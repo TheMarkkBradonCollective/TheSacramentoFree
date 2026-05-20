@@ -17,6 +17,7 @@ interface TabletViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  onRefresh: () => void;
 }
 
 export default function TabletView({
@@ -29,7 +30,8 @@ export default function TabletView({
   onLogout,
   onUpdateProfile,
   initialSelectedChatId,
-  onClearInitialChat
+  onClearInitialChat,
+  onRefresh
 }: TabletViewProps) {
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen bg-[#0B0C0D] font-sans text-white">
@@ -143,7 +145,7 @@ export default function TabletView({
               items={items}
               userProfile={userProfile}
               onInitiateChat={onInitiateChat}
-              onRefresh={() => {}}
+              onRefresh={onRefresh}
             />
           </div>
         )}

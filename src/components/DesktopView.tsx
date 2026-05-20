@@ -17,6 +17,7 @@ interface DesktopViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  onRefresh: () => void;
 }
 
 export default function DesktopView({
@@ -29,7 +30,8 @@ export default function DesktopView({
   onLogout,
   onUpdateProfile,
   initialSelectedChatId,
-  onClearInitialChat
+  onClearInitialChat,
+  onRefresh
 }: DesktopViewProps) {
   return (
     <div id="desktop_device_workspace" className="min-h-screen flex flex-col bg-[#0B0C0D] text-white antialiased font-sans">
@@ -65,7 +67,7 @@ export default function DesktopView({
               items={items}
               userProfile={userProfile}
               onInitiateChat={onInitiateChat}
-              onRefresh={() => {}}
+              onRefresh={onRefresh}
             />
           </div>
         )}

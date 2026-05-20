@@ -37,7 +37,15 @@ export default function App() {
   const [initialSelectedChatId, setInitialSelectedChatId] = useState<string | null>(null);
 
   // Responsive device classification configuration
-  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>(() => {
+    if (typeof window !== 'undefined') {
+      const w = window.innerWidth;
+      if (w < 768) return 'mobile';
+      if (w < 1024) return 'tablet';
+      return 'desktop';
+    }
+    return 'mobile';
+  });
 
   // PWA states and install trigger handlers
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -287,6 +295,55 @@ export default function App() {
     };
   }, []);
 
+  const loadItems = async (isBackground = false) => {
+    if (!userProfile) return;
+    if (!isBackground) {
+      setIsItemsLoading(true);
+    }
+    try {
+      const loadedItems = await getSupabaseItems();
+
+      // Merge current local drafted items so that user's offline submissions show up too
+      const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
+      let localListings: ItemPost[] = [];
+      try {
+        localListings = JSON.parse(localListingsStr);
+      } catch (_) {}
+
+      // Filter local items to avoid repeating items loaded from server
+      const serverIds = new Set(loadedItems.map(item => item.id));
+      const filteredLocal = localListings.filter(item => !serverIds.has(item.id));
+
+      // Merge order
+      const finalItems = [...filteredLocal, ...loadedItems];
+      
+      if (finalItems.length > 0) {
+        localStorage.setItem('cached_items', JSON.stringify(finalItems));
+        setItems(finalItems);
+      } else {
+        setItems([...filteredLocal, ...DEFAULT_OFFLINE_ITEMS]);
+      }
+    } catch (err) {
+      console.warn('Supabase items fetch failed, using offline fallback:', err);
+
+      const cachedStr = localStorage.getItem('cached_items');
+      let finalCached: ItemPost[] = [];
+      if (cachedStr) {
+        try {
+          finalCached = JSON.parse(cachedStr);
+        } catch (_) {}
+      }
+      if (finalCached.length === 0) {
+        finalCached = DEFAULT_OFFLINE_ITEMS;
+      }
+      setItems(finalCached);
+    } finally {
+      if (!isBackground) {
+        setIsItemsLoading(false);
+      }
+    }
+  };
+
   // 2. Load Item Listings periodically from Supabase once user is onboarded
   useEffect(() => {
     if (!userProfile) {
@@ -294,65 +351,21 @@ export default function App() {
       return;
     }
 
-    let isSubscribed = true;
-
-    const loadItems = async () => {
-      setIsItemsLoading(true);
-      try {
-        const loadedItems = await getSupabaseItems();
-        
-        if (!isSubscribed) return;
-
-        // Merge current local drafted items so that user's offline submissions show up too
-        const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
-        let localListings: ItemPost[] = [];
-        try {
-          localListings = JSON.parse(localListingsStr);
-        } catch (_) {}
-
-        // Filter local items to avoid repeating items loaded from server
-        const serverIds = new Set(loadedItems.map(item => item.id));
-        const filteredLocal = localListings.filter(item => !serverIds.has(item.id));
-
-        // Merge order
-        const finalItems = [...filteredLocal, ...loadedItems];
-        
-        if (finalItems.length > 0) {
-          localStorage.setItem('cached_items', JSON.stringify(finalItems));
-          setItems(finalItems);
-        } else {
-          setItems([...filteredLocal, ...DEFAULT_OFFLINE_ITEMS]);
-        }
-      } catch (err) {
-        console.warn('Supabase items fetch failed, using offline fallback:', err);
-        if (!isSubscribed) return;
-
-        const cachedStr = localStorage.getItem('cached_items');
-        let finalCached: ItemPost[] = [];
-        if (cachedStr) {
-          try {
-            finalCached = JSON.parse(cachedStr);
-          } catch (_) {}
-        }
-        if (finalCached.length === 0) {
-          finalCached = DEFAULT_OFFLINE_ITEMS;
-        }
-        setItems(finalCached);
-      } finally {
-        if (isSubscribed) {
-          setIsItemsLoading(false);
-        }
-      }
-    };
-
-    loadItems();
-    const interval = setInterval(loadItems, 8000); // Poll for real Sacramento listings
+    loadItems(false);
+    
+    let interval: any = null;
+    if (deviceType !== 'desktop') {
+      interval = setInterval(() => {
+        loadItems(true);
+      }, 45000); // Gentle 45s background poll on mobile/tablet (never on desktop)
+    }
 
     return () => {
-      isSubscribed = false;
-      clearInterval(interval);
+      if (interval) {
+        clearInterval(interval);
+      }
     };
-  }, [userProfile]);
+  }, [userProfile, deviceType]);
 
   // Handle Email and Password Logins
   const handleEmailSignIn = async (email: string, password: string): Promise<boolean> => {
@@ -617,7 +630,7 @@ export default function App() {
             <Onboarding user={sessionUser} onComplete={handleOnboardingComplete} />
           ) : (
             <>
-              {deviceType === 'mobile' ? (
+               {deviceType === 'mobile' ? (
                 <MobileView
                   items={items}
                   userProfile={userProfile}
@@ -629,6 +642,7 @@ export default function App() {
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  onRefresh={loadItems}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -642,6 +656,7 @@ export default function App() {
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  onRefresh={loadItems}
                 />
               ) : (
                 <DesktopView
@@ -655,6 +670,7 @@ export default function App() {
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  onRefresh={loadItems}
                 />
               )}
 
@@ -664,6 +680,7 @@ export default function App() {
                   userProfile={userProfile}
                   onClose={() => setShowPostModal(false)}
                   onSuccess={(newItem) => {
+                    loadItems(false);
                     setActiveTab('feed');
                     setShowPostModal(false);
                   }}

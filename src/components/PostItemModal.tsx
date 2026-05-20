@@ -98,7 +98,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
         const { latitude, longitude } = position.coords;
         const coords = mapGPSToPercent(latitude, longitude);
         setCustomCoords(coords);
-        const closest = findClosestNeighborhood(coords.x, coords.y);
+        const closest = findClosestNeighborhood(latitude, longitude);
         setNeighborhood(closest);
         setGpsStatus(`Detected precise GPS: ${coords.x.toFixed(1)}%, ${coords.y.toFixed(1)}% inside ${closest.toUpperCase()} Sector 🟢`);
         setGpsLoading(false);

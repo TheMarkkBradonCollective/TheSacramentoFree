@@ -17,6 +17,7 @@ interface MobileViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  onRefresh: () => void;
 }
 
 export default function MobileView({
@@ -29,7 +30,8 @@ export default function MobileView({
   onLogout,
   onUpdateProfile,
   initialSelectedChatId,
-  onClearInitialChat
+  onClearInitialChat,
+  onRefresh
 }: MobileViewProps) {
   // Mobile-specific layout sub-view controllers
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
@@ -130,7 +132,7 @@ export default function MobileView({
               items={items}
               userProfile={userProfile}
               onInitiateChat={onInitiateChat}
-              onRefresh={() => {}}
+              onRefresh={onRefresh}
             />
           </div>
         )}

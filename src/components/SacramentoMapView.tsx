@@ -231,8 +231,8 @@ export default function SacramentoMapView({
       if (customCoords) {
         return {
           item,
-          x: customCoords.x,
-          y: customCoords.y,
+          lat: customCoords.x,
+          lng: customCoords.y,
           color: getCategoryColor(item.category)
         };
       }
@@ -253,10 +253,14 @@ export default function SacramentoMapView({
       const dx = Math.cos(angle) * radius;
       const dy = Math.sin(angle) * radius;
 
+      const px = Math.max(8, Math.min(92, parentCoord.x + dx));
+      const py = Math.max(8, Math.min(92, parentCoord.y + dy));
+      const { lat, lng } = convertPercentToLatLng(px, py);
+
       return {
         item,
-        x: Math.max(8, Math.min(92, parentCoord.x + dx)),
-        y: Math.max(8, Math.min(92, parentCoord.y + dy)),
+        lat,
+        lng,
         color: getCategoryColor(item.category)
       };
     });
@@ -287,7 +291,23 @@ export default function SacramentoMapView({
     // Detect user position automatically at startup
     handleLocateUser();
 
+    // Trigger immediate and asynchronous container size invalidation to solve hidden tab layout bug
+    map.invalidateSize();
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+
+    // Watch dynamic resize adjustments (tab changes, screen resizing, device orientation)
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
       markersGroupRef.current = null;
@@ -370,8 +390,7 @@ export default function SacramentoMapView({
     });
 
     // 2. Draw Listing locations pins
-    blipPositions.forEach(({ item, x, y, color }) => {
-      const { lat, lng } = convertPercentToLatLng(x, y);
+    blipPositions.forEach(({ item, lat, lng, color }) => {
       const isSelected = selectedPost?.id === item.id;
 
       const blipIcon = L.divIcon({
@@ -403,7 +422,7 @@ export default function SacramentoMapView({
     // 3. Draw Route from User to Selected Post (Uber style!)
     if (selectedPost) {
       const selectedBlip = blipPositions.find(b => b.item.id === selectedPost.id);
-      const selectedLatLng = selectedBlip ? convertPercentToLatLng(selectedBlip.x, selectedBlip.y) : null;
+      const selectedLatLng = selectedBlip ? { lat: selectedBlip.lat, lng: selectedBlip.lng } : null;
       const startLatLng = userLocation || fallbackLatLng;
 
       if (selectedLatLng && startLatLng) {
