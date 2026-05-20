@@ -45,9 +45,11 @@ export default function App() {
     
     let profile: UserProfile | null = null;
     
-    // Try Supabase first
+    // Try Supabase first with a safe timeout
     try {
-      profile = await getSupabaseProfile(user.id);
+      const getProfilePromise = getSupabaseProfile(user.id);
+      const profileTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200));
+      profile = await Promise.race([getProfilePromise, profileTimeout]);
     } catch (sbErr) {
       console.warn('Supabase profile fetch failed:', sbErr);
     }
@@ -87,9 +89,35 @@ export default function App() {
 
   // 1. Subscribe to Supabase Auth State changes
   useEffect(() => {
+    let authCompleted = false;
+
+    // Safety timeout: Auto-bypass after 1.8 seconds max if database initialization or fetch hangs
+    const safetyTimeout = setTimeout(() => {
+      if (!authCompleted) {
+        console.warn('Database session check didn\'t finish within safety threshold. Auto-bypassing...');
+        const cachedGuest = localStorage.getItem('supabase_guest_profile');
+        if (cachedGuest) {
+          try {
+            const guest = JSON.parse(cachedGuest);
+            setSessionUser(guest);
+            setUserProfile(guest);
+          } catch (_) {}
+        }
+        setIsAuthLoading(false);
+        setIsProfileLoading(false);
+      }
+    }, 1800);
+
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Race the fetch call with a 1200ms timeout promise
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => 
+          setTimeout(() => resolve({ data: { session: null } }), 1200)
+        );
+
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+        
         if (session?.user) {
           setSessionUser(session.user);
           await handleUserAuthenticated(session.user);
@@ -114,6 +142,9 @@ export default function App() {
       } catch (err) {
         console.warn('Error checking supabase session:', err);
         setIsAuthLoading(false);
+      } finally {
+        authCompleted = true;
+        clearTimeout(safetyTimeout);
       }
     };
 
@@ -144,6 +175,7 @@ export default function App() {
 
     return () => {
       subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
     };
   }, []);
 
@@ -463,11 +495,20 @@ export default function App() {
 
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-black antialiased font-sans">
-      {/* 1. Loader screen */}
+      {/* 1. Loader screen with instant skip override */}
       {(isAuthLoading || isProfileLoading) && (
-        <div id="fullscreen_interactive_loader" className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center space-y-4">
+        <div id="fullscreen_interactive_loader" className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center space-y-4 px-4 text-center">
           <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-none animate-spin" />
-          <p className="text-[9.5px] font-black text-black uppercase tracking-widest font-mono">ROUTING SYSTEM VERIFICATIONS...</p>
+          <p className="text-[9.5px] font-black text-zinc-900 uppercase tracking-widest font-mono">ROUTING SYSTEM VERIFICATIONS...</p>
+          <button
+            onClick={() => {
+              setIsAuthLoading(false);
+              setIsProfileLoading(false);
+            }}
+            className="px-3.5 py-2 text-[9px] font-black border border-zinc-200 text-zinc-500 hover:border-black hover:text-black uppercase tracking-widest font-mono transition-colors rounded-none cursor-pointer mt-2"
+          >
+            Offline Bypass ✕
+          </button>
         </div>
       )}
 
