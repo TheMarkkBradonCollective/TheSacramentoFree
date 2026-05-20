@@ -713,9 +713,9 @@ export default function SacramentoMapView({
         <div className="flex flex-col space-y-1 pb-2 border-b border-[#343536]">
           <span className="text-[9px] font-black text-[#FF4500] uppercase tracking-widest font-mono flex items-center gap-1.5">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#FF4500] animate-ping"></span>
-            Sacramento Sector Map Grid
+            Sacramento Neighborhood Map
           </span>
-          <h2 className="text-sm font-bold text-white tracking-tight">Interactive Community Coordinates</h2>
+          <h2 className="text-sm font-bold text-white tracking-tight">Interactive Community Items</h2>
         </div>
       )}
 
@@ -809,7 +809,7 @@ export default function SacramentoMapView({
                 className="w-full bg-transparent text-[11px] text-white font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
                 id="map_internal_neighborhood_select"
               >
-                <option value="All Neighborhoods" className="bg-[#1A1A1B] text-white">All Sectors</option>
+                <option value="All Neighborhoods" className="bg-[#1A1A1B] text-white">All Neighborhoods</option>
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
                   <option key={n} value={n} className="bg-[#1A1A1B] text-white">{n.toUpperCase()}</option>
                 ))}
@@ -823,10 +823,10 @@ export default function SacramentoMapView({
         <div>
           <h3 className="text-[11px] font-black text-[#FF4500] uppercase tracking-widest flex items-center gap-1.5">
             <span className="inline-block w-2.5 h-2.5 bg-[#FF4500] animate-pulse rounded-full"></span>
-            Operational Map Center
+            Sacramento Activity Map
           </h3>
           <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5" id="active_pins_count_display">
-            Sacramento District Grid • {activeItems.length} active listings
+            Sacramento Neighborhoods • {activeItems.length} active listings
           </p>
         </div>
         <div className="flex items-center space-x-3">
