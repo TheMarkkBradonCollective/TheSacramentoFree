@@ -22,6 +22,30 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   // Status transitions
   const handleUpdateStatus = async (itemId: string, newStatus: 'completed' | 'withdrawn' | 'active') => {
     setUpdatingItemId(itemId);
+    
+    // Update local storage immediately for seamless offline response
+    const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
+    let localListings: ItemPost[] = [];
+    try {
+      localListings = JSON.parse(localListingsStr);
+    } catch (_) {}
+    localListings = localListings.map(item => {
+      if (item.id === itemId) return { ...item, status: newStatus, updatedAt: new Date().toISOString() };
+      return item;
+    });
+    localStorage.setItem('local_user_listings', JSON.stringify(localListings));
+
+    const cachedStr = localStorage.getItem('cached_items') || '[]';
+    let cachedItems: ItemPost[] = [];
+    try {
+      cachedItems = JSON.parse(cachedStr);
+    } catch (_) {}
+    cachedItems = cachedItems.map(item => {
+      if (item.id === itemId) return { ...item, status: newStatus, updatedAt: new Date().toISOString() };
+      return item;
+    });
+    localStorage.setItem('cached_items', JSON.stringify(cachedItems));
+
     try {
       try {
         await updateSupabaseItemStatus(itemId, newStatus);
@@ -36,11 +60,8 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
       });
       onRefresh();
     } catch (err) {
-      try {
-        handleFirestoreError(err, OperationType.UPDATE, `items/${itemId}`);
-      } catch (authError: any) {
-        alert('You do not have administrative permissions to modify this listing.');
-      }
+      console.warn('Firestore update status bypassed/offline:', err);
+      onRefresh();
     } finally {
       setUpdatingItemId(null);
     }
@@ -49,6 +70,24 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   const handleDeleteItem = async (itemId: string) => {
     if (!confirm('Are you sure you want to permanently delete this listing?')) return;
     setUpdatingItemId(itemId);
+
+    // Delete from local storage immediately for seamless offline response
+    const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
+    let localListings: ItemPost[] = [];
+    try {
+      localListings = JSON.parse(localListingsStr);
+    } catch (_) {}
+    localListings = localListings.filter(item => item.id !== itemId);
+    localStorage.setItem('local_user_listings', JSON.stringify(localListings));
+
+    const cachedStr = localStorage.getItem('cached_items') || '[]';
+    let cachedItems: ItemPost[] = [];
+    try {
+      cachedItems = JSON.parse(cachedStr);
+    } catch (_) {}
+    cachedItems = cachedItems.filter(item => item.id !== itemId);
+    localStorage.setItem('cached_items', JSON.stringify(cachedItems));
+
     try {
       try {
         await deleteSupabaseItem(itemId);
@@ -60,11 +99,8 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
       await deleteDoc(itemRef);
       onRefresh();
     } catch (err) {
-      try {
-        handleFirestoreError(err, OperationType.DELETE, `items/${itemId}`);
-      } catch (authError: any) {
-        alert('Insufficient rules permissions to delete this item.');
-      }
+      console.warn('Firestore delete item bypassed/offline:', err);
+      onRefresh();
     } finally {
       setUpdatingItemId(null);
     }

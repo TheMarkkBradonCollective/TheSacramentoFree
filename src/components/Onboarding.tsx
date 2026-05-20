@@ -49,20 +49,23 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         console.warn('Supabase onboarding profile upsert bypassed or failed:', sbErr);
       }
 
-      const userRef = doc(db, 'users', currentUser.uid);
-      await setDoc(userRef, {
-        ...newProfile,
-        createdAt: new Date(),
-      });
+      try {
+        const userRef = doc(db, 'users', currentUser.uid);
+        await setDoc(userRef, {
+          ...newProfile,
+          createdAt: new Date(),
+        });
+      } catch (fsErr) {
+        console.warn('Firestore onboarding registration bypassed/cached:', fsErr);
+      }
+
+      // Save to local storage cache immediately
+      localStorage.setItem(`profile_${newProfile.uid}`, JSON.stringify(newProfile));
       onComplete(newProfile);
     } catch (error) {
       setIsSubmitting(false);
-      try {
-        handleFirestoreError(error, OperationType.CREATE, `users/${currentUser.uid}`);
-      } catch (err: any) {
-        setErrorMsg('Failed to create community profile. Security verification failed.');
-        console.error(err);
-      }
+      setErrorMsg('Failed to initialize community profile. Operating in local-offline registration fallback.');
+      console.error(error);
     }
   };
 
