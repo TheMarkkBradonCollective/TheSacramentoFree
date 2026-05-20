@@ -76,6 +76,7 @@ export default function DesktopView({
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
               onClearInitialChat={onClearInitialChat}
+              items={items}
             />
           </div>
         )}

@@ -177,6 +177,7 @@ export default function TabletView({
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
               onClearInitialChat={onClearInitialChat}
+              items={items}
             />
           </div>
         )}

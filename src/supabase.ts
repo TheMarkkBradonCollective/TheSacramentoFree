@@ -315,6 +315,29 @@ export async function updateSupabaseItemStatus(itemId: string, status: string): 
 
 export async function deleteSupabaseItem(itemId: string): Promise<boolean> {
   try {
+    // 1. Fetch associated chats first to cascade-delete their messages
+    const { data: associatedChats, error: selectErr } = await supabase
+      .from('chats')
+      .select('id')
+      .eq('itemId', itemId);
+
+    if (!selectErr && associatedChats && associatedChats.length > 0) {
+      const chatIds = associatedChats.map(c => c.id);
+
+      // 2. Clear messages inside those chats
+      await supabase
+        .from('messages')
+        .delete()
+        .in('chatId', chatIds);
+
+      // 3. Clear the chats themselves
+      await supabase
+        .from('chats')
+        .delete()
+        .eq('itemId', itemId);
+    }
+
+    // 4. Delete the item itself
     const { error } = await supabase
       .from('items')
       .delete()

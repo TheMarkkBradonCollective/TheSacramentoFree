@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Chat, Message, UserProfile } from '../types';
+import { Chat, Message, UserProfile, ItemPost } from '../types';
 import { getSupabaseChats, getSupabaseMessages, createSupabaseMessage } from '../supabase';
 import { MessageSquare, Send, AlertCircle, MapPin, Gift, Box, ChevronLeft } from 'lucide-react';
 
@@ -7,9 +7,10 @@ interface ChatSystemProps {
   userProfile: UserProfile;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  items: ItemPost[];
 }
 
-export default function ChatSystem({ userProfile, initialSelectedChatId, onClearInitialChat }: ChatSystemProps) {
+export default function ChatSystem({ userProfile, initialSelectedChatId, onClearInitialChat, items }: ChatSystemProps) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -142,6 +143,22 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
     return { otherId, otherName, otherPhoto };
   };
 
+  // Get custom chat title: 'item name | Messangers Name'
+  const getFormattedChatTitle = (chat: Chat) => {
+    if (!chat.itemId || !chat.itemTitle) {
+      return getRecipientInfo(chat).otherName;
+    }
+    const item = items.find(i => i.id === chat.itemId);
+    const ownerId = item ? item.userId : '';
+    const messengerId = ownerId 
+      ? chat.participantIds.find(id => id !== ownerId) 
+      : chat.participantIds.find(id => id !== userProfile.uid); 
+    
+    const finalMessengerId = messengerId || chat.participantIds.find(id => id !== userProfile.uid) || userProfile.uid;
+    const messengerName = chat.participantNames[finalMessengerId] || 'Neighbor';
+    return `${chat.itemTitle} | ${messengerName}`;
+  };
+
   return (
     <div className="bg-white rounded-none overflow-hidden h-[calc(100vh-12rem)] flex shadow-xs border border-zinc-200 mb-2 font-sans" id="chat_app_viewport">
       
@@ -158,46 +175,47 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
             {chats.length} active
           </span>
         </div>
-
-        {/* Chat Channels list container */}
-        <div className="flex-1 overflow-y-auto space-y-0 p-0" id="chat_rooms_scrollable">
-          {isChatsLoading ? (
-            <div className="p-4 text-center text-xs text-zinc-550 font-black uppercase tracking-wider">CONNECTING THREADS...</div>
-          ) : chats.length === 0 ? (
-            <div className="p-8 text-center text-xs text-zinc-400">
-              <MessageSquare className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
-              <p className="font-bold text-zinc-900 uppercase tracking-widest text-[10px]">No matches routed</p>
-              <p className="text-[10px] text-zinc-450 mt-1.5 font-semibold">Select 'Message Neighbor' on any listing to open a chat channel.</p>
-            </div>
-          ) : (
-            chats.map((chat) => {
-              const { otherName, otherPhoto } = getRecipientInfo(chat);
-              const isSelected = selectedChat?.id === chat.id;
-
-              return (
-                <div
-                  key={chat.id}
-                  id={`chat_row_${chat.id}`}
-                  onClick={() => {
-                    setSelectedChat(chat);
-                    onClearInitialChat();
-                  }}
-                  className={`p-4 flex items-start space-x-3.5 cursor-pointer select-none transition-all border-b border-zinc-100 ${
-                    isSelected 
-                      ? 'bg-zinc-100 border-l-[3px] border-l-brand-orange' 
-                      : 'hover:bg-zinc-50 border-l-[3px] border-l-transparent'
-                  }`}
-                >
-                  <img
-                    src={otherPhoto}
-                    referrerPolicy="no-referrer"
-                    alt={otherName}
-                    className="w-9 h-9 rounded-none border border-zinc-150 shrink-0 mt-0.5"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-black text-black uppercase tracking-tight truncate">{otherName}</p>
-                      {chat.lastMessageAt && (
+ 
+         {/* Chat Channels list container */}
+         <div className="flex-1 overflow-y-auto space-y-0 p-0" id="chat_rooms_scrollable">
+           {isChatsLoading ? (
+             <div className="p-4 text-center text-xs text-zinc-550 font-black uppercase tracking-wider">CONNECTING THREADS...</div>
+           ) : chats.length === 0 ? (
+             <div className="p-8 text-center text-xs text-zinc-400">
+               <MessageSquare className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
+               <p className="font-bold text-zinc-900 uppercase tracking-widest text-[10px]">No matches routed</p>
+               <p className="text-[10px] text-zinc-450 mt-1.5 font-semibold">Select 'Message Neighbor' on any listing to open a chat channel.</p>
+             </div>
+           ) : (
+             chats.map((chat) => {
+               const { otherName, otherPhoto } = getRecipientInfo(chat);
+               const isSelected = selectedChat?.id === chat.id;
+               const displayTitle = getFormattedChatTitle(chat);
+ 
+               return (
+                 <div
+                   key={chat.id}
+                   id={`chat_row_${chat.id}`}
+                   onClick={() => {
+                     setSelectedChat(chat);
+                     onClearInitialChat();
+                   }}
+                   className={`p-4 flex items-start space-x-3.5 cursor-pointer select-none transition-all border-b border-zinc-100 ${
+                     isSelected 
+                       ? 'bg-zinc-100 border-l-[3px] border-l-brand-orange' 
+                       : 'hover:bg-zinc-50 border-l-[3px] border-l-transparent'
+                   }`}
+                 >
+                   <img
+                     src={otherPhoto}
+                     referrerPolicy="no-referrer"
+                     alt={otherName}
+                     className="w-9 h-9 rounded-none border border-zinc-150 shrink-0 mt-0.5"
+                   />
+                   <div className="flex-1 min-w-0">
+                     <div className="flex items-center justify-between">
+                       <p className="text-xs font-black text-black uppercase tracking-tight truncate" title={displayTitle}>{displayTitle}</p>
+                       {chat.lastMessageAt && (
                         <span className="text-[8.5px] text-zinc-400 font-mono font-bold">
                           {new Date(chat.lastMessageAt.seconds ? chat.lastMessageAt.seconds * 1000 : chat.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -231,119 +249,136 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
         id="conversations_body_viewport"
       >
         {selectedChat ? (
-          <>
-            {/* Thread Header */}
-            <div className="px-5 py-4 border-b border-zinc-200 bg-white flex items-center justify-between shadow-3xs" id="chat_panel_header">
-              <div className="flex items-center space-x-3.5 min-w-0">
-                {/* Back button on mobile */}
-                <button
-                  id="mobile_chat_back_btn"
-                  onClick={() => {
-                    setSelectedChat(null);
-                    onClearInitialChat();
-                  }}
-                  className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-none md:hidden shrink-0 cursor-pointer"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
+          (() => {
+            const linkedItem = items.find(i => i.id === selectedChat.itemId);
+            const isChatDisabled = linkedItem && linkedItem.status !== 'active';
+            const displayTitleHeader = getFormattedChatTitle(selectedChat);
 
-                <img
-                  src={getRecipientInfo(selectedChat).otherPhoto}
-                  referrerPolicy="no-referrer"
-                  alt={getRecipientInfo(selectedChat).otherName}
-                  className="w-10 h-10 rounded-none border border-zinc-250 shrink-0"
-                />
-                
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black text-black truncate uppercase tracking-widest">
-                    {getRecipientInfo(selectedChat).otherName}
-                  </h4>
-                  {selectedChat.itemTitle ? (
-                    <div className="flex items-center space-x-1.5 text-[9px] text-brand-orange font-black tracking-widest uppercase block mt-1 truncate">
-                      <Gift className="w-3.5 h-3.5" />
-                      <span>MATCHING cargo: {selectedChat.itemTitle}</span>
+            return (
+              <>
+                {/* Thread Header */}
+                <div className="px-5 py-4 border-b border-zinc-200 bg-white flex items-center justify-between shadow-3xs" id="chat_panel_header">
+                  <div className="flex items-center space-x-3.5 min-w-0">
+                    {/* Back button on mobile */}
+                    <button
+                      id="mobile_chat_back_btn"
+                      onClick={() => {
+                        setSelectedChat(null);
+                        onClearInitialChat();
+                      }}
+                      className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-none md:hidden shrink-0 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    <img
+                      src={getRecipientInfo(selectedChat).otherPhoto}
+                      referrerPolicy="no-referrer"
+                      alt={getRecipientInfo(selectedChat).otherName}
+                      className="w-10 h-10 rounded-none border border-zinc-250 shrink-0"
+                    />
+                    
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-black truncate uppercase tracking-widest" title={displayTitleHeader}>
+                        {displayTitleHeader}
+                      </h4>
+                      {selectedChat.itemTitle ? (
+                        <div className="flex items-center space-x-1.5 text-[9px] text-brand-orange font-black tracking-widest uppercase block mt-1 truncate">
+                          <Gift className="w-3.5 h-3.5" />
+                          <span>MATCHING cargo: {selectedChat.itemTitle}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-1.5 text-[9px] text-zinc-500 mt-1 uppercase tracking-widest font-black">
+                          <MapPin className="w-3 h-3 text-brand-sage" />
+                          <span>ROUTED METROPOLITAN COMMUNICATOR</span>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex items-center space-x-1.5 text-[9px] text-zinc-500 mt-1 uppercase tracking-widest font-black">
-                      <MapPin className="w-3 h-3 text-brand-sage" />
-                      <span>ROUTED METROPOLITAN COMMUNICATOR</span>
+                  </div>
+                </div>
+
+                {/* Messages Log viewport */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-4" id="messages_scroller">
+                  {errorMsg && (
+                    <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-none flex items-center space-x-1.5" id="chat_error_card">
+                      <AlertCircle className="w-4 h-4 text-red-500" />
+                      <span>{errorMsg}</span>
                     </div>
                   )}
-                </div>
-              </div>
-            </div>
 
-            {/* Messages Log viewport */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4" id="messages_scroller">
-              {errorMsg && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-none flex items-center space-x-1.5" id="chat_error_card">
-                  <AlertCircle className="w-4 h-4 text-red-500" />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
-              {messages.length === 0 ? (
-                <div className="text-center py-16 text-xs text-zinc-400 font-semibold uppercase tracking-wider space-y-2.5">
-                  <MessageSquare className="w-7 h-7 text-zinc-300 mx-auto" />
-                  <p>Send an initial transmission to initiate porch pickup logistics.</p>
-                </div>
-              ) : (
-                messages.map((msg) => {
-                  const isUser = msg.senderId === userProfile.uid;
-                  
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-                      id={`message_item_${msg.id}`}
-                    >
-                      <div
-                        className={`max-w-[70%] rounded-none px-4 py-3 text-xs font-semibold shadow-3xs ${
-                          isUser
-                            ? 'bg-black text-white'
-                            : 'bg-white border border-zinc-200 text-black'
-                        }`}
-                      >
-                        <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
-                        <span 
-                          className={`text-[8px] font-mono mt-1 w-full block text-right font-black uppercase tracking-wider ${
-                            isUser ? 'text-zinc-400' : 'text-zinc-450'
-                          }`}
-                        >
-                          {msg.createdAt?.seconds 
-                            ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                            : 'sending...'}
-                        </span>
-                      </div>
+                  {messages.length === 0 ? (
+                    <div className="text-center py-16 text-xs text-zinc-400 font-semibold uppercase tracking-wider space-y-2.5">
+                      <MessageSquare className="w-7 h-7 text-zinc-300 mx-auto" />
+                      <p>Send an initial transmission to initiate porch pickup logistics.</p>
                     </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+                  ) : (
+                    messages.map((msg) => {
+                      const isUser = msg.senderId === userProfile.uid;
+                      
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                          id={`message_item_${msg.id}`}
+                        >
+                          <div
+                            className={`max-w-[70%] rounded-none px-4 py-3 text-xs font-semibold shadow-3xs ${
+                              isUser
+                                ? 'bg-black text-white'
+                                : 'bg-white border border-zinc-200 text-black'
+                            }`}
+                          >
+                            <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                            <span 
+                              className={`text-[8px] font-mono mt-1 w-full block text-right font-black uppercase tracking-wider ${
+                                isUser ? 'text-zinc-400' : 'text-zinc-450'
+                              }`}
+                            >
+                              {msg.createdAt?.seconds 
+                                ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                : 'sending...'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
 
-            {/* Message input tray */}
-            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-zinc-200 flex items-center space-x-3" id="input_tray">
-              <input
-                type="text"
-                id="message_input_box"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Type your message here..."
-                maxLength={2000}
-                required
-                className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black placeholder-zinc-400 font-semibold focus:bg-white"
-              />
-              <button
-                type="submit"
-                id="message_send_btn"
-                disabled={!inputText.trim() || isSending}
-                className="px-5 py-3 bg-black hover:bg-zinc-800 text-white rounded-none font-black text-xs uppercase tracking-widest shrink-0 cursor-pointer disabled:opacity-40"
-              >
-                <Send className="w-3.5 h-3.5" />
-              </button>
-            </form>
-          </>
+                {/* Message input tray */}
+                <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-zinc-200 flex flex-col space-y-2" id="input_tray">
+                  {isChatDisabled && (
+                    <div className="p-2.5 bg-zinc-100 border border-zinc-200 text-zinc-500 text-[10px] font-bold uppercase tracking-wider flex items-center space-x-2 select-none" id="chat_disabled_status_banner">
+                      <AlertCircle className="w-4 h-4 text-zinc-400 shrink-0" />
+                      <span>This listing has been claimed/completed. This chat is now read-only.</span>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-3 w-full">
+                    <input
+                      type="text"
+                      id="message_input_box"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      placeholder={isChatDisabled ? "This chat is archived and read-only" : "Type your message here..."}
+                      maxLength={2000}
+                      required
+                      disabled={!!isChatDisabled}
+                      className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black placeholder-zinc-400 font-semibold focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed"
+                    />
+                    <button
+                      type="submit"
+                      id="message_send_btn"
+                      disabled={!inputText.trim() || isSending || !!isChatDisabled}
+                      className="px-5 py-3 bg-black hover:bg-zinc-800 text-white rounded-none font-black text-xs uppercase tracking-widest shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </form>
+              </>
+            );
+          })()
         ) : (
           <div className="text-center py-20 px-4 bg-[#F6F6F6] h-full flex flex-col justify-center items-center" id="messages_not_selected_state">
             <MessageSquare className="w-12 h-12 text-zinc-300 mb-4" />

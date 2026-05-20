@@ -254,6 +254,15 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
     cachedItems = cachedItems.filter(item => item.id !== itemId);
     localStorage.setItem('cached_items', JSON.stringify(cachedItems));
 
+    // Also delete associated chats from local storage
+    const localChatsKey = 'local_chats';
+    let localChats: any[] = [];
+    try {
+      localChats = JSON.parse(localStorage.getItem(localChatsKey) || '[]');
+    } catch (_) {}
+    localChats = localChats.filter(c => c.itemId !== itemId);
+    localStorage.setItem(localChatsKey, JSON.stringify(localChats));
+
     try {
       await deleteSupabaseItem(itemId);
       onRefresh();
