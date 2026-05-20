@@ -177,17 +177,4 @@ export function findClosestNeighborhood(x: number, y: number): string {
   return closestName;
 }
 
-// Map percentage coordinates back to actual GPS Latitude/Longitude for OpenStreetMap integration
-export function mapPercentToGPS(x: number, y: number): { lat: number; lng: number } {
-  const latMin = 38.35;
-  const latMax = 38.75;
-  const lngMin = -121.60;
-  const lngMax = -121.30;
-  
-  const lng = lngMin + (x / 100) * (lngMax - lngMin);
-  const lat = latMin + (1 - y / 100) * (latMax - latMin);
-  
-  return { lat, lng };
-}
-
 

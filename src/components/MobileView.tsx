@@ -68,6 +68,7 @@ export default function MobileView({
               selectedType={selectedMobileType}
               selectedCategory={selectedMobileCategory}
               onInitiateChat={onInitiateChat}
+              isFullScreenMobile={true}
             />
 
             {/* Float Pill filter list Layered on Top (Uber Map style) */}
