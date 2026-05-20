@@ -264,10 +264,10 @@ export default function SacramentoMapView({
       attributionControl: true
     }).setView([fallbackLatLng.lat, fallbackLatLng.lng], 12);
 
-    // Apply standard high quality OpenStreetMap tile overlay layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Apply soft, beautiful CartoDB Voyager tile layer (much more user friendly & warm)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>'
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>'
     }).addTo(map);
 
     // Standard control button at the bottom-right corner
@@ -703,20 +703,20 @@ export default function SacramentoMapView({
 
   // Standard interactive map layouts for desktop/tablet
   return (
-    <div id="sacramento_interactive_map_view" className="bg-white border border-zinc-200 p-4 font-sans flex flex-col space-y-4">
+    <div id="sacramento_interactive_map_view" className="bg-[#1A1A1B] border border-[#343536] p-5 rounded-2xl font-sans flex flex-col space-y-4 text-white">
       {selectedType === undefined && (
-        <div className="flex flex-col space-y-1 pb-1.5 border-b border-zinc-150">
-          <span className="text-[9px] font-black text-brand-orange uppercase tracking-widest font-mono flex items-center gap-1.5">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-orange animate-ping"></span>
+        <div className="flex flex-col space-y-1 pb-2 border-b border-[#343536]">
+          <span className="text-[9px] font-black text-[#FF4500] uppercase tracking-widest font-mono flex items-center gap-1.5">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#FF4500] animate-ping"></span>
             Sacramento Sector Map Grid
           </span>
-          <h2 className="text-sm font-black text-black uppercase tracking-tight">Interactive Community Coordinates</h2>
+          <h2 className="text-sm font-bold text-white tracking-tight">Interactive Community Coordinates</h2>
         </div>
       )}
 
       {/* Internal Filter Controls if running in standalone mode */}
       {selectedType === undefined && (
-        <div className="bg-zinc-50 border border-zinc-200 p-3.5 space-y-3" id="map_internal_filters">
+        <div className="bg-[#0F0F0F] border border-[#343536] p-4 rounded-xl space-y-3" id="map_internal_filters">
           <div className="flex flex-col xs:flex-row gap-2.5">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -725,33 +725,33 @@ export default function SacramentoMapView({
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
                 placeholder="Search pins (e.g. table, books)..."
-                className="w-full px-3 py-2 bg-white border border-zinc-200 text-xs text-black font-semibold rounded-none focus:outline-hidden focus:border-black"
+                className="w-full px-3.5 py-2 bg-[#1A1A1B] border border-[#343536] text-xs text-white placeholder-zinc-500 font-semibold rounded-xl focus:outline-hidden focus:border-[#FF4500]"
                 id="map_internal_search_input"
               />
             </div>
 
             {/* Type buttons */}
-            <div className="flex bg-zinc-200 p-0.5 border border-zinc-200 gap-0.5 rounded-none shrink-0" id="map_internal_type_selector">
+            <div className="flex bg-[#1A1A1B] p-1 border border-[#343536] gap-1 rounded-xl shrink-0" id="map_internal_type_selector">
               <button
                 onClick={() => { setLocalType('all'); setLocalCategory('All Categories'); }}
-                className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider cursor-pointer transition-all ${
-                  localType === 'all' ? 'bg-black text-white shadow-xs' : 'text-zinc-650 hover:text-black font-bold'
+                className={`px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg ${
+                  localType === 'all' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 All
               </button>
               <button
                 onClick={() => { setLocalType('giveaway'); setLocalCategory('All Categories'); }}
-                className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider cursor-pointer transition-all ${
-                  localType === 'giveaway' ? 'bg-black text-white shadow-xs' : 'text-zinc-650 hover:text-black font-bold'
+                className={`px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg ${
+                  localType === 'giveaway' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 Gives
               </button>
               <button
                 onClick={() => { setLocalType('looking'); setLocalCategory('All Categories'); }}
-                className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider cursor-pointer transition-all ${
-                  localType === 'looking' ? 'bg-black text-white shadow-xs' : 'text-zinc-650 hover:text-black font-bold'
+                className={`px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg ${
+                  localType === 'looking' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 Asks
@@ -761,52 +761,52 @@ export default function SacramentoMapView({
 
           <div className="grid grid-cols-2 gap-2.5" id="map_internal_dropdowns">
             {/* Category selection */}
-            <div className="flex items-center space-x-1.5 bg-white px-2 py-1.5 border border-zinc-200">
-              <Tag className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <div className="flex items-center space-x-1.5 bg-[#1A1A1B] px-3 py-2 border border-[#343536] rounded-xl">
+              <Tag className="w-3.5 h-3.5 text-zinc-450 shrink-0" />
               <select
                 value={localCategory}
                 onChange={(e) => setLocalCategory(e.target.value)}
-                className="w-full bg-transparent text-[11px] text-black font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
+                className="w-full bg-transparent text-[11px] text-white font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
                 id="map_internal_category_select"
               >
-                <option value="All Categories">All Categories</option>
+                <option value="All Categories" className="bg-[#1A1A1B] text-white">All Categories</option>
                 {localType === 'all' ? (
                   <>
-                    <optgroup label="OFFERS / GIFTS" className="text-[9px] bg-zinc-100 uppercase">
+                    <optgroup label="OFFERS / GIFTS" className="text-[10px] bg-[#0F0F0F] text-[#FF4500] uppercase font-bold">
                       {ITEM_CATEGORIES.map((c) => (
-                        <option key={`map_giv_${c}`} value={c}>{c.toUpperCase()}</option>
+                        <option key={`map_giv_${c}`} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
                       ))}
                     </optgroup>
-                    <optgroup label="ISO / REQUESTS" className="text-[9px] bg-zinc-100 uppercase">
+                    <optgroup label="ISO / REQUESTS" className="text-[10px] bg-[#0F0F0F] text-zinc-300 uppercase font-bold">
                       {ISO_CATEGORIES.map((c) => (
-                        <option key={`map_iso_${c}`} value={c}>{c.toUpperCase()}</option>
+                        <option key={`map_iso_${c}`} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
                       ))}
                     </optgroup>
                   </>
                 ) : localType === 'giveaway' ? (
                   ITEM_CATEGORIES.map((c) => (
-                    <option key={`map_giv_only_${c}`} value={c}>{c.toUpperCase()}</option>
+                    <option key={`map_giv_only_${c}`} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
                   ))
                 ) : (
                   ISO_CATEGORIES.map((c) => (
-                    <option key={`map_iso_only_${c}`} value={c}>{c.toUpperCase()}</option>
+                    <option key={`map_iso_only_${c}`} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
                   ))
                 )}
               </select>
             </div>
 
             {/* Neighborhood selection */}
-            <div className="flex items-center space-x-1.5 bg-white px-2 py-1.5 border border-zinc-200">
-              <MapPin className="w-3.5 h-3.5 text-brand-orange shrink-0" />
+            <div className="flex items-center space-x-1.5 bg-[#1A1A1B] px-3 py-2 border border-[#343536] rounded-xl">
+              <MapPin className="w-3.5 h-3.5 text-[#FF4500] shrink-0" />
               <select
                 value={localNeighborhood}
                 onChange={(e) => setLocalNeighborhood(e.target.value)}
-                className="w-full bg-transparent text-[11px] text-black font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
+                className="w-full bg-transparent text-[11px] text-white font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
                 id="map_internal_neighborhood_select"
               >
-                <option value="All Neighborhoods">All Sectors</option>
+                <option value="All Neighborhoods" className="bg-[#1A1A1B] text-white">All Sectors</option>
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                  <option key={n} value={n}>{n.toUpperCase()}</option>
+                  <option key={n} value={n} className="bg-[#1A1A1B] text-white">{n.toUpperCase()}</option>
                 ))}
               </select>
             </div>
@@ -814,10 +814,10 @@ export default function SacramentoMapView({
         </div>
       )}
 
-      <div className="flex items-center justify-between border-b border-zinc-150 pb-2.5">
+      <div className="flex items-center justify-between border-b border-[#343536] pb-2.5">
         <div>
-          <h3 className="text-[11px] font-black text-black uppercase tracking-widest flex items-center gap-1.5">
-            <span className="inline-block w-2.5 h-2.5 bg-brand-orange animate-pulse"></span>
+          <h3 className="text-[11px] font-black text-[#FF4500] uppercase tracking-widest flex items-center gap-1.5">
+            <span className="inline-block w-2.5 h-2.5 bg-[#FF4500] animate-pulse rounded-full"></span>
             Operational Map Center
           </h3>
           <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5" id="active_pins_count_display">
@@ -827,39 +827,39 @@ export default function SacramentoMapView({
         <div className="flex items-center space-x-3">
           <button
             onClick={handleLocateUser}
-            className={`px-2 py-1 border transition-colors cursor-pointer select-none text-[9.5px] font-black uppercase ml-auto tracking-wider flex items-center space-x-1 ${
-              isLocating ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-white border-zinc-250 text-zinc-650 hover:text-black'
+            className={`px-3 py-1.5 border transition-colors cursor-pointer select-none text-[9.5px] font-bold uppercase ml-auto tracking-wider flex items-center space-x-1 rounded-xl ${
+              isLocating ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-[#1A1A1B] border-[#343536] text-zinc-300 hover:text-white hover:bg-[#252526]'
             }`}
           >
             <Compass className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
             <span>Locate Me</span>
           </button>
-          <div className="flex items-center space-x-1.5 bg-zinc-50 border border-zinc-200 px-2 py-1 select-none">
+          <div className="hidden sm:flex items-center space-x-1.5 bg-[#0F0F0F] border border-[#343536] px-2.5 py-1 rounded-lg select-none">
             <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-mono">NEIGHBORHOOD GPS</span>
           </div>
         </div>
       </div>
 
       {/* Map Sandbox Visualizer */}
-      <div className="relative w-full aspect-square md:aspect-[4/3] bg-[#FAF9F5] border border-zinc-200 overflow-hidden select-none" id="sacramento_district_grid_canvas font-sans">
+      <div className="relative w-full aspect-square md:aspect-[4/3] bg-[#0F0F0F] border border-[#343536] rounded-2xl overflow-hidden select-none" id="sacramento_district_grid_canvas_font_sans">
         {/* Real Leaflet Map Render Surface */}
         <div ref={mapContainerRef} className="w-full h-full z-0" id="leaflet_map_render_canvas" />
 
         {/* Legend Overlay Map Cards */}
-        <div className="absolute top-2 left-2 bg-white/95 border border-zinc-200 p-2 z-10 space-y-1 shadow-xs max-w-[155px] scale-90 origin-top-left">
-          <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block font-mono">Legend</span>
-          <div className="flex items-center gap-1.5 text-[8.5px] font-bold text-zinc-700">
-            <span className="w-2.5 h-2.5 rounded-full border border-zinc-950 bg-black block shrink-0"></span>
+        <div className="absolute top-3 left-3 bg-[#1A1A1B]/95 border border-[#343536] p-3 z-10 space-y-1.5 shadow-xl max-w-[155px] scale-90 origin-top-left rounded-xl text-white">
+          <span className="text-[8.5px] font-black text-zinc-450 uppercase tracking-widest block font-mono">Legend</span>
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-300">
+            <span className="w-2.5 h-2.5 rounded-full border border-[#343536] bg-[#FF4500] block shrink-0"></span>
             <span>GIVEAWAY LIST</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[8.5px] font-bold text-zinc-700">
-            <span className="w-2.5 h-2.5 rounded-full border border-zinc-950 bg-white block shrink-0"></span>
-            <span>WANTED REQ</span>
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-300">
+            <span className="w-2.5 h-2.5 rounded-full border border-white bg-white block shrink-0"></span>
+            <span>WANTED REQ (ISO)</span>
           </div>
           
           <button
             onClick={() => setShowColorGuide(true)}
-            className="w-full mt-2 text-[8.5px] font-black uppercase tracking-widest bg-brand-orange hover:bg-brand-orange-hover text-white py-1.5 px-2 transition-colors rounded-none cursor-pointer text-center block border border-transparent"
+            className="w-full mt-2 text-[8.5px] font-black uppercase tracking-widest bg-[#FF4500] hover:bg-[#E03D00] text-white py-1.5 px-2.5 transition-colors rounded-xl cursor-pointer text-center block border border-transparent font-sans"
             id="map_show_categories_legend_btn"
           >
             🎨 Map Colors
@@ -873,29 +873,29 @@ export default function SacramentoMapView({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/75 z-40 flex flex-col p-4 overflow-hidden font-sans"
+              className="absolute inset-0 bg-[#000]/80 backdrop-blur-xs z-40 flex flex-col p-4 overflow-hidden font-sans"
               id="map_category_color_guide_overlay"
             >
-              <div className="bg-white border-2 border-black flex-1 flex flex-col p-4 overflow-hidden max-h-full">
-                <div className="flex items-center justify-between border-b border-zinc-200 pb-2 mb-3 shrink-0">
+              <div className="bg-[#1A1A1B] border border-[#343536] rounded-2xl flex-1 flex flex-col p-4 overflow-hidden max-h-full text-white">
+                <div className="flex items-center justify-between border-b border-[#343536] pb-2 mb-3 shrink-0">
                   <div>
-                    <h4 className="text-[10px] font-black text-black uppercase tracking-widest">Category Colors Index</h4>
+                    <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Category Colors Index</h4>
                     <p className="text-[8.5px] text-zinc-400 font-bold uppercase tracking-wider block mt-0.5">
                       {selectedType === undefined ? 'Touch color to isolate on map' : 'Color map reference'}
                     </p>
                   </div>
                   <button
                     onClick={() => setShowColorGuide(false)}
-                    className="p-1 text-zinc-500 hover:text-black cursor-pointer bg-zinc-50"
+                    className="p-1 px-2 text-zinc-400 hover:text-white cursor-pointer bg-[#0F0F0F] rounded-lg border border-[#343536]"
                     id="close_color_guide_btn"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin scrollbar-thumb-zinc-650">
                   <div>
-                    <h5 className="text-[9px] font-extrabold text-brand-orange uppercase tracking-wider mb-2 font-mono">Gives / Offers Colors</h5>
+                    <h5 className="text-[9px] font-extrabold text-[#FF4500] uppercase tracking-wider mb-2 font-mono">Gives / Offers Colors</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
                       {ITEM_CATEGORIES.map((cat) => {
                         const col = getCategoryColor(cat);
@@ -910,20 +910,20 @@ export default function SacramentoMapView({
                               }
                               setShowColorGuide(false);
                             }}
-                            className={`flex items-center gap-2 py-1 px-1.5 border rounded-none cursor-pointer transition-all ${
-                              isCurrentActive ? 'border-brand-orange bg-orange-50/50' : 'border-transparent hover:border-zinc-200'
+                            className={`flex items-center gap-2 py-1 px-1.5 border rounded-lg cursor-pointer transition-all ${
+                              isCurrentActive ? 'border-[#FF4500] bg-[#FF4500]/10' : 'border-transparent hover:border-zinc-700 hover:bg-zinc-800/40'
                             }`}
                           >
                             <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: col }} />
-                            <span className="truncate uppercase text-[8.5px] font-bold text-zinc-800">{cat}</span>
+                            <span className="truncate uppercase text-[8.5px] font-bold text-zinc-300">{cat}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="border-t border-zinc-150 pt-3">
-                    <h5 className="text-[9px] font-extrabold text-[#78350F] uppercase tracking-wider mb-2 font-mono">Asks / ISO Colors</h5>
+                  <div className="border-t border-[#343536] pt-3">
+                    <h5 className="text-[9px] font-extrabold text-amber-500 uppercase tracking-wider mb-2 font-mono">Asks / ISO Colors</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
                       {ISO_CATEGORIES.map((cat) => {
                         const col = getCategoryColor(cat);
@@ -938,12 +938,12 @@ export default function SacramentoMapView({
                               }
                               setShowColorGuide(false);
                             }}
-                            className={`flex items-center gap-2 py-1 px-1.5 border rounded-none cursor-pointer transition-all ${
-                              isCurrentActive ? 'border-[#78350F] bg-amber-50/35' : 'border-transparent hover:border-zinc-200'
+                            className={`flex items-center gap-2 py-1 px-1.5 border rounded-lg cursor-pointer transition-all ${
+                              isCurrentActive ? 'border-amber-500 bg-amber-500/10' : 'border-transparent hover:border-zinc-700 hover:bg-zinc-800/40'
                             }`}
                           >
                             <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: col }} />
-                            <span className="truncate uppercase text-[8.5px] font-bold text-zinc-800">{cat}</span>
+                            <span className="truncate uppercase text-[8.5px] font-bold text-zinc-300">{cat}</span>
                           </div>
                         );
                       })}
@@ -958,7 +958,7 @@ export default function SacramentoMapView({
                       setLocalCategory('All Categories');
                       setShowColorGuide(false);
                     }}
-                    className="mt-3 w-full bg-black text-white py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                    className="mt-3 w-full bg-[#FF4500] text-white py-2 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-[#E03D00] transition-colors cursor-pointer shrink-0"
                     id="map_clear_colors_filter_btn"
                   >
                     Clear Filter (Show All Map)
@@ -969,14 +969,20 @@ export default function SacramentoMapView({
           )}
         </AnimatePresence>
 
-        {/* Fallback Empty Guide */}
+        {/* Fallback Empty Guide - Beautiful, non-blocking friendly popup overlay */}
         {activeItems.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-50/80 backdrop-blur-xs z-20">
-            <MapPin className="w-8 h-8 text-zinc-300 animate-bounce mb-2" />
-            <h4 className="text-[10px] font-black text-black uppercase tracking-widest">No Active Pins Coordinates</h4>
-            <p className="text-[9.5px] text-zinc-400 font-bold uppercase tracking-wider max-w-xs mt-1 leading-normal">
-              Adjust filters or create search entries to pinpoint pins on OSM!
-            </p>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#1A1A1B]/95 backdrop-blur-md border border-[#FF4500]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
+            <div className="flex items-start space-x-3 text-left">
+              <div className="p-2 bg-[#FF4500]/10 text-[#FF4500] rounded-xl shrink-0 mt-0.5">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Quiet Neighborhood Sector</h4>
+                <p className="text-[10px] text-zinc-400 font-semibold leading-relaxed">
+                  No active listings or ISO request pins match your selected filters. Create a new post or modify your filtering to light up the map!
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
