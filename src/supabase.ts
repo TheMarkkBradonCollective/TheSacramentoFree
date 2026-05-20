@@ -113,6 +113,18 @@ export function getSupabaseConfigurationState() {
   };
 }
 
+// Intercepts connection/table errors and updates active state dynamically
+export function handleSupabaseError(err: any, tableName: string) {
+  const m = String(err?.message || err || '').toLowerCase();
+  if (m.includes('failed to fetch') || m.includes('fetch') || m.includes('networkerror') || m.includes('unreachable') || m.includes('load failed')) {
+    setSupabaseConfigurationState(false, 'Supabase connection offline (Failed to Fetch). A browser privacy extension or firewall might be blocking requests. Full offline local-fallback is actively managing your session.');
+  } else if (err?.code === '42P01') {
+    setSupabaseConfigurationState(false, `Table "${tableName}" is missing in Supabase. Run SQL Setup Script in your console to build it.`);
+  } else {
+    setSupabaseConfigurationState(false, err?.message || 'Database transaction warning.');
+  }
+}
+
 /**
  * --- PROFILES ---
  */
@@ -125,17 +137,15 @@ export async function getSupabaseProfile(uid: string): Promise<UserProfile | nul
       .maybeSingle();
 
     if (error) {
-      if (error.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "users" is missing in Supabase. Run SQL setup to create it.');
-        return null;
-      }
-      throw error;
+      handleSupabaseError(error, 'users');
+      return null;
     }
     
     setSupabaseConfigurationState(true);
     return data as UserProfile | null;
   } catch (err: any) {
     console.warn('Supabase profile fetch failed:', err);
+    handleSupabaseError(err, 'users');
     return null;
   }
 }
@@ -157,17 +167,15 @@ export async function upsertSupabaseProfile(profile: UserProfile): Promise<boole
       .upsert(payload, { onConflict: 'uid' });
 
     if (error) {
-      if (error.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "users" is missing in Supabase. Run SQL setup to create it.');
-        return false;
-      }
-      throw error;
+      handleSupabaseError(error, 'users');
+      return false;
     }
 
     setSupabaseConfigurationState(true);
     return true;
   } catch (err: any) {
     console.error('Supabase profile upsert error:', err);
+    handleSupabaseError(err, 'users');
     return false;
   }
 }
@@ -183,17 +191,15 @@ export async function getSupabaseItems(): Promise<ItemPost[]> {
       .order('createdAt', { ascending: false });
 
     if (error) {
-      if (error.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "items" is missing in Supabase. Run SQL setup to create it.');
-        return [];
-      }
-      throw error;
+      handleSupabaseError(error, 'items');
+      return [];
     }
 
     setSupabaseConfigurationState(true);
     return (data || []) as ItemPost[];
   } catch (err: any) {
     console.warn('Supabase items fetch failed:', err);
+    handleSupabaseError(err, 'items');
     return [];
   }
 }
@@ -220,17 +226,15 @@ export async function createSupabaseItem(item: ItemPost): Promise<boolean> {
       .insert(payload);
 
     if (error) {
-      if (error.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "items" is missing in Supabase. Run SQL setup to create it.');
-        return false;
-      }
-      throw error;
+      handleSupabaseError(error, 'items');
+      return false;
     }
 
     setSupabaseConfigurationState(true);
     return true;
   } catch (err: any) {
     console.error('Supabase item create failed:', err);
+    handleSupabaseError(err, 'items');
     return false;
   }
 }
@@ -243,17 +247,15 @@ export async function updateSupabaseItemStatus(itemId: string, status: string): 
       .eq('id', itemId);
 
     if (error) {
-      if (error.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "items" is missing in Supabase. Run SQL setup to create it.');
-        return false;
-      }
-      throw error;
+      handleSupabaseError(error, 'items');
+      return false;
     }
 
     setSupabaseConfigurationState(true);
     return true;
   } catch (err: any) {
     console.error('Supabase status update failed:', err);
+    handleSupabaseError(err, 'items');
     return false;
   }
 }
@@ -266,17 +268,15 @@ export async function deleteSupabaseItem(itemId: string): Promise<boolean> {
       .eq('id', itemId);
 
     if (error) {
-      if (error.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "items" is missing in Supabase. Run SQL setup to create it.');
-        return false;
-      }
-      throw error;
+      handleSupabaseError(error, 'items');
+      return false;
     }
 
     setSupabaseConfigurationState(true);
     return true;
   } catch (err: any) {
     console.error('Supabase item delete failed:', err);
+    handleSupabaseError(err, 'items');
     return false;
   }
 }
@@ -293,11 +293,8 @@ export async function getSupabaseChats(userId: string): Promise<Chat[]> {
       .select('*');
 
     if (error) {
-      if (error.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "chats" is missing in Supabase. Run SQL setup to create it.');
-        return [];
-      }
-      throw error;
+      handleSupabaseError(error, 'chats');
+      return [];
     }
 
     setSupabaseConfigurationState(true);
@@ -312,6 +309,7 @@ export async function getSupabaseChats(userId: string): Promise<Chat[]> {
     return userChats;
   } catch (err: any) {
     console.warn('Supabase chats fetch failed:', err);
+    handleSupabaseError(err, 'chats');
     return [];
   }
 }
@@ -326,11 +324,8 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
       .maybeSingle();
 
     if (checkError && checkError.code !== 'PGRST116') {
-      if (checkError.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "chats" is missing in Supabase. Run SQL setup to create it.');
-        return false;
-      }
-      throw checkError;
+      handleSupabaseError(checkError, 'chats');
+      return false;
     }
 
     if (existingChat) {
@@ -344,7 +339,10 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
         })
         .eq('id', chatId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        handleSupabaseError(updateError, 'chats');
+        throw updateError;
+      }
     } else {
       // Create new chat row
       const payload = {
@@ -363,13 +361,17 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
         .from('chats')
         .insert(payload);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        handleSupabaseError(insertError, 'chats');
+        throw insertError;
+      }
     }
 
     setSupabaseConfigurationState(true);
     return true;
   } catch (err: any) {
     console.error('Supabase write chat failed:', err);
+    handleSupabaseError(err, 'chats');
     return false;
   }
 }
@@ -386,17 +388,15 @@ export async function getSupabaseMessages(chatId: string): Promise<Message[]> {
       .order('createdAt', { ascending: true });
 
     if (error) {
-      if (error.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "messages" is missing in Supabase. Run SQL setup to create it.');
-        return [];
-      }
-      throw error;
+      handleSupabaseError(error, 'messages');
+      return [];
     }
 
     setSupabaseConfigurationState(true);
     return (data || []) as Message[];
   } catch (err: any) {
     console.warn('Supabase messages query failed:', err);
+    handleSupabaseError(err, 'messages');
     return [];
   }
 }
@@ -417,11 +417,8 @@ export async function createSupabaseMessage(chatId: string, text: string, sender
       });
 
     if (msgError) {
-      if (msgError.code === '42P01') {
-        setSupabaseConfigurationState(false, 'Table "messages" is missing in Supabase. Run SQL setup to create it.');
-        return false;
-      }
-      throw msgError;
+      handleSupabaseError(msgError, 'messages');
+      return false;
     }
 
     // 2. Update chat header
@@ -434,12 +431,16 @@ export async function createSupabaseMessage(chatId: string, text: string, sender
       })
       .eq('id', chatId);
 
-    if (chatUpdateError) throw chatUpdateError;
+    if (chatUpdateError) {
+      handleSupabaseError(chatUpdateError, 'chats');
+      throw chatUpdateError;
+    }
 
     setSupabaseConfigurationState(true);
     return true;
   } catch (err: any) {
     console.error('Supabase write message failed:', err);
+    handleSupabaseError(err, 'messages');
     return false;
   }
 }

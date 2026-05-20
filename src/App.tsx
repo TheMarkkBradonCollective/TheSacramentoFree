@@ -7,7 +7,6 @@ import PostItemModal from './components/PostItemModal';
 import ItemGrid from './components/ItemGrid';
 import ChatSystem from './components/ChatSystem';
 import UserProfileView from './components/UserProfileView';
-import SupabaseIndicator from './components/SupabaseIndicator';
 import { 
   supabase, 
   getSupabaseProfile, 
@@ -17,92 +16,7 @@ import {
 } from './supabase';
 import { Gift, MapPin, MessageSquare, Heart, Sparkles } from 'lucide-react';
 
-const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [
-  {
-    id: "offline_item_1",
-    title: "Excess organic lemons from backyard tree",
-    description: "Harvested yesterday. Absolutely organic, very juicy and yellow. Perfect for making fresh lemonade, salad dressing, or zesty lemon baking! Safe contactless pickup on our front porch in Land Park. Feel free to take a bunch!",
-    type: "giveaway",
-    category: "Garden & Outdoors",
-    userId: "landpark_margo",
-    userDisplayName: "Margo Sutter",
-    userPhotoURL: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Margo",
-    neighborhood: "Land Park",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "offline_item_2",
-    title: "Solid Pine dining room table",
-    description: "Sturdy solid pine wood table. Easily fits up to 6 chairs. It has some small cosmetic surface scratches from past crafts, but structural condition is perfect. Needs two people to lift and carry from a first-floor apartment. No chairs included.",
-    type: "giveaway",
-    category: "Furniture",
-    userId: "midtown_alex",
-    userDisplayName: "Alex Rivera",
-    userPhotoURL: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Alex",
-    neighborhood: "Midtown",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "offline_item_3",
-    title: "Double Baby Stroller",
-    description: "Double baby stroller system in dark gray fabric. Front child bar, large storage basket, and UV sun canopies. Pre-cleaned and fabric covers washed. Free for any young family needing a stroller upgrade!",
-    type: "giveaway",
-    category: "Baby & Kids",
-    userId: "eastsac_sarah",
-    userDisplayName: "Sarah Nguyen",
-    userPhotoURL: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Sarah",
-    neighborhood: "East Sacramento",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "offline_item_4",
-    title: "In-Search-Of: Slow Cooker / Crockpot",
-    description: "Hi neighbors! Our family slow cooker developed a hairline fracture along the ceramic pot. Does anyone have an extra digital slow cooker or standard crockpot sitting unused in their garage or cabinets? Happy to pick up anywhere in West or East Sac! Thanks!",
-    type: "looking",
-    category: "Kitchen & Dining",
-    userId: "curtispark_david",
-    userDisplayName: "David Bowman",
-    userPhotoURL: "https://api.dicebear.com/7.x/pixel-art/svg?seed=David",
-    neighborhood: "Curtis Park",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "offline_item_5",
-    title: "Assorted hardback mystery novels",
-    description: "A stack of 12 thriller and detective mystery novels. Includes authors like Stephen King, John Grisham, and Michael Connelly. Feel free to browse or take the whole pile. Great vacation reads! Porch pickup near Fremont Park.",
-    type: "giveaway",
-    category: "Books & Education",
-    userId: "midtown_emily",
-    userDisplayName: "Emily Parker",
-    userPhotoURL: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Emily",
-    neighborhood: "Midtown",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "offline_item_6",
-    title: "Bag of premium dry dog food (unopened)",
-    description: "15-pound bag of premium salmon and sweet potato dry dog food. Sealed and freshly bought, expires September next year. Our young pup was placed on a specialized diet, so we have no use for this beautiful nutrient bag. Hope it can feed a happy neighbor canine!",
-    type: "giveaway",
-    category: "Pet Supplies",
-    userId: "natomas_chris",
-    userDisplayName: "Chris Evans",
-    userPhotoURL: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Chris",
-    neighborhood: "Natomas",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 
 export default function App() {
   const [sessionUser, setSessionUser] = useState<any>(null);
@@ -342,7 +256,12 @@ export default function App() {
       }
 
       setIsAuthLoading(false);
-      setErrorMsg(err.message || 'Signature detour error.');
+      const friendlyErr = String(err?.message || err || '');
+      if (friendlyErr.toLowerCase().includes('failed to fetch') || friendlyErr.toLowerCase().includes('fetch')) {
+        setErrorMsg('Connection offline (Failed to Fetch). The cloud database is unreachable. Check your adblocker or select Guest Access to continue offline.');
+      } else {
+        setErrorMsg(friendlyErr || 'Signature detour error.');
+      }
       throw err;
     }
   };
@@ -581,9 +500,6 @@ export default function App() {
               {/* Main Content Workspace Layout */}
               <main id="dashboard_main" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-opacity duration-200 space-y-6">
                 
-                {/* Supabase PostgreSQL live alignment notice */}
-                <SupabaseIndicator />
-
                 {activeTab === 'feed' && (
                   <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">

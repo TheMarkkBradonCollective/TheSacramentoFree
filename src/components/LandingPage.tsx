@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Gift, 
   Heart, 
@@ -21,6 +21,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../types';
+import { getSupabaseItems } from '../supabase';
 
 interface LandingPageProps {
   onEmailSignIn: (email: string, password: string) => Promise<boolean>;
@@ -29,59 +30,6 @@ interface LandingPageProps {
   errorMsg?: string;
   isAuthLoading?: boolean;
 }
-
-const SAMPLE_ITEMS = [
-  {
-    id: 's1',
-    title: 'Meyer Lemon Garden Cuttings',
-    category: 'Garden & Fresh Food',
-    type: 'giveaway',
-    neighborhood: 'East Sacramento',
-    description: 'Pruned this morning from our mature organic sweet lemon tree. Great for tea or cooking! Come pick up on front porch steps.',
-    user: 'Amelia G.',
-    badge: 'Organic Harvest'
-  },
-  {
-    id: 's2',
-    title: 'Heavy Solid Wood Bookcase',
-    category: 'Furniture',
-    type: 'giveaway',
-    neighborhood: 'Land Park',
-    description: 'Sturdy standard pine-wood bookshelf. A few minor cosmetic surface scuffs but holds heavy books easily. Pick up must be contactless.',
-    user: 'Marcus R.',
-    badge: 'Sturdy Pine'
-  },
-  {
-    id: 's3',
-    title: 'ISO: Stroller in working condition',
-    category: 'Kids & Baby',
-    type: 'looking',
-    neighborhood: 'Midtown',
-    description: 'Looking for a clean, compact toddler stroller for morning walks. Will happily pickup anywhere in Sacramento!',
-    user: 'Chloe T.',
-    badge: 'In Search Of'
-  },
-  {
-    id: 's4',
-    title: 'Vitamix 5200 Blender & Pitcher',
-    category: 'Kitchenware',
-    type: 'giveaway',
-    neighborhood: 'Natomas',
-    description: 'Extremely strong commercial-grade motor! Runs like absolute powerhouse. Upgraded to a compact model and parting with this gem.',
-    user: 'David K.',
-    badge: 'Premium Gift'
-  },
-  {
-    id: 's5',
-    title: 'ISO: Pastels or Colored Paint Cans',
-    category: 'Home & DIY',
-    type: 'looking',
-    neighborhood: 'Pocket',
-    description: 'Any leftover indoor paints in green, blue, yellow or pastel shades for a backyard fence art project. Small quantities completely okay!',
-    user: 'Elena S.',
-    badge: 'Creative Reuse'
-  }
-];
 
 const NEIGHBORHOODS_METADATA = [
   {
@@ -130,8 +78,35 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
   
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [liveItems, setLiveItems] = useState<any[]>([]);
 
-  const filteredItems = SAMPLE_ITEMS.filter(item => {
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLive = async () => {
+      try {
+        const result = await getSupabaseItems();
+        if (isMounted) {
+          const mapped = result.map(item => ({
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            type: item.type,
+            neighborhood: item.neighborhood,
+            description: item.description,
+            user: item.userDisplayName || 'Local Neighbor',
+            badge: item.category || 'Active Member'
+          }));
+          setLiveItems(mapped);
+        }
+      } catch (err) {
+        console.warn('Failed to load live landing page items:', err);
+      }
+    };
+    fetchLive();
+    return () => { isMounted = false; };
+  }, []);
+
+  const filteredItems = liveItems.filter(item => {
     if (activeItemTypeTab === 'all') return true;
     return item.type === activeItemTypeTab;
   });
@@ -268,16 +243,69 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
 
           <div className="p-6 space-y-4">
             {localError && (
-              <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-none border border-red-200 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-650 mt-0.5" />
-                <span>{localError}</span>
+              <div className="p-4 bg-amber-50 text-amber-900 text-xs font-bold rounded-none border border-amber-300 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-700 mt-0.5" />
+                  <div>
+                    <span className="font-extrabold uppercase tracking-wide block">DATABASE OFFLINE / BARRIER</span>
+                    <span className="font-medium text-amber-800 mt-1 block leading-relaxed">
+                      {(localError.toLowerCase().includes('failed to fetch') || localError.toLowerCase().includes('fetch'))
+                        ? 'The cloud server couldn\'t be reached. This happens when browser privacy protection filters network queries, or if the public Supabase sandbox is asleep.'
+                        : localError}
+                    </span>
+                  </div>
+                </div>
+                {(localError.toLowerCase().includes('failed to fetch') || localError.toLowerCase().includes('fetch')) && (
+                  <div className="pt-2.5 border-t border-amber-200/60 flex flex-col gap-2">
+                    <p className="text-[9px] uppercase font-black text-amber-700 font-mono tracking-widest leading-none">
+                      ★ FALLBACK ACTIVATED: CONTINUE USING OFFLINE SANDBOX!
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onGuestLogin}
+                      className="w-full text-center py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold uppercase tracking-widest text-[9px] transition-colors shadow-sm cursor-pointer select-none"
+                    >
+                      Bypass & Enter as Sacramento Guest
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthTab('signup');
+                        setLocalError('Type in your desired details! The sandbox will register your account locally in your browser storage automatically.');
+                      }}
+                      className="w-full text-center py-2.5 bg-white hover:bg-amber-100 text-amber-900 font-extrabold uppercase tracking-widest text-[9px] border border-amber-300 transition-colors cursor-pointer select-none"
+                    >
+                      Create Local Profile Offline
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             
             {errorMsg && !localError && (
-              <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-none border border-red-200 flex items-start gap-2">
-                <Info className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
+              <div className="p-4 bg-amber-50 text-amber-900 text-xs font-bold rounded-none border border-amber-300 space-y-3">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 shrink-0 text-amber-750 mt-0.5" />
+                  <div>
+                    <span className="font-extrabold uppercase tracking-wide block">COOPERATIVE DISPATCH MESSAGE</span>
+                    <span className="font-medium text-amber-800 mt-1 block leading-relaxed">
+                      {(errorMsg.toLowerCase().includes('failed to fetch') || errorMsg.toLowerCase().includes('fetch'))
+                        ? 'System is current routing via offline-secure mode. Database state is linked to LocalStorage successfully.'
+                        : errorMsg}
+                    </span>
+                  </div>
+                </div>
+                {(errorMsg.toLowerCase().includes('failed to fetch') || errorMsg.toLowerCase().includes('fetch')) && (
+                  <div className="pt-1.5 border-t border-amber-200/60">
+                    <button
+                      type="button"
+                      onClick={onGuestLogin}
+                      className="w-full text-center py-2 bg-amber-600 hover:bg-amber-700 text-white font-extrabold uppercase tracking-widest text-[9px] transition-colors cursor-pointer"
+                    >
+                      Instant Guest Entrance
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -447,43 +475,50 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
 
         {/* Card slider / Grid list - Clean grid style */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="preview_grid">
-          {filteredItems.map((item) => (
-            <div 
-              key={item.id} 
-              className="bg-white p-6 rounded-none border border-zinc-200 hover:border-black shadow-xs hover:shadow-md transition-all flex flex-col justify-between h-56 relative group"
-              id={`mock_item_${item.id}`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className={`px-2.5 py-1 text-[8.5px] font-black uppercase tracking-widest border ${
-                    item.type === 'giveaway' 
-                      ? 'bg-emerald-500/10 text-emerald-800 border-emerald-500/20' 
-                      : 'bg-indigo-500/10 text-indigo-800 border-indigo-500/20'
-                  }`}>
-                    {item.type === 'giveaway' ? 'Gifting Offer' : 'Wanted Request'}
-                  </span>
-                  <span className="text-[9px] font-black text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 flex items-center space-x-1 uppercase tracking-wider">
-                    <MapPin className="w-2.5 h-2.5" />
-                    <span>{item.neighborhood}</span>
-                  </span>
+          {filteredItems.length === 0 ? (
+            <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-16 bg-white border border-dashed border-zinc-200">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#276EF1] block mb-1">LEDGER IS AWAITING POSTS</span>
+              <p className="text-xs font-semibold text-zinc-500">No active dispatches matched standard filters. Join the community to establish yours!</p>
+            </div>
+          ) : (
+            filteredItems.map((item) => (
+              <div 
+                key={item.id} 
+                className="bg-white p-6 rounded-none border border-zinc-200 hover:border-black shadow-xs hover:shadow-md transition-all flex flex-col justify-between h-56 relative group"
+                id={`mock_item_${item.id}`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className={`px-2.5 py-1 text-[8.5px] font-black uppercase tracking-widest border ${
+                      item.type === 'giveaway' 
+                        ? 'bg-emerald-500/10 text-emerald-800 border-emerald-500/20' 
+                        : 'bg-indigo-500/10 text-indigo-800 border-indigo-500/20'
+                    }`}>
+                      {item.type === 'giveaway' ? 'Gifting Offer' : 'Wanted Request'}
+                    </span>
+                    <span className="text-[9px] font-black text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 flex items-center space-x-1 uppercase tracking-wider">
+                      <MapPin className="w-2.5 h-2.5" />
+                      <span>{item.neighborhood}</span>
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm font-black text-black leading-tight group-hover:text-[#276EF1] transition-colors uppercase tracking-tight">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-zinc-500 mt-2 leading-relaxed line-clamp-3">
+                    {item.description}
+                  </p>
                 </div>
 
-                <h3 className="text-sm font-black text-black leading-tight group-hover:text-[#276EF1] transition-colors uppercase tracking-tight">
-                  {item.title}
-                </h3>
-                <p className="text-xs text-zinc-500 mt-2 leading-relaxed line-clamp-3">
-                  {item.description}
-                </p>
+                <div className="border-t border-zinc-100 pt-3.5 flex items-center justify-between mt-auto">
+                  <span className="text-[9.5px] font-mono font-medium text-zinc-400">Ledger by {item.user}</span>
+                  <span className="text-[9px] font-black text-black uppercase tracking-widest bg-zinc-100 px-1.5 py-0.5 border border-zinc-200">
+                    {item.badge}
+                  </span>
+                </div>
               </div>
-
-              <div className="border-t border-zinc-100 pt-3.5 flex items-center justify-between mt-auto">
-                <span className="text-[9.5px] font-mono font-medium text-zinc-400">Ledger by {item.user}</span>
-                <span className="text-[9px] font-black text-black uppercase tracking-widest bg-zinc-100 px-1.5 py-0.5 border border-zinc-200">
-                  {item.badge}
-                </span>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         <div className="text-center pt-2">
