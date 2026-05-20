@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#18181b" />
+      <stop offset="100%" stop-color="#09090b" />
+    </radialGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+    <linearGradient id="heartGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" rx="112" fill="url(#bgGrad)" />
+  
+  <!-- Outer circle decorative pattern -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#27272a" stroke-width="6" stroke-dasharray="16 12" />
+  
+  <!-- Group holding Sacramento oak leaf & heart merge -->
+  <g transform="translate(128, 110)">
+    <!-- Heart outline -->
+    <path d="M 128,220 C 128,220 10,120 10,64 C 10,14 50,0 90,0 C 114,0 128,18 128,18 C 128,18 142,0 166,0 C 206,0 246,14 246,64 C 246,120 128,220 128,220 Z" fill="url(#heartGrad)" opacity="0.95" />
+    
+    <!-- Sacramento Oak Leaf overlap symbol -->
+    <path d="M 128,30 
+             C 108,80 88,90 58,95
+             C 78,115 68,140 38,150
+             C 68,165 78,190 128,220
+             C 178,190 188,165 218,150
+             C 188,140 178,115 198,95
+             C 168,90 148,80 128,30 Z" 
+          fill="url(#leafGrad)" />
+          
+    <!-- Inner leaf stem line -->
+    <path d="M 128,45 L 128,210" stroke="#fef08a" stroke-width="4" stroke-linecap="round" opacity="0.75" />
+    <path d="M 128,90 Q 100,105 78,100" stroke="#fef08a" stroke-width="3" stroke-linecap="round" opacity="0.6" fill="none" />
+    <path d="M 128,120 Q 160,135 182,130" stroke="#fef08a" stroke-width="3" stroke-linecap="round" opacity="0.6" fill="none" />
+    <path d="M 128,150 Q 100,165 82,160" stroke="#fef08a" stroke-width="3" stroke-linecap="round" opacity="0.6" fill="none" />
+  </g>
+</svg>

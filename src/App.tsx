@@ -39,6 +39,79 @@ export default function App() {
   // Responsive device classification configuration
   const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
 
+  // PWA states and install trigger handlers
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
+
+  useEffect(() => {
+    // Check if running in standalone mode (already installed & launched from screen icon)
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches 
+      || (window.navigator as any).standalone === true;
+    
+    if (isStandaloneMode) {
+      setIsAlreadyInstalled(true);
+      return;
+    }
+
+    // Check device type
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIosDevice = /ipad|iphone|ipod/.test(userAgent) && !(window as any).MSStream;
+    setIsIOS(isIosDevice);
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const isDismissed = localStorage.getItem('pwa_banner_dismissed_v1');
+      if (!isDismissed) {
+        setTimeout(() => {
+          setShowInstallBanner(true);
+        }, 3000);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const handleAppInstalled = () => {
+      setIsAlreadyInstalled(true);
+      setShowInstallBanner(false);
+      setDeferredPrompt(null);
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    if (isIosDevice && !isStandaloneMode) {
+      const isDismissed = localStorage.getItem('pwa_banner_dismissed_v1');
+      if (!isDismissed) {
+        setTimeout(() => {
+          setShowInstallBanner(true);
+        }, 5000);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsAlreadyInstalled(true);
+      }
+      setDeferredPrompt(null);
+      setShowInstallBanner(false);
+    }
+  };
+
+  const handleDismissPrompt = () => {
+    setShowInstallBanner(false);
+    localStorage.setItem('pwa_banner_dismissed_v1', 'true');
+  };
+
   useEffect(() => {
     const handleResize = () => {
       const w = window.innerWidth;
@@ -599,6 +672,63 @@ export default function App() {
             </>
           )}
         </>
+      )}
+
+      {/* Floating PWA Install Helper Banner */}
+      {showInstallBanner && !isAlreadyInstalled && (
+        <div 
+          id="pwa_floating_install_banner" 
+          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-6 sm:right-6 sm:max-w-xs md:max-w-md z-50 bg-[#0B0C0D] border border-zinc-800 border-l-[4px] border-l-[#FF4500] shadow-2xl p-4 rounded-xl transition-all duration-300 text-white font-sans animate-fade-in"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start space-x-3">
+              <div className="bg-[#FF4500] p-2 rounded-lg shrink-0 mt-0.5">
+                <Gift className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-[#FF4500]">Download Mobile App</h4>
+                <p className="text-xs font-bold text-white mt-1">Sacramento Buy Nothing</p>
+                <div className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed font-semibold">
+                  {isIOS ? (
+                    <span>
+                      Tap Safari's <strong className="text-white font-bold">Share</strong> button and choose <strong className="text-white font-bold">Add to Home Screen</strong> to install.
+                    </span>
+                  ) : (
+                    <span>Add to your device home screen for fast loading, borderless viewing, and offline sharing!</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={handleDismissPrompt}
+              className="text-zinc-500 hover:text-white p-1 hover:bg-[#1A1A1B] rounded-lg transition-colors cursor-pointer shrink-0"
+              title="Dismiss Installation Banner"
+              id="pwa_banner_dismiss_btn"
+            >
+              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {!isIOS && (
+            <div className="mt-3 flex items-center justify-end space-x-3 pt-2.5 border-t border-[#1A1A1B]">
+              <button
+                onClick={handleDismissPrompt}
+                className="px-3.5 py-1.5 text-[11px] font-extrabold text-zinc-400 hover:text-white rounded-lg transition-all cursor-pointer"
+              >
+                LATER
+              </button>
+              <button
+                onClick={handleInstallApp}
+                className="px-4 py-2 bg-[#FF4500] hover:bg-[#E03D00] text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-md transition-all flex items-center space-x-1.5 cursor-pointer"
+                id="pwa_banner_install_btn"
+              >
+                <span>INSTALL NOW</span>
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

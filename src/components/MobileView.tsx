@@ -36,7 +36,7 @@ export default function MobileView({
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
 
   return (
-    <div id="mobile_device_workspace" className="flex flex-col h-screen overflow-hidden bg-[#0B0C0D] font-sans text-white relative">
+    <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-[#0B0C0D] font-sans text-white relative">
       
       {/* Floating Header Banner */}
       <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between bg-[#1A1A1B] text-white px-4 py-3 shadow-lg border border-[#343536] rounded-2xl" id="mobile_floating_header">
