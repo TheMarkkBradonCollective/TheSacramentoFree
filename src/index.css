@@ -8,41 +8,37 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --color-brand-orange: #FF4500;
   --color-brand-orange-hover: #E03D00;
-  --color-brand-orange-light: #FFF0EB;
-  --color-brand-sage: #7A9A7F;
-  --color-brand-sage-hover: #637F67;
-  --color-brand-sage-light: #F2F6F3;
-  --color-brand-sage-dark: #4A5F4D;
+  --color-brand-orange-light: #FFECE6;
+  --color-brand-sage: #0B1416;
+  --color-brand-sage-hover: #1A1A1B;
+  --color-brand-sage-light: #F6F7F8;
+  --color-brand-sage-dark: #000000;
 }
 
 @layer utilities {
-  /* Neutral clean canvas background */
+  /* Reddit neutral/dark background */
   .mesh-bg {
-    background-color: #F8F9F8;
+    background-color: #030303;
     background-image: none !important;
   }
   
-  /* Solid high contrast containers */
+  /* Solid high contrast containers styled with black/orange */
   .glass {
-    background: #FFFFFF;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    border: 1px solid #E2E2E2;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    background: #1A1A1B;
+    border: 1px solid #343536;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   }
   
   .glass-card {
-    background: #FFFFFF;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    border: 1px solid #E2E2E2;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    background: #1A1A1B;
+    border: 1px solid #343536;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
 
   .search-glass {
-    background: #FFFFFF;
-    border: 1px solid #000000;
+    background: #1A1A1B;
+    border: 1px solid #FF4500;
   }
 }
 

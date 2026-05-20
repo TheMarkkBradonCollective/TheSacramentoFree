@@ -991,25 +991,25 @@ export default function SacramentoMapView({
             exit={{ opacity: 0, x: slideDirection === 'right' ? -80 : 80 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
             id="map_item_detail_card"
-            className="border-2 border-black bg-[#FFFDF9] p-4 relative font-sans"
+            className="border border-[#343536] bg-[#1A1A1B] p-4 relative font-sans text-white rounded-2xl shadow-xl"
           >
             {/* Sliding Pagination Controls */}
-            <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 animate-fade-in">
+            <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-[#0F0F0F] border border-[#343536] px-2 py-0.5 rounded-lg animate-fade-in">
               <button
                 onClick={handlePrevPost}
                 disabled={activeItems.length <= 1}
-                className="text-zinc-500 hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                className="text-zinc-400 hover:text-white disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                 title="Slide Left"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-[10px] font-bold font-mono text-zinc-650 min-w-[28px] text-center">
+              <span className="text-[10px] font-bold font-mono text-zinc-400 min-w-[28px] text-center">
                 {currentIndex + 1}/{activeItems.length}
               </span>
               <button
                 onClick={handleNextPost}
                 disabled={activeItems.length <= 1}
-                className="text-zinc-500 hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                className="text-zinc-400 hover:text-white disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                 title="Slide Right"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1020,16 +1020,16 @@ export default function SacramentoMapView({
             <button
               id="close_map_card_btn"
               onClick={() => setSelectedPost(null)}
-              className="absolute top-3 right-3 text-zinc-400 hover:text-black transition-colors cursor-pointer bg-zinc-50 p-1"
+              className="absolute top-3 right-3 text-zinc-400 hover:text-white transition-colors cursor-pointer bg-[#0F0F0F] border border-[#343536] p-1 rounded-lg"
               title="Close panel"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 text-left">
               {/* Cargo Image preview */}
               {selectedPost.imageUrl ? (
-                <div className="w-18 h-18 sm:w-24 sm:h-24 border border-zinc-200 shrink-0 bg-white">
+                <div className="w-18 h-18 sm:w-24 sm:h-24 border border-[#343536] shrink-0 bg-[#0B0C0D] rounded-xl overflow-hidden">
                   <img
                     src={selectedPost.imageUrl}
                     alt={selectedPost.title}
@@ -1038,37 +1038,37 @@ export default function SacramentoMapView({
                   />
                 </div>
               ) : (
-                <div className="w-18 h-18 sm:w-24 sm:h-24 bg-zinc-100 border border-zinc-200 shrink-0 flex flex-col items-center justify-center text-center">
-                  <Tag className="w-5 h-5 text-zinc-400" />
-                  <span className="text-[6.5px] text-zinc-400 font-bold tracking-widest mt-1 block">NO CARGO</span>
+                <div className="w-18 h-18 sm:w-24 sm:h-24 bg-[#0B0C0D] border border-[#343536] shrink-0 flex flex-col items-center justify-center text-center rounded-xl">
+                  <Tag className="w-5 h-5 text-zinc-500" />
+                  <span className="text-[6.5px] text-zinc-500 font-bold tracking-widest mt-1 block">NO IMAGE</span>
                 </div>
               )}
 
               <div className="flex-1 min-w-0 flex flex-col justify-between font-sans">
                 <div>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`inline-block px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider ${
-                      selectedPost.type === 'giveaway' ? 'bg-black text-white' : 'bg-white border border-black text-black'
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider ${
+                      selectedPost.type === 'giveaway' ? 'bg-[#FF4500] text-white font-mono' : 'bg-[#0F0F0F] border border-[#343536] text-zinc-300 font-mono'
                     }`}>
-                      {selectedPost.type === 'giveaway' ? 'GIVEAWAY' : 'WANTED'}
+                      {selectedPost.type === 'giveaway' ? '🎁 GIFT OFFER' : '🔍 ASK'}
                     </span>
                     <span className="text-[8.5px] font-black font-mono uppercase tracking-wider" style={{ color: getCategoryColor(selectedPost.category) }}>
                       {selectedPost.category}
                     </span>
                   </div>
 
-                  <h4 className="text-xs sm:text-sm font-black text-black uppercase tracking-tight mt-1 truncate">
+                  <h4 className="text-xs sm:text-sm font-bold text-white font-display mt-2 truncate">
                     {selectedPost.title}
                   </h4>
 
-                  <p className="text-[10.5px] text-zinc-550 mt-1 line-clamp-2 leading-tight break-words font-semibold">
+                  <p className="text-[10.5px] text-zinc-400 mt-1 line-clamp-2 leading-tight break-words font-medium">
                     {selectedPost.description}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-zinc-150 flex-wrap gap-2.5">
-                  <div className="flex items-center space-x-1 text-[10px] font-extrabold text-black uppercase">
-                    <MapPin className="w-3.5 h-3.5 text-brand-orange shrink-0" />
+                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[#343536] flex-wrap gap-2.5">
+                  <div className="flex items-center space-x-1 text-[10px] font-bold text-white uppercase">
+                    <MapPin className="w-3.5 h-3.5 text-[#FF4500] shrink-0" />
                     <span>{selectedPost.neighborhood}</span>
                   </div>
 
@@ -1076,19 +1076,19 @@ export default function SacramentoMapView({
                     <button
                       id="map_dispatch_btn"
                       onClick={() => onInitiateChat(selectedPost.userId, selectedPost.userDisplayName, selectedPost.userPhotoURL, selectedPost)}
-                      className="px-3 py-1.5 bg-brand-orange hover:bg-brand-orange-hover text-white text-[9.5px] font-black uppercase tracking-wider rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
+                      className="px-3 py-1.5 bg-[#FF4500] hover:bg-[#E03D00] text-white text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
                     >
                       <MessageSquare className="w-3 h-3" />
-                      <span>Dispatch</span>
+                      <span>Say Hello</span>
                     </button>
                     {onItemDetail && (
                       <button
                         id="map_view_card_btn"
                         onClick={() => onItemDetail(selectedPost)}
-                        className="px-3 py-1.5 bg-black hover:bg-zinc-900 text-white text-[9.5px] font-black uppercase tracking-wider rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none"
+                        className="px-3 py-1.5 bg-[#343536] hover:bg-[#444546] text-white text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-zinc-700/50"
                       >
                         <Eye className="w-3 h-3" />
-                        <span>Inspect</span>
+                        <span>View Details</span>
                       </button>
                     )}
                   </div>

@@ -8,6 +8,7 @@ export interface UserProfile {
   email: string;
   neighborhood: string;
   bio?: string;
+  role?: 'user' | 'moderator' | 'admin' | 'director';
   createdAt: any;
 }
 

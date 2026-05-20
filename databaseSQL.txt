@@ -1,9 +1,9 @@
 -- =========================================================
--- SACRAMENTO BUY_NOTHING SUPABASE SCHEMAS
+-- SACRAMENTO BUY_NOTHING COZY REGISTRY SCHEMAS
 -- Copy and paste this script into your Supabase SQL Editor
 -- =========================================================
 
--- 1. Create Users profiles
+-- 1. Create Users profiles with neighborly coordination roles
 CREATE TABLE IF NOT EXISTS public.users (
   uid TEXT PRIMARY KEY,
   "displayName" TEXT NOT NULL,
@@ -11,8 +11,25 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT NOT NULL,
   neighborhood TEXT NOT NULL,
   bio TEXT,
+  role TEXT NOT NULL DEFAULT 'user', -- 'user', 'moderator', 'admin', 'director'
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- =========================================================
+-- SPECIAL ROLES & TEAM CONFIGURATION DETAILS
+-- Set yourself or fellow community leaders to handle moderation:
+-- =========================================================
+
+-- To set yourself as the Director (Our community head):
+-- UPDATE public.users SET role = 'director' WHERE email = 'YOUR_EMAIL@HERE.com';
+
+-- To set a trusted neighbor as an Admin:
+-- UPDATE public.users SET role = 'admin' WHERE email = 'admin_neighbor@example.com';
+
+-- To set a helpful neighbor as a Moderator:
+-- UPDATE public.users SET role = 'moderator' WHERE email = 'mod_neighbor@example.com';
+
+-- =========================================================
 
 -- Enable select policies
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;

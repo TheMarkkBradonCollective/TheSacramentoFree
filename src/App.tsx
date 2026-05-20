@@ -94,6 +94,10 @@ export default function App() {
       }
     }
 
+    if (profile && profile.email === 'sigsecspec@gmail.com') {
+      profile.role = 'director';
+    }
+
     // Constructor of temporary cached profile if missing
     if (!profile) {
       profile = {
@@ -103,7 +107,8 @@ export default function App() {
         email: user.email || 'neighbor@sacramentobuynothing.org',
         neighborhood: user.user_metadata?.neighborhood || 'Midtown',
         bio: user.user_metadata?.bio || 'Sacramento Buy Nothing collective member.',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        role: user.email === 'sigsecspec@gmail.com' ? 'director' : 'user'
       };
       
       try {
@@ -524,20 +529,20 @@ export default function App() {
   };
 
   return (
-    <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-black antialiased font-sans">
+    <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-zinc-100 antialiased font-sans">
       {/* 1. Loader screen with instant skip override */}
       {(isAuthLoading || isProfileLoading) && (
-        <div id="fullscreen_interactive_loader" className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center space-y-4 px-4 text-center">
-          <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-none animate-spin" />
-          <p className="text-[9.5px] font-black text-zinc-900 uppercase tracking-widest font-mono">ROUTING SYSTEM VERIFICATIONS...</p>
+        <div id="fullscreen_interactive_loader" className="fixed inset-0 bg-[#030303] z-50 flex flex-col items-center justify-center space-y-4 px-4 text-center animate-fade-in">
+          <div className="w-12 h-12 border-4 border-[#FF4500] border-t-transparent rounded-full animate-spin shadow-sm" />
+          <p className="text-xs font-bold text-[#FF4500] tracking-wider font-sans uppercase">Connecting to Sacramento Buy Nothing...</p>
           <button
             onClick={() => {
               setIsAuthLoading(false);
               setIsProfileLoading(false);
             }}
-            className="px-3.5 py-2 text-[9px] font-black border border-zinc-200 text-zinc-500 hover:border-black hover:text-black uppercase tracking-widest font-mono transition-colors rounded-none cursor-pointer mt-2"
+            className="px-4 py-2 text-xs font-bold bg-[#1A1A1B] border border-[#343536] text-zinc-300 hover:text-white hover:border-[#FF4500] transition-colors rounded-xl cursor-pointer mt-2"
           >
-            Offline Bypass ✕
+            Enter offline anyway 🍊
           </button>
         </div>
       )}

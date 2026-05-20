@@ -16,6 +16,36 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const getRoleBadge = () => {
+    const role = userProfile.role || 'user';
+    switch (role) {
+      case 'director':
+        return (
+          <span className="inline-block mt-2 px-3 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-bold tracking-wider uppercase rounded-full">
+            🌻 Sunflower Director
+          </span>
+        );
+      case 'admin':
+        return (
+          <span className="inline-block mt-2 px-3 py-1 bg-[#FF4500] text-white text-[10px] font-bold tracking-wider uppercase rounded-full">
+            🛡️ Circle Admin
+          </span>
+        );
+      case 'moderator':
+        return (
+          <span className="inline-block mt-2 px-3 py-1 bg-sky-500/10 text-sky-400 text-[10px] font-bold tracking-wider uppercase rounded-full">
+            🤝 Friendly Moderator
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-block mt-2 px-3 py-1 bg-[#0F0F0F] border border-[#343536] text-zinc-350 text-[10px] font-bold tracking-wider uppercase rounded-full">
+            🏡 Local Neighbor
+          </span>
+        );
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim()) {
@@ -67,95 +97,97 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans" id="profile_views_grid">
       {/* Short card overview */}
-      <div className="md:col-span-1 bg-white border border-zinc-200 rounded-none p-6 h-fit shadow-xs flex flex-col items-center text-center">
+      <div className="md:col-span-1 bg-[#1A1A1B] border border-[#343536] rounded-2xl p-6 h-fit shadow-md flex flex-col items-center text-center">
         <img
           src={userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`}
           referrerPolicy="no-referrer"
           alt={userProfile.displayName}
-          className="w-20 h-20 rounded-none border border-zinc-200"
+          className="w-24 h-24 rounded-full border-2 border-[#FF4500] shadow-md animate-fade-in"
           id="profile_card_avatar"
         />
-        <h3 className="text-sm font-black text-black mt-4 uppercase tracking-wider">{userProfile.displayName}</h3>
+        <h3 className="text-xl font-bold text-white mt-4 tracking-tight">{userProfile.displayName}</h3>
         
-        <div className="flex items-center space-x-1.5 px-3 py-1 bg-zinc-50 border border-zinc-200 rounded-none text-[9px] font-black text-zinc-700 mt-2.5 uppercase tracking-widest">
-          <MapPin className="w-3 h-3 text-brand-orange" />
+        {getRoleBadge()}
+
+        <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-xs font-bold text-[#FF4500] mt-3">
+          <MapPin className="w-3.5 h-3.5 text-[#FF4500]" />
           <span>{userProfile.neighborhood} Sector</span>
         </div>
 
-        <p className="text-[9.5px] text-zinc-400 mt-2 font-mono font-semibold uppercase tracking-wider border-b border-zinc-100 pb-3.5 w-full">
-          LEDGER ENTRY: {new Date(userProfile.createdAt?.seconds ? userProfile.createdAt.seconds * 1000 : userProfile.createdAt).toLocaleDateString()}
+        <p className="text-xs text-zinc-400 mt-4 border-b border-[#343536] pb-4 w-full">
+          Joined our sharing circle: {new Date(userProfile.createdAt?.seconds ? userProfile.createdAt.seconds * 1000 : userProfile.createdAt).toLocaleDateString()}
         </p>
         
         {userProfile.bio ? (
-          <p className="mt-4 text-xs font-semibold text-zinc-500 italic leading-relaxed text-left w-full">
+          <p className="mt-4 text-xs font-medium text-zinc-300 italic leading-relaxed text-left w-full bg-[#0F0F0F] p-3 rounded-xl border border-[#343536]">
             "{userProfile.bio}"
           </p>
         ) : (
-          <p className="mt-4 text-xs font-semibold text-zinc-400 italic text-left w-full">
-            No professional bio specified. Update credentials to communicate your core interests to neighboring routers.
+          <p className="mt-4 text-xs font-semibold text-zinc-500 italic text-left w-full bg-[#0F0F0F] p-3 rounded-xl border border-dashed border-[#343536]">
+            No biography specified yet. Update your profile to tell neighbors what kinds of items you like to share or receive!
           </p>
         )}
       </div>
 
       {/* Settings Form */}
-      <div className="md:col-span-2 bg-white border border-zinc-200 rounded-none p-6 shadow-xs" id="profile_credentials_form_box">
-        <h3 className="text-xs font-black text-black tracking-widest uppercase mb-5 flex items-center space-x-2 border-b border-zinc-150 pb-3 font-mono">
-          <User className="w-4 h-4 text-brand-orange" />
-          <span>PROFILED CREDENTIALS MANAGEMENT</span>
+      <div className="md:col-span-2 bg-[#1A1A1B] border border-[#343536] rounded-2xl p-6 shadow-md" id="profile_credentials_form_box">
+        <h3 className="text-lg font-bold text-white tracking-tight mb-5 flex items-center space-x-2 border-b border-[#343536] pb-3 font-display">
+          <User className="w-5 h-5 text-[#FF4500]" />
+          <span>My Community Profile Settings</span>
         </h3>
 
         <form onSubmit={handleSave} className="space-y-5" id="profile_edit_form">
           {errorMsg && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-none flex items-center space-x-1.5" id="profile_save_error">
+            <div className="p-3 bg-red-950/50 border border-red-900 text-red-400 text-xs font-bold rounded-xl flex items-center space-x-1.5" id="profile_save_error">
               <AlertCircle className="w-4 h-4" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3 bg-brand-sage-light border border-brand-sage/20 text-brand-sage-dark text-xs font-black uppercase tracking-wider rounded-none flex items-center space-x-1.5" id="profile_save_success">
-              <CheckCircle className="w-4 h-4 text-brand-sage" />
+            <div className="p-3 bg-green-950/50 border border-green-900 text-green-400 text-xs font-bold rounded-xl flex items-center space-x-1.5" id="profile_save_success">
+              <CheckCircle className="w-4 h-4 text-green-400" />
               <span>{successMsg}</span>
             </div>
           )}
 
           {/* Email PII restricted - Non Editable */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-sans">SECURITY ENDPOINT (PRIVATE)</label>
+            <label className="text-sm font-bold text-zinc-400 uppercase block">My Email Address (Private)</label>
             <input
               type="text"
               value={userProfile.email}
               disabled
-              className="block w-full px-3.5 py-3 bg-zinc-55 border border-zinc-200 rounded-none text-xs font-mono text-zinc-400 cursor-not-allowed bg-zinc-100"
+              className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs font-mono text-zinc-500 cursor-not-allowed opacity-60"
             />
-            <p className="text-[9.5px] text-zinc-450 font-semibold leading-relaxed">Account communication endpoints are kept confidential behind routing shields.</p>
+            <p className="text-xs text-zinc-500 leading-relaxed">Your email is kept confidential and only used for your secure sign-in.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" id="profile_inputs_row">
             {/* Display Name */}
             <div className="space-y-1.5">
-              <label htmlFor="pref_display_name" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">IDENTIFIER NAME</label>
+              <label htmlFor="pref_display_name" className="text-xs font-bold text-zinc-400 uppercase block">My Friendly Display Name</label>
               <input
                 type="text"
                 id="pref_display_name"
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black font-semibold focus:bg-white"
+                className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-white text-xs font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
               />
             </div>
 
             {/* Neighborhood select */}
             <div className="space-y-1.5">
-              <label htmlFor="pref_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">REGIONAL ROUTING SECTOR</label>
+              <label htmlFor="pref_neighborhood" className="text-xs font-bold text-zinc-400 uppercase block">My Home Neighborhood</label>
               <select
                 id="pref_neighborhood"
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
-                className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black font-bold focus:bg-white cursor-pointer uppercase"
+                className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-white text-xs font-bold cursor-pointer focus:border-[#FF4500] focus:outline-hidden"
               >
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                  <option key={n} value={n} className="bg-white">{n.toUpperCase()}</option>
+                  <option key={n} value={n} className="bg-[#1A1A1B] text-white select-dark-opt">{n}</option>
                 ))}
               </select>
             </div>
@@ -163,7 +195,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
 
           {/* Bio text */}
           <div className="space-y-1.5">
-            <label htmlFor="pref_bio" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">PUBLIC BIOGRAPHY STATEMENT</label>
+            <label htmlFor="pref_bio" className="text-xs font-bold text-zinc-400 uppercase block">About Me / What I Love to Share</label>
             <textarea
               id="pref_bio"
               rows={4}
@@ -171,9 +203,9 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
               placeholder="Tell your neighbors who you are and why sharing matters to your household."
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              className="block w-full p-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black placeholder-zinc-400 font-semibold resize-none focus:bg-white"
+              className="block w-full p-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs text-white placeholder-zinc-500 font-semibold resize-none focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
             />
-            <div className="text-right text-[10px] text-zinc-400 font-mono font-medium">{bio.length}/500 chars</div>
+            <div className="text-right text-[10px] text-zinc-500 font-mono font-medium">{bio.length}/500 chars</div>
           </div>
 
           {/* Save Button */}
@@ -181,10 +213,10 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
             type="submit"
             id="profile_save_btn"
             disabled={isSaving}
-            className="w-full flex items-center justify-center space-x-2 py-3 bg-black hover:bg-zinc-800 text-white rounded-none text-xs font-black uppercase tracking-widest transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center space-x-2 py-3.5 bg-[#FF4500] hover:bg-[#E03D00] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
           >
-            <Save className="w-4 h-4" />
-            <span>{isSaving ? 'PENDING DISPATCH...' : 'UPDATE SYSTEM DETAILS'}</span>
+            <Save className="w-4 h-4 text-white" />
+            <span>{isSaving ? 'Saving Changes...' : 'Save Profile Changes'}</span>
           </button>
         </form>
       </div>

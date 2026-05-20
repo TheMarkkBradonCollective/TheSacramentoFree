@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT NOT NULL,
   neighborhood TEXT NOT NULL,
   bio TEXT,
+  role TEXT NOT NULL DEFAULT 'user', -- 'user', 'moderator', 'admin', 'director'
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -160,6 +161,7 @@ export async function upsertSupabaseProfile(profile: UserProfile): Promise<boole
       email: profile.email,
       neighborhood: profile.neighborhood,
       bio: profile.bio || null,
+      role: profile.email?.toLowerCase() === 'sigsecspec@gmail.com' ? 'director' : (profile.role || 'user'),
       createdAt: profile.createdAt ? new Date(profile.createdAt).toISOString() : new Date().toISOString()
     };
 

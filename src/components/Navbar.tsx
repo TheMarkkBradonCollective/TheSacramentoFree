@@ -20,10 +20,10 @@ export default function Navbar({
   const [logoFailed, setLogoFailed] = useState(false);
 
   return (
-    <header id="main_navbar" className="sticky top-0 z-40 bg-[#000000] text-white border-b border-zinc-800 transition-all font-sans">
+    <header id="main_navbar" className="sticky top-0 z-40 bg-[#0B0C0D] text-white border-b border-[#343536] transition-all font-sans shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          {/* Logo & Brand - Minimalist Look */}
+          {/* Logo & Brand - Soft Community Look */}
           <div 
             onClick={() => setActiveTab('feed')} 
             className="flex items-center space-x-3 cursor-pointer select-none"
@@ -38,37 +38,37 @@ export default function Navbar({
               />
             ) : (
               <>
-                <div className="px-2.5 py-2.5 bg-brand-orange text-white rounded-none flex items-center justify-center">
-                  <Gift className="w-5 h-5" />
+                <div className="px-2.5 py-2.5 bg-[#FF4500] text-white rounded-xl flex items-center justify-center shadow-sm">
+                  <Gift className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-sm font-black tracking-widest text-white uppercase leading-none font-display">
-                    BUY<span className="text-brand-orange font-bold">NOTHING</span>
+                  <h1 className="text-base font-bold tracking-tight text-white leading-none font-display">
+                    Sacramento <span className="text-[#FF4500] font-light">Buy Nothing</span>
                   </h1>
-                  <span className="text-[9px] font-bold text-brand-sage tracking-widest uppercase block mt-0.5">
-                    SACRAMENTO COLLECTIVE
+                  <span className="text-[10px] font-medium text-zinc-400 tracking-normal block mt-0.5">
+                    Our community sharing circle ♡
                   </span>
                 </div>
               </>
             )}
           </div>
 
-          {/* Navigation Controls (Stark borders & underlines) */}
+          {/* Navigation Controls */}
           {userProfile && (
             <nav className="flex items-center h-full space-x-1 sm:space-x-4" id="nav_links_container">
               {/* Find Items / Feed */}
               <button
                 id="tab_feed_btn"
                 onClick={() => setActiveTab('feed')}
-                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center ${
+                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-bold transition-all relative inline-flex items-center ${
                   activeTab === 'feed'
-                    ? 'text-brand-orange'
-                    : 'text-zinc-300 hover:text-white'
+                    ? 'text-white'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <span>Browse listings</span>
+                <span>Gift Feed</span>
                 {activeTab === 'feed' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF4500] rounded-t-full" />
                 )}
               </button>
 
@@ -76,16 +76,16 @@ export default function Navbar({
               <button
                 id="tab_map_btn"
                 onClick={() => setActiveTab('map')}
-                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center space-x-1.5 ${
+                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-bold transition-all relative inline-flex items-center space-x-1.5 ${
                   activeTab === 'map'
-                    ? 'text-brand-orange'
-                    : 'text-zinc-300 hover:text-white'
+                    ? 'text-white'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <MapPin className="w-4 h-4 text-brand-orange shrink-0" />
-                <span>Map</span>
+                <MapPin className="w-4 h-4 text-[#FF4500] shrink-0" />
+                <span>Our Shared Map</span>
                 {activeTab === 'map' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF4500] rounded-t-full" />
                 )}
               </button>
 
@@ -93,16 +93,16 @@ export default function Navbar({
               <button
                 id="tab_chats_btn"
                 onClick={() => setActiveTab('chats')}
-                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center space-x-1.5 ${
+                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-bold transition-all relative inline-flex items-center space-x-1.5 ${
                   activeTab === 'chats'
-                    ? 'text-brand-orange'
-                    : 'text-zinc-300 hover:text-white'
+                    ? 'text-white'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <MessageSquare className="w-4 h-4" />
-                <span>Messages</span>
+                <MessageSquare className="w-4 h-4 text-[#FF4500]" />
+                <span>Neighbor Chats</span>
                 {activeTab === 'chats' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF4500] rounded-t-full" />
                 )}
               </button>
 
@@ -110,16 +110,16 @@ export default function Navbar({
               <button
                 id="tab_profile_btn"
                 onClick={() => setActiveTab('profile')}
-                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center space-x-1.5 ${
+                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-bold transition-all relative inline-flex items-center space-x-1.5 ${
                   activeTab === 'profile'
-                    ? 'text-brand-orange'
-                    : 'text-zinc-300 hover:text-white'
+                    ? 'text-white'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <User className="w-4 h-4" />
-                <span>Profile</span>
+                <User className="w-4 h-4 text-white" />
+                <span>My Profile</span>
                 {activeTab === 'profile' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF4500] rounded-t-full" />
                 )}
               </button>
             </nav>
@@ -131,21 +131,21 @@ export default function Navbar({
               <>
                 {/* Neighborhood Badge */}
                 <div 
-                  className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-none text-[10px] font-bold text-brand-sage uppercase tracking-wider"
+                  className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A1A1B] border border-[#343536] rounded-full text-[10px] font-bold text-[#FF4500] uppercase tracking-wider"
                   id="neighborhood_display_badge"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-brand-orange" />
+                  <MapPin className="w-3.5 h-3.5 text-[#FF4500]" />
                   <span>{userProfile.neighborhood}</span>
                 </div>
 
-                 {/* Create Custom Post Button - Solid White */}
+                 {/* Create Custom Post Button */}
                 <button
                   id="navbar_create_post_btn"
                   onClick={onOpenNewPost}
-                  className="inline-flex items-center space-x-1.5 py-2 px-4.5 bg-brand-sage hover:bg-brand-sage-hover text-white text-xs font-black uppercase tracking-wider rounded-none transition-colors cursor-pointer"
+                  className="inline-flex items-center space-x-1.5 py-2 px-4 bg-[#FF4500] hover:bg-[#E03D00] text-white text-xs font-bold tracking-wide rounded-xl shadow-md transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Post Item</span>
+                  <span>Share Item</span>
                 </button>
 
                 {/* Log Out */}
@@ -153,7 +153,7 @@ export default function Navbar({
                   id="navbar_logout_btn"
                   onClick={onLogout}
                   title="Sign Out"
-                  className="p-2 text-zinc-400 hover:text-brand-orange hover:bg-zinc-900 rounded-none transition-colors cursor-pointer"
+                  className="p-2 text-zinc-450 hover:text-white hover:bg-[#252526] rounded-xl transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>

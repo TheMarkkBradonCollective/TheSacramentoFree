@@ -32,20 +32,20 @@ export default function TabletView({
   onClearInitialChat
 }: TabletViewProps) {
   return (
-    <div id="tablet_device_workspace" className="flex flex-col min-h-screen bg-zinc-50 font-sans text-black">
+    <div id="tablet_device_workspace" className="flex flex-col min-h-screen bg-[#0B0C0D] font-sans text-white">
       
       {/* Tablet Header Navigator */}
-      <header id="tablet_navbar" className="sticky top-0 z-40 bg-black text-white p-4 flex items-center justify-between border-b border-zinc-850">
+      <header id="tablet_navbar" className="sticky top-0 z-40 bg-[#1A1A1B] border-b border-[#343536] text-white p-4 flex items-center justify-between shadow-md">
         <div className="flex items-center space-x-3 select-none" id="tablet_brand">
-          <div className="px-2 py-1.5 bg-brand-orange text-white flex items-center justify-center">
+          <div className="p-2 bg-[#FF4500] text-white rounded-xl flex items-center justify-center">
             <Layers className="w-4 h-4" />
           </div>
-          <div>
-            <h1 className="text-xs font-black tracking-widest text-white uppercase leading-none font-display">
-              SACRAMENTO <span className="text-brand-orange">BUY NOTHING</span>
+          <div className="text-left">
+            <h1 className="text-sm font-bold tracking-tight text-white font-display leading-none">
+              Sacramento <span className="text-[#FF4500] font-bold">Buy Nothing</span>
             </h1>
-            <span className="text-[7.5px] font-black text-zinc-400 tracking-widest uppercase block mt-0.5">
-              Tablet Grid Terminal
+            <span className="text-[10px] font-medium text-zinc-400 tracking-normal block mt-0.5">
+              Our community sharing circle
             </span>
           </div>
         </div>
@@ -55,40 +55,40 @@ export default function TabletView({
           <button
             id="tablet_tab_feed_btn"
             onClick={() => setActiveTab('feed')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all inline-flex items-center space-x-1 border ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'feed' || activeTab === 'map'
-                ? 'bg-brand-orange text-white border-brand-orange'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white'
+                ? 'bg-[#FF4500] text-white border-[#FF4500]'
+                : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
             }`}
           >
             <List className="w-3.5 h-3.5" />
-            <span>Dual monitoring</span>
+            <span>Browse & Map</span>
           </button>
 
           <button
             id="tablet_tab_chats_btn"
             onClick={() => setActiveTab('chats')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all inline-flex items-center space-x-1 border ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'chats'
-                ? 'bg-brand-orange text-white border-brand-orange'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white'
+                ? 'bg-[#FF4500] text-white border-[#FF4500]'
+                : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Coordinations</span>
+            <span>Cozy Chats</span>
           </button>
 
           <button
             id="tablet_tab_profile_btn"
             onClick={() => setActiveTab('profile')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all inline-flex items-center space-x-1 border ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'profile'
-                ? 'bg-brand-orange text-white border-brand-orange'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white'
+                ? 'bg-[#FF4500] text-white border-[#FF4500]'
+                : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
             }`}
           >
             <User className="w-3.5 h-3.5" />
-            <span>account</span>
+            <span>My Profile</span>
           </button>
         </nav>
 
@@ -97,16 +97,17 @@ export default function TabletView({
           <button
             id="tablet_header_dispatch"
             onClick={onOpenNewPost}
-            className="px-3.5 py-1.5 bg-brand-sage hover:bg-brand-sage-hover text-white text-[10px] font-black uppercase tracking-wider rounded-none select-none transition-colors duration-150"
+            className="px-4 py-2 bg-[#FF4500] hover:bg-[#E03D00] text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer inline-flex items-center"
           >
-            <Plus className="w-3 h-3 inline mr-1" /> Post Item
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            <span>Share Item</span>
           </button>
 
           <button
             id="tablet_header_logout"
             onClick={onLogout}
             title="Sign Out"
-            className="p-1.5 text-zinc-400 hover:text-brand-orange transition-colors cursor-pointer"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-[#252526] rounded-xl transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -121,10 +122,10 @@ export default function TabletView({
           <div className="grid grid-cols-12 gap-5" id="tablet_dual_pane_split">
             {/* Left Column: Listings Directory checklist (occupies 7 columns) */}
             <section className="col-span-12 xl:col-span-7 space-y-4" id="tablet_left_split_pane">
-              <div className="border border-zinc-200 bg-white p-4">
-                <h3 className="text-xs font-black uppercase text-zinc-400 tracking-widest">Active operational directory</h3>
-                <p className="text-xs font-bold text-zinc-700 mt-1 uppercase" id="tablet_sector_badge_title">
-                  Greater Sacramento community ledger matches • {items.length} items logged.
+              <div className="border border-[#343536] bg-[#1A1A1B] rounded-2xl p-4">
+                <h3 className="text-sm font-bold text-white tracking-tight font-display text-left">Gifts Shared with Love</h3>
+                <p className="text-xs text-zinc-400 mt-1 font-semibold text-left" id="tablet_sector_badge_title">
+                  Gifts & needed items around Greater Sacramento • {items.length} total items found.
                 </p>
               </div>
               <ItemGrid
@@ -138,17 +139,17 @@ export default function TabletView({
             {/* Right Column: Sticky active map overlay (occupies 5 columns) */}
             <aside className="col-span-12 xl:col-span-5 relative" id="tablet_right_split_pane">
               <div className="sticky top-24 space-y-4">
-                <div className="border border-zinc-200 bg-white p-4">
-                  <h4 className="text-xs font-black uppercase text-zinc-400 tracking-widest flex items-center gap-1.5">
-                    <span className="w-2 h-2 bg-brand-orange inline-block animate-pulse rounded-full" />
-                    District Map Coordinates monitoring
+                <div className="border border-[#343536] bg-[#1A1A1B] rounded-2xl p-4">
+                  <h4 className="text-sm font-bold text-white tracking-tight font-display flex items-center gap-1.5 leading-none">
+                    <span className="w-2.5 h-2.5 bg-[#FF4500] inline-block animate-pulse rounded-full" />
+                    Our Neighborhood Map
                   </h4>
-                  <p className="text-[10px] text-zinc-500 font-extrabold uppercase mt-1 leading-normal font-mono">
-                    Sacramento Sector view • click colored coordinates to view card detours
+                  <p className="text-xs text-zinc-400 mt-2 leading-normal font-medium text-left">
+                    Sacramento Community • Click any marker to see descriptions & send hello!
                   </p>
                 </div>
                 
-                <div className="border border-zinc-200 p-2.5 bg-white shadow-xs">
+                <div className="border border-[#343536] p-3.5 bg-[#1A1A1B] rounded-2xl shadow-xs">
                   <SacramentoMapView
                     items={items}
                     userProfile={userProfile}
@@ -160,9 +161,9 @@ export default function TabletView({
           </div>
         )}
 
-        {/* Coordinations (Chats) System */}
+        {/* Cozy Chats System */}
         {activeTab === 'chats' && (
-          <div className="bg-white border border-zinc-200 shadow-sm p-4" id="tablet_chats_pane">
+          <div className="bg-[#1A1A1B] border border-[#343536] rounded-2xl shadow-sm p-4 font-sans" id="tablet_chats_pane">
             <ChatSystem
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
@@ -173,7 +174,7 @@ export default function TabletView({
 
         {/* Member account card */}
         {activeTab === 'profile' && (
-          <div className="bg-white border border-zinc-200 shadow-sm p-4" id="tablet_profile_pane">
+          <div className="bg-[#1A1A1B] border border-[#343536] rounded-2xl shadow-sm p-4" id="tablet_profile_pane">
             <UserProfileView
               userProfile={userProfile}
               onUpdateProfile={onUpdateProfile}

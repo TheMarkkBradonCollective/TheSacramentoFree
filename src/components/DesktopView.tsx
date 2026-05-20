@@ -32,7 +32,7 @@ export default function DesktopView({
   onClearInitialChat
 }: DesktopViewProps) {
   return (
-    <div id="desktop_device_workspace" className="min-h-screen flex flex-col bg-zinc-50 text-black antialiased font-sans">
+    <div id="desktop_device_workspace" className="min-h-screen flex flex-col bg-[#0B0C0D] text-white antialiased font-sans">
       
       {/* Primary Header Navbar */}
       <Navbar
@@ -48,15 +48,15 @@ export default function DesktopView({
         
         {activeTab === 'feed' && (
           <div className="space-y-6" id="desktop_feed_view_root">
-            <div className="flex justify-between items-center bg-white border border-zinc-200 p-5 shadow-xs">
+            <div className="flex justify-between items-center bg-[#1A1A1B] border border-[#343536] p-5 rounded-2xl shadow-xs">
               <div>
-                <h2 className="text-xs font-black uppercase tracking-widest text-[#FF4500]">COMMUNITY EXCHANGE DIRECTORY</h2>
-                <p className="text-xs text-zinc-550 mt-1 font-semibold leading-relaxed">
-                  Active operational records within the <span className="font-extrabold text-brand-orange uppercase">{userProfile.neighborhood} Sector</span> and Greater Sacramento District.
+                <h2 className="text-sm font-bold text-white tracking-tight font-display text-left">NEIGHBORHOOD GIFTS</h2>
+                <p className="text-xs text-zinc-400 mt-1 font-semibold leading-relaxed text-left">
+                  Warmly sharing extra, loved items in <span className="font-bold text-[#FF4500] uppercase font-mono">{userProfile.neighborhood} Circle</span> and throughout Sacramento.
                 </p>
               </div>
-              <div className="px-3.5 py-1.5 bg-[#F9F9F6] border border-zinc-200">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 font-mono">STATION ONLINE</span>
+              <div className="px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/15 rounded-full">
+                <span className="text-[10px] font-bold text-[#FF4500] font-sans">🏡 ACTIVE CIRCLE</span>
               </div>
             </div>
 
@@ -71,7 +71,7 @@ export default function DesktopView({
         )}
 
         {activeTab === 'chats' && (
-          <div className="bg-white border border-zinc-200 p-4 shadow-sm" id="desktop_chats_view_root">
+          <div className="bg-[#1A1A1B] border border-[#343536] p-4 rounded-2xl shadow-sm" id="desktop_chats_view_root">
             <ChatSystem
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
@@ -81,7 +81,7 @@ export default function DesktopView({
         )}
 
         {activeTab === 'profile' && (
-          <div className="bg-white border border-zinc-200 p-6 shadow-sm" id="desktop_profile_view_root">
+          <div className="bg-[#1A1A1B] border border-[#343536] p-6 rounded-2xl shadow-sm" id="desktop_profile_view_root">
             <UserProfileView
               userProfile={userProfile}
               onUpdateProfile={onUpdateProfile}
@@ -91,14 +91,14 @@ export default function DesktopView({
 
         {activeTab === 'map' && (
           <div className="space-y-6" id="desktop_map_view_root">
-            <div className="bg-white border border-zinc-200 p-5 shadow-xs">
-              <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500">SACRAMENTO NEIGHBORHOOD COORDINATES MAP</h2>
-              <p className="text-xs text-zinc-550 mt-1 font-semibold leading-relaxed">
-                Active geographic sectors and community coordinates across Sacramento. Colors represent matching item dispatch classifications.
+            <div className="bg-[#1A1A1B] border border-[#343536] p-5 rounded-2xl shadow-xs">
+              <h2 className="text-sm font-bold text-white tracking-tight font-display text-left">SACRAMENTO NEIGHBORLY SHARING MAP</h2>
+              <p className="text-xs text-zinc-400 mt-1 font-semibold leading-relaxed text-left">
+                Explore lovely gifts floating in nearby spaces! Click any colored map pin to see item details and talk with neighbors.
               </p>
             </div>
 
-            <div className="bg-white border border-zinc-200 p-4 shadow-xs">
+            <div className="bg-[#1A1A1B] border border-[#343536] p-4 rounded-2xl shadow-xs">
               <SacramentoMapView
                 items={items}
                 userProfile={userProfile}
