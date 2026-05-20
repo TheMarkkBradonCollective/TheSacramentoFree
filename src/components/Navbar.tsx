@@ -31,7 +31,7 @@ export default function Navbar({
           >
             {!logoFailed ? (
               <img 
-                src="/Logo.png" 
+                src="/Logo.jpeg" 
                 alt="Sacramento Buy Nothing Logo" 
                 className="h-9 w-auto object-contain cursor-pointer max-w-[220px]"
                 onError={() => setLogoFailed(true)}
