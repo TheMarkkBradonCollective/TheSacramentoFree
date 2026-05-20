@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, doc, onSnapshot, getDoc, query, orderBy, setDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { UserProfile, ItemPost } from './types';
@@ -322,6 +322,19 @@ export default function App() {
     }
   };
 
+  // Handle Quick Guest Login Fallback for sandboxed context
+  const handleGuestLogin = async () => {
+    setIsAuthLoading(true);
+    setErrorMsg('');
+    try {
+      await signInAnonymously(auth);
+    } catch (err: any) {
+      setIsAuthLoading(false);
+      setErrorMsg('Guest sign in failed. Please try again.');
+      console.warn(err);
+    }
+  };
+
   // Sign out
   const handleLogOut = async () => {
     try {
@@ -415,7 +428,7 @@ export default function App() {
 
       {/* 2. Authentication Landing View */}
       {!firebaseUser ? (
-        <LandingPage onGoogleLogin={handleGoogleLogin} errorMsg={errorMsg} />
+        <LandingPage onGoogleLogin={handleGoogleLogin} onGuestLogin={handleGuestLogin} errorMsg={errorMsg} />
       ) : (
         /* 3. Post-Auth Onboard vs App Feed Layout */
         <>

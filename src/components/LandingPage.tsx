@@ -18,6 +18,7 @@ import {
 
 interface LandingPageProps {
   onGoogleLogin: () => void;
+  onGuestLogin: () => void;
   errorMsg?: string;
 }
 
@@ -107,7 +108,7 @@ const NEIGHBORHOODS_METADATA = [
   }
 ];
 
-export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProps) {
+export default function LandingPage({ onGoogleLogin, onGuestLogin, errorMsg }: LandingPageProps) {
   const [activeItemTypeTab, setActiveItemTypeTab] = useState<'all' | 'giveaway' | 'looking'>('all');
   const [selectedNeighborhoodIndex, setSelectedNeighborhoodIndex] = useState(0);
 
@@ -138,13 +139,24 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
             </div>
           </div>
 
-          <button
-            onClick={onGoogleLogin}
-            className="px-5 py-2.5 text-xs font-black bg-black hover:bg-zinc-800 text-white rounded-none transition-colors cursor-pointer inline-flex items-center space-x-2 tracking-widest uppercase"
-          >
-            <span>SIGN IN</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onGuestLogin}
+              id="landing_header_guest_login_btn"
+              className="px-3 py-2 text-[10px] font-black border border-zinc-300 text-zinc-700 hover:bg-zinc-50 rounded-none transition-colors cursor-pointer select-none tracking-widest uppercase"
+              title="Workaround Google Sign-in popup issues inside iframe"
+            >
+              GUEST ACCESS
+            </button>
+            <button
+              onClick={onGoogleLogin}
+              id="landing_header_google_login_btn"
+              className="px-4 py-2 text-[10px] font-black bg-black hover:bg-zinc-800 text-white rounded-none transition-colors cursor-pointer inline-flex items-center space-x-1.5 tracking-widest uppercase"
+            >
+              <span>GOOGLE LOGIN</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -165,31 +177,40 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
         </p>
 
         {errorMsg && (
-          <div className="mx-auto max-w-md p-3.5 bg-red-50 text-red-700 text-xs font-bold rounded-none border border-red-200" id="landing_error_overlay">
-            {errorMsg}
+          <div className="mx-auto max-w-lg p-4 bg-red-50 text-red-700 text-xs text-left font-bold rounded-none border border-red-200 space-y-1.5" id="landing_error_overlay">
+            <p className="flex items-center gap-1.5 uppercase font-mono text-[10px] tracking-wider text-red-800">
+              <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+              AUTHENTICATION DETOUR REQUIRED
+            </p>
+            <p>{errorMsg}</p>
+            <p className="text-[10px] text-zinc-650 font-semibold leading-relaxed">
+              💡 <strong>IFrame Sandbox Tip:</strong> Standard social login popups can be blocked by browsers inside secure sandboxed previews. Simply click the <strong>Quick Guest Portal Pass</strong> below to join immediately with a verified neighbor identifier!
+            </p>
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-3.5 pt-3">
+        <div className="flex flex-col sm:flex-row justify-center items-stretch sm:items-center gap-3.5 pt-4 max-w-xl mx-auto">
           <button
             id="hero_cta_login_btn"
             onClick={onGoogleLogin}
-            className="w-full sm:w-auto px-8 py-4 bg-black hover:bg-zinc-900 text-white rounded-none text-xs font-black uppercase tracking-widest flex items-center justify-center space-x-3 transition-colors cursor-pointer select-none"
+            className="flex-1 px-6 py-4 bg-black hover:bg-zinc-900 text-white rounded-none text-[10.5px] font-black uppercase tracking-widest flex items-center justify-center space-x-2 transition-colors cursor-pointer select-none"
           >
             <img
               src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
               alt="Google"
-              className="w-4 h-4 bg-white rounded-none p-0.5"
+              className="w-4 h-4 bg-white rounded-none p-0.5 shrink-0"
             />
             <span>CONTINUE WITH GOOGLE</span>
           </button>
-          
-          <a
-            href="#how_it_works_section"
-            className="w-full sm:w-auto text-center text-xs font-black text-zinc-900 hover:text-black py-4 px-6 border border-zinc-300 hover:bg-zinc-50 rounded-none transition-all uppercase tracking-widest"
+
+          <button
+            id="hero_cta_guest_login_btn"
+            onClick={onGuestLogin}
+            className="flex-1 px-6 py-4 border-2 border-dashed border-[#276EF1] bg-white hover:bg-blue-50/50 text-[#276EF1] rounded-none text-[10.5px] font-black uppercase tracking-widest flex items-center justify-center space-x-2 transition-all cursor-pointer select-none shadow-3xs"
           >
-            HOW IT WORKS
-          </a>
+            <Sparkles className="w-4 h-4 text-[#276EF1] animate-pulse shrink-0" />
+            <span>QUICK GUEST PORTAL PASS</span>
+          </button>
         </div>
 
         {/* 3. Community Stats Badge - Clean Layout */}
