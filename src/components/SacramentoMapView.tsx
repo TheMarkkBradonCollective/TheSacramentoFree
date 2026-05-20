@@ -229,10 +229,11 @@ export default function SacramentoMapView({
       // 1. Check if the post features precise custom coordinates parsed from description metadata
       const customCoords = extractGPSCoordinates(item.description);
       if (customCoords) {
+        const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
         return {
           item,
-          lat: customCoords.x,
-          lng: customCoords.y,
+          lat,
+          lng,
           color: getCategoryColor(item.category)
         };
       }

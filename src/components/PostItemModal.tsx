@@ -58,6 +58,22 @@ const findClosestNeighborhood = (lat: number, lng: number): string => {
   return closest;
 };
 
+const findClosestNeighborhoodByPercent = (x: number, y: number): string => {
+  let minDistance = Infinity;
+  let closest = 'Midtown';
+  
+  for (const [name, coords] of Object.entries(NEIGHBORHOOD_COORDS)) {
+    const dx = x - coords.x;
+    const dy = y - coords.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closest = name;
+    }
+  }
+  return closest;
+};
+
 interface PostItemModalProps {
   userProfile: UserProfile;
   onClose: () => void;
@@ -428,7 +444,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     const clampedY = Math.max(5, Math.min(95, clickY));
                     setCustomCoords({ x: clampedX, y: clampedY });
                     
-                    const nearest = findClosestNeighborhood(clampedX, clampedY);
+                    const nearest = findClosestNeighborhoodByPercent(clampedX, clampedY);
                     setNeighborhood(nearest);
                     setGpsStatus(`SET CUSTOM LOCATION PIN POINT: ${clampedX.toFixed(1)}%, ${clampedY.toFixed(1)}% 📍`);
                   }}
