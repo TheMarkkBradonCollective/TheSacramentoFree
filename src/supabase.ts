@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS public.users (
 
 -- Enable select policies
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read users" ON public.users;
 CREATE POLICY "Allow public read users" ON public.users FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert and update" ON public.users;
 CREATE POLICY "Allow insert and update" ON public.users FOR ALL USING (true);
 
 -- 2. Create Items listings
@@ -49,7 +51,9 @@ CREATE TABLE IF NOT EXISTS public.items (
 );
 
 ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read items" ON public.items;
 CREATE POLICY "Allow public read items" ON public.items FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write operations" ON public.items;
 CREATE POLICY "Allow write operations" ON public.items FOR ALL USING (true);
 
 -- 3. Create Chats metadata
@@ -66,7 +70,9 @@ CREATE TABLE IF NOT EXISTS public.chats (
 );
 
 ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read chats" ON public.chats;
 CREATE POLICY "Allow public read chats" ON public.chats FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write chats" ON public.chats;
 CREATE POLICY "Allow write chats" ON public.chats FOR ALL USING (true);
 
 -- 4. Create chat Messages
@@ -79,8 +85,11 @@ CREATE TABLE IF NOT EXISTS public.messages (
 );
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read messages" ON public.messages;
 CREATE POLICY "Allow public read messages" ON public.messages FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert messages" ON public.messages;
 CREATE POLICY "Allow insert messages" ON public.messages FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow edit or update" ON public.messages;
 CREATE POLICY "Allow edit or update" ON public.messages FOR ALL USING (true);
 `;
 

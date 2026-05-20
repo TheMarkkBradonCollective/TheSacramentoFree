@@ -25,7 +25,7 @@ const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 export default function App() {
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>('feed');
   const [showPostModal, setShowPostModal] = useState(false);
@@ -530,23 +530,6 @@ export default function App() {
 
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-zinc-100 antialiased font-sans">
-      {/* 1. Loader screen with instant skip override */}
-      {(isAuthLoading || isProfileLoading) && (
-        <div id="fullscreen_interactive_loader" className="fixed inset-0 bg-[#030303] z-50 flex flex-col items-center justify-center space-y-4 px-4 text-center animate-fade-in">
-          <div className="w-12 h-12 border-4 border-[#FF4500] border-t-transparent rounded-full animate-spin shadow-sm" />
-          <p className="text-xs font-bold text-[#FF4500] tracking-wider font-sans uppercase">Connecting to Sacramento Buy Nothing...</p>
-          <button
-            onClick={() => {
-              setIsAuthLoading(false);
-              setIsProfileLoading(false);
-            }}
-            className="px-4 py-2 text-xs font-bold bg-[#1A1A1B] border border-[#343536] text-zinc-300 hover:text-white hover:border-[#FF4500] transition-colors rounded-xl cursor-pointer mt-2"
-          >
-            Enter offline anyway 🍊
-          </button>
-        </div>
-      )}
-
       {/* 2. Authentication Landing View */}
       {!sessionUser ? (
         <LandingPage 
