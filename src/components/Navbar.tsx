@@ -72,11 +72,11 @@ export default function Navbar({
                 )}
               </button>
 
-              {/* Map View tab (Mobile Only) */}
+              {/* Map View tab */}
               <button
                 id="tab_map_btn"
                 onClick={() => setActiveTab('map')}
-                className={`lg:hidden h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center space-x-1.5 ${
+                className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center space-x-1.5 ${
                   activeTab === 'map'
                     ? 'text-brand-orange'
                     : 'text-zinc-300 hover:text-white'
