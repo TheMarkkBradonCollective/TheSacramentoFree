@@ -1,0 +1,177 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Public profile of Sacramento BuyNothing community member.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique Firebase Auth user UID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User displayed name"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar photo URL"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email (PII, restricted access)"
+        },
+        "neighborhood": {
+          "type": "string",
+          "description": "Sacramento neighborhood name"
+        },
+        "bio": {
+          "type": "string",
+          "description": "Brief autobiography"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of profile creation"
+        }
+      },
+      "required": ["uid", "displayName", "email", "neighborhood", "createdAt"]
+    },
+    "Item": {
+      "title": "Item Post",
+      "description": "A Give away or Ask post for items in the Sacramento area.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique auto-generated document ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Name or title of the item"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the item"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["giveaway", "looking"],
+          "description": "Whether it is a Give away or Looking for ask"
+        },
+        "category": {
+          "type": "string",
+          "description": "Item category, e.g., Furniture, Clothes"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of posting user"
+        },
+        "userDisplayName": {
+          "type": "string",
+          "description": "Display name of poster"
+        },
+        "userPhotoURL": {
+          "type": "string",
+          "description": "Photo URL of poster"
+        },
+        "neighborhood": {
+          "type": "string",
+          "description": "Sacramento neighborhood of listing"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "completed", "withdrawn"],
+          "description": "Post status"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["id", "title", "description", "type", "category", "userId", "userDisplayName", "neighborhood", "status", "createdAt", "updatedAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "A conversation thread between two Sacramento BuyNothing key members.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique sorted UID combination, e.g. UID1_UID2"
+        },
+        "participantIds": {
+          "type": "array",
+          "description": "Array containing both participant UIDs"
+        },
+        "participantNames": {
+          "type": "object",
+          "description": "Map of UID to display name for fast lookup"
+        },
+        "participantPhotos": {
+          "type": "object",
+          "description": "Map of UID to photo URL"
+        },
+        "lastMessageText": {
+          "type": "string",
+          "description": "Content of last message"
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of last message"
+        },
+        "lastMessageSenderId": {
+          "type": "string",
+          "description": "UID of last message sender"
+        }
+      },
+      "required": ["id", "participantIds", "participantNames", "participantPhotos", "lastMessageAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "An individual message within a conversation subcollection thread.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "senderId": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "senderId", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Subcollection of member profiles indexed by UID"
+    },
+    "items/{itemId}": {
+      "schema": "Item",
+      "description": "Subcollection of Give and Ask listings"
+    },
+    "chats/{chatId}": {
+      "schema": "Chat",
+      "description": "BuyNothing conversation documents"
+    },
+    "chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Individual messages inside a conversation chatId thread"
+    }
+  }
+}

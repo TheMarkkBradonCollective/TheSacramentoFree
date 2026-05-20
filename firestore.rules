@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable, Hardened Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Data Validator
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() <= 150
+        && data.neighborhood is string && data.neighborhood.size() > 0 && data.neighborhood.size() <= 100
+        && (!data.keys().contains('bio') || (data.bio is string && data.bio.size() <= 500))
+        && (!data.keys().contains('photoURL') || (data.photoURL is string && data.photoURL.size() <= 1000));
+    }
+
+    // Users Collection Paths
+    match /users/{userId} {
+      allow get: if isSignedIn(); // Community-driven, members can see each other
+      allow list: if isSignedIn(); // User index search
+      
+      allow create: if isSignedIn() && isEmailVerified() && userId == request.auth.uid 
+        && incoming().uid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().keys().hasAll(['uid', 'displayName', 'email', 'neighborhood', 'createdAt'])
+        && incoming().keys().size() >= 5
+        && isValidUser(incoming());
+
+      allow update: if isSignedIn() && isEmailVerified() && userId == request.auth.uid
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'neighborhood', 'bio', 'photoURL']);
+    }
+
+    // Item Data Validator
+    function isValidItem(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 100
+        && data.description is string && data.description.size() > 0 && data.description.size() <= 1000
+        && (data.type == 'giveaway' || data.type == 'looking')
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 50
+        && data.userId is string && data.userId == request.auth.uid
+        && data.userDisplayName is string && data.userDisplayName.size() <= 100
+        && data.neighborhood is string && data.neighborhood.size() <= 100
+        && (data.status == 'active' || data.status == 'completed' || data.status == 'withdrawn')
+        && (!data.keys().contains('userPhotoURL') || (data.userPhotoURL is string && data.userPhotoURL.size() <= 1000));
+    }
+
+    // Items (Posts) Collection Paths
+    match /items/{itemId} {
+      allow get, list: if isSignedIn(); // Anyone registered inside the Sacramento area can browse posts
+
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(itemId)
+        && incoming().id == itemId
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && incoming().status == 'active'
+        && incoming().keys().hasAll(['id', 'title', 'description', 'type', 'category', 'userId', 'userDisplayName', 'neighborhood', 'status', 'createdAt', 'updatedAt'])
+        && isValidItem(incoming());
+
+      allow update: if isSignedIn() && isEmailVerified() && isValidId(itemId)
+        && existing().userId == request.auth.uid
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && isValidItem(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'category', 'status', 'updatedAt', 'userPhotoURL', 'userDisplayName', 'neighborhood']);
+
+      allow delete: if isSignedIn() && isEmailVerified() && existing().userId == request.auth.uid;
+    }
+
+    // Chat Data Validator
+    function isValidChat(data) {
+      return data.id is string
+        && data.participantIds is list && data.participantIds.size() == 2
+        && data.participantIds.hasAll([request.auth.uid])
+        && data.participantNames is map
+        && data.participantPhotos is map
+        && (!data.keys().contains('lastMessageText') || (data.lastMessageText is string && data.lastMessageText.size() <= 2000))
+        && (!data.keys().contains('lastMessageSenderId') || (data.lastMessageSenderId is string && data.lastMessageSenderId.size() <= 128))
+        && (!data.keys().contains('itemId') || (data.itemId is string && data.itemId.size() <= 128))
+        && (!data.keys().contains('itemTitle') || (data.itemTitle is string && data.itemTitle.size() <= 200));
+    }
+
+    // Chat Rooms Collection Paths
+    match /chats/{chatId} {
+      allow get: if isSignedIn() && isEmailVerified() && existing().participantIds.hasAny([request.auth.uid]);
+      allow list: if isSignedIn() && isEmailVerified() && resource.data.participantIds.hasAny([request.auth.uid]);
+
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(chatId)
+        && incoming().id == chatId
+        && incoming().participantIds.hasAll([request.auth.uid])
+        && incoming().lastMessageAt == request.time
+        && incoming().keys().hasAll(['id', 'participantIds', 'participantNames', 'participantPhotos', 'lastMessageAt'])
+        && isValidChat(incoming());
+
+      allow update: if isSignedIn() && isEmailVerified() && isValidId(chatId)
+        && existing().participantIds.hasAny([request.auth.uid])
+        && incoming().participantIds == existing().participantIds
+        && incoming().lastMessageAt == request.time
+        && isValidChat(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['lastMessageText', 'lastMessageAt', 'lastMessageSenderId', 'itemId', 'itemTitle']);
+    }
+
+    // Message Data Validator
+    function isValidMessage(data) {
+      return data.id is string
+        && data.senderId == request.auth.uid
+        && data.text is string && data.text.size() > 0 && data.text.size() <= 2000;
+    }
+
+    // Subcollection: Messages nested under Chats
+    match /chats/{chatId}/messages/{messageId} {
+      allow read: if isSignedIn() && isEmailVerified() && get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds.hasAny([request.auth.uid]);
+
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(messageId)
+        && get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds.hasAny([request.auth.uid])
+        && incoming().senderId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().keys().hasAll(['id', 'senderId', 'text', 'createdAt'])
+        && incoming().keys().size() == 4
+        && isValidMessage(incoming());
+    }
+  }
+}
