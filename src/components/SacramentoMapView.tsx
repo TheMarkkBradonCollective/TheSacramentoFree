@@ -688,7 +688,7 @@ export default function SacramentoMapView({
                         className="px-3 py-1 bg-[#FF4500] hover:bg-brand-orange-hover text-white text-[9px] font-black uppercase tracking-wider rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                       >
                         <MessageSquare className="w-3 h-3" />
-                        <span>Dispatch Dispatcher</span>
+                        <span>Message Neighbor</span>
                       </button>
                     </div>
                   </div>
@@ -1074,7 +1074,7 @@ export default function SacramentoMapView({
 
                   <div className="flex items-center space-x-2">
                     <button
-                      id="map_dispatch_btn"
+                      id="map_message_btn"
                       onClick={() => onInitiateChat(selectedPost.userId, selectedPost.userDisplayName, selectedPost.userPhotoURL, selectedPost)}
                       className="px-3 py-1.5 bg-[#FF4500] hover:bg-[#E03D00] text-white text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
                     >

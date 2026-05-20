@@ -104,12 +104,12 @@ export default function MobileView({
 
             {/* Quick action circles floated on map (Uber Map Style) */}
             <div className="absolute bottom-6 right-4 z-20 flex flex-col space-y-3" id="mobile_floated_dial_controls">
-              {/* Dispatch Action */}
+              {/* New Post Action */}
               <button
                 onClick={onOpenNewPost}
                 className="w-14 h-14 bg-[#FF4500] hover:bg-[#E03D00] text-white shadow-2xl flex items-center justify-center rounded-full border-2 border-[#1A1A1B] focus:outline-hidden transition-transform active:scale-95 cursor-pointer"
                 id="mobile_floated_post_action"
-                title="Share a new gift"
+                title="Share or Request"
               >
                 <Plus className="w-7 h-7" />
               </button>

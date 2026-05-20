@@ -56,13 +56,26 @@ export default function TabletView({
             id="tablet_tab_feed_btn"
             onClick={() => setActiveTab('feed')}
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
-              activeTab === 'feed' || activeTab === 'map'
+              activeTab === 'feed'
                 ? 'bg-[#FF4500] text-white border-[#FF4500]'
                 : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
             }`}
           >
             <List className="w-3.5 h-3.5" />
-            <span>Browse & Map</span>
+            <span>Share Pile</span>
+          </button>
+
+          <button
+            id="tablet_tab_map_btn"
+            onClick={() => setActiveTab('map')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
+              activeTab === 'map'
+                ? 'bg-[#FF4500] text-white border-[#FF4500]'
+                : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5 text-[#FF4500]" />
+            <span>Explore Map</span>
           </button>
 
           <button
@@ -95,12 +108,12 @@ export default function TabletView({
         {/* Global actions */}
         <div className="flex items-center space-x-3" id="tablet_actions">
           <button
-            id="tablet_header_dispatch"
+            id="tablet_header_post"
             onClick={onOpenNewPost}
             className="px-4 py-2 bg-[#FF4500] hover:bg-[#E03D00] text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer inline-flex items-center"
           >
             <Plus className="w-3.5 h-3.5 mr-1" />
-            <span>Share Item</span>
+            <span>Share or Request</span>
           </button>
 
           <button
@@ -117,47 +130,43 @@ export default function TabletView({
       {/* Main Workspace Frame */}
       <main id="tablet_content_container" className="flex-1 max-w-7xl w-full mx-auto p-5 space-y-5">
         
-        {/* Dual Pane Browse Feed / Active Map side-on split (Perfect tablet blend of Desktop/Mobile) */}
-        {(activeTab === 'feed' || activeTab === 'map') && (
-          <div className="grid grid-cols-12 gap-5" id="tablet_dual_pane_split">
-            {/* Left Column: Listings Directory checklist (occupies 7 columns) */}
-            <section className="col-span-12 xl:col-span-7 space-y-4" id="tablet_left_split_pane">
-              <div className="border border-[#343536] bg-[#1A1A1B] rounded-2xl p-4">
-                <h3 className="text-sm font-bold text-white tracking-tight font-display text-left">Gifts Shared with Love</h3>
-                <p className="text-xs text-zinc-400 mt-1 font-semibold text-left" id="tablet_sector_badge_title">
-                  Gifts & needed items around Greater Sacramento • {items.length} total items found.
-                </p>
-              </div>
-              <ItemGrid
+        {/* Browse Feed */}
+        {activeTab === 'feed' && (
+          <div className="space-y-4" id="tablet_feed_pane">
+            <div className="border border-[#343536] bg-[#1A1A1B] rounded-2xl p-4">
+              <h3 className="text-sm font-bold text-white tracking-tight font-display text-left">Gifts Shared with Love</h3>
+              <p className="text-xs text-zinc-400 mt-1 font-semibold text-left">
+                Gifts & needed items around Greater Sacramento • {items.length} total items found.
+              </p>
+            </div>
+            <ItemGrid
+              items={items}
+              userProfile={userProfile}
+              onInitiateChat={onInitiateChat}
+              onRefresh={() => {}}
+            />
+          </div>
+        )}
+
+        {/* Explore Map View */}
+        {activeTab === 'map' && (
+          <div className="space-y-4" id="tablet_map_pane">
+            <div className="border border-[#343536] bg-[#1A1A1B] rounded-2xl p-4">
+              <h4 className="text-sm font-bold text-white tracking-tight font-display flex items-center gap-1.5 leading-none">
+                <span className="w-2.5 h-2.5 bg-[#FF4500] inline-block animate-pulse rounded-full" />
+                Our Neighborhood Map
+              </h4>
+              <p className="text-xs text-zinc-400 mt-2 leading-normal font-medium text-left">
+                Sacramento Community • Click any marker to see descriptions & arrange neighbor coordinate chats!
+              </p>
+            </div>
+            <div className="border border-[#343536] p-3.5 bg-[#1A1A1B] rounded-2xl shadow-xs h-[550px]">
+              <SacramentoMapView
                 items={items}
                 userProfile={userProfile}
                 onInitiateChat={onInitiateChat}
-                onRefresh={() => {}}
               />
-            </section>
-
-            {/* Right Column: Sticky active map overlay (occupies 5 columns) */}
-            <aside className="col-span-12 xl:col-span-5 relative" id="tablet_right_split_pane">
-              <div className="sticky top-24 space-y-4">
-                <div className="border border-[#343536] bg-[#1A1A1B] rounded-2xl p-4">
-                  <h4 className="text-sm font-bold text-white tracking-tight font-display flex items-center gap-1.5 leading-none">
-                    <span className="w-2.5 h-2.5 bg-[#FF4500] inline-block animate-pulse rounded-full" />
-                    Our Neighborhood Map
-                  </h4>
-                  <p className="text-xs text-zinc-400 mt-2 leading-normal font-medium text-left">
-                    Sacramento Community • Click any marker to see descriptions & send hello!
-                  </p>
-                </div>
-                
-                <div className="border border-[#343536] p-3.5 bg-[#1A1A1B] rounded-2xl shadow-xs">
-                  <SacramentoMapView
-                    items={items}
-                    userProfile={userProfile}
-                    onInitiateChat={onInitiateChat}
-                  />
-                </div>
-              </div>
-            </aside>
+            </div>
           </div>
         )}
 

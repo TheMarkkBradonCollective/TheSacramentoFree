@@ -153,7 +153,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
         id="chats_sidebar"
       >
         <div className="p-4 border-b border-zinc-200 bg-zinc-55 flex items-center justify-between">
-          <h3 className="text-xs font-black text-black tracking-widest uppercase">DISPATCH INDEX</h3>
+          <h3 className="text-xs font-black text-black tracking-widest uppercase">ACTIVE CHATS</h3>
           <span className="px-2.5 py-0.5 bg-black border border-black text-white text-[9px] font-black uppercase tracking-widest">
             {chats.length} active
           </span>
@@ -167,7 +167,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
             <div className="p-8 text-center text-xs text-zinc-400">
               <MessageSquare className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
               <p className="font-bold text-zinc-900 uppercase tracking-widest text-[10px]">No matches routed</p>
-              <p className="text-[10px] text-zinc-450 mt-1.5 font-semibold">Select 'Send Dispatch' on any product listing to open channels.</p>
+              <p className="text-[10px] text-zinc-450 mt-1.5 font-semibold">Select 'Message Neighbor' on any listing to open a chat channel.</p>
             </div>
           ) : (
             chats.map((chat) => {
@@ -329,7 +329,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                 id="message_input_box"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Type transmission coordinates..."
+                placeholder="Type your message here..."
                 maxLength={2000}
                 required
                 className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black placeholder-zinc-400 font-semibold focus:bg-white"
@@ -347,9 +347,9 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
         ) : (
           <div className="text-center py-20 px-4 bg-[#F6F6F6] h-full flex flex-col justify-center items-center" id="messages_not_selected_state">
             <MessageSquare className="w-12 h-12 text-zinc-300 mb-4" />
-            <h3 className="text-xs font-black text-black tracking-widest uppercase">TRANSMISSION CHANNEL VACANT</h3>
+            <h3 className="text-xs font-black text-black tracking-widest uppercase">NO ACTIVE CHAT SELECTED</h3>
             <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-2 font-semibold leading-relaxed">
-              Select any active routing thread on the sidebar index, or select 'Send Dispatch' on live directory postings to coordinate contactless porch handover actions.
+              Select any active chat thread on the sidebar index, or select 'Message Neighbor' on live listings to coordinate contactless porch handovers.
             </p>
           </div>
         )}

@@ -233,9 +233,11 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#343536] bg-[#0B0C0D]">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 bg-[#FF4500] text-white rounded-xl flex items-center justify-center">
-              <Gift className="w-4 h-4" />
+              {type === 'looking' ? <Search className="w-4 h-4" /> : <Gift className="w-4 h-4" />}
             </div>
-            <h3 className="text-sm font-bold text-white tracking-tight font-display">Share a New Gift</h3>
+            <h3 className="text-sm font-bold text-white tracking-tight font-display">
+              {type === 'looking' ? 'Post a New Request (ISO)' : 'Share a New Gift'}
+            </h3>
           </div>
           <button
             id="close_modal_btn"
@@ -290,12 +292,14 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
           {/* Item Title */}
           <div className="space-y-1.5">
-            <label htmlFor="post_title" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">What are you sharing/looking for?</label>
+            <label htmlFor="post_title" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+              {type === 'looking' ? 'What are you looking for? (ISO Request)' : 'What are you sharing?'}
+            </label>
             <input
               type="text"
               id="post_title"
               required
-              placeholder="e.g., Solid Walnut Dresser, Garden soil..."
+              placeholder={type === 'looking' ? "e.g., Lawn mower to borrow, Baby blankets, Canned food..." : "e.g., Solid Walnut Dresser, Garden soil..."}
               value={title}
               maxLength={100}
               onChange={(e) => setTitle(e.target.value)}
@@ -556,13 +560,15 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label htmlFor="post_description" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-sans">Details & Pickup Notes</label>
+            <label htmlFor="post_description" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-sans">
+              {type === 'looking' ? 'Request Details & Context' : 'Details & Pickup Notes'}
+            </label>
             <textarea
               id="post_description"
               required
               rows={4}
               maxLength={1000}
-              placeholder="Describe the item, its condition, and how neighbors can pick it up (like contactless porch pickup)."
+              placeholder={type === 'looking' ? "Describe what you are looking for, why you need it, and your transit arrangement flexibility." : "Describe the item, its condition, and how neighbors can pick it up (like contactless porch pickup)."}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="block w-full p-3.5 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs text-white placeholder-zinc-500 font-semibold resize-none focus:outline-hidden"
@@ -596,7 +602,9 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               disabled={isSubmitting}
               className="flex-1 py-3 bg-[#FF4500] hover:bg-[#E03D00] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? 'Sharing...' : 'Share Item'}
+              {isSubmitting 
+                ? (type === 'looking' ? 'Posting...' : 'Sharing...') 
+                : (type === 'looking' ? 'Post Request' : 'Share Item')}
             </button>
           </div>
         </form>

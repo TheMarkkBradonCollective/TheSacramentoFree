@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
-import { Filter, Search as SearchIcon, MapPin, Map as MapIcon, Tag, MessageSquare, AlertCircle, CheckCircle, Trash2, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search as SearchIcon, MapPin, Tag, MessageSquare, AlertCircle, Trash2, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
 import { updateSupabaseItemStatus, deleteSupabaseItem } from '../supabase';
-import SacramentoMapView from './SacramentoMapView';
 
 interface ItemGridProps {
   items: ItemPost[];
@@ -106,19 +105,6 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
-
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileViewTab, setMobileViewTab] = useState<'map' | 'list'>('map');
-
-  useEffect(() => {
-    const handleResize = () => {
-      // 1024 matches tailwind's lg breakpoint where grid transitions to side-by-side structures
-      setIsMobile(window.innerWidth < 1024);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const [customVotes, setCustomVotes] = useState<Record<string, PostVoteState>>(() => {
     try {
@@ -604,7 +590,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                     className="px-4 py-2 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[10px] uppercase tracking-widest rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>SEND DISPATCH</span>
+                    <span>MESSAGE NEIGHBOR</span>
                   </button>
                 ) : (
                   <span className="text-[9px] font-black text-zinc-550 uppercase tracking-widest font-mono">Archive Record</span>
@@ -734,120 +720,18 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
         </div>
       </div>
 
-      {/* Mobile Tab Swapper: Only displayed on mobile screens (viewport < 1024px) */}
-      {isMobile && (
-        <div id="mobile_view_modes_tab" className="flex border border-zinc-200 bg-white shadow-xs p-1 gap-1">
-          <button
-            id="mobile_map_tab_btn"
-            onClick={() => setMobileViewTab('map')}
-            className={`flex-1 py-2.5 text-xs font-black uppercase tracking-widest text-center transition-all cursor-pointer inline-flex items-center justify-center space-x-1.5 ${
-              mobileViewTab === 'map'
-                ? 'bg-black text-white'
-                : 'bg-zinc-50 text-zinc-500 hover:text-black font-semibold'
-            }`}
-          >
-            <MapIcon className="w-4 h-4 text-brand-orange shrink-0" />
-            <span>Map Grid</span>
-          </button>
-          <button
-            id="mobile_list_tab_btn"
-            onClick={() => setMobileViewTab('list')}
-            className={`flex-1 py-2.5 text-xs font-black uppercase tracking-widest text-center transition-all cursor-pointer inline-flex items-center justify-center space-x-1.5 ${
-              mobileViewTab === 'list'
-                ? 'bg-black text-white'
-                : 'bg-zinc-50 text-zinc-500 hover:text-black font-semibold'
-            }`}
-          >
-            <Filter className="w-4 h-4 text-zinc-400 shrink-0" />
-            <span>Bulletin ({filteredItems.length})</span>
-          </button>
+      {/* Bulletin Listings Feed */}
+      {filteredItems.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-none border border-dashed border-zinc-300 p-8" id="empty_feed_state">
+          <AlertCircle className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
+          <h3 className="text-xs font-black text-black uppercase tracking-widest">No listings match operational filters</h3>
+          <p className="text-xs text-zinc-500 mt-2 max-w-sm mx-auto font-semibold">
+            Re-adjust your filter configurations above.
+          </p>
         </div>
-      )}
-
-      {/* View routing for different form factors */}
-      {isMobile ? (
-        mobileViewTab === 'map' ? (
-          <SacramentoMapView
-            items={items}
-            userProfile={userProfile}
-            selectedType={selectedType}
-            selectedCategory={selectedCategory}
-            selectedNeighborhood={selectedNeighborhood}
-            searchTerm={searchTerm}
-            onInitiateChat={onInitiateChat}
-            onItemDetail={(item) => {
-              setMobileViewTab('list');
-              setExpandedPostComments((prev) => ({ ...prev, [item.id]: true }));
-              setTimeout(() => {
-                const card = document.getElementById(`item_card_${item.id}`);
-                card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 100);
-            }}
-          />
-        ) : filteredItems.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-none border border-dashed border-zinc-300 p-8" id="empty_feed_state_mobile">
-            <AlertCircle className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
-            <h3 className="text-xs font-black text-black uppercase tracking-widest">No listings matches operational filters</h3>
-            <p className="text-xs text-zinc-550 mt-2 max-w-sm mx-auto font-semibold">
-              Re-adjust your sector configurations above.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6" id="items_grid_cards_mobile">
-            {filteredItems.map((item) => renderItemCard(item))}
-          </div>
-        )
       ) : (
-        /* Desktop Dual Pane View: Listings on the Left, Dynamic Sacramento Coordinates Map on the Right */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" id="desktop_workspace_split">
-          {/* Listings side column */}
-          <div className="lg:col-span-7 xl:col-span-8 space-y-6" id="items_grid_cards_desktop_view">
-            {filteredItems.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-none border border-dashed border-zinc-300 p-8" id="empty_feed_state_desktop">
-                <AlertCircle className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
-                <h3 className="text-xs font-black text-black uppercase tracking-widest">No listings matches operational filters</h3>
-                <p className="text-xs text-zinc-550 mt-2 max-w-sm mx-auto font-semibold">
-                  Re-adjust your sector configurations above.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6" id="items_grid_cards_desktop">
-                {filteredItems.map((item) => renderItemCard(item))}
-              </div>
-            )}
-          </div>
-
-          {/* Interactive live monitoring map on the right */}
-          <div className="lg:col-span-5 xl:col-span-4" id="desktop_sticky_map_wrapper">
-            <div className="sticky top-[88px] z-10 space-y-4">
-              <div className="bg-black text-white border border-zinc-850 p-4.5 rounded-none shadow-xs">
-                <span className="text-[9.5px] font-black text-brand-orange uppercase tracking-widest font-mono flex items-center gap-1.5">
-                  <span className="inline-block w-2 h-2 rounded-full bg-brand-orange animate-ping"></span>
-                  SACRAMENTO GRID MONITOR
-                </span>
-                <p className="text-[10px] font-bold text-zinc-350 mt-1 uppercase tracking-wider leading-relaxed">
-                  Active filter overlays apply automatically. Select map districts or categories inside map colors drawer to inspect items.
-                </p>
-              </div>
-
-              <SacramentoMapView
-                items={items}
-                userProfile={userProfile}
-                selectedType={selectedType}
-                selectedCategory={selectedCategory}
-                selectedNeighborhood={selectedNeighborhood}
-                searchTerm={searchTerm}
-                onInitiateChat={onInitiateChat}
-                onItemDetail={(item) => {
-                  setExpandedPostComments((prev) => ({ ...prev, [item.id]: true }));
-                  setTimeout(() => {
-                    const card = document.getElementById(`item_card_${item.id}`);
-                    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }, 150);
-                }}
-              />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="items_grid_cards">
+          {filteredItems.map((item) => renderItemCard(item))}
         </div>
       )}
     </div>

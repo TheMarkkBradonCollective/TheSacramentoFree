@@ -145,7 +145,7 @@ export default function Navbar({
                   className="inline-flex items-center space-x-1.5 py-2 px-4 bg-[#FF4500] hover:bg-[#E03D00] text-white text-xs font-bold tracking-wide rounded-xl shadow-md transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Share Item</span>
+                  <span>Share or Request</span>
                 </button>
 
                 {/* Log Out */}
