@@ -26,14 +26,14 @@ export default function Navbar({
             className="flex items-center space-x-3 cursor-pointer select-none"
             id="brand_logo_container"
           >
-            <div className="px-2.5 py-2.5 bg-[#276EF1] text-white rounded-none flex items-center justify-center">
+            <div className="px-2.5 py-2.5 bg-brand-orange text-white rounded-none flex items-center justify-center">
               <Gift className="w-5 h-5" />
             </div>
             <div>
               <h1 className="text-sm font-black tracking-widest text-white uppercase leading-none font-display">
-                BUY<span className="text-[#276EF1] font-bold">NOTHING</span>
+                BUY<span className="text-brand-orange font-bold">NOTHING</span>
               </h1>
-              <span className="text-[9px] font-bold text-zinc-400 tracking-widest uppercase block mt-0.5">
+              <span className="text-[9px] font-bold text-brand-sage tracking-widest uppercase block mt-0.5">
                 SACRAMENTO COLLECTIVE
               </span>
             </div>
@@ -48,13 +48,13 @@ export default function Navbar({
                 onClick={() => setActiveTab('feed')}
                 className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center ${
                   activeTab === 'feed'
-                    ? 'text-[#276EF1]'
+                    ? 'text-brand-orange'
                     : 'text-zinc-300 hover:text-white'
                 }`}
               >
                 <span>Browse listings</span>
                 {activeTab === 'feed' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#276EF1]" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
                 )}
               </button>
 
@@ -64,14 +64,14 @@ export default function Navbar({
                 onClick={() => setActiveTab('chats')}
                 className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center space-x-1.5 ${
                   activeTab === 'chats'
-                    ? 'text-[#276EF1]'
+                    ? 'text-brand-orange'
                     : 'text-zinc-300 hover:text-white'
                 }`}
               >
                 <MessageSquare className="w-4 h-4" />
                 <span>Messages</span>
                 {activeTab === 'chats' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#276EF1]" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
                 )}
               </button>
 
@@ -81,14 +81,14 @@ export default function Navbar({
                 onClick={() => setActiveTab('profile')}
                 className={`h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center space-x-1.5 ${
                   activeTab === 'profile'
-                    ? 'text-[#276EF1]'
+                    ? 'text-brand-orange'
                     : 'text-zinc-300 hover:text-white'
                 }`}
               >
                 <User className="w-4 h-4" />
                 <span>Profile</span>
                 {activeTab === 'profile' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#276EF1]" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
                 )}
               </button>
             </nav>
@@ -100,10 +100,10 @@ export default function Navbar({
               <>
                 {/* Neighborhood Badge */}
                 <div 
-                  className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-none text-[10px] font-bold text-zinc-300 uppercase tracking-wider"
+                  className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-none text-[10px] font-bold text-brand-sage uppercase tracking-wider"
                   id="neighborhood_display_badge"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#276EF1]" />
+                  <MapPin className="w-3.5 h-3.5 text-brand-orange" />
                   <span>{userProfile.neighborhood}</span>
                 </div>
 
@@ -111,7 +111,7 @@ export default function Navbar({
                 <button
                   id="navbar_create_post_btn"
                   onClick={onOpenNewPost}
-                  className="inline-flex items-center space-x-1.5 py-2 px-4.5 bg-white hover:bg-zinc-200 text-black text-xs font-black uppercase tracking-wider rounded-none transition-colors cursor-pointer"
+                  className="inline-flex items-center space-x-1.5 py-2 px-4.5 bg-brand-sage hover:bg-brand-sage-hover text-white text-xs font-black uppercase tracking-wider rounded-none transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Post Item</span>
@@ -122,13 +122,13 @@ export default function Navbar({
                   id="navbar_logout_btn"
                   onClick={onLogout}
                   title="Sign Out"
-                  className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-900 rounded-none transition-colors cursor-pointer"
+                  className="p-2 text-zinc-400 hover:text-brand-orange hover:bg-zinc-900 rounded-none transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
               </>
             ) : (
-              <span className="text-[10px] font-black tracking-widest text-[#276EF1] uppercase font-mono">SACRAMENTO BUY NOTHING</span>
+              <span className="text-[10px] font-black tracking-widest text-[#FF4500] uppercase font-mono">SACRAMENTO BUY NOTHING</span>
             )}
           </div>
         </div>

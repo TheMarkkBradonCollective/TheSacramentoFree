@@ -211,7 +211,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
           {/* Guidelines info notice */}
           <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-none flex items-start space-x-2.5 text-xs text-black font-semibold" id="buy_nothing_alert">
-            <Info className="w-4 h-4 text-[#276EF1] shrink-0 mt-0.5" />
+            <Info className="w-4 h-4 text-brand-orange shrink-0 mt-0.5" />
             <span>
               <strong>Zero-Cost Mandate:</strong> Selling, credit, reciprocation, or bartering are blocked. Everything dispatched to Sacramento Buy Nothing lists at 100% free.
             </span>
@@ -223,7 +223,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               type="button"
               id="cancel_post_btn"
               onClick={onClose}
-              className="flex-1 py-3 bg-white hover:bg-zinc-50 border border-zinc-300 rounded-none text-xs font-black uppercase tracking-widest text-[#E11900] transition-colors cursor-pointer"
+              className="flex-1 py-3 bg-white hover:bg-zinc-50 border border-zinc-300 rounded-none text-xs font-black uppercase tracking-widest text-red-650 transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -231,7 +231,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               type="submit"
               id="submit_listing_btn"
               disabled={isSubmitting}
-              className="flex-1 py-3 bg-[#276EF1] hover:bg-[#1952ca] text-white rounded-none text-xs font-black uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50"
+              className="flex-1 py-3 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-none text-xs font-black uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? 'DISPATCHING...' : 'DISPATCH LISTING'}
             </button>

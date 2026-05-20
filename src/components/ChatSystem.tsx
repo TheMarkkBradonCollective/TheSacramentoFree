@@ -184,7 +184,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                   }}
                   className={`p-4 flex items-start space-x-3.5 cursor-pointer select-none transition-all border-b border-zinc-100 ${
                     isSelected 
-                      ? 'bg-zinc-100 border-l-[3px] border-l-[#276EF1]' 
+                      ? 'bg-zinc-100 border-l-[3px] border-l-brand-orange' 
                       : 'hover:bg-zinc-50 border-l-[3px] border-l-transparent'
                   }`}
                 >
@@ -207,7 +207,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                     {/* Item Post Context */}
                     {chat.itemTitle && (
                       <span className="inline-flex mt-1.5 items-center space-x-1 text-[8.5px] font-black text-black bg-zinc-100 border border-zinc-200 px-2 py-0.5 uppercase tracking-widest truncate max-w-full">
-                        <Box className="w-2.5 h-2.5 text-[#276EF1]" />
+                        <Box className="w-2.5 h-2.5 text-brand-orange" />
                         <span>{chat.itemTitle}</span>
                       </span>
                     )}
@@ -259,13 +259,13 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                     {getRecipientInfo(selectedChat).otherName}
                   </h4>
                   {selectedChat.itemTitle ? (
-                    <div className="flex items-center space-x-1.5 text-[9px] text-[#276EF1] font-black tracking-widest uppercase block mt-1 truncate">
+                    <div className="flex items-center space-x-1.5 text-[9px] text-brand-orange font-black tracking-widest uppercase block mt-1 truncate">
                       <Gift className="w-3.5 h-3.5" />
                       <span>MATCHING cargo: {selectedChat.itemTitle}</span>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-1.5 text-[9px] text-zinc-500 mt-1 uppercase tracking-widest font-black">
-                      <MapPin className="w-3 h-3 text-[#276EF1]" />
+                      <MapPin className="w-3 h-3 text-brand-sage" />
                       <span>ROUTED METROPOLITAN COMMUNICATOR</span>
                     </div>
                   )}

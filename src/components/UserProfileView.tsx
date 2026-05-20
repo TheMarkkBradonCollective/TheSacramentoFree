@@ -78,7 +78,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         <h3 className="text-sm font-black text-black mt-4 uppercase tracking-wider">{userProfile.displayName}</h3>
         
         <div className="flex items-center space-x-1.5 px-3 py-1 bg-zinc-50 border border-zinc-200 rounded-none text-[9px] font-black text-zinc-700 mt-2.5 uppercase tracking-widest">
-          <MapPin className="w-3 h-3 text-[#276EF1]" />
+          <MapPin className="w-3 h-3 text-brand-orange" />
           <span>{userProfile.neighborhood} Sector</span>
         </div>
 
@@ -99,8 +99,8 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
 
       {/* Settings Form */}
       <div className="md:col-span-2 bg-white border border-zinc-200 rounded-none p-6 shadow-xs" id="profile_credentials_form_box">
-        <h3 className="text-xs font-black text-black tracking-widest uppercase mb-5 flex items-center space-x-2 border-b border-zinc-150 pb-3">
-          <User className="w-4 h-4 text-[#276EF1]" />
+        <h3 className="text-xs font-black text-black tracking-widest uppercase mb-5 flex items-center space-x-2 border-b border-zinc-150 pb-3 font-mono">
+          <User className="w-4 h-4 text-brand-orange" />
           <span>PROFILED CREDENTIALS MANAGEMENT</span>
         </h3>
 
@@ -113,8 +113,8 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
           )}
 
           {successMsg && (
-            <div className="p-3 bg-blue-50 border border-blue-200 text-[#276EF1] text-xs font-black uppercase tracking-wider rounded-none flex items-center space-x-1.5" id="profile_save_success">
-              <CheckCircle className="w-4 h-4 text-[#276EF1]" />
+            <div className="p-3 bg-brand-sage-light border border-brand-sage/20 text-brand-sage-dark text-xs font-black uppercase tracking-wider rounded-none flex items-center space-x-1.5" id="profile_save_success">
+              <CheckCircle className="w-4 h-4 text-brand-sage" />
               <span>{successMsg}</span>
             </div>
           )}

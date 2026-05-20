@@ -183,7 +183,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
 
           {/* Neighborhood Dropdown */}
           <div className="flex items-center space-x-2.5 bg-zinc-50 rounded-none px-3 py-2 border border-zinc-200">
-            <MapPin className="w-4 h-4 text-[#276EF1] shrink-0" />
+            <MapPin className="w-4 h-4 text-brand-orange shrink-0" />
             <select
               id="filter_neighborhood_select"
               value={selectedNeighborhood}
@@ -248,14 +248,14 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                         </span>
                       )}
                       {item.status === 'active' && (
-                        <span className="inline-flex items-center text-[8.5px] font-black uppercase tracking-widest text-[#276EF1] bg-[#276EF1]/10 border border-[#276EF1]/20 px-2.5 py-0.5">
+                        <span className="inline-flex items-center text-[8.5px] font-black uppercase tracking-widest text-brand-orange bg-brand-orange-light border border-brand-orange/20 px-2.5 py-0.5">
                           Active
                         </span>
                       )}
                     </div>
 
                     {/* Title */}
-                    <h4 className="text-sm font-black text-black group-hover:text-[#276EF1] transition-colors uppercase tracking-tight leading-tight">
+                    <h4 className="text-sm font-black text-black group-hover:text-brand-orange transition-colors uppercase tracking-tight leading-tight">
                       {item.title}
                     </h4>
 
@@ -273,7 +273,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                   {/* Metadata Row */}
                   <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-500">
                     <div className="flex items-center space-x-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-[#276EF1]" />
+                      <MapPin className="w-3.5 h-3.5 text-brand-sage" />
                       <span className="font-extrabold text-black uppercase tracking-wide">{item.neighborhood}</span>
                     </div>
                     <div className="flex items-center space-x-1">
@@ -334,7 +334,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                               id={`relist_btn_${item.id}`}
                               disabled={updatingItemId === item.id}
                               onClick={() => handleUpdateStatus(item.id, 'active')}
-                              className="px-2.5 py-1.5 bg-[#276EF1] hover:bg-[#1953ca] text-white rounded-none text-[9.5px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                              className="px-2.5 py-1.5 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-none text-[9.5px] font-black uppercase tracking-wider transition-colors cursor-pointer"
                             >
                               Relist
                             </button>
@@ -355,7 +355,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                         <button
                           id={`message_btn_${item.id}`}
                           onClick={() => onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)}
-                          className="px-4 py-2 bg-[#276EF1] hover:bg-[#1952ca] text-white font-black text-[10px] uppercase tracking-widest rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none"
+                          className="px-4 py-2 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[10px] uppercase tracking-widest rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>SEND DISPATCH</span>

@@ -506,7 +506,7 @@ export default function App() {
                       <div>
                         <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500">EXCHANGE DIRECTORY</h2>
                         <p className="text-xs text-zinc-550 mt-1 font-semibold leading-relaxed">
-                          Active operational records within the <span className="font-black text-[#276EF1] uppercase">{userProfile.neighborhood} Sector</span> and Greater Sacramento District.
+                          Active operational records within the <span className="font-black text-brand-orange uppercase">{userProfile.neighborhood} Sector</span> and Greater Sacramento District.
                         </p>
                       </div>
                     </div>

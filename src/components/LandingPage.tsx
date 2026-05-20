@@ -158,7 +158,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
   };
 
   return (
-    <div id="landing_page_root" className="min-h-screen flex flex-col justify-between bg-white text-black font-sans selection:bg-[#276EF1]/20">
+    <div id="landing_page_root" className="min-h-screen flex flex-col justify-between bg-white text-black font-sans selection:bg-brand-orange/20">
       
       {/* 1. Header/Navigation Bar - Minimalist Style (Stark borders & crisp lines) */}
       <nav className="border-b border-zinc-200 bg-white sticky top-0 z-45 px-4 sm:px-6 lg:px-8" id="landing_navbar">
@@ -169,7 +169,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
             </div>
             <div>
               <span className="text-sm font-black tracking-widest text-black uppercase block leading-none font-display">
-                BUY<span className="text-[#276EF1]">NOTHING</span>
+                BUY<span className="text-brand-orange">NOTHING</span>
               </span>
               <span className="text-[8.5px] font-black text-zinc-500 tracking-widest uppercase font-mono block mt-0.5">
                 SACRAMENTO FREE EXCHANGE
@@ -199,14 +199,14 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
 
       {/* 2. Hero Presentation (Stark Typography Layout) */}
       <section className="relative px-4 pt-16 pb-16 sm:px-6 lg:px-8 text-center max-w-4xl mx-auto space-y-6" id="hero_section">
-        <div className="inline-flex items-center space-x-2 bg-zinc-100 border border-zinc-200 text-black py-1.5 px-4 text-[10px] font-black tracking-widest uppercase font-mono">
-          <Sparkles className="w-3.5 h-3.5 text-[#276EF1]" />
+        <div className="inline-flex items-center space-x-2 bg-brand-sage-light border border-brand-sage/20 text-brand-sage-dark py-1.5 px-4 text-[10px] font-black tracking-widest uppercase font-mono">
+          <Sparkles className="w-3.5 h-3.5 text-brand-orange" />
           <span>ZERO-WASTE PILE — 100% COMMUNITY OWNED</span>
         </div>
 
         <h1 className="text-4xl sm:text-5xl md:text-6.5xl font-black text-black tracking-tight leading-none uppercase font-display">
           Go zero-waste.<br />
-          <span className="text-[#276EF1]">Give freely.</span>
+          <span className="text-brand-orange">Give freely.</span>
         </h1>
 
         <p className="text-sm sm:text-base text-zinc-650 leading-relaxed max-w-2xl mx-auto font-medium">
@@ -371,7 +371,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
                     <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500 block">SACRAMENTO NEIGHBORHOOD SECTOR</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
-                        <MapPin className="w-3.5 h-3.5 text-[#276EF1]" />
+                        <MapPin className="w-3.5 h-3.5 text-brand-sage" />
                       </div>
                       <select
                         value={neighborhood}
@@ -387,7 +387,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
 
                   {/* Bio */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-wider text-[#276EF1] block">BIOGRAPHY BRIEF (OPTIONAL)</label>
+                    <label className="text-[9px] font-black uppercase tracking-wider text-brand-sage block">BIOGRAPHY BRIEF (OPTIONAL)</label>
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
@@ -423,7 +423,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
             <button
               onClick={onGuestLogin}
               type="button"
-              className="w-full py-2.5 border border-dashed border-[#276EF1] text-[#276EF1] bg-white hover:bg-blue-50/40 text-[10px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer inline-flex items-center justify-center space-x-1.5"
+              className="w-full py-2.5 border border-dashed border-brand-orange text-brand-orange bg-white hover:bg-brand-orange-light text-[10px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer inline-flex items-center justify-center space-x-1.5"
             >
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
               <span>GUEST PORTAL PASS</span>
@@ -451,7 +451,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
       {/* 4. Interactive Live Preview Filter (Grid Look) */}
       <section className="px-4 py-12 max-w-7xl mx-auto w-full space-y-8 bg-zinc-50 border border-zinc-200 rounded-none my-8 shadow-xs" id="live_previews">
         <div className="text-center space-y-2">
-          <span className="text-[9px] font-black uppercase tracking-widest text-[#276EF1] font-mono">LIVE MATCHMAKER</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-[#FF4500] font-mono">LIVE MATCHMAKER</span>
           <h2 className="text-2xl font-black text-black tracking-tight uppercase font-display">Live Exchange Ledger</h2>
           <p className="text-xs font-semibold text-zinc-500">Instant views of verified equipment, items, and crops shared globally</p>
         </div>
@@ -477,7 +477,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="preview_grid">
           {filteredItems.length === 0 ? (
             <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-16 bg-white border border-dashed border-zinc-200">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#276EF1] block mb-1">LEDGER IS AWAITING POSTS</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-brand-orange block mb-1">LEDGER IS AWAITING POSTS</span>
               <p className="text-xs font-semibold text-zinc-500">No active dispatches matched standard filters. Join the community to establish yours!</p>
             </div>
           ) : (
@@ -491,18 +491,18 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
                   <div className="flex items-center justify-between mb-2.5">
                     <span className={`px-2.5 py-1 text-[8.5px] font-black uppercase tracking-widest border ${
                       item.type === 'giveaway' 
-                        ? 'bg-emerald-500/10 text-emerald-800 border-emerald-500/20' 
-                        : 'bg-indigo-500/10 text-indigo-800 border-indigo-500/20'
+                        ? 'bg-brand-sage-light text-brand-sage-dark border-brand-sage/20' 
+                        : 'bg-brand-orange-light text-brand-orange border-brand-orange/20'
                     }`}>
                       {item.type === 'giveaway' ? 'Gifting Offer' : 'Wanted Request'}
                     </span>
                     <span className="text-[9px] font-black text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 flex items-center space-x-1 uppercase tracking-wider">
-                      <MapPin className="w-2.5 h-2.5" />
+                      <MapPin className="w-2.5 h-2.5 text-brand-sage" />
                       <span>{item.neighborhood}</span>
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-black text-black leading-tight group-hover:text-[#276EF1] transition-colors uppercase tracking-tight">
+                  <h3 className="text-sm font-black text-black leading-tight group-hover:text-brand-orange transition-colors uppercase tracking-tight">
                     {item.title}
                   </h3>
                   <p className="text-xs text-zinc-500 mt-2 leading-relaxed line-clamp-3">
@@ -524,7 +524,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
         <div className="text-center pt-2">
           <button 
             onClick={() => document.getElementById('auth_credential_desk')?.scrollIntoView({ behavior: 'smooth' })}
-            className="inline-flex items-center space-x-1.5 text-xs font-black text-[#276EF1] hover:text-[#1953ca] uppercase tracking-widest cursor-pointer transition-all"
+            className="inline-flex items-center space-x-1.5 text-xs font-black text-brand-orange hover:text-brand-orange-hover uppercase tracking-widest cursor-pointer transition-all"
           >
             <span>Start a dispatch or claim items — Join the network</span>
             <ChevronRight className="w-4 h-4" />
@@ -535,7 +535,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
       {/* 5. How It Works Timeline (Stark minimal card blocks) */}
       <section className="px-4 py-16 max-w-5xl mx-auto w-full space-y-12" id="how_it_works_section">
         <div className="text-center space-y-2">
-          <span className="text-[9px] font-black uppercase tracking-widest text-[#276EF1] bg-blue-50 border border-blue-100 px-3 py-1 font-mono">VERIFIED STANDARD PIPELINE</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-[#FF4500] bg-brand-orange-light border border-brand-orange/10 px-3 py-1 font-mono">VERIFIED STANDARD PIPELINE</span>
           <h2 className="text-2xl font-black text-black tracking-tight uppercase font-display">System Architecture</h2>
           <p className="text-xs font-semibold text-zinc-500 max-w-sm mx-auto">Three elementary stages keeping resource cycles fluid with zero friction.</p>
         </div>
@@ -565,7 +565,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
 
           {/* Step 3 */}
           <div className="bg-white p-6 rounded-none border border-zinc-200 text-center space-y-4 shadow-3xs hover:border-zinc-400 transition-colors">
-            <div className="mx-auto w-11 h-11 bg-[#276EF1] text-white rounded-none flex items-center justify-center font-black text-sm">
+            <div className="mx-auto w-11 h-11 bg-brand-orange text-white rounded-none flex items-center justify-center font-black text-sm">
               03
             </div>
             <h3 className="text-xs font-black text-black uppercase tracking-widest">PROPULSION CLAIM</h3>
@@ -587,24 +587,24 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
           {/* Neighborhood Selection Rail */}
           <div className="md:col-span-4 flex md:flex-col overflow-x-auto md:overflow-x-visible gap-2 p-1" id="selection_rail">
             {NEIGHBORHOODS_METADATA.map((district, idx) => {
-              const isSelected = selectedNeighborhoodIndex === idx;
-              return (
-                <button
-                  key={district.name}
-                  onClick={() => setSelectedNeighborhoodIndex(idx)}
-                  className={`px-4 py-3.5 rounded-none text-xs font-black text-left transition-all shrink-0 cursor-pointer flex items-center justify-between w-full border ${
-                    isSelected 
-                      ? 'bg-black text-white border-black shadow-sm' 
-                      : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-200'
-                  }`}
-                >
-                  <span className="flex items-center space-x-2.5 uppercase tracking-wider">
-                    <MapPin className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-[#276EF1]'}`} />
-                    <span>{district.name}</span>
-                  </span>
-                  <ChevronRight className={`w-3.5 h-3.5 hidden md:block ${isSelected ? 'text-white' : 'text-zinc-400'}`} />
-                </button>
-              );
+               const isSelected = selectedNeighborhoodIndex === idx;
+               return (
+                 <button
+                   key={district.name}
+                   onClick={() => setSelectedNeighborhoodIndex(idx)}
+                   className={`px-4 py-3.5 rounded-none text-xs font-black text-left transition-all shrink-0 cursor-pointer flex items-center justify-between w-full border ${
+                     isSelected 
+                       ? 'bg-black text-white border-black shadow-sm' 
+                       : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-200'
+                   }`}
+                 >
+                   <span className="flex items-center space-x-2.5 uppercase tracking-wider">
+                     <MapPin className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-brand-orange'}`} />
+                     <span>{district.name}</span>
+                   </span>
+                   <ChevronRight className={`w-3.5 h-3.5 hidden md:block ${isSelected ? 'text-white' : 'text-zinc-400'}`} />
+                 </button>
+               );
             })}
           </div>
 
@@ -625,7 +625,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
               </p>
 
               <div className="p-4 bg-white border border-zinc-200" id="popular_exchanges_badge">
-                <span className="block text-[8px] font-black uppercase tracking-widest text-[#276EF1] font-mono mb-1.5">frequent listings:</span>
+                <span className="block text-[8px] font-black uppercase tracking-widest text-[#FF4500] font-mono mb-1.5">frequent listings:</span>
                 <p className="text-xs text-black font-bold leading-relaxed">{featuredNeighborhood.popular}</p>
               </div>
             </div>
@@ -644,7 +644,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
       <section className="px-4 py-8 max-w-4xl mx-auto w-full text-center" id="philosophy_rules">
         <div className="bg-white p-6 rounded-none border border-zinc-200 space-y-3.5">
           <div className="flex justify-center items-center space-x-2">
-            <ShieldAlert className="w-4 h-4 text-[#276EF1]" />
+            <ShieldAlert className="w-4 h-4 text-brand-orange" />
             <span className="text-xs font-black tracking-widest uppercase font-mono text-black">ABSOLUTE PUBLIC INTEREST TRUST</span>
           </div>
           <p className="text-xs text-zinc-600 leading-relaxed max-w-2xl mx-auto font-medium">
@@ -656,7 +656,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
       {/* 8. Call To Action Footer Section */}
       <section className="bg-black text-white mt-12 py-16 px-4 text-center relative overflow-hidden" id="call_to_action">
         <div className="max-w-xl mx-auto space-y-6">
-          <div className="w-11 h-11 bg-[#276EF1] text-white rounded-none flex items-center justify-center mx-auto mb-4">
+          <div className="w-11 h-11 bg-brand-orange text-white rounded-none flex items-center justify-center mx-auto mb-4">
             <Heart className="w-5.5 h-5.5 fill-current" />
           </div>
 
@@ -673,7 +673,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
             <span>EXCHANGE WITH SECURE ACCOUNT</span>
           </button>
 
-          <p className="text-[9px] text-[#276EF1] font-black uppercase tracking-widest font-mono">
+          <p className="text-[9px] text-[#FF4500] font-black uppercase tracking-widest font-mono">
             SACRAMENTO COUNTY VERIFIED LOGISTIC STREAMS
           </p>
         </div>

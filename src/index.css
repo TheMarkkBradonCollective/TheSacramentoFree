@@ -5,12 +5,19 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-brand-orange: #FF4500;
+  --color-brand-orange-hover: #E03D00;
+  --color-brand-orange-light: #FFF0EB;
+  --color-brand-sage: #7A9A7F;
+  --color-brand-sage-hover: #637F67;
+  --color-brand-sage-light: #F2F6F3;
+  --color-brand-sage-dark: #4A5F4D;
 }
 
 @layer utilities {
   /* Neutral clean canvas background */
   .mesh-bg {
-    background-color: #F6F6F6;
+    background-color: #F8F9F8;
     background-image: none !important;
   }
   
@@ -20,7 +27,7 @@
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     border: 1px solid #E2E2E2;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
   }
   
   .glass-card {
@@ -29,7 +36,7 @@
     -webkit-backdrop-filter: none !important;
     border: 1px solid #E2E2E2;
     border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   }
 
   .search-glass {
@@ -41,8 +48,8 @@
 /* Custom global overrides for high-contrast interactive items */
 input:focus, select:focus, textarea:focus {
   outline: none !important;
-  border-color: #276EF1 !important;
-  box-shadow: 0 0 0 2px rgba(39, 110, 241, 0.15) !important;
+  border-color: var(--color-brand-orange) !important;
+  box-shadow: 0 0 0 2px rgba(255, 69, 0, 0.15) !important;
 }
 
 button {

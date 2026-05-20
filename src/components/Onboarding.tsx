@@ -60,7 +60,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     <div id="onboarding_viewport" className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-zinc-50 font-sans">
       <div className="max-w-md w-full bg-white p-8 rounded-none border border-zinc-200 shadow-lg">
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-zinc-100 border border-zinc-200 rounded-none text-[#276EF1] mb-4" id="onboarding_icon_wrapper">
+          <div className="inline-flex p-3 bg-brand-orange-light border border-brand-orange/10 rounded-none text-brand-orange mb-4" id="onboarding_icon_wrapper">
             <Sparkles className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-black text-black tracking-tight uppercase font-display">
@@ -80,7 +80,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
 
           {/* Display Name */}
           <div className="space-y-1.5">
-            <label htmlFor="on_display_name" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">
+            <label htmlFor="on_display_name" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-mono">
               IDENTIFIER / NAME
             </label>
             <div className="relative rounded-none shadow-3xs">
@@ -101,12 +101,12 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
 
           {/* Neighborhood Selector */}
           <div className="space-y-1.5">
-            <label htmlFor="on_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">
+            <label htmlFor="on_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-mono">
               SACRAMENTO NEIGHBORHOOD SECTOR
             </label>
             <div className="relative rounded-none shadow-3xs">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <MapPin className="h-4 w-4 text-[#276EF1]" />
+                <MapPin className="h-4 w-4 text-brand-sage" />
               </div>
               <select
                 id="on_neighborhood"
@@ -128,7 +128,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
 
           {/* Profile Biography */}
           <div className="space-y-1.5">
-            <label htmlFor="on_bio" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">
+            <label htmlFor="on_bio" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-mono">
               BIOGRAPHY (OPTIONAL)
             </label>
             <textarea
@@ -150,14 +150,14 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
             type="submit"
             id="onboarding_submit_btn"
             disabled={isSubmitting}
-            className="w-full flex justify-center py-3 px-4 bg-black hover:bg-zinc-800 text-white rounded-none text-xs font-black uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex justify-center py-3 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-none text-xs font-black uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'JOINING REGISTER...' : 'JOIN LOCAL COOPERATIVE'}
           </button>
         </form>
 
         <div className="mt-6 flex items-center justify-center space-x-2 text-[10px] text-zinc-400 font-black uppercase tracking-wider border-t border-zinc-100 pt-6">
-          <Heart className="w-3.5 h-3.5 text-[#276EF1]" />
+          <Heart className="w-3.5 h-3.5 text-brand-orange animate-pulse" />
           <span>ESTABLISHING LOGISTIC HARMONY</span>
         </div>
       </div>
