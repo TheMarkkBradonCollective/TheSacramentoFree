@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates } from '../types';
-import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye, Compass } from 'lucide-react';
+import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye, Compass, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 
@@ -45,6 +45,26 @@ export function convertPercentToLatLng(x: number, y: number): { lat: number; lng
   const lng = lngMin + (x / 100) * (lngMax - lngMin);
   const lat = latMin + (1 - y / 100) * (latMax - latMin);
   return { lat, lng };
+}
+
+// Generate street-aligned block segments between two coordinates, mimicking Uber routes
+export function generateUberRouteCoords(from: { lat: number; lng: number }, to: { lat: number; lng: number }): [number, number][] {
+  const lat1 = from.lat;
+  const lng1 = from.lng;
+  const lat2 = to.lat;
+  const lng2 = to.lng;
+
+  // Midpoints to form standard square-grid urban street paths
+  const midLat = lat1 + (lat2 - lat1) * 0.55;
+  const midLng = lng1 + (lng2 - lng1) * 0.45;
+
+  return [
+    [lat1, lng1],
+    [midLat, lng1],
+    [midLat, midLng],
+    [lat2, midLng],
+    [lat2, lng2]
+  ];
 }
 
 // Map each post category to a specific distinct color for blips
@@ -97,6 +117,7 @@ export default function SacramentoMapView({
 }: SacramentoMapViewProps) {
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
   const [showColorGuide, setShowColorGuide] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
   // Local overrides in case filters are not controlled by a parent grid
   const [localSearch, setLocalSearch] = useState('');
@@ -171,6 +192,26 @@ export default function SacramentoMapView({
       return matchesSearch && matchesType && matchesCategory && matchesNeighborhood;
     });
   }, [items, sType, sCat, sNeigh, sTerm]);
+
+  // Find current listing index in filtered list for pagination
+  const currentIndex = useMemo(() => {
+    if (!selectedPost) return -1;
+    return activeItems.findIndex(item => item.id === selectedPost.id);
+  }, [selectedPost, activeItems]);
+
+  const handleNextPost = () => {
+    if (activeItems.length <= 1 || currentIndex === -1) return;
+    setSlideDirection('right');
+    const nextIdx = (currentIndex + 1) % activeItems.length;
+    setSelectedPost(activeItems[nextIdx]);
+  };
+
+  const handlePrevPost = () => {
+    if (activeItems.length <= 1 || currentIndex === -1) return;
+    setSlideDirection('left');
+    const prevIdx = (currentIndex - 1 + activeItems.length) % activeItems.length;
+    setSelectedPost(activeItems[prevIdx]);
+  };
 
   // Distribute points deterministically so multiple posts in the same neighbourhood don't stack directly
   const blipPositions = useMemo(() => {
@@ -348,12 +389,79 @@ export default function SacramentoMapView({
       L.marker([lat, lng], { icon: blipIcon })
         .addTo(markersGroup)
         .on('click', () => {
+          setSlideDirection('right');
           setSelectedPost(item);
           map.setView([lat, lng], map.getZoom(), { animate: true });
         });
     });
 
-  }, [blipPositions, selectedPost, activeItems]);
+    // 3. Draw Route from User to Selected Post (Uber style!)
+    if (selectedPost) {
+      const selectedBlip = blipPositions.find(b => b.item.id === selectedPost.id);
+      const selectedLatLng = selectedBlip ? convertPercentToLatLng(selectedBlip.x, selectedBlip.y) : null;
+      const startLatLng = userLocation || fallbackLatLng;
+
+      if (selectedLatLng && startLatLng) {
+        const routePoints = generateUberRouteCoords(startLatLng, selectedLatLng);
+
+        // Draw background thick glowing route line (semi-transparent blue)
+        L.polyline(routePoints, {
+          color: '#3B82F6',
+          weight: 7,
+          opacity: 0.35,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(markersGroup);
+
+        // Draw foreground sharp dashed line representing actual connection routing guide
+        L.polyline(routePoints, {
+          color: '#1D4ED8',
+          weight: 3.5,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round',
+          dashArray: '6, 8'
+        }).addTo(markersGroup);
+
+        // Draw starting marker pin style
+        const startIcon = L.divIcon({
+          html: `
+            <div class="h-3.5 w-3.5 bg-blue-600 rounded-full border-2.5 border-white shadow-md flex items-center justify-center">
+              <div class="h-1 w-1 bg-white rounded-full"></div>
+            </div>
+          `,
+          className: 'route-start-marker',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        });
+        L.marker([startLatLng.lat, startLatLng.lng], { icon: startIcon, zIndexOffset: 200 }).addTo(markersGroup);
+
+        // Draw detailed target indicator on selected item coordinates
+        const destIcon = L.divIcon({
+          html: `
+            <div class="relative flex items-center justify-center">
+              <span class="absolute inline-flex h-8 w-8 rounded-full bg-red-500/25 animate-ping"></span>
+              <div class="h-4.5 w-4.5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+              </div>
+            </div>
+          `,
+          className: 'route-destination-pulsing-marker',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+        L.marker([selectedLatLng.lat, selectedLatLng.lng], { icon: destIcon, zIndexOffset: 201 }).addTo(markersGroup);
+
+        // Fit map bounds to view both points nicely with padding (Uber style!)
+        const bounds = L.latLngBounds([
+          [startLatLng.lat, startLatLng.lng],
+          [selectedLatLng.lat, selectedLatLng.lng]
+        ]);
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14, animate: true });
+      }
+    }
+
+  }, [blipPositions, selectedPost, activeItems, userLocation, fallbackLatLng]);
 
   // Handle programmatically panning/zooming to a selected neighborhood
   useEffect(() => {
@@ -369,22 +477,7 @@ export default function SacramentoMapView({
     }
   }, [sNeigh]);
 
-  // Focus and center dynamically when item details are requested
-  useEffect(() => {
-    if (!mapRef.current || !selectedPost) return;
-    const customCoords = extractGPSCoordinates(selectedPost.description);
-    let coords = customCoords;
-    if (!coords) {
-      const neighCoord = NEIGHBORHOOD_COORDS[selectedPost.neighborhood];
-      if (neighCoord) {
-        coords = neighCoord;
-      }
-    }
-    if (coords) {
-      const { lat, lng } = convertPercentToLatLng(coords.x, coords.y);
-      mapRef.current.setView([lat, lng], 14, { animate: true });
-    }
-  }, [selectedPost]);
+  // Note: Standard Uber camera view fits bounds reactively inside the primary rendering hook above.
 
   // Immersive mobile layout implementation
   if (isFullScreenMobile) {
@@ -504,15 +597,40 @@ export default function SacramentoMapView({
 
         {/* Selected Blip floating detours block panel */}
         <div className="absolute bottom-20 left-4 right-4 z-30 pointer-events-none">
-          <AnimatePresence>
+          <AnimatePresence mode="popLayout">
             {selectedPost && (
               <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 30 }}
+                key={selectedPost.id}
+                initial={{ opacity: 0, x: slideDirection === 'right' ? 70 : -70 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: slideDirection === 'right' ? -70 : 70 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
                 id="mobile_map_detail_floating_card"
                 className="pointer-events-auto border-2 border-black bg-white p-4 shadow-2xl relative font-sans w-full"
               >
+                {/* Sliding Pagination Controls */}
+                <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-zinc-50 border border-zinc-200 px-1.5 py-0.5">
+                  <button
+                    onClick={handlePrevPost}
+                    disabled={activeItems.length <= 1}
+                    className="text-zinc-500 hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                    title="Slide Left"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-[9px] font-bold font-mono text-zinc-650 min-w-[26px] text-center">
+                    {currentIndex + 1}/{activeItems.length}
+                  </span>
+                  <button
+                    onClick={handleNextPost}
+                    disabled={activeItems.length <= 1}
+                    className="text-zinc-500 hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                    title="Slide Right"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
                 <button
                   onClick={() => setSelectedPost(null)}
                   className="absolute top-3 right-3 text-zinc-400 hover:text-black transition-colors cursor-pointer bg-zinc-50 p-1"
@@ -520,7 +638,7 @@ export default function SacramentoMapView({
                   <X className="w-3.5 h-3.5" />
                 </button>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-2">
                   {selectedPost.imageUrl ? (
                     <div className="w-16 h-16 border border-zinc-200 shrink-0 bg-white">
                       <img
@@ -566,7 +684,7 @@ export default function SacramentoMapView({
                       </div>
 
                       <button
-                        onClick={() => onInitiateChat(selectedPost.userId, selectedPost.userDisplayName, selectedPost.userPhotoURL, selectedPost)}
+                        onClick={() => onInitiateChat(selectedPost.userId, selectedPost.userDisplayName, selectedPost.userId, selectedPost)}
                         className="px-3 py-1 bg-[#FF4500] hover:bg-brand-orange-hover text-white text-[9px] font-black uppercase tracking-wider rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                       >
                         <MessageSquare className="w-3 h-3" />
@@ -864,20 +982,45 @@ export default function SacramentoMapView({
       </div>
 
       {/* Selected Blip Mini Card Slide Panel */}
-      <AnimatePresence>
+      <AnimatePresence mode="popLayout">
         {selectedPost && (
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 15 }}
+            key={selectedPost.id}
+            initial={{ opacity: 0, x: slideDirection === 'right' ? 80 : -80 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: slideDirection === 'right' ? -80 : 80 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
             id="map_item_detail_card"
             className="border-2 border-black bg-[#FFFDF9] p-4 relative font-sans"
           >
+            {/* Sliding Pagination Controls */}
+            <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 animate-fade-in">
+              <button
+                onClick={handlePrevPost}
+                disabled={activeItems.length <= 1}
+                className="text-zinc-500 hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                title="Slide Left"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-[10px] font-bold font-mono text-zinc-650 min-w-[28px] text-center">
+                {currentIndex + 1}/{activeItems.length}
+              </span>
+              <button
+                onClick={handleNextPost}
+                disabled={activeItems.length <= 1}
+                className="text-zinc-500 hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                title="Slide Right"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
             {/* Close buttons */}
             <button
               id="close_map_card_btn"
               onClick={() => setSelectedPost(null)}
-              className="absolute top-3 right-3 text-zinc-400 hover:text-black transition-colors cursor-pointer"
+              className="absolute top-3 right-3 text-zinc-400 hover:text-black transition-colors cursor-pointer bg-zinc-50 p-1"
               title="Close panel"
             >
               <X className="w-4 h-4" />
