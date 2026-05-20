@@ -24,6 +24,7 @@ export interface ItemPost {
   status: PostStatus;
   createdAt: any;
   updatedAt: any;
+  imageUrl?: string;
 }
 
 export interface Chat {
@@ -64,6 +65,9 @@ export const SACRAMENTO_NEIGHBORHOODS = [
 ];
 
 export const ITEM_CATEGORIES = [
+  'Curb Alert',
+  'Porch Pickup',
+  'Free Pile / Box',
   'Furniture',
   'Kitchen & Dining',
   'Appliances',
@@ -80,3 +84,26 @@ export const ITEM_CATEGORIES = [
   'Pet Supplies',
   'Other / Custom'
 ];
+
+export const ISO_CATEGORIES = [
+  'Borrow Request',
+  'Household Needed',
+  'Furniture Wanted',
+  'Appliances Needed',
+  'Groceries & Food Needed',
+  'Baby & Kids ISO',
+  'Garden & Tools ISO',
+  'Clothing Needed',
+  'Electronics / Media Wanted',
+  'Pet Supplies Needed',
+  'Help / Labor Request',
+  'Other Seeking Support'
+];
+
+export const ISO_DELIVERY_PREFS = [
+  'Willing to pick up (I have transport)',
+  'No vehicle, needs drop-off help',
+  'Can meet halfway in public spot',
+  'Flexible / Open to pick up or delivery'
+];
+

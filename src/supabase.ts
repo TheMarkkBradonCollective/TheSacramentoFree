@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.items (
   "userPhotoURL" TEXT,
   neighborhood TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
+  "imageUrl" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
@@ -204,6 +205,46 @@ export async function getSupabaseItems(): Promise<ItemPost[]> {
   }
 }
 
+export async function uploadItemImage(file: File, itemId: string): Promise<string | null> {
+  try {
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const filePath = `${itemId}_${Date.now()}.${fileExt}`;
+
+    // Upload to 'items' bucket using supabase-js
+    const { data, error } = await supabase.storage
+      .from('items')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+    if (error) {
+      console.warn('Supabase storage upload failed, checking schema or connection:', error);
+      throw error;
+    }
+
+    // Get public URL
+    const { data: publicData } = supabase.storage
+      .from('items')
+      .getPublicUrl(filePath);
+
+    return publicData?.publicUrl || null;
+  } catch (err: any) {
+    console.warn('Real storage upload failed, using local/base64 cache fallback:', err);
+    // If the storage block is disabled/empty/permission denied, fallback to dataURL base64 format mapping
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = () => {
+        resolve(null);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
 export async function createSupabaseItem(item: ItemPost): Promise<boolean> {
   try {
     const payload = {
@@ -217,6 +258,7 @@ export async function createSupabaseItem(item: ItemPost): Promise<boolean> {
       userPhotoURL: item.userPhotoURL || null,
       neighborhood: item.neighborhood,
       status: item.status || 'active',
+      imageUrl: item.imageUrl || null,
       createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : new Date().toISOString()
     };

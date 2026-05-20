@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { LogOut, MessageSquare, Plus, User, MapPin, Gift } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -16,6 +17,8 @@ export default function Navbar({
   onOpenNewPost,
   onLogout,
 }: NavbarProps) {
+  const [logoFailed, setLogoFailed] = useState(false);
+
   return (
     <header id="main_navbar" className="sticky top-0 z-40 bg-[#000000] text-white border-b border-zinc-800 transition-all font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,17 +29,28 @@ export default function Navbar({
             className="flex items-center space-x-3 cursor-pointer select-none"
             id="brand_logo_container"
           >
-            <div className="px-2.5 py-2.5 bg-brand-orange text-white rounded-none flex items-center justify-center">
-              <Gift className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-sm font-black tracking-widest text-white uppercase leading-none font-display">
-                BUY<span className="text-brand-orange font-bold">NOTHING</span>
-              </h1>
-              <span className="text-[9px] font-bold text-brand-sage tracking-widest uppercase block mt-0.5">
-                SACRAMENTO COLLECTIVE
-              </span>
-            </div>
+            {!logoFailed ? (
+              <img 
+                src="/Logo.png" 
+                alt="Sacramento Buy Nothing Logo" 
+                className="h-9 w-auto object-contain cursor-pointer max-w-[220px]"
+                onError={() => setLogoFailed(true)}
+              />
+            ) : (
+              <>
+                <div className="px-2.5 py-2.5 bg-brand-orange text-white rounded-none flex items-center justify-center">
+                  <Gift className="w-5 h-5" />
+                </div>
+                <div>
+                  <h1 className="text-sm font-black tracking-widest text-white uppercase leading-none font-display">
+                    BUY<span className="text-brand-orange font-bold">NOTHING</span>
+                  </h1>
+                  <span className="text-[9px] font-bold text-brand-sage tracking-widest uppercase block mt-0.5">
+                    SACRAMENTO COLLECTIVE
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Navigation Controls (Stark borders & underlines) */}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, PostType } from '../types';
-import { createSupabaseItem } from '../supabase';
-import { X, Gift, Search, Info } from 'lucide-react';
+import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType } from '../types';
+import { createSupabaseItem, uploadItemImage } from '../supabase';
+import { X, Gift, Search, Info, Camera, Trash2 } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 
 interface PostItemModalProps {
@@ -15,9 +15,41 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
   const [description, setDescription] = useState('');
   const [type, setType] = useState<PostType>('giveaway');
   const [category, setCategory] = useState(ITEM_CATEGORIES[0]);
+  const [isoCategory, setIsoCategory] = useState(ISO_CATEGORIES[0]);
+  const [collectionMethod, setCollectionMethod] = useState(ISO_DELIVERY_PREFS[0]);
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleImageChange = (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageChange(e.dataTransfer.files[0]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,19 +64,37 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
     // Generate accurate path ID safely
     const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    let uploadedUrl = '';
+    if (imageFile) {
+      try {
+        const url = await uploadItemImage(imageFile, itemId);
+        if (url) {
+          uploadedUrl = url;
+        }
+      } catch (err) {
+        console.warn('Image uploading failed, fallback behavior handles local cache:', err);
+      }
+    }
+
+    const finalCategory = type === 'looking' ? isoCategory : category;
+    const finalDescription = type === 'looking' 
+      ? `[TRANSPORT: ${collectionMethod}]\n\n${description.trim()}`
+      : description.trim();
+
     const newItem: ItemPost = {
       id: itemId,
       title: title.trim(),
-      description: description.trim(),
+      description: finalDescription,
       type,
-      category,
+      category: finalCategory,
       userId: userProfile.uid,
       userDisplayName: userProfile.displayName,
       userPhotoURL: userProfile.photoURL,
       neighborhood,
       status: 'active',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      imageUrl: uploadedUrl || undefined
     };
 
     try {
@@ -159,36 +209,145 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4" id="post_category_neighborhood_grid">
-            {/* Category selection */}
-            <div className="space-y-1.5">
-              <label htmlFor="post_category" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Sector Category</label>
-              <select
-                id="post_category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
-              >
-                {ITEM_CATEGORIES.map((c) => (
-                  <option key={c} value={c} className="bg-white">{c.toUpperCase()}</option>
-                ))}
-              </select>
-            </div>
+          {type === 'giveaway' ? (
+            <div className="grid grid-cols-2 gap-4" id="post_category_neighborhood_grid">
+              {/* Category selection */}
+              <div className="space-y-1.5">
+                <label htmlFor="post_category" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Sector Category</label>
+                <select
+                  id="post_category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
+                >
+                  {ITEM_CATEGORIES.map((c) => (
+                    <option key={c} value={c} className="bg-white">{c.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Neighborhood location */}
-            <div className="space-y-1.5">
-              <label htmlFor="post_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Pick-up Routing</label>
-              <select
-                id="post_neighborhood"
-                value={neighborhood}
-                onChange={(e) => setNeighborhood(e.target.value)}
-                className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
-              >
-                {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                  <option key={n} value={n} className="bg-white">{n.toUpperCase()}</option>
-                ))}
-              </select>
+              {/* Neighborhood location */}
+              <div className="space-y-1.5">
+                <label htmlFor="post_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Pick-up Routing</label>
+                <select
+                  id="post_neighborhood"
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
+                >
+                  {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                    <option key={n} value={n} className="bg-white">{n.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+          ) : (
+            <div className="space-y-4 font-sans" id="post_looking_custom_fields">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Seeking Category */}
+                <div className="space-y-1.5">
+                  <label htmlFor="post_iso_category" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Category of Need</label>
+                  <select
+                    id="post_iso_category"
+                    value={isoCategory}
+                    onChange={(e) => setIsoCategory(e.target.value)}
+                    className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
+                  >
+                    {ISO_CATEGORIES.map((c) => (
+                      <option key={c} value={c} className="bg-white text-xs">{c.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Neighborhood location */}
+                <div className="space-y-1.5">
+                  <label htmlFor="post_iso_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Your Neighborhood</label>
+                  <select
+                    id="post_iso_neighborhood"
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(e.target.value)}
+                    className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
+                  >
+                    {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                      <option key={n} value={n} className="bg-white">{n.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Transit preference */}
+              <div className="space-y-1.5">
+                <label htmlFor="post_collection_method" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Lending / Transportation Arrangement</label>
+                <select
+                  id="post_collection_method"
+                  value={collectionMethod}
+                  onChange={(e) => setCollectionMethod(e.target.value)}
+                  className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
+                >
+                  {ISO_DELIVERY_PREFS.map((m) => (
+                    <option key={m} value={m} className="bg-white">{m.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Picture Upload Box */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Cargo Picture (Optional)</span>
+            
+            {imagePreview ? (
+              <div className="relative border border-zinc-200 bg-zinc-50 p-2 text-center" id="item_image_preview_container">
+                <img
+                  src={imagePreview}
+                  alt="Item Preview"
+                  className="max-h-48 mx-auto object-cover border border-zinc-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview('');
+                  }}
+                  id="remove_preview_btn"
+                  className="absolute top-4 right-4 bg-black/80 hover:bg-black text-white p-2 rounded-none transition-colors cursor-pointer"
+                  title="Remove image"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => document.getElementById('item_file_input')?.click()}
+                className={`border-2 border-dashed p-6 text-center cursor-pointer transition-all select-none rounded-none flex flex-col items-center justify-center space-y-2 ${
+                  dragActive ? 'border-brand-orange bg-orange-50/20' : 'border-zinc-300 hover:border-black bg-zinc-50'
+                }`}
+                id="image_drag_drop_zone"
+              >
+                <input
+                  type="file"
+                  id="item_file_input"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleImageChange(e.target.files[0]);
+                    }
+                  }}
+                />
+                <Camera className="w-6 h-6 text-zinc-400 group-hover:text-black transition-colors" />
+                <div className="text-xs text-zinc-800 font-bold uppercase tracking-wider">
+                  Drag & Drop or Click to Upload
+                </div>
+                <div className="text-[10px] text-zinc-400 font-mono">
+                  PNG, JPG, OR WEBP (UP TO 5MB)
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Description */}

@@ -107,6 +107,7 @@ const NEIGHBORHOODS_METADATA = [
 ];
 
 export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin, errorMsg, isAuthLoading }: LandingPageProps) {
+  const [logoFailed, setLogoFailed] = useState(false);
   const [activeItemTypeTab, setActiveItemTypeTab] = useState<'all' | 'giveaway' | 'looking'>('all');
   const [selectedNeighborhoodIndex, setSelectedNeighborhoodIndex] = useState(0);
 
@@ -205,18 +206,29 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
       {/* 1. Header/Navigation Bar - Minimalist Style (Stark borders & crisp lines) */}
       <nav className="border-b border-zinc-200 bg-white sticky top-0 z-45 px-4 sm:px-6 lg:px-8" id="landing_navbar">
         <div className="max-w-7xl mx-auto h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-black text-white rounded-none flex items-center justify-center">
-              <Gift className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="text-sm font-black tracking-widest text-black uppercase block leading-none font-display">
-                BUY<span className="text-brand-orange">NOTHING</span>
-              </span>
-              <span className="text-[8.5px] font-black text-zinc-500 tracking-widest uppercase font-mono block mt-0.5">
-                SACRAMENTO FREE EXCHANGE
-              </span>
-            </div>
+          <div className="flex items-center space-x-3 select-none">
+            {!logoFailed ? (
+              <img 
+                src="/Logo.png" 
+                alt="Sacramento Buy Nothing Logo" 
+                className="h-9 w-auto object-contain cursor-pointer max-w-[220px]"
+                onError={() => setLogoFailed(true)}
+              />
+            ) : (
+              <>
+                <div className="p-2.5 bg-black text-white rounded-none flex items-center justify-center">
+                  <Gift className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <span className="text-sm font-black tracking-widest text-black uppercase block leading-none font-display">
+                    BUY<span className="text-brand-orange">NOTHING</span>
+                  </span>
+                  <span className="text-[8.5px] font-black text-zinc-500 tracking-widest uppercase font-mono block mt-0.5">
+                    SACRAMENTO FREE EXCHANGE
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">
