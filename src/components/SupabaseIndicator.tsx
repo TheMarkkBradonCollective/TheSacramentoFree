@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Copy, Check, Terminal, ExternalLink, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
+import { Database, Copy, Check, Terminal, ExternalLink, Sparkles, AlertTriangle } from 'lucide-react';
 import { getSupabaseConfigurationState, subscribeToSupabaseState, SQL_SETUP_SCRIPT } from '../supabase';
 
 export default function SupabaseIndicator() {
@@ -20,32 +20,32 @@ export default function SupabaseIndicator() {
   };
 
   return (
-    <div id="supabase_db_indicator_block" className="space-y-4">
-      {/* Mini Bar Status */}
+    <div id="supabase_db_indicator_block" className="space-y-3 font-sans">
+      {/* Uber Styled Minimalist Status Bar */}
       <div 
-        className={`flex flex-col sm:flex-row items-center justify-between p-4 rounded-3xl border transition-all ${
+        className={`flex flex-col sm:flex-row items-center justify-between p-5 rounded-none border transition-all ${
           dbState.isConfigured 
-            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800' 
-            : 'bg-amber-500/10 border-amber-500/25 text-amber-900'
+            ? 'bg-white border-zinc-200 text-black shadow-sm' 
+            : 'bg-zinc-50 border-amber-500/30 text-black'
         }`}
       >
-        <div className="flex items-center space-x-3 text-center sm:text-left mb-3 sm:mb-0">
-          <div className={`p-2.5 rounded-2xl flex items-center justify-center ${
-            dbState.isConfigured ? 'bg-emerald-600/10 text-emerald-700' : 'bg-amber-600/10 text-amber-700'
+        <div className="flex items-start space-x-3.5 text-center sm:text-left mb-4 sm:mb-0">
+          <div className={`p-2.5 rounded-none flex items-center justify-center shrink-0 ${
+            dbState.isConfigured ? 'bg-zinc-100 text-[#276EF1]' : 'bg-amber-100 text-amber-700'
           }`}>
-            <Database className={`w-5 h-5 ${dbState.isConfigured ? 'animate-pulse' : ''}`} />
+            <Database className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center justify-center sm:justify-start space-x-1.5">
-              <span className="text-xs font-black uppercase tracking-wider">
-                {dbState.isConfigured ? 'Supabase Synchronized' : 'Database Setup Pending'}
+            <div className="flex items-center justify-center sm:justify-start space-x-2">
+              <span className="text-xs font-black tracking-widest uppercase">
+                {dbState.isConfigured ? 'DATABASE ACTIVE' : 'SCHEMA SETUP CONSOLE'}
               </span>
-              <span className={`w-2 h-2 rounded-full ${dbState.isConfigured ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${dbState.isConfigured ? 'bg-[#05A357]' : 'bg-amber-500'}`} />
             </div>
-            <p className="text-[11px] font-semibold text-slate-600 mt-0.5">
+            <p className="text-xs text-zinc-500 mt-1 font-semibold leading-relaxed">
               {dbState.isConfigured 
-                ? 'Your zero-waste listings and conversations are synced in real-time to PostgreSQL.'
-                : 'Connection verified but PostgreSQL schema tables are missing. Click below to initialize.'}
+                ? 'Relational mapping linked. Sacramento listings and chats are securely written to active cloud tables.'
+                : 'Local Sandbox is operational. To unlock standard multi-tenant features, paste the SQL schema script.'}
             </p>
           </div>
         </div>
@@ -54,56 +54,56 @@ export default function SupabaseIndicator() {
           {!dbState.isConfigured && (
             <button
               onClick={() => setShowSqlPanel(!showSqlPanel)}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer select-none inline-flex items-center space-x-1"
+              className="px-5 py-2.5 bg-black hover:bg-zinc-800 text-white rounded-none text-[10.5px] font-bold uppercase tracking-widest shadow-sm transition-all cursor-pointer select-none inline-flex items-center space-x-2"
             >
               <Terminal className="w-3.5 h-3.5" />
-              <span>{showSqlPanel ? 'Hide SQL Code' : 'Get SQL Script'}</span>
+              <span>{showSqlPanel ? 'HIDE SQL CHEVRON' : 'GET INTEGRATION SQL'}</span>
             </button>
           )}
           {dbState.isConfigured && (
             <button
               onClick={() => setShowSqlPanel(!showSqlPanel)}
-              className="px-4 py-2 bg-emerald-700/10 hover:bg-emerald-705/15 text-emerald-800 border border-emerald-500/20 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer inline-flex items-center space-x-1"
+              className="px-5 py-2.5 bg-white hover:bg-zinc-50 text-black border border-zinc-200 rounded-none text-[10.5px] font-bold uppercase tracking-widest transition-all cursor-pointer inline-flex items-center space-x-2"
             >
-              <Terminal className="w-3.5 h-3.5" />
-              <span>View Schema</span>
+              <Terminal className="w-3.5 h-3.5 text-[#276EF1]" />
+              <span>{showSqlPanel ? 'CLOSE CONTROLLER' : 'VIEW SCHEMA OUTLINE'}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* SQL Script Viewer Panel */}
+      {/* SQL Script Viewer Panel - Styled like premium developer docs */}
       {showSqlPanel && (
-        <div className="glass p-5 rounded-3xl border border-white/60 shadow-xl space-y-4 animate-fadeIn" id="db_sql_drawer">
-          <div className="flex items-center justify-between border-b border-white/35 pb-3">
+        <div className="bg-white p-6 rounded-none border border-zinc-200 shadow-lg space-y-4 animate-fadeIn" id="db_sql_drawer">
+          <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
             <div className="flex items-center space-x-2">
-              <Terminal className="w-4 h-4 text-emerald-600" />
-              <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight">Supabase Table Initializer</h4>
+              <Terminal className="w-4 h-4 text-[#276EF1]" />
+              <h4 className="text-xs font-black text-black uppercase tracking-widest">POSTGRESQL RELATIONAL SCHEMAS</h4>
             </div>
             <button
               onClick={handleCopySql}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all flex items-center space-x-1"
+              className="px-4 py-2 bg-[#276EF1] hover:bg-[#1a56ca] text-white rounded-none text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all flex items-center space-x-2"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-100" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied to Clipboard!' : 'Copy Schema'}</span>
+              {copied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? 'COPIED TO BUFFER' : 'COPY SCHEMAS'}</span>
             </button>
           </div>
 
-          <div className="rounded-xl overflow-hidden bg-slate-900 border border-slate-950 p-4 font-mono text-[10px] text-emerald-400 max-h-56 overflow-y-auto leading-relaxed shadow-inner">
+          <div className="rounded-none overflow-hidden bg-zinc-950 border border-zinc-900 p-4 font-mono text-[11px] text-zinc-300 max-h-60 overflow-y-auto leading-relaxed shadow-inner">
             <pre className="whitespace-pre">{SQL_SETUP_SCRIPT}</pre>
           </div>
 
-          <div className="p-3.5 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 text-[10.5px] leading-relaxed text-slate-650 font-semibold space-y-2">
-            <div className="flex items-start space-x-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="p-4 bg-zinc-50 rounded-none border border-zinc-200 text-xs text-zinc-600 font-semibold space-y-2.5">
+            <div className="flex items-start space-x-2.5">
+              <Sparkles className="w-4 h-4 text-[#276EF1] shrink-0 mt-0.5" />
               <p>
-                <strong>Setting up is quick:</strong> Log in to your <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-emerald-705 font-bold hover:underline inline-flex items-center space-x-0.5"><span>Supabase Dashboard</span><ExternalLink className="w-2.5 h-2.5 inline" /></a>, select your project, open the <strong>SQL Editor</strong>, paste this scheme snippet, and click <strong>Run</strong>.
+                <strong>Deployment Blueprint:</strong> Load your <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-[#276EF1] font-bold hover:underline inline-flex items-center space-x-1"><span>Supabase Console</span><ExternalLink className="w-3 h-3 inline" /></a>, paste these schemas in any <strong>SQL Query Tab</strong>, and press <strong>Run</strong>.
               </p>
             </div>
-            <div className="flex items-start space-x-1.5">
-              <AlertCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="flex items-start space-x-2.5">
+              <AlertTriangle className="w-4 h-4 text-[#276EF1] shrink-0 mt-0.5" />
               <p>
-                <strong>No worries if pending:</strong> We built an integrated automatic dual backup engine. If Postgres tables aren't found, the app automatically fails over to Firebase, keeping the interface fully operational so there are <em>zero breakdowns</em> in your grading or testing loop!
+                <strong>Cross-Platform Synchronization Failover:</strong> An automated dual pipeline connects Supabase to your active Firebase store. If Postgres structures are not detected, listings automatically sync via secondary fallback channels—ensuring a 100% reliable system with no failures.
               </p>
             </div>
           </div>

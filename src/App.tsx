@@ -245,12 +245,12 @@ export default function App() {
   };
 
   return (
-    <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-slate-800 antialiased font-sans">
+    <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-black antialiased font-sans">
       {/* 1. Loader screen */}
       {(isAuthLoading || isProfileLoading) && (
-        <div id="fullscreen_interactive_loader" className="fixed inset-0 mesh-bg z-50 flex flex-col items-center justify-center space-y-4 backdrop-blur-md">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold text-emerald-700 uppercase tracking-widest font-mono">Syncing Sacramento Community...</p>
+        <div id="fullscreen_interactive_loader" className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center space-y-4">
+          <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-none animate-spin" />
+          <p className="text-[9.5px] font-black text-black uppercase tracking-widest font-mono">ROUTING SYSTEM VERIFICATIONS...</p>
         </div>
       )}
 
@@ -285,9 +285,9 @@ export default function App() {
                   <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                       <div>
-                        <h2 className="text-xl font-bold tracking-tight text-gray-900">Neighborhood Exchange</h2>
-                        <p className="text-xs text-gray-500 mt-1">
-                          You are viewing verified posts in the <span className="font-semibold text-emerald-600">{userProfile.neighborhood}</span> and general Sacramento area.
+                        <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500">EXCHANGE DIRECTORY</h2>
+                        <p className="text-xs text-zinc-550 mt-1 font-semibold leading-relaxed">
+                          Active operational records within the <span className="font-black text-[#276EF1] uppercase">{userProfile.neighborhood} Sector</span> and Greater Sacramento District.
                         </p>
                       </div>
                     </div>

@@ -1,35 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;505&display=swap');
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
 @layer utilities {
+  /* Uber-Eats / Uber-Ride styled neutral canvas background */
   .mesh-bg {
-    background-color: #f0f9ff;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.35) 0, transparent 50%), 
-      radial-gradient(at 50% 0%, rgba(34, 197, 94, 0.25) 0, transparent 50%), 
-      radial-gradient(at 100% 0%, rgba(251, 191, 36, 0.25) 0, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(56, 189, 248, 0.35) 0, transparent 50%);
-    background-attachment: fixed;
+    background-color: #F6F6F6;
+    background-image: none !important;
   }
   
+  /* Uber Base Web solid high contrast containers */
   .glass {
-    background: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: #FFFFFF;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid #E2E2E2;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
   }
   
   .glass-card {
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: #FFFFFF;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid #E2E2E2;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   }
 
   .search-glass {
-    background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: #FFFFFF;
+    border: 1px solid #000000;
   }
 }
 
+/* Custom global overrides for high-contrast Uber interactive items */
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: #276EF1 !important;
+  box-shadow: 0 0 0 2px rgba(39, 110, 241, 0.15) !important;
+}
+
+button {
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}

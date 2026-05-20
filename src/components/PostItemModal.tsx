@@ -78,18 +78,20 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
   };
 
   return (
-    <div id="post_modal_overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-md glass rounded-3xl shadow-2xl border border-white/45 overflow-hidden my-8" id="post_modal_box">
+    <div id="post_modal_overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 overflow-y-auto font-sans">
+      <div className="relative w-full max-w-md bg-white rounded-none border border-zinc-200 shadow-2xl overflow-hidden my-8" id="post_modal_box">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-white/50 border-b border-white/30">
-          <div className="flex items-center space-x-2">
-            <Gift className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-base font-black text-slate-800 tracking-tight">Create Community Listing</h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-1.5 bg-black text-white rounded-none flex items-center justify-center">
+              <Gift className="w-4 h-4" />
+            </div>
+            <h3 className="text-xs font-black text-black tracking-widest uppercase">DISPATCH NEW LISTING</h3>
           </div>
           <button
             id="close_modal_btn"
             onClick={onClose}
-            className="p-1.5 text-slate-555 hover:text-slate-850 hover:bg-white/40 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-105 rounded-none transition-colors cursor-pointer"
           >
             <X className="w-4.5 h-4.5" />
           </button>
@@ -98,87 +100,87 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5" id="post_item_form">
           {errorMsg && (
-            <div className="p-3 bg-red-500/10 text-red-700 text-xs font-semibold rounded-lg border border-red-500/20" id="post_item_error">
+            <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-none border border-red-200" id="post_item_error">
               {errorMsg}
             </div>
           )}
 
           {/* Type Toggle (Giveaway vs Looking for) */}
-          <div className="space-y-2">
-            <span className="text-[10px] font-bold text-slate-550 uppercase tracking-widest block header">Listing Type</span>
-            <div className="grid grid-cols-2 gap-3" id="listing_type_grid">
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">ORDER TYPE</span>
+            <div className="grid grid-cols-2 gap-3.5" id="listing_type_grid">
               <button
                 type="button"
                 id="type_giveaway_btn"
                 onClick={() => setType('giveaway')}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all inline-flex items-center justify-center space-x-2 cursor-pointer ${
+                className={`py-3 px-4 rounded-none text-xs font-black border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-2 cursor-pointer ${
                   type === 'giveaway'
-                    ? 'bg-white/70 border-white/60 text-emerald-800 shadow-sm'
-                    : 'bg-white/15 border-white/20 text-slate-600 hover:bg-white/30'
+                    ? 'bg-black border-black text-white'
+                    : 'bg-zinc-50 border-zinc-200 text-zinc-650 hover:bg-zinc-100'
                 }`}
               >
                 <Gift className="w-4 h-4" />
-                <span>Giving Away (Give)</span>
+                <span>Giving Away</span>
               </button>
 
               <button
                 type="button"
                 id="type_looking_btn"
                 onClick={() => setType('looking')}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all inline-flex items-center justify-center space-x-2 cursor-pointer ${
+                className={`py-3 px-4 rounded-none text-xs font-black border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-2 cursor-pointer ${
                   type === 'looking'
-                    ? 'bg-white/70 border-white/60 text-emerald-800 shadow-sm'
-                    : 'bg-white/15 border-white/20 text-slate-600 hover:bg-white/30'
+                    ? 'bg-black border-black text-white'
+                    : 'bg-zinc-50 border-zinc-200 text-zinc-650 hover:bg-zinc-100'
                 }`}
               >
                 <Search className="w-4 h-4" />
-                <span>Looking For (Ask)</span>
+                <span>In Search Of</span>
               </button>
             </div>
           </div>
 
           {/* Item Title */}
           <div className="space-y-1.5">
-            <label htmlFor="post_title" className="text-[10px] font-bold text-slate-555 uppercase tracking-widest block">Item Name / Title</label>
+            <label htmlFor="post_title" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Title / Cargo Description</label>
             <input
               type="text"
               id="post_title"
               required
-              placeholder="e.g., Wooden Dining Chair, Slow Cooker, Baby formula"
+              placeholder="e.g., Solid Walnut Dresser, Garden soil..."
               value={title}
               maxLength={100}
               onChange={(e) => setTitle(e.target.value)}
-              className="block w-full px-3 py-2 search-glass rounded-xl text-xs text-slate-900 placeholder-slate-500 font-bold focus:outline-hidden"
+              className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black font-semibold focus:bg-white"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4" id="post_category_neighborhood_grid">
             {/* Category selection */}
             <div className="space-y-1.5">
-              <label htmlFor="post_category" className="text-[10px] font-bold text-slate-555 uppercase tracking-widest block">Category</label>
+              <label htmlFor="post_category" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Sector Category</label>
               <select
                 id="post_category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="block w-full px-3 py-2 bg-white/45 border border-white/45 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden cursor-pointer"
+                className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
               >
                 {ITEM_CATEGORIES.map((c) => (
-                  <option key={c} value={c} className="bg-white">{c}</option>
+                  <option key={c} value={c} className="bg-white">{c.toUpperCase()}</option>
                 ))}
               </select>
             </div>
 
             {/* Neighborhood location */}
             <div className="space-y-1.5">
-              <label htmlFor="post_neighborhood" className="text-[10px] font-bold text-slate-555 uppercase tracking-widest block">Pick-up Location</label>
+              <label htmlFor="post_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Pick-up Routing</label>
               <select
                 id="post_neighborhood"
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
-                className="block w-full px-3 py-2 bg-white/45 border border-white/45 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden cursor-pointer"
+                className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
               >
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                  <option key={n} value={n} className="bg-white">{n}</option>
+                  <option key={n} value={n} className="bg-white">{n.toUpperCase()}</option>
                 ))}
               </select>
             </div>
@@ -186,37 +188,37 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label htmlFor="post_description" className="text-[10px] font-bold text-slate-555 uppercase tracking-widest block">Details / Condition</label>
+            <label htmlFor="post_description" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Details / Handover Protocol</label>
             <textarea
               id="post_description"
               required
               rows={4}
               maxLength={1000}
-              placeholder="Provide a helpful description! Mention the item's condition, dimensions, pick-up details (e.g. contactless porch pick-up), and availability."
+              placeholder="State actual condition, measurements, and safe contactless porch instructions."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="block w-full p-3 search-glass rounded-xl text-xs text-slate-900 placeholder-slate-500 font-bold focus:outline-hidden resize-none"
+              className="block w-full p-3.5 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black placeholder-zinc-400 font-semibold resize-none focus:bg-white"
             />
-            <div className="text-right text-[10px] text-slate-500 font-mono font-bold">
+            <div className="text-right text-[10px] text-zinc-400 font-mono font-medium">
               {description.length}/1000 chars
             </div>
           </div>
 
           {/* Guidelines info notice */}
-          <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/15 flex items-start space-x-2 text-xs text-emerald-850 font-bold" id="buy_nothing_alert">
-            <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-none flex items-start space-x-2.5 text-xs text-black font-semibold" id="buy_nothing_alert">
+            <Info className="w-4 h-4 text-[#276EF1] shrink-0 mt-0.5" />
             <span>
-              BuyNothing rule check: Everything listed must be entirely free. Trading, bartering, and selling are strictly prohibited.
+              <strong>Zero-Cost Mandate:</strong> Selling, credit, reciprocation, or bartering are blocked. Everything dispatched to UberShare lists at 100% free.
             </span>
           </div>
 
           {/* Form Actions */}
-          <div className="flex space-x-3 pt-2" id="post_item_actions">
+          <div className="flex space-x-3.5 pt-2" id="post_item_actions">
             <button
               type="button"
               id="cancel_post_btn"
               onClick={onClose}
-              className="flex-1 py-2.5 bg-white/20 hover:bg-white/35 border border-white/35 rounded-full text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+              className="flex-1 py-3 bg-white hover:bg-zinc-50 border border-zinc-300 rounded-none text-xs font-black uppercase tracking-widest text-[#E11900] transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -224,9 +226,9 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               type="submit"
               id="submit_listing_btn"
               disabled={isSubmitting}
-              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold shadow-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 bg-[#276EF1] hover:bg-[#1952ca] text-white rounded-none text-xs font-black uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? 'Posting...' : 'Create Listing'}
+              {isSubmitting ? 'DISPATCHING...' : 'DISPATCH LISTING'}
             </button>
           </div>
         </form>

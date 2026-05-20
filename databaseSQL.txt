@@ -1,0 +1,71 @@
+-- =========================================================
+-- SACRAMENTO BUY_NOTHING SUPABASE SCHEMAS
+-- Copy and paste this script into your Supabase SQL Editor
+-- =========================================================
+
+-- 1. Create Users profiles
+CREATE TABLE IF NOT EXISTS public.users (
+  uid TEXT PRIMARY KEY,
+  "displayName" TEXT NOT NULL,
+  "photoURL" TEXT,
+  email TEXT NOT NULL,
+  neighborhood TEXT NOT NULL,
+  bio TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable select policies
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read users" ON public.users FOR SELECT USING (true);
+CREATE POLICY "Allow insert and update" ON public.users FOR ALL USING (true);
+
+-- 2. Create Items listings
+CREATE TABLE IF NOT EXISTS public.items (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  type TEXT NOT NULL,
+  category TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "userDisplayName" TEXT NOT NULL,
+  "userPhotoURL" TEXT,
+  neighborhood TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read items" ON public.items FOR SELECT USING (true);
+CREATE POLICY "Allow write operations" ON public.items FOR ALL USING (true);
+
+-- 3. Create Chats metadata
+CREATE TABLE IF NOT EXISTS public.chats (
+  id TEXT PRIMARY KEY,
+  "participantIds" JSONB NOT NULL DEFAULT '[]'::jsonb,
+  "participantNames" JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "participantPhotos" JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "lastMessageText" TEXT,
+  "lastMessageAt" TIMESTAMPTZ DEFAULT NOW(),
+  "lastMessageSenderId" TEXT,
+  "itemId" TEXT,
+  "itemTitle" TEXT
+);
+
+ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read chats" ON public.chats FOR SELECT USING (true);
+CREATE POLICY "Allow write chats" ON public.chats FOR ALL USING (true);
+
+-- 4. Create chat Messages
+CREATE TABLE IF NOT EXISTS public.messages (
+  id TEXT PRIMARY KEY,
+  "chatId" TEXT NOT NULL,
+  "senderId" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read messages" ON public.messages FOR SELECT USING (true);
+CREATE POLICY "Allow insert messages" ON public.messages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow edit or update" ON public.messages FOR ALL USING (true);
