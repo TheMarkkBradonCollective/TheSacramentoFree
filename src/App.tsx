@@ -7,6 +7,7 @@ import PostItemModal from './components/PostItemModal';
 import ItemGrid from './components/ItemGrid';
 import ChatSystem from './components/ChatSystem';
 import UserProfileView from './components/UserProfileView';
+import SacramentoMapView from './components/SacramentoMapView';
 import { 
   supabase, 
   getSupabaseProfile, 
@@ -23,7 +24,7 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'feed' | 'chats' | 'profile'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>('feed');
   const [showPostModal, setShowPostModal] = useState(false);
   const [items, setItems] = useState<ItemPost[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
@@ -575,6 +576,23 @@ export default function App() {
                     userProfile={userProfile}
                     onUpdateProfile={(updated) => setUserProfile(updated)}
                   />
+                )}
+
+                {activeTab === 'map' && (
+                  <div className="space-y-6" id="standalone_map_view_container">
+                    <div>
+                      <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500">SACRAMENTO NEIGHBORHOOD COORDINATES</h2>
+                      <p className="text-xs text-zinc-550 mt-1 font-semibold leading-relaxed">
+                        Operational map sectors across Greater Sacramento. Category centers are marked with custom color indicators.
+                      </p>
+                    </div>
+
+                    <SacramentoMapView
+                      items={items}
+                      userProfile={userProfile}
+                      onInitiateChat={handleInitiateChat}
+                    />
+                  </div>
                 )}
               </main>
 

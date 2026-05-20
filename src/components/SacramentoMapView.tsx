@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES } from '../types';
 import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SacramentoMapViewProps {
   items: ItemPost[];
   userProfile: UserProfile;
-  selectedType: 'all' | 'giveaway' | 'looking';
-  selectedCategory: string;
-  selectedNeighborhood: string;
-  searchTerm: string;
+  selectedType?: 'all' | 'giveaway' | 'looking';
+  selectedCategory?: string;
+  selectedNeighborhood?: string;
+  searchTerm?: string;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onItemDetail?: (item: ItemPost) => void;
 }
@@ -83,6 +83,18 @@ export default function SacramentoMapView({
   onItemDetail
 }: SacramentoMapViewProps) {
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
+  const [showColorGuide, setShowColorGuide] = useState(false);
+
+  // Local overrides in case filters are not controlled by a parent grid
+  const [localSearch, setLocalSearch] = useState('');
+  const [localType, setLocalType] = useState<'all' | 'giveaway' | 'looking'>('all');
+  const [localCategory, setLocalCategory] = useState('All Categories');
+  const [localNeighborhood, setLocalNeighborhood] = useState('All Neighborhoods');
+
+  const sTerm = searchTerm !== undefined ? searchTerm : localSearch;
+  const sType = selectedType !== undefined ? selectedType : localType;
+  const sCat = selectedCategory !== undefined ? selectedCategory : localCategory;
+  const sNeigh = selectedNeighborhood !== undefined ? selectedNeighborhood : localNeighborhood;
 
   // Filter items in real time for accuracy
   const activeItems = useMemo(() => {
@@ -91,20 +103,20 @@ export default function SacramentoMapView({
 
       // 1. Search text filter
       const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
-      const matchesSearch = searchString.includes(searchTerm.toLowerCase());
+      const matchesSearch = searchString.includes(sTerm.toLowerCase());
 
       // 2. Type filter (Gives / Asks)
-      const matchesType = selectedType === 'all' || item.type === selectedType;
+      const matchesType = sType === 'all' || item.type === sType;
 
       // 3. Category filter
-      const matchesCategory = selectedCategory === 'All Categories' || item.category === selectedCategory;
+      const matchesCategory = sCat === 'All Categories' || item.category === sCat;
 
       // 4. Neighborhood filter
-      const matchesNeighborhood = selectedNeighborhood === 'All Neighborhoods' || item.neighborhood === selectedNeighborhood;
+      const matchesNeighborhood = sNeigh === 'All Neighborhoods' || item.neighborhood === sNeigh;
 
       return matchesSearch && matchesType && matchesCategory && matchesNeighborhood;
     });
-  }, [items, selectedType, selectedCategory, selectedNeighborhood, searchTerm]);
+  }, [items, sType, sCat, sNeigh, sTerm]);
 
   // Distribute points deterministically so multiple posts in the same neighbourhood don't stack directly
   const blipPositions = useMemo(() => {
@@ -140,13 +152,125 @@ export default function SacramentoMapView({
 
   return (
     <div id="sacramento_interactive_map_view" className="bg-white border border-zinc-200 p-4 font-sans flex flex-col space-y-4">
+      
+      {/* Header if self-contained (dedicated Mobile Map View) */}
+      {selectedType === undefined && (
+        <div className="flex flex-col space-y-1 pb-1.5 border-b border-zinc-150">
+          <span className="text-[9px] font-black text-brand-orange uppercase tracking-widest font-mono flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-brand-orange animate-ping"></span>
+            Sacramento Sector Map Grid
+          </span>
+          <h2 className="text-sm font-black text-black uppercase tracking-tight">Interactive Community Coordinates</h2>
+        </div>
+      )}
+
+      {/* Internal Filter Controls if running in standalone mode */}
+      {selectedType === undefined && (
+        <div className="bg-zinc-50 border border-zinc-200 p-3.5 space-y-3" id="map_internal_filters">
+          <div className="flex flex-col xs:flex-row gap-2.5">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                placeholder="Search pins (e.g. table, books)..."
+                className="w-full px-3 py-2 bg-white border border-zinc-200 text-xs text-black font-semibold rounded-none focus:outline-hidden focus:border-black"
+                id="map_internal_search_input"
+              />
+            </div>
+
+            {/* Type buttons */}
+            <div className="flex bg-zinc-200 p-0.5 border border-zinc-200 gap-0.5 rounded-none shrink-0" id="map_internal_type_selector">
+              <button
+                onClick={() => { setLocalType('all'); setLocalCategory('All Categories'); }}
+                className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider cursor-pointer transition-all ${
+                  localType === 'all' ? 'bg-black text-white shadow-xs' : 'text-zinc-650 hover:text-black font-bold'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => { setLocalType('giveaway'); setLocalCategory('All Categories'); }}
+                className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider cursor-pointer transition-all ${
+                  localType === 'giveaway' ? 'bg-black text-white shadow-xs' : 'text-zinc-650 hover:text-black font-bold'
+                }`}
+              >
+                Gives
+              </button>
+              <button
+                onClick={() => { setLocalType('looking'); setLocalCategory('All Categories'); }}
+                className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider cursor-pointer transition-all ${
+                  localType === 'looking' ? 'bg-black text-white shadow-xs' : 'text-zinc-650 hover:text-black font-bold'
+                }`}
+              >
+                Asks
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5" id="map_internal_dropdowns">
+            {/* Category selection */}
+            <div className="flex items-center space-x-1.5 bg-white px-2 py-1.5 border border-zinc-200">
+              <Tag className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <select
+                value={localCategory}
+                onChange={(e) => setLocalCategory(e.target.value)}
+                className="w-full bg-transparent text-[11px] text-black font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider"
+                id="map_internal_category_select"
+              >
+                <option value="All Categories">All Categories</option>
+                {localType === 'all' ? (
+                  <>
+                    <optgroup label="OFFERS / GIFTS" className="text-[9px] bg-zinc-100 uppercase">
+                      {ITEM_CATEGORIES.map((c) => (
+                        <option key={`map_giv_${c}`} value={c}>{c.toUpperCase()}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="ISO / REQUESTS" className="text-[9px] bg-zinc-100 uppercase">
+                      {ISO_CATEGORIES.map((c) => (
+                        <option key={`map_iso_${c}`} value={c}>{c.toUpperCase()}</option>
+                      ))}
+                    </optgroup>
+                  </>
+                ) : localType === 'giveaway' ? (
+                  ITEM_CATEGORIES.map((c) => (
+                    <option key={`map_giv_only_${c}`} value={c}>{c.toUpperCase()}</option>
+                  ))
+                ) : (
+                  ISO_CATEGORIES.map((c) => (
+                    <option key={`map_iso_only_${c}`} value={c}>{c.toUpperCase()}</option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            {/* Neighborhood selection */}
+            <div className="flex items-center space-x-1.5 bg-white px-2 py-1.5 border border-zinc-200">
+              <MapPin className="w-3.5 h-3.5 text-brand-orange shrink-0" />
+              <select
+                value={localNeighborhood}
+                onChange={(e) => setLocalNeighborhood(e.target.value)}
+                className="w-full bg-transparent text-[11px] text-black font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider"
+                id="map_internal_neighborhood_select"
+              >
+                <option value="All Neighborhoods">All Sectors</option>
+                {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                  <option key={n} value={n}>{n.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between border-b border-zinc-150 pb-2.5">
         <div>
           <h3 className="text-[11px] font-black text-black uppercase tracking-widest flex items-center gap-1.5">
             <span className="inline-block w-2.5 h-2.5 bg-brand-orange animate-pulse"></span>
             Operational Map Center
           </h3>
-          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5">
+          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5" id="active_pins_count_display">
             Sacramento District Grid • {activeItems.length} active listings
           </p>
         </div>
@@ -204,21 +328,133 @@ export default function SacramentoMapView({
         </svg>
 
         {/* Legend */}
-        <div className="absolute top-2 left-2 bg-white/95 border border-zinc-200 p-2 z-10 space-y-1 shadow-xs max-w-[150px] scale-90 origin-top-left">
+        <div className="absolute top-2 left-2 bg-white/95 border border-zinc-200 p-2 z-10 space-y-1 shadow-xs max-w-[155px] scale-90 origin-top-left">
           <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block font-mono">Legend</span>
           <div className="flex items-center gap-1.5 text-[8.5px] font-bold text-zinc-700">
-            <span className="w-2 h-2 rounded-full border border-black bg-black"></span>
+            <span className="w-2 h-2 rounded-full border border-zinc-950 bg-black"></span>
             <span>GIVEAWAY LIST</span>
           </div>
           <div className="flex items-center gap-1.5 text-[8.5px] font-bold text-zinc-700">
-            <span className="w-2 h-2 rounded-full border border-black bg-white"></span>
+            <span className="w-2 h-2 rounded-full border border-zinc-950 bg-white"></span>
             <span>WANTED REQ</span>
           </div>
+          
+          <button
+            onClick={() => setShowColorGuide(true)}
+            className="w-full mt-2 text-[8.5px] font-black uppercase tracking-widest bg-brand-orange hover:bg-brand-orange-hover text-white py-1.5 px-2 transition-colors rounded-none cursor-pointer text-center block"
+            id="map_show_categories_legend_btn"
+          >
+            🎨 Map Colors
+          </button>
+
           <div className="flex items-center gap-1.5 text-[8.5px] font-bold text-zinc-700 mt-1 pt-1 border-t border-zinc-150">
             <span className="w-2.5 h-1 bg-[#93C5FD] block"></span>
-            <span className="uppercase text-[7.5px] text-zinc-450 font-mono">Sac Sacramento River</span>
+            <span className="uppercase text-[7.5px] text-zinc-450 font-mono">Sac River</span>
           </div>
         </div>
+
+        {/* Category Color Guide Drawer Overlay */}
+        <AnimatePresence>
+          {showColorGuide && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/75 z-40 flex flex-col p-4 overflow-hidden font-sans"
+              id="map_category_color_guide_overlay"
+            >
+              <div className="bg-white border-2 border-black flex-1 flex flex-col p-4 overflow-hidden max-h-full">
+                <div className="flex items-center justify-between border-b border-zinc-200 pb-2 mb-3 shrink-0">
+                  <div>
+                    <h4 className="text-[10px] font-black text-black uppercase tracking-widest">Category Colors Index</h4>
+                    <p className="text-[8.5px] text-zinc-400 font-bold uppercase tracking-wider block mt-0.5">
+                      {selectedType === undefined ? 'Touch color to isolate on map' : 'Color map reference'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowColorGuide(false)}
+                    className="p-1 text-zinc-500 hover:text-black cursor-pointer"
+                    id="close_color_guide_btn"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
+                  <div>
+                    <h5 className="text-[9px] font-extrabold text-brand-orange uppercase tracking-wider mb-2 font-mono">Gives / Offers Colors</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
+                      {ITEM_CATEGORIES.map((cat) => {
+                        const col = getCategoryColor(cat);
+                        const isCurrentActive = sCat === cat;
+                        return (
+                          <div
+                            key={cat}
+                            onClick={() => {
+                              if (selectedType === undefined) {
+                                setLocalType('giveaway');
+                                setLocalCategory(cat);
+                              }
+                              setShowColorGuide(false);
+                            }}
+                            className={`flex items-center gap-2 py-1 px-1.5 border rounded-none cursor-pointer transition-all ${
+                              isCurrentActive ? 'border-brand-orange bg-orange-50/50' : 'border-transparent hover:border-zinc-200'
+                            }`}
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: col }} />
+                            <span className="truncate uppercase text-[8.5px] font-bold text-zinc-800">{cat}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-zinc-150 pt-3">
+                    <h5 className="text-[9px] font-extrabold text-[#78350F] uppercase tracking-wider mb-2 font-mono">Asks / ISO Colors</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
+                      {ISO_CATEGORIES.map((cat) => {
+                        const col = getCategoryColor(cat);
+                        const isCurrentActive = sCat === cat;
+                        return (
+                          <div
+                            key={cat}
+                            onClick={() => {
+                              if (selectedType === undefined) {
+                                setLocalType('looking');
+                                setLocalCategory(cat);
+                              }
+                              setShowColorGuide(false);
+                            }}
+                            className={`flex items-center gap-2 py-1 px-1.5 border rounded-none cursor-pointer transition-all ${
+                              isCurrentActive ? 'border-[#78350F] bg-amber-50/35' : 'border-transparent hover:border-zinc-200'
+                            }`}
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: col }} />
+                            <span className="truncate uppercase text-[8.5px] font-bold text-zinc-800">{cat}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedType === undefined && (localType !== 'all' || localCategory !== 'All Categories') && (
+                  <button
+                    onClick={() => {
+                      setLocalType('all');
+                      setLocalCategory('All Categories');
+                      setShowColorGuide(false);
+                    }}
+                    className="mt-3 w-full bg-black text-white py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                    id="map_clear_colors_filter_btn"
+                  >
+                    Clear Filter (Show All Map)
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Neighborhood Overlay Bubbles */}
         {SACRAMENTO_NEIGHBORHOODS.map((neighborhood) => {

@@ -4,8 +4,8 @@ import { UserProfile } from '../types';
 
 interface NavbarProps {
   userProfile: UserProfile | null;
-  activeTab: 'feed' | 'chats' | 'profile';
-  setActiveTab: (tab: 'feed' | 'chats' | 'profile') => void;
+  activeTab: 'feed' | 'chats' | 'profile' | 'map';
+  setActiveTab: (tab: 'feed' | 'chats' | 'profile' | 'map') => void;
   onOpenNewPost: () => void;
   onLogout: () => void;
 }
@@ -68,6 +68,23 @@ export default function Navbar({
               >
                 <span>Browse listings</span>
                 {activeTab === 'feed' && (
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
+                )}
+              </button>
+
+              {/* Map View tab (Mobile Only) */}
+              <button
+                id="tab_map_btn"
+                onClick={() => setActiveTab('map')}
+                className={`lg:hidden h-16 px-3 py-1.5 text-xs sm:text-xs font-black uppercase tracking-wider transition-all relative inline-flex items-center space-x-1.5 ${
+                  activeTab === 'map'
+                    ? 'text-brand-orange'
+                    : 'text-zinc-300 hover:text-white'
+                }`}
+              >
+                <MapPin className="w-4 h-4 text-brand-orange shrink-0" />
+                <span>Map</span>
+                {activeTab === 'map' && (
                   <span className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-orange" />
                 )}
               </button>
