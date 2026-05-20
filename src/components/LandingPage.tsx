@@ -209,9 +209,9 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
           <div className="flex items-center space-x-3 select-none">
             {!logoFailed ? (
               <img 
-                src="/Logo.jpeg" 
+                src="https://nezmabanjoqdzikliysd.supabase.co/storage/v1/object/public/SacramentoBuyNothing/876852c0-541a-11f1-9143-af3d50fee019.webp" 
                 alt="Sacramento Buy Nothing Logo" 
-                className="h-9 w-auto object-contain cursor-pointer max-w-[220px]"
+                className="h-10 w-auto object-contain cursor-pointer max-w-[240px] rounded"
                 onError={() => setLogoFailed(true)}
               />
             ) : (

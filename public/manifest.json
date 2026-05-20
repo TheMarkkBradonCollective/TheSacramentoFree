@@ -9,21 +9,21 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/Logo.jpeg",
+      "src": "https://nezmabanjoqdzikliysd.supabase.co/storage/v1/object/public/SacramentoBuyNothing/876852c0-541a-11f1-9143-af3d50fee019.webp",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/Logo.jpeg",
+      "src": "https://nezmabanjoqdzikliysd.supabase.co/storage/v1/object/public/SacramentoBuyNothing/876852c0-541a-11f1-9143-af3d50fee019.webp",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/Logo.jpeg",
+      "src": "https://nezmabanjoqdzikliysd.supabase.co/storage/v1/object/public/SacramentoBuyNothing/876852c0-541a-11f1-9143-af3d50fee019.webp",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/webp",
       "purpose": "any maskable"
     }
   ]
