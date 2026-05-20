@@ -1,6 +1,6 @@
 {
   "name": "Sacramento Buy Nothing",
   "description": "A local community platform for Sacramento residents to list items to give away, ask for items they need, and coordinate exchanges via messaging.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

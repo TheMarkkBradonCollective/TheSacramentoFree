@@ -8,6 +8,9 @@ import ItemGrid from './components/ItemGrid';
 import ChatSystem from './components/ChatSystem';
 import UserProfileView from './components/UserProfileView';
 import SacramentoMapView from './components/SacramentoMapView';
+import MobileView from './components/MobileView';
+import TabletView from './components/TabletView';
+import DesktopView from './components/DesktopView';
 import { 
   supabase, 
   getSupabaseProfile, 
@@ -32,6 +35,32 @@ export default function App() {
 
   // Initial Chat Trigger State when clicking "Message Member"
   const [initialSelectedChatId, setInitialSelectedChatId] = useState<string | null>(null);
+
+  // Responsive device classification configuration
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
+
+  useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      if (w < 768) {
+        setDeviceType('mobile');
+      } else if (w < 1024) {
+        setDeviceType('tablet');
+      } else {
+        setDeviceType('desktop');
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Set default tab on mobile to the map view for that premium Uber map startup feel
+  useEffect(() => {
+    if (deviceType === 'mobile' && activeTab === 'feed') {
+      setActiveTab('map');
+    }
+  }, [deviceType]);
 
   // Sync profile update to localStorage
   useEffect(() => {
@@ -522,79 +551,51 @@ export default function App() {
           errorMsg={errorMsg} 
         />
       ) : (
-        /* 3. Post-Auth Onboard vs App Feed Layout */
         <>
           {!userProfile ? (
-            /* User signed in but needs onboarding details */
             <Onboarding user={sessionUser} onComplete={handleOnboardingComplete} />
           ) : (
-            /* Standard Dashboard Workspace */
             <>
-              {/* Header Navigator */}
-              <Navbar
-                userProfile={userProfile}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onOpenNewPost={() => setShowPostModal(true)}
-                onLogout={handleLogOut}
-              />
-
-              {/* Main Content Workspace Layout */}
-              <main id="dashboard_main" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-opacity duration-200 space-y-6">
-                
-                {activeTab === 'feed' && (
-                  <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                      <div>
-                        <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500">EXCHANGE DIRECTORY</h2>
-                        <p className="text-xs text-zinc-550 mt-1 font-semibold leading-relaxed">
-                          Active operational records within the <span className="font-black text-brand-orange uppercase">{userProfile.neighborhood} Sector</span> and Greater Sacramento District.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Listings list component */}
-                    <ItemGrid
-                      items={items}
-                      userProfile={userProfile}
-                      onInitiateChat={handleInitiateChat}
-                      onRefresh={() => {}} // snapshot triggers automatically
-                    />
-                  </div>
-                )}
-
-                {activeTab === 'chats' && (
-                  <ChatSystem
-                    userProfile={userProfile}
-                    initialSelectedChatId={initialSelectedChatId}
-                    onClearInitialChat={() => setInitialSelectedChatId(null)}
-                  />
-                )}
-
-                {activeTab === 'profile' && (
-                  <UserProfileView
-                    userProfile={userProfile}
-                    onUpdateProfile={(updated) => setUserProfile(updated)}
-                  />
-                )}
-
-                {activeTab === 'map' && (
-                  <div className="space-y-6" id="standalone_map_view_container">
-                    <div>
-                      <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500">SACRAMENTO NEIGHBORHOOD COORDINATES</h2>
-                      <p className="text-xs text-zinc-550 mt-1 font-semibold leading-relaxed">
-                        Operational map sectors across Greater Sacramento. Category centers are marked with custom color indicators.
-                      </p>
-                    </div>
-
-                    <SacramentoMapView
-                      items={items}
-                      userProfile={userProfile}
-                      onInitiateChat={handleInitiateChat}
-                    />
-                  </div>
-                )}
-              </main>
+              {deviceType === 'mobile' ? (
+                <MobileView
+                  items={items}
+                  userProfile={userProfile}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  onOpenNewPost={() => setShowPostModal(true)}
+                  onInitiateChat={handleInitiateChat}
+                  onLogout={handleLogOut}
+                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  initialSelectedChatId={initialSelectedChatId}
+                  onClearInitialChat={() => setInitialSelectedChatId(null)}
+                />
+              ) : deviceType === 'tablet' ? (
+                <TabletView
+                  items={items}
+                  userProfile={userProfile}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  onOpenNewPost={() => setShowPostModal(true)}
+                  onInitiateChat={handleInitiateChat}
+                  onLogout={handleLogOut}
+                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  initialSelectedChatId={initialSelectedChatId}
+                  onClearInitialChat={() => setInitialSelectedChatId(null)}
+                />
+              ) : (
+                <DesktopView
+                  items={items}
+                  userProfile={userProfile}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  onOpenNewPost={() => setShowPostModal(true)}
+                  onInitiateChat={handleInitiateChat}
+                  onLogout={handleLogOut}
+                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  initialSelectedChatId={initialSelectedChatId}
+                  onClearInitialChat={() => setInitialSelectedChatId(null)}
+                />
+              )}
 
               {/* Posting Dialog Overlay */}
               {showPostModal && (

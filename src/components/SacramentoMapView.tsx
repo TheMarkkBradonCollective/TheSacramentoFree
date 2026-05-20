@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates } from '../types';
 import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -123,6 +123,18 @@ export default function SacramentoMapView({
     const neighborhoodCounts: Record<string, number> = {};
     
     return activeItems.map((item) => {
+      // 1. Check if the post features precise custom coordinates parsed from description metadata
+      const customCoords = extractGPSCoordinates(item.description);
+      if (customCoords) {
+        return {
+          item,
+          x: customCoords.x,
+          y: customCoords.y,
+          color: getCategoryColor(item.category)
+        };
+      }
+
+      // 2. Otherwise drop inside standard neighborhood sectors utilizing layout distribution scatter
       const parentCoord = NEIGHBORHOOD_COORDS[item.neighborhood] || { x: 50, y: 50 };
       const currentCount = neighborhoodCounts[item.neighborhood] || 0;
       neighborhoodCounts[item.neighborhood] = currentCount + 1;

@@ -1,8 +1,62 @@
 import React, { useState } from 'react';
-import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType } from '../types';
+import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType, mapGPSToPercent } from '../types';
 import { createSupabaseItem, uploadItemImage } from '../supabase';
-import { X, Gift, Search, Info, Camera, Trash2 } from 'lucide-react';
+import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
+
+// Neighborhood center coordinates as percentages (0-100) of our map sandbox
+const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
+  'Natomas': { x: 48, y: 16 },
+  'Arden': { x: 74, y: 25 },
+  'Citrus Heights': { x: 90, y: 10 },
+  'Rancho Cordova': { x: 90, y: 45 },
+  'East Sacramento': { x: 64, y: 38 },
+  'Midtown': { x: 53, y: 40 },
+  'Downtown': { x: 41, y: 40 },
+  'West Sacramento': { x: 22, y: 40 },
+  'Land Park': { x: 38, y: 56 },
+  'Curtis Park': { x: 50, y: 55 },
+  'Oak Park': { x: 63, y: 56 },
+  'Tahoe Park': { x: 75, y: 56 },
+  'Pocket-Greenhaven': { x: 24, y: 72 },
+  'South Sacramento': { x: 55, y: 74 },
+  'Elk Grove': { x: 58, y: 91 }
+};
+
+// Approximate real Lat/Lng center points across Sacramento
+const NEIGHBORHOOD_LAT_LONGS: Record<string, { lat: number; lng: number }> = {
+  'Natomas': { lat: 38.6368, lng: -121.5034 },
+  'Arden': { lat: 38.6013, lng: -121.3916 },
+  'Citrus Heights': { lat: 38.7071, lng: -121.2811 },
+  'Rancho Cordova': { lat: 38.5891, lng: -121.3027 },
+  'East Sacramento': { lat: 38.5674, lng: -121.4429 },
+  'Midtown': { lat: 38.5724, lng: -121.4784 },
+  'Downtown': { lat: 38.5816, lng: -121.4944 },
+  'West Sacramento': { lat: 38.5805, lng: -121.5302 },
+  'Land Park': { lat: 38.5432, lng: -121.4975 },
+  'Curtis Park': { lat: 38.5484, lng: -121.4795 },
+  'Oak Park': { lat: 38.5447, lng: -121.4614 },
+  'Tahoe Park': { lat: 38.5455, lng: -121.4326 },
+  'Pocket-Greenhaven': { lat: 38.4907, lng: -121.5365 },
+  'South Sacramento': { lat: 38.4952, lng: -121.4468 },
+  'Elk Grove': { lat: 38.4088, lng: -121.3716 }
+};
+
+const findClosestNeighborhood = (lat: number, lng: number): string => {
+  let minDistance = Infinity;
+  let closest = 'Midtown';
+  
+  for (const [name, coords] of Object.entries(NEIGHBORHOOD_LAT_LONGS)) {
+    const dLat = lat - coords.lat;
+    const dLng = lng - coords.lng;
+    const distance = Math.sqrt(dLat * dLat + dLng * dLng); // Euclidean approximation
+    if (distance < minDistance) {
+      minDistance = distance;
+      closest = name;
+    }
+  }
+  return closest;
+};
 
 interface PostItemModalProps {
   userProfile: UserProfile;
@@ -23,6 +77,45 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
+
+  // GPS and Map selection utility state
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState('');
+  const [showMiniMap, setShowMiniMap] = useState(false);
+  const [customCoords, setCustomCoords] = useState<{ x: number; y: number } | null>(null);
+
+  const handleDetectGPS = () => {
+    setGpsLoading(true);
+    setGpsStatus('Accessing browser location sensors...');
+    if (!navigator.geolocation) {
+      setGpsStatus('Error: Location lookup unsupported by browser.');
+      setGpsLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const coords = mapGPSToPercent(latitude, longitude);
+        setCustomCoords(coords);
+        const closest = findClosestNeighborhood(coords.x, coords.y);
+        setNeighborhood(closest);
+        setGpsStatus(`Detected precise GPS: ${coords.x.toFixed(1)}%, ${coords.y.toFixed(1)}% inside ${closest.toUpperCase()} Sector 🟢`);
+        setGpsLoading(false);
+        setShowMiniMap(true);
+      },
+      (error) => {
+        console.warn('GPS location fetch error:', error);
+        let errMsg = 'Access Timed Out. Please pick manually.';
+        if (error.code === error.PERMISSION_DENIED) {
+          errMsg = 'Permission Denied. Please enable GPS permissions.';
+        }
+        setGpsStatus(errMsg);
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+    );
+  };
 
   const handleImageChange = (file: File) => {
     if (file && file.type.startsWith('image/')) {
@@ -77,9 +170,10 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
     }
 
     const finalCategory = type === 'looking' ? isoCategory : category;
-    const finalDescription = type === 'looking' 
+    const gpsSuffix = customCoords ? `\n\n[GPS: ${customCoords.x.toFixed(2)},${customCoords.y.toFixed(2)}]` : '';
+    const finalDescription = (type === 'looking' 
       ? `[TRANSPORT: ${collectionMethod}]\n\n${description.trim()}`
-      : description.trim();
+      : description.trim()) + gpsSuffix;
 
     const newItem: ItemPost = {
       id: itemId,
@@ -210,40 +304,23 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
           </div>
 
           {type === 'giveaway' ? (
-            <div className="grid grid-cols-2 gap-4" id="post_category_neighborhood_grid">
-              {/* Category selection */}
-              <div className="space-y-1.5">
-                <label htmlFor="post_category" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Sector Category</label>
-                <select
-                  id="post_category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
-                >
-                  {ITEM_CATEGORIES.map((c) => (
-                    <option key={c} value={c} className="bg-white">{c.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Neighborhood location */}
-              <div className="space-y-1.5">
-                <label htmlFor="post_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Pick-up Routing</label>
-                <select
-                  id="post_neighborhood"
-                  value={neighborhood}
-                  onChange={(e) => setNeighborhood(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
-                >
-                  {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                    <option key={n} value={n} className="bg-white">{n.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
+            /* Category selection */
+            <div className="space-y-1.5" id="post_category_section">
+              <label htmlFor="post_category" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Sector Category</label>
+              <select
+                id="post_category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase text-left w-full focus:outline-hidden"
+              >
+                {ITEM_CATEGORIES.map((c) => (
+                  <option key={c} value={c} className="bg-white">{c.toUpperCase()}</option>
+                ))}
+              </select>
             </div>
           ) : (
             <div className="space-y-4 font-sans" id="post_looking_custom_fields">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Seeking Category */}
                 <div className="space-y-1.5">
                   <label htmlFor="post_iso_category" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Category of Need</label>
@@ -251,7 +328,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     id="post_iso_category"
                     value={isoCategory}
                     onChange={(e) => setIsoCategory(e.target.value)}
-                    className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
+                    className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase focus:outline-hidden"
                   >
                     {ISO_CATEGORIES.map((c) => (
                       <option key={c} value={c} className="bg-white text-xs">{c.toUpperCase()}</option>
@@ -259,38 +336,165 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                   </select>
                 </div>
 
-                {/* Neighborhood location */}
+                {/* Transit preference */}
                 <div className="space-y-1.5">
-                  <label htmlFor="post_iso_neighborhood" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Your Neighborhood</label>
+                  <label htmlFor="post_collection_method" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Transit arrangement</label>
                   <select
-                    id="post_iso_neighborhood"
-                    value={neighborhood}
-                    onChange={(e) => setNeighborhood(e.target.value)}
-                    className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
+                    id="post_collection_method"
+                    value={collectionMethod}
+                    onChange={(e) => setCollectionMethod(e.target.value)}
+                    className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase focus:outline-hidden"
                   >
-                    {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                      <option key={n} value={n} className="bg-white">{n.toUpperCase()}</option>
+                    {ISO_DELIVERY_PREFS.map((m) => (
+                      <option key={m} value={m} className="bg-white text-xs">{m.toUpperCase()}</option>
                     ))}
                   </select>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Transit preference */}
-              <div className="space-y-1.5">
-                <label htmlFor="post_collection_method" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-bold">Lending / Transportation Arrangement</label>
+          {/* Unified Location Selector Sector */}
+          <div className="space-y-2 border-t border-zinc-150 pt-4" id="post_location_coordinates_section">
+            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block font-mono">Exchange Sector (Pick-up Location)</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
                 <select
-                  id="post_collection_method"
-                  value={collectionMethod}
-                  onChange={(e) => setCollectionMethod(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black appearance-none cursor-pointer focus:bg-white uppercase"
+                  id="post_final_neighborhood"
+                  value={neighborhood}
+                  onChange={(e) => {
+                    setNeighborhood(e.target.value);
+                    setGpsStatus('');
+                  }}
+                  className="block w-full px-3.5 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs font-bold text-black cursor-pointer focus:bg-white uppercase focus:outline-hidden"
                 >
-                  {ISO_DELIVERY_PREFS.map((m) => (
-                    <option key={m} value={m} className="bg-white">{m.toUpperCase()}</option>
+                  {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                    <option key={`unified_neigh_${n}`} value={n} className="bg-white">{n.toUpperCase()}</option>
                   ))}
                 </select>
               </div>
+
+              {/* GPS Button */}
+              <button
+                type="button"
+                onClick={handleDetectGPS}
+                disabled={gpsLoading}
+                title="Detect current location via GPS"
+                className="px-3.5 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-black flex items-center justify-center cursor-pointer transition-all select-none disabled:opacity-50"
+              >
+                <Navigation className={`w-4 h-4 text-zinc-700 ${gpsLoading ? 'animate-spin text-brand-orange' : ''}`} />
+              </button>
+
+              {/* Map Button */}
+              <button
+                type="button"
+                onClick={() => setShowMiniMap(!showMiniMap)}
+                title="Pinpoint neighborhood on interactive district map"
+                className={`px-3.5 border flex items-center justify-center cursor-pointer transition-all select-none ${
+                  showMiniMap
+                    ? 'bg-black border-black text-white'
+                    : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700'
+                }`}
+              >
+                <Map className="w-4 h-4 text-current" />
+              </button>
             </div>
-          )}
+
+            {/* GPS Feedback text */}
+            {gpsStatus && (
+              <p className="text-[9.5px] font-black text-zinc-650 tracking-wider uppercase flex items-center gap-1.5 mt-1 font-mono">
+                <span className="w-1.5 h-1.5 bg-brand-orange rounded-full inline-block animate-ping"></span>
+                {gpsStatus}
+              </p>
+            )}
+
+            {/* Micro Sacramento Map Picker */}
+            {showMiniMap &&
+              <div className="border border-zinc-200 bg-[#FAF9F5] p-2 mt-2 select-none relative" id="sac_mini_map_picker_container">
+                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-200 mb-2">
+                  <span className="text-[8.5px] font-black text-zinc-400 uppercase tracking-widest font-mono">Sacramento District map Grid</span>
+                  <span className="text-[9px] font-extrabold text-brand-orange uppercase font-mono">{neighborhood.toUpperCase()} SECTOR</span>
+                </div>
+                <div 
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = ((e.clientX - rect.left) / rect.width) * 100;
+                    const clickY = ((e.clientY - rect.top) / rect.height) * 100;
+                    const clampedX = Math.max(5, Math.min(95, clickX));
+                    const clampedY = Math.max(5, Math.min(95, clickY));
+                    setCustomCoords({ x: clampedX, y: clampedY });
+                    
+                    const nearest = findClosestNeighborhood(clampedX, clampedY);
+                    setNeighborhood(nearest);
+                    setGpsStatus(`SET CUSTOM LOCATION PIN POINT: ${clampedX.toFixed(1)}%, ${clampedY.toFixed(1)}% 📍`);
+                  }}
+                  className="relative w-full aspect-video bg-[#FAF9F7] border border-zinc-200 overflow-hidden cursor-crosshair" 
+                  id="mini_svg_canvas"
+                >
+                  {/* Rivers */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path
+                      d="M 40,0 Q 38,20 34,40 T 26,62 T 28,82 T 22,100"
+                      fill="none"
+                      stroke="#A5F3FC"
+                      strokeWidth="3.5"
+                      opacity="0.65"
+                    />
+                    <path
+                      d="M 100,28 C 85,30 75,25 60,35 T 34,40"
+                      fill="none"
+                      stroke="#A5F3FC"
+                      strokeWidth="3"
+                      opacity="0.65"
+                    />
+                  </svg>
+
+                  {/* Neighborhood label dots / references */}
+                  {Object.entries(NEIGHBORHOOD_COORDS).map(([name, pos]) => {
+                    const isSelected = neighborhood === name;
+                    return (
+                      <div
+                        key={`mini_pos_${name}`}
+                        style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                      >
+                        <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-brand-orange scale-125' : 'bg-zinc-350'} opacity-75`} />
+                        <span className="text-[6px] tracking-widest text-[#FF4500] font-bold uppercase whitespace-nowrap block mt-0.5 scale-90">
+                          {name}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {/* Precise Custom Pin */}
+                  {(() => {
+                    const activeX = customCoords ? customCoords.x : (NEIGHBORHOOD_COORDS[neighborhood]?.x || 50);
+                    const activeY = customCoords ? customCoords.y : (NEIGHBORHOOD_COORDS[neighborhood]?.y || 50);
+
+                    return (
+                      <div 
+                        style={{ left: `${activeX}%`, top: `${activeY}%` }}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 flex flex-col items-center"
+                      >
+                        <span className="relative flex h-5 w-5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-5 w-5 bg-black border border-white shadow-xl flex items-center justify-center">
+                            <MapPin className="w-3.5 h-3.5 text-white" />
+                          </span>
+                        </span>
+                        <span className="text-[7.5px] bg-black text-white px-1 py-0.5 font-bold uppercase tracking-widest whitespace-nowrap shadow-md mt-1 scale-90">
+                          {customCoords ? 'Precise Spot' : 'Sector Center'}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="text-[8.5px] text-zinc-400 font-bold uppercase tracking-wider mt-1.5 block text-center select-none font-mono">
+                  {customCoords ? '🟢 Precise map coordinates locked successfully.' : 'Click any point on the map screen above to set a custom precise spot'}
+                </div>
+              </div>
+            }
+          </div>
 
           {/* Picture Upload Box */}
           <div className="space-y-1.5">
