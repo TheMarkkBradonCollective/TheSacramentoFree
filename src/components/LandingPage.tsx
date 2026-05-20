@@ -36,31 +36,73 @@ const NEIGHBORHOODS_METADATA = [
     name: 'Midtown',
     bio: 'Urban tree-lined avenues, micro-apartments, and dense neighborhoods. The perfect district for fast, walkable porch pickups, bike tool sharing, and potted houseplant cuttings.',
     popular: 'Indoor Plants, Kitchenware, Books, Compact Furniture',
-    activeCount: '240 community members'
+    activeCount: '240 members'
+  },
+  {
+    name: 'Downtown',
+    bio: 'Sacramento historic commercial center and capital core. Ideal for quick handoffs, office supply rehoming, commuting swaps, and apartment decor exchanges.',
+    popular: 'Electronics, Books, Travel Gear, Office Storage',
+    activeCount: '150 members'
   },
   {
     name: 'East Sacramento',
     bio: 'Famed for beautiful gardens, heritage houses, and family-friendly park interactions. Highly active for garden surplus, premium tools, infant supplies, and outdoor activities.',
     popular: 'Fresh Fruits/Veg, Tool Swaps, Baby Clothes, Garden Seeds',
-    activeCount: '185 community members'
+    activeCount: '185 members'
   },
   {
     name: 'Land Park',
     bio: 'Historic core residential zone flanking the zoo and massive community parks. Famous for passing down toys, vintage hardcovers, baking supplies, and sports upgrades.',
     popular: 'Sourdough Starters, Board Games, Kids Toys, Hardcover Fiction',
-    activeCount: '150 community members'
+    activeCount: '170 members'
+  },
+  {
+    name: 'Oak Park',
+    bio: 'A highly collaborative historic community with robust community gardens and creative reuse initiatives. Excellent spot for diy craft materials and youth sports equipment.',
+    popular: 'Pastel Paints, Sewing Tools, Children Shoes, Fresh Cuttings',
+    activeCount: '145 members'
   },
   {
     name: 'Natomas',
     bio: 'A sprawling modern cluster of growing neighborhoods. Excellent activity for tech accessories, extra sports gears, home organization bins, and baby crib accessories.',
     popular: 'Computer Accessories, Clean Baby Gear, Exercise Outfits, Shelving Units',
-    activeCount: '190 community members'
+    activeCount: '190 members'
   },
   {
-    name: 'Pocket',
-    bio: 'Peaceful riverbend neighborhood with a deep sense of recycling and nature care. Local exchange highlights elder assistance tools, fishing gear, and citrus collections.',
-    popular: 'Citrus Bounties, Mobility Tools, Fishing Hardware, Craft Materials',
-    activeCount: '120 community members'
+    name: 'Elk Grove',
+    bio: 'Spacious suburban residential sector with active home cooperatives. High-density sharing of large household goods, backyard tools, and play structures.',
+    popular: 'Pruning Shears, Patio Chairs, Lawn Equipment, Baby Walkers',
+    activeCount: '210 members'
+  },
+  {
+    name: 'Arden',
+    bio: 'Central residential sector with a wide range of home garden active members. Famous for rehoming kitchen gear, power equipment, and holiday decorations.',
+    popular: 'Kitchen Blenders, Hand Tools, Holiday Supplies, Storage Chests',
+    activeCount: '160 members'
+  },
+  {
+    name: 'Citrus Heights',
+    bio: 'Active perimeter community focused on reducing municipal waste and recycling. High turnover of wooden cabinetry, outdoor tools, and fitness gear.',
+    popular: 'Wooden Shelves, Dumbbell Weights, Leaf Blowers, Board Games',
+    activeCount: '130 members'
+  },
+  {
+    name: 'Rancho Cordova',
+    bio: 'Collaborative family-first communities flanking the American River. Incredible resource for river gear, camping spares, and children outfits.',
+    popular: 'Inflatable Kayaks, Sleep Bags, St strollers, Board Books',
+    activeCount: '135 members'
+  },
+  {
+    name: 'West Sacramento',
+    bio: 'Just across the river, active in river district exchanges. Energetic sharing of gardening logs, fresh citrus harvests, and tool shed spares.',
+    popular: 'Oranges, Wood Pallets, Folding Tables, Drills',
+    activeCount: '115 members'
+  },
+  {
+    name: 'South Sacramento',
+    bio: 'Diverse, highly welcoming neighborhoods focused on immediate mutual aid. Excellent place for food pantries, home electronics, and childrens apparel.',
+    popular: 'Unopened Canine Food, Warm Jackets, Rice Cookers, Play Materials',
+    activeCount: '180 members'
   }
 ];
 
@@ -640,21 +682,151 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
         </div>
       </section>
 
-      {/* 7. Zero-Waste Philosophy / Community Bill of Rights */}
-      <section className="px-4 py-8 max-w-4xl mx-auto w-full text-center" id="philosophy_rules">
-        <div className="bg-white p-6 rounded-none border border-zinc-200 space-y-3.5">
-          <div className="flex justify-center items-center space-x-2">
-            <ShieldAlert className="w-4 h-4 text-brand-orange" />
-            <span className="text-xs font-black tracking-widest uppercase font-mono text-black">ABSOLUTE PUBLIC INTEREST TRUST</span>
+      {/* 7. Zero-Waste Philosophy & Active Community Rules Ledger */}
+      <section className="px-4 py-12 max-w-5xl mx-auto w-full space-y-8" id="philosophy_rules_community">
+        <div className="text-center space-y-2">
+          <span className="text-[9px] font-black uppercase tracking-widest text-brand-orange font-mono">SACRAMENTO BUY NOTHING CODE OF CONDUCT</span>
+          <h2 className="text-2xl font-black text-black tracking-tight uppercase font-display">COMMUNITY BILL & COOPERATIVE RULES</h2>
+          <p className="text-xs font-semibold text-zinc-500 max-w-md mx-auto">Absolute public interest trust. Sharing is better than throwing away.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="allowed_forbidden_rules">
+          {/* Allowed Section */}
+          <div className="bg-white border-l-4 border-l-brand-sage border border-zinc-200 p-6 space-y-4">
+            <div className="flex items-center space-x-2.5 pb-2 border-b border-zinc-100">
+              <span className="w-5 h-5 bg-brand-sage-light text-brand-sage-dark rounded-none font-bold text-xs flex items-center justify-center">✓</span>
+              <h3 className="text-xs font-black text-black uppercase tracking-widest font-mono">STRICTLY ALLOWED</h3>
+            </div>
+            <ul className="space-y-3.5 text-xs text-zinc-700">
+              <li className="flex items-start space-x-2">
+                <span className="text-brand-sage font-black mt-0.5 font-mono">✓</span>
+                <span><strong>Free Items / Gifting:</strong> Rehoming functional items, household spares, tools, crops, or furniture at zero cost to neighbors.</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="text-brand-sage font-black mt-0.5 font-mono">✓</span>
+                <span><strong>Community Mutual Aid:</strong> Free services, yard cleanup help, borrowing tools, and general local assistance.</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="text-brand-sage font-black mt-0.5 font-mono">✓</span>
+                <span><strong>Requests (In Search Of / ISO):</strong> Respectfully asking neighbors for specific needs, project tools, or emergency items.</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="text-brand-sage font-black mt-0.5 font-mono">✓</span>
+                <span><strong>Rehoming Usable Goods:</strong> Keeping clothes, electronics, garden supplies, and clean children accessories in circulation.</span>
+              </li>
+            </ul>
           </div>
-          <p className="text-xs text-zinc-600 leading-relaxed max-w-2xl mx-auto font-medium">
-            This platform protects the perfect circular exchange of goods without credit. We enforce a zero commercialized standard: NO sales, NO swaps, NO barters, and NO solicitations. Users must respect their community sectors, communicate transparently, and follow safety protocols to maintain general logistics harmony.
-          </p>
+
+          {/* Forbidden Section */}
+          <div className="bg-white border-l-4 border-l-brand-orange border border-zinc-200 p-6 space-y-4">
+            <div className="flex items-center space-x-2.5 pb-2 border-b border-zinc-100">
+              <span className="w-5 h-5 bg-brand-orange-light text-brand-orange rounded-none font-bold text-xs flex items-center justify-center">✕</span>
+              <h3 className="text-xs font-black text-black uppercase tracking-widest font-mono">STRICTLY FORBIDDEN</h3>
+            </div>
+            <ul className="space-y-3.5 text-xs text-zinc-700">
+              <li className="flex items-start space-x-2">
+                <span className="text-brand-orange font-black mt-0.5 font-mono">✕</span>
+                <span><strong>Selling or Auctions:</strong> Offering items for monetary payment, requesting cash compensation, or charging pickup fees.</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="text-brand-orange font-black mt-0.5 font-mono">✕</span>
+                <span><strong>Commercial Trades & Barters:</strong> Offering trades for services, bartering for goods value, or marketing businesses.</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="text-brand-orange font-black mt-0.5 font-mono">✕</span>
+                <span><strong>Scams or Commercial Solicitation:</strong> Commercial multi-level marketing, suspicious listing descriptions, or harassment.</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="text-brand-orange font-black mt-0.5 font-mono">✕</span>
+                <span><strong>Reselling Recycled Gifts:</strong> Taking a community donation item only to list it elsewhere for offline profit.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* 7.5. Common Items Shared Grid */}
+      <section className="px-4 py-12 bg-zinc-50 border-t border-b border-zinc-200" id="common_items_section">
+        <div className="max-w-5xl mx-auto space-y-8">
+          <div className="text-center space-y-2">
+            <span className="text-[9px] font-black uppercase tracking-widest text-brand-orange font-mono">MUNICIPAL INVENTORY INDEX</span>
+            <h2 className="text-2xl font-black text-black tracking-tight uppercase font-display">Common Items Shared By Neighbors</h2>
+            <p className="text-xs font-semibold text-zinc-500 max-w-sm mx-auto">A sample of high-efficiency recycled materials and catalog categories</p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="items_index_grid">
+            {[
+              { desc: 'Furniture & Desks', count: 'Midtown & Elk Grove' },
+              { desc: 'Power Tools & Hardware', count: 'East Sac & Natomas' },
+              { desc: 'Cooking & Kitchenware', count: 'Downtown & Pocket' },
+              { desc: 'Baby Gears & Strollers', count: 'Rancho Cordova & Land Park' },
+              { desc: 'Lawn & Garden Seeds', count: 'West Sac & East Sac' },
+              { desc: 'Creative Art Supplies', count: 'Oak Park & Midtown' },
+              { desc: 'Books, Guides & Games', count: 'Land Park & Curtis Park' },
+              { desc: 'Electronics & Adaptors', count: 'Natomas & Arden' },
+              { desc: 'Cardboards & Moving Bins', count: 'South Sac & Arden' },
+              { desc: 'Pet Supplies & Crates', count: 'Downtown & Citrus Heights' },
+              { desc: 'Clean Apparel & Jackets', count: 'South Sac & Oak Park' },
+              { desc: 'Hobby Gear & Instruments', count: 'Arden & Midtown' }
+            ].map((item, idx) => (
+              <div key={idx} className="bg-white border border-zinc-200 p-4 rounded-none hover:border-black transition-colors flex flex-col justify-between">
+                <span className="block text-xs font-black text-black uppercase tracking-tight">{item.desc}</span>
+                <span className="block text-[8px] font-mono text-zinc-400 mt-2 uppercase tracking-wide">ACTIVE: {item.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 7.6. Why Sustainability Matters (Statistics & Ecological Context) */}
+      <section className="px-4 py-12 max-w-4xl mx-auto w-full text-center space-y-6" id="sustainability_matters">
+        <div className="inline-flex items-center space-x-2 bg-brand-sage-light border border-brand-sage/20 text-brand-sage-dark py-1.5 px-4 text-[9px] font-black tracking-widest uppercase font-mono">
+          <Recycle className="w-3.5 h-3.5 text-brand-orange animate-spin" style={{ animationDuration: '12s' }} />
+          <span>ECOLOGICAL FOOTPRINT MATRIX</span>
+        </div>
+        <h2 className="text-2xl font-black text-black tracking-tight uppercase font-display">Why Buy Nothing Matters</h2>
+        <p className="text-xs text-zinc-650 leading-relaxed max-w-2xl mx-auto font-semibold">
+          Every single item shared or passed to a neighbor directly keeps resources out of Sacramento municipal landfills, reduces unnecessary manufacturing outputs, encourages ecological responsibility, and supports neighborhood mutual aid networks. Small acts of local sharing build highly resilient, supportive neighborhoods.
+        </p>
+      </section>
+
+      {/* 7.7. Future Planned Upgrades Ledger */}
+      <section className="px-4 py-12 bg-black text-white border-t border-zinc-904" id="future_upgrades_roadmap">
+        <div className="max-w-5xl mx-auto space-y-8">
+          <div className="text-center space-y-2">
+            <span className="text-[9px] font-black uppercase tracking-widest text-brand-orange font-mono">UPCOMING LEDGER CAPABILITIES</span>
+            <h2 className="text-xl font-black tracking-widest uppercase font-display text-white">FUTURE PLATFORM UPGRADES ROADMAP</h2>
+            <p className="text-xs font-semibold text-zinc-400 max-w-md mx-auto">Vetted features mapped to upcoming development iterations</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="future_cards_grid">
+            <div className="border border-zinc-800 p-6 space-y-3 bg-zinc-950">
+              <span className="text-[9px] font-mono text-brand-orange font-black tracking-widest uppercase block">PHASE 2.1 — STATUS ENGAGEMENTS</span>
+              <h3 className="text-xs font-black uppercase text-white tracking-widest">Reputation & Streak Systems</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Adding donation streaks, neighborhood contribution badges, and verified donor history metrics to honor frequent sharers.
+              </p>
+            </div>
+            <div className="border border-zinc-800 p-6 space-y-3 bg-zinc-950">
+              <span className="text-[9px] font-mono text-brand-orange font-black tracking-widest uppercase block">PHASE 2.2 — SCHEDULING ROUTERS</span>
+              <h3 className="text-xs font-black uppercase text-white tracking-widest">Contactless Pickups Coordinator</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Interactive schedules directly linked to private chats to simplify and automate porch pickup windows safely.
+              </p>
+            </div>
+            <div className="border border-zinc-800 p-6 space-y-3 bg-zinc-950">
+              <span className="text-[9px] font-mono text-brand-orange font-black tracking-widest uppercase block">PHASE 2.3 — GEOLOCATION SECTORS</span>
+              <h3 className="text-xs font-black uppercase text-white tracking-widest">Street-Level Location Markers</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Encrypted boundary radiuses on local maps to verify exact pickup sectors across the greater Sacramento area.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* 8. Call To Action Footer Section */}
-      <section className="bg-black text-white mt-12 py-16 px-4 text-center relative overflow-hidden" id="call_to_action">
+      <section className="bg-zinc-950 text-white py-16 px-4 text-center relative overflow-hidden" id="call_to_action">
         <div className="max-w-xl mx-auto space-y-6">
           <div className="w-11 h-11 bg-brand-orange text-white rounded-none flex items-center justify-center mx-auto mb-4">
             <Heart className="w-5.5 h-5.5 fill-current" />
@@ -667,7 +839,7 @@ export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin
 
           <button
             onClick={() => document.getElementById('auth_credential_desk')?.scrollIntoView({ behavior: 'smooth' })}
-            className="mx-auto w-full max-w-xs py-4 px-6 rounded-none font-black text-xs uppercase tracking-widest bg-white hover:bg-zinc-100 active:bg-zinc-200 text-black shadow-lg inline-flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+            className="mx-auto w-full max-w-xs py-4 px-6 rounded-none font-black text-xs uppercase tracking-widest bg-white hover:bg-zinc-100 active:bg-zinc-200 text-black shadow-lg inline-flex items-center justify-center space-x-2 transition-colors cursor-pointer animate-bounce"
           >
             <Lock className="w-4 h-4 text-black" />
             <span>EXCHANGE WITH SECURE ACCOUNT</span>

@@ -50,17 +50,17 @@ export const SACRAMENTO_NEIGHBORHOODS = [
   'Downtown',
   'East Sacramento',
   'Land Park',
-  'Curtis Park',
   'Oak Park',
   'Natomas',
-  'Pocket-Greenhaven',
-  'Tahoe Park',
-  'North Sacramento',
-  'Arden-Arcade',
-  'Carmichael',
   'Elk Grove',
-  'Folsom',
-  'Roseville'
+  'Arden',
+  'Citrus Heights',
+  'Rancho Cordova',
+  'West Sacramento',
+  'South Sacramento',
+  'Pocket-Greenhaven',
+  'Curtis Park',
+  'Tahoe Park'
 ];
 
 export const ITEM_CATEGORIES = [
