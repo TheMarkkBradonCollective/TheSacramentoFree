@@ -8,13 +8,13 @@
 }
 
 @layer utilities {
-  /* Uber-Eats / Uber-Ride styled neutral canvas background */
+  /* Neutral clean canvas background */
   .mesh-bg {
     background-color: #F6F6F6;
     background-image: none !important;
   }
   
-  /* Uber Base Web solid high contrast containers */
+  /* Solid high contrast containers */
   .glass {
     background: #FFFFFF;
     backdrop-filter: none !important;
@@ -38,7 +38,7 @@
   }
 }
 
-/* Custom global overrides for high-contrast Uber interactive items */
+/* Custom global overrides for high-contrast interactive items */
 input:focus, select:focus, textarea:focus {
   outline: none !important;
   border-color: #276EF1 !important;

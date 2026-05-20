@@ -21,7 +21,7 @@ export default function SupabaseIndicator() {
 
   return (
     <div id="supabase_db_indicator_block" className="space-y-3 font-sans">
-      {/* Uber Styled Minimalist Status Bar */}
+      {/* Minimalist Status Bar */}
       <div 
         className={`flex flex-col sm:flex-row items-center justify-between p-5 rounded-none border transition-all ${
           dbState.isConfigured 

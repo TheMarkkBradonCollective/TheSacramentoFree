@@ -22,7 +22,7 @@ export default function Navbar({
     <header id="main_navbar" className="sticky top-0 z-40 bg-[#000000] text-white border-b border-zinc-800 transition-all font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          {/* Logo & Brand - Uber Minimalist Look */}
+          {/* Logo & Brand - Minimalist Look */}
           <div 
             onClick={() => setActiveTab('feed')} 
             className="flex items-center space-x-3 cursor-pointer select-none"
@@ -33,15 +33,15 @@ export default function Navbar({
             </div>
             <div>
               <h1 className="text-sm font-black tracking-widest text-white uppercase leading-none font-display">
-                UBER<span className="text-[#276EF1] font-bold">SHARE</span>
+                BUY<span className="text-[#276EF1] font-bold">NOTHING</span>
               </h1>
               <span className="text-[9px] font-bold text-zinc-400 tracking-widest uppercase block mt-0.5">
-                SACRAMENTO FREE CELL
+                SACRAMENTO COLLECTIVE
               </span>
             </div>
           </div>
 
-          {/* Navigation Controls in Uber Base Style (Stark borders & underlines) */}
+          {/* Navigation Controls (Stark borders & underlines) */}
           {userProfile && (
             <nav className="flex items-center h-full space-x-1 sm:space-x-4" id="nav_links_container">
               {/* Find Items / Feed */}
@@ -109,7 +109,7 @@ export default function Navbar({
                   <span>{userProfile.neighborhood}</span>
                 </div>
 
-                {/* Create Custom Post Button - Solid Uber White */}
+                 {/* Create Custom Post Button - Solid White */}
                 <button
                   id="navbar_create_post_btn"
                   onClick={onOpenNewPost}
@@ -130,7 +130,7 @@ export default function Navbar({
                 </button>
               </>
             ) : (
-              <span className="text-[10px] font-black tracking-widest text-[#276EF1] uppercase font-mono">UBER SHARE</span>
+              <span className="text-[10px] font-black tracking-widest text-[#276EF1] uppercase font-mono">SACRAMENTO BUY NOTHING</span>
             )}
           </div>
         </div>

@@ -121,7 +121,7 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
   return (
     <div id="landing_page_root" className="min-h-screen flex flex-col justify-between bg-white text-black font-sans selection:bg-[#276EF1]/20">
       
-      {/* 1. Header/Navigation Bar - Uber Style (Stark borders & crisp lines) */}
+      {/* 1. Header/Navigation Bar - Minimalist Style (Stark borders & crisp lines) */}
       <nav className="border-b border-zinc-200 bg-white sticky top-0 z-45 px-4 sm:px-6 lg:px-8" id="landing_navbar">
         <div className="max-w-7xl mx-auto h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -130,7 +130,7 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
             </div>
             <div>
               <span className="text-sm font-black tracking-widest text-black uppercase block leading-none font-display">
-                UBER<span className="text-[#276EF1]">SHARE</span>
+                BUY<span className="text-[#276EF1]">NOTHING</span>
               </span>
               <span className="text-[8.5px] font-black text-zinc-500 tracking-widest uppercase font-mono block mt-0.5">
                 SACRAMENTO FREE EXCHANGE
@@ -148,7 +148,7 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
         </div>
       </nav>
 
-      {/* 2. Hero Presentation (Stark Uber Typography Layout) */}
+      {/* 2. Hero Presentation (Stark Typography Layout) */}
       <section className="relative px-4 pt-16 pb-16 sm:px-6 lg:px-8 text-center max-w-4xl mx-auto space-y-6" id="hero_section">
         <div className="inline-flex items-center space-x-2 bg-zinc-100 border border-zinc-200 text-black py-1.5 px-4 text-[10px] font-black tracking-widest uppercase font-mono">
           <Sparkles className="w-3.5 h-3.5 text-[#276EF1]" />
@@ -192,7 +192,7 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
           </a>
         </div>
 
-        {/* 3. Community Stats Badge - Uber Clean Layout */}
+        {/* 3. Community Stats Badge - Clean Layout */}
         <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto pt-10 text-center" id="stats_panel">
           <div className="p-5 bg-zinc-50 border border-zinc-200 rounded-none">
             <span className="block text-2xl font-black text-black leading-none font-display">1,820 LBS</span>
@@ -209,7 +209,7 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
         </div>
       </section>
 
-      {/* 4. Interactive Live Preview Filter (Uber Grid Look) */}
+      {/* 4. Interactive Live Preview Filter (Grid Look) */}
       <section className="px-4 py-12 max-w-7xl mx-auto w-full space-y-8 bg-zinc-50 border border-zinc-200 rounded-none my-8 shadow-xs" id="live_previews">
         <div className="text-center space-y-2">
           <span className="text-[9px] font-black uppercase tracking-widest text-[#276EF1] font-mono">LIVE MATCHMAKER</span>
@@ -217,7 +217,7 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
           <p className="text-xs font-semibold text-zinc-500">Instant views of verified equipment, items, and crops shared globally</p>
         </div>
 
-        {/* Filter Toggle in Uber Stark Selectors */}
+        {/* Filter Toggle in Stark Selectors */}
         <div className="flex justify-center space-x-1" id="preview_filters">
           {(['all', 'giveaway', 'looking'] as const).map((tab) => (
             <button
@@ -234,7 +234,7 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
           ))}
         </div>
 
-        {/* Card slider / Grid list - Uber eats grid style */}
+        {/* Card slider / Grid list - Clean grid style */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="preview_grid">
           {filteredItems.map((item) => (
             <div 
@@ -439,7 +439,7 @@ export default function LandingPage({ onGoogleLogin, errorMsg }: LandingPageProp
 
       {/* 9. Minimal humblest credit line */}
       <footer className="py-6 text-center text-[9.5px] text-zinc-400 font-mono font-black border-t border-zinc-200 bg-zinc-50" id="landing_minimal_footer">
-        <span>© {new Date().getFullYear()} UBER SHARE LOCAL OPERATIONAL HUB. REDUCING MUNICIPAL WASTE FLOW.</span>
+        <span>© {new Date().getFullYear()} SACRAMENTO BUY NOTHING LOCAL OPERATIONAL HUB. REDUCING MUNICIPAL WASTE FLOW.</span>
       </footer>
 
     </div>
