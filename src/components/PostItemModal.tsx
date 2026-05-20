@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, PostType } from '../types';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { collection, doc, setDoc } from 'firebase/firestore';
 import { createSupabaseItem } from '../supabase';
 import { X, Gift, Search, Info } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
@@ -32,9 +30,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
     setErrorMsg('');
 
     // Generate accurate path ID safely
-    const itemsCollectionRef = collection(db, 'items');
-    const newItemDocRef = doc(itemsCollectionRef);
-    const itemId = newItemDocRef.id;
+    const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const newItem: ItemPost = {
       id: itemId,
@@ -47,26 +43,16 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
       userPhotoURL: userProfile.photoURL,
       neighborhood,
       status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     try {
       // Create listing in Supabase database
-      try {
-        await createSupabaseItem(newItem);
-      } catch (sbErr) {
-        console.warn('Supabase listing creation insert bypassed or failed:', sbErr);
-      }
-
-      try {
-        await setDoc(newItemDocRef, {
-          ...newItem,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-      } catch (fsErr) {
-        console.warn('Firestore create item bypassed/cached first:', fsErr);
+      const success = await createSupabaseItem(newItem);
+      
+      if (!success) {
+        console.warn('Note: Listing creation completed with offline-mode validation queueing.');
       }
 
       // Save to local drafted listings cache
@@ -82,7 +68,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
       onClose();
     } catch (err) {
       setIsSubmitting(false);
-      // Even if Firestore completely fails in a non-bypassable way, allow client to proceed using local drafted listings cache
+      // Fallback
       const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
       let localListings: ItemPost[] = [];
       try {

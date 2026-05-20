@@ -1,7 +1,4 @@
 import { useState, useEffect } from 'react';
-import { GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, doc, onSnapshot, getDoc, query, orderBy, setDoc } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { UserProfile, ItemPost } from './types';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
@@ -11,7 +8,13 @@ import ItemGrid from './components/ItemGrid';
 import ChatSystem from './components/ChatSystem';
 import UserProfileView from './components/UserProfileView';
 import SupabaseIndicator from './components/SupabaseIndicator';
-import { getSupabaseProfile, upsertSupabaseProfile, getSupabaseItems, getOrCreateSupabaseChat } from './supabase';
+import { 
+  supabase, 
+  getSupabaseProfile, 
+  upsertSupabaseProfile, 
+  getSupabaseItems, 
+  getOrCreateSupabaseChat 
+} from './supabase';
 import { Gift, MapPin, MessageSquare, Heart, Sparkles } from 'lucide-react';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [
@@ -102,7 +105,7 @@ const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [
 ];
 
 export default function App() {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [sessionUser, setSessionUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -122,229 +125,300 @@ export default function App() {
     }
   }, [userProfile]);
 
-  // 1. Subscribe to Firebase Auth State changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-      if (user) {
-        setIsProfileLoading(true);
-        setErrorMsg('');
-        
-        let profile: UserProfile | null = null;
-        
-        // Try Supabase first
-        try {
-          profile = await getSupabaseProfile(user.uid);
-        } catch (sbErr) {
-          console.warn('Supabase offline/not configured:', sbErr);
-        }
-        
-        // If not in Supabase, try Firestore
-        if (!profile) {
-          try {
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDocSnap = await getDoc(userDocRef);
+  const handleUserAuthenticated = async (user: any) => {
+    setIsProfileLoading(true);
+    setErrorMsg('');
+    
+    let profile: UserProfile | null = null;
+    
+    // Try Supabase first
+    try {
+      profile = await getSupabaseProfile(user.id);
+    } catch (sbErr) {
+      console.warn('Supabase profile fetch failed:', sbErr);
+    }
 
-            if (userDocSnap.exists()) {
-              const data = userDocSnap.data();
-              profile = {
-                uid: data.uid,
-                displayName: data.displayName,
-                photoURL: data.photoURL || '',
-                email: data.email,
-                neighborhood: data.neighborhood,
-                bio: data.bio || '',
-                createdAt: data.createdAt
-              };
-              
-              // Try syncing back to Supabase
-              try {
-                await upsertSupabaseProfile(profile);
-              } catch (_) {}
+    // If neither worked, try localStorage fallback
+    if (!profile) {
+      const cachedProfileStr = localStorage.getItem(`profile_${user.id}`);
+      if (cachedProfileStr) {
+        try {
+          profile = JSON.parse(cachedProfileStr);
+        } catch (_) {}
+      }
+    }
+
+    // Constructor of temporary cached profile if missing
+    if (!profile) {
+      profile = {
+        uid: user.id,
+        displayName: user.user_metadata?.displayName || user.email?.split('@')[0] || 'Sacramento Neighbor',
+        photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.id)}`,
+        email: user.email || 'neighbor@sacramentobuynothing.org',
+        neighborhood: user.user_metadata?.neighborhood || 'Midtown',
+        bio: user.user_metadata?.bio || 'Sacramento Buy Nothing collective member.',
+        createdAt: new Date().toISOString()
+      };
+      
+      try {
+        await upsertSupabaseProfile(profile);
+      } catch (_) {}
+      localStorage.setItem(`profile_${profile.uid}`, JSON.stringify(profile));
+    }
+
+    setUserProfile(profile);
+    setIsProfileLoading(false);
+    setIsAuthLoading(false);
+  };
+
+  // 1. Subscribe to Supabase Auth State changes
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setSessionUser(session.user);
+          await handleUserAuthenticated(session.user);
+        } else {
+          // Check if there is a cached guest user
+          const cachedGuest = localStorage.getItem('supabase_guest_profile');
+          if (cachedGuest) {
+            try {
+              const guest = JSON.parse(cachedGuest);
+              setSessionUser(guest);
+              setUserProfile(guest);
+            } catch (_) {
+              setSessionUser(null);
+              setUserProfile(null);
             }
-          } catch (fsErr) {
-            console.warn('Firestore user profile fetch failed (offline/unreachable):', fsErr);
+          } else {
+            setSessionUser(null);
+            setUserProfile(null);
+          }
+          setIsAuthLoading(false);
+        }
+      } catch (err) {
+        console.warn('Error checking supabase session:', err);
+        setIsAuthLoading(false);
+      }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setSessionUser(session.user);
+        await handleUserAuthenticated(session.user);
+      } else {
+        const cachedGuest = localStorage.getItem('supabase_guest_profile');
+        if (cachedGuest) {
+          try {
+            const guest = JSON.parse(cachedGuest);
+            setSessionUser(guest);
+            setUserProfile(guest);
+          } catch (_) {
+            setSessionUser(null);
+            setUserProfile(null);
           }
         } else {
-          // Sync Supabase profile to Firestore
-          try {
-            const userRef = doc(db, 'users', user.uid);
-            await setDoc(userRef, {
-              uid: profile.uid,
-              displayName: profile.displayName,
-              photoURL: profile.photoURL || '',
-              email: profile.email,
-              neighborhood: profile.neighborhood,
-              bio: profile.bio || '',
-              createdAt: new Date(profile.createdAt || Date.now())
-            }, { merge: true });
-          } catch (fsErr) {
-            console.warn('Firestore profile sync failed:', fsErr);
-          }
+          setSessionUser(null);
+          setUserProfile(null);
         }
-
-        // If neither worked, try localStorage fallback
-        if (!profile) {
-          const cachedProfileStr = localStorage.getItem(`profile_${user.uid}`);
-          if (cachedProfileStr) {
-            try {
-              profile = JSON.parse(cachedProfileStr);
-            } catch (_) {}
-          }
-        }
-
-        // If we still don't have a profile, construct a smart temporary guest profile
-        if (!profile) {
-          profile = {
-            uid: user.uid,
-            displayName: user.displayName || user.email?.split('@')[0] || 'Sacramento Neighbor',
-            photoURL: user.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.uid)}`,
-            email: user.email || 'neighbor@sacramentobuynothing.org',
-            neighborhood: 'Midtown',
-            bio: 'Sacramento Buy Nothing collective member.',
-            createdAt: new Date().toISOString()
-          };
-          localStorage.setItem(`profile_${profile.uid}`, JSON.stringify(profile));
-        }
-
-        setUserProfile(profile);
-        setIsProfileLoading(false);
-      } else {
-        setUserProfile(null);
+        setIsAuthLoading(false);
       }
-      setIsAuthLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // 2. Load Item Listings from Firestore once user is onboarded
+  // 2. Load Item Listings periodically from Supabase once user is onboarded
   useEffect(() => {
     if (!userProfile) {
       setItems([]);
       return;
     }
 
-    setIsItemsLoading(true);
-    const itemsRef = collection(db, 'items');
-    // Query order by most recent post first
-    const q = query(itemsRef, orderBy('createdAt', 'desc'));
+    let isSubscribed = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedItems: ItemPost[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        loadedItems.push({
-          id: docSnap.id,
-          title: data.title,
-          description: data.description,
-          type: data.type,
-          category: data.category,
-          userId: data.userId,
-          userDisplayName: data.userDisplayName,
-          userPhotoURL: data.userPhotoURL,
-          neighborhood: data.neighborhood,
-          status: data.status,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt
-        });
-      });
-
-      // Merge current local drafted items so that user's offline submissions show up too
-      const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
-      let localListings: ItemPost[] = [];
+    const loadItems = async () => {
+      setIsItemsLoading(true);
       try {
-        localListings = JSON.parse(localListingsStr);
-      } catch (_) {}
+        const loadedItems = await getSupabaseItems();
+        
+        if (!isSubscribed) return;
 
-      // Filter local items to avoid repeating items loaded from server
-      const serverIds = new Set(loadedItems.map(item => item.id));
-      const filteredLocal = localListings.filter(item => !serverIds.has(item.id));
-
-      // Merge order
-      const finalItems = [...filteredLocal, ...loadedItems];
-      
-      // If we got items, save to fallback
-      if (finalItems.length > 0) {
-        localStorage.setItem('cached_items', JSON.stringify(finalItems));
-        setItems(finalItems);
-      } else {
-        // No items in DB, combine local listings with beautiful default Sacramento database
-        setItems([...filteredLocal, ...DEFAULT_OFFLINE_ITEMS]);
-      }
-      setIsItemsLoading(false);
-    }, (error) => {
-      console.warn('Firestore real-time subscription error, using cached/offline listings:', error);
-      setIsItemsLoading(false);
-
-      // Offline flow: retrieve local drafted items + cached items, or fallback to real Sacramento Buy Nothing listing base
-      const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
-      let localListings: ItemPost[] = [];
-      try {
-        localListings = JSON.parse(localListingsStr);
-      } catch (_) {}
-
-      const cachedStr = localStorage.getItem('cached_items');
-      let finalCached: ItemPost[] = [];
-      if (cachedStr) {
+        // Merge current local drafted items so that user's offline submissions show up too
+        const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
+        let localListings: ItemPost[] = [];
         try {
-          finalCached = JSON.parse(cachedStr);
+          localListings = JSON.parse(localListingsStr);
         } catch (_) {}
+
+        // Filter local items to avoid repeating items loaded from server
+        const serverIds = new Set(loadedItems.map(item => item.id));
+        const filteredLocal = localListings.filter(item => !serverIds.has(item.id));
+
+        // Merge order
+        const finalItems = [...filteredLocal, ...loadedItems];
+        
+        if (finalItems.length > 0) {
+          localStorage.setItem('cached_items', JSON.stringify(finalItems));
+          setItems(finalItems);
+        } else {
+          setItems([...filteredLocal, ...DEFAULT_OFFLINE_ITEMS]);
+        }
+      } catch (err) {
+        console.warn('Supabase items fetch failed, using offline fallback:', err);
+        if (!isSubscribed) return;
+
+        const cachedStr = localStorage.getItem('cached_items');
+        let finalCached: ItemPost[] = [];
+        if (cachedStr) {
+          try {
+            finalCached = JSON.parse(cachedStr);
+          } catch (_) {}
+        }
+        if (finalCached.length === 0) {
+          finalCached = DEFAULT_OFFLINE_ITEMS;
+        }
+        setItems(finalCached);
+      } finally {
+        if (isSubscribed) {
+          setIsItemsLoading(false);
+        }
       }
+    };
 
-      if (finalCached.length === 0) {
-        finalCached = DEFAULT_OFFLINE_ITEMS;
-      }
+    loadItems();
+    const interval = setInterval(loadItems, 8000); // Poll for real Sacramento listings
 
-      const serverIds = new Set(localListings.map(item => item.id));
-      const filteredCached = finalCached.filter(item => !serverIds.has(item.id));
-
-      setItems([...localListings, ...filteredCached]);
-    });
-
-    return () => unsubscribe();
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
   }, [userProfile]);
 
-  // Handle Google Login popup
-  const handleGoogleLogin = async () => {
+  // Handle Email and Password Logins
+  const handleEmailSignIn = async (email: string, password: string): Promise<boolean> => {
     setIsAuthLoading(true);
     setErrorMsg('');
-    const provider = new GoogleAuthProvider();
-    // Force prompt to ensure user can select accounts smoothly inside sandbox
-    provider.setCustomParameters({ prompt: 'select_account' });
-
     try {
-      await signInWithPopup(auth, provider);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        setErrorMsg(error.message);
+        setIsAuthLoading(false);
+        return false;
+      }
+
+      if (data.user) {
+        setSessionUser(data.user);
+        await handleUserAuthenticated(data.user);
+        return true;
+      }
+      setIsAuthLoading(false);
+      return false;
     } catch (err: any) {
       setIsAuthLoading(false);
-      setErrorMsg('Login interrupted or rejected. Please try again.');
-      console.warn(err);
+      setErrorMsg(err.message || 'Signature detour error.');
+      return false;
     }
   };
 
-  // Handle Quick Guest Login Fallback for sandboxed context
-  const handleGuestLogin = async () => {
+  const handleEmailSignUp = async (
+    email: string, 
+    password: string, 
+    displayName: string, 
+    neighborhood: string, 
+    bio: string
+  ): Promise<boolean> => {
     setIsAuthLoading(true);
     setErrorMsg('');
     try {
-      await signInAnonymously(auth);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            displayName,
+            neighborhood,
+            bio
+          }
+        }
+      });
+
+      if (error) {
+        setErrorMsg(error.message);
+        setIsAuthLoading(false);
+        return false;
+      }
+
+      if (data.user) {
+        const newProfile: UserProfile = {
+          uid: data.user.id,
+          displayName,
+          photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(data.user.id)}`,
+          email: data.user.email || email,
+          neighborhood,
+          bio,
+          createdAt: new Date().toISOString()
+        };
+
+        await upsertSupabaseProfile(newProfile);
+        localStorage.setItem(`profile_${newProfile.uid}`, JSON.stringify(newProfile));
+        
+        setSessionUser(data.user);
+        setUserProfile(newProfile);
+        setIsAuthLoading(false);
+        return true;
+      }
+      setIsAuthLoading(false);
+      return false;
     } catch (err: any) {
       setIsAuthLoading(false);
-      setErrorMsg('Guest sign in failed. Please try again.');
-      console.warn(err);
+      setErrorMsg(err.message || 'Neighbor induction error.');
+      return false;
     }
+  };
+
+  // Handle Quick Guest Login
+  const handleGuestLogin = () => {
+    setIsAuthLoading(true);
+    setErrorMsg('');
+    const guestProfile: UserProfile = {
+      uid: 'guest_' + Math.random().toString(36).substring(2, 11),
+      displayName: 'Sacramento Guest ' + Math.floor(100 + Math.random() * 900),
+      photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=Guest_${Date.now()}`,
+      email: 'guest@sacramentobuynothing.org',
+      neighborhood: 'Midtown',
+      bio: 'Visiting Sacramento guest user.',
+      createdAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem('supabase_guest_profile', JSON.stringify(guestProfile));
+    localStorage.setItem(`profile_${guestProfile.uid}`, JSON.stringify(guestProfile));
+    
+    setTimeout(() => {
+      setSessionUser(guestProfile);
+      setUserProfile(guestProfile);
+      setIsAuthLoading(false);
+    }, 450);
   };
 
   // Sign out
   const handleLogOut = async () => {
     try {
-      await signOut(auth);
-      setFirebaseUser(null);
-      setUserProfile(null);
-      setActiveTab('feed');
-    } catch (err) {
-      console.error(err);
-    }
+      await supabase.auth.signOut();
+    } catch (_) {}
+    localStorage.removeItem('supabase_guest_profile');
+    setSessionUser(null);
+    setUserProfile(null);
+    setActiveTab('feed');
   };
 
   // Onboarding Complete Handler
@@ -363,9 +437,6 @@ export default function App() {
     setIsProfileLoading(true);
 
     try {
-      const chatDocRef = doc(db, 'chats', chatId);
-      const chatDocSnap = await getDoc(chatDocRef);
-
       const payload = {
         id: chatId,
         participantIds: participants,
@@ -377,7 +448,7 @@ export default function App() {
           [userProfile.uid]: userProfile.photoURL || '',
           [posterUid]: posterPhoto || ''
         },
-        lastMessageAt: new Date(),
+        lastMessageAt: new Date().toISOString(),
         lastMessageText: `Proposed an exchange for: "${item?.title || 'item'}"`,
         lastMessageSenderId: userProfile.uid,
         itemId: item?.id || '',
@@ -385,32 +456,25 @@ export default function App() {
       };
 
       // Sync Chat room details to Supabase
-      try {
-        await getOrCreateSupabaseChat(chatId, payload);
-      } catch (sbErr) {
-        console.warn('Supabase chat synchronization bypassed or failed:', sbErr);
-      }
+      await getOrCreateSupabaseChat(chatId, payload);
 
-      if (!chatDocSnap.exists()) {
-        // Chat doesn't exist, create it!
-        await setDoc(chatDocRef, payload);
-      } else if (item) {
-        // Chat exists, update the specific post context so they know what they are chatting about
-        await setDoc(chatDocRef, {
-          lastMessageAt: new Date(),
-          itemId: item.id,
-          itemTitle: item.title
-        }, { merge: true });
-      }
+      // Local storage backup
+      const localChatsKey = 'local_chats';
+      let localChats: any[] = [];
+      try {
+        localChats = JSON.parse(localStorage.getItem(localChatsKey) || '[]');
+      } catch (_) {}
+      const filteredLocalList = localChats.filter(c => c.id !== chatId);
+      filteredLocalList.push(payload);
+      localStorage.setItem(localChatsKey, JSON.stringify(filteredLocalList));
 
       setInitialSelectedChatId(chatId);
       setActiveTab('chats');
     } catch (err) {
-      try {
-        handleFirestoreError(err, OperationType.WRITE, `chats/${chatId}`);
-      } catch (authError: any) {
-        alert('Exchange coordination could not be started. Check login token state.');
-      }
+      console.warn('Exchange coordination could not be synced:', err);
+      // Fallback local UI session activation
+      setInitialSelectedChatId(chatId);
+      setActiveTab('chats');
     } finally {
       setIsProfileLoading(false);
     }
@@ -427,14 +491,19 @@ export default function App() {
       )}
 
       {/* 2. Authentication Landing View */}
-      {!firebaseUser ? (
-        <LandingPage onGoogleLogin={handleGoogleLogin} onGuestLogin={handleGuestLogin} errorMsg={errorMsg} />
+      {!sessionUser ? (
+        <LandingPage 
+          onEmailSignIn={handleEmailSignIn} 
+          onEmailSignUp={handleEmailSignUp} 
+          onGuestLogin={handleGuestLogin} 
+          errorMsg={errorMsg} 
+        />
       ) : (
         /* 3. Post-Auth Onboard vs App Feed Layout */
         <>
           {!userProfile ? (
             /* User signed in but needs onboarding details */
-            <Onboarding onComplete={handleOnboardingComplete} />
+            <Onboarding user={sessionUser} onComplete={handleOnboardingComplete} />
           ) : (
             /* Standard Dashboard Workspace */
             <>

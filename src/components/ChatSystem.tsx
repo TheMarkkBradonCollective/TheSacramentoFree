@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chat, Message, UserProfile } from '../types';
-import { collection, doc, query, where, orderBy, onSnapshot, writeBatch } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { createSupabaseMessage } from '../supabase';
+import { getSupabaseChats, getSupabaseMessages, createSupabaseMessage } from '../supabase';
 import { MessageSquare, Send, AlertCircle, MapPin, Gift, Box, ChevronLeft } from 'lucide-react';
 
 interface ChatSystemProps {
@@ -33,49 +31,42 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
 
   // Sync / Subscribe to client's Chat Rooms
   useEffect(() => {
-    const chatsRef = collection(db, 'chats');
-    const q = query(chatsRef, where('participantIds', 'array-contains', userProfile.uid));
+    let active = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedChats: Chat[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        loadedChats.push({
-          id: docSnap.id,
-          participantIds: data.participantIds || [],
-          participantNames: data.participantNames || {},
-          participantPhotos: data.participantPhotos || {},
-          lastMessageText: data.lastMessageText || '',
-          lastMessageAt: data.lastMessageAt || null,
-          lastMessageSenderId: data.lastMessageSenderId || '',
-          itemId: data.itemId || '',
-          itemTitle: data.itemTitle || ''
+    const loadChats = async () => {
+      try {
+        const loadedChats = await getSupabaseChats(userProfile.uid);
+        if (!active) return;
+
+        // Sort chats by lastMessageAt descending
+        loadedChats.sort((a, b) => {
+          const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+          const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+          return timeB - timeA;
         });
-      });
 
-      // Sort chats by lastMessageAt descending
-      loadedChats.sort((a, b) => {
-        const timeA = a.lastMessageAt?.seconds ? a.lastMessageAt.seconds : (a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0);
-        const timeB = b.lastMessageAt?.seconds ? b.lastMessageAt.seconds : (b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0);
-        return timeB - timeA;
-      });
+        setChats(loadedChats);
+        setIsChatsLoading(false);
 
-      setChats(loadedChats);
-      setIsChatsLoading(false);
-
-      // Handle selecting initial chat if passed down
-      if (initialSelectedChatId) {
-        const target = loadedChats.find(c => c.id === initialSelectedChatId);
-        if (target) {
-          setSelectedChat(target);
+        // Handle selecting initial chat if passed down
+        if (initialSelectedChatId) {
+          const target = loadedChats.find(c => c.id === initialSelectedChatId);
+          if (target && !selectedChat) {
+            setSelectedChat(target);
+          }
         }
+      } catch (err) {
+        console.warn('Failed to load chats from Supabase:', err);
       }
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'chats');
-    });
+    };
+
+    loadChats();
+    // Poll chats every 5 seconds for updates
+    const interval = setInterval(loadChats, 5000);
 
     return () => {
-      unsubscribe();
+      active = false;
+      clearInterval(interval);
     };
   }, [userProfile.uid, initialSelectedChatId]);
 
@@ -86,27 +77,25 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
       return;
     }
 
-    const messagesRef = collection(db, 'chats', selectedChat.id, 'messages');
-    const q = query(messagesRef, orderBy('createdAt', 'asc'));
+    let active = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedMessages: Message[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        loadedMessages.push({
-          id: docSnap.id,
-          senderId: data.senderId,
-          text: data.text,
-          createdAt: data.createdAt
-        });
-      });
-      setMessages(loadedMessages);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, `chats/${selectedChat.id}/messages`);
-    });
+    const loadMessages = async () => {
+      try {
+        const loadedMessages = await getSupabaseMessages(selectedChat.id);
+        if (!active) return;
+        setMessages(loadedMessages);
+      } catch (err) {
+        console.warn('Failed to load messages from Supabase:', err);
+      }
+    };
+
+    loadMessages();
+    // Poll messages every 2.5 seconds for instant threads
+    const interval = setInterval(loadMessages, 2500);
 
     return () => {
-      unsubscribe();
+      active = false;
+      clearInterval(interval);
     };
   }, [selectedChat]);
 
@@ -120,43 +109,26 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
     const typedText = inputText.trim();
     setInputText('');
 
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
     try {
-      const messagesRef = collection(db, 'chats', selectedChat.id, 'messages');
-      const chatDocRef = doc(db, 'chats', selectedChat.id);
+      const success = await createSupabaseMessage(selectedChat.id, typedText, userProfile.uid, messageId);
 
-      // Generate doc for message
-      const msgDocRef = doc(messagesRef);
-      const messagePayload = {
-        id: msgDocRef.id,
-        senderId: userProfile.uid,
-        text: typedText,
-        createdAt: new Date()
-      };
-
-      // Sync message to Supabase
-      try {
-        await createSupabaseMessage(selectedChat.id, typedText, userProfile.uid, msgDocRef.id);
-      } catch (sbErr) {
-        console.warn('Supabase message creation bypassed or failed:', sbErr);
+      if (success) {
+        // Optimistically insert locally to prevent latency
+        setMessages(prev => [...prev, {
+          id: messageId,
+          senderId: userProfile.uid,
+          text: typedText,
+          createdAt: new Date().toISOString()
+        }]);
+      } else {
+        throw new Error('Supabase message write failed');
       }
-
-      // Create message & update chat header atomically
-      const batch = writeBatch(db);
-      batch.set(msgDocRef, messagePayload);
-      batch.update(chatDocRef, {
-        lastMessageText: typedText,
-        lastMessageSenderId: userProfile.uid,
-        lastMessageAt: new Date()
-      });
-
-      await batch.commit();
     } catch (err) {
       setInputText(typedText); // restore text on error
-      try {
-        handleFirestoreError(err, OperationType.WRITE, `chats/${selectedChat.id}/messages`);
-      } catch (authError: any) {
-        setErrorMsg('Access denied. Security rules prevents writing to this chat.');
-      }
+      setErrorMsg('Failed to send message over Supabase connection.');
+      console.error(err);
     } finally {
       setIsSending(false);
     }

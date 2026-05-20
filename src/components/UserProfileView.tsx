@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { UserProfile, SACRAMENTO_NEIGHBORHOODS } from '../types';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import { upsertSupabaseProfile } from '../supabase';
 import { MapPin, User, CheckCircle, Save, AlertCircle } from 'lucide-react';
 
@@ -36,28 +34,14 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
     };
 
     try {
-      // Sync to Supabase
-      try {
-        await upsertSupabaseProfile({
-          ...userProfile,
-          ...updateData
-        });
-      } catch (sbErr) {
-        console.warn('Supabase profile update bypassed or failed:', sbErr);
-      }
-
-      try {
-        const userRef = doc(db, 'users', userProfile.uid);
-        await updateDoc(userRef, updateData);
-      } catch (fsErr) {
-        console.warn('Firestore profile update bypassed/offline:', fsErr);
-      }
-      
       const updatedProfile = {
         ...userProfile,
         ...updateData
       };
 
+      // Sync to Supabase
+      await upsertSupabaseProfile(updatedProfile);
+      
       // Set in cache
       localStorage.setItem(`profile_${userProfile.uid}`, JSON.stringify(updatedProfile));
       onUpdateProfile(updatedProfile);

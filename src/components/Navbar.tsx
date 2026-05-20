@@ -1,5 +1,3 @@
-import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
 import { LogOut, MessageSquare, Plus, User, MapPin, Gift } from 'lucide-react';
 import { UserProfile } from '../types';
 

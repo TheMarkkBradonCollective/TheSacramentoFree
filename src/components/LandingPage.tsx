@@ -13,13 +13,21 @@ import {
   Users, 
   HelpCircle, 
   CheckCircle2, 
-  ShieldAlert
+  ShieldAlert,
+  User,
+  Lock,
+  Mail,
+  Info,
+  AlertCircle
 } from 'lucide-react';
+import { SACRAMENTO_NEIGHBORHOODS } from '../types';
 
 interface LandingPageProps {
-  onGoogleLogin: () => void;
+  onEmailSignIn: (email: string, password: string) => Promise<boolean>;
+  onEmailSignUp: (email: string, password: string, displayName: string, neighborhood: string, bio: string) => Promise<boolean>;
   onGuestLogin: () => void;
   errorMsg?: string;
+  isAuthLoading?: boolean;
 }
 
 const SAMPLE_ITEMS = [
@@ -108,9 +116,20 @@ const NEIGHBORHOODS_METADATA = [
   }
 ];
 
-export default function LandingPage({ onGoogleLogin, onGuestLogin, errorMsg }: LandingPageProps) {
+export default function LandingPage({ onEmailSignIn, onEmailSignUp, onGuestLogin, errorMsg, isAuthLoading }: LandingPageProps) {
   const [activeItemTypeTab, setActiveItemTypeTab] = useState<'all' | 'giveaway' | 'looking'>('all');
   const [selectedNeighborhoodIndex, setSelectedNeighborhoodIndex] = useState(0);
+
+  // Email and Password Form state
+  const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [neighborhood, setNeighborhood] = useState('Midtown');
+  const [bio, setBio] = useState('');
+  
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
 
   const filteredItems = SAMPLE_ITEMS.filter(item => {
     if (activeItemTypeTab === 'all') return true;
@@ -118,6 +137,50 @@ export default function LandingPage({ onGoogleLogin, onGuestLogin, errorMsg }: L
   });
 
   const featuredNeighborhood = NEIGHBORHOODS_METADATA[selectedNeighborhoodIndex];
+
+  const handleSignInSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setLocalError('Please enter both your email and password.');
+      return;
+    }
+    setLocalLoading(true);
+    setLocalError('');
+    try {
+      const res = await onEmailSignIn(email.trim(), password);
+      if (!res) {
+        setLocalError('Invalid credentials. Check your email or join as a new neighbor.');
+      }
+    } catch (err: any) {
+      setLocalError(err.message || 'Signature handshake error.');
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim() || !displayName.trim()) {
+      setLocalError('Please fill out all required fields.');
+      return;
+    }
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters in length.');
+      return;
+    }
+    setLocalLoading(true);
+    setLocalError('');
+    try {
+      const res = await onEmailSignUp(email.trim(), password, displayName.trim(), neighborhood, bio.trim());
+      if (!res) {
+        setLocalError('Neighbor registration detour failed.');
+      }
+    } catch (err: any) {
+      setLocalError(err.message || 'Neighbor registration failed.');
+    } finally {
+      setLocalLoading(false);
+    }
+  };
 
   return (
     <div id="landing_page_root" className="min-h-screen flex flex-col justify-between bg-white text-black font-sans selection:bg-[#276EF1]/20">
@@ -144,16 +207,15 @@ export default function LandingPage({ onGoogleLogin, onGuestLogin, errorMsg }: L
               onClick={onGuestLogin}
               id="landing_header_guest_login_btn"
               className="px-3 py-2 text-[10px] font-black border border-zinc-300 text-zinc-700 hover:bg-zinc-50 rounded-none transition-colors cursor-pointer select-none tracking-widest uppercase"
-              title="Workaround Google Sign-in popup issues inside iframe"
             >
               GUEST ACCESS
             </button>
             <button
-              onClick={onGoogleLogin}
-              id="landing_header_google_login_btn"
-              className="px-4 py-2 text-[10px] font-black bg-black hover:bg-zinc-800 text-white rounded-none transition-colors cursor-pointer inline-flex items-center space-x-1.5 tracking-widest uppercase"
+              onClick={() => document.getElementById('auth_credential_desk')?.scrollIntoView({ behavior: 'smooth' })}
+              id="landing_header_register_btn"
+              className="px-4 py-2 text-[10px] font-black bg-black hover:bg-zinc-805 text-white rounded-none transition-colors cursor-pointer inline-flex items-center space-x-1.5 tracking-widest uppercase"
             >
-              <span>GOOGLE LOGIN</span>
+              <span>ACCESS LEDGER</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -176,41 +238,169 @@ export default function LandingPage({ onGoogleLogin, onGuestLogin, errorMsg }: L
           A premium, high-efficiency neighborhood ledger for Sacramento residents. Connect with vetted neighboring homes to match off unused items, excess home gear, or fresh garden crops. Zero cash, zero barters, absolute high-quality sharing.
         </p>
 
-        {errorMsg && (
-          <div className="mx-auto max-w-lg p-4 bg-red-50 text-red-700 text-xs text-left font-bold rounded-none border border-red-200 space-y-1.5" id="landing_error_overlay">
-            <p className="flex items-center gap-1.5 uppercase font-mono text-[10px] tracking-wider text-red-800">
-              <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-              AUTHENTICATION DETOUR REQUIRED
-            </p>
-            <p>{errorMsg}</p>
-            <p className="text-[10px] text-zinc-650 font-semibold leading-relaxed">
-              💡 <strong>IFrame Sandbox Tip:</strong> Standard social login popups can be blocked by browsers inside secure sandboxed previews. Simply click the <strong>Quick Guest Portal Pass</strong> below to join immediately with a verified neighbor identifier!
-            </p>
+        {/* Dynamic Authentication Panel */}
+        <div id="auth_credential_desk" className="max-w-md mx-auto bg-white border border-zinc-200 text-black shadow-lg rounded-none text-left overflow-hidden">
+          {/* Tabs */}
+          <div className="flex border-b border-zinc-200 bg-zinc-50 font-mono">
+            <button
+              onClick={() => { setAuthTab('signin'); setLocalError(''); }}
+              type="button"
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-center transition-all ${
+                authTab === 'signin'
+                  ? 'bg-white text-black border-r border-zinc-200 font-extrabold pb-3'
+                  : 'text-zinc-500 hover:text-black border-r border-zinc-200'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => { setAuthTab('signup'); setLocalError(''); }}
+              type="button"
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-center transition-all ${
+                authTab === 'signup'
+                  ? 'bg-white text-black font-extrabold pb-3'
+                  : 'text-zinc-500 hover:text-black'
+              }`}
+            >
+              Join Cooperative
+            </button>
           </div>
-        )}
 
-        <div className="flex flex-col sm:flex-row justify-center items-stretch sm:items-center gap-3.5 pt-4 max-w-xl mx-auto">
-          <button
-            id="hero_cta_login_btn"
-            onClick={onGoogleLogin}
-            className="flex-1 px-6 py-4 bg-black hover:bg-zinc-900 text-white rounded-none text-[10.5px] font-black uppercase tracking-widest flex items-center justify-center space-x-2 transition-colors cursor-pointer select-none"
-          >
-            <img
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt="Google"
-              className="w-4 h-4 bg-white rounded-none p-0.5 shrink-0"
-            />
-            <span>CONTINUE WITH GOOGLE</span>
-          </button>
+          <div className="p-6 space-y-4">
+            {localError && (
+              <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-none border border-red-200 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-650 mt-0.5" />
+                <span>{localError}</span>
+              </div>
+            )}
+            
+            {errorMsg && !localError && (
+              <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-none border border-red-200 flex items-start gap-2">
+                <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
-          <button
-            id="hero_cta_guest_login_btn"
-            onClick={onGuestLogin}
-            className="flex-1 px-6 py-4 border-2 border-dashed border-[#276EF1] bg-white hover:bg-blue-50/50 text-[#276EF1] rounded-none text-[10.5px] font-black uppercase tracking-widest flex items-center justify-center space-x-2 transition-all cursor-pointer select-none shadow-3xs"
-          >
-            <Sparkles className="w-4 h-4 text-[#276EF1] animate-pulse shrink-0" />
-            <span>QUICK GUEST PORTAL PASS</span>
-          </button>
+            <form onSubmit={authTab === 'signin' ? handleSignInSubmit : handleSignUpSubmit} className="space-y-4">
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500 block">ACCOUNT EMAIL</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                    <Mail className="w-3.5 h-3.5" />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@domain.com"
+                    className="w-full pl-9 pr-3 py-2 bg-zinc-50 border border-zinc-200 text-xs font-medium text-black focus:bg-white focus:outline-none focus:border-black rounded-none"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500 block">PASSWORD</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                    <Lock className="w-3.5 h-3.5" />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min. 6 alphanumeric characters"
+                    className="w-full pl-9 pr-3 py-2 bg-zinc-50 border border-zinc-200 text-xs font-medium text-black focus:bg-white focus:outline-none focus:border-black rounded-none"
+                  />
+                </div>
+              </div>
+
+              {authTab === 'signup' && (
+                <>
+                  {/* Neighbor Name */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500 block">NEIGHBOR IDENTIFIER NAME</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                        <User className="w-3.5 h-3.5" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="e.g. Amelia G."
+                        className="w-full pl-9 pr-3 py-2 bg-zinc-50 border border-zinc-200 text-xs font-semibold text-black focus:bg-white focus:outline-none focus:border-black rounded-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sector */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500 block">SACRAMENTO NEIGHBORHOOD SECTOR</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                        <MapPin className="w-3.5 h-3.5 text-[#276EF1]" />
+                      </div>
+                      <select
+                        value={neighborhood}
+                        onChange={(e) => setNeighborhood(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-zinc-50 border border-zinc-200 text-xs font-bold text-black focus:bg-white focus:outline-none focus:border-black rounded-none appearance-none"
+                      >
+                        {SACRAMENTO_NEIGHBORHOODS.map(n => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Bio */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-[#276EF1] block">BIOGRAPHY BRIEF (OPTIONAL)</label>
+                    <textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="e.g. Sharing garden surplus and tools!"
+                      maxLength={180}
+                      className="w-full p-2 bg-zinc-50 border border-zinc-200 text-xs font-medium text-black focus:bg-white focus:outline-none focus:border-black rounded-none resize-none h-16"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Submit Action */}
+              <button
+                type="submit"
+                disabled={localLoading || isAuthLoading}
+                className="w-full py-3 bg-black hover:bg-zinc-800 text-white disabled:opacity-50 text-[10px] font-black uppercase tracking-widest rounded-none transition-colors cursor-pointer select-none"
+              >
+                {localLoading || isAuthLoading 
+                  ? 'ESTABLISHING HANDSHAKE...' 
+                  : authTab === 'signin' 
+                    ? 'VERIFY NEIGHBOR ACCESS' 
+                    : 'INDUCT AS SACRAMENTO NEIGHBOR'
+                }
+              </button>
+            </form>
+
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-zinc-200"></div>
+              <span className="flex-shrink mx-4 text-[8px] text-zinc-400 font-black uppercase tracking-widest font-mono">OR DIRECT BYPASS</span>
+              <div className="flex-grow border-t border-zinc-200"></div>
+            </div>
+
+            <button
+              onClick={onGuestLogin}
+              type="button"
+              className="w-full py-2.5 border border-dashed border-[#276EF1] text-[#276EF1] bg-white hover:bg-blue-50/40 text-[10px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer inline-flex items-center justify-center space-x-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+              <span>GUEST PORTAL PASS</span>
+            </button>
+          </div>
         </div>
 
         {/* 3. Community Stats Badge - Clean Layout */}
@@ -298,10 +488,10 @@ export default function LandingPage({ onGoogleLogin, onGuestLogin, errorMsg }: L
 
         <div className="text-center pt-2">
           <button 
-            onClick={onGoogleLogin}
+            onClick={() => document.getElementById('auth_credential_desk')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-flex items-center space-x-1.5 text-xs font-black text-[#276EF1] hover:text-[#1953ca] uppercase tracking-widest cursor-pointer transition-all"
           >
-            <span>Start an dispatch or claim items — Join the network</span>
+            <span>Start a dispatch or claim items — Join the network</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -406,7 +596,7 @@ export default function LandingPage({ onGoogleLogin, onGuestLogin, errorMsg }: L
             </div>
 
             <button 
-              onClick={onGoogleLogin}
+              onClick={() => document.getElementById('auth_credential_desk')?.scrollIntoView({ behavior: 'smooth' })}
               className="mt-6 w-full py-3 bg-white hover:bg-zinc-50 border border-black text-black text-xs font-black uppercase tracking-widest rounded-none transition-colors cursor-pointer text-center"
             >
               LOG IN TO JOIN {featuredNeighborhood.name.toUpperCase()} SECTOR
@@ -441,15 +631,11 @@ export default function LandingPage({ onGoogleLogin, onGuestLogin, errorMsg }: L
           </p>
 
           <button
-            onClick={onGoogleLogin}
-            className="mx-auto w-full max-w-xs py-4 px-6 rounded-none font-black text-xs uppercase tracking-widest bg-white hover:bg-zinc-100 active:bg-zinc-200 text-black shadow-lg inline-flex items-center justify-center space-x-3 transition-colors cursor-pointer"
+            onClick={() => document.getElementById('auth_credential_desk')?.scrollIntoView({ behavior: 'smooth' })}
+            className="mx-auto w-full max-w-xs py-4 px-6 rounded-none font-black text-xs uppercase tracking-widest bg-white hover:bg-zinc-100 active:bg-zinc-200 text-black shadow-lg inline-flex items-center justify-center space-x-2 transition-colors cursor-pointer"
           >
-            <img
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt="Google Icon"
-              className="w-4.5 h-4.5"
-            />
-            <span>AUTHENTICATE WITH GOOGLE</span>
+            <Lock className="w-4 h-4 text-black" />
+            <span>EXCHANGE WITH SECURE ACCOUNT</span>
           </button>
 
           <p className="text-[9px] text-[#276EF1] font-black uppercase tracking-widest font-mono">

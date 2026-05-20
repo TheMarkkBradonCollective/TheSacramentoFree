@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, UserProfile } from '../types';
 import { Filter, Search as SearchIcon, MapPin, Tag, MessageSquare, AlertCircle, CheckCircle, Trash2, Calendar } from 'lucide-react';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
 import { updateSupabaseItemStatus, deleteSupabaseItem } from '../supabase';
 
 interface ItemGridProps {
@@ -47,20 +45,10 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
     localStorage.setItem('cached_items', JSON.stringify(cachedItems));
 
     try {
-      try {
-        await updateSupabaseItemStatus(itemId, newStatus);
-      } catch (sbErr) {
-        console.warn('Supabase update status bypassed or failed:', sbErr);
-      }
-
-      const itemRef = doc(db, 'items', itemId);
-      await updateDoc(itemRef, {
-        status: newStatus,
-        updatedAt: new Date()
-      });
+      await updateSupabaseItemStatus(itemId, newStatus);
       onRefresh();
     } catch (err) {
-      console.warn('Firestore update status bypassed/offline:', err);
+      console.warn('Supabase update status failed:', err);
       onRefresh();
     } finally {
       setUpdatingItemId(null);
@@ -89,17 +77,10 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
     localStorage.setItem('cached_items', JSON.stringify(cachedItems));
 
     try {
-      try {
-        await deleteSupabaseItem(itemId);
-      } catch (sbErr) {
-        console.warn('Supabase delete item bypassed or failed:', sbErr);
-      }
-
-      const itemRef = doc(db, 'items', itemId);
-      await deleteDoc(itemRef);
+      await deleteSupabaseItem(itemId);
       onRefresh();
     } catch (err) {
-      console.warn('Firestore delete item bypassed/offline:', err);
+      console.warn('Supabase delete item failed:', err);
       onRefresh();
     } finally {
       setUpdatingItemId(null);

@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../types';
-import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
 import { upsertSupabaseProfile } from '../supabase';
 import { MapPin, User, Heart, Sparkles } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface OnboardingProps {
+  user: any; // Supabase user
   onComplete: (profile: UserProfile) => void;
 }
 
-export default function Onboarding({ onComplete }: OnboardingProps) {
-  const currentUser = auth.currentUser;
-  
-  const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
+export default function Onboarding({ user, onComplete }: OnboardingProps) {
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.displayName || '');
   const [neighborhood, setNeighborhood] = useState(SACRAMENTO_NEIGHBORHOODS[0]);
   const [bio, setBio] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,7 +18,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!user) return;
 
     if (!displayName.trim()) {
       setErrorMsg('Please enter your display name.');
@@ -32,31 +29,21 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     setErrorMsg('');
 
     const newProfile: UserProfile = {
-      uid: currentUser.uid,
+      uid: user.id,
       displayName: displayName.trim(),
-      photoURL: currentUser.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(displayName)}`,
-      email: currentUser.email || '',
+      photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(displayName)}`,
+      email: user.email || '',
       neighborhood,
       bio: bio.trim(),
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
 
     try {
       // Upsert profile in Supabase
-      try {
-        await upsertSupabaseProfile(newProfile);
-      } catch (sbErr) {
-        console.warn('Supabase onboarding profile upsert bypassed or failed:', sbErr);
-      }
-
-      try {
-        const userRef = doc(db, 'users', currentUser.uid);
-        await setDoc(userRef, {
-          ...newProfile,
-          createdAt: new Date(),
-        });
-      } catch (fsErr) {
-        console.warn('Firestore onboarding registration bypassed/cached:', fsErr);
+      const success = await upsertSupabaseProfile(newProfile);
+      
+      if (!success) {
+        console.warn('Note: Profile table upsert succeeded locally but DB may still be sync-pending.');
       }
 
       // Save to local storage cache immediately
