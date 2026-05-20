@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates } from '../types';
-import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye, Compass, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 
@@ -171,6 +171,14 @@ export default function SacramentoMapView({
     );
   };
 
+  const handleZoomIn = () => {
+    mapRef.current?.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    mapRef.current?.zoomOut();
+  };
+
   // Filter items in real time for accuracy
   const activeItems = useMemo(() => {
     return items.filter((item) => {
@@ -269,9 +277,6 @@ export default function SacramentoMapView({
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>'
     }).addTo(map);
-
-    // Standard control button at the bottom-right corner
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // Dynamic Markers Layer Group
     const markersGroup = L.layerGroup().addTo(map);
@@ -825,15 +830,6 @@ export default function SacramentoMapView({
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <button
-            onClick={handleLocateUser}
-            className={`px-3 py-1.5 border transition-colors cursor-pointer select-none text-[9.5px] font-bold uppercase ml-auto tracking-wider flex items-center space-x-1 rounded-xl ${
-              isLocating ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-[#1A1A1B] border-[#343536] text-zinc-300 hover:text-white hover:bg-[#252526]'
-            }`}
-          >
-            <Compass className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
-            <span>Locate Me</span>
-          </button>
           <div className="hidden sm:flex items-center space-x-1.5 bg-[#0F0F0F] border border-[#343536] px-2.5 py-1 rounded-lg select-none">
             <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-mono">NEIGHBORHOOD GPS</span>
           </div>
@@ -863,6 +859,44 @@ export default function SacramentoMapView({
             id="map_show_categories_legend_btn"
           >
             🎨 Map Colors
+          </button>
+        </div>
+
+        {/* Custom Map Controller HUD Panel (Zoom & Live Locating) on the opposite side, stacked vertically with Locate at bottom under zoom */}
+        <div className="absolute bottom-3 right-3 z-10 flex flex-col items-center gap-2 shadow-xl select-none" id="custom_map_hud_panel">
+          {/* Zoom Actions Container */}
+          <div className="flex flex-col bg-[#1A1A1B]/95 border border-[#343536] p-0.5 rounded-xl shadow-md">
+            <button
+              onClick={handleZoomIn}
+              className="w-8.5 h-8.5 flex items-center justify-center text-white hover:bg-zinc-800 hover:text-[#FF4500] transition-colors cursor-pointer rounded-t-lg"
+              title="Zoom In"
+              id="custom_zoom_in_btn"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <div className="h-[1px] bg-[#343536] mx-1" />
+            <button
+              onClick={handleZoomOut}
+              className="w-8.5 h-8.5 flex items-center justify-center text-white hover:bg-zinc-800 hover:text-[#FF4500] transition-colors cursor-pointer rounded-b-lg"
+              title="Zoom Out"
+              id="custom_zoom_out_btn"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Center to User (Locate Me) control at the bottom under the +- */}
+          <button
+            onClick={handleLocateUser}
+            className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
+              isLocating 
+                ? 'bg-[#FF4500] text-white border-[#FF4500]' 
+                : 'bg-[#1A1A1B]/95 border-[#343536] text-white hover:bg-zinc-800 hover:text-[#FF4500]'
+            }`}
+            title="Locate Me / Center to User"
+            id="custom_locate_user_btn"
+          >
+            <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
