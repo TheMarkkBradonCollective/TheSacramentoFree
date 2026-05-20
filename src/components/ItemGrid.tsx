@@ -3,6 +3,7 @@ import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, UserProfile } from
 import { Filter, Search as SearchIcon, MapPin, Tag, MessageSquare, AlertCircle, CheckCircle, Trash2, Calendar } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { updateSupabaseItemStatus, deleteSupabaseItem } from '../supabase';
 
 interface ItemGridProps {
   items: ItemPost[];
@@ -22,6 +23,12 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   const handleUpdateStatus = async (itemId: string, newStatus: 'completed' | 'withdrawn' | 'active') => {
     setUpdatingItemId(itemId);
     try {
+      try {
+        await updateSupabaseItemStatus(itemId, newStatus);
+      } catch (sbErr) {
+        console.warn('Supabase update status bypassed or failed:', sbErr);
+      }
+
       const itemRef = doc(db, 'items', itemId);
       await updateDoc(itemRef, {
         status: newStatus,
@@ -43,6 +50,12 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
     if (!confirm('Are you sure you want to permanently delete this listing?')) return;
     setUpdatingItemId(itemId);
     try {
+      try {
+        await deleteSupabaseItem(itemId);
+      } catch (sbErr) {
+        console.warn('Supabase delete item bypassed or failed:', sbErr);
+      }
+
       const itemRef = doc(db, 'items', itemId);
       await deleteDoc(itemRef);
       onRefresh();

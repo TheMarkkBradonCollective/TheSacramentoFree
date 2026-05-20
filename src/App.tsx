@@ -10,6 +10,8 @@ import PostItemModal from './components/PostItemModal';
 import ItemGrid from './components/ItemGrid';
 import ChatSystem from './components/ChatSystem';
 import UserProfileView from './components/UserProfileView';
+import SupabaseIndicator from './components/SupabaseIndicator';
+import { getSupabaseProfile, upsertSupabaseProfile, getSupabaseItems, getOrCreateSupabaseChat } from './supabase';
 import { Gift, MapPin, MessageSquare, Heart, Sparkles } from 'lucide-react';
 
 export default function App() {
@@ -34,21 +36,48 @@ export default function App() {
         setIsProfileLoading(true);
         setErrorMsg('');
         try {
-          // Check if user has an existing community profile in Firestore
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          // Attempt to find profile in Supabase first
+          let profile = await getSupabaseProfile(user.uid);
+          
+          if (!profile) {
+            // Check if user has an existing community profile in Firestore
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
 
-          if (userDocSnap.exists()) {
-            const data = userDocSnap.data();
-            setUserProfile({
-              uid: data.uid,
-              displayName: data.displayName,
-              photoURL: data.photoURL,
-              email: data.email,
-              neighborhood: data.neighborhood,
-              bio: data.bio || '',
-              createdAt: data.createdAt
-            });
+            if (userDocSnap.exists()) {
+              const data = userDocSnap.data();
+              profile = {
+                uid: data.uid,
+                displayName: data.displayName,
+                photoURL: data.photoURL,
+                email: data.email,
+                neighborhood: data.neighborhood,
+                bio: data.bio || '',
+                createdAt: data.createdAt
+              };
+              // Sync Firestore profile back up to Supabase
+              await upsertSupabaseProfile(profile);
+            }
+          } else {
+            // Sync Supabase profile to Firestore so there is alignment
+            try {
+              const userRef = doc(db, 'users', user.uid);
+              await setDoc(userRef, {
+                uid: profile.uid,
+                displayName: profile.displayName,
+                photoURL: profile.photoURL || '',
+                email: profile.email,
+                neighborhood: profile.neighborhood,
+                bio: profile.bio || '',
+                createdAt: new Date(profile.createdAt || Date.now())
+              }, { merge: true });
+            } catch (fsErr) {
+              console.warn('Firestore profile sync failed:', fsErr);
+            }
+          }
+
+          if (profile) {
+            setUserProfile(profile);
           } else {
             // Needs onboarding
             setUserProfile(null);
@@ -165,25 +194,33 @@ export default function App() {
       const chatDocRef = doc(db, 'chats', chatId);
       const chatDocSnap = await getDoc(chatDocRef);
 
+      const payload = {
+        id: chatId,
+        participantIds: participants,
+        participantNames: {
+          [userProfile.uid]: userProfile.displayName,
+          [posterUid]: posterName
+        },
+        participantPhotos: {
+          [userProfile.uid]: userProfile.photoURL || '',
+          [posterUid]: posterPhoto || ''
+        },
+        lastMessageAt: new Date(),
+        lastMessageText: `Proposed an exchange for: "${item?.title || 'item'}"`,
+        lastMessageSenderId: userProfile.uid,
+        itemId: item?.id || '',
+        itemTitle: item?.title || ''
+      };
+
+      // Sync Chat room details to Supabase
+      try {
+        await getOrCreateSupabaseChat(chatId, payload);
+      } catch (sbErr) {
+        console.warn('Supabase chat synchronization bypassed or failed:', sbErr);
+      }
+
       if (!chatDocSnap.exists()) {
         // Chat doesn't exist, create it!
-        const payload = {
-          id: chatId,
-          participantIds: participants,
-          participantNames: {
-            [userProfile.uid]: userProfile.displayName,
-            [posterUid]: posterName
-          },
-          participantPhotos: {
-            [userProfile.uid]: userProfile.photoURL || '',
-            [posterUid]: posterPhoto || ''
-          },
-          lastMessageAt: new Date(),
-          lastMessageText: `Proposed an exchange for: "${item?.title || 'item'}"`,
-          lastMessageSenderId: userProfile.uid,
-          itemId: item?.id || '',
-          itemTitle: item?.title || ''
-        };
         await setDoc(chatDocRef, payload);
       } else if (item) {
         // Chat exists, update the specific post context so they know what they are chatting about
@@ -239,7 +276,11 @@ export default function App() {
               />
 
               {/* Main Content Workspace Layout */}
-              <main id="dashboard_main" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-opacity duration-200">
+              <main id="dashboard_main" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-opacity duration-200 space-y-6">
+                
+                {/* Supabase PostgreSQL live alignment notice */}
+                <SupabaseIndicator />
+
                 {activeTab === 'feed' && (
                   <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserProfile, SACRAMENTO_NEIGHBORHOODS } from '../types';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { upsertSupabaseProfile } from '../supabase';
 import { MapPin, User, FileText, CheckCircle, Save, AlertCircle } from 'lucide-react';
 
 interface UserProfileViewProps {
@@ -29,12 +30,23 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
     setSuccessMsg('');
 
     try {
-      const userRef = doc(db, 'users', userProfile.uid);
       const updateData = {
         displayName: displayName.trim(),
         neighborhood,
         bio: bio.trim(),
       };
+
+      // Sync to Supabase
+      try {
+        await upsertSupabaseProfile({
+          ...userProfile,
+          ...updateData
+        });
+      } catch (sbErr) {
+        console.warn('Supabase profile update bypassed or failed:', sbErr);
+      }
+
+      const userRef = doc(db, 'users', userProfile.uid);
       await updateDoc(userRef, updateData);
       
       onUpdateProfile({

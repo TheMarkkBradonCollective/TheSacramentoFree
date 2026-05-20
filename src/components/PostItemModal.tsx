@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, PostType } from '../types';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
+import { createSupabaseItem } from '../supabase';
 import { X, Gift, Search, Info } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 
@@ -51,6 +52,13 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
     };
 
     try {
+      // Create listing in Supabase database
+      try {
+        await createSupabaseItem(newItem);
+      } catch (sbErr) {
+        console.warn('Supabase listing creation insert bypassed or failed:', sbErr);
+      }
+
       await setDoc(newItemDocRef, {
         ...newItem,
         createdAt: new Date(),

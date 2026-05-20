@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../types';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { upsertSupabaseProfile } from '../supabase';
 import { MapPin, Sparkles, User, Heart } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -41,6 +42,13 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     };
 
     try {
+      // Upsert profile in Supabase
+      try {
+        await upsertSupabaseProfile(newProfile);
+      } catch (sbErr) {
+        console.warn('Supabase onboarding profile upsert bypassed or failed:', sbErr);
+      }
+
       const userRef = doc(db, 'users', currentUser.uid);
       await setDoc(userRef, {
         ...newProfile,

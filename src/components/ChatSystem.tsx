@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Chat, Message, UserProfile } from '../types';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, doc, query, where, orderBy, onSnapshot, addDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { createSupabaseMessage } from '../supabase';
 import { MessageSquare, Send, AlertCircle, MapPin, Gift, Box, ChevronLeft } from 'lucide-react';
 
 interface ChatSystemProps {
@@ -131,6 +132,13 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
         text: typedText,
         createdAt: new Date()
       };
+
+      // Sync message to Supabase
+      try {
+        await createSupabaseMessage(selectedChat.id, typedText, userProfile.uid, msgDocRef.id);
+      } catch (sbErr) {
+        console.warn('Supabase message creation bypassed or failed:', sbErr);
+      }
 
       // Create message & update chat header atomically
       const batch = writeBatch(db);
