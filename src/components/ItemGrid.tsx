@@ -377,8 +377,8 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
 
                 {/* Status label */}
                 {item.status === 'completed' && (
-                  <span className="inline-flex items-center text-[8.5px] font-black uppercase tracking-widest text-[#05A357] bg-[#05A357]/10 border border-[#05A357]/20 px-2.5 py-0.5">
-                    STASH COMPLETED
+                  <span className="inline-flex items-center text-[8.5px] font-black uppercase tracking-widest text-[#05A357] bg-[#05A357]/10 border border-[#05A357]/20 px-2.5 py-0.5" id={`status_claimed_badge_${item.id}`}>
+                    {item.type === 'giveaway' ? 'CLAIMED' : 'FULFILLED'}
                   </span>
                 )}
                 {item.status === 'withdrawn' && (
@@ -554,10 +554,10 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                         id={`complete_btn_${item.id}`}
                         disabled={updatingItemId === item.id}
                         onClick={() => handleUpdateStatus(item.id, 'completed')}
-                        className="px-2.5 py-1.5 bg-black hover:bg-zinc-900 text-white rounded-none text-[9.5px] font-black uppercase tracking-wider transition-colors cursor-pointer"
-                        title="Mark as completed/shared"
+                        className="px-2.5 py-1.5 bg-[#05A357]/10 hover:bg-[#05A357]/20 border border-[#05A357]/30 text-[#05A357] rounded-none text-[9.5px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                        title={item.type === 'giveaway' ? "Mark as claimed" : "Mark as fulfilled"}
                       >
-                        Completed
+                        {item.type === 'giveaway' ? 'Claimed' : 'Fulfilled'}
                       </button>
                       <button
                         id={`withdraw_btn_${item.id}`}
@@ -592,7 +592,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                   )}
                 </div>
               ) : (
-                item.status === 'active' ? (
+                (item.status === 'active' || item.status === 'completed') ? (
                   <button
                     id={`message_btn_${item.id}`}
                     onClick={() => onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)}
@@ -602,7 +602,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                     <span>MESSAGE NEIGHBOR</span>
                   </button>
                 ) : (
-                  <span className="text-[9px] font-black text-zinc-550 uppercase tracking-widest font-mono">Archive Record</span>
+                  <span className="text-[9px] font-black text-zinc-550 uppercase tracking-widest font-mono">Withdrawn / Archived</span>
                 )
               )}
             </div>
