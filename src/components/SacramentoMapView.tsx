@@ -364,33 +364,7 @@ export default function SacramentoMapView({
 
     markersGroup.clearLayers();
 
-    // 1. Draw Neighborhood indicators
-    SACRAMENTO_NEIGHBORHOODS.forEach((neighborhood) => {
-      const coord = NEIGHBORHOOD_COORDS[neighborhood];
-      if (!coord) return;
-      const { lat, lng } = convertPercentToLatLng(coord.x, coord.y);
-      const count = activeItems.filter(item => item.neighborhood === neighborhood).length;
-
-      const labelIcon = L.divIcon({
-        html: `
-          <div class="flex flex-col items-center pointer-events-none select-none">
-            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full border border-white"></div>
-            <div class="bg-white/85 border border-zinc-200 px-1.5 py-0.5 mt-0.5 rounded shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-xs">
-              <span class="text-[7.5px] font-black text-zinc-550 uppercase tracking-widest font-mono">
-                ${neighborhood} ${count > 0 ? `(${count})` : ''}
-              </span>
-            </div>
-          </div>
-        `,
-        className: 'custom-neighborhood-label-marker',
-        iconSize: [80, 24],
-        iconAnchor: [40, 12]
-      });
-
-      L.marker([lat, lng], { icon: labelIcon, zIndexOffset: -200 }).addTo(markersGroup);
-    });
-
-    // 2. Draw Listing locations pins
+    // 1. Draw Listing locations pins
     blipPositions.forEach(({ item, lat, lng, color }) => {
       const isSelected = selectedPost?.id === item.id;
 
