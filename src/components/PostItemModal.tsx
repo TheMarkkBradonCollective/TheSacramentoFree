@@ -469,22 +469,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     />
                   </svg>
 
-                  {/* Neighborhood label dots / references */}
-                  {Object.entries(NEIGHBORHOOD_COORDS).map(([name, pos]) => {
-                    const isSelected = neighborhood === name;
-                    return (
-                      <div
-                        key={`mini_pos_${name}`}
-                        style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                      >
-                        <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-[#FF4500] scale-125' : 'bg-zinc-700'} opacity-75`} />
-                        <span className="text-[6px] tracking-widest text-[#FF4500] font-bold uppercase whitespace-nowrap block mt-0.5 scale-90">
-                          {name}
-                        </span>
-                      </div>
-                    );
-                  })}
+                  {/* Center of the area relative markers are hidden to keep map clean of generic neighborhood icons */}
 
                   {/* Precise Custom Pin */}
                   {(() => {
