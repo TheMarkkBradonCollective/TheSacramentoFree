@@ -1,7 +1,7 @@
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import ThemeToggle from '../ThemeToggle';
-import { SITE } from '../../siteContent';
+import BrandLogo from '../BrandLogo';
 import { PUBLIC_NAV, type PublicRoute } from '../../public/routes';
 
 interface PublicNavProps {
@@ -20,12 +20,8 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
   return (
     <header className="sticky top-0 z-50 sbn-glass-nav">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => onNavigate('home')}
-          className="font-display font-bold text-app hover:text-accent transition-colors"
-        >
-          {SITE.shortName}
+        <button type="button" onClick={() => onNavigate('home')} className="shrink-0">
+          <BrandLogo imgClassName="h-8 w-auto max-w-[130px] object-contain rounded-lg" />
         </button>
 
         <nav className="hidden md:flex items-center gap-1">

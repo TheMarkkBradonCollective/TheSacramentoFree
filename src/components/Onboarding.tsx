@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../types';
 import { upsertSupabaseProfile } from '../supabase';
-import { MapPin, User, Heart } from 'lucide-react';
+import { MapPin, User } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 import { IN_APP, SITE } from '../siteContent';
 import { UserProfile } from '../types';
 
@@ -66,8 +67,8 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     <div id="onboarding_viewport" className="min-h-[80vh] flex items-center justify-center py-12 px-4 mesh-bg">
       <div className="max-w-md w-full sbn-card-elevated p-8 md:p-10">
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-accent mb-4" id="onboarding_icon_wrapper">
-            <Heart className="w-8 h-8 text-accent" />
+          <div className="flex justify-center mb-4" id="onboarding_icon_wrapper">
+            <BrandLogo imgClassName="h-16 w-auto max-w-[200px] object-contain rounded-xl" />
           </div>
           <h2 className="text-2xl font-extrabold text-app tracking-tight font-display">
             Welcome in

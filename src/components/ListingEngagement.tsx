@@ -51,7 +51,7 @@ export default function ListingEngagement({
         <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">Community</h3>
       )}
 
-      <div className={`flex items-center gap-2 ${variant === 'card' ? 'mt-4' : ''}`}>
+      <div className={`flex items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2 sm:mt-4' : ''}`}>
         <button
           type="button"
           disabled={isOwner}
@@ -112,7 +112,7 @@ export default function ListingEngagement({
           className={
             variant === 'detail'
               ? 'space-y-3 pt-1 border-t border-app'
-              : 'mt-4 pt-4 border-t border-app space-y-3'
+              : 'mt-2 sm:mt-4 pt-2 sm:pt-4 border-t border-app space-y-3'
           }
         >
           {comments.length === 0 ? (

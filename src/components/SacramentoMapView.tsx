@@ -2,7 +2,15 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates } from '../types';
 import { canViewerSeeExactLocation, stripListingMetadata } from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
-import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil } from 'lucide-react';
+import {
+  estimateDrivingStats,
+  fetchDrivingRoute,
+  formatRouteDistance,
+  formatRouteDuration,
+  openDrivingDirections,
+  type LatLng,
+} from '../lib/mapRoute';
+import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 
@@ -52,43 +60,6 @@ export function convertPercentToLatLng(x: number, y: number): { lat: number; lng
   return { lat, lng };
 }
 
-/** Fallback straight-line path if the routing API is unavailable. */
-function generateFallbackRouteCoords(
-  from: { lat: number; lng: number },
-  to: { lat: number; lng: number },
-): [number, number][] {
-  return [
-    [from.lat, from.lng],
-    [to.lat, to.lng],
-  ];
-}
-
-/** Fetch a real driving route along roads (OpenStreetMap via OSRM). */
-export async function fetchDrivingRoute(
-  from: { lat: number; lng: number },
-  to: { lat: number; lng: number },
-): Promise<[number, number][] | null> {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 10_000);
-
-  try {
-    const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordPath}?overview=full&geometries=geojson`;
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    const coordinates = data?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
-    if (data?.code !== 'Ok' || !coordinates?.length) return null;
-
-    return coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
-  } catch {
-    return null;
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-}
-
 // Map each post category to a specific distinct color for blips
 export const getCategoryColor = (category: string): string => {
   const colors: Record<string, string> = {
@@ -125,6 +96,71 @@ export const getCategoryColor = (category: string): string => {
   };
   return colors[category] || '#FF6A39'; 
 };
+
+interface MapSelectionRouteRowProps {
+  selectedPost: ItemPost;
+  routeEndpoints: { start: LatLng; end: LatLng } | null;
+  routeLoading: boolean;
+  distanceMeters: number | null;
+  durationSeconds: number | null;
+  hasLiveGps: boolean;
+  viewerUserId: string;
+}
+
+function MapSelectionRouteRow({
+  selectedPost,
+  routeEndpoints,
+  routeLoading,
+  distanceMeters,
+  durationSeconds,
+  hasLiveGps,
+  viewerUserId,
+}: MapSelectionRouteRowProps) {
+  if (!routeEndpoints) return null;
+
+  const exactPin = canViewerSeeExactLocation(selectedPost, viewerUserId);
+  const locationHint = exactPin
+    ? 'Exact pickup pin on map'
+    : `Approx. area · ${selectedPost.neighborhood}`;
+
+  return (
+    <div className="mt-2 pt-2 border-t border-app flex items-center gap-2">
+      <div className="flex-1 min-w-0">
+        {routeLoading ? (
+          <p className="text-[9px] font-medium text-muted animate-pulse">Calculating distance…</p>
+        ) : distanceMeters != null ? (
+          <>
+            <p className="text-[10px] font-bold text-app leading-snug">
+              <span className="text-accent">{formatRouteDistance(distanceMeters)}</span>
+              <span className="text-muted font-semibold"> away</span>
+              {durationSeconds != null && durationSeconds > 0 && (
+                <span className="text-muted font-semibold">
+                  {' '}
+                  · {formatRouteDuration(durationSeconds)} drive
+                </span>
+              )}
+            </p>
+            <p className="text-[8px] text-muted mt-0.5 truncate">{locationHint}</p>
+            {!hasLiveGps && (
+              <p className="text-[7.5px] text-subtle mt-0.5">Enable GPS for distance from you</p>
+            )}
+          </>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        onClick={() =>
+          openDrivingDirections(routeEndpoints.end, hasLiveGps ? routeEndpoints.start : undefined)
+        }
+        className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
+        title="Open turn-by-turn directions in Maps"
+      >
+        <Navigation className="w-3.5 h-3.5" />
+        Navigate
+      </button>
+    </div>
+  );
+}
 
 export default function SacramentoMapView({
   items,
@@ -170,6 +206,9 @@ export default function SacramentoMapView({
   const [isLocating, setIsLocating] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
+  const [routeDistanceMeters, setRouteDistanceMeters] = useState<number | null>(null);
+  const [routeDurationSeconds, setRouteDurationSeconds] = useState<number | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
   const routeFetchIdRef = useRef(0);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const routeEndpointsRef = useRef<{ start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null>(null);
@@ -487,6 +526,9 @@ export default function SacramentoMapView({
       routeEndpointsRef.current = null;
       routeFitForPostIdRef.current = null;
       setRouteCoords(null);
+      setRouteDistanceMeters(null);
+      setRouteDurationSeconds(null);
+      setRouteLoading(false);
       routeLayerRef.current?.clearLayers();
       return;
     }
@@ -506,16 +548,19 @@ export default function SacramentoMapView({
     if (selectionChanged) {
       routeFitForPostIdRef.current = null;
       setRouteCoords(null);
+      setRouteDistanceMeters(null);
+      setRouteDurationSeconds(null);
+      setRouteLoading(true);
     }
-    // Otherwise keep the previous polyline visible until the new route arrives.
 
-    fetchDrivingRoute(routeEndpoints.start, routeEndpoints.end).then((points) => {
+    fetchDrivingRoute(routeEndpoints.start, routeEndpoints.end).then((result) => {
       if (fetchId !== routeFetchIdRef.current) return;
-      if (points && points.length >= 2) {
-        setRouteCoords(points);
-      } else {
-        setRouteCoords(generateFallbackRouteCoords(routeEndpoints.start, routeEndpoints.end));
-      }
+
+      const resolved = result ?? estimateDrivingStats(routeEndpoints.start, routeEndpoints.end);
+      setRouteCoords(resolved.coords);
+      setRouteDistanceMeters(resolved.distanceMeters);
+      setRouteDurationSeconds(resolved.durationSeconds);
+      setRouteLoading(false);
     });
   }, [selectedPost, routeEndpoints]);
 
@@ -838,6 +883,16 @@ export default function SacramentoMapView({
                       <p className="text-[9.5px] text-muted mt-0.5 line-clamp-1 break-words">
                         {stripListingMetadata(selectedPost.description)}
                       </p>
+
+                      <MapSelectionRouteRow
+                        selectedPost={selectedPost}
+                        routeEndpoints={routeEndpoints}
+                        routeLoading={routeLoading}
+                        distanceMeters={routeDistanceMeters}
+                        durationSeconds={routeDurationSeconds}
+                        hasLiveGps={!!userLocation}
+                        viewerUserId={userProfile.uid}
+                      />
                     </div>
 
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-app gap-2">
@@ -1306,8 +1361,18 @@ export default function SacramentoMapView({
                   </h4>
 
                   <p className="text-[10.5px] text-muted mt-1 line-clamp-2 leading-tight break-words font-medium">
-                    {selectedPost.description}
+                    {stripListingMetadata(selectedPost.description)}
                   </p>
+
+                  <MapSelectionRouteRow
+                    selectedPost={selectedPost}
+                    routeEndpoints={routeEndpoints}
+                    routeLoading={routeLoading}
+                    distanceMeters={routeDistanceMeters}
+                    durationSeconds={routeDurationSeconds}
+                    hasLiveGps={!!userLocation}
+                    viewerUserId={userProfile.uid}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-app flex-wrap gap-2.5">

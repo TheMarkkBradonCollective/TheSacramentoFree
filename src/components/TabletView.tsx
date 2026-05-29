@@ -4,7 +4,8 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { List, MessageSquare, User, Plus, LogOut, Map, Gift } from 'lucide-react';
+import { List, MessageSquare, User, Plus, LogOut, Map } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 import CommunityFooter from './CommunityFooter';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
@@ -54,15 +55,7 @@ export default function TabletView({
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen mesh-bg text-app">
       <header id="tablet_navbar" className="sticky top-0 z-40 sbn-glass-nav px-5 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 bg-accent text-on-accent rounded-xl flex items-center justify-center">
-            <Gift className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="font-display font-bold text-sm text-app">Sac Buy Nothing</p>
-            <p className="text-[11px] text-muted">{userProfile.neighborhood}</p>
-          </div>
-        </div>
+        <BrandLogo subtitle={userProfile.neighborhood} showTitle />
 
         <nav className="flex gap-1" id="tablet_nav">
           {TABS.map(({ id, label, icon: Icon }) => (

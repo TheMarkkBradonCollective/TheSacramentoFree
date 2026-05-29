@@ -24,8 +24,7 @@ import {
   updateSupabaseItemStatus,
   deleteSupabaseItem,
 } from './supabase';
-import { Gift, Heart } from 'lucide-react';
-import { SITE } from './siteContent';
+import { APP_LOGO_SRC, SITE } from './siteContent';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 
@@ -684,9 +683,11 @@ export default function App() {
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start space-x-3">
-              <div className="bg-[#FF4500] p-2 rounded-lg shrink-0 mt-0.5">
-                <Gift className="w-4 h-4 text-white" />
-              </div>
+              <img
+                src={APP_LOGO_SRC}
+                alt=""
+                className="w-10 h-10 rounded-lg object-contain shrink-0 mt-0.5 bg-surface border border-app"
+              />
               <div className="min-w-0">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-accent">Download Mobile App</h4>
                 <p className="text-xs font-bold text-app mt-1">{SITE.name}</p>

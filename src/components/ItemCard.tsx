@@ -57,77 +57,145 @@ export default function ItemCard({
   const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
   const coverPhoto = photos[0];
 
+  const statusBadges = (
+    <>
+      {item.type === 'giveaway' ? (
+        <span className="sbn-badge sbn-badge-give text-[10px] sm:text-xs py-0.5">Giving</span>
+      ) : (
+        <span className="sbn-badge sbn-badge-ask text-[10px] sm:text-xs py-0.5">Looking for</span>
+      )}
+      {item.status === 'completed' && (
+        <span className="sbn-badge sbn-badge-done text-[10px] sm:text-xs py-0.5">
+          {item.type === 'giveaway' ? 'Claimed' : 'Fulfilled'}
+        </span>
+      )}
+      {item.status === 'withdrawn' && (
+        <span className="sbn-badge sbn-badge-withdrawn text-[10px] sm:text-xs py-0.5">Withdrawn</span>
+      )}
+      {item.status === 'active' && (
+        <span className="sbn-badge sbn-badge-give text-[10px] sm:text-xs py-0.5 sm:inline-flex hidden">
+          Active
+        </span>
+      )}
+    </>
+  );
+
+  const actionButtons = isOwner ? (
+    <div className="flex flex-wrap gap-1 justify-end">
+      <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-sm sbn-btn-secondary shrink-0">
+        <Eye className="w-3.5 h-3.5 sm:mr-0" />
+        <span className="hidden sm:inline ml-1">View</span>
+      </button>
+      <button
+        type="button"
+        disabled={updating}
+        onClick={onEdit}
+        className="sbn-btn sbn-btn-sm sbn-btn-primary shrink-0"
+        title="Edit listing"
+      >
+        <Pencil className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline ml-1">Edit</span>
+      </button>
+      {item.status === 'active' ? (
+        <button
+          type="button"
+          disabled={updating}
+          onClick={() => onUpdateStatus('withdrawn')}
+          className="sbn-btn sbn-btn-sm sbn-btn-ghost hidden sm:inline-flex"
+        >
+          Withdraw
+        </button>
+      ) : (
+        <>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onUpdateStatus('active')}
+            className="sbn-btn sbn-btn-sm sbn-btn-primary hidden sm:inline-flex"
+          >
+            Relist
+          </button>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={onDelete}
+            className="p-2 text-red-500 hover:bg-red-500/10 rounded-full"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </>
+      )}
+    </div>
+  ) : item.status === 'active' || item.status === 'completed' ? (
+    <div className="flex flex-wrap gap-1 justify-end">
+      <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
+        <Eye className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline ml-1">View</span>
+      </button>
+      <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+        <MessageSquare className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline ml-1">Message</span>
+      </button>
+    </div>
+  ) : (
+    <span className="text-[10px] font-medium text-muted">Archived</span>
+  );
+
   return (
     <article
       id={`item_card_${item.id}`}
-      className={`item-feed-card flex flex-col ${inactive ? 'opacity-75' : ''}`}
+      className={`item-feed-card item-feed-card--responsive flex flex-row sm:flex-col ${inactive ? 'opacity-75' : ''}`}
     >
-      {coverPhoto && (
-        <button
-          type="button"
-          onClick={onViewDetail}
-          className="relative aspect-[16/10] overflow-hidden bg-zinc-100 w-full text-left cursor-pointer"
-        >
-          <img
-            src={coverPhoto}
-            alt={item.title}
-            className="h-full w-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-          {photos.length > 1 && (
-            <span className="absolute bottom-2 right-2 text-[10px] font-bold bg-black/70 text-white px-2 py-0.5 rounded-full">
-              +{photos.length - 1} photos
-            </span>
-          )}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onViewDetail}
+        className={`relative shrink-0 overflow-hidden bg-inset text-left cursor-pointer
+          w-[5.25rem] h-[5.25rem] sm:w-full sm:h-auto sm:aspect-[16/10]
+          ${!coverPhoto ? 'flex items-center justify-center border-r sm:border-r-0 border-app' : ''}`}
+      >
+        {coverPhoto ? (
+          <>
+            <img
+              src={coverPhoto}
+              alt={item.title}
+              className="h-full w-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            {photos.length > 1 && (
+              <span className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 text-[8px] sm:text-[10px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
+                +{photos.length - 1}
+              </span>
+            )}
+          </>
+        ) : (
+          <Tag className="w-6 h-6 text-subtle" aria-hidden />
+        )}
+      </button>
 
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          {item.type === 'giveaway' ? (
-            <span className="sbn-badge sbn-badge-give">Giving</span>
-          ) : (
-            <span className="sbn-badge sbn-badge-ask">Looking for</span>
-          )}
-          {item.status === 'completed' && (
-            <span className="sbn-badge sbn-badge-done">
-              {item.type === 'giveaway' ? 'Claimed' : 'Fulfilled'}
-            </span>
-          )}
-          {item.status === 'withdrawn' && (
-            <span className="sbn-badge" style={{ background: '#fef2f2', color: '#dc2626' }}>
-              Withdrawn
-            </span>
-          )}
-          {item.status === 'active' && (
-            <span className="sbn-badge sbn-badge-give">Active</span>
-          )}
-        </div>
+      <div className="flex-1 min-w-0 flex flex-col p-2.5 sm:p-4">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-2">{statusBadges}</div>
 
-        <button
-          type="button"
-          onClick={onViewDetail}
-          className="text-left w-full mt-3 cursor-pointer"
-        >
-          <h3 className="font-display text-lg font-bold text-card leading-snug hover:text-accent transition-colors">
+        <button type="button" onClick={onViewDetail} className="text-left w-full mt-1 sm:mt-3 cursor-pointer">
+          <h3 className="font-display text-sm sm:text-lg font-bold text-app leading-snug hover:text-accent transition-colors line-clamp-2 sm:line-clamp-none">
             {item.title}
           </h3>
         </button>
 
-        <p className="text-xs font-medium text-card-muted flex items-center gap-1 mt-1">
+        <p className="text-[10px] sm:text-xs font-medium text-muted flex items-center gap-1 mt-0.5 sm:mt-1 truncate">
           <Tag className="w-3 h-3 text-accent shrink-0" />
-          {item.category}
+          <span className="truncate">{item.category}</span>
         </p>
 
-        <p className="text-sm text-card-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
+        <p className="hidden sm:block text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
 
-        <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-card-muted">
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-accent" />
-            {item.neighborhood}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
+          <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
+            <MapPin className="w-3 h-3 text-accent shrink-0" />
+            <span className="truncate">{item.neighborhood}</span>
           </span>
-          <span className="inline-flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-0.5 shrink-0">
+            <Calendar className="w-3 h-3 shrink-0" />
             {dateLabel}
           </span>
         </div>
@@ -145,11 +213,11 @@ export default function ItemCard({
           variant="card"
         />
 
-        <div className="mt-4 pt-4 border-t border-zinc-100 flex items-center justify-between gap-2">
+        <div className="mt-2 sm:mt-4 pt-2 sm:pt-4 border-t border-app flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => onViewProfile(item.userId)}
-            className="flex items-center gap-2 min-w-0 text-left hover:opacity-90 cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 min-w-0 text-left hover:opacity-90 cursor-pointer"
           >
             <img
               src={
@@ -157,80 +225,16 @@ export default function ItemCard({
                 `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(item.userDisplayName)}`
               }
               alt=""
-              className="w-9 h-9 rounded-full border border-zinc-200 shrink-0"
+              className="w-7 h-7 sm:w-9 sm:h-9 rounded-full border border-app shrink-0"
               referrerPolicy="no-referrer"
             />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-card truncate">{item.userDisplayName}</p>
-              <p className="text-[10px] text-card-muted">View profile</p>
+              <p className="text-xs sm:text-sm font-semibold text-app truncate">{item.userDisplayName}</p>
+              <p className="text-[9px] sm:text-[10px] text-muted hidden sm:block">View profile</p>
             </div>
           </button>
 
-          {isOwner ? (
-            <div className="flex flex-wrap gap-1 justify-end">
-              <button
-                type="button"
-                onClick={onViewDetail}
-                className="sbn-btn sbn-btn-sm sbn-btn-secondary shrink-0"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                View
-              </button>
-              <button
-                type="button"
-                disabled={updating}
-                onClick={onEdit}
-                className="sbn-btn sbn-btn-sm sbn-btn-primary shrink-0"
-                title="Edit listing"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                Edit
-              </button>
-              {item.status === 'active' ? (
-                <button
-                  type="button"
-                  disabled={updating}
-                  onClick={() => onUpdateStatus('withdrawn')}
-                  className="sbn-btn sbn-btn-sm sbn-btn-ghost"
-                >
-                  Withdraw
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('active')}
-                    className="sbn-btn sbn-btn-sm sbn-btn-primary"
-                  >
-                    Relist
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={onDelete}
-                    className="p-2 text-red-500 hover:bg-red-50 rounded-full"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          ) : (item.status === 'active' || item.status === 'completed') ? (
-            <div className="flex flex-wrap gap-1 justify-end">
-              <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
-                <Eye className="w-3.5 h-3.5" />
-                View
-              </button>
-              <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-                <MessageSquare className="w-3.5 h-3.5" />
-                Message
-              </button>
-            </div>
-          ) : (
-            <span className="text-[10px] font-medium text-card-muted">Archived</span>
-          )}
+          {actionButtons}
         </div>
       </div>
     </article>

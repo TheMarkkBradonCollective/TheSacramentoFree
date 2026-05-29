@@ -302,33 +302,37 @@ option {
   color: #34d399;
 }
 
-/* Listing cards — always light card body for readability */
+.sbn-badge-withdrawn {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.dark .sbn-badge-withdrawn {
+  background: rgba(220, 38, 38, 0.15);
+  color: #f87171;
+}
+
+/* Feed listing cards — follow light/dark theme like sbn-card */
 .item-feed-card {
-  background: #ffffff;
-  color: #111111;
-  border: 1px solid #e8e8e8;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 1px 2px var(--color-shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
 .item-feed-card:hover {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  border-color: color-mix(in srgb, var(--color-accent) 25%, var(--color-border));
+  box-shadow: 0 8px 24px var(--color-shadow-lg);
   transform: translateY(-2px);
 }
 
-.dark .item-feed-card {
-  border-color: #e0e0e0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-}
-
-.item-feed-card .text-card {
-  color: #111111;
-}
-
-.item-feed-card .text-card-muted {
-  color: #52525b;
+@media (max-width: 639px) {
+  .item-feed-card--responsive:hover {
+    transform: none;
+  }
 }
 
 input:focus,

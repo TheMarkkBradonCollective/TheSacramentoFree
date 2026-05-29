@@ -1,3 +1,6 @@
+/** Local brand logo (public/Logo.jpeg) — do not hotlink external CDNs. */
+export const APP_LOGO_SRC = '/Logo.jpeg';
+
 export const SITE = {
   name: 'Sacramento Buy Nothing',
   shortName: 'Sac Buy Nothing',

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { LogOut, MessageSquare, Plus, User, MapPin, Gift } from 'lucide-react';
+import React from 'react';
+import { LogOut, Plus, MapPin } from 'lucide-react';
 import { UserProfile } from '../types';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
+import BrandLogo from './BrandLogo';
 
 interface NavbarProps {
   userProfile: UserProfile | null;
@@ -12,7 +13,7 @@ interface NavbarProps {
   onLogout: () => void;
 }
 
-const TABS: { id: 'feed' | 'map' | 'chats' | 'profile'; label: string; icon?: React.ReactNode }[] = [
+const TABS: { id: 'feed' | 'map' | 'chats' | 'profile'; label: string }[] = [
   { id: 'map', label: 'Map' },
   { id: 'feed', label: 'Feed' },
   { id: 'chats', label: 'Messages' },
@@ -26,8 +27,6 @@ export default function Navbar({
   onOpenNewPost,
   onLogout,
 }: NavbarProps) {
-  const [logoFailed, setLogoFailed] = useState(false);
-
   return (
     <header id="main_navbar" className="sticky top-0 z-40 sbn-glass-nav">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -35,29 +34,10 @@ export default function Navbar({
           <button
             type="button"
             onClick={() => setActiveTab('feed')}
-            className="flex items-center gap-3 shrink-0"
+            className="shrink-0"
             id="brand_logo_container"
           >
-            {!logoFailed ? (
-              <img
-                src="https://nezmabanjoqdzikliysd.supabase.co/storage/v1/object/public/SacramentoBuyNothing/876852c0-541a-11f1-9143-af3d50fee019.webp"
-                alt="Sacramento Buy Nothing"
-                className="h-9 w-auto object-contain rounded-lg"
-                onError={() => setLogoFailed(true)}
-              />
-            ) : (
-              <>
-                <div className="w-9 h-9 bg-accent text-on-accent rounded-xl flex items-center justify-center">
-                  <Gift className="w-5 h-5" />
-                </div>
-                <div className="text-left hidden sm:block">
-                  <p className="font-display font-bold text-sm text-app leading-tight">
-                    Sacramento <span className="text-accent">Buy Nothing</span>
-                  </p>
-                  <p className="text-[11px] text-muted">{IN_APP.brandSubtitle}</p>
-                </div>
-              </>
-            )}
+            <BrandLogo showTitle subtitle={IN_APP.brandSubtitle} />
           </button>
 
           {userProfile && (

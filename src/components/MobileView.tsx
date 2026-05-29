@@ -8,6 +8,7 @@ import { Map, List, MessageSquare, User, Plus, LogOut } from 'lucide-react';
 import CommunityFooter from './CommunityFooter';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
+import BrandLogo from './BrandLogo';
 
 interface MobileViewProps {
   items: ItemPost[];
@@ -57,10 +58,11 @@ export default function MobileView({
   return (
     <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-app text-app">
       <header className="shrink-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-30">
-        <div className="min-w-0">
-          <p className="font-display font-bold text-sm text-app truncate">Sac Buy Nothing</p>
-          <p className="text-[11px] text-muted truncate">{userProfile.neighborhood}</p>
-        </div>
+        <BrandLogo
+          imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
+          subtitle={userProfile.neighborhood}
+          showTitle
+        />
         <div className="flex items-center gap-1 shrink-0">
           <ThemeToggle />
           <button

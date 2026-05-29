@@ -195,7 +195,7 @@ export default function ItemGrid({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5" id="items_grid_cards">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5" id="items_grid_cards">
           {filteredItems.map((item) => (
             <ItemCard
               key={item.id}
