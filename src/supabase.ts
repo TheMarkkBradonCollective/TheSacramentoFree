@@ -54,7 +54,7 @@ ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read items" ON public.items;
 CREATE POLICY "Allow public read items" ON public.items FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write operations" ON public.items;
-CREATE POLICY "Allow write operations" ON public.items FOR ALL USING (true);
+CREATE POLICY "Allow write operations" ON public.items FOR ALL USING (true) WITH CHECK (true);
 
 -- 3. Create Chats metadata
 CREATE TABLE IF NOT EXISTS public.chats (
@@ -73,7 +73,7 @@ ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read chats" ON public.chats;
 CREATE POLICY "Allow public read chats" ON public.chats FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write chats" ON public.chats;
-CREATE POLICY "Allow write chats" ON public.chats FOR ALL USING (true);
+CREATE POLICY "Allow write chats" ON public.chats FOR ALL USING (true) WITH CHECK (true);
 
 -- 4. Create chat Messages
 CREATE TABLE IF NOT EXISTS public.messages (
@@ -312,6 +312,7 @@ export async function createSupabaseItem(item: ItemPost): Promise<boolean> {
       .insert(payload);
 
     if (error) {
+      console.error('createSupabaseItem RLS/DB error:', error.code, error.message, error.details, error.hint);
       handleSupabaseError(error, 'items');
       return false;
     }
@@ -319,7 +320,7 @@ export async function createSupabaseItem(item: ItemPost): Promise<boolean> {
     setSupabaseConfigurationState(true);
     return true;
   } catch (err: any) {
-    console.error('Supabase item create failed:', err);
+    console.error('createSupabaseItem exception:', err);
     handleSupabaseError(err, 'items');
     return false;
   }

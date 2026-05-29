@@ -42,7 +42,7 @@ ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read items" ON public.items;
 CREATE POLICY "Allow public read items" ON public.items FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write operations" ON public.items;
-CREATE POLICY "Allow write operations" ON public.items FOR ALL USING (true);
+CREATE POLICY "Allow write operations" ON public.items FOR ALL USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS items_created_at_idx ON public.items ("createdAt" DESC);
 CREATE INDEX IF NOT EXISTS items_user_id_idx ON public.items ("userId");
@@ -64,7 +64,7 @@ ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read chats" ON public.chats;
 CREATE POLICY "Allow public read chats" ON public.chats FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write chats" ON public.chats;
-CREATE POLICY "Allow write chats" ON public.chats FOR ALL USING (true);
+CREATE POLICY "Allow write chats" ON public.chats FOR ALL USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS chats_item_id_idx ON public.chats ("itemId");
 CREATE INDEX IF NOT EXISTS chats_last_message_at_idx ON public.chats ("lastMessageAt" DESC);
