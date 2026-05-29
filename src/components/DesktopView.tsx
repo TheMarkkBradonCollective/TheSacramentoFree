@@ -1,4 +1,5 @@
 import React from 'react';
+import { Plus } from 'lucide-react';
 import { ItemPost, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid from './ItemGrid';
@@ -49,10 +50,17 @@ export default function DesktopView({
         {activeTab === 'feed' && (
           <div className="space-y-6" id="desktop_feed_view_root">
             <div className="sbn-page-header">
-              <h2>{IN_APP.feedTitle}</h2>
-              <p>
-                {IN_APP.feedDescription} · <span className="text-accent font-semibold">{userProfile.neighborhood}</span>
-              </p>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2>{IN_APP.feedTitle}</h2>
+                  <p>
+                    {IN_APP.feedDescription} · <span className="text-accent font-semibold">{userProfile.neighborhood}</span>
+                  </p>
+                </div>
+                <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary shrink-0">
+                  <Plus className="w-4 h-4" /> Post
+                </button>
+              </div>
             </div>
             <ItemGrid
               items={items}

@@ -30,7 +30,7 @@ export default function App() {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileLoadRef = useRef<Promise<void> | null>(null);
-  const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>('map');
   const [showPostModal, setShowPostModal] = useState(false);
   const [items, setItems] = useState<ItemPost[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
@@ -406,7 +406,7 @@ export default function App() {
     } catch (_) {}
     setSessionUser(null);
     setUserProfile(null);
-    setActiveTab('feed');
+    setActiveTab('map');
   };
 
   // Onboarding Complete Handler

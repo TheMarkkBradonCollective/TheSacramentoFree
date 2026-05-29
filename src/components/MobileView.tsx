@@ -24,8 +24,8 @@ interface MobileViewProps {
 }
 
 const NAV_ITEMS = [
-  { id: 'feed' as const, label: 'Feed', icon: List },
   { id: 'map' as const, label: 'Map', icon: Map },
+  { id: 'feed' as const, label: 'Feed', icon: List },
   { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
   { id: 'profile' as const, label: 'You', icon: User },
 ];
@@ -115,6 +115,14 @@ export default function MobileView({
               onRefresh={onRefresh}
             />
             <CommunityFooter compact />
+            <button
+              type="button"
+              onClick={onOpenNewPost}
+              className="sbn-fab fixed bottom-20 right-4 z-20"
+              aria-label="New post"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
           </div>
         )}
 

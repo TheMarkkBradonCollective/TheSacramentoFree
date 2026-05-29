@@ -92,10 +92,17 @@ export default function TabletView({
         {activeTab === 'feed' && (
           <div className="space-y-5" id="tablet_feed_pane">
             <div className="sbn-page-header">
-              <h2>{IN_APP.feedTitle}</h2>
-              <p>
-                {IN_APP.feedDescription} · {items.length} listings
-              </p>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2>{IN_APP.feedTitle}</h2>
+                  <p>
+                    {IN_APP.feedDescription} · {items.length} listings
+                  </p>
+                </div>
+                <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary shrink-0">
+                  <Plus className="w-4 h-4" /> Post
+                </button>
+              </div>
             </div>
             <ItemGrid items={items} userProfile={userProfile} onInitiateChat={onInitiateChat} onRefresh={onRefresh} />
             <CommunityFooter />

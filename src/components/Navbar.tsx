@@ -13,8 +13,8 @@ interface NavbarProps {
 }
 
 const TABS: { id: 'feed' | 'map' | 'chats' | 'profile'; label: string; icon?: React.ReactNode }[] = [
-  { id: 'feed', label: 'Feed' },
   { id: 'map', label: 'Map' },
+  { id: 'feed', label: 'Feed' },
   { id: 'chats', label: 'Messages' },
   { id: 'profile', label: 'Profile' },
 ];
