@@ -525,7 +525,7 @@ export default function SacramentoMapView({
             className="sbn-btn sbn-btn-secondary sbn-btn-sm shadow-app"
             id="floating_color_guide_trigger"
           >
-            🎨 Colors
+            🎨 Index
           </button>
         </div>
 
