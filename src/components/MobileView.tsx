@@ -65,7 +65,8 @@ export default function MobileView({
 
   return (
     <div id="mobile_device_workspace" className="sbn-mobile-shell flex flex-col bg-app text-app">
-      <header className="sbn-mobile-header sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2">
+      <header className="sbn-mobile-header sbn-glass-nav">
+        <div className="sbn-mobile-header-row">
         <BrandLogo
           imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
           subtitle={userProfile.neighborhood}
@@ -81,6 +82,7 @@ export default function MobileView({
           >
             <LogOut className="w-4 h-4" />
           </button>
+        </div>
         </div>
       </header>
 

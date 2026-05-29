@@ -67,6 +67,7 @@ export interface SupportTicketMessage {
   senderUserId: string;
   senderName: string;
   text: string;
+  imageUrl?: string | null;
   createdAt: string;
 }
 

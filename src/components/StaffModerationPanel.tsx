@@ -29,7 +29,7 @@ import SupportTicketThread from './SupportTicketThread';
 import ListingImage from './ListingImage';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { avatarImageUrl } from '../lib/imageUrl';
-import { ClipboardList, Flag, LifeBuoy, Search, Shield, Users, X } from 'lucide-react';
+import { ClipboardList, Flag, LifeBuoy, Search, Shield, Users } from 'lucide-react';
 
 const SUSPEND_DURATIONS = [
   { label: '1 day', days: 1 },
@@ -315,8 +315,8 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
 
   if (!canDirectory) return null;
 
-  const statusBanner = (msg || err) && panel && panel !== 'ticketThread' && (
-    <div className="px-4 py-2 border-b border-app">
+  const statusBanner = (msg || err) && panel && panel !== 'ticketThread' && !editUser && (
+    <div className="sbn-help-card mb-3 py-2">
       {msg && <p className="text-xs font-semibold text-emerald-500">{msg}</p>}
       {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
     </div>
@@ -370,9 +370,9 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
       </div>
 
       {panel === 'directory' && (
-        <FullScreenPanel title="Neighbor directory" subtitle="All community members" onClose={closePanel}>
+        <FullScreenPanel wide title="Neighbor directory" subtitle="All community members" onClose={closePanel}>
           {statusBanner}
-          <div className="p-4 space-y-3">
+          <div className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
               <input
@@ -385,9 +385,11 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
             </div>
 
             {loading ? (
-              <p className="text-sm text-muted text-center py-6">Loading neighbors…</p>
+              <p className="text-sm text-muted sbn-help-empty">Loading neighbors…</p>
             ) : filteredUsers.length === 0 ? (
-              <p className="text-sm text-muted text-center py-6">No neighbors found.</p>
+              <div className="sbn-help-empty">
+                <p className="text-sm text-muted">No neighbors found.</p>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {filteredUsers.map((user) => {
@@ -397,7 +399,7 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                   return (
                     <li
                       key={user.uid}
-                      className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-xl border border-app bg-surface"
+                      className="sbn-help-list-item flex-col sm:flex-row sm:items-center !items-stretch gap-2"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <ListingImage
@@ -467,16 +469,17 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
       )}
 
       {panel === 'audit' && (
-        <FullScreenPanel title="Moderation audit log" subtitle="Director & City Manager" onClose={closePanel}>
-          <div className="p-4">
-            {loading ? (
-              <p className="text-sm text-muted text-center py-6">Loading audit log…</p>
+        <FullScreenPanel wide title="Moderation audit log" subtitle="Director & City Manager" onClose={closePanel}>
+          {loading ? (
+              <p className="text-sm text-muted sbn-help-empty">Loading audit log…</p>
             ) : audit.length === 0 ? (
-              <p className="text-sm text-muted text-center py-6">No moderation actions recorded yet.</p>
+              <div className="sbn-help-empty">
+                <p className="text-sm text-muted">No moderation actions recorded yet.</p>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {audit.map((entry) => (
-                  <li key={entry.id} className="p-3 rounded-xl border border-app bg-surface text-sm">
+                  <li key={entry.id} className="sbn-help-card text-sm">
                     <div className="flex flex-wrap justify-between gap-1">
                       <span className="font-semibold text-app capitalize">{entry.action.replace(/_/g, ' ')}</span>
                       <span className="text-[10px] text-muted">
@@ -495,22 +498,22 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                 ))}
               </ul>
             )}
-          </div>
         </FullScreenPanel>
       )}
 
       {panel === 'reports' && (
-        <FullScreenPanel title="User reports" subtitle="One-way submissions from neighbors" onClose={closePanel}>
+        <FullScreenPanel wide title="User reports" subtitle="One-way submissions from neighbors" onClose={closePanel}>
           {statusBanner}
-          <div className="p-4">
-            {loading ? (
-              <p className="text-sm text-muted text-center py-6">Loading reports…</p>
+          {loading ? (
+              <p className="text-sm text-muted sbn-help-empty">Loading reports…</p>
             ) : reports.length === 0 ? (
-              <p className="text-sm text-muted text-center py-6">No reports yet.</p>
+              <div className="sbn-help-empty">
+                <p className="text-sm text-muted">No reports yet.</p>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {reports.map((report) => (
-                  <li key={report.id} className="p-3 rounded-xl border border-app bg-surface text-sm space-y-2">
+                  <li key={report.id} className="sbn-help-card text-sm space-y-2">
                     <div className="flex flex-wrap justify-between gap-1">
                       <span className="font-semibold text-app">{report.subject}</span>
                       <div className="flex flex-wrap gap-1">
@@ -570,17 +573,17 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                 ))}
               </ul>
             )}
-          </div>
         </FullScreenPanel>
       )}
 
       {panel === 'tickets' && (
-        <FullScreenPanel title="Support inbox" subtitle="Tickets you can access based on your role" onClose={closePanel}>
-          <div className="p-4">
-            {loading ? (
-              <p className="text-sm text-muted text-center py-6">Loading tickets…</p>
+        <FullScreenPanel wide title="Support inbox" subtitle="Tickets you can access based on your role" onClose={closePanel}>
+          {loading ? (
+              <p className="text-sm text-muted sbn-help-empty">Loading tickets…</p>
             ) : tickets.length === 0 ? (
-              <p className="text-sm text-muted text-center py-6">No tickets in your inbox.</p>
+              <div className="sbn-help-empty">
+                <p className="text-sm text-muted">No tickets in your inbox.</p>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {tickets.map((ticket) => (
@@ -588,7 +591,7 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                     <button
                       type="button"
                       onClick={() => void openTicketThread(ticket)}
-                      className="w-full text-left p-3 rounded-xl border border-app bg-surface hover:bg-inset/50 transition-colors"
+                      className="sbn-help-list-item flex-col !items-stretch"
                     >
                       <div className="flex flex-wrap justify-between gap-1">
                         <span className="font-semibold text-sm text-app">{ticket.subject}</span>
@@ -616,12 +619,12 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                 ))}
               </ul>
             )}
-          </div>
         </FullScreenPanel>
       )}
 
       {panel === 'ticketThread' && activeTicket && (
         <FullScreenPanel
+          wide
           title={activeTicket.subject}
           subtitle={`${activeTicket.openerName} · ${activeTicket.status}`}
           fillBody
@@ -650,14 +653,15 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
       )}
 
       {editUser && (
-        <div className="fixed inset-0 z-[80] bg-black/60 flex items-end sm:items-center justify-center p-4">
-          <div className="sbn-card w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h4 className="font-display font-bold text-app">Edit {editUser.displayName}</h4>
-              <button type="button" onClick={() => setEditUser(null)} className="p-1.5 rounded-full hover:bg-inset">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+        <FullScreenPanel
+          nested
+          wide
+          title={`Edit ${editUser.displayName}`}
+          subtitle="Staff profile editor"
+          onClose={() => setEditUser(null)}
+        >
+          <div className="sbn-help-card space-y-4">
+            {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
             <label className="block space-y-1">
               <span className="text-[10px] font-bold uppercase text-muted">Display name</span>
               <input className="sbn-input text-sm" value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -700,21 +704,16 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                 </select>
               </label>
             )}
-            <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setEditUser(null)} className="sbn-btn sbn-btn-secondary flex-1">
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={editSaving || !editName.trim()}
-                onClick={() => void handleSaveEdit()}
-                className="sbn-btn sbn-btn-primary flex-1"
-              >
-                {editSaving ? 'Saving…' : 'Save'}
-              </button>
-            </div>
+            <button
+              type="button"
+              disabled={editSaving || !editName.trim()}
+              onClick={() => void handleSaveEdit()}
+              className="sbn-btn sbn-btn-primary w-full"
+            >
+              {editSaving ? 'Saving…' : 'Save changes'}
+            </button>
           </div>
-        </div>
+        </FullScreenPanel>
       )}
 
       <p className="text-[10px] text-muted leading-snug">

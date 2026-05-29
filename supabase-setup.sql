@@ -361,6 +361,8 @@ CREATE POLICY "Allow write ticket messages" ON public.support_ticket_messages FO
 
 CREATE INDEX IF NOT EXISTS support_ticket_messages_ticket_idx ON public.support_ticket_messages ("ticketId", "createdAt");
 
+ALTER TABLE public.support_ticket_messages ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+
 -- =========================================================
 -- 15. Multi-item listings + contactless self-claim at pickup
 -- =========================================================

@@ -169,6 +169,15 @@ option {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Respect iPhone notch / home indicator when viewport-fit=cover */
+.sbn-safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.sbn-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 .sbn-btn {
   display: inline-flex;
   align-items: center;
@@ -338,6 +347,39 @@ option {
   background: var(--color-inset);
 }
 
+.sbn-help-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 1rem 1.125rem;
+}
+
+.sbn-help-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sbn-help-list-item:hover {
+  background: var(--color-inset);
+  border-color: color-mix(in srgb, var(--color-accent) 20%, var(--color-border));
+}
+
+.sbn-help-empty {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  border-radius: 1rem;
+  border: 1px dashed var(--color-border);
+  background: color-mix(in srgb, var(--color-inset) 50%, transparent);
+}
+
 .sbn-badge {
   display: inline-flex;
   align-items: center;
@@ -439,7 +481,8 @@ button {
 
 /* Mobile app shell — fixed chrome, stable viewport height */
 :root {
-  --sbn-mobile-header-h: calc(3.5rem + env(safe-area-inset-top, 0px));
+  --sbn-mobile-header-body-h: 3.5rem;
+  --sbn-mobile-header-h: calc(var(--sbn-mobile-header-body-h) + env(safe-area-inset-top, 0px));
   --sbn-mobile-nav-h: calc(4.25rem + env(safe-area-inset-bottom, 0px));
 }
 
@@ -459,7 +502,18 @@ button {
   left: 0;
   right: 0;
   z-index: 50;
-  padding-top: env(safe-area-inset-top, 0);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+}
+
+.sbn-mobile-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: var(--sbn-mobile-header-body-h);
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 .sbn-mobile-main {

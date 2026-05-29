@@ -117,7 +117,7 @@ export default function ItemDetailView({
       role="dialog"
       aria-modal="true"
     >
-      <header className="sticky top-0 z-10 sbn-glass-nav px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-10 sbn-glass-nav sbn-safe-top px-4 min-h-14 flex items-center gap-3">
         <button
           type="button"
           onClick={onClose}

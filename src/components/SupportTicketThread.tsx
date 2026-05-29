@@ -7,6 +7,9 @@ import {
 } from '../supabase';
 import { canViewerAccessTicket } from '../lib/roles';
 import RoleBadge from './RoleBadge';
+import ListingImage from './ListingImage';
+import ImageAttachmentPicker from './ImageAttachmentPicker';
+import { useImageAttachment } from '../hooks/useImageAttachment';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface SupportTicketThreadProps {
@@ -25,6 +28,7 @@ export default function SupportTicketThread({
   const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState('');
+  const replyImage = useImageAttachment();
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const [err, setErr] = useState('');
@@ -49,7 +53,7 @@ export default function SupportTicketThread({
       onUpdated?.();
     }, 100);
 
-    const unsubMessages = subscribePostgresChanges<SupportTicketMessage>(
+    const unsubMessages = subscribePostgresChanges<Record<string, unknown>>(
       {
         channelName: `live-ticket-msgs-${ticket.id}`,
         table: 'support_ticket_messages',
@@ -57,13 +61,10 @@ export default function SupportTicketThread({
         filter: `ticketId=eq.${ticket.id}`,
       },
       (payload) => {
-        const row = payload.new as SupportTicketMessage | null;
+        const row = payload.new;
         if (!row?.id) return;
-        if (row.senderUserId === viewer.uid) return;
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === row.id)) return prev;
-          return [...prev, row];
-        });
+        if (String(row.senderUserId) === viewer.uid) return;
+        void reload();
       },
     );
 
@@ -81,7 +82,7 @@ export default function SupportTicketThread({
       unsubMessages();
       unsubTicket();
     };
-  }, [ticket.id, viewer.uid, onUpdated]);
+  }, [ticket.id, viewer.uid, onUpdated, reload]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -89,17 +90,19 @@ export default function SupportTicketThread({
 
   const handleSend = async () => {
     const text = reply.trim();
-    if (!text) return;
+    if (!text && !replyImage.file) return;
     setSending(true);
     setErr('');
     const result = await addSupportTicketMessage({
       ticketId: ticket.id,
       sender: viewer,
       text,
+      imageFile: replyImage.file,
     });
     setSending(false);
     if (result.ok) {
       setReply('');
+      replyImage.clear();
       await reload();
       onUpdated?.();
     } else {
@@ -122,7 +125,7 @@ export default function SupportTicketThread({
 
   if (!canAccess) {
     return (
-      <p className="p-4 text-sm text-muted text-center">You do not have access to this ticket.</p>
+      <p className="p-4 text-sm text-muted text-center sbn-help-empty">You do not have access to this ticket.</p>
     );
   }
 
@@ -156,6 +159,7 @@ export default function SupportTicketThread({
         ) : (
           messages.map((msg) => {
             const isMine = msg.senderUserId === viewer.uid;
+            const showText = msg.text && msg.text !== '📷 Photo';
             return (
               <div
                 key={msg.id}
@@ -173,7 +177,24 @@ export default function SupportTicketThread({
                       {msg.senderName}
                     </p>
                   )}
-                  <p className="leading-snug whitespace-pre-wrap">{msg.text}</p>
+                  {msg.imageUrl && (
+                    <a
+                      href={msg.imageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`block rounded-lg overflow-hidden mb-1.5 ${isMine ? 'ring-1 ring-white/20' : 'border border-app'}`}
+                    >
+                      <ListingImage
+                        src={msg.imageUrl}
+                        alt="Attached photo"
+                        width={320}
+                        className="w-full max-h-52 object-contain bg-black/10"
+                      />
+                    </a>
+                  )}
+                  {showText && (
+                    <p className="leading-snug whitespace-pre-wrap">{msg.text}</p>
+                  )}
                   <p className={`text-[9px] mt-1 ${isMine ? 'text-white/70' : 'text-muted'}`}>
                     {new Date(msg.createdAt).toLocaleString()}
                   </p>
@@ -186,12 +207,19 @@ export default function SupportTicketThread({
       </div>
 
       {isOpen && (
-        <div className="shrink-0 p-4 border-t border-app bg-surface space-y-2">
+        <div className="shrink-0 p-4 border-t border-app bg-surface space-y-2 sbn-safe-bottom">
           <textarea
             className="sbn-input text-sm min-h-[4rem] resize-none"
             placeholder="Write a reply…"
             value={reply}
             onChange={(e) => setReply(e.target.value)}
+            disabled={sending}
+          />
+          <ImageAttachmentPicker
+            label="Attach photo"
+            file={replyImage.file}
+            previewUrl={replyImage.previewUrl}
+            onChange={replyImage.setFile}
             disabled={sending}
           />
           <div className="flex gap-2">
@@ -206,7 +234,7 @@ export default function SupportTicketThread({
             <button
               type="button"
               onClick={() => void handleSend()}
-              disabled={sending || !reply.trim()}
+              disabled={sending || (!reply.trim() && !replyImage.file)}
               className="sbn-btn sbn-btn-primary flex-1 text-sm"
             >
               {sending ? 'Sending…' : 'Send'}

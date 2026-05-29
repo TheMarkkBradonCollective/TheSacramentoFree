@@ -259,7 +259,7 @@ export default function NeighborProfileView({
       aria-modal="true"
       id="neighbor_profile_overlay"
     >
-      <header className="sticky top-0 z-10 sbn-glass-nav px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-10 sbn-glass-nav sbn-safe-top px-4 min-h-14 flex items-center gap-3">
         <button
           type="button"
           onClick={onClose}

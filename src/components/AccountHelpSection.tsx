@@ -8,6 +8,8 @@ import {
 } from '../supabase';
 import FullScreenPanel from './FullScreenPanel';
 import SupportTicketThread from './SupportTicketThread';
+import ImageAttachmentPicker from './ImageAttachmentPicker';
+import { useImageAttachment } from '../hooks/useImageAttachment';
 import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight } from 'lucide-react';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
@@ -23,9 +25,11 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
   const [reportBody, setReportBody] = useState('');
   const [reportSending, setReportSending] = useState(false);
   const [reportSent, setReportSent] = useState(false);
+  const reportProof = useImageAttachment();
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
   const [ticketCreating, setTicketCreating] = useState(false);
+  const ticketImage = useImageAttachment();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
@@ -86,12 +90,14 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
       reporter: user,
       subject: reportSubject,
       body: reportBody,
+      proofFile: reportProof.file,
     });
     setReportSending(false);
     if (result.ok) {
       setReportSent(true);
       setReportSubject('');
       setReportBody('');
+      reportProof.clear();
     } else {
       setErr(result.errorMessage || 'Could not send report.');
     }
@@ -104,11 +110,13 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
       opener: user,
       subject: ticketSubject,
       message: ticketMessage,
+      imageFile: ticketImage.file,
     });
     setTicketCreating(false);
     if (result.ok && result.ticketId) {
       setTicketSubject('');
       setTicketMessage('');
+      ticketImage.clear();
       await reloadTickets();
       const ticket = await getSupportTicketById(result.ticketId);
       if (ticket) {
@@ -127,27 +135,44 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
     setActiveTicket(null);
     setErr('');
     setReportSent(false);
+    reportProof.clear();
+    ticketImage.clear();
   };
+
+  const canSubmitTicket =
+    ticketSubject.trim() && (ticketMessage.trim() || ticketImage.file);
 
   return (
     <div className="space-y-3" id="account_help_section">
       <h3 className="font-display font-bold text-sm text-app">Help & safety</h3>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => setPanel('report')}
-          className="sbn-btn sbn-btn-secondary sbn-btn-sm inline-flex items-center gap-1.5"
+          className="sbn-help-list-item"
         >
-          <Flag className="w-4 h-4" />
-          Send a report
+          <span className="p-2 rounded-lg bg-red-500/10 text-red-400 shrink-0">
+            <Flag className="w-4 h-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-app block">Send a report</span>
+            <span className="text-[11px] text-muted">One-way — staff review only</span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
         </button>
         <button
           type="button"
           onClick={() => setPanel('tickets')}
-          className="sbn-btn sbn-btn-secondary sbn-btn-sm inline-flex items-center gap-1.5"
+          className="sbn-help-list-item"
         >
-          <LifeBuoy className="w-4 h-4" />
-          Support tickets
+          <span className="p-2 rounded-lg bg-accent/10 text-accent shrink-0">
+            <LifeBuoy className="w-4 h-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-app block">Support tickets</span>
+            <span className="text-[11px] text-muted">Get personal help from staff</span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
         </button>
       </div>
       <p className="text-[10px] text-muted leading-snug">
@@ -156,55 +181,66 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
 
       {panel === 'report' && (
         <FullScreenPanel title="Send a report" subtitle="No follow-up — staff will review" onClose={closePanel}>
-          <div className="p-4 space-y-4 max-w-lg mx-auto">
-            {reportSent ? (
-              <div className="text-center py-8 space-y-2">
-                <p className="font-display font-bold text-app">Report received</p>
-                <p className="text-sm text-muted">
-                  Thank you. Moderators will review this. You do not need to do anything else.
-                </p>
-                <button type="button" onClick={closePanel} className="sbn-btn sbn-btn-primary mt-4">
-                  Done
-                </button>
-              </div>
-            ) : (
-              <>
-                {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
-                <label className="block space-y-1">
-                  <span className="text-[10px] font-bold uppercase text-muted">Subject</span>
-                  <input
-                    className="sbn-input text-sm"
-                    value={reportSubject}
-                    onChange={(e) => setReportSubject(e.target.value)}
-                    placeholder="Brief summary"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[10px] font-bold uppercase text-muted">What happened?</span>
-                  <textarea
-                    className="sbn-input text-sm min-h-[8rem]"
-                    value={reportBody}
-                    onChange={(e) => setReportBody(e.target.value)}
-                    placeholder="Describe the issue. Include neighbor names or post details if relevant."
-                  />
-                </label>
-                <button
-                  type="button"
-                  disabled={reportSending || !reportSubject.trim() || !reportBody.trim()}
-                  onClick={() => void handleSubmitReport()}
-                  className="sbn-btn sbn-btn-primary w-full"
-                >
-                  {reportSending ? 'Sending…' : 'Submit report'}
-                </button>
-              </>
-            )}
-          </div>
+          {reportSent ? (
+            <div className="sbn-help-empty space-y-2">
+              <p className="font-display font-bold text-app">Report received</p>
+              <p className="text-sm text-muted">
+                Thank you. Moderators will review this. You do not need to do anything else.
+              </p>
+              <button type="button" onClick={closePanel} className="sbn-btn sbn-btn-primary mt-2">
+                Done
+              </button>
+            </div>
+          ) : (
+            <div className="sbn-help-card space-y-4">
+              {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
+              <label className="block space-y-1">
+                <span className="text-[10px] font-bold uppercase text-muted">Subject</span>
+                <input
+                  className="sbn-input text-sm"
+                  value={reportSubject}
+                  onChange={(e) => setReportSubject(e.target.value)}
+                  placeholder="Brief summary"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[10px] font-bold uppercase text-muted">What happened?</span>
+                <textarea
+                  className="sbn-input text-sm min-h-[8rem]"
+                  value={reportBody}
+                  onChange={(e) => setReportBody(e.target.value)}
+                  placeholder="Describe the issue. Include neighbor names or post details if relevant."
+                />
+              </label>
+              <ImageAttachmentPicker
+                label="Screenshot proof (optional)"
+                hint="Attach a screenshot if it helps staff understand the issue."
+                file={reportProof.file}
+                previewUrl={reportProof.previewUrl}
+                onChange={reportProof.setFile}
+                disabled={reportSending}
+              />
+              <button
+                type="button"
+                disabled={reportSending || !reportSubject.trim() || !reportBody.trim()}
+                onClick={() => void handleSubmitReport()}
+                className="sbn-btn sbn-btn-primary w-full"
+              >
+                {reportSending ? 'Sending…' : 'Submit report'}
+              </button>
+            </div>
+          )}
         </FullScreenPanel>
       )}
 
       {panel === 'tickets' && (
-        <FullScreenPanel title="My support tickets" subtitle="One-on-one help from staff" onClose={closePanel}>
-          <div className="p-4 space-y-3">
+        <FullScreenPanel
+          wide
+          title="My support tickets"
+          subtitle="One-on-one help from staff"
+          onClose={closePanel}
+        >
+          <div className="space-y-3">
             <button
               type="button"
               onClick={() => {
@@ -218,9 +254,12 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
             </button>
 
             {ticketsLoading ? (
-              <p className="text-sm text-muted text-center py-6">Loading tickets…</p>
+              <p className="text-sm text-muted sbn-help-empty">Loading tickets…</p>
             ) : tickets.length === 0 ? (
-              <p className="text-sm text-muted text-center py-6">No tickets yet.</p>
+              <div className="sbn-help-empty">
+                <p className="text-sm text-muted">No tickets yet.</p>
+                <p className="text-[11px] text-muted mt-1">Open a ticket above if you need help from staff.</p>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {tickets.map((ticket) => (
@@ -228,16 +267,16 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
                     <button
                       type="button"
                       onClick={() => void openThread(ticket)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-app bg-surface text-left hover:bg-inset/50 transition-colors"
+                      className="sbn-help-list-item"
                     >
-                      <div className="min-w-0 flex-1">
+                      <span className="min-w-0 flex-1">
                         <p className="font-semibold text-sm text-app truncate">{ticket.subject}</p>
                         <p className="text-[11px] text-muted">
                           {ticket.status === 'open' ? 'Open' : 'Closed'}
                           {' · '}
                           {new Date(ticket.updatedAt).toLocaleDateString()}
                         </p>
-                      </div>
+                      </span>
                       <ChevronRight className="w-4 h-4 text-muted shrink-0" />
                     </button>
                   </li>
@@ -250,7 +289,7 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
 
       {panel === 'newTicket' && (
         <FullScreenPanel title="Open support ticket" subtitle="Staff will reply here" onClose={() => setPanel('tickets')}>
-          <div className="p-4 space-y-4 max-w-lg mx-auto">
+          <div className="sbn-help-card space-y-4">
             {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
             <label className="block space-y-1">
               <span className="text-[10px] font-bold uppercase text-muted">Subject</span>
@@ -270,9 +309,17 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
                 placeholder="Describe your question or issue in detail."
               />
             </label>
+            <ImageAttachmentPicker
+              label="Attach a photo (optional)"
+              hint="You can send a photo instead of or along with your message."
+              file={ticketImage.file}
+              previewUrl={ticketImage.previewUrl}
+              onChange={ticketImage.setFile}
+              disabled={ticketCreating}
+            />
             <button
               type="button"
-              disabled={ticketCreating || !ticketSubject.trim() || !ticketMessage.trim()}
+              disabled={ticketCreating || !canSubmitTicket}
               onClick={() => void handleCreateTicket()}
               className="sbn-btn sbn-btn-primary w-full"
             >
@@ -284,6 +331,7 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
 
       {panel === 'thread' && activeTicket && (
         <FullScreenPanel
+          wide
           title={activeTicket.subject}
           subtitle={activeTicket.status === 'open' ? 'Support conversation' : 'Closed'}
           fillBody

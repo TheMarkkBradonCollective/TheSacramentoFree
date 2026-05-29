@@ -629,6 +629,36 @@ export async function uploadReportProofImage(file: File, reportId: string): Prom
   }
 }
 
+export async function uploadTicketMessageImage(
+  file: File,
+  ticketId: string,
+  messageId: string,
+): Promise<string | null> {
+  try {
+    const compressed = await compressImageIfNeeded(file, 1400, 0.8);
+    const fileExt = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
+    const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
+    const filePath = `tickets/${ticketId}/${messageId}.${safeExt}`;
+
+    const { error } = await supabase.storage.from('items').upload(filePath, compressed, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+    if (error) throw error;
+
+    const { data: publicData } = supabase.storage.from('items').getPublicUrl(filePath);
+    return publicData?.publicUrl || null;
+  } catch {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
 export async function uploadProfilePhoto(file: File, userId: string): Promise<string | null> {
   const compressed = await compressImageIfNeeded(file, 512, 0.85);
   const extRaw = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
@@ -2495,14 +2525,66 @@ function normalizeTicket(row: Record<string, unknown>): SupportTicket {
 }
 
 function normalizeTicketMessage(row: Record<string, unknown>): SupportTicketMessage {
+  const imageRaw = row.imageUrl ?? row.image_url;
+  const imageUrl =
+    typeof imageRaw === 'string' && imageRaw.trim() ? imageRaw.trim() : null;
+  let text = String(row.text ?? '');
+  if (!imageUrl && text.includes('[Photo]:')) {
+    const match = text.match(/\[Photo\]:\s*(\S+)/);
+    if (match) {
+      return {
+        id: String(row.id),
+        ticketId: String(row.ticketId),
+        senderUserId: String(row.senderUserId),
+        senderName: String(row.senderName),
+        text: text.replace(/\n\n\[Photo\]:\s*\S+\s*/g, '').trim() || '📷 Photo',
+        imageUrl: match[1],
+        createdAt: String(row.createdAt ?? row.created_at ?? ''),
+      };
+    }
+  }
   return {
     id: String(row.id),
     ticketId: String(row.ticketId),
     senderUserId: String(row.senderUserId),
     senderName: String(row.senderName),
-    text: String(row.text),
+    text,
+    imageUrl,
     createdAt: String(row.createdAt ?? row.created_at ?? ''),
   };
+}
+
+async function insertSupportTicketMessageRow(params: {
+  ticketId: string;
+  senderUserId: string;
+  senderName: string;
+  text: string;
+  imageUrl?: string | null;
+  createdAt: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const id = `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const displayText = params.text.trim() || (params.imageUrl ? '📷 Photo' : '');
+
+  const payload: Record<string, unknown> = {
+    id,
+    ticketId: params.ticketId,
+    senderUserId: params.senderUserId,
+    senderName: params.senderName,
+    text: displayText,
+    createdAt: params.createdAt,
+  };
+  if (params.imageUrl) payload.imageUrl = params.imageUrl;
+
+  let { error } = await supabase.from('support_ticket_messages').insert(payload);
+
+  if (error && isMissingImageUrlColumnError(error) && params.imageUrl) {
+    const { imageUrl: _omit, ...fallbackPayload } = payload;
+    fallbackPayload.text = `${displayText}\n\n[Photo]: ${params.imageUrl}`.trim();
+    ({ error } = await supabase.from('support_ticket_messages').insert(fallbackPayload));
+  }
+
+  if (error) return { ok: false, errorMessage: error.message };
+  return { ok: true };
 }
 
 export async function submitUserReport(params: {
@@ -2512,6 +2594,7 @@ export async function submitUserReport(params: {
   reportedUserId?: string;
   reportedUserName?: string;
   proofImageUrl?: string | null;
+  proofFile?: File | null;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const subject = params.subject.trim();
   const body = params.body.trim();
@@ -2519,16 +2602,23 @@ export async function submitUserReport(params: {
     return { ok: false, errorMessage: 'Please add a subject and description.' };
   }
 
+  const reportId = `report_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  let proofImageUrl = params.proofImageUrl ?? null;
+
+  if (params.proofFile) {
+    proofImageUrl = await uploadReportProofImage(params.proofFile, reportId);
+  }
+
   try {
     const { error } = await supabase.from('user_reports').insert({
-      id: `report_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      id: reportId,
       reporterUserId: params.reporter.uid,
       reporterName: params.reporter.displayName,
       subject,
-      body,
+      body: proofImageUrl ? `${body}\n\nScreenshot attached for staff review.` : body,
       reportedUserId: params.reportedUserId || null,
       reportedUserName: params.reportedUserName || null,
-      proofImageUrl: params.proofImageUrl || null,
+      proofImageUrl,
       source: 'manual',
       status: 'new',
       createdAt: new Date().toISOString(),
@@ -2584,17 +2674,27 @@ export async function createSupportTicket(params: {
   opener: UserProfile;
   subject: string;
   message: string;
+  imageFile?: File | null;
 }): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
   const subject = params.subject.trim();
   const message = params.message.trim();
-  if (!subject || !message) {
-    return { ok: false, errorMessage: 'Please add a subject and message.' };
+  if (!subject) {
+    return { ok: false, errorMessage: 'Please add a subject.' };
+  }
+  if (!message && !params.imageFile) {
+    return { ok: false, errorMessage: 'Please add a message or attach a photo.' };
   }
 
   const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const openerRole = normalizeUserRole(params.opener.role);
   const minStaffRank = minStaffRankForTicket(openerRole);
   const now = new Date().toISOString();
+  const messageId = `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  let imageUrl: string | null = null;
+  if (params.imageFile) {
+    imageUrl = await uploadTicketMessageImage(params.imageFile, ticketId, messageId);
+  }
 
   try {
     const { error: ticketError } = await supabase.from('support_tickets').insert({
@@ -2616,16 +2716,16 @@ export async function createSupportTicket(params: {
       return { ok: false, errorMessage: ticketError.message };
     }
 
-    const { error: msgError } = await supabase.from('support_ticket_messages').insert({
-      id: `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    const msgResult = await insertSupportTicketMessageRow({
       ticketId,
       senderUserId: params.opener.uid,
       senderName: params.opener.displayName,
       text: message,
+      imageUrl,
       createdAt: now,
     });
 
-    if (msgError) return { ok: false, errorMessage: msgError.message };
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
     return { ok: true, ticketId };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open ticket.' };
@@ -2698,9 +2798,12 @@ export async function addSupportTicketMessage(params: {
   ticketId: string;
   sender: UserProfile;
   text: string;
+  imageFile?: File | null;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const text = params.text.trim();
-  if (!text) return { ok: false, errorMessage: 'Message cannot be empty.' };
+  if (!text && !params.imageFile) {
+    return { ok: false, errorMessage: 'Add a message or attach a photo.' };
+  }
 
   const ticket = await getSupportTicketById(params.ticketId);
   if (!ticket) return { ok: false, errorMessage: 'Ticket not found.' };
@@ -2710,18 +2813,24 @@ export async function addSupportTicketMessage(params: {
   }
 
   const now = new Date().toISOString();
+  const messageId = `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  let imageUrl: string | null = null;
+  if (params.imageFile) {
+    imageUrl = await uploadTicketMessageImage(params.imageFile, params.ticketId, messageId);
+  }
 
   try {
-    const { error: msgError } = await supabase.from('support_ticket_messages').insert({
-      id: `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    const msgResult = await insertSupportTicketMessageRow({
       ticketId: params.ticketId,
       senderUserId: params.sender.uid,
       senderName: params.sender.displayName,
       text,
+      imageUrl,
       createdAt: now,
     });
 
-    if (msgError) return { ok: false, errorMessage: msgError.message };
+    if (!msgResult.ok) return msgResult;
 
     await supabase
       .from('support_tickets')
