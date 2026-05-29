@@ -44,9 +44,9 @@ function parseTabFromHistoryState(state: unknown): 'feed' | 'map' | 'chats' | 'p
   return typeof value === 'string' ? parseStoredTab(value) : null;
 }
 
-function withTabInHistoryState(state: unknown, tab: 'feed' | 'map' | 'chats' | 'profile') {
-  const current = state && typeof state === 'object' ? (state as Record<string, unknown>) : {};
-  return { ...current, [TAB_HISTORY_KEY]: tab };
+function withTabInHistoryState(tab: 'feed' | 'map' | 'chats' | 'profile') {
+  // Keep history state minimal/serializable to avoid DataCloneError crashes.
+  return { [TAB_HISTORY_KEY]: tab };
 }
 
 export default function App() {
@@ -190,7 +190,11 @@ export default function App() {
     if (initialTab !== activeTab) {
       setActiveTab(initialTab);
     }
-    window.history.replaceState(withTabInHistoryState(window.history.state, initialTab), '', window.location.href);
+    try {
+      window.history.replaceState(withTabInHistoryState(initialTab), '', window.location.href);
+    } catch (err) {
+      console.warn('History replaceState unavailable, tab persistence fallback active:', err);
+    }
   }, []);
 
   useEffect(() => {
@@ -208,7 +212,11 @@ export default function App() {
       const fallbackTab = parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
       handlingPopStateRef.current = true;
       setActiveTab(fallbackTab);
-      window.history.pushState(withTabInHistoryState(window.history.state, fallbackTab), '', window.location.href);
+      try {
+        window.history.pushState(withTabInHistoryState(fallbackTab), '', window.location.href);
+      } catch (err) {
+        console.warn('History pushState fallback failed:', err);
+      }
     };
 
     window.addEventListener('popstate', onPopState);
@@ -224,7 +232,11 @@ export default function App() {
 
     const currentHistoryTab = parseTabFromHistoryState(window.history.state);
     if (currentHistoryTab === activeTab) return;
-    window.history.pushState(withTabInHistoryState(window.history.state, activeTab), '', window.location.href);
+    try {
+      window.history.pushState(withTabInHistoryState(activeTab), '', window.location.href);
+    } catch (err) {
+      console.warn('History pushState unavailable, continuing without tab back-stack:', err);
+    }
   }, [activeTab]);
 
 
