@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chat, Message, UserProfile, ItemPost } from '../types';
 import { getSupabaseChats, getSupabaseMessages, createSupabaseMessage } from '../supabase';
-import { MessageSquare, Send, AlertCircle, MapPin, Gift, Box, ChevronLeft } from 'lucide-react';
+import { MessageSquare, Send, AlertCircle, MapPin, Gift, Box, ChevronLeft, Navigation } from 'lucide-react';
 import { IN_APP } from '../siteContent';
+import {
+  formatPickupLocationMessage,
+  hasStoredGps,
+  isLocationPrivate,
+} from '../lib/itemLocation';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -116,39 +121,52 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
     };
   }, [selectedChat]);
 
+  const sendChatText = async (text: string) => {
+    if (!selectedChat || !text.trim() || isSending) return false;
+
+    setIsSending(true);
+    setErrorMsg('');
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      const success = await createSupabaseMessage(selectedChat.id, text.trim(), userProfile.uid, messageId);
+      if (success) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: messageId,
+            senderId: userProfile.uid,
+            text: text.trim(),
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        return true;
+      }
+      throw new Error('Supabase message write failed');
+    } catch (err) {
+      setErrorMsg('Failed to send message.');
+      console.error(err);
+      return false;
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSendPickupLocation = async () => {
+    const linkedItem = items.find((i) => i.id === selectedChat?.itemId);
+    if (!linkedItem) return;
+    await sendChatText(formatPickupLocationMessage(linkedItem));
+  };
+
   // Send a message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedChat || !inputText.trim() || isSending) return;
 
-    setIsSending(true);
-    setErrorMsg('');
     const typedText = inputText.trim();
     setInputText('');
-
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    try {
-      const success = await createSupabaseMessage(selectedChat.id, typedText, userProfile.uid, messageId);
-
-      if (success) {
-        // Optimistically insert locally to prevent latency
-        setMessages(prev => [...prev, {
-          id: messageId,
-          senderId: userProfile.uid,
-          text: typedText,
-          createdAt: new Date().toISOString()
-        }]);
-      } else {
-        throw new Error('Supabase message write failed');
-      }
-    } catch (err) {
-      setInputText(typedText); // restore text on error
-      setErrorMsg('Failed to send message over Supabase connection.');
-      console.error(err);
-    } finally {
-      setIsSending(false);
-    }
+    const ok = await sendChatText(typedText);
+    if (!ok) setInputText(typedText);
   };
 
   // Helper to extract neighbor display variables
@@ -269,6 +287,12 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
             const linkedItem = items.find(i => i.id === selectedChat.itemId);
             const isChatDisabled = linkedItem && linkedItem.status !== 'active';
             const displayTitleHeader = getFormattedChatTitle(selectedChat);
+            const isListingOwner = linkedItem?.userId === userProfile.uid;
+            const showSendLocationBtn =
+              !!linkedItem &&
+              !isChatDisabled &&
+              isListingOwner &&
+              (!hasStoredGps(linkedItem.description) || isLocationPrivate(linkedItem.description));
 
             return (
               <>
@@ -362,6 +386,18 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
 
                 {/* Message input tray */}
                 <form onSubmit={handleSendMessage} className="p-4 bg-surface border-t border-app flex flex-col space-y-2" id="input_tray">
+                  {showSendLocationBtn && (
+                    <button
+                      type="button"
+                      onClick={handleSendPickupLocation}
+                      disabled={isSending}
+                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
+                      id="chat_send_pickup_location_btn"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Send pickup location / address
+                    </button>
+                  )}
                   {isChatDisabled && (
                     <div className="p-2.5 bg-inset border border-app text-subtle text-[10px] font-bold uppercase tracking-wider flex items-center space-x-2 select-none" id="chat_disabled_status_banner">
                       <AlertCircle className="w-4 h-4 text-muted shrink-0" />

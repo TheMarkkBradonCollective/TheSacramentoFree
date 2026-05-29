@@ -2,6 +2,7 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
+  Eye,
   MapPin,
   MessageSquare,
   Pencil,
@@ -9,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { ItemComment, ItemPost } from '../types';
+import { stripListingMetadata } from '../lib/itemLocation';
 
 export interface ItemCardVoteState {
   userVote: 'up' | 'down' | null;
@@ -28,6 +30,7 @@ interface ItemCardProps {
   onAddComment: (text: string) => void;
   onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active') => void;
   onEdit: () => void;
+  onViewDetail: () => void;
   onDelete: () => void;
   onMessage: () => void;
 }
@@ -44,6 +47,7 @@ export default function ItemCard({
   onAddComment,
   onUpdateStatus,
   onEdit,
+  onViewDetail,
   onDelete,
   onMessage,
 }: ItemCardProps) {
@@ -60,20 +64,26 @@ export default function ItemCard({
       ).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     : 'Recent';
 
+  const previewText = stripListingMetadata(item.description);
+
   return (
     <article
       id={`item_card_${item.id}`}
       className={`item-feed-card flex flex-col ${inactive ? 'opacity-75' : ''}`}
     >
       {item.imageUrl && (
-        <div className="aspect-[16/10] overflow-hidden bg-zinc-100">
+        <button
+          type="button"
+          onClick={onViewDetail}
+          className="aspect-[16/10] overflow-hidden bg-zinc-100 w-full text-left cursor-pointer"
+        >
           <img
             src={item.imageUrl}
             alt={item.title}
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
           />
-        </div>
+        </button>
       )}
 
       <div className="p-4 flex flex-col flex-1">
@@ -98,14 +108,22 @@ export default function ItemCard({
           )}
         </div>
 
-        <h3 className="font-display text-lg font-bold text-card mt-3 leading-snug">{item.title}</h3>
+        <button
+          type="button"
+          onClick={onViewDetail}
+          className="text-left w-full mt-3 cursor-pointer"
+        >
+          <h3 className="font-display text-lg font-bold text-card leading-snug hover:text-accent transition-colors">
+            {item.title}
+          </h3>
+        </button>
 
         <p className="text-xs font-medium text-card-muted flex items-center gap-1 mt-1">
           <Tag className="w-3 h-3 text-accent shrink-0" />
           {item.category}
         </p>
 
-        <p className="text-sm text-card-muted mt-2 leading-relaxed line-clamp-3">{item.description}</p>
+        <p className="text-sm text-card-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
 
         <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-card-muted">
           <span className="inline-flex items-center gap-1">
@@ -284,10 +302,16 @@ export default function ItemCard({
               )}
             </div>
           ) : (item.status === 'active' || item.status === 'completed') ? (
-            <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-              <MessageSquare className="w-3.5 h-3.5" />
-              Message
-            </button>
+            <div className="flex flex-wrap gap-1 justify-end">
+              <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
+                <Eye className="w-3.5 h-3.5" />
+                View
+              </button>
+              <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+                <MessageSquare className="w-3.5 h-3.5" />
+                Message
+              </button>
+            </div>
           ) : (
             <span className="text-[10px] font-medium text-card-muted">Archived</span>
           )}

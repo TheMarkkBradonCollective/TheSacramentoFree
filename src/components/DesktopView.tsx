@@ -16,6 +16,7 @@ interface DesktopViewProps {
   setActiveTab: (tab: 'feed' | 'chats' | 'profile' | 'map') => void;
   onOpenNewPost: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onViewItem: (item: ItemPost) => void;
   onLogout: () => void;
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
@@ -30,6 +31,7 @@ export default function DesktopView({
   setActiveTab,
   onOpenNewPost,
   onInitiateChat,
+  onViewItem,
   onLogout,
   onUpdateProfile,
   initialSelectedChatId,
@@ -66,6 +68,7 @@ export default function DesktopView({
               items={items}
               userProfile={userProfile}
               onInitiateChat={onInitiateChat}
+              onViewItem={onViewItem}
               onRefresh={onRefresh}
             />
             <CommunityFooter />
@@ -107,7 +110,12 @@ export default function DesktopView({
               <p>{IN_APP.mapDescription}</p>
             </div>
             <div className="sbn-card-elevated overflow-hidden p-2">
-              <SacramentoMapView items={items} userProfile={userProfile} onInitiateChat={onInitiateChat} />
+              <SacramentoMapView
+                items={items}
+                userProfile={userProfile}
+                onInitiateChat={onInitiateChat}
+                onViewItem={onViewItem}
+              />
             </div>
           </div>
         )}

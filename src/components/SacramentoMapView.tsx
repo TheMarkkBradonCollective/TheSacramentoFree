@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates } from '../types';
+import { canViewerSeeExactLocation, stripListingMetadata } from '../lib/itemLocation';
 import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
@@ -12,6 +13,8 @@ interface SacramentoMapViewProps {
   selectedNeighborhood?: string;
   searchTerm?: string;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onViewItem?: (item: ItemPost) => void;
+  /** @deprecated Use onViewItem */
   onItemDetail?: (item: ItemPost) => void;
   isFullScreenMobile?: boolean;
 }
@@ -129,9 +132,11 @@ export default function SacramentoMapView({
   selectedNeighborhood,
   searchTerm,
   onInitiateChat,
+  onViewItem,
   onItemDetail,
   isFullScreenMobile = false
 }: SacramentoMapViewProps) {
+  const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
   const [showColorGuide, setShowColorGuide] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
@@ -245,9 +250,10 @@ export default function SacramentoMapView({
     const neighborhoodCounts: Record<string, number> = {};
     
     return activeItems.map((item) => {
-      // 1. Check if the post features precise custom coordinates parsed from description metadata
+      // 1. Precise pin only when location is public (or viewer is the owner)
       const customCoords = extractGPSCoordinates(item.description);
-      if (customCoords) {
+      const showExactPin = customCoords && canViewerSeeExactLocation(item, userProfile?.uid);
+      if (showExactPin && customCoords) {
         const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
         return {
           item,
@@ -284,7 +290,7 @@ export default function SacramentoMapView({
         color: getCategoryColor(item.category)
       };
     });
-  }, [activeItems]);
+  }, [activeItems, userProfile?.uid]);
 
   // Map mounted lifecycle hook
   useEffect(() => {
@@ -696,23 +702,43 @@ export default function SacramentoMapView({
                       </h4>
 
                       <p className="text-[9.5px] text-muted mt-0.5 line-clamp-1 break-words">
-                        {selectedPost.description}
+                        {stripListingMetadata(selectedPost.description)}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-app">
-                      <div className="flex items-center space-x-1 text-[9px] font-medium text-muted">
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-app gap-2">
+                      <div className="flex items-center space-x-1 text-[9px] font-medium text-muted min-w-0">
                         <MapPin className="w-3 h-3 text-accent shrink-0" />
-                        <span>{selectedPost.neighborhood}</span>
+                        <span className="truncate">{selectedPost.neighborhood}</span>
                       </div>
 
-                      <button
-                        onClick={() => onInitiateChat(selectedPost.userId, selectedPost.userDisplayName, selectedPost.userId, selectedPost)}
-                        className="sbn-btn sbn-btn-primary sbn-btn-sm"
-                      >
-                        <MessageSquare className="w-3 h-3" />
-                        <span>Message</span>
-                      </button>
+                      <div className="flex gap-1 shrink-0">
+                        {openItemDetail && (
+                          <button
+                            type="button"
+                            onClick={() => openItemDetail(selectedPost)}
+                            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                          >
+                            <Eye className="w-3 h-3" />
+                            View
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onInitiateChat(
+                              selectedPost.userId,
+                              selectedPost.userDisplayName,
+                              selectedPost.userPhotoURL,
+                              selectedPost,
+                            )
+                          }
+                          className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          Message
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1139,14 +1165,15 @@ export default function SacramentoMapView({
                       <MessageSquare className="w-3 h-3" />
                       <span>Say Hello</span>
                     </button>
-                    {onItemDetail && (
+                    {openItemDetail && (
                       <button
                         id="map_view_card_btn"
-                        onClick={() => onItemDetail(selectedPost)}
+                        type="button"
+                        onClick={() => openItemDetail(selectedPost)}
                         className="px-3 py-1.5 bg-inset hover:bg-surface-hover text-app text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-app"
                       >
                         <Eye className="w-3 h-3" />
-                        <span>View Details</span>
+                        <span>View details</span>
                       </button>
                     )}
                   </div>

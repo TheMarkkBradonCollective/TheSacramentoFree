@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType, mapGPSToPercent } from '../types';
 import { createSupabaseItem, updateSupabaseItem, uploadItemImage } from '../supabase';
+import {
+  buildListingDescription,
+  categoryRequiresGps,
+  parseItemForEditForm,
+} from '../lib/itemLocation';
 import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
@@ -75,37 +80,6 @@ const findClosestNeighborhoodByPercent = (x: number, y: number): string => {
   return closest;
 };
 
-function parseItemForEdit(item: ItemPost) {
-  let description = item.description || '';
-  let collectionMethod = ISO_DELIVERY_PREFS[0];
-
-  if (item.type === 'looking') {
-    const transportMatch = description.match(/^\[TRANSPORT:\s*(.+?)\]\s*\n\n/s);
-    if (transportMatch) {
-      collectionMethod = transportMatch[1].trim();
-      description = description.slice(transportMatch[0].length);
-    }
-  }
-
-  const gpsMatch = description.match(/\n\n\[GPS:\s*([\d.]+),([\d.]+)\]\s*$/);
-  let customCoords: { x: number; y: number } | null = null;
-  if (gpsMatch) {
-    customCoords = { x: parseFloat(gpsMatch[1]), y: parseFloat(gpsMatch[2]) };
-    description = description.slice(0, gpsMatch.index);
-  }
-
-  const photoMatch = description.match(/\n\n\[Photo\]:\s*(https?:\/\/\S+)\s*$/);
-  if (photoMatch) {
-    description = description.slice(0, photoMatch.index);
-  }
-
-  return {
-    description: description.trim(),
-    collectionMethod,
-    customCoords,
-  };
-}
-
 interface PostItemModalProps {
   userProfile: UserProfile;
   editItem?: ItemPost | null;
@@ -133,17 +107,23 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
   const [gpsStatus, setGpsStatus] = useState('');
   const [showMiniMap, setShowMiniMap] = useState(false);
   const [customCoords, setCustomCoords] = useState<{ x: number; y: number } | null>(null);
+  const [locationIsPublic, setLocationIsPublic] = useState(true);
+  const [pickupAddress, setPickupAddress] = useState('');
+
+  const activeCategory = type === 'looking' ? isoCategory : category;
 
   useEffect(() => {
     if (!editItem) return;
 
-    const parsed = parseItemForEdit(editItem);
+    const parsed = parseItemForEditForm(editItem);
     setTitle(editItem.title);
     setDescription(parsed.description);
     setType(editItem.type);
     setNeighborhood(editItem.neighborhood);
     setCollectionMethod(parsed.collectionMethod);
     setCustomCoords(parsed.customCoords);
+    setLocationIsPublic(parsed.locationIsPublic);
+    setPickupAddress(parsed.pickupAddress);
     setShowMiniMap(!!parsed.customCoords);
     setImageFile(null);
     setImagePreview(editItem.imageUrl || '');
@@ -248,10 +228,21 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     }
 
     const finalCategory = type === 'looking' ? isoCategory : category;
-    const gpsSuffix = customCoords ? `\n\n[GPS: ${customCoords.x.toFixed(2)},${customCoords.y.toFixed(2)}]` : '';
-    const finalDescription = (type === 'looking'
-      ? `[TRANSPORT: ${collectionMethod}]\n\n${description.trim()}`
-      : description.trim()) + gpsSuffix;
+
+    if (type === 'giveaway' && categoryRequiresGps(finalCategory) && !customCoords) {
+      setIsSubmitting(false);
+      setErrorMsg('Curb Alert and Porch Pickup require a pinned pickup spot. Use GPS or tap the map.');
+      return;
+    }
+
+    const finalDescription = buildListingDescription({
+      type,
+      body: description.trim(),
+      collectionMethod,
+      customCoords,
+      locationIsPublic: categoryRequiresGps(finalCategory) ? true : locationIsPublic,
+      pickupAddress: pickupAddress.trim() || undefined,
+    });
 
     const listing: ItemPost = {
       id: itemId,
@@ -396,7 +387,11 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
               <select
                 id="post_category"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setCategory(next);
+                  if (categoryRequiresGps(next)) setLocationIsPublic(true);
+                }}
                 className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
               >
                 {ITEM_CATEGORIES.map((c) => (
@@ -492,6 +487,43 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 <span className="w-1.5 h-1.5 bg-[#FF4500] rounded-full inline-block animate-ping"></span>
                 {gpsStatus}
               </p>
+            )}
+
+            {type === 'giveaway' && categoryRequiresGps(activeCategory) && (
+              <p className="text-xs text-accent font-medium">
+                {activeCategory} listings must include a map pin so neighbors can find the curb or porch.
+              </p>
+            )}
+
+            {type === 'giveaway' && customCoords && !categoryRequiresGps(activeCategory) && (
+              <label className="flex items-start gap-2.5 text-xs text-app cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={locationIsPublic}
+                  onChange={(e) => setLocationIsPublic(e.target.checked)}
+                  className="mt-0.5 accent-[#FF4500]"
+                />
+                <span>
+                  Show exact pickup spot on the public map. If unchecked, you can share the address in messages
+                  instead.
+                </span>
+              </label>
+            )}
+
+            {type === 'giveaway' && (
+              <div className="space-y-1">
+                <label htmlFor="pickup_address" className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                  Street address (optional)
+                </label>
+                <input
+                  id="pickup_address"
+                  type="text"
+                  value={pickupAddress}
+                  onChange={(e) => setPickupAddress(e.target.value)}
+                  placeholder="Only shared when you send location in chat"
+                  className="sbn-input text-xs"
+                />
+              </div>
             )}
 
             {/* Micro Sacramento Map Picker */}

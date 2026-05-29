@@ -17,6 +17,7 @@ interface ItemGridProps {
   items: ItemPost[];
   userProfile: UserProfile;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onViewItem: (item: ItemPost) => void;
   onRefresh: () => void;
 }
 
@@ -26,7 +27,7 @@ interface PostVoteState {
   downvotes: number;
 }
 
-export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh }: ItemGridProps) {
+export default function ItemGrid({ items, userProfile, onInitiateChat, onViewItem, onRefresh }: ItemGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | 'giveaway' | 'looking'>('all');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -321,6 +322,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
               onAddComment={(text) => handleAddComment(item.id, text)}
               onUpdateStatus={(status) => handleUpdateStatus(item.id, status)}
               onEdit={() => setEditingItem(item)}
+              onViewDetail={() => onViewItem(item)}
               onDelete={() => handleDeleteItem(item.id)}
               onMessage={() =>
                 onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)

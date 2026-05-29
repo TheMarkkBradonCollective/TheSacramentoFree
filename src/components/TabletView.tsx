@@ -16,6 +16,7 @@ interface TabletViewProps {
   setActiveTab: (tab: 'feed' | 'chats' | 'profile' | 'map') => void;
   onOpenNewPost: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onViewItem: (item: ItemPost) => void;
   onLogout: () => void;
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
@@ -37,6 +38,7 @@ export default function TabletView({
   setActiveTab,
   onOpenNewPost,
   onInitiateChat,
+  onViewItem,
   onLogout,
   onUpdateProfile,
   initialSelectedChatId,
@@ -104,7 +106,13 @@ export default function TabletView({
                 </button>
               </div>
             </div>
-            <ItemGrid items={items} userProfile={userProfile} onInitiateChat={onInitiateChat} onRefresh={onRefresh} />
+            <ItemGrid
+              items={items}
+              userProfile={userProfile}
+              onInitiateChat={onInitiateChat}
+              onViewItem={onViewItem}
+              onRefresh={onRefresh}
+            />
             <CommunityFooter />
           </div>
         )}
@@ -116,7 +124,12 @@ export default function TabletView({
               <p>{IN_APP.mapDescription}</p>
             </div>
             <div className="sbn-card-elevated p-2 h-[520px]">
-              <SacramentoMapView items={items} userProfile={userProfile} onInitiateChat={onInitiateChat} />
+              <SacramentoMapView
+                items={items}
+                userProfile={userProfile}
+                onInitiateChat={onInitiateChat}
+                onViewItem={onViewItem}
+              />
             </div>
           </div>
         )}

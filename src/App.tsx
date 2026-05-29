@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
+import ItemDetailView from './components/ItemDetailView';
 import ItemGrid from './components/ItemGrid';
 import ChatSystem from './components/ChatSystem';
 import UserProfileView from './components/UserProfileView';
@@ -32,6 +33,7 @@ export default function App() {
   const profileLoadRef = useRef<Promise<void> | null>(null);
   const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>('map');
   const [showPostModal, setShowPostModal] = useState(false);
+  const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
   const [items, setItems] = useState<ItemPost[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -493,6 +495,7 @@ export default function App() {
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
+                  onViewItem={setDetailItem}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -507,6 +510,7 @@ export default function App() {
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
+                  onViewItem={setDetailItem}
                 />
               ) : (
                 <DesktopView
@@ -521,6 +525,24 @@ export default function App() {
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
+                  onViewItem={setDetailItem}
+                />
+              )}
+
+              {detailItem && (
+                <ItemDetailView
+                  item={detailItem}
+                  currentUserId={userProfile.uid}
+                  onClose={() => setDetailItem(null)}
+                  onMessage={() => {
+                    handleInitiateChat(
+                      detailItem.userId,
+                      detailItem.userDisplayName,
+                      detailItem.userPhotoURL,
+                      detailItem,
+                    );
+                    setDetailItem(null);
+                  }}
                 />
               )}
 
