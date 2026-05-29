@@ -768,7 +768,7 @@ export default function App() {
       {showInstallBanner && !isAlreadyInstalled && (
         <div 
           id="pwa_floating_install_banner" 
-          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-6 sm:right-6 sm:max-w-xs md:max-w-md z-50 bg-surface border border-app border-l-[4px] border-l-[#FF4500] shadow-2xl p-4 rounded-xl transition-all duration-300 text-app font-sans animate-fade-in"
+          className="fixed bottom-20 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-xs md:max-w-md z-[45] bg-surface border border-app border-l-[4px] border-l-[#FF4500] shadow-2xl p-4 rounded-xl transition-all duration-300 text-app font-sans animate-fade-in"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start space-x-3">

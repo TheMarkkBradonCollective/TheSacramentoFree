@@ -56,7 +56,7 @@ export default function MobileView({
 
   return (
     <div id="mobile_device_workspace" className="relative h-[100dvh] overflow-hidden bg-app text-app">
-      <header className="fixed top-0 left-0 right-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-40">
+      <header className="fixed top-0 left-0 right-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-50">
         <BrandLogo
           imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
           subtitle={userProfile.neighborhood}
@@ -75,106 +75,112 @@ export default function MobileView({
         </div>
       </header>
 
-      <div
-        className="absolute inset-0 pt-[4.25rem] pb-[4.25rem] overflow-hidden relative"
+      <main
         id="mobile_viewport_card"
+        className="fixed top-[4.25rem] bottom-[4.25rem] left-0 right-0 z-0 overflow-hidden"
       >
-        {activeTab === 'map' && (
-          <div className="absolute inset-0">
-            <SacramentoMapView
-              items={items}
-              userProfile={userProfile}
-              selectedType={selectedMobileType}
-              selectedCategory={selectedMobileCategory}
-              onInitiateChat={onInitiateChat}
-              onViewItem={onViewItem}
-              onEditItem={onEditItem}
-              isFullScreenMobile
-            />
-            <div className="absolute top-3 left-3 right-3 z-20 flex gap-2 overflow-x-auto pb-1">
-              {(['all', 'giveaway', 'looking'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setSelectedMobileType(t)}
-                  className={`sbn-chip shrink-0 ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
-                >
-                  {t === 'all' ? 'All' : t === 'giveaway' ? 'Giving' : 'Looking'}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={onOpenNewPost}
-              className="sbn-fab absolute bottom-4 right-4 z-20"
-              aria-label="New post"
-            >
-              <Plus className="w-6 h-6" />
-            </button>
+        {/* Keep map mounted so Leaflet keeps size; hide when another tab is active */}
+        <div
+          className={`relative h-full w-full min-h-0 ${activeTab === 'map' ? '' : 'hidden'}`}
+          aria-hidden={activeTab !== 'map'}
+        >
+          <SacramentoMapView
+            items={items}
+            userProfile={userProfile}
+            selectedType={selectedMobileType}
+            selectedCategory={selectedMobileCategory}
+            onInitiateChat={onInitiateChat}
+            onViewItem={onViewItem}
+            onEditItem={onEditItem}
+            isFullScreenMobile
+            mapVisible={activeTab === 'map'}
+          />
+          <div className="absolute top-3 left-3 right-3 z-20 flex gap-2 overflow-x-auto pb-1 pointer-events-auto">
+            {(['all', 'giveaway', 'looking'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setSelectedMobileType(t)}
+                className={`sbn-chip shrink-0 ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
+              >
+                {t === 'all' ? 'All' : t === 'giveaway' ? 'Giving' : 'Looking'}
+              </button>
+            ))}
           </div>
-        )}
-
-        {activeTab === 'feed' && (
-          <div className="absolute inset-0 overflow-y-auto p-4 pb-24" id="mobile_directory_drawer">
-            <div className="sbn-page-header">
-              <h2>{IN_APP.feedTitle}</h2>
-              <p>
-                {IN_APP.feedDescription} · {items.length} listings
-              </p>
-            </div>
-            <ItemGrid
-              items={items}
-              userProfile={userProfile}
-              engagement={engagement}
-              onInitiateChat={onInitiateChat}
-              onViewItem={onViewItem}
-              onViewProfile={onViewProfile}
-              onRefresh={onRefresh}
-            />
-            <button
-              type="button"
-              onClick={onOpenNewPost}
-              className="sbn-fab fixed bottom-20 right-4 z-20"
-              aria-label="New post"
-            >
-              <Plus className="w-6 h-6" />
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'chats' && (
-          <div
-            className="absolute inset-0 flex flex-col min-h-0 overflow-hidden"
-            id="mobile_messaging_dock"
+          <button
+            type="button"
+            onClick={onOpenNewPost}
+            className="sbn-fab absolute bottom-4 right-4 z-20"
+            aria-label="New post"
           >
-            <ChatSystem
-              userProfile={userProfile}
-              initialSelectedChatId={initialSelectedChatId}
-              onClearInitialChat={onClearInitialChat}
-              items={items}
-              onViewProfile={onViewProfile}
-              onItemsChanged={onRefresh}
-              fullBleed
-              className="flex-1 min-h-0"
-            />
-          </div>
-        )}
+            <Plus className="w-6 h-6" />
+          </button>
+        </div>
 
-        {activeTab === 'profile' && (
-          <div className="absolute inset-0 overflow-y-auto bg-app" id="mobile_profile_dock">
-            <div className="sbn-page-header px-4 pt-4 pb-2">
-              <h2>{IN_APP.profileTitle}</h2>
-            </div>
-            <UserProfileView
-              userProfile={userProfile}
-              onUpdateProfile={onUpdateProfile}
-              fullBleed
-            />
+        <div
+          className={`h-full w-full min-h-0 overflow-y-auto p-4 pb-24 ${activeTab === 'feed' ? '' : 'hidden'}`}
+          id="mobile_directory_drawer"
+          aria-hidden={activeTab !== 'feed'}
+        >
+          <div className="sbn-page-header">
+            <h2>{IN_APP.feedTitle}</h2>
+            <p>
+              {IN_APP.feedDescription} · {items.length} listings
+            </p>
           </div>
-        )}
-      </div>
+          <ItemGrid
+            items={items}
+            userProfile={userProfile}
+            engagement={engagement}
+            onInitiateChat={onInitiateChat}
+            onViewItem={onViewItem}
+            onViewProfile={onViewProfile}
+            onRefresh={onRefresh}
+          />
+          <button
+            type="button"
+            onClick={onOpenNewPost}
+            className="sbn-fab fixed bottom-20 right-4 z-20"
+            aria-label="New post"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        </div>
 
-      <footer id="mobile_sticky_footer_nav" className="fixed bottom-0 left-0 right-0 sbn-mobile-nav z-40">
+        <div
+          className={`h-full w-full min-h-0 flex flex-col overflow-hidden ${activeTab === 'chats' ? '' : 'hidden'}`}
+          id="mobile_messaging_dock"
+          aria-hidden={activeTab !== 'chats'}
+        >
+          <ChatSystem
+            userProfile={userProfile}
+            initialSelectedChatId={initialSelectedChatId}
+            onClearInitialChat={onClearInitialChat}
+            items={items}
+            onViewProfile={onViewProfile}
+            onItemsChanged={onRefresh}
+            fullBleed
+            className="h-full min-h-0"
+          />
+        </div>
+
+        <div
+          className={`h-full w-full min-h-0 overflow-y-auto bg-app ${activeTab === 'profile' ? '' : 'hidden'}`}
+          id="mobile_profile_dock"
+          aria-hidden={activeTab !== 'profile'}
+        >
+          <div className="sbn-page-header px-4 pt-4 pb-2">
+            <h2>{IN_APP.profileTitle}</h2>
+          </div>
+          <UserProfileView
+            userProfile={userProfile}
+            onUpdateProfile={onUpdateProfile}
+            fullBleed
+          />
+        </div>
+      </main>
+
+      <footer id="mobile_sticky_footer_nav" className="fixed bottom-0 left-0 right-0 sbn-mobile-nav z-50">
         <div className="grid grid-cols-4 h-[4.25rem] px-2">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button

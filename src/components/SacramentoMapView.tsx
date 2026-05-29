@@ -27,6 +27,8 @@ interface SacramentoMapViewProps {
   /** @deprecated Use onViewItem */
   onItemDetail?: (item: ItemPost) => void;
   isFullScreenMobile?: boolean;
+  /** When false (e.g. another mobile tab is active), map stays mounted but hidden */
+  mapVisible?: boolean;
 }
 
 // Neighborhood center coordinates as percentages (0-100) of our map sandbox
@@ -173,7 +175,8 @@ export default function SacramentoMapView({
   onViewItem,
   onEditItem,
   onItemDetail,
-  isFullScreenMobile = false
+  isFullScreenMobile = false,
+  mapVisible = true,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -505,6 +508,22 @@ export default function SacramentoMapView({
     };
   }, []);
 
+  // Recalculate size when mobile tab becomes visible again (display:none → block)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapVisible || !map) return;
+
+    const refresh = () => map.invalidateSize({ animate: false });
+    refresh();
+    const raf = requestAnimationFrame(refresh);
+    const timer = setTimeout(refresh, 200);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+  }, [mapVisible]);
+
   // Resume map follow when a listing popup is closed and follow mode is on
   useEffect(() => {
     if (selectedPost || !followUser || !userLocation || !mapRef.current) return;
@@ -762,8 +781,10 @@ export default function SacramentoMapView({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 z-40 flex flex-col p-4 justify-end font-sans"
+              className="absolute inset-0 bg-black/60 z-30 flex flex-col p-4 justify-end font-sans"
               id="mobile_color_guide_overlay"
+              role="presentation"
+              onClick={() => setShowColorGuide(false)}
             >
               <motion.div
                 initial={{ y: '100%' }}
@@ -771,6 +792,7 @@ export default function SacramentoMapView({
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 260 }}
                 className="sbn-card w-full max-h-[72vh] flex flex-col p-5 shadow-2xl rounded-b-none"
+                onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between pb-3 mb-4 border-b border-app shrink-0">
                   <div>
