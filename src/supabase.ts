@@ -762,27 +762,30 @@ export async function deleteSupabaseItem(itemId: string): Promise<boolean> {
  */
 export async function getSupabaseChats(userId: string): Promise<Chat[]> {
   try {
-    // Find all chats where participantIds has user ID
-    // We can query using the JSON containment or filtration operators since client-side
+    // Filter server-side using JSONB containment so we only fetch this user's chats.
     const { data, error } = await supabase
       .from('chats')
-      .select('*');
+      .select('*')
+      .contains('participantIds', JSON.stringify([userId]))
+      .order('lastMessageAt', { ascending: false });
 
     if (error) {
-      handleSupabaseError(error, 'chats');
-      return [];
+      // Fall back to client-side filtering if the JSONB operator isn't supported on this schema.
+      const { data: allData, error: allError } = await supabase.from('chats').select('*');
+      if (allError) {
+        handleSupabaseError(allError, 'chats');
+        return [];
+      }
+      setSupabaseConfigurationState(true);
+      const chats = (allData || []) as Chat[];
+      return chats.filter((c: any) => {
+        const ids = Array.isArray(c.participantIds) ? c.participantIds : [];
+        return ids.includes(userId);
+      });
     }
 
     setSupabaseConfigurationState(true);
-
-    // Safely filter participantIds locally or format them
-    const chats = (data || []) as Chat[];
-    const userChats = chats.filter((c: any) => {
-      const ids = Array.isArray(c.participantIds) ? c.participantIds : [];
-      return ids.includes(userId);
-    });
-
-    return userChats;
+    return (data || []) as Chat[];
   } catch (err: any) {
     console.warn('Supabase chats fetch failed:', err);
     handleSupabaseError(err, 'chats');

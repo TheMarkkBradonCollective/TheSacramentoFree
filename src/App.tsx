@@ -363,7 +363,7 @@ export default function App() {
     };
   }, [handleUserAuthenticated, loadProfileForUser]);
 
-  const loadItems = async (isBackground = false) => {
+  const loadItems = useCallback(async (isBackground = false) => {
     if (!userProfile) return;
     if (!isBackground) {
       setIsItemsLoading(true);
@@ -379,7 +379,7 @@ export default function App() {
         setIsItemsLoading(false);
       }
     }
-  };
+  }, [userProfile?.uid]);
 
   // 2. Load listings once, then keep in sync via Supabase Realtime
   useEffect(() => {

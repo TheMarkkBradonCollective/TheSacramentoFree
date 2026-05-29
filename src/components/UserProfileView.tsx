@@ -159,18 +159,14 @@ export default function UserProfileView({
 
     const photoForSave =
       photoURL.startsWith('data:') || photoURL.startsWith('blob:')
-        ? sanitizeRemotePhoto(userProfile.photoURL)
+        ? (sanitizeRemotePhoto(userProfile.photoURL) ?? undefined)
         : photoURL;
-
-    const hadLocalOnlyPhoto =
-      (photoURL.startsWith('data:') || photoURL.startsWith('blob:')) &&
-      !sanitizeRemotePhoto(photoURL);
 
     const updateData = {
       displayName: displayName.trim(),
       neighborhood,
       bio: bio.trim(),
-      photoURL: photoForSave ?? userProfile.photoURL,
+      photoURL: photoForSave,
     };
 
     try {
@@ -185,15 +181,7 @@ export default function UserProfileView({
         throw new Error(errorMessage || 'Profile save failed');
       }
       onUpdateProfile(updatedProfile);
-
-      if (hadLocalOnlyPhoto) {
-        setErrorMsg(
-          'Profile saved, but your new photo did not upload — try a smaller image or check your connection, then upload again.',
-        );
-      } else {
-        setErrorMsg('');
-      }
-
+      setErrorMsg('');
       setSuccessMsg('Profile settings synced successfully.');
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {

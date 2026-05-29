@@ -200,7 +200,7 @@ export default function ChatSystem({
 
     setIsSending(true);
     setErrorMsg('');
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     try {
       const success = await createSupabaseMessage(

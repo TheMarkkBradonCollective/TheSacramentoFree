@@ -172,12 +172,12 @@ export default function MobileView({
           <div className="sbn-page-header px-4 pt-4 pb-2">
             <h2>{IN_APP.profileTitle}</h2>
           </div>
-            <UserProfileView
-              userProfile={userProfile}
-              onUpdateProfile={onUpdateProfile}
-              onProfilePhotoSaved={onRefresh}
-              fullBleed
-            />
+          <UserProfileView
+            userProfile={userProfile}
+            onUpdateProfile={onUpdateProfile}
+            onProfilePhotoSaved={onRefresh}
+            fullBleed
+          />
         </div>
       </main>
 

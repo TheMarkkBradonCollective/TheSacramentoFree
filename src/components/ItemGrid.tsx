@@ -73,7 +73,9 @@ export default function ItemGrid({
     } finally {
       setUpdatingItemId(null);
     }
-  }  // Run modular filters
+  };
+
+  // Run modular filters
   const filteredItems = items.filter((item) => {
     // 1. Text Search
     const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
