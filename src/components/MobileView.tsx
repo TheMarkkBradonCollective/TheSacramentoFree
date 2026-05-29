@@ -8,6 +8,7 @@ import { Map, List, MessageSquare, User, Plus, LogOut } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
+import CommunityStatsBar from './CommunityStatsBar';
 
 interface MobileViewProps {
   items: ItemPost[];
@@ -128,6 +129,7 @@ export default function MobileView({
               {IN_APP.feedDescription} · {items.length} listings
             </p>
           </div>
+          <CommunityStatsBar items={items} variant="compact" />
           <ItemGrid
             items={items}
             userProfile={userProfile}

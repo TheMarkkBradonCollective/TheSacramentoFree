@@ -8,6 +8,7 @@ import { List, MessageSquare, User, Plus, LogOut, Map } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
+import CommunityStatsBar from './CommunityStatsBar';
 
 interface TabletViewProps {
   items: ItemPost[];
@@ -104,6 +105,7 @@ export default function TabletView({
                 </button>
               </div>
             </div>
+            <CommunityStatsBar items={items} variant="full" />
             <ItemGrid
               items={items}
               userProfile={userProfile}

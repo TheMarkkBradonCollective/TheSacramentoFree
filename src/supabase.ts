@@ -890,6 +890,41 @@ export interface NeighborStats {
   downvotesReceived: number;
 }
 
+export interface CommunityStats {
+  memberCount: number;
+  activeListings: number;
+  itemsGiven: number;
+  requestsFulfilled: number;
+}
+
+export async function getCommunityStats(): Promise<CommunityStats> {
+  try {
+    const [membersRes, activeRes, givenRes, fulfilledRes] = await Promise.all([
+      supabase.from('users').select('uid', { count: 'exact', head: true }),
+      supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase
+        .from('items')
+        .select('id', { count: 'exact', head: true })
+        .eq('type', 'giveaway')
+        .eq('status', 'completed'),
+      supabase
+        .from('items')
+        .select('id', { count: 'exact', head: true })
+        .eq('type', 'looking')
+        .eq('status', 'completed'),
+    ]);
+
+    return {
+      memberCount: membersRes.count ?? 0,
+      activeListings: activeRes.count ?? 0,
+      itemsGiven: givenRes.count ?? 0,
+      requestsFulfilled: fulfilledRes.count ?? 0,
+    };
+  } catch {
+    return { memberCount: 0, activeListings: 0, itemsGiven: 0, requestsFulfilled: 0 };
+  }
+}
+
 export async function getNeighborStats(uid: string): Promise<NeighborStats> {
   const empty = {
     itemsGiven: 0,

@@ -6,6 +6,7 @@ import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import Navbar from './Navbar';
+import CommunityStatsBar from './CommunityStatsBar';
 import { IN_APP } from '../siteContent';
 
 interface DesktopViewProps {
@@ -69,6 +70,7 @@ export default function DesktopView({
                 </button>
               </div>
             </div>
+            <CommunityStatsBar items={items} variant="full" />
             <ItemGrid
               items={items}
               userProfile={userProfile}
