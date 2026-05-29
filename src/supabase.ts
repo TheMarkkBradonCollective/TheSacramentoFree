@@ -3,6 +3,7 @@ import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageReq
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
+import { normalizeItemMedia } from './lib/listingContent';
 import { normalizeUserRole, type UserRole, canStaffBan, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
@@ -544,7 +545,16 @@ export async function getSupabaseItems(): Promise<ItemPost[]> {
     }
 
     setSupabaseConfigurationState(true);
-    return (data || []).map(normalizeItemFromRow);
+    const rows = data || [];
+    const items: ItemPost[] = [];
+    for (const row of rows) {
+      try {
+        items.push(normalizeItemFromRow(row as ItemPost));
+      } catch (rowErr) {
+        console.warn('Skipping malformed listing row:', row?.id, rowErr);
+      }
+    }
+    return items;
   } catch (err: any) {
     console.warn('Supabase items fetch failed:', err);
     handleSupabaseError(err, 'items');
