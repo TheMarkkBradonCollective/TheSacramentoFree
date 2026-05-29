@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useItemsEngagement } from './hooks/useItemsEngagement';
+import { useItemsRealtime } from './hooks/useItemsRealtime';
 import { UserProfile, ItemPost } from './types';
 import Navbar from './components/Navbar';
 import PublicSite from './components/public/PublicSite';
@@ -291,28 +292,34 @@ export default function App() {
     }
   };
 
-  // 2. Load Item Listings periodically from Supabase once user is onboarded
+  // 2. Load listings once, then keep in sync via Supabase Realtime
   useEffect(() => {
     if (!userProfile) {
       setItems([]);
       return;
     }
-
     loadItems(false);
-    
-    let interval: any = null;
-    if (deviceType !== 'desktop') {
-      interval = setInterval(() => {
-        loadItems(true);
-      }, 45000); // Gentle 45s background poll on mobile/tablet (never on desktop)
-    }
+  }, [userProfile]);
 
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [userProfile, deviceType]);
+  useItemsRealtime(!!userProfile, setItems);
+
+  // Keep detail view in sync when this listing changes live (not on unrelated feed updates)
+  useEffect(() => {
+    if (!detailItem) return;
+    const updated = items.find((i) => i.id === detailItem.id);
+    if (!updated) {
+      setDetailItem(null);
+      return;
+    }
+    if (
+      updated.updatedAt !== detailItem.updatedAt ||
+      updated.status !== detailItem.status ||
+      updated.title !== detailItem.title ||
+      updated.description !== detailItem.description
+    ) {
+      setDetailItem(updated);
+    }
+  }, [items, detailItem]);
 
   // Handle Email and Password Logins
   const handleEmailSignIn = async (email: string, password: string): Promise<boolean> => {

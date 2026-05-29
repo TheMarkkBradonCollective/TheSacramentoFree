@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp, Gift, MapPin, MessageSquare, Package } from 'lucide-react';
 import { UserProfile } from '../types';
 import { getNeighborStats, getSupabaseProfile, NeighborStats } from '../supabase';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface NeighborProfileViewProps {
   userId: string;
@@ -36,8 +37,35 @@ export default function NeighborProfileView({
       setLoading(false);
     })();
 
+    const reload = debounceRealtime(() => {
+      if (!active) return;
+      void Promise.all([getSupabaseProfile(userId), getNeighborStats(userId)]).then(
+        ([loadedProfile, loadedStats]) => {
+          if (!active) return;
+          setProfile(loadedProfile);
+          setStats(loadedStats);
+        },
+      );
+    }, 250);
+
+    const unsubItems = subscribePostgresChanges(
+      { channelName: `live-profile-items-${userId}`, table: 'items', event: '*' },
+      () => reload(),
+    );
+    const unsubVotes = subscribePostgresChanges(
+      { channelName: `live-profile-votes-${userId}`, table: 'item_votes', event: '*' },
+      () => reload(),
+    );
+    const unsubClaims = subscribePostgresChanges(
+      { channelName: `live-profile-claims-${userId}`, table: 'item_claims', event: '*' },
+      () => reload(),
+    );
+
     return () => {
       active = false;
+      unsubItems();
+      unsubVotes();
+      unsubClaims();
     };
   }, [userId]);
 

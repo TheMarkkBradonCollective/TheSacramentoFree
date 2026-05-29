@@ -171,6 +171,16 @@ export default function SacramentoMapView({
   const [locationError, setLocationError] = useState<string | null>(null);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const routeFetchIdRef = useRef(0);
+  const routeLayerRef = useRef<L.LayerGroup | null>(null);
+  const routeEndpointsRef = useRef<{ start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null>(null);
+  const routeFitForPostIdRef = useRef<string | null>(null);
+
+  /** ~40 m — avoid refetching OSRM on every GPS tick. */
+  const coordsMovedEnough = (
+    a: { lat: number; lng: number },
+    b: { lat: number; lng: number },
+    thresholdDeg = 0.00035,
+  ) => Math.abs(a.lat - b.lat) > thresholdDeg || Math.abs(a.lng - b.lng) > thresholdDeg;
 
   // Default coordinate centered around the user's neighborhood
   const userNeighborhood = userProfile?.neighborhood || 'Midtown';
@@ -415,6 +425,9 @@ export default function SacramentoMapView({
     const markersGroup = L.layerGroup().addTo(map);
     markersGroupRef.current = markersGroup;
 
+    const routeLayer = L.layerGroup().addTo(map);
+    routeLayerRef.current = routeLayer;
+
     mapRef.current = map;
 
     const onUserPanMap = () => {
@@ -448,6 +461,7 @@ export default function SacramentoMapView({
       map.remove();
       mapRef.current = null;
       markersGroupRef.current = null;
+      routeLayerRef.current = null;
       userMarkerRef.current = null;
     };
   }, []);
@@ -469,13 +483,31 @@ export default function SacramentoMapView({
   }, [selectedPost, blipPositions, userLocation, fallbackLatLng]);
 
   useEffect(() => {
-    if (!routeEndpoints) {
+    if (!selectedPost) {
+      routeEndpointsRef.current = null;
+      routeFitForPostIdRef.current = null;
       setRouteCoords(null);
+      routeLayerRef.current?.clearLayers();
       return;
     }
 
+    if (!routeEndpoints) return;
+
+    const prev = routeEndpointsRef.current;
+    const destMoved = !prev || coordsMovedEnough(prev.end, routeEndpoints.end);
+    const startMoved = !prev || coordsMovedEnough(prev.start, routeEndpoints.start);
+    const selectionChanged = routeFitForPostIdRef.current !== selectedPost.id;
+
+    if (!selectionChanged && !destMoved && !startMoved) return;
+
+    routeEndpointsRef.current = routeEndpoints;
+
     const fetchId = ++routeFetchIdRef.current;
-    setRouteCoords(null);
+    if (selectionChanged) {
+      routeFitForPostIdRef.current = null;
+      setRouteCoords(null);
+    }
+    // Otherwise keep the previous polyline visible until the new route arrives.
 
     fetchDrivingRoute(routeEndpoints.start, routeEndpoints.end).then((points) => {
       if (fetchId !== routeFetchIdRef.current) return;
@@ -485,7 +517,7 @@ export default function SacramentoMapView({
         setRouteCoords(generateFallbackRouteCoords(routeEndpoints.start, routeEndpoints.end));
       }
     });
-  }, [routeEndpoints]);
+  }, [selectedPost, routeEndpoints]);
 
   // Update all items points & neighborhood labels
   useEffect(() => {
@@ -525,57 +557,69 @@ export default function SacramentoMapView({
         });
     });
 
-    // 3. Draw real driving route from user to selected listing
-    if (selectedPost && routeEndpoints && routeCoords && routeCoords.length >= 2) {
-      const { start: startLatLng, end: selectedLatLng } = routeEndpoints;
+  }, [blipPositions, selectedPost, activeItems]);
 
-      L.polyline(routeCoords, {
-        color: '#FF4500',
-        weight: 8,
-        opacity: 0.28,
-        lineCap: 'round',
-        lineJoin: 'round',
-      }).addTo(markersGroup);
+  // Route layer — separate from blips so marker refreshes don't wipe the line.
+  useEffect(() => {
+    const map = mapRef.current;
+    const routeLayer = routeLayerRef.current;
+    if (!map || !routeLayer) return;
 
-      L.polyline(routeCoords, {
-        color: '#FF4500',
-        weight: 4,
-        opacity: 0.92,
-        lineCap: 'round',
-        lineJoin: 'round',
-      }).addTo(markersGroup);
+    routeLayer.clearLayers();
 
-      const startIcon = L.divIcon({
-        html: `
-          <div class="h-3.5 w-3.5 bg-[#FF4500] rounded-full border-2.5 border-white shadow-md flex items-center justify-center">
-            <div class="h-1 w-1 bg-white rounded-full"></div>
+    const endpoints = routeEndpointsRef.current;
+    if (!selectedPost || !endpoints || !routeCoords || routeCoords.length < 2) return;
+
+    const { start: startLatLng, end: selectedLatLng } = endpoints;
+
+    L.polyline(routeCoords, {
+      color: '#FF4500',
+      weight: 8,
+      opacity: 0.28,
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(routeLayer);
+
+    L.polyline(routeCoords, {
+      color: '#FF4500',
+      weight: 4,
+      opacity: 0.92,
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(routeLayer);
+
+    const startIcon = L.divIcon({
+      html: `
+        <div class="h-3.5 w-3.5 bg-[#FF4500] rounded-full border-2.5 border-white shadow-md flex items-center justify-center">
+          <div class="h-1 w-1 bg-white rounded-full"></div>
+        </div>
+      `,
+      className: 'route-start-marker',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+    L.marker([startLatLng.lat, startLatLng.lng], { icon: startIcon, zIndexOffset: 200 }).addTo(routeLayer);
+
+    const destIcon = L.divIcon({
+      html: `
+        <div class="relative flex items-center justify-center">
+          <span class="absolute inline-flex h-8 w-8 rounded-full bg-[#FF4500]/25 animate-ping"></span>
+          <div class="h-4.5 w-4.5 bg-[#FF4500] rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+            <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
           </div>
-        `,
-        className: 'route-start-marker',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
-      });
-      L.marker([startLatLng.lat, startLatLng.lng], { icon: startIcon, zIndexOffset: 200 }).addTo(markersGroup);
+        </div>
+      `,
+      className: 'route-destination-pulsing-marker',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+    L.marker([selectedLatLng.lat, selectedLatLng.lng], { icon: destIcon, zIndexOffset: 201 }).addTo(routeLayer);
 
-      const destIcon = L.divIcon({
-        html: `
-          <div class="relative flex items-center justify-center">
-            <span class="absolute inline-flex h-8 w-8 rounded-full bg-[#FF4500]/25 animate-ping"></span>
-            <div class="h-4.5 w-4.5 bg-[#FF4500] rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-              <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
-            </div>
-          </div>
-        `,
-        className: 'route-destination-pulsing-marker',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-      });
-      L.marker([selectedLatLng.lat, selectedLatLng.lng], { icon: destIcon, zIndexOffset: 201 }).addTo(markersGroup);
-
+    if (routeFitForPostIdRef.current !== selectedPost.id) {
+      routeFitForPostIdRef.current = selectedPost.id;
       map.fitBounds(routeCoords, { padding: [60, 60], maxZoom: 14, animate: true });
     }
-
-  }, [blipPositions, selectedPost, activeItems, routeCoords, routeEndpoints]);
+  }, [selectedPost, routeCoords]);
 
   // Handle programmatically panning/zooming to a selected neighborhood
   useEffect(() => {

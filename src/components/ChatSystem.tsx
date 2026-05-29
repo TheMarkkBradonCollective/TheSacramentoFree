@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chat, Message, UserProfile, ItemPost } from '../types';
 import { getSupabaseChats, getSupabaseMessages, createSupabaseMessage } from '../supabase';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
   MessageSquare,
   Send,
@@ -102,8 +103,8 @@ export default function ChatSystem({
 
         if (initialSelectedChatId) {
           const target = loadedChats.find((c) => c.id === initialSelectedChatId);
-          if (target && !selectedChat) {
-            setSelectedChat(target);
+          if (target) {
+            setSelectedChat((prev) => prev ?? target);
           }
         }
       } catch (err) {
@@ -113,11 +114,25 @@ export default function ChatSystem({
     };
 
     loadChats();
-    const interval = setInterval(loadChats, 5000);
+
+    const refreshChats = debounceRealtime(() => {
+      if (active) void loadChats();
+    }, 200);
+
+    const unsubChats = subscribePostgresChanges(
+      { channelName: `live-chats-${userProfile.uid}`, table: 'chats', event: '*' },
+      () => refreshChats(),
+    );
+
+    const unsubMessagesForInbox = subscribePostgresChanges(
+      { channelName: `live-messages-inbox-${userProfile.uid}`, table: 'messages', event: 'INSERT' },
+      () => refreshChats(),
+    );
 
     return () => {
       active = false;
-      clearInterval(interval);
+      unsubChats();
+      unsubMessagesForInbox();
     };
   }, [userProfile.uid, initialSelectedChatId]);
 
@@ -128,10 +143,27 @@ export default function ChatSystem({
     }
 
     let active = true;
+    const chatId = selectedChat.id;
+
+    const refreshChatMeta = debounceRealtime(() => {
+      void getSupabaseChats(userProfile.uid).then((loadedChats) => {
+        if (!active) return;
+        loadedChats.sort((a, b) => {
+          const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+          const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+          return timeB - timeA;
+        });
+        setChats(loadedChats);
+        setSelectedChat((prev) => {
+          if (!prev) return prev;
+          return loadedChats.find((c) => c.id === prev.id) ?? prev;
+        });
+      });
+    }, 200);
 
     const loadMessages = async () => {
       try {
-        const loadedMessages = await getSupabaseMessages(selectedChat.id);
+        const loadedMessages = await getSupabaseMessages(chatId);
         if (!active) return;
         setMessages(loadedMessages);
       } catch (err) {
@@ -140,13 +172,30 @@ export default function ChatSystem({
     };
 
     loadMessages();
-    const interval = setInterval(loadMessages, 2500);
+
+    const unsubMessages = subscribePostgresChanges<Message>(
+      {
+        channelName: `live-messages-${chatId}`,
+        table: 'messages',
+        event: 'INSERT',
+        filter: `chatId=eq.${chatId}`,
+      },
+      (payload) => {
+        const row = payload.new as Message | null;
+        if (!row?.id || !active) return;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === row.id)) return prev;
+          return [...prev, row];
+        });
+        refreshChatMeta();
+      },
+    );
 
     return () => {
       active = false;
-      clearInterval(interval);
+      unsubMessages();
     };
-  }, [selectedChat]);
+  }, [selectedChat?.id, userProfile.uid]);
 
   const sendChatText = async (text: string) => {
     if (!selectedChat || !text.trim() || isSending) return false;

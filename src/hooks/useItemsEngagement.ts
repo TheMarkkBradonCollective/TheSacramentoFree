@@ -1,11 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
-import { ItemComment, UserProfile } from '../types';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { ItemComment, ItemVote, UserProfile } from '../types';
 import {
   createSupabaseItemComment,
   getSupabaseItemComments,
   getSupabaseItemVotes,
   setSupabaseItemVote,
 } from '../supabase';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 export interface PostVoteState {
   userVote: 'up' | 'down' | null;
@@ -22,6 +23,7 @@ export function useItemsEngagement(
   const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
 
   const uid = userProfile?.uid ?? '';
+  const itemIdSetRef = useRef(new Set<string>());
 
   const getVotesForPost = useCallback(
     (postId: string): PostVoteState =>
@@ -76,6 +78,83 @@ export function useItemsEngagement(
       mounted = false;
     };
   }, [itemIds.join('|'), uid]);
+
+  useEffect(() => {
+    itemIdSetRef.current = new Set(itemIds);
+  }, [itemIds.join('|')]);
+
+  const reloadEngagementForItems = useCallback(
+    debounceRealtime(async (ids: string[]) => {
+      if (!uid || ids.length === 0) return;
+      const tracked = ids.filter((id) => itemIdSetRef.current.has(id));
+      if (tracked.length === 0) return;
+
+      const [votes, comments] = await Promise.all([
+        getSupabaseItemVotes(tracked),
+        getSupabaseItemComments(tracked),
+      ]);
+
+      setItemVotes((prev) => {
+        const next = { ...prev };
+        for (const itemId of tracked) {
+          const votesForItem = votes.filter((v) => v.itemId === itemId);
+          next[itemId] = {
+            userVote: (votesForItem.find((v) => v.userId === uid)?.voteType || null) as
+              | 'up'
+              | 'down'
+              | null,
+            upvotes: votesForItem.filter((v) => v.voteType === 'up').length,
+            downvotes: votesForItem.filter((v) => v.voteType === 'down').length,
+          };
+        }
+        return next;
+      });
+
+      setItemComments((prev) => {
+        const next = { ...prev };
+        for (const itemId of tracked) {
+          next[itemId] = comments.filter((c) => c.itemId === itemId);
+        }
+        return next;
+      });
+    }, 150),
+    [uid],
+  );
+
+  useEffect(() => {
+    if (!uid || itemIds.length === 0) return;
+
+    const unsubVotes = subscribePostgresChanges<ItemVote>(
+      { channelName: 'live-item-votes', table: 'item_votes', event: '*' },
+      (payload) => {
+        const row = (payload.new || payload.old) as ItemVote | null;
+        if (!row?.itemId || !itemIdSetRef.current.has(row.itemId)) return;
+        if (row.userId === uid && payload.eventType !== 'DELETE') return;
+        reloadEngagementForItems([row.itemId]);
+      },
+    );
+
+    const unsubComments = subscribePostgresChanges<ItemComment>(
+      { channelName: 'live-item-comments', table: 'item_comments', event: '*' },
+      (payload) => {
+        const row = payload.new as ItemComment | null;
+        if (payload.eventType !== 'INSERT' || !row?.itemId) return;
+        if (!itemIdSetRef.current.has(row.itemId)) return;
+        if (row.userId === uid) return;
+
+        setItemComments((prev) => {
+          const list = prev[row.itemId] ?? [];
+          if (list.some((c) => c.id === row.id)) return prev;
+          return { ...prev, [row.itemId]: [...list, row] };
+        });
+      },
+    );
+
+    return () => {
+      unsubVotes();
+      unsubComments();
+    };
+  }, [uid, itemIds.join('|'), reloadEngagementForItems]);
 
   const handleVote = (itemId: string, posterUserId: string, direction: 'up' | 'down') => {
     if (!uid || posterUserId === uid) return;

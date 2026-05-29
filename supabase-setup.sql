@@ -174,6 +174,29 @@ ON storage.objects FOR DELETE
 USING (bucket_id = 'items');
 
 -- =========================================================
+-- 8. REALTIME — live feed, chat, votes without page refresh
+-- Run once in SQL Editor. Safe to re-run (skips tables already added).
+-- =========================================================
+DO $$
+DECLARE
+  tbl TEXT;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY[
+    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'users'
+  ]
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+        AND schemaname = 'public'
+        AND tablename = tbl
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', tbl);
+    END IF;
+  END LOOP;
+END $$;
+
+-- =========================================================
 -- OPTIONAL: set community director role (run after you sign up)
 -- UPDATE public.users SET role = 'director' WHERE email = 'you@example.com';
 -- =========================================================

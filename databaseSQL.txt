@@ -5,3 +5,5 @@
 -- ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
 --
 -- CLAIMS (inbox "This neighbor claimed it" + profile counters): run section 7 in supabase-setup.sql
+--
+-- LIVE UPDATES (no refresh for new posts/messages/votes): run section 8 in supabase-setup.sql

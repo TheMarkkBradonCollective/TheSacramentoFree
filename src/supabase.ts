@@ -292,8 +292,12 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
   }
 }
 
-function normalizeItemFromRow(row: ItemPost): ItemPost {
+export function normalizeSupabaseItem(row: ItemPost): ItemPost {
   return normalizeItemMedia(row);
+}
+
+function normalizeItemFromRow(row: ItemPost): ItemPost {
+  return normalizeSupabaseItem(row);
 }
 
 function isMissingImageUrlColumnError(error: { code?: string; message?: string } | null): boolean {
