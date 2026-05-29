@@ -4,6 +4,7 @@ import {
   ChevronUp,
   MapPin,
   MessageSquare,
+  Pencil,
   Tag,
   Trash2,
 } from 'lucide-react';
@@ -26,6 +27,7 @@ interface ItemCardProps {
   onToggleComments: () => void;
   onAddComment: (text: string) => void;
   onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active') => void;
+  onEdit: () => void;
   onDelete: () => void;
   onMessage: () => void;
 }
@@ -41,6 +43,7 @@ export default function ItemCard({
   onToggleComments,
   onAddComment,
   onUpdateStatus,
+  onEdit,
   onDelete,
   onMessage,
 }: ItemCardProps) {
@@ -229,6 +232,16 @@ export default function ItemCard({
 
           {isOwner ? (
             <div className="flex flex-wrap gap-1 justify-end">
+              <button
+                type="button"
+                disabled={updating}
+                onClick={onEdit}
+                className="sbn-btn sbn-btn-sm sbn-btn-secondary"
+                title="Edit listing"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit
+              </button>
               {item.status === 'active' ? (
                 <>
                   <button

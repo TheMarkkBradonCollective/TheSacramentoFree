@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType, mapGPSToPercent } from '../types';
-import { createSupabaseItem, uploadItemImage } from '../supabase';
-import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin } from 'lucide-react';
+import { createSupabaseItem, updateSupabaseItem, uploadItemImage } from '../supabase';
+import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
 
@@ -75,13 +75,46 @@ const findClosestNeighborhoodByPercent = (x: number, y: number): string => {
   return closest;
 };
 
-interface PostItemModalProps {
-  userProfile: UserProfile;
-  onClose: () => void;
-  onSuccess: (newItem: ItemPost) => void;
+function parseItemForEdit(item: ItemPost) {
+  let description = item.description || '';
+  let collectionMethod = ISO_DELIVERY_PREFS[0];
+
+  if (item.type === 'looking') {
+    const transportMatch = description.match(/^\[TRANSPORT:\s*(.+?)\]\s*\n\n/s);
+    if (transportMatch) {
+      collectionMethod = transportMatch[1].trim();
+      description = description.slice(transportMatch[0].length);
+    }
+  }
+
+  const gpsMatch = description.match(/\n\n\[GPS:\s*([\d.]+),([\d.]+)\]\s*$/);
+  let customCoords: { x: number; y: number } | null = null;
+  if (gpsMatch) {
+    customCoords = { x: parseFloat(gpsMatch[1]), y: parseFloat(gpsMatch[2]) };
+    description = description.slice(0, gpsMatch.index);
+  }
+
+  const photoMatch = description.match(/\n\n\[Photo\]:\s*(https?:\/\/\S+)\s*$/);
+  if (photoMatch) {
+    description = description.slice(0, photoMatch.index);
+  }
+
+  return {
+    description: description.trim(),
+    collectionMethod,
+    customCoords,
+  };
 }
 
-export default function PostItemModal({ userProfile, onClose, onSuccess }: PostItemModalProps) {
+interface PostItemModalProps {
+  userProfile: UserProfile;
+  editItem?: ItemPost | null;
+  onClose: () => void;
+  onSuccess: (item: ItemPost) => void;
+}
+
+export default function PostItemModal({ userProfile, editItem = null, onClose, onSuccess }: PostItemModalProps) {
+  const isEditing = !!editItem;
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<PostType>('giveaway');
@@ -100,6 +133,33 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
   const [gpsStatus, setGpsStatus] = useState('');
   const [showMiniMap, setShowMiniMap] = useState(false);
   const [customCoords, setCustomCoords] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!editItem) return;
+
+    const parsed = parseItemForEdit(editItem);
+    setTitle(editItem.title);
+    setDescription(parsed.description);
+    setType(editItem.type);
+    setNeighborhood(editItem.neighborhood);
+    setCollectionMethod(parsed.collectionMethod);
+    setCustomCoords(parsed.customCoords);
+    setShowMiniMap(!!parsed.customCoords);
+    setImageFile(null);
+    setImagePreview(editItem.imageUrl || '');
+    setErrorMsg('');
+    setGpsStatus('');
+
+    if (editItem.type === 'looking') {
+      setIsoCategory(
+        ISO_CATEGORIES.includes(editItem.category) ? editItem.category : ISO_CATEGORIES[0],
+      );
+    } else {
+      setCategory(
+        ITEM_CATEGORIES.includes(editItem.category) ? editItem.category : ITEM_CATEGORIES[0],
+      );
+    }
+  }, [editItem]);
 
   const handleDetectGPS = () => {
     setGpsLoading(true);
@@ -171,28 +231,29 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
     setIsSubmitting(true);
     setErrorMsg('');
 
-    // Generate accurate path ID safely
-    const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const itemId = isEditing && editItem
+      ? editItem.id
+      : `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    let uploadedUrl = '';
+    let imageUrl = isEditing && editItem ? editItem.imageUrl : undefined;
     if (imageFile) {
       try {
         const url = await uploadItemImage(imageFile, itemId);
-        if (url) {
-          uploadedUrl = url;
+        if (url?.startsWith('http://') || url?.startsWith('https://')) {
+          imageUrl = url;
         }
       } catch (err) {
-        console.warn('Image uploading failed, fallback behavior handles local cache:', err);
+        console.warn('Image uploading failed:', err);
       }
     }
 
     const finalCategory = type === 'looking' ? isoCategory : category;
     const gpsSuffix = customCoords ? `\n\n[GPS: ${customCoords.x.toFixed(2)},${customCoords.y.toFixed(2)}]` : '';
-    const finalDescription = (type === 'looking' 
+    const finalDescription = (type === 'looking'
       ? `[TRANSPORT: ${collectionMethod}]\n\n${description.trim()}`
       : description.trim()) + gpsSuffix;
 
-    const newItem: ItemPost = {
+    const listing: ItemPost = {
       id: itemId,
       title: title.trim(),
       description: finalDescription,
@@ -202,26 +263,37 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
       userDisplayName: userProfile.displayName,
       userPhotoURL: userProfile.photoURL,
       neighborhood,
-      status: 'active',
-      createdAt: new Date().toISOString(),
+      status: isEditing && editItem ? editItem.status : 'active',
+      createdAt: isEditing && editItem ? editItem.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      imageUrl: uploadedUrl || undefined
+      imageUrl,
     };
 
     try {
-      const result = await createSupabaseItem(newItem, userProfile);
+      const result = isEditing
+        ? await updateSupabaseItem(listing)
+        : await createSupabaseItem(listing, userProfile);
 
       if (!result.ok) {
         setIsSubmitting(false);
-        setErrorMsg(result.errorMessage || 'Unable to publish listing. Please try again.');
+        setErrorMsg(
+          result.errorMessage ||
+            (isEditing ? 'Unable to save changes. Please try again.' : 'Unable to publish listing. Please try again.'),
+        );
         return;
       }
 
-      onSuccess(newItem);
+      onSuccess(listing);
       onClose();
     } catch (err) {
       setIsSubmitting(false);
-      setErrorMsg(err instanceof Error ? err.message : 'Unable to publish listing. Please try again.');
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : isEditing
+            ? 'Unable to save changes. Please try again.'
+            : 'Unable to publish listing. Please try again.',
+      );
     }
   };
 
@@ -233,10 +305,20 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
         <div className="flex items-center justify-between px-6 py-5 border-b border-app bg-accent-soft/50">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 bg-accent text-on-accent rounded-xl flex items-center justify-center">
-              {type === 'looking' ? <Search className="w-4 h-4" /> : <Gift className="w-4 h-4" />}
+              {isEditing ? (
+                <Pencil className="w-4 h-4" />
+              ) : type === 'looking' ? (
+                <Search className="w-4 h-4" />
+              ) : (
+                <Gift className="w-4 h-4" />
+              )}
             </div>
             <h3 className="text-base font-bold text-app font-display">
-              {type === 'looking' ? 'Request something' : 'Give something away'}
+              {isEditing
+                ? 'Edit listing'
+                : type === 'looking'
+                  ? 'Request something'
+                  : 'Give something away'}
             </h3>
           </div>
           <button
@@ -585,9 +667,17 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               disabled={isSubmitting}
               className="flex-1 py-3 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting 
-                ? (type === 'looking' ? 'Posting...' : 'Sharing...') 
-                : (type === 'looking' ? 'Post Request' : 'Share Item')}
+              {isSubmitting
+                ? isEditing
+                  ? 'Saving...'
+                  : type === 'looking'
+                    ? 'Posting...'
+                    : 'Sharing...'
+                : isEditing
+                  ? 'Save changes'
+                  : type === 'looking'
+                    ? 'Post Request'
+                    : 'Share Item'}
             </button>
           </div>
         </form>

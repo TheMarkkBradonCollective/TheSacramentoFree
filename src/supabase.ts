@@ -372,6 +372,58 @@ export async function createSupabaseItem(
   }
 }
 
+function buildItemUpdatePayload(item: ItemPost, includeImageUrl: boolean) {
+  const payload: Record<string, unknown> = {
+    title: item.title,
+    description: item.description,
+    type: item.type,
+    category: item.category,
+    neighborhood: item.neighborhood,
+    userDisplayName: item.userDisplayName,
+    userPhotoURL: item.userPhotoURL || null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (includeImageUrl && item.imageUrl) {
+    if (item.imageUrl.startsWith('http://') || item.imageUrl.startsWith('https://')) {
+      payload.imageUrl = item.imageUrl;
+    }
+  }
+
+  return payload;
+}
+
+export async function updateSupabaseItem(
+  item: ItemPost,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    let payload = buildItemUpdatePayload(item, true);
+    let { error } = await supabase.from('items').update(payload).eq('id', item.id);
+
+    if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
+      const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
+      payload = buildItemUpdatePayload({ ...item, description: descriptionWithImage }, false);
+      ({ error } = await supabase.from('items').update(payload).eq('id', item.id));
+    }
+
+    if (error) {
+      console.error('updateSupabaseItem error:', error.code, error.message);
+      handleSupabaseError(error, 'items');
+      const hint = isMissingImageUrlColumnError(error)
+        ? ' Database is missing the imageUrl column — run the SQL fix in Supabase (see databaseSQL.txt).'
+        : '';
+      return { ok: false, errorMessage: (error.message || 'Could not update listing.') + hint };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: any) {
+    console.error('updateSupabaseItem exception:', err);
+    handleSupabaseError(err, 'items');
+    return { ok: false, errorMessage: err?.message || 'Could not update listing.' };
+  }
+}
+
 export async function updateSupabaseItemStatus(itemId: string, status: string): Promise<boolean> {
   try {
     const { error } = await supabase

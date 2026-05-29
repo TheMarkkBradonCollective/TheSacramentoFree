@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile, ItemComment } from '../types';
 import { Search as SearchIcon, MapPin, Tag, AlertCircle } from 'lucide-react';
 import ItemCard from './ItemCard';
+import PostItemModal from './PostItemModal';
 import {
   updateSupabaseItemStatus,
   deleteSupabaseItem,
@@ -36,6 +37,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   const [itemComments, setItemComments] = useState<Record<string, ItemComment[]>>({});
 
   const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
+  const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
 
   const getVotesForPost = (postId: string): PostVoteState => itemVotes[postId] || { userVote: null, upvotes: 0, downvotes: 0 };
   const getCommentsForPost = (postId: string): ItemComment[] => itemComments[postId] || [];
@@ -201,6 +203,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   });
 
   return (
+    <>
     <div className="space-y-6" id="item_feed_wrapper">
       <div className="sbn-card p-5" id="filter_panel">
         <div className="flex flex-col lg:flex-row gap-3">
@@ -317,6 +320,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
               onToggleComments={() => toggleComments(item.id)}
               onAddComment={(text) => handleAddComment(item.id, text)}
               onUpdateStatus={(status) => handleUpdateStatus(item.id, status)}
+              onEdit={() => setEditingItem(item)}
               onDelete={() => handleDeleteItem(item.id)}
               onMessage={() =>
                 onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)
@@ -326,5 +330,18 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
         </div>
       )}
     </div>
+
+    {editingItem && (
+      <PostItemModal
+        userProfile={userProfile}
+        editItem={editingItem}
+        onClose={() => setEditingItem(null)}
+        onSuccess={() => {
+          setEditingItem(null);
+          onRefresh();
+        }}
+      />
+    )}
+    </>
   );
 }
