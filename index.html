@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content" />
     <title>Sacramento Buy Nothing — Free Local Gifting</title>
     <meta name="description" content="Sacramento Buy Nothing — give away items and request what you need, completely free. No selling, no bidding, no flipping. Neighbors helping neighbors." />
     <link rel="manifest" href="/manifest.json" />
@@ -25,6 +25,9 @@
         document.documentElement.style.colorScheme = t;
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', t === 'light' ? '#ffffff' : '#000000');
+        if (localStorage.getItem('sbn_profile_cache_v1')) {
+          document.documentElement.classList.add('sbn-session-restore');
+        }
       })();
     </script>
   </head>

@@ -31,6 +31,15 @@ import {
 } from './supabase';
 import { APP_LOGO_SRC, SITE } from './siteContent';
 import { AppTab, parseAppTab } from './lib/appTabs';
+import {
+  readCachedProfile,
+  readCachedItems,
+  writeCachedProfile,
+  writeCachedItems,
+  clearSessionCache,
+  sessionStubFromProfile,
+} from './lib/sessionCache';
+import AppBootSplash from './components/AppBootSplash';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -51,9 +60,19 @@ function withTabInHistoryState(tab: AppTab) {
   return { [TAB_HISTORY_KEY]: tab };
 }
 
+function readInitialAuthState() {
+  const cachedProfile = readCachedProfile();
+  return {
+    sessionUser: cachedProfile ? sessionStubFromProfile(cachedProfile) : null,
+    userProfile: cachedProfile,
+    items: readCachedItems(),
+  };
+}
+
 export default function App() {
-  const [sessionUser, setSessionUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const initialAuth = readInitialAuthState();
+  const [sessionUser, setSessionUser] = useState<any>(initialAuth.sessionUser);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(initialAuth.userProfile);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
@@ -67,7 +86,7 @@ export default function App() {
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
-  const [items, setItems] = useState<ItemPost[]>([]);
+  const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
   const visibleItems = useMemo(
     () => items.filter((item) => !blockedUserIds.has(item.userId)),
@@ -255,7 +274,10 @@ export default function App() {
   /** Enter the app immediately from auth metadata — DB sync runs in background. */
   const applySession = useCallback((user: any) => {
     setSessionUser(user);
-    setUserProfile(profileFromAuthUser(user));
+    setUserProfile((prev) => {
+      if (prev?.uid === user.id) return prev;
+      return profileFromAuthUser(user);
+    });
     setIsAuthLoading(false);
     setAuthBootstrapping(false);
   }, []);
@@ -267,13 +289,14 @@ export default function App() {
 
     try {
       const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
-      if (fromDb) {
-        if (isDirectorUser(user.id, user.email)) {
-          fromDb.role = 'director';
+        if (fromDb) {
+          if (isDirectorUser(user.id, user.email)) {
+            fromDb.role = 'director';
+          }
+          setUserProfile(fromDb);
+          writeCachedProfile(fromDb);
+          return;
         }
-        setUserProfile(fromDb);
-        return;
-      }
 
       const seed = profileFromAuthUser(user);
       void upsertSupabaseProfile(seed);
@@ -317,6 +340,7 @@ export default function App() {
         } else {
           setSessionUser(null);
           setUserProfile(null);
+          clearSessionCache();
         }
       } catch (err) {
         if (!cancelled) {
@@ -343,6 +367,7 @@ export default function App() {
         }, 0);
       } else if (event === 'SIGNED_OUT') {
         profileSyncRef.current = null;
+        clearSessionCache();
         setSessionUser(null);
         setUserProfile(null);
         setIsAuthLoading(false);
@@ -364,9 +389,12 @@ export default function App() {
     try {
       const loadedItems = await getSupabaseItems();
       setItems(loadedItems);
+      if (loadedItems.length > 0) {
+        writeCachedItems(loadedItems);
+      }
     } catch (err) {
       console.warn('Supabase items fetch failed:', err);
-      setItems(DEFAULT_OFFLINE_ITEMS);
+      setItems((current) => (current.length === 0 ? DEFAULT_OFFLINE_ITEMS : current));
     } finally {
       if (!isBackground) {
         setIsItemsLoading(false);
@@ -377,10 +405,18 @@ export default function App() {
   // 2. Load listings once, then keep in sync via Supabase Realtime
   useEffect(() => {
     if (!userProfile) {
-      setItems([]);
+      if (!authBootstrapping) {
+        setItems([]);
+      }
       return;
     }
     loadItems(false);
+  }, [userProfile?.uid, authBootstrapping, loadItems]);
+
+  useEffect(() => {
+    if (userProfile) {
+      writeCachedProfile(userProfile);
+    }
   }, [userProfile]);
 
   useItemsRealtime(!!userProfile, setItems);
@@ -502,8 +538,10 @@ export default function App() {
     try {
       await supabase.auth.signOut();
     } catch (_) {}
+    clearSessionCache();
     setSessionUser(null);
     setUserProfile(null);
+    setItems([]);
     setActiveTab('map');
   };
 
@@ -642,19 +680,15 @@ export default function App() {
 
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
-      {/* 2. Authentication Landing View */}
-      {!sessionUser ? (
+      {authBootstrapping && !sessionUser ? (
+        <AppBootSplash />
+      ) : !sessionUser ? (
         <PublicSite
           onEmailSignIn={handleEmailSignIn}
           onEmailSignUp={handleEmailSignUp}
           errorMsg={errorMsg}
           isAuthLoading={isAuthLoading}
         />
-      ) : authBootstrapping ? (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center mesh-bg">
-          <div className="w-11 h-11 border-2 border-accent border-t-transparent rounded-full animate-spin" aria-hidden />
-          <p className="font-display text-lg font-bold text-app">Loading…</p>
-        </div>
       ) : (
         <>
           {!userProfile ? (

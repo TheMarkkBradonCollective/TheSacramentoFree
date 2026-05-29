@@ -64,8 +64,8 @@ export default function MobileView({
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
 
   return (
-    <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-app text-app">
-      <header className="shrink-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-50">
+    <div id="mobile_device_workspace" className="sbn-mobile-shell flex flex-col bg-app text-app">
+      <header className="sbn-mobile-header sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2">
         <BrandLogo
           imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
           subtitle={userProfile.neighborhood}
@@ -86,7 +86,7 @@ export default function MobileView({
 
       <main
         id="mobile_viewport_card"
-        className="relative flex-1 min-h-0 overflow-hidden"
+        className="sbn-mobile-main"
       >
         {/* Keep map mounted so Leaflet keeps size; hide when another tab is active */}
         <div
@@ -156,7 +156,8 @@ export default function MobileView({
           <button
             type="button"
             onClick={onOpenNewPost}
-            className="sbn-fab fixed bottom-20 right-4 z-20"
+            className="sbn-fab fixed right-4 z-20"
+            style={{ bottom: 'calc(var(--sbn-mobile-nav-h) + 1rem)' }}
             aria-label="New post"
           >
             <Plus className="w-6 h-6" />
@@ -214,7 +215,7 @@ export default function MobileView({
         </div>
       </main>
 
-      <footer id="mobile_sticky_footer_nav" className="shrink-0 sbn-mobile-nav z-50">
+      <footer id="mobile_sticky_footer_nav" className="sbn-mobile-nav">
         <div className="grid grid-cols-5 h-[4.25rem] px-1">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button

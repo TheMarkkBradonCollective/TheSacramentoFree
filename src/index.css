@@ -63,8 +63,27 @@ body {
   overflow-x: hidden;
 }
 
+/* Lock page scroll on mobile app shell so header/nav stay pinned */
+html:has(#mobile_device_workspace),
+html:has(#mobile_device_workspace) body {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: none;
+}
+
 #root {
   overflow-x: hidden;
+}
+
+/* Branded placeholder before React mounts (returning users only) */
+html.sbn-session-restore #root:empty {
+  min-height: 100svh;
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, var(--color-accent-soft), transparent 55%);
 }
 
 /* Leaflet must fill the mobile main pane (avoids theme bg blanking the map) */
@@ -384,8 +403,47 @@ button {
   z-index: 1;
 }
 
+/* Mobile app shell — fixed chrome, stable viewport height */
+:root {
+  --sbn-mobile-header-h: calc(3.5rem + env(safe-area-inset-top, 0px));
+  --sbn-mobile-nav-h: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+.sbn-mobile-shell {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100svh;
+  max-height: 100svh;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+.sbn-mobile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.sbn-mobile-main {
+  position: fixed;
+  top: var(--sbn-mobile-header-h);
+  bottom: var(--sbn-mobile-nav-h);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+
 /* Mobile bottom nav */
 .sbn-mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   padding-bottom: env(safe-area-inset-bottom, 0);
