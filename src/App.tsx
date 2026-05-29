@@ -324,11 +324,7 @@ export default function App() {
 
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await withTimeout(
-          supabase.auth.getSession(),
-          5000,
-          { data: { session: null }, error: null },
-        );
+        const { data: { session }, error } = await supabase.auth.getSession();
         if (cancelled) return;
         if (error) {
           console.warn('Error checking supabase session:', error);
@@ -337,7 +333,8 @@ export default function App() {
         if (session?.user) {
           applySession(session.user);
           void syncProfileFromDb(session.user);
-        } else {
+        } else if (!readCachedProfile()) {
+          // Only clear when there is no cached session hint — avoids wiping UI on slow refresh.
           setSessionUser(null);
           setUserProfile(null);
           clearSessionCache();
@@ -382,13 +379,19 @@ export default function App() {
   }, [applySession, syncProfileFromDb]);
 
   const loadItems = useCallback(async (isBackground = false) => {
-    if (!userProfile) return;
+    if (!userProfile || !sessionUser) return;
     if (!isBackground) {
       setIsItemsLoading(true);
     }
     try {
       const loadedItems = await getSupabaseItems();
-      setItems(loadedItems);
+      setItems((current) => {
+        if (loadedItems.length === 0 && current.length > 0) {
+          console.warn('Items fetch returned empty — keeping cached listings until auth syncs.');
+          return current;
+        }
+        return loadedItems;
+      });
       if (loadedItems.length > 0) {
         writeCachedItems(loadedItems);
       }
@@ -400,18 +403,20 @@ export default function App() {
         setIsItemsLoading(false);
       }
     }
-  }, [userProfile?.uid]);
+  }, [userProfile?.uid, sessionUser]);
 
-  // 2. Load listings once, then keep in sync via Supabase Realtime
+  const sessionReady = !!sessionUser && !!userProfile && !authBootstrapping;
+
+  // 2. Load listings once auth is ready, then keep in sync via Supabase Realtime
   useEffect(() => {
-    if (!userProfile) {
-      if (!authBootstrapping) {
+    if (!sessionReady) {
+      if (!userProfile && !authBootstrapping) {
         setItems([]);
       }
       return;
     }
     loadItems(false);
-  }, [userProfile?.uid, authBootstrapping, loadItems]);
+  }, [sessionReady, userProfile?.uid, loadItems, authBootstrapping]);
 
   useEffect(() => {
     if (userProfile) {
@@ -419,8 +424,8 @@ export default function App() {
     }
   }, [userProfile]);
 
-  useItemsRealtime(!!userProfile, setItems);
-  useAuthorProfilesRealtime(!!userProfile, setItems);
+  useItemsRealtime(sessionReady, setItems);
+  useAuthorProfilesRealtime(sessionReady, setItems);
 
   // Keep detail view in sync when this listing changes live (not on unrelated feed updates)
   useEffect(() => {
