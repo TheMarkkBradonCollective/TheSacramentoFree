@@ -26,6 +26,7 @@ import {
   getOrCreateSupabaseChat,
   updateSupabaseItemStatus,
   deleteSupabaseItem,
+  isAccountRestricted,
 } from './supabase';
 import { APP_LOGO_SRC, SITE } from './siteContent';
 
@@ -631,6 +632,8 @@ export default function App() {
     }
   }, [blockedUserIds, viewProfileUid, detailItem, initialSelectedChatId, userProfile]);
 
+  const accountRestriction = isAccountRestricted(userProfile);
+
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {/* 2. Authentication Landing View */}
@@ -650,6 +653,24 @@ export default function App() {
         <>
           {!userProfile ? (
             <Onboarding user={sessionUser} onComplete={handleOnboardingComplete} />
+          ) : accountRestriction.restricted ? (
+            <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center mesh-bg">
+              <h1 className="font-display text-xl font-bold text-app">
+                {accountRestriction.reason === 'banned'
+                  ? 'Account disabled'
+                  : 'Account suspended'}
+              </h1>
+              <p className="text-sm text-muted max-w-md leading-relaxed">
+                {accountRestriction.reason === 'banned'
+                  ? 'Your account has been disabled by community staff. Contact the Buy Nothing team if you believe this is a mistake.'
+                  : accountRestriction.suspendedUntil
+                    ? `Your account is suspended until ${new Date(accountRestriction.suspendedUntil).toLocaleString()}. You cannot use the app until then.`
+                    : 'Your account is temporarily suspended.'}
+              </p>
+              <button type="button" onClick={handleLogOut} className="sbn-btn sbn-btn-secondary">
+                Sign out
+              </button>
+            </div>
           ) : (
             <>
                {deviceType === 'mobile' ? (

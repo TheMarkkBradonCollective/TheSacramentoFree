@@ -59,8 +59,8 @@ export default function MobileView({
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
 
   return (
-    <div id="mobile_device_workspace" className="relative h-[100dvh] overflow-hidden bg-app text-app">
-      <header className="fixed top-0 left-0 right-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-50">
+    <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-app text-app">
+      <header className="shrink-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-50">
         <BrandLogo
           imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
           subtitle={userProfile.neighborhood}
@@ -81,7 +81,7 @@ export default function MobileView({
 
       <main
         id="mobile_viewport_card"
-        className="fixed top-[4.25rem] bottom-[4.25rem] left-0 right-0 z-0 overflow-hidden"
+        className="relative flex-1 min-h-0 overflow-hidden"
       >
         {/* Keep map mounted so Leaflet keeps size; hide when another tab is active */}
         <div
@@ -127,7 +127,7 @@ export default function MobileView({
         </div>
 
         <div
-          className={`h-full w-full min-h-0 overflow-y-auto p-4 pb-24 ${activeTab === 'feed' ? '' : 'hidden'}`}
+          className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 ${activeTab === 'feed' ? '' : 'hidden'}`}
           id="mobile_directory_drawer"
           aria-hidden={activeTab !== 'feed'}
         >
@@ -187,13 +187,13 @@ export default function MobileView({
             userProfile={userProfile}
             onUpdateProfile={onUpdateProfile}
             onProfilePhotoSaved={onRefresh}
-            onViewMember={onViewProfile}
+            onViewProfile={onViewProfile}
             fullBleed
           />
         </div>
       </main>
 
-      <footer id="mobile_sticky_footer_nav" className="fixed bottom-0 left-0 right-0 sbn-mobile-nav z-50">
+      <footer id="mobile_sticky_footer_nav" className="shrink-0 sbn-mobile-nav z-50">
         <div className="grid grid-cols-4 h-[4.25rem] px-2">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button

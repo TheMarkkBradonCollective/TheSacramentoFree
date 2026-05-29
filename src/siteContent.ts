@@ -134,8 +134,6 @@ export const IN_APP = {
   chatsDescription: 'Comment or message to arrange pickup. Keep every exchange free and friendly.',
   profileTitle: 'Your Community Profile',
   accountTabLabel: 'Account',
-  teamDirectoryButton: 'Community members',
-  teamDirectoryHint: 'View all neighbors and manage roles.',
   onboardingTitle: 'Join Sacramento Buy Nothing',
   onboardingBody:
     'Set up your profile to give away items, request what you need, and connect with neighbors — completely free.',

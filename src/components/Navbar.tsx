@@ -17,7 +17,7 @@ const TABS: { id: 'feed' | 'map' | 'chats' | 'profile'; label: string }[] = [
   { id: 'map', label: 'Map' },
   { id: 'feed', label: 'Feed' },
   { id: 'chats', label: 'Messages' },
-  { id: 'profile', label: 'Profile' },
+  { id: 'profile', label: IN_APP.accountTabLabel },
 ];
 
 export default function Navbar({

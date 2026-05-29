@@ -68,30 +68,30 @@ export function isStaffRole(role?: UserProfile['role']): boolean {
   );
 }
 
-/** Director + City Manager can browse the full member list. */
-export function canManageTeamMembers(role?: UserProfile['role']): boolean {
-  const normalized = normalizeUserRole(role);
-  return normalized === 'director' || normalized === 'city_manager';
+/** Staff neighbor directory (all staff roles). */
+export function canAccessStaffDirectory(role?: UserProfile['role']): boolean {
+  return isStaffRole(role);
 }
 
-/** Whether this leader may edit the target neighbor's role. */
-export function canAssignRolesToUser(
-  actorRole?: UserProfile['role'],
-  targetRole?: UserProfile['role'],
-): boolean {
-  const actor = normalizeUserRole(actorRole);
-  const target = normalizeUserRole(targetRole);
-  if (!canManageTeamMembers(actor)) return false;
-  if (actor === 'city_manager' && target === 'director') return false;
-  return true;
+/** Director + City Manager audit log. */
+export function canViewAuditLog(role?: UserProfile['role']): boolean {
+  const r = normalizeUserRole(role);
+  return r === 'director' || r === 'city_manager';
 }
 
-/** Role options shown in team management for the acting user. */
-export function assignableRoleOptionsFor(actorRole?: UserProfile['role']) {
-  const actor = normalizeUserRole(actorRole);
-  if (actor === 'director') return ASSIGNABLE_ROLE_OPTIONS;
-  if (actor === 'city_manager') {
-    return ASSIGNABLE_ROLE_OPTIONS.filter((option) => option.value !== 'director');
-  }
-  return [];
+/** Suspend / unsuspend (mods and above). */
+export function canStaffSuspend(role?: UserProfile['role']): boolean {
+  return isStaffRole(role);
+}
+
+/** Platform ban / unban (admins and above — not city moderator). */
+export function canStaffBan(role?: UserProfile['role']): boolean {
+  const r = normalizeUserRole(role);
+  return r === 'city_administrator' || r === 'city_manager' || r === 'director';
+}
+
+/** Edit neighbor profile fields (manager + director). */
+export function canStaffEditUser(role?: UserProfile['role']): boolean {
+  const r = normalizeUserRole(role);
+  return r === 'city_manager' || r === 'director';
 }

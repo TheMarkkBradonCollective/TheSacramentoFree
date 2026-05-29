@@ -17,6 +17,8 @@
 --
 -- DM REQUESTS (request to message from neighbor profile): run section 9 in supabase-setup.sql
 --
+-- STAFF MODERATION (suspend / ban + audit log): run sections 10–11 in supabase-setup.sql
+--
 -- LIVE UPDATES (no refresh for new posts/messages/votes/blocks/requests): run the REALTIME block in supabase-setup.sql
 --
 -- PROFILE PHOTOS: run the avatars bucket block in supabase-setup.sql (storage section)

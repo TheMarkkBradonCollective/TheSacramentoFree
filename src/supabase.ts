@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow } from './types';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole } from './lib/roles';
+import { normalizeUserRole, type UserRole, canStaffBan, canStaffEditUser, canStaffSuspend, canViewAuditLog } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -208,6 +208,36 @@ function sanitizePhotoUrlForDb(url?: string | null): string | null {
   return null;
 }
 
+function normalizeAccountStatus(
+  row: Record<string, unknown>,
+): { accountStatus: AccountStatus; suspendedUntil: string | null } {
+  let accountStatus = (String(row.accountStatus ?? row.account_status ?? 'active') ||
+    'active') as AccountStatus;
+  let suspendedUntil =
+    typeof row.suspendedUntil === 'string'
+      ? row.suspendedUntil
+      : typeof row.suspended_until === 'string'
+        ? row.suspended_until
+        : null;
+
+  if (accountStatus === 'suspended' && suspendedUntil) {
+    if (new Date(suspendedUntil).getTime() <= Date.now()) {
+      accountStatus = 'active';
+      suspendedUntil = null;
+      void supabase
+        .from('users')
+        .update({ accountStatus: 'active', suspendedUntil: null })
+        .eq('uid', String(row.uid ?? ''));
+    }
+  }
+
+  if (accountStatus !== 'active' && accountStatus !== 'suspended' && accountStatus !== 'banned') {
+    accountStatus = 'active';
+  }
+
+  return { accountStatus, suspendedUntil };
+}
+
 function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfile | null {
   if (!row) return null;
   const uid = String(row.uid ?? '');
@@ -218,6 +248,8 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
   const photoURL =
     typeof photoRaw === 'string' && photoRaw.trim() ? sanitizePhotoUrlForDb(photoRaw) : undefined;
 
+  const { accountStatus, suspendedUntil } = normalizeAccountStatus(row);
+
   return {
     uid,
     displayName: String(row.displayName ?? row.display_name ?? 'Neighbor'),
@@ -226,6 +258,8 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     neighborhood: String(row.neighborhood ?? 'Sacramento'),
     bio: typeof row.bio === 'string' ? row.bio : undefined,
     role: normalizeUserRole(row.role),
+    accountStatus,
+    suspendedUntil,
     createdAt: row.createdAt ?? row.created_at,
   };
 }
@@ -936,7 +970,7 @@ export interface CommunityStats {
   requestsFulfilled: number;
 }
 
-/** Director or City Manager: update another user's role. */
+/** Director-only: update another user's role. */
 export async function setUserRole(
   uid: string,
   role: UserRole,
@@ -954,28 +988,6 @@ export async function setUserRole(
     return { ok: true };
   } catch (err: any) {
     return { ok: false, errorMessage: err?.message || 'Could not update role.' };
-  }
-}
-
-/** All registered neighbors — for director / city manager team directory. */
-export async function getAllCommunityUsers(): Promise<UserProfile[]> {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('uid, displayName, photoURL, email, neighborhood, bio, role, createdAt')
-      .order('displayName', { ascending: true });
-
-    if (error) {
-      handleSupabaseError(error, 'users');
-      return [];
-    }
-
-    return (data ?? [])
-      .map((row) => normalizeUserProfileRow(row as Record<string, unknown>))
-      .filter((profile): profile is UserProfile => profile !== null);
-  } catch (err) {
-    console.warn('Failed to load community users:', err);
-    return [];
   }
 }
 
@@ -1663,3 +1675,288 @@ export function filterChatsByBlocked(chats: Chat[], userId: string, hiddenIds: S
     return !otherId || !hiddenIds.has(otherId);
   });
 }
+
+/**
+ * --- STAFF MODERATION ---
+ */
+
+export function isAccountRestricted(profile: UserProfile | null | undefined): {
+  restricted: boolean;
+  reason: 'banned' | 'suspended' | null;
+  suspendedUntil?: string | null;
+} {
+  if (!profile) return { restricted: false, reason: null };
+  if (profile.accountStatus === 'banned') {
+    return { restricted: true, reason: 'banned' };
+  }
+  if (profile.accountStatus === 'suspended') {
+    if (profile.suspendedUntil && new Date(profile.suspendedUntil).getTime() > Date.now()) {
+      return { restricted: true, reason: 'suspended', suspendedUntil: profile.suspendedUntil };
+    }
+  }
+  return { restricted: false, reason: null };
+}
+
+async function writeModerationAudit(params: {
+  actor: UserProfile;
+  target: Pick<UserProfile, 'uid' | 'displayName'>;
+  action: string;
+  detail?: string;
+}): Promise<void> {
+  try {
+    await supabase.from('moderation_audit_log').insert({
+      id: `mod_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      actorUserId: params.actor.uid,
+      actorName: params.actor.displayName,
+      targetUserId: params.target.uid,
+      targetName: params.target.displayName,
+      action: params.action,
+      detail: params.detail ?? null,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('Failed to write moderation audit log:', err);
+  }
+}
+
+export async function getStaffUserDirectory(): Promise<StaffUserRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid, displayName, photoURL, email, neighborhood, bio, role, accountStatus, suspendedUntil, createdAt')
+      .order('displayName', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      handleSupabaseError(error, 'users');
+      return [];
+    }
+
+    return (data ?? [])
+      .map((row) => normalizeUserProfileRow(row as Record<string, unknown>))
+      .filter((p): p is UserProfile => !!p)
+      .map((p) => ({
+        ...p,
+        accountStatus: p.accountStatus ?? 'active',
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getModerationAuditLog(limit = 100): Promise<ModerationAuditEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from('moderation_audit_log')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      return [];
+    }
+
+    return (data ?? []).map((row) => ({
+      id: String(row.id),
+      actorUserId: String(row.actorUserId),
+      actorName: String(row.actorName),
+      targetUserId: String(row.targetUserId),
+      targetName: String(row.targetName),
+      action: String(row.action),
+      detail: row.detail ? String(row.detail) : null,
+      createdAt: String(row.createdAt),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function staffSuspendUser(params: {
+  actor: UserProfile;
+  targetUserId: string;
+  targetName: string;
+  durationDays: number;
+  note?: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canStaffSuspend(params.actor.role)) {
+    return { ok: false, errorMessage: 'You do not have permission to suspend users.' };
+  }
+  if (params.actor.uid === params.targetUserId) {
+    return { ok: false, errorMessage: 'You cannot suspend yourself.' };
+  }
+
+  const until = new Date();
+  until.setDate(until.getDate() + params.durationDays);
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        accountStatus: 'suspended',
+        suspendedUntil: until.toISOString(),
+        moderationNote: params.note?.trim() || null,
+      })
+      .eq('uid', params.targetUserId);
+
+    if (error) {
+      if (error.code === '42703') {
+        return { ok: false, errorMessage: 'Run section 10 in supabase-setup.sql (account moderation columns).' };
+      }
+      return { ok: false, errorMessage: error.message };
+    }
+
+    await writeModerationAudit({
+      actor: params.actor,
+      target: { uid: params.targetUserId, displayName: params.targetName },
+      action: 'suspend',
+      detail: `${params.durationDays} day(s) until ${until.toLocaleString()}${params.note ? ` — ${params.note}` : ''}`,
+    });
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not suspend user.' };
+  }
+}
+
+export async function staffUnsuspendUser(params: {
+  actor: UserProfile;
+  targetUserId: string;
+  targetName: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canStaffSuspend(params.actor.role)) {
+    return { ok: false, errorMessage: 'You do not have permission to unsuspend users.' };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ accountStatus: 'active', suspendedUntil: null, moderationNote: null })
+      .eq('uid', params.targetUserId);
+
+    if (error) return { ok: false, errorMessage: error.message };
+
+    await writeModerationAudit({
+      actor: params.actor,
+      target: { uid: params.targetUserId, displayName: params.targetName },
+      action: 'unsuspend',
+    });
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not unsuspend user.' };
+  }
+}
+
+export async function staffBanUser(params: {
+  actor: UserProfile;
+  targetUserId: string;
+  targetName: string;
+  note?: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canStaffBan(params.actor.role)) {
+    return { ok: false, errorMessage: 'You do not have permission to ban users.' };
+  }
+  if (params.actor.uid === params.targetUserId) {
+    return { ok: false, errorMessage: 'You cannot ban yourself.' };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        accountStatus: 'banned',
+        suspendedUntil: null,
+        moderationNote: params.note?.trim() || null,
+      })
+      .eq('uid', params.targetUserId);
+
+    if (error) {
+      if (error.code === '42703') {
+        return { ok: false, errorMessage: 'Run section 10 in supabase-setup.sql (account moderation columns).' };
+      }
+      return { ok: false, errorMessage: error.message };
+    }
+
+    await writeModerationAudit({
+      actor: params.actor,
+      target: { uid: params.targetUserId, displayName: params.targetName },
+      action: 'ban',
+      detail: params.note?.trim() || 'Platform ban',
+    });
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not ban user.' };
+  }
+}
+
+export async function staffUnbanUser(params: {
+  actor: UserProfile;
+  targetUserId: string;
+  targetName: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canStaffBan(params.actor.role)) {
+    return { ok: false, errorMessage: 'You do not have permission to unban users.' };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ accountStatus: 'active', suspendedUntil: null, moderationNote: null })
+      .eq('uid', params.targetUserId);
+
+    if (error) return { ok: false, errorMessage: error.message };
+
+    await writeModerationAudit({
+      actor: params.actor,
+      target: { uid: params.targetUserId, displayName: params.targetName },
+      action: 'unban',
+    });
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not unban user.' };
+  }
+}
+
+export async function staffUpdateUserProfile(params: {
+  actor: UserProfile;
+  targetUserId: string;
+  targetName: string;
+  displayName: string;
+  neighborhood: string;
+  bio?: string;
+  role?: UserRole;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canStaffEditUser(params.actor.role)) {
+    return { ok: false, errorMessage: 'You do not have permission to edit users.' };
+  }
+
+  try {
+    const payload: Record<string, unknown> = {
+      displayName: params.displayName.trim(),
+      neighborhood: params.neighborhood,
+      bio: params.bio?.trim() || null,
+    };
+    if (params.role && params.actor.role === 'director') {
+      payload.role = params.role;
+    }
+
+    const { error } = await supabase.from('users').update(payload).eq('uid', params.targetUserId);
+    if (error) return { ok: false, errorMessage: error.message };
+
+    await writeModerationAudit({
+      actor: params.actor,
+      target: { uid: params.targetUserId, displayName: params.targetName },
+      action: 'edit_profile',
+      detail: `Updated profile${params.role ? `, role → ${params.role}` : ''}`,
+    });
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not update user.' };
+  }
+}
+
+export { canViewAuditLog };

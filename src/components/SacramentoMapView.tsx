@@ -700,8 +700,8 @@ export default function SacramentoMapView({
           id="leaflet_map_immersive_mobile"
         />
 
-        {/* Mobile map controls — left: +/- on top, Center + New post row below */}
-        <div className="absolute top-14 left-3 z-20 flex flex-col gap-2 pointer-events-auto" id="mobile_map_controls_left">
+        {/* Mobile map controls — zoom top-left; center bottom-left; new post bottom-right */}
+        <div className="absolute top-14 left-3 z-20 pointer-events-auto" id="mobile_map_zoom_controls">
           <div className="flex flex-col bg-surface border border-app p-0.5 rounded-xl shadow-app w-11">
             <button
               onClick={handleZoomIn}
@@ -721,36 +721,34 @@ export default function SacramentoMapView({
               <Minus className="w-5 h-5" />
             </button>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleLocateUser}
-              className={`h-11 min-w-[5.5rem] px-3 rounded-xl shadow-app flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer border font-semibold text-[10px] uppercase tracking-wide ${
-                isLocating
-                  ? 'bg-accent text-on-accent border-accent'
-                  : followUser
-                    ? 'bg-accent text-on-accent border-accent'
-                    : 'bg-surface text-app hover:bg-surface-hover border-app'
-              }`}
-              id="mobile_floating_locator_btn"
-              title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
-            >
-              <Compass className={`w-4 h-4 shrink-0 ${isLocating ? 'animate-spin' : ''}`} />
-              Center
-            </button>
-            {onOpenNewPost && (
-              <button
-                type="button"
-                onClick={onOpenNewPost}
-                className="sbn-fab w-11 h-11 min-w-11 shrink-0"
-                aria-label="New post"
-                id="mobile_map_new_post_btn"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            )}
-          </div>
         </div>
+
+        <button
+          onClick={handleLocateUser}
+          className={`absolute bottom-4 left-4 z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
+            isLocating
+              ? 'bg-accent text-on-accent border-accent'
+              : followUser
+                ? 'bg-accent text-on-accent border-accent'
+                : 'bg-surface text-app hover:bg-surface-hover border-app'
+          }`}
+          id="mobile_floating_locator_btn"
+          title={followUser ? 'Following your location (tap to recenter)' : 'Center on my location'}
+        >
+          <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
+        </button>
+
+        {onOpenNewPost && (
+          <button
+            type="button"
+            onClick={onOpenNewPost}
+            className="sbn-fab absolute bottom-4 right-4 z-20 pointer-events-auto"
+            aria-label="New post"
+            id="mobile_map_new_post_btn"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        )}
 
         {/* Location error toast */}
         {locationError && (
@@ -829,7 +827,7 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Selected Blip floating detours block panel */}
-        <div className="absolute bottom-20 left-4 right-4 z-30 pointer-events-none">
+        <div className="absolute bottom-4 left-4 right-4 z-30 pointer-events-none">
           <AnimatePresence mode="popLayout">
             {selectedPost && (
               <motion.div

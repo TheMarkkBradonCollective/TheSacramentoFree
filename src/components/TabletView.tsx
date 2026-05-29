@@ -33,7 +33,7 @@ const TABS = [
   { id: 'feed' as const, label: 'Feed', icon: List },
   { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'chats' as const, label: 'Messages', icon: MessageSquare },
-  { id: 'profile' as const, label: 'Profile', icon: User },
+  { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ];
 
 export default function TabletView({
@@ -169,7 +169,7 @@ export default function TabletView({
                 userProfile={userProfile}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
-                onViewMember={onViewProfile}
+                onViewProfile={onViewProfile}
               />
             </div>
           </div>

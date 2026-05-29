@@ -1,5 +1,6 @@
 export type PostStatus = 'active' | 'completed' | 'withdrawn';
 export type PostType = 'giveaway' | 'looking';
+export type AccountStatus = 'active' | 'suspended' | 'banned';
 
 export interface UserProfile {
   uid: string;
@@ -9,7 +10,24 @@ export interface UserProfile {
   neighborhood: string;
   bio?: string;
   role?: 'user' | 'city_moderator' | 'city_administrator' | 'city_manager' | 'director';
+  accountStatus?: AccountStatus;
+  suspendedUntil?: string | null;
   createdAt: any;
+}
+
+export interface StaffUserRow extends UserProfile {
+  accountStatus: AccountStatus;
+}
+
+export interface ModerationAuditEntry {
+  id: string;
+  actorUserId: string;
+  actorName: string;
+  targetUserId: string;
+  targetName: string;
+  action: string;
+  detail?: string | null;
+  createdAt: string;
 }
 
 export interface ItemPost {

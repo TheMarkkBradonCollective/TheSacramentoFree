@@ -252,6 +252,40 @@ ON storage.objects FOR DELETE
 USING (bucket_id = 'avatars');
 
 -- =========================================================
+-- 10. Staff account moderation (suspend / platform ban)
+-- =========================================================
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "accountStatus" TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "suspendedUntil" TIMESTAMPTZ;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "moderationNote" TEXT;
+
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_account_status_check;
+ALTER TABLE public.users ADD CONSTRAINT users_account_status_check
+  CHECK ("accountStatus" IN ('active', 'suspended', 'banned'));
+
+-- =========================================================
+-- 11. Moderation audit log (director + city manager review)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.moderation_audit_log (
+  id TEXT PRIMARY KEY,
+  "actorUserId" TEXT NOT NULL,
+  "actorName" TEXT NOT NULL,
+  "targetUserId" TEXT NOT NULL,
+  "targetName" TEXT NOT NULL,
+  action TEXT NOT NULL,
+  detail TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.moderation_audit_log ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read moderation audit log" ON public.moderation_audit_log;
+CREATE POLICY "Allow read moderation audit log" ON public.moderation_audit_log FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write moderation audit log" ON public.moderation_audit_log;
+CREATE POLICY "Allow write moderation audit log" ON public.moderation_audit_log FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS moderation_audit_created_idx ON public.moderation_audit_log ("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS moderation_audit_target_idx ON public.moderation_audit_log ("targetUserId");
+
+-- =========================================================
 -- 8. REALTIME — live feed, chat, votes without page refresh
 -- Run once in SQL Editor. Safe to re-run (skips tables already added).
 -- =========================================================
@@ -260,7 +294,7 @@ DECLARE
   tbl TEXT;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
-    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'users', 'user_blocks', 'message_requests'
+    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log'
   ]
   LOOP
     IF NOT EXISTS (

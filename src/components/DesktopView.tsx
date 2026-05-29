@@ -116,7 +116,7 @@ export default function DesktopView({
                 userProfile={userProfile}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
-                onViewMember={onViewProfile}
+                onViewProfile={onViewProfile}
               />
             </div>
           </div>

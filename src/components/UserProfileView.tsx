@@ -22,21 +22,21 @@ import {
   ChevronUp,
   ChevronDown,
   Camera,
-  Users,
 } from 'lucide-react';
 import CommunityFooter from './CommunityFooter';
+import StaffModerationPanel from './StaffModerationPanel';
+import { canAccessStaffDirectory } from '../lib/roles';
 import { IN_APP } from '../siteContent';
-import TeamDirectoryPanel from './TeamDirectoryPanel';
-import { canManageTeamMembers } from '../lib/roles';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
   onUpdateProfile: (updated: UserProfile) => void;
   /** Refresh feed/listings after avatar is saved */
   onProfilePhotoSaved?: () => void;
+  /** Open another neighbor's profile (staff directory). */
+  onViewProfile?: (userId: string) => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
   fullBleed?: boolean;
-  onViewMember?: (userId: string) => void;
 }
 
 function sanitizeRemotePhoto(url?: string): string | undefined {
@@ -49,8 +49,8 @@ export default function UserProfileView({
   userProfile,
   onUpdateProfile,
   onProfilePhotoSaved,
+  onViewProfile,
   fullBleed = false,
-  onViewMember,
 }: UserProfileViewProps) {
   const [displayName, setDisplayName] = useState(userProfile.displayName);
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
@@ -63,8 +63,6 @@ export default function UserProfileView({
   const [stats, setStats] = useState<NeighborStats | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [showTeamDirectory, setShowTeamDirectory] = useState(false);
-  const showTeamTools = canManageTeamMembers(userProfile.role);
 
   useEffect(() => {
     getNeighborStats(userProfile.uid).then(setStats);
@@ -320,23 +318,6 @@ export default function UserProfileView({
             </div>
           </div>
 
-          {showTeamTools && (
-            <div className="mt-4 w-full">
-              <button
-                type="button"
-                onClick={() => setShowTeamDirectory(true)}
-                className="sbn-btn sbn-btn-secondary w-full flex items-center justify-center gap-2"
-                id="profile_team_directory_btn"
-              >
-                <Users className="w-4 h-4 shrink-0" />
-                {IN_APP.teamDirectoryButton}
-              </button>
-              <p className="text-[10px] text-muted text-center mt-2 leading-snug">
-                {IN_APP.teamDirectoryHint}
-              </p>
-            </div>
-          )}
-
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
             Joined our sharing circle: {new Date(userProfile.createdAt?.seconds ? userProfile.createdAt.seconds * 1000 : userProfile.createdAt).toLocaleDateString()}
           </p>
@@ -587,17 +568,15 @@ export default function UserProfileView({
         </div>
       </div>
 
+      {canAccessStaffDirectory(userProfile.role) && onViewProfile && (
+        <div className={fullBleed ? `${sectionShell} border-t-0` : ''}>
+          <StaffModerationPanel viewer={userProfile} onViewProfile={onViewProfile} />
+        </div>
+      )}
+
       <div className={fullBleed ? '' : 'mt-6'}>
         <CommunityFooter compact />
       </div>
-
-      {showTeamDirectory && onViewMember && (
-        <TeamDirectoryPanel
-          currentUserId={userProfile.uid}
-          onClose={() => setShowTeamDirectory(false)}
-          onViewMember={onViewMember}
-        />
-      )}
     </div>
   );
 }
