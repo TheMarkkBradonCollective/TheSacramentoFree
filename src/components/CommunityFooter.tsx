@@ -14,8 +14,8 @@ export default function CommunityFooter({ compact = false }: { compact?: boolean
   return (
     <footer className="border-t border-app bg-surface rounded-2xl p-5 mt-6 space-y-4">
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-xl bg-[#FF4500]/10 border border-[#FF4500]/20 shrink-0">
-          <Heart className="w-4 h-4 text-[#FF4500]" />
+        <div className="p-2 rounded-xl bg-accent-soft border border-accent/20 shrink-0">
+          <Heart className="w-4 h-4 text-accent" />
         </div>
         <div>
           <h3 className="text-sm font-black text-app">{SITE.name}</h3>

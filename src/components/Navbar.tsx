@@ -40,12 +40,12 @@ export default function Navbar({
               />
             ) : (
               <>
-                <div className="px-2.5 py-2.5 bg-[#FF4500] text-white rounded-xl flex items-center justify-center shadow-sm">
-                  <Gift className="w-5 h-5 text-app" />
+                <div className="px-2.5 py-2.5 bg-accent text-on-accent rounded-xl flex items-center justify-center shadow-sm">
+                  <Gift className="w-5 h-5" />
                 </div>
                 <div>
                   <h1 className="text-base font-bold tracking-tight text-app leading-none font-display">
-                    Sacramento <span className="text-[#FF4500] font-light">Buy Nothing</span>
+                    Sacramento <span className="text-accent font-light">Buy Nothing</span>
                   </h1>
                   <span className="text-[10px] font-medium text-muted tracking-normal block mt-0.5">
                     {IN_APP.brandSubtitle}
@@ -70,7 +70,7 @@ export default function Navbar({
               >
                 <span>Community Feed</span>
                 {activeTab === 'feed' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF4500] rounded-t-full" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-accent rounded-t-full" />
                 )}
               </button>
 
@@ -84,10 +84,10 @@ export default function Navbar({
                     : 'text-muted hover:text-app'
                 }`}
               >
-                <MapPin className="w-4 h-4 text-[#FF4500] shrink-0" />
+                <MapPin className="w-4 h-4 text-accent shrink-0" />
                 <span>Neighborhood Map</span>
                 {activeTab === 'map' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF4500] rounded-t-full" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-accent rounded-t-full" />
                 )}
               </button>
 
@@ -101,10 +101,10 @@ export default function Navbar({
                     : 'text-muted hover:text-app'
                 }`}
               >
-                <MessageSquare className="w-4 h-4 text-[#FF4500]" />
+                <MessageSquare className="w-4 h-4 text-accent" />
                 <span>Messages</span>
                 {activeTab === 'chats' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF4500] rounded-t-full" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-accent rounded-t-full" />
                 )}
               </button>
 
@@ -121,7 +121,7 @@ export default function Navbar({
                 <User className="w-4 h-4 text-app" />
                 <span>My Profile</span>
                 {activeTab === 'profile' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF4500] rounded-t-full" />
+                  <span className="absolute bottom-0 left-0 w-full h-[3px] bg-accent rounded-t-full" />
                 )}
               </button>
             </nav>
@@ -134,10 +134,10 @@ export default function Navbar({
               <>
                 {/* Neighborhood Badge */}
                 <div 
-                  className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-surface border border-app rounded-full text-[10px] font-bold text-[#FF4500] uppercase tracking-wider"
+                  className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-surface border border-app rounded-full text-[10px] font-bold text-accent uppercase tracking-wider"
                   id="neighborhood_display_badge"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#FF4500]" />
+                  <MapPin className="w-3.5 h-3.5 text-accent" />
                   <span>{userProfile.neighborhood}</span>
                 </div>
 
@@ -145,7 +145,7 @@ export default function Navbar({
                 <button
                   id="navbar_create_post_btn"
                   onClick={onOpenNewPost}
-                  className="inline-flex items-center space-x-1.5 py-2 px-4 bg-[#FF4500] hover:bg-[#E03D00] text-white text-xs font-bold tracking-wide rounded-xl shadow-md transition-colors cursor-pointer"
+                  className="inline-flex items-center space-x-1.5 py-2 px-4 bg-accent hover:bg-accent-hover text-on-accent text-xs font-bold tracking-wide rounded-xl shadow-md transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>{IN_APP.shareOrRequest}</span>
@@ -162,7 +162,7 @@ export default function Navbar({
                 </button>
               </>
             ) : (
-              <span className="text-[10px] font-black tracking-widest text-[#FF4500] uppercase font-mono">{SITE.name.toUpperCase()}</span>
+              <span className="text-[10px] font-black tracking-widest text-accent uppercase font-mono">{SITE.name.toUpperCase()}</span>
             )}
           </div>
         </div>

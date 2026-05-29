@@ -42,12 +42,12 @@ export default function TabletView({
       {/* Tablet Header Navigator */}
       <header id="tablet_navbar" className="sticky top-0 z-40 bg-surface border-b border-app text-app p-4 flex items-center justify-between shadow-md">
         <div className="flex items-center space-x-3 select-none" id="tablet_brand">
-          <div className="p-2 bg-[#FF4500] text-white rounded-xl flex items-center justify-center">
+          <div className="p-2 bg-accent text-on-accent rounded-xl flex items-center justify-center">
             <Layers className="w-4 h-4" />
           </div>
           <div className="text-left">
             <h1 className="text-sm font-bold tracking-tight text-app font-display leading-none">
-              Sacramento <span className="text-[#FF4500] font-bold">Buy Nothing</span>
+              Sacramento <span className="text-accent font-bold">Buy Nothing</span>
             </h1>
             <span className="text-[10px] font-medium text-muted tracking-normal block mt-0.5">
               {IN_APP.brandSubtitle}
@@ -62,7 +62,7 @@ export default function TabletView({
             onClick={() => setActiveTab('feed')}
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'feed'
-                ? 'bg-[#FF4500] text-white border-[#FF4500]'
+                ? 'bg-accent text-on-accent border-[#FF4500]'
                 : 'bg-inset border-app text-[#D4D4D8] hover:text-app'
             }`}
           >
@@ -75,11 +75,11 @@ export default function TabletView({
             onClick={() => setActiveTab('map')}
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'map'
-                ? 'bg-[#FF4500] text-white border-[#FF4500]'
+                ? 'bg-accent text-on-accent border-[#FF4500]'
                 : 'bg-inset border-app text-[#D4D4D8] hover:text-app'
             }`}
           >
-            <Compass className="w-3.5 h-3.5 text-[#FF4500]" />
+            <Compass className="w-3.5 h-3.5 text-accent" />
             <span>Explore Map</span>
           </button>
 
@@ -88,7 +88,7 @@ export default function TabletView({
             onClick={() => setActiveTab('chats')}
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'chats'
-                ? 'bg-[#FF4500] text-white border-[#FF4500]'
+                ? 'bg-accent text-on-accent border-[#FF4500]'
                 : 'bg-inset border-app text-[#D4D4D8] hover:text-app'
             }`}
           >
@@ -101,7 +101,7 @@ export default function TabletView({
             onClick={() => setActiveTab('profile')}
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'profile'
-                ? 'bg-[#FF4500] text-white border-[#FF4500]'
+                ? 'bg-accent text-on-accent border-[#FF4500]'
                 : 'bg-inset border-app text-[#D4D4D8] hover:text-app'
             }`}
           >
@@ -116,7 +116,7 @@ export default function TabletView({
           <button
             id="tablet_header_post"
             onClick={onOpenNewPost}
-            className="px-4 py-2 bg-[#FF4500] hover:bg-[#E03D00] text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer inline-flex items-center"
+            className="px-4 py-2 bg-accent hover:bg-accent-hover text-on-accent text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer inline-flex items-center"
           >
             <Plus className="w-3.5 h-3.5 mr-1" />
             <span>{IN_APP.shareOrRequest}</span>

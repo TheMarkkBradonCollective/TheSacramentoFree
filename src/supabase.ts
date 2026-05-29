@@ -31,7 +31,7 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read users" ON public.users;
 CREATE POLICY "Allow public read users" ON public.users FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow insert and update" ON public.users;
-CREATE POLICY "Allow insert and update" ON public.users FOR ALL USING (true);
+CREATE POLICY "Allow insert and update" ON public.users FOR ALL USING (true) WITH CHECK (true);
 
 -- 2. Create Items listings
 CREATE TABLE IF NOT EXISTS public.items (
@@ -194,7 +194,9 @@ export async function getSupabaseProfile(uid: string): Promise<UserProfile | nul
   }
 }
 
-export async function upsertSupabaseProfile(profile: UserProfile): Promise<boolean> {
+export async function upsertSupabaseProfile(
+  profile: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
     const payload = {
       uid: profile.uid,
@@ -204,24 +206,22 @@ export async function upsertSupabaseProfile(profile: UserProfile): Promise<boole
       neighborhood: profile.neighborhood,
       bio: profile.bio || null,
       role: profile.email?.toLowerCase() === 'sigsecspec@gmail.com' ? 'director' : (profile.role || 'user'),
-      createdAt: profile.createdAt ? new Date(profile.createdAt).toISOString() : new Date().toISOString()
+      createdAt: profile.createdAt ? new Date(profile.createdAt).toISOString() : new Date().toISOString(),
     };
 
-    const { error } = await supabase
-      .from('users')
-      .upsert(payload, { onConflict: 'uid' });
+    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'uid' });
 
     if (error) {
       handleSupabaseError(error, 'users');
-      return false;
+      return { ok: false, errorMessage: error.message };
     }
 
     setSupabaseConfigurationState(true);
-    return true;
+    return { ok: true };
   } catch (err: any) {
     console.error('Supabase profile upsert error:', err);
     handleSupabaseError(err, 'users');
-    return false;
+    return { ok: false, errorMessage: String(err?.message || err) };
   }
 }
 

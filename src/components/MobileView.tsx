@@ -47,7 +47,7 @@ export default function MobileView({
       <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between bg-surface text-app px-4 py-3 shadow-lg border border-app rounded-2xl" id="mobile_floating_header">
         <div className="flex items-center space-x-2">
           <div className="w-2.5 h-2.5 rounded-full bg-[#FF4500] animate-ping" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF4500]">{SITE.shortName}</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-accent">{SITE.shortName}</span>
         </div>
         <div className="text-[10px] font-bold uppercase tracking-wider text-app truncate max-w-[100px]" id="mobile_neighborhood_header">
           {userProfile.neighborhood.toUpperCase()} CIRCLE
@@ -85,7 +85,7 @@ export default function MobileView({
                 id="pill_all_types"
                 onClick={() => setSelectedMobileType('all')}
                 className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'all' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
+                  selectedMobileType === 'all' ? 'bg-accent text-on-accent border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
                 }`}
               >
                 All Circle Gifts
@@ -94,7 +94,7 @@ export default function MobileView({
                 id="pill_gives_only"
                 onClick={() => setSelectedMobileType('giveaway')}
                 className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'giveaway' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
+                  selectedMobileType === 'giveaway' ? 'bg-accent text-on-accent border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
                 }`}
               >
                 Gives 🎁
@@ -103,7 +103,7 @@ export default function MobileView({
                 id="pill_asks_only"
                 onClick={() => setSelectedMobileType('looking')}
                 className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'looking' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
+                  selectedMobileType === 'looking' ? 'bg-accent text-on-accent border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
                 }`}
               >
                 Asks 🔍
@@ -115,7 +115,7 @@ export default function MobileView({
               {/* New Post Action */}
               <button
                 onClick={onOpenNewPost}
-                className="w-14 h-14 bg-[#FF4500] hover:bg-[#E03D00] text-white shadow-2xl flex items-center justify-center rounded-full border-2 border-[#1A1A1B] focus:outline-hidden transition-transform active:scale-95 cursor-pointer"
+                className="w-14 h-14 bg-accent hover:bg-accent-hover text-on-accent shadow-2xl flex items-center justify-center rounded-full border-2 border-[#1A1A1B] focus:outline-hidden transition-transform active:scale-95 cursor-pointer"
                 id="mobile_floated_post_action"
                 title="Share or Request"
               >
@@ -176,7 +176,7 @@ export default function MobileView({
             id="mobile_nav_map"
             onClick={() => setActiveTab('map')}
             className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'map' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-muted hover:text-white'
+              activeTab === 'map' ? 'text-accent border-t-2 border-accent bg-accent-soft' : 'text-muted hover:text-app'
             }`}
           >
             <Compass className="w-5 h-5" />
@@ -188,7 +188,7 @@ export default function MobileView({
             id="mobile_nav_feed"
             onClick={() => setActiveTab('feed')}
             className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'feed' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-muted hover:text-white'
+              activeTab === 'feed' ? 'text-accent border-t-2 border-accent bg-accent-soft' : 'text-muted hover:text-app'
             }`}
           >
             <List className="w-5 h-5" />
@@ -200,7 +200,7 @@ export default function MobileView({
             id="mobile_nav_chats"
             onClick={() => setActiveTab('chats')}
             className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'chats' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-muted hover:text-white'
+              activeTab === 'chats' ? 'text-accent border-t-2 border-accent bg-accent-soft' : 'text-muted hover:text-app'
             }`}
           >
             <div className="relative">
@@ -215,7 +215,7 @@ export default function MobileView({
             id="mobile_nav_profile"
             onClick={() => setActiveTab('profile')}
             className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'profile' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-muted hover:text-white'
+              activeTab === 'profile' ? 'text-accent border-t-2 border-accent bg-accent-soft' : 'text-muted hover:text-app'
             }`}
           >
             <User className="w-5 h-5" />

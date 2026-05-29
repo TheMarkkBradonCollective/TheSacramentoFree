@@ -72,11 +72,11 @@ export default function InstallPrompt() {
   return (
     <div 
       id="pwa_install_container" 
-      className="p-4 bg-surface border border-[#FF4500]/50 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-sans text-white mx-4 mt-4 transition-all animate-fade-in"
+      className="p-4 bg-surface border border-[#FF4500]/50 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-sans text-app mx-4 mt-4 transition-all animate-fade-in"
     >
       <div className="flex items-start space-x-3.5 flex-1 min-w-0" id="pwa_text_info">
         <div className="p-2.5 bg-[#FF4500]/15 border border-[#FF4500]/30 rounded-xl flex items-center justify-center shrink-0">
-          <Smartphone className="w-5 h-5 text-[#FF4500]" />
+          <Smartphone className="w-5 h-5 text-accent" />
         </div>
         <div className="text-left min-w-0">
           <h4 className="text-xs font-black text-app uppercase tracking-wider flex items-center gap-1.5 leading-none">
@@ -96,7 +96,7 @@ export default function InstallPrompt() {
           <button
             id="pwa_btn_install"
             onClick={handleInstallClick}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-[#FF4500] hover:bg-[#E03D00] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer shrink-0 transition-colors"
+            className="flex items-center space-x-1.5 px-4 py-2 bg-accent hover:bg-accent-hover text-on-accent text-xs font-bold rounded-xl shadow-md cursor-pointer shrink-0 transition-colors"
           >
             <Download className="w-4 h-4" />
             <span>Install App</span>
@@ -104,7 +104,7 @@ export default function InstallPrompt() {
         )}
         {isIOS && (
           <div className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-800 border border-zinc-700 text-muted text-[10px] font-bold rounded-lg shrink-0">
-            <Share className="w-3.5 h-3.5 text-[#FF4500]" />
+            <Share className="w-3.5 h-3.5 text-accent" />
             <span>Tap Share icon</span>
           </div>
         )}

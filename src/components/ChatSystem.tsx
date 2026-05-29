@@ -176,18 +176,18 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
   };
 
   return (
-    <div className="bg-white rounded-none overflow-hidden h-[calc(100vh-12rem)] flex shadow-xs border border-zinc-200 mb-2 font-sans" id="chat_app_viewport">
+    <div className="bg-surface rounded-none overflow-hidden h-[calc(100vh-12rem)] flex shadow-xs border border-app mb-2 font-sans text-app" id="chat_app_viewport">
       
       {/* Sidebar List - Responsive collapse */}
       <div 
-        className={`w-full md:w-80 border-r border-zinc-200 flex flex-col shrink-0 ${
+        className={`w-full md:w-80 border-r border-app flex flex-col shrink-0 ${
           selectedChat ? 'hidden md:flex' : 'flex'
         }`}
         id="chats_sidebar"
       >
-        <div className="p-4 border-b border-zinc-200 bg-zinc-55 flex items-center justify-between">
-          <h3 className="text-xs font-black text-black tracking-widest uppercase">ACTIVE CHATS</h3>
-          <span className="px-2.5 py-0.5 bg-black border border-black text-app text-[9px] font-black uppercase tracking-widest">
+        <div className="p-4 border-b border-app bg-inset flex items-center justify-between">
+          <h3 className="text-xs font-black text-app tracking-widest uppercase">ACTIVE CHATS</h3>
+          <span className="px-2.5 py-0.5 bg-accent border border-accent text-on-accent text-[9px] font-black uppercase tracking-widest">
             {chats.length} active
           </span>
         </div>
@@ -199,7 +199,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
            ) : chats.length === 0 ? (
              <div className="p-8 text-center text-xs text-muted">
                <MessageSquare className="w-8 h-8 text-muted mx-auto mb-3" />
-               <p className="font-bold text-zinc-900 uppercase tracking-widest text-[10px]">No matches routed</p>
+               <p className="font-bold text-app uppercase tracking-widest text-[10px]">No matches routed</p>
                <p className="text-[10px] text-subtle mt-1.5 font-semibold">{IN_APP.chatsDescription}</p>
              </div>
            ) : (
@@ -216,10 +216,10 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                      setSelectedChat(chat);
                      onClearInitialChat();
                    }}
-                   className={`p-4 flex items-start space-x-3.5 cursor-pointer select-none transition-all border-b border-zinc-100 ${
+                   className={`p-4 flex items-start space-x-3.5 cursor-pointer select-none transition-all border-b border-app ${
                      isSelected 
-                       ? 'bg-zinc-100 border-l-[3px] border-l-brand-orange' 
-                       : 'hover:bg-zinc-50 border-l-[3px] border-l-transparent'
+                       ? 'bg-accent-soft border-l-[3px] border-l-brand-orange' 
+                       : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
                    }`}
                  >
                    <img
@@ -230,7 +230,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                    />
                    <div className="flex-1 min-w-0">
                      <div className="flex items-center justify-between">
-                       <p className="text-xs font-black text-black uppercase tracking-tight truncate" title={displayTitle}>{displayTitle}</p>
+                       <p className="text-xs font-black text-app uppercase tracking-tight truncate" title={displayTitle}>{displayTitle}</p>
                        {chat.lastMessageAt && (
                         <span className="text-[8.5px] text-muted font-mono font-bold">
                           {new Date(chat.lastMessageAt.seconds ? chat.lastMessageAt.seconds * 1000 : chat.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -240,7 +240,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                     
                     {/* Item Post Context */}
                     {chat.itemTitle && (
-                      <span className="inline-flex mt-1.5 items-center space-x-1 text-[8.5px] font-black text-black bg-zinc-100 border border-zinc-200 px-2 py-0.5 uppercase tracking-widest truncate max-w-full">
+                      <span className="inline-flex mt-1.5 items-center space-x-1 text-[8.5px] font-black text-app bg-inset border border-app px-2 py-0.5 uppercase tracking-widest truncate max-w-full">
                         <Box className="w-2.5 h-2.5 text-brand-orange" />
                         <span>{chat.itemTitle}</span>
                       </span>
@@ -259,8 +259,8 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
 
       {/* Primary Conversation pane */}
       <div 
-        className={`flex-1 flex flex-col bg-zinc-50 ${
-          !selectedChat ? 'hidden md:flex items-center justify-center bg-[#F6F6F6]' : 'flex'
+        className={`flex-1 flex flex-col bg-app ${
+          !selectedChat ? 'hidden md:flex items-center justify-center bg-app-secondary' : 'flex'
         }`}
         id="conversations_body_viewport"
       >
@@ -273,7 +273,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
             return (
               <>
                 {/* Thread Header */}
-                <div className="px-5 py-4 border-b border-zinc-200 bg-white flex items-center justify-between shadow-3xs" id="chat_panel_header">
+                <div className="px-5 py-4 border-b border-app bg-surface flex items-center justify-between shadow-3xs" id="chat_panel_header">
                   <div className="flex items-center space-x-3.5 min-w-0">
                     {/* Back button on mobile */}
                     <button
@@ -282,7 +282,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                         setSelectedChat(null);
                         onClearInitialChat();
                       }}
-                      className="p-1.5 text-muted hover:text-black hover:bg-zinc-100 rounded-none md:hidden shrink-0 cursor-pointer"
+                      className="p-1.5 text-muted hover:text-app hover:bg-surface-hover rounded-none md:hidden shrink-0 cursor-pointer"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -295,7 +295,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                     />
                     
                     <div className="min-w-0">
-                      <h4 className="text-xs font-black text-black truncate uppercase tracking-widest" title={displayTitleHeader}>
+                      <h4 className="text-xs font-black text-app truncate uppercase tracking-widest" title={displayTitleHeader}>
                         {displayTitleHeader}
                       </h4>
                       {selectedChat.itemTitle ? (
@@ -340,14 +340,14 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                           <div
                             className={`max-w-[70%] rounded-none px-4 py-3 text-xs font-semibold shadow-3xs ${
                               isUser
-                                ? 'bg-black text-app'
-                                : 'bg-white border border-zinc-200 text-black'
+                                ? 'bg-accent text-on-accent'
+                                : 'bg-surface border border-app text-app'
                             }`}
                           >
                             <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
                             <span 
                               className={`text-[8px] font-mono mt-1 w-full block text-right font-black uppercase tracking-wider ${
-                                isUser ? 'text-muted' : 'text-subtle'
+                                isUser ? 'text-white/80' : 'text-subtle'
                               }`}
                             >
                               {formatTime(msg.createdAt) || 'sending...'}
@@ -361,9 +361,9 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                 </div>
 
                 {/* Message input tray */}
-                <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-zinc-200 flex flex-col space-y-2" id="input_tray">
+                <form onSubmit={handleSendMessage} className="p-4 bg-surface border-t border-app flex flex-col space-y-2" id="input_tray">
                   {isChatDisabled && (
-                    <div className="p-2.5 bg-zinc-100 border border-zinc-200 text-subtle text-[10px] font-bold uppercase tracking-wider flex items-center space-x-2 select-none" id="chat_disabled_status_banner">
+                    <div className="p-2.5 bg-inset border border-app text-subtle text-[10px] font-bold uppercase tracking-wider flex items-center space-x-2 select-none" id="chat_disabled_status_banner">
                       <AlertCircle className="w-4 h-4 text-muted shrink-0" />
                       <span>This listing has been claimed/completed. This chat is now read-only.</span>
                     </div>
@@ -378,13 +378,13 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                       maxLength={2000}
                       required
                       disabled={!!isChatDisabled}
-                      className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-black placeholder-zinc-400 font-semibold focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-3 bg-inset border border-app rounded-none text-xs text-app placeholder:text-subtle font-semibold focus:border-accent disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                     <button
                       type="submit"
                       id="message_send_btn"
                       disabled={!inputText.trim() || isSending || !!isChatDisabled}
-                      className="px-5 py-3 bg-black hover:bg-zinc-800 text-app rounded-none font-black text-xs uppercase tracking-widest shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="px-5 py-3 bg-accent hover:bg-accent-hover text-on-accent rounded-none font-black text-xs uppercase tracking-widest shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Send className="w-3.5 h-3.5" />
                     </button>
@@ -394,9 +394,9 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
             );
           })()
         ) : (
-          <div className="text-center py-20 px-4 bg-[#F6F6F6] h-full flex flex-col justify-center items-center" id="messages_not_selected_state">
+          <div className="text-center py-20 px-4 bg-app-secondary h-full flex flex-col justify-center items-center" id="messages_not_selected_state">
             <MessageSquare className="w-12 h-12 text-muted mb-4" />
-            <h3 className="text-xs font-black text-black tracking-widest uppercase">NO ACTIVE CHAT SELECTED</h3>
+            <h3 className="text-xs font-black text-app tracking-widest uppercase">NO ACTIVE CHAT SELECTED</h3>
             <p className="text-xs text-subtle max-w-sm mx-auto mt-2 font-semibold leading-relaxed">
               {IN_APP.chatsDescription}
             </p>

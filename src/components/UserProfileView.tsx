@@ -75,7 +75,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         );
       case 'admin':
         return (
-          <span className="inline-block mt-2 px-3 py-1 bg-[#FF4500] text-white text-[10px] font-bold tracking-wider uppercase rounded-full">
+          <span className="inline-block mt-2 px-3 py-1 bg-accent text-on-accent text-[10px] font-bold tracking-wider uppercase rounded-full">
             🛡️ Circle Admin
           </span>
         );
@@ -87,7 +87,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         );
       default:
         return (
-          <span className="inline-block mt-2 px-3 py-1 bg-inset border border-app text-zinc-350 text-[10px] font-bold tracking-wider uppercase rounded-full">
+          <span className="inline-block mt-2 px-3 py-1 bg-inset border border-app text-muted text-[10px] font-bold tracking-wider uppercase rounded-full">
             🏡 Local Neighbor
           </span>
         );
@@ -118,9 +118,9 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
       };
 
       // Sync to Supabase
-      const success = await upsertSupabaseProfile(updatedProfile);
-      if (!success) {
-        throw new Error('Profile save failed');
+      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile);
+      if (!ok) {
+        throw new Error(errorMessage || 'Profile save failed');
       }
       onUpdateProfile(updatedProfile);
 
@@ -150,8 +150,8 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
           
           {getRoleBadge()}
 
-          <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-xs font-bold text-[#FF4500] mt-3">
-            <MapPin className="w-3.5 h-3.5 text-[#FF4500]" />
+          <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-xs font-bold text-accent mt-3">
+            <MapPin className="w-3.5 h-3.5 text-accent" />
             <span>{userProfile.neighborhood} Sector</span>
           </div>
 
@@ -173,7 +173,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         {/* Settings Form */}
         <div className="md:col-span-2 bg-surface border border-app rounded-2xl p-6 shadow-md" id="profile_credentials_form_box">
           <h3 className="text-lg font-bold text-app tracking-tight mb-5 flex items-center space-x-2 border-b border-app pb-3 font-display">
-            <User className="w-5 h-5 text-[#FF4500]" />
+            <User className="w-5 h-5 text-accent" />
             <span>{IN_APP.profileTitle}</span>
           </h3>
 
@@ -214,7 +214,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                   required
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-white text-xs font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
                 />
               </div>
 
@@ -225,7 +225,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                   id="pref_neighborhood"
                   value={neighborhood}
                   onChange={(e) => setNeighborhood(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-white text-xs font-bold cursor-pointer focus:border-[#FF4500] focus:outline-hidden"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-bold cursor-pointer focus:border-[#FF4500] focus:outline-hidden"
                 >
                   {SACRAMENTO_NEIGHBORHOODS.map((n) => (
                     <option key={n} value={n} className="bg-surface text-app select-dark-opt">{n}</option>
@@ -244,7 +244,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                 placeholder="Tell your neighbors who you are and why sharing matters to your household."
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                className="block w-full p-3 bg-inset border border-app rounded-xl text-xs text-white placeholder:text-subtle font-semibold resize-none focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+                className="block w-full p-3 bg-inset border border-app rounded-xl text-xs text-app placeholder:text-subtle font-semibold resize-none focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
               />
               <div className="text-right text-[10px] text-subtle font-mono font-medium">{bio.length}/500 chars</div>
             </div>
@@ -254,7 +254,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
               type="submit"
               id="profile_save_btn"
               disabled={isSaving}
-              className="w-full flex items-center justify-center space-x-2 py-3.5 bg-[#FF4500] hover:bg-[#E03D00] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center space-x-2 py-3.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
             >
               <Save className="w-4 h-4 text-app" />
               <span>{isSaving ? 'Saving Changes...' : 'Save Profile Changes'}</span>
@@ -268,8 +268,8 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-app/70 pb-6 mb-6">
           <div className="max-w-xl">
             <div className="flex items-center gap-2 mb-2">
-              <Smartphone className="w-4 h-4 text-[#FF4500]" />
-              <span className="text-[10px] text-[#FF4500] font-black uppercase tracking-widest font-mono">Mobile App Download Hub</span>
+              <Smartphone className="w-4 h-4 text-accent" />
+              <span className="text-[10px] text-accent font-black uppercase tracking-widest font-mono">Mobile App Download Hub</span>
             </div>
             <h3 className="text-base font-bold text-app tracking-tight">Run Sacramento Buy Nothing on your Phone</h3>
             <p className="text-xs text-muted mt-1 leading-relaxed">
@@ -286,7 +286,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
             ) : deferredPrompt ? (
               <button
                 onClick={triggerDirectPWAInstall}
-                className="inline-flex items-center space-x-2 px-5 py-3.5 bg-[#FF4500] hover:bg-[#E03D00] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md hover:scale-[1.02] cursor-pointer"
+                className="inline-flex items-center space-x-2 px-5 py-3.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md hover:scale-[1.02] cursor-pointer"
                 id="pwa_install_direct_trigger"
               >
                 <Download className="w-4 h-4" />
@@ -308,7 +308,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                 onClick={() => setActiveManualPlatform('ios')}
                 className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'ios'
-                    ? 'border-[#FF4500] text-white'
+                    ? 'bg-accent border-accent text-on-accent'
                     : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >
@@ -318,7 +318,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                 onClick={() => setActiveManualPlatform('android')}
                 className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'android'
-                    ? 'border-[#FF4500] text-white'
+                    ? 'bg-accent border-accent text-on-accent'
                     : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >
@@ -328,7 +328,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                 onClick={() => setActiveManualPlatform('chrome')}
                 className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'chrome'
-                    ? 'border-[#FF4500] text-white'
+                    ? 'bg-accent border-accent text-on-accent'
                     : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >

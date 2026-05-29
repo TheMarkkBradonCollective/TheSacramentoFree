@@ -230,7 +230,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-app bg-app">
           <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 bg-[#FF4500] text-white rounded-xl flex items-center justify-center">
+            <div className="p-1.5 bg-accent text-on-accent rounded-xl flex items-center justify-center">
               {type === 'looking' ? <Search className="w-4 h-4" /> : <Gift className="w-4 h-4" />}
             </div>
             <h3 className="text-sm font-bold text-app tracking-tight font-display">
@@ -301,7 +301,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               value={title}
               maxLength={100}
               onChange={(e) => setTitle(e.target.value)}
-              className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-white font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+              className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-app font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
             />
           </div>
 
@@ -313,7 +313,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                 id="post_category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
               >
                 {ITEM_CATEGORIES.map((c) => (
                   <option key={c} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
@@ -330,7 +330,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     id="post_iso_category"
                     value={isoCategory}
                     onChange={(e) => setIsoCategory(e.target.value)}
-                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
                   >
                     {ISO_CATEGORIES.map((c) => (
                       <option key={c} value={c} className="bg-surface text-app select-dark-opt">{c.toUpperCase()}</option>
@@ -345,7 +345,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     id="post_collection_method"
                     value={collectionMethod}
                     onChange={(e) => setCollectionMethod(e.target.value)}
-                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
                   >
                     {ISO_DELIVERY_PREFS.map((m) => (
                       <option key={m} value={m} className="bg-surface text-app select-dark-opt">{m.toUpperCase()}</option>
@@ -368,7 +368,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     setNeighborhood(e.target.value);
                     setGpsStatus('');
                   }}
-                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
                 >
                   {SACRAMENTO_NEIGHBORHOODS.map((n) => (
                     <option key={`unified_neigh_${n}`} value={n} className="bg-surface text-app select-dark-opt">{n.toUpperCase()}</option>
@@ -384,7 +384,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                 title="Detect current location via GPS"
                 className="px-3.5 bg-inset hover:bg-surface-hover border border-app rounded-xl text-muted flex items-center justify-center cursor-pointer transition-all select-none disabled:opacity-50"
               >
-                <Navigation className={`w-4 h-4 text-muted ${gpsLoading ? 'animate-spin text-[#FF4500]' : ''}`} />
+                <Navigation className={`w-4 h-4 text-muted ${gpsLoading ? 'animate-spin text-accent' : ''}`} />
               </button>
 
               {/* Map Button */}
@@ -415,7 +415,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               <div className="border border-app bg-inset p-2 mt-2 select-none relative rounded-xl" id="sac_mini_map_picker_container">
                 <div className="flex items-center justify-between pb-1.5 border-b border-app mb-2">
                   <span className="text-[8.5px] font-black text-subtle uppercase tracking-widest font-mono">Sacramento District map Grid</span>
-                  <span className="text-[9px] font-extrabold text-[#FF4500] uppercase font-mono">{neighborhood.toUpperCase()} SECTOR</span>
+                  <span className="text-[9px] font-extrabold text-accent uppercase font-mono">{neighborhood.toUpperCase()} SECTOR</span>
                 </div>
                 <div 
                   onClick={(e) => {
@@ -466,7 +466,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                         <span className="relative flex h-5 w-5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF4500] opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-5 w-5 bg-white shadow-xl flex items-center justify-center">
-                            <MapPin className="w-3.5 h-3.5 text-[#FF4500]" />
+                            <MapPin className="w-3.5 h-3.5 text-accent" />
                           </span>
                         </span>
                         <span className="text-[7.5px] bg-black text-app px-1 py-0.5 font-bold uppercase tracking-widest whitespace-nowrap shadow-md mt-1 scale-90">
@@ -530,7 +530,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     }
                   }}
                 />
-                <Camera className="w-6 h-6 text-muted group-hover:text-[#FF4500] transition-colors" />
+                <Camera className="w-6 h-6 text-muted group-hover:text-accent transition-colors" />
                 <div className="text-xs text-muted font-bold tracking-wide">
                   Drag & Drop or Click to Upload
                 </div>
@@ -562,8 +562,8 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
           </div>
 
           {/* Guidelines info notice */}
-          <div className="p-3.5 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-xl flex items-start space-x-2.5 text-xs text-white font-semibold" id="buy_nothing_alert">
-            <Info className="w-4 h-4 text-[#FF4500] shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-accent-soft border border-accent/30 rounded-xl flex items-start space-x-2.5 text-xs text-app font-semibold" id="buy_nothing_alert">
+            <Info className="w-4 h-4 text-accent shrink-0 mt-0.5" />
             <span>{RULES.postReminder}</span>
           </div>
 
@@ -581,7 +581,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               type="submit"
               id="submit_listing_btn"
               disabled={isSubmitting}
-              className="flex-1 py-3 bg-[#FF4500] hover:bg-[#E03D00] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
+              className="flex-1 py-3 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
             >
               {isSubmitting 
                 ? (type === 'looking' ? 'Posting...' : 'Sharing...') 

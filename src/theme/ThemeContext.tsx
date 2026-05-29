@@ -26,7 +26,7 @@ function applyThemeToDocument(theme: Theme) {
   root.style.colorScheme = theme;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute('content', theme === 'light' ? '#ffffff' : '#0B0C0D');
+    meta.setAttribute('content', theme === 'light' ? '#ffffff' : '#000000');
   }
 }
 

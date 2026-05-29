@@ -19,7 +19,7 @@ export default function ThemeToggle({ className = '', showLabel = false }: Theme
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       id="theme_toggle_btn"
     >
-      {isDark ? <Sun className="w-4 h-4 text-[#FF4500]" /> : <Moon className="w-4 h-4 text-[#FF4500]" />}
+      {isDark ? <Sun className="w-4 h-4 text-accent" /> : <Moon className="w-4 h-4 text-accent" />}
       {showLabel && (
         <span className="text-[10px] font-bold uppercase tracking-wider">
           {isDark ? 'Light' : 'Dark'}

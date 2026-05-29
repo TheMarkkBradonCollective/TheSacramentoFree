@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { UserProfile, ItemPost } from './types';
 import Navbar from './components/Navbar';
-import LandingPage from './components/LandingPage';
+import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
 import ItemGrid from './components/ItemGrid';
@@ -28,6 +28,8 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [authBootstrapping, setAuthBootstrapping] = useState(true);
+  const profileLoadRef = useRef<Promise<void> | null>(null);
   const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>('feed');
   const [showPostModal, setShowPostModal] = useState(false);
   const [items, setItems] = useState<ItemPost[]>([]);
@@ -144,17 +146,20 @@ export default function App() {
     }
   }, [deviceType]);
 
-  const handleUserAuthenticated = async (user: any) => {
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+    ]);
+
+  const handleUserAuthenticated = useCallback(async (user: any) => {
     setIsProfileLoading(true);
     setErrorMsg('');
-    
+
     let profile: UserProfile | null = null;
-    
-    // Try Supabase first with a safe timeout
+
     try {
-      const getProfilePromise = getSupabaseProfile(user.id);
-      const profileTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200));
-      profile = await Promise.race([getProfilePromise, profileTimeout]);
+      profile = await withTimeout(getSupabaseProfile(user.id), 8000, null);
     } catch (sbErr) {
       console.warn('Supabase profile fetch failed:', sbErr);
     }
@@ -163,7 +168,6 @@ export default function App() {
       profile.role = 'director';
     }
 
-    // Constructor of temporary cached profile if missing
     if (!profile) {
       profile = {
         uid: user.id,
@@ -173,79 +177,96 @@ export default function App() {
         neighborhood: user.user_metadata?.neighborhood || 'Midtown',
         bio: user.user_metadata?.bio || 'Sacramento Buy Nothing collective member.',
         createdAt: new Date().toISOString(),
-        role: user.email === 'sigsecspec@gmail.com' ? 'director' : 'user'
+        role: user.email === 'sigsecspec@gmail.com' ? 'director' : 'user',
       };
-      
-      try {
-        await upsertSupabaseProfile(profile);
-      } catch (_) {}
+
+      await withTimeout(upsertSupabaseProfile(profile), 8000, { ok: false });
     }
 
     setUserProfile(profile);
     setIsProfileLoading(false);
     setIsAuthLoading(false);
-  };
+  }, []);
+
+  const loadProfileForUser = useCallback(
+    (user: any): Promise<void> => {
+      if (!user?.id) return Promise.resolve();
+      if (profileLoadRef.current) {
+        return profileLoadRef.current;
+      }
+      const task = handleUserAuthenticated(user).finally(() => {
+        if (profileLoadRef.current === task) {
+          profileLoadRef.current = null;
+        }
+      });
+      profileLoadRef.current = task;
+      return task;
+    },
+    [handleUserAuthenticated],
+  );
 
   // 1. Subscribe to Supabase Auth State changes
   useEffect(() => {
-    let authCompleted = false;
-
-    // Safety timeout: Auto-bypass after 1.8 seconds max if database initialization or fetch hangs
-    const safetyTimeout = setTimeout(() => {
-      if (!authCompleted) {
-        console.warn('Database session check didn\'t finish within safety threshold. Auto-bypassing...');
-        setSessionUser(null);
-        setUserProfile(null);
-        setIsAuthLoading(false);
-        setIsProfileLoading(false);
-      }
-    }, 1800);
+    let cancelled = false;
 
     const checkSession = async () => {
       try {
-        // Race the fetch call with a 1200ms timeout promise
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => 
-          setTimeout(() => resolve({ data: { session: null } }), 1200)
-        );
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (cancelled) return;
+        if (error) {
+          console.warn('Error checking supabase session:', error);
+        }
 
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
-        
         if (session?.user) {
+          setIsProfileLoading(true);
           setSessionUser(session.user);
           await handleUserAuthenticated(session.user);
         } else {
           setSessionUser(null);
           setUserProfile(null);
           setIsAuthLoading(false);
+          setIsProfileLoading(false);
         }
       } catch (err) {
-        console.warn('Error checking supabase session:', err);
-        setIsAuthLoading(false);
+        if (!cancelled) {
+          console.warn('Error checking supabase session:', err);
+          setIsAuthLoading(false);
+          setIsProfileLoading(false);
+        }
       } finally {
-        authCompleted = true;
-        clearTimeout(safetyTimeout);
+        if (!cancelled) {
+          setAuthBootstrapping(false);
+        }
       }
     };
 
-    checkSession();
+    void checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+
       if (session?.user) {
+        setIsProfileLoading(true);
         setSessionUser(session.user);
-        await handleUserAuthenticated(session.user);
-      } else {
+        // Defer async work — awaiting inside this callback can deadlock Supabase auth.
+        setTimeout(() => {
+          if (!cancelled) {
+            loadProfileForUser(session.user);
+          }
+        }, 0);
+      } else if (event === 'SIGNED_OUT') {
         setSessionUser(null);
         setUserProfile(null);
         setIsAuthLoading(false);
+        setIsProfileLoading(false);
       }
     });
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
-      clearTimeout(safetyTimeout);
     };
-  }, []);
+  }, [handleUserAuthenticated, loadProfileForUser]);
 
   const loadItems = async (isBackground = false) => {
     if (!userProfile) return;
@@ -303,6 +324,7 @@ export default function App() {
       }
 
       if (data.user) {
+        setIsProfileLoading(true);
         setSessionUser(data.user);
         await handleUserAuthenticated(data.user);
         return true;
@@ -366,6 +388,7 @@ export default function App() {
           throw new Error('Registration completed! Check your email inbox to verify your account.');
         }
 
+        setIsProfileLoading(false);
         setSessionUser(data.user);
         setUserProfile(newProfile);
         setIsAuthLoading(false);
@@ -445,11 +468,18 @@ export default function App() {
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {/* 2. Authentication Landing View */}
       {!sessionUser ? (
-        <LandingPage 
-          onEmailSignIn={handleEmailSignIn} 
-          onEmailSignUp={handleEmailSignUp} 
-          errorMsg={errorMsg} 
+        <PublicSite
+          onEmailSignIn={handleEmailSignIn}
+          onEmailSignUp={handleEmailSignUp}
+          errorMsg={errorMsg}
+          isAuthLoading={isAuthLoading}
         />
+      ) : authBootstrapping || isProfileLoading ? (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center bg-app">
+          <div className="w-10 h-10 border-2 border-[#FF4500] border-t-transparent rounded-full animate-spin" aria-hidden />
+          <p className="text-sm font-semibold text-app">Signing you in…</p>
+          <p className="text-xs text-subtle max-w-xs">Loading your neighbor profile from the community database.</p>
+        </div>
       ) : (
         <>
           {!userProfile ? (
@@ -529,7 +559,7 @@ export default function App() {
                 <Gift className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-[#FF4500]">Download Mobile App</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-accent">Download Mobile App</h4>
                 <p className="text-xs font-bold text-app mt-1">{SITE.name}</p>
                 <div className="text-[11px] text-muted mt-1.5 leading-relaxed font-semibold">
                   {isIOS ? (
@@ -564,7 +594,7 @@ export default function App() {
               </button>
               <button
                 onClick={handleInstallApp}
-                className="px-4 py-2 bg-[#FF4500] hover:bg-[#E03D00] text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-md transition-all flex items-center space-x-1.5 cursor-pointer"
+                className="px-4 py-2 bg-accent hover:bg-accent-hover text-on-accent text-[11px] font-black uppercase tracking-wider rounded-lg shadow-md transition-all flex items-center space-x-1.5 cursor-pointer"
                 id="pwa_banner_install_btn"
               >
                 <span>INSTALL NOW</span>

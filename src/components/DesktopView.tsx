@@ -56,11 +56,11 @@ export default function DesktopView({
               <div>
                 <h2 className="text-sm font-bold text-app tracking-tight font-display text-left">{IN_APP.feedTitle}</h2>
                 <p className="text-xs text-muted mt-1 font-semibold leading-relaxed text-left">
-                  {IN_APP.feedDescription} · <span className="font-bold text-[#FF4500] uppercase font-mono">{userProfile.neighborhood}</span>
+                  {IN_APP.feedDescription} · <span className="font-bold text-accent uppercase font-mono">{userProfile.neighborhood}</span>
                 </p>
               </div>
               <div className="px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/15 rounded-full">
-                <span className="text-[10px] font-bold text-[#FF4500] font-sans">🏡 ACTIVE CIRCLE</span>
+                <span className="text-[10px] font-bold text-accent font-sans">🏡 ACTIVE CIRCLE</span>
               </div>
             </div>
 

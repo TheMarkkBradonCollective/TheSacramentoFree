@@ -12,10 +12,13 @@ interface OnboardingProps {
 
 export default function Onboarding({ user, onComplete }: OnboardingProps) {
   const [displayName, setDisplayName] = useState(user?.user_metadata?.displayName || '');
-  const [neighborhood, setNeighborhood] = useState(SACRAMENTO_NEIGHBORHOODS[0]);
-  const [bio, setBio] = useState('');
+  const [neighborhood, setNeighborhood] = useState(
+    user?.user_metadata?.neighborhood || SACRAMENTO_NEIGHBORHOODS[0],
+  );
+  const [bio, setBio] = useState(user?.user_metadata?.bio || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [saveWarning, setSaveWarning] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,18 +43,22 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     };
 
     try {
-      // Upsert profile in Supabase
-      const success = await upsertSupabaseProfile(newProfile);
-      
-      if (!success) {
-        throw new Error('Profile could not be saved to the database.');
+      const { ok, errorMessage } = await upsertSupabaseProfile(newProfile);
+
+      if (!ok) {
+        setSaveWarning(
+          errorMessage ||
+            'Profile saved locally but the database sync failed. You can still use the app; try updating your profile later.',
+        );
       }
 
       onComplete(newProfile);
-    } catch (error) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to save your profile.';
+      setErrorMsg(message);
+      onComplete(newProfile);
+    } finally {
       setIsSubmitting(false);
-      setErrorMsg('Failed to initialize profile in the database. Please try again.');
-      console.error(error);
     }
   };
 
@@ -59,8 +66,8 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     <div id="onboarding_viewport" className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-app font-sans">
       <div className="max-w-md w-full bg-surface p-8 rounded-2xl border border-app shadow-xl">
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-[#FF4500] mb-4" id="onboarding_icon_wrapper">
-            <Heart className="w-8 h-8 text-[#FF4500]" />
+          <div className="inline-flex p-3 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-accent mb-4" id="onboarding_icon_wrapper">
+            <Heart className="w-8 h-8 text-accent" />
           </div>
           <h2 className="text-2xl font-bold text-app tracking-tight font-display">
             {IN_APP.onboardingTitle}
@@ -68,13 +75,18 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
           <p className="mt-2 text-sm text-subtle leading-relaxed">
             {IN_APP.onboardingBody}
           </p>
-          <p className="mt-2 text-xs font-bold text-[#FF4500]">{SITE.freeRule}</p>
+          <p className="mt-2 text-xs font-bold text-accent">{SITE.freeRule}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5" id="onboarding_form">
           {errorMsg && (
-            <div className="p-3 bg-red-950/50 text-red-405 text-xs font-bold rounded-xl border border-red-900" id="onboarding_error">
+            <div className="p-3 bg-red-950/50 text-red-400 text-xs font-bold rounded-xl border border-red-900" id="onboarding_error">
               {errorMsg}
+            </div>
+          )}
+          {saveWarning && (
+            <div className="p-3 bg-amber-950/40 text-amber-300 text-xs font-semibold rounded-xl border border-amber-900/50">
+              {saveWarning}
             </div>
           )}
 
@@ -94,7 +106,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="e.g. Grandma Rosie, TreeHugger Sam"
-                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm text-white placeholder:text-subtle font-medium focus:outline-hidden focus:border-[#FF4500]"
+                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm text-app placeholder:text-subtle font-medium focus:outline-hidden focus:border-[#FF4500]"
               />
             </div>
           </div>
@@ -112,7 +124,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
                 id="on_neighborhood"
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
-                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm font-bold text-white appearance-none cursor-pointer focus:outline-hidden focus:border-[#FF4500]"
+                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm font-bold text-app appearance-none cursor-pointer focus:outline-hidden focus:border-[#FF4500]"
               >
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
                   <option key={n} value={n} className="bg-surface text-app">
@@ -138,7 +150,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
               onChange={(e) => setBio(e.target.value)}
               placeholder="e.g., 'Just moved to Curtis Park. Excited to meet neighbors, reduce waste, and find warm homes for extra garden tomatoes!'"
               maxLength={500}
-              className="block w-full p-3 bg-inset border border-app rounded-xl text-sm text-white placeholder:text-subtle font-medium resize-none focus:outline-hidden focus:border-[#FF4500]"
+              className="block w-full p-3 bg-inset border border-app rounded-xl text-sm text-app placeholder:text-subtle font-medium resize-none focus:outline-hidden focus:border-[#FF4500]"
             />
             <div className="text-right text-[10px] text-subtle font-mono font-medium">
               {bio.length}/500 chars
@@ -150,14 +162,14 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
             type="submit"
             id="onboarding_submit_btn"
             disabled={isSubmitting}
-            className="w-full flex justify-center py-3.5 bg-[#FF4500] hover:bg-[#E03D00] text-white rounded-xl text-sm font-bold tracking-wide transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed uppercase text-center"
+            className="w-full flex justify-center py-3.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-sm font-bold tracking-wide transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed uppercase text-center"
           >
             {isSubmitting ? 'Joining the circle...' : 'Step into our sharing circle'}
           </button>
         </form>
 
         <div className="mt-6 flex items-center justify-center space-x-2 text-xs text-subtle font-semibold border-t border-app pt-6">
-          <Heart className="w-3.5 h-3.5 text-[#FF4500] animate-pulse" />
+          <Heart className="w-3.5 h-3.5 text-accent animate-pulse" />
           <span>{SITE.tagline}</span>
         </div>
       </div>
