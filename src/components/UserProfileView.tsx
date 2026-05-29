@@ -7,6 +7,7 @@ import {
   uploadProfilePhoto,
   getSupabaseProfile,
 } from '../supabase';
+import RoleBadge from './RoleBadge';
 import {
   MapPin,
   User,
@@ -116,35 +117,6 @@ export default function UserProfileView({
     setDeferredPrompt(null);
   };
 
-  const getRoleBadge = () => {
-    const role = userProfile.role || 'user';
-    switch (role) {
-      case 'director':
-        return (
-          <span className="inline-block mt-2 px-3 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-bold tracking-wider uppercase rounded-full">
-            🌻 Sunflower Director
-          </span>
-        );
-      case 'admin':
-        return (
-          <span className="inline-block mt-2 px-3 py-1 bg-accent text-on-accent text-[10px] font-bold tracking-wider uppercase rounded-full">
-            🛡️ Circle Admin
-          </span>
-        );
-      case 'moderator':
-        return (
-          <span className="inline-block mt-2 px-3 py-1 bg-sky-500/10 text-sky-400 text-[10px] font-bold tracking-wider uppercase rounded-full">
-            🤝 Friendly Moderator
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-block mt-2 px-3 py-1 bg-inset border border-app text-muted text-[10px] font-bold tracking-wider uppercase rounded-full">
-            🏡 Local Neighbor
-          </span>
-        );
-    }
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -311,7 +283,7 @@ export default function UserProfileView({
           />
           <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{userProfile.displayName}</h3>
           
-          {getRoleBadge()}
+          <RoleBadge role={userProfile.role} showForUser />
 
           <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-xs font-bold text-accent mt-3">
             <MapPin className="w-3.5 h-3.5 text-accent" />

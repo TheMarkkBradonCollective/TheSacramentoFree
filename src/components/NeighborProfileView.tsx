@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, Gift, MapPin, MessageSquare, Package
 import { UserProfile } from '../types';
 import { getNeighborStats, getPublicNeighborProfile, NeighborStats, profileFromListingAuthor } from '../supabase';
 import { ItemPost } from '../types';
+import RoleBadge from './RoleBadge';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface NeighborProfileViewProps {
@@ -142,6 +143,11 @@ export default function NeighborProfileView({
               </p>
               {joinedLabel && (
                 <p className="text-xs text-subtle mt-2">Neighbor since {joinedLabel}</p>
+              )}
+              {profile.role && profile.role !== 'user' && (
+                <div className="mt-3">
+                  <RoleBadge role={profile.role} />
+                </div>
               )}
             </div>
 
