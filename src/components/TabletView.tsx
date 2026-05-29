@@ -160,7 +160,11 @@ export default function TabletView({
               <h2>{IN_APP.profileTitle}</h2>
             </div>
             <div className="sbn-card p-6">
-              <UserProfileView userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+              <UserProfileView
+                userProfile={userProfile}
+                onUpdateProfile={onUpdateProfile}
+                onProfilePhotoSaved={onRefresh}
+              />
             </div>
           </div>
         )}

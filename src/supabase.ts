@@ -172,6 +172,95 @@ export function handleSupabaseError(err: any, tableName: string) {
   }
 }
 
+/** Accept ISO strings, epoch ms, Date, or legacy { seconds } timestamps. */
+export function coerceToIsoDate(value: unknown): string {
+  if (value == null || value === '') {
+    return new Date().toISOString();
+  }
+  if (typeof value === 'object' && value !== null && 'seconds' in value) {
+    const seconds = Number((value as { seconds: number }).seconds);
+    if (!Number.isNaN(seconds)) {
+      return new Date(seconds * 1000).toISOString();
+    }
+  }
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? new Date().toISOString() : value.toISOString();
+  }
+  if (typeof value === 'number') {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  }
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  }
+  return new Date().toISOString();
+}
+
+/** Only persist remote URLs — never multi-MB data URLs in Postgres. */
+function sanitizePhotoUrlForDb(url?: string | null): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return null;
+}
+
+function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfile | null {
+  if (!row) return null;
+  const uid = String(row.uid ?? '');
+  if (!uid) return null;
+
+  const photoRaw =
+    row.photoURL ?? row.photo_url ?? row.photourl ?? row['photoURL'] ?? null;
+  const photoURL =
+    typeof photoRaw === 'string' && photoRaw.trim() ? sanitizePhotoUrlForDb(photoRaw) : undefined;
+
+  return {
+    uid,
+    displayName: String(row.displayName ?? row.display_name ?? 'Neighbor'),
+    photoURL: photoURL ?? undefined,
+    email: String(row.email ?? ''),
+    neighborhood: String(row.neighborhood ?? 'Sacramento'),
+    bio: typeof row.bio === 'string' ? row.bio : undefined,
+    role: (row.role as UserProfile['role']) ?? 'user',
+    createdAt: row.createdAt ?? row.created_at,
+  };
+}
+
+/** Push avatar URL onto listings, comments, and chat headers so neighbors see the latest photo. */
+export async function syncProfilePhotoAcrossApp(
+  uid: string,
+  photoURL: string | null,
+  displayName?: string,
+): Promise<void> {
+  const safePhoto = sanitizePhotoUrlForDb(photoURL);
+
+  try {
+    await supabase.from('items').update({ userPhotoURL: safePhoto }).eq('userId', uid);
+
+    if (displayName?.trim()) {
+      await supabase.from('items').update({ userDisplayName: displayName.trim() }).eq('userId', uid);
+    }
+
+    await supabase.from('item_comments').update({ userPhoto: safePhoto }).eq('userId', uid);
+
+    const { data: chats } = await supabase.from('chats').select('id, participantIds, participantPhotos');
+    for (const chat of chats ?? []) {
+      const ids = Array.isArray(chat.participantIds) ? chat.participantIds : [];
+      if (!ids.includes(uid)) continue;
+      const photos = {
+        ...((chat.participantPhotos ?? {}) as Record<string, string>),
+        [uid]: safePhoto ?? '',
+      };
+      await supabase.from('chats').update({ participantPhotos: photos }).eq('id', chat.id);
+    }
+  } catch (err) {
+    console.warn('syncProfilePhotoAcrossApp failed (profile row may still be saved):', err);
+  }
+}
+
 /**
  * --- PROFILES ---
  */
@@ -189,7 +278,7 @@ export async function getSupabaseProfile(uid: string): Promise<UserProfile | nul
     }
     
     setSupabaseConfigurationState(true);
-    return data as UserProfile | null;
+    return normalizeUserProfileRow(data as Record<string, unknown>);
   } catch (err: any) {
     console.warn('Supabase profile fetch failed:', err);
     handleSupabaseError(err, 'users');
@@ -197,26 +286,162 @@ export async function getSupabaseProfile(uid: string): Promise<UserProfile | nul
   }
 }
 
+function listingRowToProfile(uid: string, row: Record<string, unknown>): UserProfile {
+  return {
+    uid,
+    displayName: String(row.userDisplayName || 'Neighbor'),
+    photoURL: row.userPhotoURL ? String(row.userPhotoURL) : undefined,
+    email: '',
+    neighborhood: String(row.neighborhood || 'Sacramento'),
+    bio: undefined,
+    role: 'user',
+    createdAt: row.createdAt,
+  };
+}
+
+async function buildProfileFromLatestListing(uid: string): Promise<UserProfile | null> {
+  const { data, error } = await supabase
+    .from('items')
+    .select('userId, userDisplayName, userPhotoURL, neighborhood, createdAt')
+    .eq('userId', uid)
+    .order('createdAt', { ascending: false })
+    .limit(1);
+
+  if (error || !data?.length) return null;
+  return listingRowToProfile(uid, data[0] as Record<string, unknown>);
+}
+
+async function buildProfileFromLatestComment(uid: string): Promise<UserProfile | null> {
+  const { data, error } = await supabase
+    .from('item_comments')
+    .select('userId, userName, userPhoto, userNeighborhood, createdAt')
+    .eq('userId', uid)
+    .order('createdAt', { ascending: false })
+    .limit(1);
+
+  if (error || !data?.length) return null;
+  const row = data[0] as Record<string, unknown>;
+  return {
+    uid,
+    displayName: String(row.userName || 'Neighbor'),
+    photoURL: row.userPhoto ? String(row.userPhoto) : undefined,
+    email: '',
+    neighborhood: String(row.userNeighborhood || 'Sacramento'),
+    bio: undefined,
+    role: 'user',
+    createdAt: row.createdAt,
+  };
+}
+
+async function buildProfileFromChats(uid: string): Promise<UserProfile | null> {
+  const { data, error } = await supabase.from('chats').select('participantIds, participantNames, participantPhotos');
+
+  if (error || !data?.length) return null;
+
+  for (const chat of data) {
+    const ids = Array.isArray(chat.participantIds) ? chat.participantIds : [];
+    if (!ids.includes(uid)) continue;
+
+    const names = (chat.participantNames ?? {}) as Record<string, string>;
+    const photos = (chat.participantPhotos ?? {}) as Record<string, string>;
+
+    return {
+      uid,
+      displayName: names[uid] || 'Neighbor',
+      photoURL: photos[uid],
+      email: '',
+      neighborhood: 'Sacramento',
+      bio: undefined,
+      role: 'user',
+      createdAt: undefined,
+    };
+  }
+
+  return null;
+}
+
+/** Public neighbor card — users table first, then listings, comments, or chat metadata. */
+export async function getPublicNeighborProfile(uid: string): Promise<UserProfile | null> {
+  const fromUsers = await getSupabaseProfile(uid);
+  if (fromUsers) return fromUsers;
+
+  const fromListing = await buildProfileFromLatestListing(uid);
+  if (fromListing) return fromListing;
+
+  const fromComment = await buildProfileFromLatestComment(uid);
+  if (fromComment) return fromComment;
+
+  return buildProfileFromChats(uid);
+}
+
+export function profileFromListingAuthor(
+  uid: string,
+  listing: Pick<ItemPost, 'userDisplayName' | 'userPhotoURL' | 'neighborhood' | 'createdAt'>,
+): UserProfile {
+  return {
+    uid,
+    displayName: listing.userDisplayName || 'Neighbor',
+    photoURL: listing.userPhotoURL,
+    email: '',
+    neighborhood: listing.neighborhood || 'Sacramento',
+    bio: undefined,
+    role: 'user',
+    createdAt: listing.createdAt,
+  };
+}
+
 export async function upsertSupabaseProfile(
   profile: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
+    const email = profile.email?.trim();
+    if (!email) {
+      return { ok: false, errorMessage: 'Profile email is missing. Sign out and sign in again.' };
+    }
+
+    const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
+
     const payload = {
       uid: profile.uid,
-      displayName: profile.displayName,
-      photoURL: profile.photoURL || null,
-      email: profile.email,
+      displayName: profile.displayName.trim(),
+      photoURL,
+      email,
       neighborhood: profile.neighborhood,
-      bio: profile.bio || null,
+      bio: profile.bio?.trim() || null,
       role: profile.email?.toLowerCase() === 'sigsecspec@gmail.com' ? 'director' : (profile.role || 'user'),
-      createdAt: profile.createdAt ? new Date(profile.createdAt).toISOString() : new Date().toISOString(),
+      createdAt: coerceToIsoDate(profile.createdAt),
     };
 
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'uid' });
+    const { data, error } = await supabase
+      .from('users')
+      .upsert(payload, { onConflict: 'uid' })
+      .select('uid, photoURL, displayName, email, neighborhood, bio, role, createdAt')
+      .single();
 
     if (error) {
       handleSupabaseError(error, 'users');
       return { ok: false, errorMessage: error.message };
+    }
+
+    const saved = normalizeUserProfileRow(data as Record<string, unknown>);
+
+    if (photoURL && !saved?.photoURL) {
+      const { error: patchError } = await supabase
+        .from('users')
+        .update({ photoURL })
+        .eq('uid', profile.uid);
+      if (patchError) {
+        return {
+          ok: false,
+          errorMessage:
+            patchError.message ||
+            'Profile saved but photoURL column could not be updated — check users table schema in Supabase.',
+        };
+      }
+    }
+
+    if (photoURL) {
+      await syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
     }
 
     setSupabaseConfigurationState(true);
@@ -293,32 +518,36 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
 }
 
 export async function uploadProfilePhoto(file: File, userId: string): Promise<string | null> {
-  try {
-    const fileExt = file.name.split('.').pop() || 'jpg';
-    const filePath = `profiles/${userId}_${Date.now()}.${fileExt}`;
+  const extRaw = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
+  const contentType = file.type.startsWith('image/') ? file.type : 'image/jpeg';
 
-    const { error } = await supabase.storage
-      .from('items')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true,
-      });
+  const attempts: { bucket: string; path: string }[] = [
+    { bucket: 'avatars', path: `${userId}/avatar.${fileExt}` },
+    { bucket: 'items', path: `profiles/${userId}/avatar.${fileExt}` },
+    { bucket: 'items', path: `profiles/${userId}_${Date.now()}.${fileExt}` },
+  ];
+
+  for (const { bucket, path } of attempts) {
+    const { error } = await supabase.storage.from(bucket).upload(path, file, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType,
+    });
 
     if (error) {
-      throw error;
+      console.warn(`Profile photo upload failed (${bucket}/${path}):`, error.message);
+      continue;
     }
 
-    const { data: publicData } = supabase.storage.from('items').getPublicUrl(filePath);
-    return publicData?.publicUrl || null;
-  } catch (err) {
-    console.warn('Profile photo upload failed, using data URL fallback:', err);
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(file);
-    });
+    const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(path);
+    const publicUrl = publicData?.publicUrl;
+    if (publicUrl) {
+      return `${publicUrl}?v=${Date.now()}`;
+    }
   }
+
+  return null;
 }
 
 export function normalizeSupabaseItem(row: ItemPost): ItemPost {

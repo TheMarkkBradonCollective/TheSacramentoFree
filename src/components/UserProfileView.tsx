@@ -5,6 +5,7 @@ import {
   NeighborStats,
   upsertSupabaseProfile,
   uploadProfilePhoto,
+  getSupabaseProfile,
 } from '../supabase';
 import {
   MapPin,
@@ -27,13 +28,22 @@ import { IN_APP } from '../siteContent';
 interface UserProfileViewProps {
   userProfile: UserProfile;
   onUpdateProfile: (updated: UserProfile) => void;
+  /** Refresh feed/listings after avatar is saved */
+  onProfilePhotoSaved?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
   fullBleed?: boolean;
+}
+
+function sanitizeRemotePhoto(url?: string): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return undefined;
 }
 
 export default function UserProfileView({
   userProfile,
   onUpdateProfile,
+  onProfilePhotoSaved,
   fullBleed = false,
 }: UserProfileViewProps) {
   const [displayName, setDisplayName] = useState(userProfile.displayName);
@@ -53,11 +63,12 @@ export default function UserProfileView({
   }, [userProfile.uid]);
 
   useEffect(() => {
+    if (isPhotoUploading) return;
     setPhotoURL(
       userProfile.photoURL ||
         `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`,
     );
-  }, [userProfile.photoURL, userProfile.displayName]);
+  }, [userProfile.photoURL, userProfile.displayName, isPhotoUploading]);
 
   // PWA Prompt status
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -146,11 +157,20 @@ export default function UserProfileView({
     setErrorMsg('');
     setSuccessMsg('');
 
+    const photoForSave =
+      photoURL.startsWith('data:') || photoURL.startsWith('blob:')
+        ? sanitizeRemotePhoto(userProfile.photoURL)
+        : photoURL;
+
+    const hadLocalOnlyPhoto =
+      (photoURL.startsWith('data:') || photoURL.startsWith('blob:')) &&
+      !sanitizeRemotePhoto(photoURL);
+
     const updateData = {
       displayName: displayName.trim(),
       neighborhood,
       bio: bio.trim(),
-      photoURL,
+      photoURL: photoForSave ?? userProfile.photoURL,
     };
 
     try {
@@ -166,11 +186,24 @@ export default function UserProfileView({
       }
       onUpdateProfile(updatedProfile);
 
+      if (hadLocalOnlyPhoto) {
+        setErrorMsg(
+          'Profile saved, but your new photo did not upload — try a smaller image or check your connection, then upload again.',
+        );
+      } else {
+        setErrorMsg('');
+      }
+
       setSuccessMsg('Profile settings synced successfully.');
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
       console.warn('Failed to commit profile updates:', err);
-      setErrorMsg('Unable to save profile to the database. Please try again.');
+      const detail = err instanceof Error ? err.message : '';
+      setErrorMsg(
+        detail && detail !== 'Profile save failed'
+          ? detail
+          : 'Unable to save profile to the database. Please try again.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -182,25 +215,67 @@ export default function UserProfileView({
 
     if (!file.type.startsWith('image/')) {
       setErrorMsg('Please select an image file.');
+      event.target.value = '';
       return;
     }
     if (file.size > 6 * 1024 * 1024) {
       setErrorMsg('Image is too large. Please use a file under 6MB.');
+      event.target.value = '';
       return;
     }
 
     setErrorMsg('');
+    setSuccessMsg('');
     setIsPhotoUploading(true);
-    const uploadedUrl = await uploadProfilePhoto(file, userProfile.uid);
-    setIsPhotoUploading(false);
 
-    if (!uploadedUrl) {
-      setErrorMsg('Could not upload profile photo. Try a different image.');
-      return;
+    const previousPhoto = photoURL;
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoURL(previewUrl);
+
+    try {
+      const uploadedUrl = await uploadProfilePhoto(file, userProfile.uid);
+      if (!uploadedUrl) {
+        setPhotoURL(previousPhoto);
+        setErrorMsg(
+          'Could not upload profile photo. Check your connection and Supabase storage (items bucket), then try again.',
+        );
+        return;
+      }
+
+      setPhotoURL(uploadedUrl);
+
+      const updatedProfile = {
+        ...userProfile,
+        photoURL: uploadedUrl,
+      };
+
+      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile);
+      if (!ok) {
+        setPhotoURL(previousPhoto);
+        throw new Error(errorMessage || 'Profile photo could not be saved.');
+      }
+
+      const refreshed = await getSupabaseProfile(userProfile.uid);
+      const profileToApply = refreshed?.photoURL
+        ? { ...updatedProfile, photoURL: refreshed.photoURL }
+        : updatedProfile;
+
+      onUpdateProfile(profileToApply);
+      if (profileToApply.photoURL) {
+        setPhotoURL(profileToApply.photoURL);
+      }
+      onProfilePhotoSaved?.();
+      setSuccessMsg('Profile photo saved.');
+      setTimeout(() => setSuccessMsg(''), 3500);
+    } catch (err) {
+      console.warn('Profile photo save failed:', err);
+      const detail = err instanceof Error ? err.message : '';
+      setErrorMsg(detail || 'Could not save profile photo. Please try again.');
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      setIsPhotoUploading(false);
+      event.target.value = '';
     }
-
-    setPhotoURL(uploadedUrl);
-    setSuccessMsg('Photo uploaded. Tap Save Profile Changes to publish it.');
   };
 
   const sectionShell = fullBleed
@@ -237,7 +312,7 @@ export default function UserProfileView({
             }`}
           >
             <Camera className={`w-3.5 h-3.5 ${isPhotoUploading ? 'animate-pulse' : ''}`} />
-            {isPhotoUploading ? 'Uploading…' : 'Change photo'}
+            {isPhotoUploading ? 'Saving photo…' : 'Change photo'}
           </label>
           <input
             id="profile_photo_upload"

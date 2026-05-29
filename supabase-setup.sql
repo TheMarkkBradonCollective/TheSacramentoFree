@@ -179,6 +179,31 @@ CREATE POLICY "Public delete items bucket"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'items');
 
+-- Profile avatars (dedicated bucket — run if profile photos fail to upload)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public read avatars bucket" ON storage.objects;
+CREATE POLICY "Public read avatars bucket"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Public upload avatars bucket" ON storage.objects;
+CREATE POLICY "Public upload avatars bucket"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Public update avatars bucket" ON storage.objects;
+CREATE POLICY "Public update avatars bucket"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Public delete avatars bucket" ON storage.objects;
+CREATE POLICY "Public delete avatars bucket"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'avatars');
+
 -- =========================================================
 -- 8. REALTIME — live feed, chat, votes without page refresh
 -- Run once in SQL Editor. Safe to re-run (skips tables already added).

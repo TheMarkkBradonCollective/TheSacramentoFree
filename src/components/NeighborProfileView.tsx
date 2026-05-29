@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp, Gift, MapPin, MessageSquare, Package } from 'lucide-react';
 import { UserProfile } from '../types';
-import { getNeighborStats, getSupabaseProfile, NeighborStats } from '../supabase';
+import { getNeighborStats, getPublicNeighborProfile, NeighborStats, profileFromListingAuthor } from '../supabase';
+import { ItemPost } from '../types';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface NeighborProfileViewProps {
   userId: string;
   currentUserId: string;
+  currentUserProfile?: UserProfile;
+  listingHints?: ItemPost[];
   onClose: () => void;
   onMessage?: () => void;
 }
@@ -14,9 +17,13 @@ interface NeighborProfileViewProps {
 export default function NeighborProfileView({
   userId,
   currentUserId,
+  currentUserProfile,
+  listingHints = [],
   onClose,
   onMessage,
 }: NeighborProfileViewProps) {
+  const hintListing = listingHints.find((item) => item.userId === userId);
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<NeighborStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,25 +31,34 @@ export default function NeighborProfileView({
 
   useEffect(() => {
     let active = true;
+
+    const localSeed: UserProfile | null =
+      userId === currentUserId && currentUserProfile
+        ? currentUserProfile
+        : hintListing
+          ? profileFromListingAuthor(userId, hintListing)
+          : null;
+
+    setProfile(localSeed);
     setLoading(true);
 
     (async () => {
       const [loadedProfile, loadedStats] = await Promise.all([
-        getSupabaseProfile(userId),
+        getPublicNeighborProfile(userId),
         getNeighborStats(userId),
       ]);
       if (!active) return;
-      setProfile(loadedProfile);
+      setProfile(loadedProfile ?? localSeed);
       setStats(loadedStats);
       setLoading(false);
     })();
 
     const reload = debounceRealtime(() => {
       if (!active) return;
-      void Promise.all([getSupabaseProfile(userId), getNeighborStats(userId)]).then(
+      void Promise.all([getPublicNeighborProfile(userId), getNeighborStats(userId)]).then(
         ([loadedProfile, loadedStats]) => {
           if (!active) return;
-          setProfile(loadedProfile);
+          setProfile(loadedProfile ?? localSeed);
           setStats(loadedStats);
         },
       );
@@ -67,7 +83,7 @@ export default function NeighborProfileView({
       unsubVotes();
       unsubClaims();
     };
-  }, [userId]);
+  }, [userId, currentUserId, currentUserProfile, hintListing?.id]);
 
   const joinedLabel = profile?.createdAt
     ? new Date(
@@ -103,7 +119,7 @@ export default function NeighborProfileView({
       </header>
 
       <div className="max-w-md mx-auto p-6 pb-12">
-        {loading ? (
+        {loading && !profile ? (
           <p className="text-center text-sm text-muted py-16">Loading profile…</p>
         ) : !profile ? (
           <p className="text-center text-sm text-muted py-16">This neighbor profile is not available.</p>

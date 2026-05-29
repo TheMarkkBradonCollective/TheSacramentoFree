@@ -17,6 +17,7 @@ import TabletView from './components/TabletView';
 import DesktopView from './components/DesktopView';
 import { 
   supabase, 
+  getPublicNeighborProfile,
   getSupabaseProfile, 
   upsertSupabaseProfile, 
   getSupabaseItems,
@@ -609,7 +610,7 @@ export default function App() {
 
   const handleProfileMessage = async () => {
     if (!viewProfileUid || !userProfile || viewProfileUid === userProfile.uid) return;
-    const neighbor = await getSupabaseProfile(viewProfileUid);
+    const neighbor = await getPublicNeighborProfile(viewProfileUid);
     if (!neighbor) return;
     setViewProfileUid(null);
     await handleInitiateChat(neighbor.uid, neighbor.displayName, neighbor.photoURL);
@@ -707,6 +708,8 @@ export default function App() {
                 <NeighborProfileView
                   userId={viewProfileUid}
                   currentUserId={userProfile.uid}
+                  currentUserProfile={userProfile}
+                  listingHints={items}
                   onClose={() => setViewProfileUid(null)}
                   onMessage={
                     viewProfileUid !== userProfile.uid ? handleProfileMessage : undefined
