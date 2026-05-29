@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng } from '../types';
-import { canViewerSeeExactLocation, stripListingMetadata } from '../lib/itemLocation';
+import {
+  canViewerSeeExactLocation,
+  hasStoredGps,
+  stripListingMetadata,
+} from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
 import {
   estimateDrivingStats,
@@ -29,6 +33,9 @@ interface SacramentoMapViewProps {
   isFullScreenMobile?: boolean;
   /** When false (e.g. another mobile tab is active), map stays mounted but hidden */
   mapVisible?: boolean;
+  /** Controlled color guide overlay (mobile toolbar). */
+  colorGuideOpen?: boolean;
+  onColorGuideOpenChange?: (open: boolean) => void;
 }
 
 // Map each post category to a specific distinct color for blips
@@ -146,10 +153,18 @@ export default function SacramentoMapView({
   onItemDetail,
   isFullScreenMobile = false,
   mapVisible = true,
+  colorGuideOpen: colorGuideOpenProp,
+  onColorGuideOpenChange,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
-  const [showColorGuide, setShowColorGuide] = useState(false);
+  const [colorGuideInternal, setColorGuideInternal] = useState(false);
+  const showColorGuide =
+    colorGuideOpenProp !== undefined ? colorGuideOpenProp : colorGuideInternal;
+  const setShowColorGuide = (open: boolean) => {
+    onColorGuideOpenChange?.(open);
+    if (colorGuideOpenProp === undefined) setColorGuideInternal(open);
+  };
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
   // Local overrides in case filters are not controlled by a parent grid
@@ -374,20 +389,22 @@ export default function SacramentoMapView({
     const neighborhoodCounts: Record<string, number> = {};
     
     return activeItems.map((item) => {
-      // 1. Precise pin only when location is public (or viewer is the owner)
       const customCoords = extractGPSCoordinates(item.description);
-      const showExactPin = customCoords && canViewerSeeExactLocation(item, userProfile?.uid);
+      const hasPin = hasStoredGps(item.description);
+      const showExactPin = hasPin && customCoords && canViewerSeeExactLocation(item, userProfile?.uid);
+
+      // Use the pickup pin the poster saved — never scatter when GPS exists and is visible
       if (showExactPin && customCoords) {
         const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
         return {
           item,
           lat,
           lng,
-          color: getCategoryColor(item.category)
+          color: getCategoryColor(item.category),
         };
       }
 
-      // 2. Otherwise drop inside standard neighborhood sectors utilizing layout distribution scatter
+      // No GPS pin (or hidden from this viewer): approximate by neighborhood sector
       const parentCoord = NEIGHBORHOOD_COORDS[item.neighborhood] || { x: 50, y: 50 };
       const currentCount = neighborhoodCounts[item.neighborhood] || 0;
       neighborhoodCounts[item.neighborhood] = currentCount + 1;
@@ -732,17 +749,6 @@ export default function SacramentoMapView({
           </div>
         )}
 
-        {/* Colors index trigger */}
-        <div className="absolute top-20 right-4 z-20">
-          <button
-            onClick={() => setShowColorGuide(true)}
-            className="sbn-btn sbn-btn-secondary sbn-btn-sm shadow-app"
-            id="floating_color_guide_trigger"
-          >
-            🎨 Index
-          </button>
-        </div>
-
         {/* Categories reference overlay sheet */}
         <AnimatePresence>
           {showColorGuide && (
@@ -992,7 +998,7 @@ export default function SacramentoMapView({
               />
             </div>
 
-            {/* Type buttons */}
+            {/* Type buttons + category index */}
             <div className="flex bg-surface p-1 border border-app gap-1 rounded-xl shrink-0" id="map_internal_type_selector">
               <button
                 onClick={() => { setLocalType('all'); setLocalCategory('All Categories'); }}
@@ -1017,6 +1023,14 @@ export default function SacramentoMapView({
                 }`}
               >
                 Asks
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowColorGuide(true)}
+                className="px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg text-muted hover:text-app border-l border-app ml-0.5 pl-2.5"
+                id="map_internal_color_index_btn"
+              >
+                🎨 Index
               </button>
             </div>
           </div>
@@ -1109,14 +1123,6 @@ export default function SacramentoMapView({
             <span className="w-2.5 h-2.5 rounded-full border border-white bg-white block shrink-0"></span>
             <span>WANTED REQ (ISO)</span>
           </div>
-          
-          <button
-            onClick={() => setShowColorGuide(true)}
-            className="w-full mt-2 text-[8.5px] font-black uppercase tracking-widest bg-accent hover:bg-accent-hover text-on-accent py-1.5 px-2.5 transition-colors rounded-xl cursor-pointer text-center block border border-transparent font-sans"
-            id="map_show_categories_legend_btn"
-          >
-            🎨 Map Colors
-          </button>
         </div>
 
         {/* Custom Map Controller HUD Panel (Zoom & Live Locating) on the opposite side, stacked vertically with Locate at bottom under zoom */}

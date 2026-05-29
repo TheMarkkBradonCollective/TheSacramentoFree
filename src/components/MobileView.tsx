@@ -56,6 +56,7 @@ export default function MobileView({
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
+  const [colorGuideOpen, setColorGuideOpen] = useState(false);
 
   return (
     <div id="mobile_device_workspace" className="relative h-[100dvh] overflow-hidden bg-app text-app">
@@ -97,18 +98,30 @@ export default function MobileView({
             onEditItem={onEditItem}
             isFullScreenMobile
             mapVisible={activeTab === 'map'}
+            colorGuideOpen={colorGuideOpen}
+            onColorGuideOpenChange={setColorGuideOpen}
           />
-          <div className="absolute top-3 left-3 right-3 z-20 flex gap-2 overflow-x-auto pb-1 pointer-events-auto">
-            {(['all', 'giveaway', 'looking'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setSelectedMobileType(t)}
-                className={`sbn-chip shrink-0 ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
-              >
-                {t === 'all' ? 'All' : t === 'giveaway' ? 'Giving' : 'Looking'}
-              </button>
-            ))}
+          <div className="absolute top-3 left-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
+            <div className="flex gap-2 overflow-x-auto flex-1 min-w-0 pb-1">
+              {(['all', 'giveaway', 'looking'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setSelectedMobileType(t)}
+                  className={`sbn-chip shrink-0 ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
+                >
+                  {t === 'all' ? 'All' : t === 'giveaway' ? 'Giving' : 'Looking'}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setColorGuideOpen(true)}
+              className="sbn-chip shrink-0"
+              id="mobile_map_color_index_btn"
+            >
+              🎨 Index
+            </button>
           </div>
           <button
             type="button"

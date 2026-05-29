@@ -183,7 +183,15 @@ export function extractGPSCoordinates(description: string): { x: number; y: numb
   return null;
 }
 
-// Greater Sacramento region bounds (map + GPS conversion)
+/** Leaflet map + stored [GPS: x,y] percent coords — must match the post form mini-map grid. */
+export const MAP_PICKUP_BOUNDS = {
+  latMin: 38.35,
+  latMax: 38.75,
+  lngMin: -121.6,
+  lngMax: -121.3,
+} as const;
+
+/** Wider Sacramento metro — neighborhood name lookup only, not pickup pin math. */
 export const MAP_REGION_BOUNDS = {
   latMin: 38.35,
   latMax: 38.92,
@@ -236,9 +244,9 @@ export const NEIGHBORHOOD_LAT_LONGS: Record<string, { lat: number; lng: number }
   'Pocket-Greenhaven': { lat: 38.4907, lng: -121.5365 },
 };
 
-// Bounding box for mapping real GPS to percentage coordinates
+// Bounding box for mapping real GPS to percentage coordinates (pickup pins on the live map)
 export function mapGPSToPercent(lat: number, lng: number): { x: number; y: number } {
-  const { latMin, latMax, lngMin, lngMax } = MAP_REGION_BOUNDS;
+  const { latMin, latMax, lngMin, lngMax } = MAP_PICKUP_BOUNDS;
 
   const clampedLat = Math.max(latMin, Math.min(latMax, lat));
   const clampedLng = Math.max(lngMin, Math.min(lngMax, lng));
@@ -253,16 +261,41 @@ export function mapGPSToPercent(lat: number, lng: number): { x: number; y: numbe
 }
 
 export function convertPercentToLatLng(x: number, y: number): { lat: number; lng: number } {
-  const { latMin, latMax, lngMin, lngMax } = MAP_REGION_BOUNDS;
+  const { latMin, latMax, lngMin, lngMax } = MAP_PICKUP_BOUNDS;
   const lng = lngMin + (x / 100) * (lngMax - lngMin);
   const lat = latMin + (1 - y / 100) * (latMax - latMin);
   return { lat, lng };
 }
 
-// Map percent coords derived from lat/lng centers
-export const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = Object.fromEntries(
-  Object.entries(NEIGHBORHOOD_LAT_LONGS).map(([name, { lat, lng }]) => [name, mapGPSToPercent(lat, lng)]),
-);
+/** Hand-tuned sector centers for the post mini-map grid (fallback when no GPS pin). */
+const LEGACY_NEIGHBORHOOD_MAP_COORDS: Record<string, { x: number; y: number }> = {
+  Natomas: { x: 48, y: 16 },
+  Arden: { x: 74, y: 25 },
+  Carmichael: { x: 82, y: 22 },
+  'Citrus Heights': { x: 90, y: 10 },
+  'Fair Oaks': { x: 88, y: 20 },
+  Orangevale: { x: 93, y: 15 },
+  'Rancho Cordova': { x: 90, y: 45 },
+  'East Sacramento': { x: 64, y: 38 },
+  Midtown: { x: 53, y: 40 },
+  Downtown: { x: 41, y: 40 },
+  'West Sacramento': { x: 22, y: 40 },
+  'Land Park': { x: 38, y: 56 },
+  'Curtis Park': { x: 50, y: 55 },
+  'Oak Park': { x: 63, y: 56 },
+  'Tahoe Park': { x: 75, y: 56 },
+  'Pocket-Greenhaven': { x: 24, y: 72 },
+  'South Sacramento': { x: 55, y: 74 },
+  'Elk Grove': { x: 58, y: 91 },
+};
+
+// Map percent coords derived from lat/lng centers, with legacy tuned overrides
+export const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
+  ...Object.fromEntries(
+    Object.entries(NEIGHBORHOOD_LAT_LONGS).map(([name, { lat, lng }]) => [name, mapGPSToPercent(lat, lng)]),
+  ),
+  ...LEGACY_NEIGHBORHOOD_MAP_COORDS,
+};
 
 // Help find the closest neighborhood based on custom coordinates
 export function findClosestNeighborhood(x: number, y: number): string {

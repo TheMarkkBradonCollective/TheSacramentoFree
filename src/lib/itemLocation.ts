@@ -1,4 +1,6 @@
-import { ItemPost, PostType, extractGPSCoordinates } from '../types';
+import { ItemPost, PostType, extractGPSCoordinates, convertPercentToLatLng } from '../types';
+
+export { convertPercentToLatLng };
 import { getListingDetailsText, parseListingDetails, parsePickupNotes } from './listingContent';
 
 export const CATEGORIES_REQUIRING_GPS = ['Curb Alert', 'Porch Pickup'] as const;
@@ -27,16 +29,6 @@ export function canViewerSeeExactLocation(
 
 export function stripListingMetadata(description: string): string {
   return getListingDetailsText(description);
-}
-
-export function convertPercentToLatLng(x: number, y: number): { lat: number; lng: number } {
-  const latMin = 38.35;
-  const latMax = 38.75;
-  const lngMin = -121.6;
-  const lngMax = -121.3;
-  const lng = lngMin + (x / 100) * (lngMax - lngMin);
-  const lat = latMin + (1 - y / 100) * (latMax - latMin);
-  return { lat, lng };
 }
 
 export function buildListingDescription(params: {
