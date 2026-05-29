@@ -29,7 +29,7 @@ import SupportTicketThread from './SupportTicketThread';
 import ListingImage from './ListingImage';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { avatarImageUrl } from '../lib/imageUrl';
-import { ClipboardList, Flag, LifeBuoy, Search, Shield, Users } from 'lucide-react';
+import { ClipboardList, ChevronRight, Flag, LifeBuoy, Search, Shield, Users } from 'lucide-react';
 
 const SUSPEND_DURATIONS = [
   { label: '1 day', days: 1 },
@@ -328,43 +328,67 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
         <Shield className="w-4 h-4 text-accent" />
         Staff tools
       </h3>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => setPanel('directory')}
-          className="sbn-btn sbn-btn-secondary sbn-btn-sm inline-flex items-center gap-1.5"
+          className="sbn-help-list-item"
         >
-          <Users className="w-4 h-4" />
-          Neighbor directory
+          <span className="p-2 rounded-lg bg-accent/10 text-accent shrink-0">
+            <Users className="w-4 h-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-app block">Neighbor directory</span>
+            <span className="text-[11px] text-muted">All community members</span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
         </button>
         {canAudit && (
           <button
             type="button"
             onClick={() => setPanel('audit')}
-            className="sbn-btn sbn-btn-secondary sbn-btn-sm inline-flex items-center gap-1.5"
+            className="sbn-help-list-item"
           >
-            <ClipboardList className="w-4 h-4" />
-            Audit log
+            <span className="p-2 rounded-lg bg-violet-500/10 text-violet-400 shrink-0">
+              <ClipboardList className="w-4 h-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="font-semibold text-sm text-app block">Audit log</span>
+              <span className="text-[11px] text-muted">Moderation action history</span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
           </button>
         )}
         {canReports && (
           <button
             type="button"
             onClick={() => setPanel('reports')}
-            className="sbn-btn sbn-btn-secondary sbn-btn-sm inline-flex items-center gap-1.5"
+            className="sbn-help-list-item"
           >
-            <Flag className="w-4 h-4" />
-            User reports
+            <span className="p-2 rounded-lg bg-red-500/10 text-red-400 shrink-0">
+              <Flag className="w-4 h-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="font-semibold text-sm text-app block">User reports</span>
+              <span className="text-[11px] text-muted">One-way submissions from neighbors</span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
           </button>
         )}
         {canTickets && (
           <button
             type="button"
             onClick={() => setPanel('tickets')}
-            className="sbn-btn sbn-btn-secondary sbn-btn-sm inline-flex items-center gap-1.5"
+            className="sbn-help-list-item"
           >
-            <LifeBuoy className="w-4 h-4" />
-            Support inbox
+            <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
+              <LifeBuoy className="w-4 h-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="font-semibold text-sm text-app block">Support inbox</span>
+              <span className="text-[11px] text-muted">Reply to neighbor support tickets</span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
           </button>
         )}
       </div>

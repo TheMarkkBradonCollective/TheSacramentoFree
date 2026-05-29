@@ -1,4 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
 interface FullScreenPanelProps {
@@ -25,9 +27,17 @@ export default function FullScreenPanel({
 }: FullScreenPanelProps) {
   const contentMax = wide ? 'max-w-4xl' : 'max-w-2xl';
 
-  return (
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const panel = (
     <div
-      className={`fixed inset-0 ${nested ? 'z-[75]' : 'z-[70]'} bg-app flex flex-col font-sans`}
+      className={`fixed inset-0 ${nested ? 'z-[95]' : 'z-[90]'} bg-app flex flex-col font-sans`}
       role="dialog"
       aria-modal="true"
     >
@@ -36,10 +46,11 @@ export default function FullScreenPanel({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-full text-muted hover:text-app hover:bg-inset shrink-0"
+            className="sbn-back-btn !mb-0 shrink-0"
             aria-label="Back"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </button>
           <div className="min-w-0 flex-1">
             <h2 className="font-display font-bold text-base sm:text-lg text-app truncate">{title}</h2>
@@ -55,10 +66,12 @@ export default function FullScreenPanel({
           </div>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto sbn-safe-bottom">
           <div className={`mx-auto w-full px-4 py-5 pb-10 ${contentMax}`}>{children}</div>
         </div>
       )}
     </div>
   );
+
+  return createPortal(panel, document.body);
 }
