@@ -4,7 +4,8 @@ import { getCommunityStats, type CommunityStats } from '../supabase';
 import { ItemPost } from '../types';
 
 interface CommunityStatsBarProps {
-  items: ItemPost[];
+  /** When provided, stats appear instantly before the DB fetch completes. */
+  items?: ItemPost[];
   /** compact = single scrollable row (mobile); full = 4-up grid (desktop) */
   variant?: 'compact' | 'full';
 }
@@ -68,7 +69,7 @@ function StatCard({
   );
 }
 
-export default function CommunityStatsBar({ items, variant = 'full' }: CommunityStatsBarProps) {
+export default function CommunityStatsBar({ items = [], variant = 'full' }: CommunityStatsBarProps) {
   const [dbStats, setDbStats] = useState<CommunityStats | null>(null);
 
   useEffect(() => {

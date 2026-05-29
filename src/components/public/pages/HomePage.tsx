@@ -1,5 +1,6 @@
 import { ArrowRight, Heart, MapPin, Shield, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
+import CommunityStatsBar from '../../CommunityStatsBar';
 import { SITE } from '../../../siteContent';
 import type { PublicRoute } from '../../../public/routes';
 
@@ -50,6 +51,11 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       </div>
 
       <p className="mt-5 text-sm font-semibold text-accent">{SITE.freeRule}</p>
+
+      <div className="mt-10">
+        <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">Community at a glance</p>
+        <CommunityStatsBar variant="full" />
+      </div>
 
       <h2 className="mt-14 font-display text-xl font-bold text-app">Explore the community</h2>
       <p className="mt-1 text-sm text-muted">Browse without an account.</p>
