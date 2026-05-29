@@ -228,6 +228,92 @@ BEGIN
 END $$;
 
 -- =========================================================
+-- 9. AUTO-PROFILE TRIGGER
+-- Whenever a user is created in auth.users, automatically create a matching
+-- row in public.users so they are never "auth only" orphans.
+-- Safe to re-run — uses CREATE OR REPLACE and IF NOT EXISTS.
+-- =========================================================
+
+-- Function called by the trigger
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.users (
+    uid,
+    "displayName",
+    "photoURL",
+    email,
+    neighborhood,
+    bio,
+    role,
+    "createdAt"
+  )
+  VALUES (
+    NEW.id::text,
+    COALESCE(
+      NULLIF(TRIM(NEW.raw_user_meta_data->>'displayName'), ''),
+      SPLIT_PART(NEW.email, '@', 1),
+      'Neighbor'
+    ),
+    -- Default pixel-art avatar — the app will update this on first login
+    'https://api.dicebear.com/7.x/pixel-art/svg?seed=' || NEW.id::text,
+    NEW.email,
+    COALESCE(
+      NULLIF(TRIM(NEW.raw_user_meta_data->>'neighborhood'), ''),
+      'Sacramento'
+    ),
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'bio', '')), ''),
+    'user',
+    NOW()
+  )
+  ON CONFLICT (uid) DO NOTHING;   -- never overwrite an existing profile
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger on auth.users — fires after every INSERT
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+
+-- =========================================================
+-- 10. ONE-TIME BACKFILL — fixes users already in auth but missing from public.users
+-- Run this once after adding the trigger above.
+-- =========================================================
+INSERT INTO public.users (
+  uid,
+  "displayName",
+  "photoURL",
+  email,
+  neighborhood,
+  role,
+  "createdAt"
+)
+SELECT
+  au.id::text,
+  COALESCE(
+    NULLIF(TRIM(au.raw_user_meta_data->>'displayName'), ''),
+    SPLIT_PART(au.email, '@', 1),
+    'Neighbor'
+  ),
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=' || au.id::text,
+  au.email,
+  COALESCE(
+    NULLIF(TRIM(au.raw_user_meta_data->>'neighborhood'), ''),
+    'Sacramento'
+  ),
+  'user',
+  au.created_at
+FROM auth.users au
+WHERE au.id::text NOT IN (SELECT uid FROM public.users)
+  AND au.email IS NOT NULL;
+
+-- =========================================================
 -- OPTIONAL: set community director role (run after you sign up)
 -- UPDATE public.users SET role = 'director' WHERE email = 'you@example.com';
 -- =========================================================
