@@ -3,6 +3,7 @@ import { ItemComment, ItemPost } from '../types';
 import { stripListingMetadata } from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
 import ListingEngagement from './ListingEngagement';
+import ListingImage from './ListingImage';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 
 export type ItemCardVoteState = PostVoteState;
@@ -156,11 +157,11 @@ export default function ItemCard({
       >
         {coverPhoto ? (
           <>
-            <img
+            <ListingImage
               src={coverPhoto}
               alt={item.title}
+              width={480}
               className="h-full w-full object-cover"
-              referrerPolicy="no-referrer"
             />
             {photos.length > 1 && (
               <span className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 text-[8px] sm:text-[10px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">

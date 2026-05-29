@@ -139,16 +139,10 @@ export function useItemsEngagement(
     const unsubComments = subscribePostgresChanges<ItemComment>(
       { channelName: 'live-item-comments', table: 'item_comments', event: '*' },
       (payload) => {
-        const row = payload.new as ItemComment | null;
-        if (payload.eventType !== 'INSERT' || !row?.itemId) return;
-        if (!itemIdSetRef.current.has(row.itemId)) return;
-        if (row.userId === uid) return;
-
-        setItemComments((prev) => {
-          const list = prev[row.itemId] ?? [];
-          if (list.some((c) => c.id === row.id)) return prev;
-          return { ...prev, [row.itemId]: [...list, row] };
-        });
+        const row = (payload.new || payload.old) as ItemComment | null;
+        if (!row?.itemId || !itemIdSetRef.current.has(row.itemId)) return;
+        if (payload.eventType === 'INSERT' && row.userId === uid) return;
+        reloadEngagementForItems([row.itemId]);
       },
     );
 

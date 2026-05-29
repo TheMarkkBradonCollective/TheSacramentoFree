@@ -3,6 +3,7 @@ import { ItemPost, ListingSubItem, UserProfile } from '../types';
 import { getListingSubitems, submitSelfClaimRequest } from '../supabase';
 import { isUserAtPickupLocation, pickupHasGpsPin } from '../lib/pickupProximity';
 import SubItemPicker from './SubItemPicker';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { CheckCircle, Loader2 } from 'lucide-react';
 
 interface ClaimAtPickupButtonProps {
@@ -50,6 +51,27 @@ export default function ClaimAtPickupButton({
       setLoadingSubitems(false);
     });
   }, [showPicker, item.id, isGiveaway]);
+
+  useEffect(() => {
+    if (!showPicker) return;
+
+    const refresh = debounceRealtime(() => {
+      void getListingSubitems(item.id).then((rows) => {
+        setSubitems(rows);
+        setSelectedIds((prev) => prev.filter((id) => rows.some((s) => s.id === id && s.status === 'available')));
+      });
+    }, 100);
+
+    return subscribePostgresChanges(
+      {
+        channelName: `live-claim-picker-${item.id}`,
+        table: 'listing_subitems',
+        event: '*',
+        filter: `itemId=eq.${item.id}`,
+      },
+      refresh,
+    );
+  }, [showPicker, item.id]);
 
   if (!isGiveaway || isOwner || !hasGps) return null;
 

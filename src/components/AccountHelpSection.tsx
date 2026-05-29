@@ -9,6 +9,7 @@ import {
 import FullScreenPanel from './FullScreenPanel';
 import SupportTicketThread from './SupportTicketThread';
 import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight } from 'lucide-react';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface AccountHelpSectionProps {
   user: UserProfile;
@@ -38,8 +39,39 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
   }, [user.uid]);
 
   useEffect(() => {
-    if (panel === 'tickets') void reloadTickets();
+    if (panel === 'tickets' || panel === 'thread') void reloadTickets();
   }, [panel, reloadTickets]);
+
+  useEffect(() => {
+    if (panel !== 'tickets' && panel !== 'thread') return;
+
+    const refresh = debounceRealtime(() => {
+      void reloadTickets();
+      if (activeTicket) {
+        void getSupportTicketById(activeTicket.id).then((t) => {
+          if (t) setActiveTicket(t);
+        });
+      }
+    }, 100);
+
+    const unsubs = [
+      subscribePostgresChanges(
+        {
+          channelName: `live-my-tickets-${user.uid}`,
+          table: 'support_tickets',
+          event: '*',
+          filter: `openerUserId=eq.${user.uid}`,
+        },
+        refresh,
+      ),
+      subscribePostgresChanges(
+        { channelName: `live-my-ticket-msgs-${user.uid}`, table: 'support_ticket_messages', event: 'INSERT' },
+        refresh,
+      ),
+    ];
+
+    return () => unsubs.forEach((u) => u());
+  }, [panel, user.uid, activeTicket?.id, reloadTickets]);
 
   const openThread = async (ticket: SupportTicket) => {
     const fresh = await getSupportTicketById(ticket.id);

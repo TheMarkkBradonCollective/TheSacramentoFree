@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest } from './types';
-import { normalizeItemMedia } from './lib/listingContent';
+import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeUserRole, type UserRole, canStaffBan, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket } from './lib/roles';
@@ -554,13 +554,14 @@ export async function getSupabaseItems(): Promise<ItemPost[]> {
 
 export async function uploadItemImage(file: File, itemId: string): Promise<string | null> {
   try {
-    const fileExt = file.name.split('.').pop() || 'jpg';
+    const compressed = await compressImageIfNeeded(file);
+    const fileExt = compressed.name.split('.').pop() || 'jpg';
     const filePath = `${itemId}_${Date.now()}.${fileExt}`;
 
     // Upload to 'items' bucket using supabase-js
     const { data, error } = await supabase.storage
       .from('items')
-      .upload(filePath, file, {
+      .upload(filePath, compressed, {
         cacheControl: '3600',
         upsert: true
       });
@@ -594,11 +595,12 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
 
 export async function uploadReportProofImage(file: File, reportId: string): Promise<string | null> {
   try {
-    const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const compressed = await compressImageIfNeeded(file, 1400, 0.8);
+    const fileExt = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
     const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
     const filePath = `reports/${reportId}_${Date.now()}.${safeExt}`;
 
-    const { error } = await supabase.storage.from('items').upload(filePath, file, {
+    const { error } = await supabase.storage.from('items').upload(filePath, compressed, {
       cacheControl: '3600',
       upsert: true,
     });
@@ -618,9 +620,10 @@ export async function uploadReportProofImage(file: File, reportId: string): Prom
 }
 
 export async function uploadProfilePhoto(file: File, userId: string): Promise<string | null> {
-  const extRaw = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const compressed = await compressImageIfNeeded(file, 512, 0.85);
+  const extRaw = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
   const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
-  const contentType = file.type.startsWith('image/') ? file.type : 'image/jpeg';
+  const contentType = compressed.type.startsWith('image/') ? compressed.type : 'image/jpeg';
 
   const attempts: { bucket: string; path: string }[] = [
     { bucket: 'avatars', path: `${userId}/avatar.${fileExt}` },
@@ -629,7 +632,7 @@ export async function uploadProfilePhoto(file: File, userId: string): Promise<st
   ];
 
   for (const { bucket, path } of attempts) {
-    const { error } = await supabase.storage.from(bucket).upload(path, file, {
+    const { error } = await supabase.storage.from(bucket).upload(path, compressed, {
       cacheControl: '3600',
       upsert: true,
       contentType,

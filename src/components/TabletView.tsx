@@ -4,17 +4,19 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { List, MessageSquare, User, Plus, LogOut, Map } from 'lucide-react';
+import CommunityMenuView from './CommunityMenuView';
+import { List, MessageSquare, User, Plus, LogOut, Map, LifeBuoy } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import CommunityStatsBar from './CommunityStatsBar';
+import { AppTab } from '../lib/appTabs';
 
 interface TabletViewProps {
   items: ItemPost[];
   userProfile: UserProfile;
-  activeTab: 'feed' | 'chats' | 'profile' | 'map';
-  setActiveTab: (tab: 'feed' | 'chats' | 'profile' | 'map') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
@@ -34,6 +36,7 @@ const TABS = [
   { id: 'feed' as const, label: 'Feed', icon: List },
   { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'chats' as const, label: 'Messages', icon: MessageSquare },
+  { id: 'menu' as const, label: IN_APP.menuTabLabel, icon: LifeBuoy },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ];
 
@@ -172,8 +175,19 @@ export default function TabletView({
                 userProfile={userProfile}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
-                onViewProfile={onViewProfile}
               />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'menu' && (
+          <div className="space-y-4" id="tablet_menu_pane">
+            <div className="sbn-page-header">
+              <h2>{IN_APP.menuTitle}</h2>
+              <p>{IN_APP.menuDescription}</p>
+            </div>
+            <div className="sbn-card p-6">
+              <CommunityMenuView userProfile={userProfile} onViewProfile={onViewProfile} />
             </div>
           </div>
         )}

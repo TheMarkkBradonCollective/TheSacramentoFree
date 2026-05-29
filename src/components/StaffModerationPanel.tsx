@@ -26,6 +26,9 @@ import {
 import RoleBadge from './RoleBadge';
 import FullScreenPanel from './FullScreenPanel';
 import SupportTicketThread from './SupportTicketThread';
+import ListingImage from './ListingImage';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { avatarImageUrl } from '../lib/imageUrl';
 import { ClipboardList, Flag, LifeBuoy, Search, Shield, Users, X } from 'lucide-react';
 
 const SUSPEND_DURATIONS = [
@@ -43,10 +46,7 @@ interface StaffModerationPanelProps {
 }
 
 function neighborAvatarUrl(user: StaffUserRow): string {
-  if (user.photoURL?.startsWith('http://') || user.photoURL?.startsWith('https://')) {
-    return user.photoURL;
-  }
-  return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.displayName || user.uid)}`;
+  return avatarImageUrl(user.photoURL, user.displayName, user.uid);
 }
 
 function statusLabel(user: StaffUserRow): string {
@@ -119,6 +119,54 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
     if (panel === 'audit') void reloadAudit();
     if (panel === 'reports') void reloadReports();
     if (panel === 'tickets') void reloadTickets();
+  }, [panel, reloadDirectory, reloadAudit, reloadReports, reloadTickets]);
+
+  useEffect(() => {
+    if (!panel) return;
+
+    const refresh = debounceRealtime(() => {
+      if (panel === 'directory') void reloadDirectory();
+      else if (panel === 'audit') void reloadAudit();
+      else if (panel === 'reports') void reloadReports();
+      else if (panel === 'tickets' || panel === 'ticketThread') void reloadTickets();
+    }, 100);
+
+    const unsubs: (() => void)[] = [];
+
+    if (panel === 'directory') {
+      unsubs.push(
+        subscribePostgresChanges({ channelName: 'staff-live-users', table: 'users', event: '*' }, refresh),
+      );
+    }
+    if (panel === 'audit') {
+      unsubs.push(
+        subscribePostgresChanges(
+          { channelName: 'staff-live-audit', table: 'moderation_audit_log', event: 'INSERT' },
+          refresh,
+        ),
+      );
+    }
+    if (panel === 'reports') {
+      unsubs.push(
+        subscribePostgresChanges({ channelName: 'staff-live-reports', table: 'user_reports', event: '*' }, refresh),
+      );
+    }
+    if (panel === 'tickets' || panel === 'ticketThread') {
+      unsubs.push(
+        subscribePostgresChanges(
+          { channelName: 'staff-live-tickets', table: 'support_tickets', event: '*' },
+          refresh,
+        ),
+      );
+      unsubs.push(
+        subscribePostgresChanges(
+          { channelName: 'staff-live-ticket-msgs', table: 'support_ticket_messages', event: 'INSERT' },
+          refresh,
+        ),
+      );
+    }
+
+    return () => unsubs.forEach((u) => u());
   }, [panel, reloadDirectory, reloadAudit, reloadReports, reloadTickets]);
 
   const filteredUsers = useMemo(() => {
@@ -352,11 +400,11 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                       className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-xl border border-app bg-surface"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <img
+                        <ListingImage
                           src={neighborAvatarUrl(user)}
                           alt=""
+                          width={96}
                           className="w-10 h-10 rounded-full border border-app object-cover shrink-0 bg-inset"
-                          referrerPolicy="no-referrer"
                         />
                         <div className="min-w-0 flex-1">
                           <p className="font-semibold text-sm text-app truncate">{user.displayName}</p>
@@ -498,11 +546,11 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                         rel="noreferrer"
                         className="block rounded-xl border border-app overflow-hidden bg-inset max-w-xs"
                       >
-                        <img
+                        <ListingImage
                           src={report.proofImageUrl}
                           alt="Report proof"
+                          width={480}
                           className="w-full max-h-48 object-contain"
-                          referrerPolicy="no-referrer"
                         />
                         <span className="text-[10px] text-accent font-semibold px-2 py-1 block">
                           View screenshot proof

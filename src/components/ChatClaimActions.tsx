@@ -8,6 +8,7 @@ import {
 } from '../supabase';
 import SubItemPicker from './SubItemPicker';
 import { CheckCircle } from 'lucide-react';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface ChatClaimActionsProps {
   chatId: string;
@@ -47,6 +48,36 @@ export default function ChatClaimActions({
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    const refresh = debounceRealtime(() => {
+      void reload();
+      onChanged();
+    }, 100);
+
+    const unsubs = [
+      subscribePostgresChanges(
+        {
+          channelName: `live-subitems-${linkedItem.id}`,
+          table: 'listing_subitems',
+          event: '*',
+          filter: `itemId=eq.${linkedItem.id}`,
+        },
+        refresh,
+      ),
+      subscribePostgresChanges(
+        {
+          channelName: `live-claim-reqs-${chatId}`,
+          table: 'item_claim_requests',
+          event: '*',
+          filter: `chatId=eq.${chatId}`,
+        },
+        refresh,
+      ),
+    ];
+
+    return () => unsubs.forEach((u) => u());
+  }, [linkedItem.id, chatId, reload, onChanged]);
 
   const isMulti = subitems.length > 0;
   const availableCount = isMulti ? subitems.filter((s) => s.status === 'available').length : 1;

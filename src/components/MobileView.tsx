@@ -4,17 +4,19 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, Plus, LogOut } from 'lucide-react';
+import CommunityMenuView from './CommunityMenuView';
+import { Map, List, MessageSquare, User, Plus, LogOut, LifeBuoy } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
+import { AppTab } from '../lib/appTabs';
 
 interface MobileViewProps {
   items: ItemPost[];
   userProfile: UserProfile;
-  activeTab: 'feed' | 'chats' | 'profile' | 'map';
-  setActiveTab: (tab: 'feed' | 'chats' | 'profile' | 'map') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
@@ -34,6 +36,7 @@ const NAV_ITEMS = [
   { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'feed' as const, label: 'Feed', icon: List },
   { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
+  { id: 'menu' as const, label: IN_APP.menuTabLabel, icon: LifeBuoy },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ];
 
@@ -190,6 +193,21 @@ export default function MobileView({
             userProfile={userProfile}
             onUpdateProfile={onUpdateProfile}
             onProfilePhotoSaved={onRefresh}
+            fullBleed
+          />
+        </div>
+
+        <div
+          className={`h-full w-full min-h-0 overflow-y-auto bg-app ${activeTab === 'menu' ? '' : 'hidden'}`}
+          id="mobile_menu_dock"
+          aria-hidden={activeTab !== 'menu'}
+        >
+          <div className="sbn-page-header px-4 pt-4 pb-2">
+            <h2>{IN_APP.menuTitle}</h2>
+            <p className="text-sm text-muted mt-1">{IN_APP.menuDescription}</p>
+          </div>
+          <CommunityMenuView
+            userProfile={userProfile}
             onViewProfile={onViewProfile}
             fullBleed
           />
@@ -197,7 +215,7 @@ export default function MobileView({
       </main>
 
       <footer id="mobile_sticky_footer_nav" className="shrink-0 sbn-mobile-nav z-50">
-        <div className="grid grid-cols-4 h-[4.25rem] px-2">
+        <div className="grid grid-cols-5 h-[4.25rem] px-1">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}

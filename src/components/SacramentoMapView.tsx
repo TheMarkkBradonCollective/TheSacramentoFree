@@ -16,6 +16,7 @@ import {
 } from '../lib/mapRoute';
 import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
+import ListingImage from './ListingImage';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 
@@ -878,10 +879,10 @@ export default function SacramentoMapView({
                     const thumb = photos[0];
                     return thumb ? (
                     <div className="relative w-16 h-16 rounded-xl border border-app shrink-0 overflow-hidden">
-                      <img
+                      <ListingImage
                         src={thumb}
                         alt={selectedPost.title}
-                        referrerPolicy="no-referrer"
+                        width={160}
                         className="w-full h-full object-cover"
                       />
                       {photos.length > 1 && (
@@ -1369,10 +1370,10 @@ export default function SacramentoMapView({
                 const thumb = photos[0];
                 return thumb ? (
                 <div className="relative w-18 h-18 sm:w-24 sm:h-24 border border-app shrink-0 bg-app rounded-xl overflow-hidden">
-                  <img
+                  <ListingImage
                     src={thumb}
                     alt={selectedPost.title}
-                    referrerPolicy="no-referrer"
+                    width={240}
                     className="w-full h-full object-cover rounded-none"
                   />
                   {photos.length > 1 && (

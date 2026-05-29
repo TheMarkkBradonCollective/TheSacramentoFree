@@ -24,9 +24,6 @@ import {
   Camera,
 } from 'lucide-react';
 import CommunityFooter from './CommunityFooter';
-import StaffModerationPanel from './StaffModerationPanel';
-import AccountHelpSection from './AccountHelpSection';
-import { canAccessStaffDirectory } from '../lib/roles';
 import { IN_APP } from '../siteContent';
 
 interface UserProfileViewProps {
@@ -34,8 +31,6 @@ interface UserProfileViewProps {
   onUpdateProfile: (updated: UserProfile) => void;
   /** Refresh feed/listings after avatar is saved */
   onProfilePhotoSaved?: () => void;
-  /** Open another neighbor's profile (staff directory). */
-  onViewProfile?: (userId: string) => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
   fullBleed?: boolean;
 }
@@ -50,7 +45,6 @@ export default function UserProfileView({
   userProfile,
   onUpdateProfile,
   onProfilePhotoSaved,
-  onViewProfile,
   fullBleed = false,
 }: UserProfileViewProps) {
   const [displayName, setDisplayName] = useState(userProfile.displayName);
@@ -567,16 +561,6 @@ export default function UserProfileView({
             <p className="text-[10px] text-muted">Hides browser tab clutter and URL headers to let you focus entirely on friendly neighborly exchanges.</p>
           </div>
         </div>
-      </div>
-
-      {canAccessStaffDirectory(userProfile.role) && onViewProfile && (
-        <div className={fullBleed ? `${sectionShell} border-t-0` : ''}>
-          <StaffModerationPanel viewer={userProfile} onViewProfile={onViewProfile} />
-        </div>
-      )}
-
-      <div className={fullBleed ? `${sectionShell} border-t-0` : 'mt-6'}>
-        <AccountHelpSection user={userProfile} />
       </div>
 
       <div className={fullBleed ? '' : 'mt-6'}>

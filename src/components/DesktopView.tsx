@@ -5,15 +5,17 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
+import CommunityMenuView from './CommunityMenuView';
 import Navbar from './Navbar';
 import CommunityStatsBar from './CommunityStatsBar';
 import { IN_APP } from '../siteContent';
+import { AppTab } from '../lib/appTabs';
 
 interface DesktopViewProps {
   items: ItemPost[];
   userProfile: UserProfile;
-  activeTab: 'feed' | 'chats' | 'profile' | 'map';
-  setActiveTab: (tab: 'feed' | 'chats' | 'profile' | 'map') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
@@ -118,8 +120,19 @@ export default function DesktopView({
                 userProfile={userProfile}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
-                onViewProfile={onViewProfile}
               />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'menu' && (
+          <div className="space-y-4" id="desktop_menu_view_root">
+            <div className="sbn-page-header">
+              <h2>{IN_APP.menuTitle}</h2>
+              <p>{IN_APP.menuDescription}</p>
+            </div>
+            <div className="sbn-card p-6 md:p-8">
+              <CommunityMenuView userProfile={userProfile} onViewProfile={onViewProfile} />
             </div>
           </div>
         )}

@@ -20,6 +20,7 @@ import { PostVoteState } from '../hooks/useItemsEngagement';
 import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import { getListingSubitems } from '../supabase';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface ItemDetailViewProps {
   item: ItemPost;
@@ -65,6 +66,22 @@ export default function ItemDetailView({
 
   useEffect(() => {
     void getListingSubitems(item.id).then(setSubitems);
+  }, [item.id]);
+
+  useEffect(() => {
+    const refresh = debounceRealtime(() => {
+      void getListingSubitems(item.id).then(setSubitems);
+    }, 100);
+
+    return subscribePostgresChanges(
+      {
+        channelName: `live-detail-subitems-${item.id}`,
+        table: 'listing_subitems',
+        event: '*',
+        filter: `itemId=eq.${item.id}`,
+      },
+      refresh,
+    );
   }, [item.id]);
 
   const partialClaimed =

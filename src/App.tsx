@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useItemsEngagement } from './hooks/useItemsEngagement';
 import { useItemsRealtime } from './hooks/useItemsRealtime';
+import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
 import { UserProfile, ItemPost } from './types';
 import Navbar from './components/Navbar';
@@ -29,26 +30,23 @@ import {
   isAccountRestricted,
 } from './supabase';
 import { APP_LOGO_SRC, SITE } from './siteContent';
+import { AppTab, parseAppTab } from './lib/appTabs';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
-const APP_TABS = ['feed', 'map', 'chats', 'profile'] as const;
 const TAB_HISTORY_KEY = 'sbnTab';
 
-function parseStoredTab(value: string | null): 'feed' | 'map' | 'chats' | 'profile' | null {
-  if (!value) return null;
-  return (APP_TABS as readonly string[]).includes(value)
-    ? (value as 'feed' | 'map' | 'chats' | 'profile')
-    : null;
+function parseStoredTab(value: string | null): AppTab | null {
+  return parseAppTab(value);
 }
 
-function parseTabFromHistoryState(state: unknown): 'feed' | 'map' | 'chats' | 'profile' | null {
+function parseTabFromHistoryState(state: unknown): AppTab | null {
   if (!state || typeof state !== 'object') return null;
   const value = (state as Record<string, unknown>)[TAB_HISTORY_KEY];
   return typeof value === 'string' ? parseStoredTab(value) : null;
 }
 
-function withTabInHistoryState(tab: 'feed' | 'map' | 'chats' | 'profile') {
+function withTabInHistoryState(tab: AppTab) {
   // Keep history state minimal/serializable to avoid DataCloneError crashes.
   return { [TAB_HISTORY_KEY]: tab };
 }
@@ -60,7 +58,7 @@ export default function App() {
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
-  const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>(() => {
+  const [activeTab, setActiveTab] = useState<AppTab>(() => {
     if (typeof window === 'undefined') return 'map';
     return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
   });
@@ -386,6 +384,7 @@ export default function App() {
   }, [userProfile]);
 
   useItemsRealtime(!!userProfile, setItems);
+  useAuthorProfilesRealtime(!!userProfile, setItems);
 
   // Keep detail view in sync when this listing changes live (not on unrelated feed updates)
   useEffect(() => {

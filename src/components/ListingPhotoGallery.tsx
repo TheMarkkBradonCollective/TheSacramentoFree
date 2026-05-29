@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ListingImage from './ListingImage';
 
 interface ListingPhotoGalleryProps {
   urls: string[];
@@ -16,11 +17,12 @@ export default function ListingPhotoGallery({ urls, title, className = '' }: Lis
   return (
     <div className={className}>
       <div className="aspect-[4/3] sm:aspect-video bg-inset overflow-hidden relative">
-        <img
+        <ListingImage
           src={active}
           alt={title}
+          width={960}
+          priority
           className="w-full h-full object-cover"
-          referrerPolicy="no-referrer"
         />
         {urls.length > 1 && (
           <span className="absolute bottom-3 right-3 text-[10px] font-bold uppercase tracking-wide bg-black/70 text-white px-2 py-1 rounded-full">
@@ -39,7 +41,7 @@ export default function ListingPhotoGallery({ urls, title, className = '' }: Lis
                 i === activeIndex ? 'border-accent' : 'border-app opacity-80 hover:opacity-100'
               }`}
             >
-              <img src={url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <ListingImage src={url} alt="" width={128} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>

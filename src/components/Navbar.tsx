@@ -4,19 +4,21 @@ import { UserProfile } from '../types';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
+import { AppTab } from '../lib/appTabs';
 
 interface NavbarProps {
   userProfile: UserProfile | null;
-  activeTab: 'feed' | 'chats' | 'profile' | 'map';
-  setActiveTab: (tab: 'feed' | 'chats' | 'profile' | 'map') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
   onLogout: () => void;
 }
 
-const TABS: { id: 'feed' | 'map' | 'chats' | 'profile'; label: string }[] = [
+const TABS: { id: AppTab; label: string }[] = [
   { id: 'map', label: 'Map' },
   { id: 'feed', label: 'Feed' },
   { id: 'chats', label: 'Messages' },
+  { id: 'menu', label: IN_APP.menuTabLabel },
   { id: 'profile', label: IN_APP.accountTabLabel },
 ];
 

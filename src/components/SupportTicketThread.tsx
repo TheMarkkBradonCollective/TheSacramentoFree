@@ -7,6 +7,7 @@ import {
 } from '../supabase';
 import { canViewerAccessTicket } from '../lib/roles';
 import RoleBadge from './RoleBadge';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface SupportTicketThreadProps {
   ticket: SupportTicket;
@@ -42,6 +43,45 @@ export default function SupportTicketThread({
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    const refreshTicket = debounceRealtime(() => {
+      onUpdated?.();
+    }, 100);
+
+    const unsubMessages = subscribePostgresChanges<SupportTicketMessage>(
+      {
+        channelName: `live-ticket-msgs-${ticket.id}`,
+        table: 'support_ticket_messages',
+        event: 'INSERT',
+        filter: `ticketId=eq.${ticket.id}`,
+      },
+      (payload) => {
+        const row = payload.new as SupportTicketMessage | null;
+        if (!row?.id) return;
+        if (row.senderUserId === viewer.uid) return;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === row.id)) return prev;
+          return [...prev, row];
+        });
+      },
+    );
+
+    const unsubTicket = subscribePostgresChanges(
+      {
+        channelName: `live-ticket-${ticket.id}`,
+        table: 'support_tickets',
+        event: 'UPDATE',
+        filter: `id=eq.${ticket.id}`,
+      },
+      () => refreshTicket(),
+    );
+
+    return () => {
+      unsubMessages();
+      unsubTicket();
+    };
+  }, [ticket.id, viewer.uid, onUpdated]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
