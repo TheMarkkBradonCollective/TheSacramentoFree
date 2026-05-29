@@ -139,12 +139,6 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Set default tab on mobile to the map view for that premium Uber map startup feel
-  useEffect(() => {
-    if (deviceType === 'mobile' && activeTab === 'feed') {
-      setActiveTab('map');
-    }
-  }, [deviceType]);
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
     Promise.race([
@@ -475,10 +469,10 @@ export default function App() {
           isAuthLoading={isAuthLoading}
         />
       ) : authBootstrapping || isProfileLoading ? (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center bg-app">
-          <div className="w-10 h-10 border-2 border-[#FF4500] border-t-transparent rounded-full animate-spin" aria-hidden />
-          <p className="text-sm font-semibold text-app">Signing you in…</p>
-          <p className="text-xs text-subtle max-w-xs">Loading your neighbor profile from the community database.</p>
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center mesh-bg">
+          <div className="w-11 h-11 border-2 border-accent border-t-transparent rounded-full animate-spin" aria-hidden />
+          <p className="font-display text-lg font-bold text-app">Signing you in…</p>
+          <p className="text-sm text-muted max-w-xs">Setting up your neighbor profile.</p>
         </div>
       ) : (
         <>

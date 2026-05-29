@@ -33,12 +33,10 @@ export default function DesktopView({
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
-  onRefresh
+  onRefresh,
 }: DesktopViewProps) {
   return (
-    <div id="desktop_device_workspace" className="min-h-screen flex flex-col bg-app text-app antialiased font-sans">
-      
-      {/* Primary Header Navbar */}
+    <div id="desktop_device_workspace" className="min-h-screen flex flex-col mesh-bg text-app">
       <Navbar
         userProfile={userProfile}
         activeTab={activeTab}
@@ -47,24 +45,15 @@ export default function DesktopView({
         onLogout={onLogout}
       />
 
-      {/* Main Content Workspace Layout */}
-      <main id="desktop_main" className="flex-1 max-w-7xl w-full mx-auto px-6 lg:px-8 py-8 space-y-6">
-        
+      <main id="desktop_main" className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
         {activeTab === 'feed' && (
           <div className="space-y-6" id="desktop_feed_view_root">
-            <div className="flex justify-between items-center bg-surface border border-app p-5 rounded-2xl shadow-xs">
-              <div>
-                <h2 className="text-sm font-bold text-app tracking-tight font-display text-left">{IN_APP.feedTitle}</h2>
-                <p className="text-xs text-muted mt-1 font-semibold leading-relaxed text-left">
-                  {IN_APP.feedDescription} · <span className="font-bold text-accent uppercase font-mono">{userProfile.neighborhood}</span>
-                </p>
-              </div>
-              <div className="px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/15 rounded-full">
-                <span className="text-[10px] font-bold text-accent font-sans">🏡 ACTIVE CIRCLE</span>
-              </div>
+            <div className="sbn-page-header">
+              <h2>{IN_APP.feedTitle}</h2>
+              <p>
+                {IN_APP.feedDescription} · <span className="text-accent font-semibold">{userProfile.neighborhood}</span>
+              </p>
             </div>
-
-            {/* Listings Directory list view */}
             <ItemGrid
               items={items}
               userProfile={userProfile}
@@ -76,40 +65,41 @@ export default function DesktopView({
         )}
 
         {activeTab === 'chats' && (
-          <div className="bg-surface border border-app p-4 rounded-2xl shadow-sm" id="desktop_chats_view_root">
-            <ChatSystem
-              userProfile={userProfile}
-              initialSelectedChatId={initialSelectedChatId}
-              onClearInitialChat={onClearInitialChat}
-              items={items}
-            />
+          <div className="space-y-4" id="desktop_chats_view_root">
+            <div className="sbn-page-header">
+              <h2>{IN_APP.chatsTitle}</h2>
+              <p>{IN_APP.chatsDescription}</p>
+            </div>
+            <div className="sbn-card-elevated overflow-hidden p-1">
+              <ChatSystem
+                userProfile={userProfile}
+                initialSelectedChatId={initialSelectedChatId}
+                onClearInitialChat={onClearInitialChat}
+                items={items}
+              />
+            </div>
           </div>
         )}
 
         {activeTab === 'profile' && (
-          <div className="bg-surface border border-app p-6 rounded-2xl shadow-sm" id="desktop_profile_view_root">
-            <UserProfileView
-              userProfile={userProfile}
-              onUpdateProfile={onUpdateProfile}
-            />
+          <div className="space-y-4" id="desktop_profile_view_root">
+            <div className="sbn-page-header">
+              <h2>{IN_APP.profileTitle}</h2>
+            </div>
+            <div className="sbn-card p-6 md:p-8">
+              <UserProfileView userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+            </div>
           </div>
         )}
 
         {activeTab === 'map' && (
           <div className="space-y-6" id="desktop_map_view_root">
-            <div className="bg-surface border border-app p-5 rounded-2xl shadow-xs">
-              <h2 className="text-sm font-bold text-app tracking-tight font-display text-left">{IN_APP.mapTitle}</h2>
-              <p className="text-xs text-muted mt-1 font-semibold leading-relaxed text-left">
-                {IN_APP.mapDescription}
-              </p>
+            <div className="sbn-page-header">
+              <h2>{IN_APP.mapTitle}</h2>
+              <p>{IN_APP.mapDescription}</p>
             </div>
-
-            <div className="bg-surface border border-app p-4 rounded-2xl shadow-xs">
-              <SacramentoMapView
-                items={items}
-                userProfile={userProfile}
-                onInitiateChat={onInitiateChat}
-              />
+            <div className="sbn-card-elevated overflow-hidden p-2">
+              <SacramentoMapView items={items} userProfile={userProfile} onInitiateChat={onInitiateChat} />
             </div>
           </div>
         )}

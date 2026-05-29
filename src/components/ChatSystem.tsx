@@ -176,7 +176,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
   };
 
   return (
-    <div className="bg-surface rounded-none overflow-hidden h-[calc(100vh-12rem)] flex shadow-xs border border-app mb-2 font-sans text-app" id="chat_app_viewport">
+    <div className="bg-surface rounded-2xl overflow-hidden h-[calc(100vh-12rem)] min-h-[420px] flex border border-app text-app" id="chat_app_viewport">
       
       {/* Sidebar List - Responsive collapse */}
       <div 

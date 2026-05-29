@@ -225,16 +225,16 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
   };
 
   return (
-    <div id="post_modal_overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 overflow-y-auto font-sans">
-      <div className="relative w-full max-w-md bg-surface rounded-2xl border border-app shadow-2xl overflow-hidden my-8" id="post_modal_box">
+    <div id="post_modal_overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-lg sbn-card-elevated overflow-hidden my-8" id="post_modal_box">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-app bg-app">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-app bg-accent-soft/50">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 bg-accent text-on-accent rounded-xl flex items-center justify-center">
               {type === 'looking' ? <Search className="w-4 h-4" /> : <Gift className="w-4 h-4" />}
             </div>
-            <h3 className="text-sm font-bold text-app tracking-tight font-display">
-              {type === 'looking' ? 'Post a New Request (ISO)' : 'Share a New Gift'}
+            <h3 className="text-base font-bold text-app font-display">
+              {type === 'looking' ? 'Request something' : 'Give something away'}
             </h3>
           </div>
           <button

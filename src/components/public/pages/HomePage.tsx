@@ -15,67 +15,57 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
 
 export default function HomePage({ onNavigate }: HomePageProps) {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 md:py-14">
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF4500]/10 border border-[#FF4500]/20 text-accent text-xs font-bold uppercase tracking-wider">
-        <Heart className="w-3.5 h-3.5" />
+    <div className="max-w-2xl mx-auto px-4 py-12 md:py-16 sbn-hero-glow">
+      <span className="sbn-badge sbn-badge-give">
+        <Heart className="w-3 h-3 inline mr-1" />
         {SITE.name}
-      </div>
+      </span>
 
-      <h1 className="mt-5 text-3xl md:text-4xl font-black text-app leading-tight tracking-tight">
-        Give freely. Ask kindly.
-        <span className="block text-accent mt-1">Neighbors helping neighbors.</span>
+      <h1 className="mt-6 font-display text-4xl md:text-5xl font-extrabold text-app leading-[1.1] tracking-tight">
+        Give freely.
+        <br />
+        <span className="text-accent">Ask kindly.</span>
       </h1>
 
-      <p className="mt-4 text-sm md:text-base text-muted leading-relaxed max-w-xl">
-        {SITE.description}
-      </p>
+      <p className="mt-5 text-base text-muted leading-relaxed max-w-lg">{SITE.description}</p>
 
-      <ul className="mt-4 flex flex-wrap gap-2">
+      <ul className="mt-6 flex flex-wrap gap-2">
         {SITE.principles.map((line) => (
-          <li
-            key={line}
-            className="px-3 py-1 rounded-full bg-inset border border-app text-xs font-bold text-muted"
-          >
+          <li key={line} className="sbn-chip text-xs">
             {line}
           </li>
         ))}
       </ul>
 
       <div className="mt-8 flex flex-col sm:flex-row gap-3">
-        <button
-          type="button"
-          onClick={() => onNavigate('login')}
-          className="px-6 py-3.5 rounded-xl bg-accent hover:bg-accent-hover text-on-accent text-sm font-black uppercase tracking-wide"
-        >
+        <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary">
           Sign in or join
         </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('about')}
-          className="px-6 py-3.5 rounded-xl border border-app bg-surface text-app text-sm font-bold hover:bg-inset transition-colors"
-        >
-          Learn about the project
+        <button type="button" onClick={() => onNavigate('about')} className="sbn-btn sbn-btn-secondary">
+          Learn more
         </button>
       </div>
 
-      <p className="mt-6 text-xs font-bold text-accent">{SITE.freeRule}</p>
+      <p className="mt-5 text-sm font-semibold text-accent">{SITE.freeRule}</p>
 
-      <h2 className="mt-12 text-lg font-black text-app">Explore before you join</h2>
-      <p className="mt-1 text-sm text-muted">No account needed to read about the community.</p>
+      <h2 className="mt-14 font-display text-xl font-bold text-app">Explore the community</h2>
+      <p className="mt-1 text-sm text-muted">Browse without an account.</p>
 
-      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {EXPLORE_LINKS.map(({ route, title, blurb, icon: Icon }) => (
           <button
             key={route}
             type="button"
             onClick={() => onNavigate(route)}
-            className="text-left p-4 rounded-2xl bg-surface border border-app hover:border-[#FF4500]/40 transition-colors group"
+            className="sbn-card p-5 text-left hover:shadow-app transition-shadow group"
           >
-            <Icon className="w-5 h-5 text-accent mb-2" />
-            <p className="font-black text-app text-sm">{title}</p>
-            <p className="mt-1 text-xs text-muted leading-relaxed">{blurb}</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-accent group-hover:gap-2 transition-all">
-              Read more <ArrowRight className="w-3.5 h-3.5" />
+            <div className="w-10 h-10 rounded-2xl bg-accent-soft flex items-center justify-center mb-3">
+              <Icon className="w-5 h-5 text-accent" />
+            </div>
+            <p className="font-display font-bold text-app">{title}</p>
+            <p className="mt-1 text-sm text-muted leading-relaxed">{blurb}</p>
+            <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
+              Read more <ArrowRight className="w-4 h-4" />
             </span>
           </button>
         ))}
@@ -84,10 +74,10 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       <button
         type="button"
         onClick={() => onNavigate('community')}
-        className="mt-3 w-full p-4 rounded-2xl bg-inset border border-app text-left hover:border-[#FF4500]/30 transition-colors"
+        className="mt-4 w-full sbn-card p-5 text-left hover:border-accent/40 transition-colors"
       >
-        <p className="font-black text-sm text-app">Why community matters</p>
-        <p className="mt-1 text-xs text-muted">Trust, mutual aid, and less waste in Sacramento.</p>
+        <p className="font-display font-bold text-app">Why community matters</p>
+        <p className="mt-1 text-sm text-muted">Trust, mutual aid, and less waste in Sacramento.</p>
       </button>
     </div>
   );

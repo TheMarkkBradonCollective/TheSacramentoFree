@@ -63,14 +63,14 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
   };
 
   return (
-    <div id="onboarding_viewport" className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-app font-sans">
-      <div className="max-w-md w-full bg-surface p-8 rounded-2xl border border-app shadow-xl">
+    <div id="onboarding_viewport" className="min-h-[80vh] flex items-center justify-center py-12 px-4 mesh-bg">
+      <div className="max-w-md w-full sbn-card-elevated p-8 md:p-10">
         <div className="text-center mb-8">
           <div className="inline-flex p-3 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-accent mb-4" id="onboarding_icon_wrapper">
             <Heart className="w-8 h-8 text-accent" />
           </div>
-          <h2 className="text-2xl font-bold text-app tracking-tight font-display">
-            {IN_APP.onboardingTitle}
+          <h2 className="text-2xl font-extrabold text-app tracking-tight font-display">
+            Welcome in
           </h2>
           <p className="mt-2 text-sm text-subtle leading-relaxed">
             {IN_APP.onboardingBody}
@@ -92,8 +92,8 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
 
           {/* Display Name */}
           <div className="space-y-1.5">
-            <label htmlFor="on_display_name" className="text-xs font-bold text-subtle uppercase tracking-wide block">
-              YOUR NAME OR NICKNAME
+            <label htmlFor="on_display_name" className="text-sm font-semibold text-app block">
+              Your name or nickname
             </label>
             <div className="relative rounded-xl shadow-xs">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -113,8 +113,8 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
 
           {/* Neighborhood Selector */}
           <div className="space-y-1.5">
-            <label htmlFor="on_neighborhood" className="text-xs font-bold text-subtle uppercase tracking-wide block">
-              YOUR SACRAMENTO NEIGHBORHOOD
+            <label htmlFor="on_neighborhood" className="text-sm font-semibold text-app block">
+              Your neighborhood
             </label>
             <div className="relative rounded-xl shadow-xs">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -140,8 +140,8 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
 
           {/* Profile Biography */}
           <div className="space-y-1.5">
-            <label htmlFor="on_bio" className="text-xs font-bold text-subtle uppercase tracking-wide block">
-              TELL NEIGHBORS ABOUT YOURSELF (BIO)
+            <label htmlFor="on_bio" className="text-sm font-semibold text-app block">
+              Short bio <span className="text-muted font-normal">(optional)</span>
             </label>
             <textarea
               id="on_bio"
@@ -162,9 +162,9 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
             type="submit"
             id="onboarding_submit_btn"
             disabled={isSubmitting}
-            className="w-full flex justify-center py-3.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-sm font-bold tracking-wide transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed uppercase text-center"
+            className="sbn-btn sbn-btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Joining the circle...' : 'Step into our sharing circle'}
+            {isSubmitting ? 'Saving…' : 'Continue to the community'}
           </button>
         </form>
 

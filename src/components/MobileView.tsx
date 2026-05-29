@@ -4,9 +4,9 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, Plus, Compass, LogOut } from 'lucide-react';
+import { Map, List, MessageSquare, User, Plus, LogOut } from 'lucide-react';
 import CommunityFooter from './CommunityFooter';
-import { IN_APP, SITE } from '../siteContent';
+import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 
 interface MobileViewProps {
@@ -23,6 +23,13 @@ interface MobileViewProps {
   onRefresh: () => void;
 }
 
+const NAV_ITEMS = [
+  { id: 'feed' as const, label: 'Feed', icon: List },
+  { id: 'map' as const, label: 'Map', icon: Map },
+  { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
+  { id: 'profile' as const, label: 'You', icon: User },
+];
+
 export default function MobileView({
   items,
   userProfile,
@@ -34,104 +41,71 @@ export default function MobileView({
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
-  onRefresh
+  onRefresh,
 }: MobileViewProps) {
-  // Mobile-specific layout sub-view controllers
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
 
   return (
-    <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-app font-sans text-app relative">
-      
-      {/* Floating Header Banner */}
-      <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between bg-surface text-app px-4 py-3 shadow-lg border border-app rounded-2xl" id="mobile_floating_header">
-        <div className="flex items-center space-x-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#FF4500] animate-ping" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-accent">{SITE.shortName}</span>
-        </div>
-        <div className="text-[10px] font-bold uppercase tracking-wider text-app truncate max-w-[100px]" id="mobile_neighborhood_header">
-          {userProfile.neighborhood.toUpperCase()} CIRCLE
+    <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-app text-app">
+      <header className="shrink-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-30">
+        <div className="min-w-0">
+          <p className="font-display font-bold text-sm text-app truncate">Sac Buy Nothing</p>
+          <p className="text-[11px] text-muted truncate">{userProfile.neighborhood}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <ThemeToggle />
           <button
+            type="button"
             onClick={onLogout}
-            className="text-muted hover:text-app p-1 transition-colors cursor-pointer"
-            id="mobile_logout_floating_btn"
-            title="Sign Out"
+            className="p-2 rounded-full text-muted hover:bg-inset hover:text-app"
+            title="Sign out"
           >
             <LogOut className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Primary Context Workspace Container */}
-      <div className="flex-1 w-full relative h-full overflow-hidden" id="mobile_viewport_card">
+      <div className="flex-1 overflow-hidden relative" id="mobile_viewport_card">
         {activeTab === 'map' && (
-          <div className="absolute inset-0 w-full h-full z-0 overflow-hidden" id="ubermap_viewport_container">
-            {/* Immersive Map Background */}
+          <div className="absolute inset-0">
             <SacramentoMapView
               items={items}
               userProfile={userProfile}
               selectedType={selectedMobileType}
               selectedCategory={selectedMobileCategory}
               onInitiateChat={onInitiateChat}
-              isFullScreenMobile={true}
+              isFullScreenMobile
             />
-
-            {/* Float Pill filter list Layered on Top (Uber Map style) */}
-            <div className="absolute top-20 left-4 right-4 z-20 flex gap-2 overflow-x-auto pb-2 scrollbar-none" id="mobile_map_quick_pills">
-              <button
-                id="pill_all_types"
-                onClick={() => setSelectedMobileType('all')}
-                className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'all' ? 'bg-accent text-on-accent border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
-                }`}
-              >
-                All Circle Gifts
-              </button>
-              <button
-                id="pill_gives_only"
-                onClick={() => setSelectedMobileType('giveaway')}
-                className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'giveaway' ? 'bg-accent text-on-accent border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
-                }`}
-              >
-                Gives 🎁
-              </button>
-              <button
-                id="pill_asks_only"
-                onClick={() => setSelectedMobileType('looking')}
-                className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'looking' ? 'bg-accent text-on-accent border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
-                }`}
-              >
-                Asks 🔍
-              </button>
+            <div className="absolute top-3 left-3 right-3 z-20 flex gap-2 overflow-x-auto pb-1">
+              {(['all', 'giveaway', 'looking'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setSelectedMobileType(t)}
+                  className={`sbn-chip shrink-0 ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
+                >
+                  {t === 'all' ? 'All' : t === 'giveaway' ? 'Giving' : 'Looking'}
+                </button>
+              ))}
             </div>
-
-            {/* Quick action circles floated on map (Uber Map Style) */}
-            <div className="absolute bottom-6 right-4 z-20 flex flex-col space-y-3" id="mobile_floated_dial_controls">
-              {/* New Post Action */}
-              <button
-                onClick={onOpenNewPost}
-                className="w-14 h-14 bg-accent hover:bg-accent-hover text-on-accent shadow-2xl flex items-center justify-center rounded-full border-2 border-[#1A1A1B] focus:outline-hidden transition-transform active:scale-95 cursor-pointer"
-                id="mobile_floated_post_action"
-                title="Share or Request"
-              >
-                <Plus className="w-7 h-7" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onOpenNewPost}
+              className="sbn-fab absolute bottom-4 right-4 z-20"
+              aria-label="New post"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
           </div>
         )}
 
-        {/* Directory/Feed Section */}
         {activeTab === 'feed' && (
-          <div className="absolute inset-0 overflow-y-auto bg-app p-4 pt-20" id="mobile_directory_drawer">
-            <div className="mb-4 bg-surface border border-app p-4 rounded-2xl shadow-xs">
-              <h2 className="text-sm font-bold text-app font-display text-left">{IN_APP.feedTitle}</h2>
-              <p className="text-xs text-muted mt-0.5 font-medium leading-normal text-left">
-                {IN_APP.feedDescription} · {items.length} active listings.
+          <div className="absolute inset-0 overflow-y-auto p-4 pb-24" id="mobile_directory_drawer">
+            <div className="sbn-page-header">
+              <h2>{IN_APP.feedTitle}</h2>
+              <p>
+                {IN_APP.feedDescription} · {items.length} listings
               </p>
             </div>
             <ItemGrid
@@ -140,13 +114,12 @@ export default function MobileView({
               onInitiateChat={onInitiateChat}
               onRefresh={onRefresh}
             />
-            <CommunityFooter />
+            <CommunityFooter compact />
           </div>
         )}
 
-        {/* Chats Segment */}
         {activeTab === 'chats' && (
-          <div className="absolute inset-0 bg-app pt-20" id="mobile_messaging_dock font-sans">
+          <div className="absolute inset-0 overflow-hidden p-2 pb-20" id="mobile_messaging_dock">
             <ChatSystem
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
@@ -156,71 +129,27 @@ export default function MobileView({
           </div>
         )}
 
-        {/* User Profile Segment */}
         {activeTab === 'profile' && (
-          <div className="absolute inset-0 bg-app overflow-y-auto p-4 pt-20" id="mobile_profile_dock">
-            <UserProfileView
-              userProfile={userProfile}
-              onUpdateProfile={onUpdateProfile}
-            />
+          <div className="absolute inset-0 overflow-y-auto p-4 pb-24" id="mobile_profile_dock">
+            <UserProfileView userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           </div>
         )}
       </div>
 
-      {/* Immersive Bottom Nav Rail (Uber/Mobile layout) */}
-      <footer id="mobile_sticky_footer_nav" className="bg-surface border-t border-app text-app shadow-2xl pb-safe z-30 font-sans">
-        <div className="grid grid-cols-4 h-16 w-full text-center">
-          
-          {/* Map Portal */}
-          <button
-            id="mobile_nav_map"
-            onClick={() => setActiveTab('map')}
-            className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'map' ? 'text-accent border-t-2 border-accent bg-accent-soft' : 'text-muted hover:text-app'
-            }`}
-          >
-            <Compass className="w-5 h-5" />
-            <span className="text-[9px] font-bold tracking-wide">Explore Map</span>
-          </button>
-
-          {/* Directory Portal */}
-          <button
-            id="mobile_nav_feed"
-            onClick={() => setActiveTab('feed')}
-            className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'feed' ? 'text-accent border-t-2 border-accent bg-accent-soft' : 'text-muted hover:text-app'
-            }`}
-          >
-            <List className="w-5 h-5" />
-            <span className="text-[9px] font-bold tracking-wide">Share Pile</span>
-          </button>
-
-          {/* Coordination Panel */}
-          <button
-            id="mobile_nav_chats"
-            onClick={() => setActiveTab('chats')}
-            className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'chats' ? 'text-accent border-t-2 border-accent bg-accent-soft' : 'text-muted hover:text-app'
-            }`}
-          >
-            <div className="relative">
-              <MessageSquare className="w-5 h-5" />
-              <div className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-[#FF4500] animate-pulse" />
-            </div>
-            <span className="text-[9px] font-bold tracking-wide">Cozy Chats</span>
-          </button>
-
-          {/* User Account Panel */}
-          <button
-            id="mobile_nav_profile"
-            onClick={() => setActiveTab('profile')}
-            className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'profile' ? 'text-accent border-t-2 border-accent bg-accent-soft' : 'text-muted hover:text-app'
-            }`}
-          >
-            <User className="w-5 h-5" />
-            <span className="text-[9px] font-bold tracking-wide">My Profile</span>
-          </button>
+      <footer id="mobile_sticky_footer_nav" className="sbn-mobile-nav shrink-0 z-30">
+        <div className="grid grid-cols-4 h-[4.25rem] px-2">
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              id={`mobile_nav_${id}`}
+              onClick={() => setActiveTab(id)}
+              className={`sbn-mobile-nav-item ${activeTab === id ? 'sbn-mobile-nav-item-active' : ''}`}
+            >
+              <Icon className="w-5 h-5" strokeWidth={activeTab === id ? 2.5 : 2} />
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
       </footer>
     </div>

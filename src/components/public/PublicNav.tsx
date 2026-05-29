@@ -13,33 +13,29 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const linkClass = (r: PublicRoute) =>
-    `px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors ${
-      route === r ? 'bg-[#FF4500]/15 text-accent' : 'text-muted hover:text-app hover:bg-inset'
+    `px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+      route === r ? 'bg-accent-soft text-accent' : 'text-muted hover:text-app hover:bg-inset'
     }`;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-app bg-surface/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 sbn-glass-nav">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => onNavigate('home')}
-          className="text-sm font-black text-app truncate hover:text-accent transition-colors"
+          className="font-display font-bold text-app hover:text-accent transition-colors"
         >
           {SITE.shortName}
         </button>
 
-        <nav className="hidden md:flex items-center gap-1 flex-wrap justify-end">
+        <nav className="hidden md:flex items-center gap-1">
           {PUBLIC_NAV.map(({ route: r, label }) => (
             <button key={r} type="button" onClick={() => onNavigate(r)} className={linkClass(r)}>
               {label}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => onNavigate('login')}
-            className="ml-1 px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-on-accent text-xs font-black uppercase tracking-wide"
-          >
-            Sign In
+          <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary sbn-btn-sm ml-2">
+            Sign in
           </button>
           <ThemeToggle />
         </nav>
@@ -49,7 +45,7 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            className="p-2 rounded-lg border border-app text-app"
+            className="p-2 rounded-full border border-app text-app"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -78,9 +74,9 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
               onNavigate('login');
               setMenuOpen(false);
             }}
-            className="mt-1 w-full py-3 rounded-lg bg-accent text-on-accent text-xs font-black uppercase"
+            className="sbn-btn sbn-btn-primary w-full mt-2"
           >
-            Sign In / Join
+            Sign in / Join
           </button>
         </nav>
       )}
