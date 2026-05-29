@@ -10,7 +10,7 @@ export default function NeighborhoodsPage() {
       subtitle="Neighbors from across the city and surrounding areas are welcome."
     >
       <PublicCard>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {SACRAMENTO_NEIGHBORHOODS.map((area) => (
             <div
               key={area}
@@ -20,9 +20,6 @@ export default function NeighborhoodsPage() {
               {area}
             </div>
           ))}
-          <div className="px-3 py-2.5 rounded-xl bg-inset border border-app text-xs font-bold text-muted col-span-2 sm:col-span-1">
-            And surrounding areas
-          </div>
         </div>
       </PublicCard>
     </PublicPageShell>

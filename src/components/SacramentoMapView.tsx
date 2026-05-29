@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng } from '../types';
 import { canViewerSeeExactLocation, stripListingMetadata } from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
 import {
@@ -29,40 +29,6 @@ interface SacramentoMapViewProps {
   isFullScreenMobile?: boolean;
   /** When false (e.g. another mobile tab is active), map stays mounted but hidden */
   mapVisible?: boolean;
-}
-
-// Neighborhood center coordinates as percentages (0-100) of our map sandbox
-export const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
-  'Natomas': { x: 48, y: 16 },
-  'Arden': { x: 74, y: 25 },
-  'Carmichael': { x: 82, y: 22 },
-  'Citrus Heights': { x: 90, y: 10 },
-  'Fair Oaks': { x: 88, y: 20 },
-  'Orangevale': { x: 93, y: 15 },
-  'Rancho Cordova': { x: 90, y: 45 },
-  'East Sacramento': { x: 64, y: 38 },
-  'Midtown': { x: 53, y: 40 },
-  'Downtown': { x: 41, y: 40 },
-  'West Sacramento': { x: 22, y: 40 },
-  'Land Park': { x: 38, y: 56 },
-  'Curtis Park': { x: 50, y: 55 },
-  'Oak Park': { x: 63, y: 56 },
-  'Tahoe Park': { x: 75, y: 56 },
-  'Pocket-Greenhaven': { x: 24, y: 72 },
-  'South Sacramento': { x: 55, y: 74 },
-  'Elk Grove': { x: 58, y: 91 }
-};
-
-// Coordinate helpers
-const latMin = 38.35;
-const latMax = 38.75;
-const lngMin = -121.60;
-const lngMax = -121.30;
-
-export function convertPercentToLatLng(x: number, y: number): { lat: number; lng: number } {
-  const lng = lngMin + (x / 100) * (lngMax - lngMin);
-  const lat = latMin + (1 - y / 100) * (latMax - latMin);
-  return { lat, lng };
 }
 
 // Map each post category to a specific distinct color for blips

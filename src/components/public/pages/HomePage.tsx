@@ -12,7 +12,7 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
   { route: 'about', title: 'What we are', blurb: 'Local free gifting — no money, just neighbors.', icon: Heart },
   { route: 'how-it-works', title: 'How it works', blurb: 'Post, connect, porch pickup — four simple steps.', icon: Users },
   { route: 'rules', title: 'Community rules', blurb: "What's allowed and what isn't.", icon: Shield },
-  { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Land Park, Natomas, and more.', icon: MapPin },
+  { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 34+ areas.', icon: MapPin },
 ];
 
 export default function HomePage({ onNavigate }: HomePageProps) {

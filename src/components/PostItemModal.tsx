@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType, mapGPSToPercent } from '../types';
+import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType, mapGPSToPercent, NEIGHBORHOOD_COORDS, findClosestNeighborhood, findClosestNeighborhoodByLatLng } from '../types';
 import { createSupabaseItem, updateSupabaseItem, uploadItemImage } from '../supabase';
 import {
   buildListingDescription,
@@ -14,82 +14,6 @@ import {
 import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
-
-// Neighborhood center coordinates as percentages (0-100) of our map sandbox
-const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
-  'Natomas': { x: 48, y: 16 },
-  'Arden': { x: 74, y: 25 },
-  'Carmichael': { x: 82, y: 22 },
-  'Citrus Heights': { x: 90, y: 10 },
-  'Fair Oaks': { x: 88, y: 20 },
-  'Orangevale': { x: 93, y: 15 },
-  'Rancho Cordova': { x: 90, y: 45 },
-  'East Sacramento': { x: 64, y: 38 },
-  'Midtown': { x: 53, y: 40 },
-  'Downtown': { x: 41, y: 40 },
-  'West Sacramento': { x: 22, y: 40 },
-  'Land Park': { x: 38, y: 56 },
-  'Curtis Park': { x: 50, y: 55 },
-  'Oak Park': { x: 63, y: 56 },
-  'Tahoe Park': { x: 75, y: 56 },
-  'Pocket-Greenhaven': { x: 24, y: 72 },
-  'South Sacramento': { x: 55, y: 74 },
-  'Elk Grove': { x: 58, y: 91 }
-};
-
-// Approximate real Lat/Lng center points across Sacramento
-const NEIGHBORHOOD_LAT_LONGS: Record<string, { lat: number; lng: number }> = {
-  'Natomas': { lat: 38.6368, lng: -121.5034 },
-  'Arden': { lat: 38.6013, lng: -121.3916 },
-  'Carmichael': { lat: 38.6171, lng: -121.3283 },
-  'Citrus Heights': { lat: 38.7071, lng: -121.2811 },
-  'Fair Oaks': { lat: 38.6446, lng: -121.2720 },
-  'Orangevale': { lat: 38.6785, lng: -121.2254 },
-  'Rancho Cordova': { lat: 38.5891, lng: -121.3027 },
-  'East Sacramento': { lat: 38.5674, lng: -121.4429 },
-  'Midtown': { lat: 38.5724, lng: -121.4784 },
-  'Downtown': { lat: 38.5816, lng: -121.4944 },
-  'West Sacramento': { lat: 38.5805, lng: -121.5302 },
-  'Land Park': { lat: 38.5432, lng: -121.4975 },
-  'Curtis Park': { lat: 38.5484, lng: -121.4795 },
-  'Oak Park': { lat: 38.5447, lng: -121.4614 },
-  'Tahoe Park': { lat: 38.5455, lng: -121.4326 },
-  'Pocket-Greenhaven': { lat: 38.4907, lng: -121.5365 },
-  'South Sacramento': { lat: 38.4952, lng: -121.4468 },
-  'Elk Grove': { lat: 38.4088, lng: -121.3716 }
-};
-
-const findClosestNeighborhood = (lat: number, lng: number): string => {
-  let minDistance = Infinity;
-  let closest = 'Midtown';
-  
-  for (const [name, coords] of Object.entries(NEIGHBORHOOD_LAT_LONGS)) {
-    const dLat = lat - coords.lat;
-    const dLng = lng - coords.lng;
-    const distance = Math.sqrt(dLat * dLat + dLng * dLng); // Euclidean approximation
-    if (distance < minDistance) {
-      minDistance = distance;
-      closest = name;
-    }
-  }
-  return closest;
-};
-
-const findClosestNeighborhoodByPercent = (x: number, y: number): string => {
-  let minDistance = Infinity;
-  let closest = 'Midtown';
-  
-  for (const [name, coords] of Object.entries(NEIGHBORHOOD_COORDS)) {
-    const dx = x - coords.x;
-    const dy = y - coords.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance < minDistance) {
-      minDistance = distance;
-      closest = name;
-    }
-  }
-  return closest;
-};
 
 interface PostItemModalProps {
   userProfile: UserProfile;
@@ -168,7 +92,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
         const { latitude, longitude } = position.coords;
         const coords = mapGPSToPercent(latitude, longitude);
         setCustomCoords(coords);
-        const closest = findClosestNeighborhood(latitude, longitude);
+        const closest = findClosestNeighborhoodByLatLng(latitude, longitude);
         setNeighborhood(closest);
         setGpsStatus(`Detected precise GPS: ${coords.x.toFixed(1)}%, ${coords.y.toFixed(1)}% inside ${closest.toUpperCase()} Sector 🟢`);
         setGpsLoading(false);
@@ -586,7 +510,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                     const clampedY = Math.max(5, Math.min(95, clickY));
                     setCustomCoords({ x: clampedX, y: clampedY });
                     
-                    const nearest = findClosestNeighborhoodByPercent(clampedX, clampedY);
+                    const nearest = findClosestNeighborhood(clampedX, clampedY);
                     setNeighborhood(nearest);
                     setGpsStatus(`SET CUSTOM LOCATION PIN POINT: ${clampedX.toFixed(1)}%, ${clampedY.toFixed(1)}% 📍`);
                   }}

@@ -70,22 +70,42 @@ export const SACRAMENTO_NEIGHBORHOODS = [
   'Midtown',
   'Downtown',
   'East Sacramento',
-  'Land Park',
+  'McKinley',
+  'River Park',
   'Oak Park',
+  'Tahoe Park',
+  'Colonial Heights',
+  'Land Park',
+  'Curtis Park',
+  'Hollywood Park',
+  'South Sacramento',
+  'North Sacramento',
   'Natomas',
-  'Elk Grove',
-  'Arden',
+  'Rosemont',
   'Carmichael',
+  'Arden Arcade',
+  'Del Paso Heights',
   'Citrus Heights',
+  'Greenhaven',
+  'Pocket',
+  'South Land Park',
+  'Antelope',
+  'Auburn',
+  'Davis',
+  'El Dorado Hills',
+  'Elk Grove',
   'Fair Oaks',
+  'Folsom',
+  'Foothill Farms',
+  'La Riviera',
+  'North Highlands',
   'Orangevale',
   'Rancho Cordova',
+  'Rio Linda',
+  'Roseville',
   'West Sacramento',
-  'South Sacramento',
-  'Pocket-Greenhaven',
-  'Curtis Park',
-  'Tahoe Park'
-];
+  'Woodland',
+] as const;
 
 export const ITEM_CATEGORIES = [
   'Curb Alert',
@@ -144,54 +164,95 @@ export function extractGPSCoordinates(description: string): { x: number; y: numb
   return null;
 }
 
+// Greater Sacramento region bounds (map + GPS conversion)
+export const MAP_REGION_BOUNDS = {
+  latMin: 38.35,
+  latMax: 38.92,
+  lngMin: -121.78,
+  lngMax: -121.05,
+} as const;
+
+// Approximate center points for each area
+export const NEIGHBORHOOD_LAT_LONGS: Record<string, { lat: number; lng: number }> = {
+  'Midtown': { lat: 38.5724, lng: -121.4784 },
+  'Downtown': { lat: 38.5816, lng: -121.4944 },
+  'East Sacramento': { lat: 38.5674, lng: -121.4429 },
+  'McKinley': { lat: 38.5608, lng: -121.4693 },
+  'River Park': { lat: 38.5624, lng: -121.4325 },
+  'Oak Park': { lat: 38.5447, lng: -121.4614 },
+  'Tahoe Park': { lat: 38.5455, lng: -121.4326 },
+  'Colonial Heights': { lat: 38.5324, lng: -121.4472 },
+  'Land Park': { lat: 38.5432, lng: -121.4975 },
+  'Curtis Park': { lat: 38.5484, lng: -121.4795 },
+  'Hollywood Park': { lat: 38.534, lng: -121.492 },
+  'South Sacramento': { lat: 38.4952, lng: -121.4468 },
+  'North Sacramento': { lat: 38.606, lng: -121.457 },
+  'Natomas': { lat: 38.6368, lng: -121.5034 },
+  'Rosemont': { lat: 38.547, lng: -121.41 },
+  'Carmichael': { lat: 38.6171, lng: -121.3283 },
+  'Arden Arcade': { lat: 38.6013, lng: -121.3916 },
+  'Del Paso Heights': { lat: 38.625, lng: -121.455 },
+  'Citrus Heights': { lat: 38.7071, lng: -121.2811 },
+  'Greenhaven': { lat: 38.4907, lng: -121.5365 },
+  'Pocket': { lat: 38.465, lng: -121.505 },
+  'South Land Park': { lat: 38.525, lng: -121.51 },
+  'Antelope': { lat: 38.7082, lng: -121.3299 },
+  'Auburn': { lat: 38.8966, lng: -121.077 },
+  'Davis': { lat: 38.5449, lng: -121.7402 },
+  'El Dorado Hills': { lat: 38.685, lng: -121.082 },
+  'Elk Grove': { lat: 38.4088, lng: -121.3716 },
+  'Fair Oaks': { lat: 38.6446, lng: -121.272 },
+  'Folsom': { lat: 38.6779, lng: -121.176 },
+  'Foothill Farms': { lat: 38.678, lng: -121.346 },
+  'La Riviera': { lat: 38.568, lng: -121.366 },
+  'North Highlands': { lat: 38.6681, lng: -121.3726 },
+  'Orangevale': { lat: 38.6785, lng: -121.2254 },
+  'Rancho Cordova': { lat: 38.5891, lng: -121.3027 },
+  'Rio Linda': { lat: 38.69, lng: -121.4486 },
+  'Roseville': { lat: 38.7521, lng: -121.288 },
+  'West Sacramento': { lat: 38.5805, lng: -121.5302 },
+  'Woodland': { lat: 38.6785, lng: -121.773 },
+  // Legacy names still on older listings/profiles
+  'Arden': { lat: 38.6013, lng: -121.3916 },
+  'Pocket-Greenhaven': { lat: 38.4907, lng: -121.5365 },
+};
+
 // Bounding box for mapping real GPS to percentage coordinates
 export function mapGPSToPercent(lat: number, lng: number): { x: number; y: number } {
-  const latMin = 38.35;
-  const latMax = 38.75;
-  const lngMin = -121.60;
-  const lngMax = -121.30;
-  
-  // Clamp to Sacramento bounding box
+  const { latMin, latMax, lngMin, lngMax } = MAP_REGION_BOUNDS;
+
   const clampedLat = Math.max(latMin, Math.min(latMax, lat));
   const clampedLng = Math.max(lngMin, Math.min(lngMax, lng));
-  
+
   const x = ((clampedLng - lngMin) / (lngMax - lngMin)) * 100;
   const y = (1 - (clampedLat - latMin) / (latMax - latMin)) * 100;
-  
+
   return {
-    x: Math.max(5, Math.min(95, x)), // margin safety
-    y: Math.max(5, Math.min(95, y))
+    x: Math.max(2, Math.min(98, x)),
+    y: Math.max(2, Math.min(98, y)),
   };
 }
 
-// Map each neighborhood coordinates
-export const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
-  'Natomas': { x: 48, y: 16 },
-  'Arden': { x: 74, y: 25 },
-  'Carmichael': { x: 82, y: 22 },
-  'Citrus Heights': { x: 90, y: 10 },
-  'Fair Oaks': { x: 88, y: 20 },
-  'Orangevale': { x: 93, y: 15 },
-  'Rancho Cordova': { x: 90, y: 45 },
-  'East Sacramento': { x: 64, y: 38 },
-  'Midtown': { x: 53, y: 40 },
-  'Downtown': { x: 41, y: 40 },
-  'West Sacramento': { x: 22, y: 40 },
-  'Land Park': { x: 38, y: 56 },
-  'Curtis Park': { x: 50, y: 55 },
-  'Oak Park': { x: 63, y: 56 },
-  'Tahoe Park': { x: 75, y: 56 },
-  'Pocket-Greenhaven': { x: 24, y: 72 },
-  'South Sacramento': { x: 55, y: 74 },
-  'Elk Grove': { x: 58, y: 91 }
-};
+export function convertPercentToLatLng(x: number, y: number): { lat: number; lng: number } {
+  const { latMin, latMax, lngMin, lngMax } = MAP_REGION_BOUNDS;
+  const lng = lngMin + (x / 100) * (lngMax - lngMin);
+  const lat = latMin + (1 - y / 100) * (latMax - latMin);
+  return { lat, lng };
+}
+
+// Map percent coords derived from lat/lng centers
+export const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = Object.fromEntries(
+  Object.entries(NEIGHBORHOOD_LAT_LONGS).map(([name, { lat, lng }]) => [name, mapGPSToPercent(lat, lng)]),
+);
 
 // Help find the closest neighborhood based on custom coordinates
 export function findClosestNeighborhood(x: number, y: number): string {
-  let closestName = 'Midtown';
+  let closestName = SACRAMENTO_NEIGHBORHOODS[0];
   let minDistance = Infinity;
-  
-  for (const [name, coord] of Object.entries(NEIGHBORHOOD_COORDS)) {
+
+  for (const name of SACRAMENTO_NEIGHBORHOODS) {
+    const coord = NEIGHBORHOOD_COORDS[name];
+    if (!coord) continue;
     const dx = x - coord.x;
     const dy = y - coord.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -203,4 +264,20 @@ export function findClosestNeighborhood(x: number, y: number): string {
   return closestName;
 }
 
+export function findClosestNeighborhoodByLatLng(lat: number, lng: number): string {
+  let closestName = SACRAMENTO_NEIGHBORHOODS[0];
+  let minDistance = Infinity;
 
+  for (const name of SACRAMENTO_NEIGHBORHOODS) {
+    const coords = NEIGHBORHOOD_LAT_LONGS[name];
+    if (!coords) continue;
+    const dLat = lat - coords.lat;
+    const dLng = lng - coords.lng;
+    const distance = Math.sqrt(dLat * dLat + dLng * dLng);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestName = name;
+    }
+  }
+  return closestName;
+}
