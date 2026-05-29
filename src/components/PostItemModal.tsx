@@ -225,8 +225,9 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
   };
 
   return (
-    <div id="post_modal_overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-lg sbn-card-elevated overflow-hidden my-8" id="post_modal_box">
+    <div id="post_modal_overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4 py-8">
+      <div className="relative w-full max-w-lg sbn-card-elevated overflow-hidden" id="post_modal_box">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-app bg-accent-soft/50">
           <div className="flex items-center space-x-2.5">
@@ -589,6 +590,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );
