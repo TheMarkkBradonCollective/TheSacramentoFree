@@ -1,9 +1,10 @@
-const CACHE_NAME = 'sac-buy-nothing-v1';
+const CACHE_NAME = 'sac-buy-nothing-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.svg'
+  '/icon.svg',
+  '/Logo.jpeg'
 ];
 
 self.addEventListener('install', (event) => {
