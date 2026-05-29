@@ -21,9 +21,15 @@ import { IN_APP } from '../siteContent';
 interface UserProfileViewProps {
   userProfile: UserProfile;
   onUpdateProfile: (updated: UserProfile) => void;
+  /** Edge-to-edge sections (mobile tab) — no nested card frames */
+  fullBleed?: boolean;
 }
 
-export default function UserProfileView({ userProfile, onUpdateProfile }: UserProfileViewProps) {
+export default function UserProfileView({
+  userProfile,
+  onUpdateProfile,
+  fullBleed = false,
+}: UserProfileViewProps) {
   const [displayName, setDisplayName] = useState(userProfile.displayName);
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [bio, setBio] = useState(userProfile.bio || '');
@@ -152,11 +158,24 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
     }
   };
 
+  const sectionShell = fullBleed
+    ? 'border-b border-app px-4 py-6 bg-surface'
+    : 'bg-surface border border-app rounded-2xl p-6 shadow-md';
+
   return (
-    <div className="space-y-6" id="profile_root_container">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans" id="profile_views_grid">
-        {/* Short card overview */}
-        <div className="md:col-span-1 bg-surface border border-app rounded-2xl p-6 h-fit shadow-md flex flex-col items-center text-center">
+    <div className={fullBleed ? 'font-sans' : 'space-y-6'} id="profile_root_container">
+      <div
+        className={
+          fullBleed
+            ? 'flex flex-col font-sans'
+            : 'grid grid-cols-1 md:grid-cols-3 gap-6 font-sans'
+        }
+        id="profile_views_grid"
+      >
+        {/* Profile overview */}
+        <div
+          className={`${fullBleed ? sectionShell : 'md:col-span-1'} flex flex-col items-center text-center h-fit`}
+        >
           <img
             src={userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`}
             referrerPolicy="no-referrer"
@@ -212,7 +231,10 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         </div>
 
         {/* Settings Form */}
-        <div className="md:col-span-2 bg-surface border border-app rounded-2xl p-6 shadow-md" id="profile_credentials_form_box">
+        <div
+          className={fullBleed ? sectionShell : `md:col-span-2 ${sectionShell}`}
+          id="profile_credentials_form_box"
+        >
           <h3 className="text-lg font-bold text-app tracking-tight mb-5 flex items-center space-x-2 border-b border-app pb-3 font-display">
             <User className="w-5 h-5 text-accent" />
             <span>{IN_APP.profileTitle}</span>
@@ -305,7 +327,10 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
       </div>
 
       {/* Modern PWA App Installation Widget */}
-      <div className="bg-surface border border-app rounded-2xl p-6 shadow-lg animate-fade-in" id="pwa_installs_section">
+      <div
+        className={`${fullBleed ? `${sectionShell} shadow-none` : 'bg-surface border border-app rounded-2xl p-6 shadow-lg'} animate-fade-in`}
+        id="pwa_installs_section"
+      >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-app/70 pb-6 mb-6">
           <div className="max-w-xl">
             <div className="flex items-center gap-2 mb-2">
@@ -440,7 +465,9 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         </div>
       </div>
 
-      <CommunityFooter />
+      <div className={fullBleed ? 'px-4 pb-6' : ''}>
+        <CommunityFooter compact={fullBleed} />
+      </div>
     </div>
   );
 }

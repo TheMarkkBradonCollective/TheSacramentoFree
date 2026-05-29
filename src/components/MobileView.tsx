@@ -143,7 +143,7 @@ export default function MobileView({
 
         {activeTab === 'chats' && (
           <div
-            className="absolute inset-0 flex flex-col min-h-0 overflow-hidden px-2 pt-2 pb-[4.5rem]"
+            className="absolute inset-0 flex flex-col min-h-0 overflow-hidden pb-[4.25rem]"
             id="mobile_messaging_dock"
           >
             <ChatSystem
@@ -153,14 +153,22 @@ export default function MobileView({
               items={items}
               onViewProfile={onViewProfile}
               onItemsChanged={onRefresh}
-              className="flex-1 min-h-0 shadow-app"
+              fullBleed
+              className="flex-1 min-h-0"
             />
           </div>
         )}
 
         {activeTab === 'profile' && (
-          <div className="absolute inset-0 overflow-y-auto p-4 pb-24" id="mobile_profile_dock">
-            <UserProfileView userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          <div className="absolute inset-0 overflow-y-auto pb-[4.25rem] bg-app" id="mobile_profile_dock">
+            <div className="sbn-page-header px-4 pt-4 pb-2">
+              <h2>{IN_APP.profileTitle}</h2>
+            </div>
+            <UserProfileView
+              userProfile={userProfile}
+              onUpdateProfile={onUpdateProfile}
+              fullBleed
+            />
           </div>
         )}
       </div>

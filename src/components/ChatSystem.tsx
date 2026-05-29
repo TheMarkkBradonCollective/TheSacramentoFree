@@ -32,6 +32,8 @@ interface ChatSystemProps {
   onClearInitialChat: () => void;
   items: ItemPost[];
   className?: string;
+  /** Edge-to-edge layout (mobile tab) — no outer card chrome */
+  fullBleed?: boolean;
   onViewProfile?: (userId: string) => void;
   onItemsChanged?: () => void;
 }
@@ -42,6 +44,7 @@ export default function ChatSystem({
   onClearInitialChat,
   items,
   className = '',
+  fullBleed = false,
   onViewProfile,
   onItemsChanged,
 }: ChatSystemProps) {
@@ -342,12 +345,18 @@ export default function ChatSystem({
   return (
     <div
       id="chat_app_viewport"
-      className={`flex h-full min-h-0 w-full overflow-hidden bg-surface text-app border border-app rounded-2xl ${className}`}
+      className={`flex h-full min-h-0 w-full overflow-hidden text-app ${className} ${
+        fullBleed
+          ? 'bg-app rounded-none border-0'
+          : 'bg-surface border border-app rounded-2xl'
+      }`}
     >
       {/* Conversation list */}
       <div
         id="chats_sidebar"
-        className={`flex flex-col min-h-0 shrink-0 border-r border-app bg-surface w-full md:w-72 lg:w-80 ${
+        className={`flex flex-col min-h-0 shrink-0 border-r border-app w-full md:w-72 lg:w-80 ${
+          fullBleed ? 'bg-app' : 'bg-surface'
+        } ${
           selectedChat ? 'hidden md:flex' : 'flex'
         }`}
       >
