@@ -160,8 +160,8 @@ export default function NeighborProfileView({
             ) : null}
 
             <p className="text-[11px] text-subtle text-center leading-relaxed px-2">
-              Email and private details are never shown. Claimed items are only counted here — not linked to
-              specific listings on the feed.
+              Email and private details are never shown. Give, claim, and fulfill counts are private totals —
+              not linked to specific listings on the feed.
             </p>
           </div>
         )}

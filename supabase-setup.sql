@@ -137,6 +137,12 @@ CREATE TABLE IF NOT EXISTS public.item_claims (
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- giveaway = neighbor picked up a giveaway; request_fulfilled = neighbor helped close an ISO request
+ALTER TABLE public.item_claims ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'giveaway';
+ALTER TABLE public.item_claims DROP CONSTRAINT IF EXISTS item_claims_kind_check;
+ALTER TABLE public.item_claims ADD CONSTRAINT item_claims_kind_check
+  CHECK (kind IN ('giveaway', 'request_fulfilled'));
+
 ALTER TABLE public.item_claims ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow read item claims" ON public.item_claims;
 CREATE POLICY "Allow read item claims" ON public.item_claims FOR SELECT USING (true);

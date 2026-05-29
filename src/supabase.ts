@@ -650,6 +650,7 @@ export async function getSupabaseMessages(chatId: string): Promise<Message[]> {
 
 export interface NeighborStats {
   itemsGiven: number;
+  /** Giveaways picked up + ISO requests fulfilled (received from a neighbor) */
   itemsClaimed: number;
   /** Upvotes neighbors cast on this user's listings */
   upvotesReceived: number;
@@ -665,7 +666,7 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
     downvotesReceived: 0,
   };
   try {
-    const [givenRes, claimedRes, itemsRes] = await Promise.all([
+    const [givenRes, claimedRes, helpedGiveRes, itemsRes] = await Promise.all([
       supabase
         .from('items')
         .select('id', { count: 'exact', head: true })
@@ -675,7 +676,13 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
       supabase
         .from('item_claims')
         .select('id', { count: 'exact', head: true })
-        .eq('claimerUserId', uid),
+        .eq('claimerUserId', uid)
+        .in('kind', ['giveaway', 'request_fulfilled']),
+      supabase
+        .from('item_claims')
+        .select('id', { count: 'exact', head: true })
+        .eq('giverUserId', uid)
+        .eq('kind', 'request_fulfilled'),
       supabase.from('items').select('id').eq('userId', uid),
     ]);
 
@@ -695,9 +702,19 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
       }
     }
 
+    const legacyClaimed = claimedRes.error
+      ? await supabase
+          .from('item_claims')
+          .select('id', { count: 'exact', head: true })
+          .eq('claimerUserId', uid)
+      : null;
+
+    const itemsClaimed = claimedRes.error ? legacyClaimed?.count ?? 0 : (claimedRes.count ?? 0);
+    const helpedGive = helpedGiveRes.error ? 0 : (helpedGiveRes.count ?? 0);
+
     return {
-      itemsGiven: givenRes.count ?? 0,
-      itemsClaimed: claimedRes.error ? 0 : (claimedRes.count ?? 0),
+      itemsGiven: (givenRes.count ?? 0) + helpedGive,
+      itemsClaimed,
       upvotesReceived,
       downvotesReceived,
     };
@@ -722,6 +739,7 @@ export async function recordItemClaimInChat(params: {
       giverUserId: params.giverUserId,
       claimerUserId: params.claimerUserId,
       chatId: params.chatId,
+      kind: 'giveaway',
       createdAt: new Date().toISOString(),
     });
 
@@ -766,19 +784,65 @@ export async function recordItemClaimInChat(params: {
 export async function markItemFulfilledFromChat(params: {
   itemId: string;
   ownerUserId: string;
+  helperUserId: string;
   chatId: string;
   message: string;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
-  const statusOk = await updateSupabaseItemStatus(params.itemId, 'completed');
-  if (!statusOk) {
-    return { ok: false, errorMessage: 'Could not update listing status.' };
+  try {
+    const claimId = `fulfill_${params.itemId}_${Date.now()}`;
+
+    const { error: claimError } = await supabase.from('item_claims').insert({
+      id: claimId,
+      itemId: params.itemId,
+      giverUserId: params.helperUserId,
+      claimerUserId: params.ownerUserId,
+      chatId: params.chatId,
+      kind: 'request_fulfilled',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (claimError) {
+      const msg = String(claimError.message || '').toLowerCase();
+      if (msg.includes('duplicate') || msg.includes('unique')) {
+        return { ok: false, errorMessage: 'This request was already marked as fulfilled.' };
+      }
+      if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
+        return {
+          ok: false,
+          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see supabase-setup.sql).',
+        };
+      }
+      if (msg.includes('kind') || msg.includes('column')) {
+        return {
+          ok: false,
+          errorMessage:
+            'Claims table needs the kind column — re-run section 7 in supabase-setup.sql (request_fulfilled support).',
+        };
+      }
+      return { ok: false, errorMessage: claimError.message || 'Could not record fulfillment.' };
+    }
+
+    const statusOk = await updateSupabaseItemStatus(params.itemId, 'completed');
+    if (!statusOk) {
+      return { ok: false, errorMessage: 'Fulfillment saved but listing status could not be updated.' };
+    }
+
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const msgOk = await createSupabaseMessage(
+      params.chatId,
+      params.message,
+      params.ownerUserId,
+      messageId,
+    );
+    if (!msgOk) {
+      return { ok: false, errorMessage: 'Request marked fulfilled but chat message failed.' };
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Could not mark as fulfilled.';
+    return { ok: false, errorMessage: message };
   }
-  const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  const msgOk = await createSupabaseMessage(params.chatId, params.message, params.ownerUserId, messageId);
-  if (!msgOk) {
-    return { ok: false, errorMessage: 'Listing updated but chat message failed.' };
-  }
-  return { ok: true };
 }
 
 export async function createSupabaseMessage(chatId: string, text: string, senderId: string, messageId: string): Promise<boolean> {

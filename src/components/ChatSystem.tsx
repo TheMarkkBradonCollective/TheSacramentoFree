@@ -281,15 +281,31 @@ export default function ChatSystem({
     const linkedItem = items.find((i) => i.id === selectedChat.itemId);
     if (!linkedItem || linkedItem.userId !== userProfile.uid) return;
 
-    if (!confirm('Mark this request as fulfilled?')) return;
+    const helperUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
+    if (!helperUserId) {
+      setErrorMsg('Could not identify the neighbor who helped in this chat.');
+      return;
+    }
+
+    const helperName =
+      selectedChat.participantNames[helperUserId] || getRecipientInfo(selectedChat).otherName;
+
+    if (
+      !confirm(
+        `Mark this request as fulfilled with help from ${helperName}? They get credit for giving an item, and you get +1 Items claimed.`,
+      )
+    ) {
+      return;
+    }
 
     setIsSending(true);
     setErrorMsg('');
     const result = await markItemFulfilledFromChat({
       itemId: linkedItem.id,
       ownerUserId: userProfile.uid,
+      helperUserId,
       chatId: selectedChat.id,
-      message: formatItemFulfilledChatMessage(linkedItem.title),
+      message: formatItemFulfilledChatMessage(linkedItem.title, helperName),
     });
     setIsSending(false);
 

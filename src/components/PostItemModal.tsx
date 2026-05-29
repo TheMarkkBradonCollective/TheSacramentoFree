@@ -19,7 +19,10 @@ import { RULES } from '../siteContent';
 const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
   'Natomas': { x: 48, y: 16 },
   'Arden': { x: 74, y: 25 },
+  'Carmichael': { x: 82, y: 22 },
   'Citrus Heights': { x: 90, y: 10 },
+  'Fair Oaks': { x: 88, y: 20 },
+  'Orangevale': { x: 93, y: 15 },
   'Rancho Cordova': { x: 90, y: 45 },
   'East Sacramento': { x: 64, y: 38 },
   'Midtown': { x: 53, y: 40 },
@@ -38,7 +41,10 @@ const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
 const NEIGHBORHOOD_LAT_LONGS: Record<string, { lat: number; lng: number }> = {
   'Natomas': { lat: 38.6368, lng: -121.5034 },
   'Arden': { lat: 38.6013, lng: -121.3916 },
+  'Carmichael': { lat: 38.6171, lng: -121.3283 },
   'Citrus Heights': { lat: 38.7071, lng: -121.2811 },
+  'Fair Oaks': { lat: 38.6446, lng: -121.2720 },
+  'Orangevale': { lat: 38.6785, lng: -121.2254 },
   'Rancho Cordova': { lat: 38.5891, lng: -121.3027 },
   'East Sacramento': { lat: 38.5674, lng: -121.4429 },
   'Midtown': { lat: 38.5724, lng: -121.4784 },

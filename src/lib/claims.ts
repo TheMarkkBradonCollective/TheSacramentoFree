@@ -6,6 +6,9 @@ export function formatItemClaimedChatMessage(itemTitle: string): string {
   );
 }
 
-export function formatItemFulfilledChatMessage(itemTitle: string): string {
-  return `✓ "${itemTitle}" was marked as fulfilled. This request is now closed.`;
+export function formatItemFulfilledChatMessage(itemTitle: string, helperDisplayName: string): string {
+  return (
+    `✓ "${itemTitle}" was marked as fulfilled.\n` +
+    `Received from ${helperDisplayName}. This request is now closed.`
+  );
 }
