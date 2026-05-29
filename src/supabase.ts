@@ -56,6 +56,8 @@ CREATE POLICY "Allow public read items" ON public.items FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write operations" ON public.items;
 CREATE POLICY "Allow write operations" ON public.items FOR ALL USING (true) WITH CHECK (true);
 
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+
 -- 3. Create Chats metadata
 CREATE TABLE IF NOT EXISTS public.chats (
   id TEXT PRIMARY KEY,
@@ -241,7 +243,7 @@ export async function getSupabaseItems(): Promise<ItemPost[]> {
     }
 
     setSupabaseConfigurationState(true);
-    return (data || []) as ItemPost[];
+    return (data || []).map(normalizeItemFromRow);
   } catch (err: any) {
     console.warn('Supabase items fetch failed:', err);
     handleSupabaseError(err, 'items');
@@ -289,40 +291,84 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
   }
 }
 
-export async function createSupabaseItem(item: ItemPost): Promise<boolean> {
-  try {
-    const payload = {
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      type: item.type,
-      category: item.category,
-      userId: item.userId,
-      userDisplayName: item.userDisplayName,
-      userPhotoURL: item.userPhotoURL || null,
-      neighborhood: item.neighborhood,
-      status: item.status || 'active',
-      imageUrl: item.imageUrl || null,
-      createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : new Date().toISOString()
-    };
+function normalizeItemFromRow(row: ItemPost): ItemPost {
+  if (row.imageUrl) return row;
+  const match = row.description?.match(/\[Photo\]:\s*(https?:\/\/\S+)/);
+  if (match) {
+    return { ...row, imageUrl: match[1] };
+  }
+  return row;
+}
 
-    const { error } = await supabase
-      .from('items')
-      .insert(payload);
+function isMissingImageUrlColumnError(error: { code?: string; message?: string } | null): boolean {
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    error?.code === 'PGRST204' ||
+    error?.code === '42703' ||
+    msg.includes('imageurl') ||
+    msg.includes('image_url')
+  );
+}
+
+function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
+  const payload: Record<string, unknown> = {
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    type: item.type,
+    category: item.category,
+    userId: item.userId,
+    userDisplayName: item.userDisplayName,
+    userPhotoURL: item.userPhotoURL || null,
+    neighborhood: item.neighborhood,
+    status: item.status || 'active',
+    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : new Date().toISOString(),
+  };
+
+  if (includeImageUrl && item.imageUrl) {
+    // Only persist real URLs — never store multi-MB base64 in the database.
+    if (item.imageUrl.startsWith('http://') || item.imageUrl.startsWith('https://')) {
+      payload.imageUrl = item.imageUrl;
+    }
+  }
+
+  return payload;
+}
+
+export async function createSupabaseItem(
+  item: ItemPost,
+  author?: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    if (author?.email) {
+      await upsertSupabaseProfile(author);
+    }
+
+    let payload = buildItemInsertPayload(item, true);
+    let { error } = await supabase.from('items').insert(payload);
+
+    if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
+      const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
+      payload = buildItemInsertPayload({ ...item, description: descriptionWithImage }, false);
+      ({ error } = await supabase.from('items').insert(payload));
+    }
 
     if (error) {
-      console.error('createSupabaseItem RLS/DB error:', error.code, error.message, error.details, error.hint);
+      console.error('createSupabaseItem error:', error.code, error.message, error.details, error.hint);
       handleSupabaseError(error, 'items');
-      return false;
+      const hint = isMissingImageUrlColumnError(error)
+        ? ' Database is missing the imageUrl column — run the SQL fix in Supabase (see databaseSQL.txt).'
+        : '';
+      return { ok: false, errorMessage: (error.message || 'Could not save listing.') + hint };
     }
 
     setSupabaseConfigurationState(true);
-    return true;
+    return { ok: true };
   } catch (err: any) {
     console.error('createSupabaseItem exception:', err);
     handleSupabaseError(err, 'items');
-    return false;
+    return { ok: false, errorMessage: err?.message || 'Could not save listing.' };
   }
 }
 

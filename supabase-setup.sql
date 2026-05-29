@@ -44,6 +44,9 @@ CREATE POLICY "Allow public read items" ON public.items FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write operations" ON public.items;
 CREATE POLICY "Allow write operations" ON public.items FOR ALL USING (true) WITH CHECK (true);
 
+-- Add imageUrl if the table was created from an older script without it
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+
 CREATE INDEX IF NOT EXISTS items_created_at_idx ON public.items ("createdAt" DESC);
 CREATE INDEX IF NOT EXISTS items_user_id_idx ON public.items ("userId");
 

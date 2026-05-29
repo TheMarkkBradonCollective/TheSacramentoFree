@@ -1,2 +1,5 @@
 -- See supabase-setup.sql in the project root for the full, up-to-date script.
 -- Run it in Supabase Dashboard → SQL Editor → New query → Run
+--
+-- QUICK FIX if posts fail when a photo is attached (image uploads but listing won't save):
+-- ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;

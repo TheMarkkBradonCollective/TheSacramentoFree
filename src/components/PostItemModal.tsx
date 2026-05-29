@@ -209,18 +209,19 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
     };
 
     try {
-      // Create listing in Supabase database
-      const success = await createSupabaseItem(newItem);
-      
-      if (!success) {
-        throw new Error('Listing could not be created in the database.');
+      const result = await createSupabaseItem(newItem, userProfile);
+
+      if (!result.ok) {
+        setIsSubmitting(false);
+        setErrorMsg(result.errorMessage || 'Unable to publish listing. Please try again.');
+        return;
       }
 
       onSuccess(newItem);
       onClose();
     } catch (err) {
       setIsSubmitting(false);
-      setErrorMsg('Unable to publish listing to the database. Please try again.');
+      setErrorMsg(err instanceof Error ? err.message : 'Unable to publish listing. Please try again.');
     }
   };
 
