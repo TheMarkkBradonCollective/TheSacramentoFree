@@ -47,24 +47,41 @@ export function convertPercentToLatLng(x: number, y: number): { lat: number; lng
   return { lat, lng };
 }
 
-// Generate street-aligned block segments between two coordinates, mimicking Uber routes
-export function generateUberRouteCoords(from: { lat: number; lng: number }, to: { lat: number; lng: number }): [number, number][] {
-  const lat1 = from.lat;
-  const lng1 = from.lng;
-  const lat2 = to.lat;
-  const lng2 = to.lng;
-
-  // Midpoints to form standard square-grid urban street paths
-  const midLat = lat1 + (lat2 - lat1) * 0.55;
-  const midLng = lng1 + (lng2 - lng1) * 0.45;
-
+/** Fallback straight-line path if the routing API is unavailable. */
+function generateFallbackRouteCoords(
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+): [number, number][] {
   return [
-    [lat1, lng1],
-    [midLat, lng1],
-    [midLat, midLng],
-    [lat2, midLng],
-    [lat2, lng2]
+    [from.lat, from.lng],
+    [to.lat, to.lng],
   ];
+}
+
+/** Fetch a real driving route along roads (OpenStreetMap via OSRM). */
+export async function fetchDrivingRoute(
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+): Promise<[number, number][] | null> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordPath}?overview=full&geometries=geojson`;
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const coordinates = data?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
+    if (data?.code !== 'Ok' || !coordinates?.length) return null;
+
+    return coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 // Map each post category to a specific distinct color for blips
@@ -139,6 +156,8 @@ export default function SacramentoMapView({
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
+  const routeFetchIdRef = useRef(0);
 
   // Default coordinate centered around the user's neighborhood
   const userNeighborhood = userProfile?.neighborhood || 'Midtown';
@@ -356,6 +375,35 @@ export default function SacramentoMapView({
     }
   }, [userLocation]);
 
+  const routeEndpoints = useMemo(() => {
+    if (!selectedPost) return null;
+    const selectedBlip = blipPositions.find((b) => b.item.id === selectedPost.id);
+    if (!selectedBlip) return null;
+    return {
+      start: userLocation || fallbackLatLng,
+      end: { lat: selectedBlip.lat, lng: selectedBlip.lng },
+    };
+  }, [selectedPost, blipPositions, userLocation, fallbackLatLng]);
+
+  useEffect(() => {
+    if (!routeEndpoints) {
+      setRouteCoords(null);
+      return;
+    }
+
+    const fetchId = ++routeFetchIdRef.current;
+    setRouteCoords(null);
+
+    fetchDrivingRoute(routeEndpoints.start, routeEndpoints.end).then((points) => {
+      if (fetchId !== routeFetchIdRef.current) return;
+      if (points && points.length >= 2) {
+        setRouteCoords(points);
+      } else {
+        setRouteCoords(generateFallbackRouteCoords(routeEndpoints.start, routeEndpoints.end));
+      }
+    });
+  }, [routeEndpoints]);
+
   // Update all items points & neighborhood labels
   useEffect(() => {
     const map = mapRef.current;
@@ -394,73 +442,57 @@ export default function SacramentoMapView({
         });
     });
 
-    // 3. Draw Route from User to Selected Post (Uber style!)
-    if (selectedPost) {
-      const selectedBlip = blipPositions.find(b => b.item.id === selectedPost.id);
-      const selectedLatLng = selectedBlip ? { lat: selectedBlip.lat, lng: selectedBlip.lng } : null;
-      const startLatLng = userLocation || fallbackLatLng;
+    // 3. Draw real driving route from user to selected listing
+    if (selectedPost && routeEndpoints && routeCoords && routeCoords.length >= 2) {
+      const { start: startLatLng, end: selectedLatLng } = routeEndpoints;
 
-      if (selectedLatLng && startLatLng) {
-        const routePoints = generateUberRouteCoords(startLatLng, selectedLatLng);
+      L.polyline(routeCoords, {
+        color: '#FF4500',
+        weight: 8,
+        opacity: 0.28,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(markersGroup);
 
-        // Draw background thick glowing route line (semi-transparent blue)
-        L.polyline(routePoints, {
-          color: '#3B82F6',
-          weight: 7,
-          opacity: 0.35,
-          lineCap: 'round',
-          lineJoin: 'round'
-        }).addTo(markersGroup);
+      L.polyline(routeCoords, {
+        color: '#FF4500',
+        weight: 4,
+        opacity: 0.92,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(markersGroup);
 
-        // Draw foreground sharp dashed line representing actual connection routing guide
-        L.polyline(routePoints, {
-          color: '#1D4ED8',
-          weight: 3.5,
-          opacity: 0.9,
-          lineCap: 'round',
-          lineJoin: 'round',
-          dashArray: '6, 8'
-        }).addTo(markersGroup);
+      const startIcon = L.divIcon({
+        html: `
+          <div class="h-3.5 w-3.5 bg-[#FF4500] rounded-full border-2.5 border-white shadow-md flex items-center justify-center">
+            <div class="h-1 w-1 bg-white rounded-full"></div>
+          </div>
+        `,
+        className: 'route-start-marker',
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+      L.marker([startLatLng.lat, startLatLng.lng], { icon: startIcon, zIndexOffset: 200 }).addTo(markersGroup);
 
-        // Draw starting marker pin style
-        const startIcon = L.divIcon({
-          html: `
-            <div class="h-3.5 w-3.5 bg-blue-600 rounded-full border-2.5 border-white shadow-md flex items-center justify-center">
-              <div class="h-1 w-1 bg-white rounded-full"></div>
+      const destIcon = L.divIcon({
+        html: `
+          <div class="relative flex items-center justify-center">
+            <span class="absolute inline-flex h-8 w-8 rounded-full bg-[#FF4500]/25 animate-ping"></span>
+            <div class="h-4.5 w-4.5 bg-[#FF4500] rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+              <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
             </div>
-          `,
-          className: 'route-start-marker',
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
-        });
-        L.marker([startLatLng.lat, startLatLng.lng], { icon: startIcon, zIndexOffset: 200 }).addTo(markersGroup);
+          </div>
+        `,
+        className: 'route-destination-pulsing-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+      L.marker([selectedLatLng.lat, selectedLatLng.lng], { icon: destIcon, zIndexOffset: 201 }).addTo(markersGroup);
 
-        // Draw detailed target indicator on selected item coordinates
-        const destIcon = L.divIcon({
-          html: `
-            <div class="relative flex items-center justify-center">
-              <span class="absolute inline-flex h-8 w-8 rounded-full bg-red-500/25 animate-ping"></span>
-              <div class="h-4.5 w-4.5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
-              </div>
-            </div>
-          `,
-          className: 'route-destination-pulsing-marker',
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
-        });
-        L.marker([selectedLatLng.lat, selectedLatLng.lng], { icon: destIcon, zIndexOffset: 201 }).addTo(markersGroup);
-
-        // Fit map bounds to view both points nicely with padding (Uber style!)
-        const bounds = L.latLngBounds([
-          [startLatLng.lat, startLatLng.lng],
-          [selectedLatLng.lat, selectedLatLng.lng]
-        ]);
-        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14, animate: true });
-      }
+      map.fitBounds(routeCoords, { padding: [60, 60], maxZoom: 14, animate: true });
     }
 
-  }, [blipPositions, selectedPost, activeItems, userLocation, fallbackLatLng]);
+  }, [blipPositions, selectedPost, activeItems, routeCoords, routeEndpoints]);
 
   // Handle programmatically panning/zooming to a selected neighborhood
   useEffect(() => {
@@ -476,7 +508,7 @@ export default function SacramentoMapView({
     }
   }, [sNeigh]);
 
-  // Note: Standard Uber camera view fits bounds reactively inside the primary rendering hook above.
+  // Route bounds fit inside the markers rendering effect when routeCoords load.
 
   // Immersive mobile layout implementation
   if (isFullScreenMobile) {
