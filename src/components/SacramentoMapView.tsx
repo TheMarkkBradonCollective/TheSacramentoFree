@@ -490,45 +490,42 @@ export default function SacramentoMapView({
         />
 
         {/* Floating Locator Sensors */}
-        <div className="absolute bottom-24 right-4 z-20 flex flex-col space-y-2">
+        <div className="absolute bottom-24 right-4 z-20">
           <button
             onClick={handleLocateUser}
-            className={`w-11 h-11 shadow-2xl flex items-center justify-center border-2 border-white focus:outline-hidden transition-all active:scale-95 cursor-pointer backdrop-blur-xs ${
-              isLocating ? 'bg-accent text-on-accent' : 'bg-surface text-app hover:bg-surface-hover border border-app'
+            className={`w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border ${
+              isLocating
+                ? 'bg-accent text-on-accent border-accent'
+                : 'bg-surface/95 backdrop-blur-sm text-app hover:bg-surface-hover border-app'
             }`}
             id="mobile_floating_locator_btn"
-            title="Recenter Map on Precise Geolocation"
+            title="Recenter map"
           >
-            <Compass className={`w-5.5 h-5.5 ${isLocating ? 'animate-spin' : ''}`} />
+            <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
-        {/* Location permission error toasts */}
+        {/* Location error toast */}
         {locationError && (
-          <div className="absolute top-36 left-4 right-4 z-35 bg-white border-2 border-black p-3.5 shadow-xl flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <span className="text-xs">⚠️</span>
-              <span className="text-[10px] font-black uppercase text-zinc-855 tracking-wide leading-tight">
-                {locationError}
-              </span>
-            </div>
+          <div className="absolute top-20 left-4 right-4 z-35 sbn-card p-3 flex items-center justify-between gap-3">
+            <span className="text-sm font-medium text-app">⚠️ {locationError}</span>
             <button
               onClick={() => setLocationError(null)}
-              className="text-muted hover:text-black p-1 text-xs font-black cursor-pointer bg-zinc-50"
+              className="p-1.5 rounded-full text-muted hover:text-app hover:bg-inset cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* Legend buttons floated at the top-left */}
-        <div className="absolute top-32 left-4 z-20 flex flex-col space-y-2">
+        {/* Colors index trigger */}
+        <div className="absolute top-20 left-4 z-20">
           <button
             onClick={() => setShowColorGuide(true)}
-            className="bg-white border-2 border-black py-2 px-3 text-[9px] font-black uppercase tracking-widest text-zinc-900 hover:bg-zinc-50 shadow-md block transition-colors cursor-pointer select-none"
+            className="sbn-btn sbn-btn-secondary sbn-btn-sm shadow-app"
             id="floating_color_guide_trigger"
           >
-            🎨 Colors Index
+            🎨 Colors
           </button>
         </div>
 
@@ -542,48 +539,46 @@ export default function SacramentoMapView({
               className="absolute inset-0 bg-black/60 z-40 flex flex-col p-4 justify-end font-sans"
               id="mobile_color_guide_overlay"
             >
-              <motion.div 
-                initial={{ y: "100%" }}
+              <motion.div
+                initial={{ y: '100%' }}
                 animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: 'spring', damping: 25 }}
-                className="bg-white border-t-4 border-black w-full max-h-[75vh] flex flex-col p-5 shadow-2xl relative"
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+                className="sbn-card w-full max-h-[72vh] flex flex-col p-5 shadow-2xl rounded-b-none"
               >
-                <div className="flex items-center justify-between border-b border-zinc-250 pb-3 mb-4 shrink-0">
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-app shrink-0">
                   <div>
-                    <h4 className="text-xs font-black text-black uppercase tracking-widest">Category Legend Index</h4>
-                    <p className="text-[8.5px] text-muted font-bold uppercase tracking-wider mt-0.5">
-                      Operational Buy Nothing Map Indicators
-                    </p>
+                    <h4 className="font-display font-bold text-base text-app">Map color guide</h4>
+                    <p className="text-xs text-muted mt-0.5">Tap a color to filter the map</p>
                   </div>
                   <button
                     onClick={() => setShowColorGuide(false)}
-                    className="p-1.5 text-subtle hover:text-black cursor-pointer bg-zinc-100"
+                    className="p-2 rounded-full text-muted hover:text-app hover:bg-inset cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none">
+                <div className="flex-1 overflow-y-auto space-y-5">
                   <div>
-                    <h5 className="text-[9px] font-black text-brand-orange uppercase tracking-wider mb-2 font-mono">Gifts list</h5>
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <p className="text-xs font-semibold text-accent mb-2">Giving</p>
+                    <div className="grid grid-cols-2 gap-1.5">
                       {ITEM_CATEGORIES.map((cat) => (
-                        <div key={cat} className="flex items-center gap-2 py-1 px-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: getCategoryColor(cat) }} />
-                          <span className="truncate uppercase text-[8.5px] font-bold text-zinc-800">{cat}</span>
+                        <div key={cat} className="flex items-center gap-2 py-1.5 px-2 rounded-xl bg-inset">
+                          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(cat) }} />
+                          <span className="text-xs font-medium text-app truncate">{cat}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="border-t border-zinc-150 pt-3">
-                    <h5 className="text-[9px] font-black text-[#78350F] uppercase tracking-wider mb-2 font-mono">Asks & Wanted</h5>
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div>
+                    <p className="text-xs font-semibold text-muted mb-2">Looking for</p>
+                    <div className="grid grid-cols-2 gap-1.5">
                       {ISO_CATEGORIES.map((cat) => (
-                        <div key={cat} className="flex items-center gap-2 py-1 px-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: getCategoryColor(cat) }} />
-                          <span className="truncate uppercase text-[8.5px] font-bold text-zinc-800">{cat}</span>
+                        <div key={cat} className="flex items-center gap-2 py-1.5 px-2 rounded-xl bg-inset">
+                          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(cat) }} />
+                          <span className="text-xs font-medium text-app truncate">{cat}</span>
                         </div>
                       ))}
                     </div>
@@ -605,26 +600,24 @@ export default function SacramentoMapView({
                 exit={{ opacity: 0, x: slideDirection === 'right' ? -70 : 70 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 id="mobile_map_detail_floating_card"
-                className="pointer-events-auto border-2 border-black bg-white p-4 shadow-2xl relative font-sans w-full"
+                className="pointer-events-auto sbn-card p-4 shadow-2xl w-full"
               >
                 {/* Sliding Pagination Controls */}
-                <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-zinc-50 border border-zinc-200 px-1.5 py-0.5">
+                <div className="absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg">
                   <button
                     onClick={handlePrevPost}
                     disabled={activeItems.length <= 1}
-                    className="text-subtle hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                    title="Slide Left"
+                    className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
-                  <span className="text-[9px] font-bold font-mono text-zinc-650 min-w-[26px] text-center">
+                  <span className="text-[9px] font-bold font-mono text-muted min-w-[24px] text-center">
                     {currentIndex + 1}/{activeItems.length}
                   </span>
                   <button
                     onClick={handleNextPost}
                     disabled={activeItems.length <= 1}
-                    className="text-subtle hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                    title="Slide Right"
+                    className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -632,62 +625,61 @@ export default function SacramentoMapView({
 
                 <button
                   onClick={() => setSelectedPost(null)}
-                  className="absolute top-3 right-3 text-muted hover:text-black transition-colors cursor-pointer bg-zinc-50 p-1"
+                  className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
 
                 <div className="flex gap-3 mt-2">
                   {selectedPost.imageUrl ? (
-                    <div className="w-16 h-16 border border-zinc-200 shrink-0 bg-white">
+                    <div className="w-16 h-16 rounded-xl border border-app shrink-0 overflow-hidden">
                       <img
                         src={selectedPost.imageUrl}
                         alt={selectedPost.title}
                         referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover rounded-none"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   ) : (
-                    <div className="w-16 h-16 bg-zinc-100 border border-zinc-200 shrink-0 flex flex-col items-center justify-center text-center">
+                    <div className="w-16 h-16 bg-inset border border-app rounded-xl shrink-0 flex flex-col items-center justify-center">
                       <Tag className="w-4 h-4 text-muted" />
-                      <span className="text-[6.5px] text-muted font-extrabold tracking-widest mt-1">NO CARGO</span>
                     </div>
                   )}
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`inline-block px-1.5 py-0.5 text-[6.5px] font-black uppercase tracking-wider ${
-                          selectedPost.type === 'giveaway' ? 'bg-black text-app' : 'bg-white border border-black text-black'
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider ${
+                          selectedPost.type === 'giveaway' ? 'bg-accent text-on-accent' : 'bg-inset border border-app text-muted'
                         }`}>
-                          {selectedPost.type === 'giveaway' ? 'GIVEAWAY' : 'WANTED'}
+                          {selectedPost.type === 'giveaway' ? '🎁 GIFT' : '🔍 ASK'}
                         </span>
-                        <span className="text-[8px] font-black font-mono uppercase tracking-wider" style={{ color: getCategoryColor(selectedPost.category) }}>
+                        <span className="text-[8px] font-bold font-mono uppercase tracking-wider" style={{ color: getCategoryColor(selectedPost.category) }}>
                           {selectedPost.category}
                         </span>
                       </div>
 
-                      <h4 className="text-xs font-black text-black uppercase tracking-tight mt-1 truncate">
+                      <h4 className="text-xs font-semibold text-app mt-1 truncate">
                         {selectedPost.title}
                       </h4>
 
-                      <p className="text-[9.5px] text-subtle mt-0.5 line-clamp-1 break-words font-semibold font-sans">
+                      <p className="text-[9.5px] text-muted mt-0.5 line-clamp-1 break-words">
                         {selectedPost.description}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-150">
-                      <div className="flex items-center space-x-1 text-[8.5px] font-black text-black uppercase">
-                        <MapPin className="w-3 h-3 text-brand-orange shrink-0" />
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-app">
+                      <div className="flex items-center space-x-1 text-[9px] font-medium text-muted">
+                        <MapPin className="w-3 h-3 text-accent shrink-0" />
                         <span>{selectedPost.neighborhood}</span>
                       </div>
 
                       <button
                         onClick={() => onInitiateChat(selectedPost.userId, selectedPost.userDisplayName, selectedPost.userId, selectedPost)}
-                        className="px-3 py-1 bg-[#FF4500] hover:bg-brand-orange-hover text-white text-[9px] font-black uppercase tracking-wider rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
+                        className="sbn-btn sbn-btn-primary sbn-btn-sm"
                       >
                         <MessageSquare className="w-3 h-3" />
-                        <span>Message Neighbor</span>
+                        <span>Message</span>
                       </button>
                     </div>
                   </div>
@@ -724,7 +716,7 @@ export default function SacramentoMapView({
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
                 placeholder="Search pins (e.g. table, books)..."
-                className="w-full px-3.5 py-2 bg-surface border border-app text-xs text-app placeholder:text-subtle font-semibold rounded-xl focus:outline-hidden focus:border-[#FF4500]"
+                className="sbn-input text-xs"
                 id="map_internal_search_input"
               />
             </div>
@@ -868,7 +860,7 @@ export default function SacramentoMapView({
             >
               <Plus className="w-4 h-4" />
             </button>
-            <div className="h-[1px] bg-[#343536] mx-1" />
+            <div className="h-[1px] bg-app/20 mx-1" />
             <button
               onClick={handleZoomOut}
               className="w-8.5 h-8.5 flex items-center justify-center text-app hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-b-lg"
@@ -884,7 +876,7 @@ export default function SacramentoMapView({
             onClick={handleLocateUser}
             className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
               isLocating 
-                ? 'bg-accent text-on-accent border-[#FF4500]' 
+                ? 'bg-accent text-on-accent border-accent'
                 : 'bg-surface/95 border-app text-app hover:bg-surface-hover hover:text-accent'
             }`}
             title="Locate Me / Center to User"
@@ -939,7 +931,7 @@ export default function SacramentoMapView({
                               setShowColorGuide(false);
                             }}
                             className={`flex items-center gap-2 py-1 px-1.5 border rounded-lg cursor-pointer transition-all ${
-                              isCurrentActive ? 'border-[#FF4500] bg-[#FF4500]/10' : 'border-transparent hover:border-zinc-700 hover:bg-zinc-800/40'
+                              isCurrentActive ? 'border-accent bg-accent/10' : 'border-transparent hover:border-app hover:bg-inset'
                             }`}
                           >
                             <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: col }} />
@@ -951,7 +943,7 @@ export default function SacramentoMapView({
                   </div>
 
                   <div className="border-t border-app pt-3">
-                    <h5 className="text-[9px] font-extrabold text-amber-500 uppercase tracking-wider mb-2 font-mono">Asks / ISO Colors</h5>
+                    <h5 className="text-[9px] font-extrabold text-muted uppercase tracking-wider mb-2 font-mono">Asks / ISO Colors</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
                       {ISO_CATEGORIES.map((cat) => {
                         const col = getCategoryColor(cat);
@@ -967,7 +959,7 @@ export default function SacramentoMapView({
                               setShowColorGuide(false);
                             }}
                             className={`flex items-center gap-2 py-1 px-1.5 border rounded-lg cursor-pointer transition-all ${
-                              isCurrentActive ? 'border-amber-500 bg-amber-500/10' : 'border-transparent hover:border-zinc-700 hover:bg-zinc-800/40'
+                              isCurrentActive ? 'border-accent bg-accent/10' : 'border-transparent hover:border-app hover:bg-inset'
                             }`}
                           >
                             <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: col }} />
@@ -1119,7 +1111,7 @@ export default function SacramentoMapView({
                       <button
                         id="map_view_card_btn"
                         onClick={() => onItemDetail(selectedPost)}
-                        className="px-3 py-1.5 bg-[#343536] hover:bg-[#444546] text-app text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-zinc-700/50"
+                        className="px-3 py-1.5 bg-inset hover:bg-surface-hover text-app text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-app"
                       >
                         <Eye className="w-3 h-3" />
                         <span>View Details</span>
