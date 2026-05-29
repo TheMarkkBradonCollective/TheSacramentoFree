@@ -897,6 +897,27 @@ export interface CommunityStats {
   requestsFulfilled: number;
 }
 
+/** Director-only: update another user's role. */
+export async function setUserRole(
+  uid: string,
+  role: 'user' | 'moderator' | 'admin' | 'director',
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('uid', uid);
+
+    if (error) {
+      handleSupabaseError(error, 'users');
+      return { ok: false, errorMessage: error.message };
+    }
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, errorMessage: err?.message || 'Could not update role.' };
+  }
+}
+
 export async function getCommunityStats(): Promise<CommunityStats> {
   try {
     const [membersRes, activeRes, givenRes, fulfilledRes] = await Promise.all([
