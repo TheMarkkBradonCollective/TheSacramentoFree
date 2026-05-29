@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { ItemComment } from '../types';
 import { PostVoteState } from '../hooks/useItemsEngagement';
@@ -28,10 +29,20 @@ export default function ListingEngagement({
   onViewProfile,
   variant = 'card',
 }: ListingEngagementProps) {
+  const DETAIL_PREVIEW_COUNT = 5;
   const isOwner = posterUserId === currentUserId;
   const { userVote, upvotes, downvotes } = voteState;
   const netScore = upvotes - downvotes;
-  const showComments = variant === 'detail' || commentsExpanded;
+  const [showAllComments, setShowAllComments] = useState(false);
+
+  const visibleComments = useMemo(() => {
+    if (variant !== 'detail') return comments;
+    if (showAllComments) return comments;
+    return comments.slice(-DETAIL_PREVIEW_COUNT);
+  }, [comments, showAllComments, variant]);
+
+  const hasHiddenComments =
+    variant === 'detail' && comments.length > DETAIL_PREVIEW_COUNT && !showAllComments;
 
   const voteBtnClass = (active: boolean, disabled: boolean) =>
     `flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
@@ -85,11 +96,8 @@ export default function ListingEngagement({
           <button
             type="button"
             onClick={onToggleComments}
-            className={`ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-              commentsExpanded
-                ? 'bg-accent text-on-accent border-accent'
-                : 'border-app text-muted hover:border-accent'
-            }`}
+            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors border-app text-muted hover:border-accent"
+            title="Open listing to view all comments"
           >
             <MessageSquare className="w-3.5 h-3.5" />
             {comments.length}
@@ -107,19 +115,16 @@ export default function ListingEngagement({
         <p className="text-[11px] text-muted">Vote counts are from neighbors — you can&apos;t vote on your own post.</p>
       )}
 
-      {showComments && (
+      {variant === 'detail' && (
         <div
-          className={
-            variant === 'detail'
-              ? 'space-y-3 pt-1 border-t border-app'
-              : 'mt-2 sm:mt-4 pt-2 sm:pt-4 border-t border-app space-y-3'
-          }
+          className="space-y-3 pt-1 border-t border-app"
         >
           {comments.length === 0 ? (
             <p className="text-xs text-muted italic text-center py-2">No comments yet — say hello!</p>
           ) : (
-            <ul className={`space-y-2 ${variant === 'detail' ? 'max-h-64' : 'max-h-48'} overflow-y-auto`}>
-              {comments.map((comment) => (
+            <>
+              <ul className="space-y-2 max-h-64 overflow-y-auto">
+                {visibleComments.map((comment) => (
                 <li key={comment.id} className="bg-inset rounded-xl p-3 border border-app">
                   <div className="flex items-center gap-2">
                     <button
@@ -143,8 +148,18 @@ export default function ListingEngagement({
                   </div>
                   <p className="text-sm text-muted mt-1.5 leading-relaxed">{comment.text}</p>
                 </li>
-              ))}
-            </ul>
+                ))}
+              </ul>
+              {hasHiddenComments && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllComments(true)}
+                  className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                >
+                  See all comments ({comments.length})
+                </button>
+              )}
+            </>
           )}
           <form
             onSubmit={(e) => {

@@ -392,14 +392,14 @@ export default function ChatSystem({
                     setSelectedChat(chat);
                     onClearInitialChat();
                   }}
-                  className={`w-full text-left p-3 flex items-start gap-3 transition-colors cursor-pointer ${
+                  className={`text-left p-3 flex items-start gap-3 transition-colors cursor-pointer ${
                     mobileConversationRowBase
                   } ${
                     isSelected
                       ? 'bg-accent-soft border-l-[3px] border-l-accent'
                       : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
                   } ${
-                    fullBleed ? 'mx-3 mt-2 first:mt-3 mb-0' : ''
+                    fullBleed ? 'mx-3 mt-2 first:mt-3 mb-0 w-auto' : 'w-full'
                   }`}
                 >
                   <button

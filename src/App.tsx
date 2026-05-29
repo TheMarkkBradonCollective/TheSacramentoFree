@@ -27,6 +27,27 @@ import {
 import { APP_LOGO_SRC, SITE } from './siteContent';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
+const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
+const APP_TABS = ['feed', 'map', 'chats', 'profile'] as const;
+const TAB_HISTORY_KEY = 'sbnTab';
+
+function parseStoredTab(value: string | null): 'feed' | 'map' | 'chats' | 'profile' | null {
+  if (!value) return null;
+  return (APP_TABS as readonly string[]).includes(value)
+    ? (value as 'feed' | 'map' | 'chats' | 'profile')
+    : null;
+}
+
+function parseTabFromHistoryState(state: unknown): 'feed' | 'map' | 'chats' | 'profile' | null {
+  if (!state || typeof state !== 'object') return null;
+  const value = (state as Record<string, unknown>)[TAB_HISTORY_KEY];
+  return typeof value === 'string' ? parseStoredTab(value) : null;
+}
+
+function withTabInHistoryState(state: unknown, tab: 'feed' | 'map' | 'chats' | 'profile') {
+  const current = state && typeof state === 'object' ? (state as Record<string, unknown>) : {};
+  return { ...current, [TAB_HISTORY_KEY]: tab };
+}
 
 export default function App() {
   const [sessionUser, setSessionUser] = useState<any>(null);
@@ -35,7 +56,11 @@ export default function App() {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileLoadRef = useRef<Promise<void> | null>(null);
-  const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>('map');
+  const handlingPopStateRef = useRef(false);
+  const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>(() => {
+    if (typeof window === 'undefined') return 'map';
+    return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
+  });
   const [showPostModal, setShowPostModal] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
@@ -149,6 +174,58 @@ export default function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(TAB_STORAGE_KEY, activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const historyTab = parseTabFromHistoryState(window.history.state);
+    const storedTab = parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY));
+    const initialTab = historyTab || storedTab || 'map';
+
+    if (initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+    window.history.replaceState(withTabInHistoryState(window.history.state, initialTab), '', window.location.href);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onPopState = (event: PopStateEvent) => {
+      const nextTab = parseTabFromHistoryState(event.state);
+      if (nextTab) {
+        handlingPopStateRef.current = true;
+        setActiveTab(nextTab);
+        return;
+      }
+
+      // If browser history has no app-tab state, keep users in-app by restoring last tab.
+      const fallbackTab = parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
+      handlingPopStateRef.current = true;
+      setActiveTab(fallbackTab);
+      window.history.pushState(withTabInHistoryState(window.history.state, fallbackTab), '', window.location.href);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (handlingPopStateRef.current) {
+      handlingPopStateRef.current = false;
+      return;
+    }
+
+    const currentHistoryTab = parseTabFromHistoryState(window.history.state);
+    if (currentHistoryTab === activeTab) return;
+    window.history.pushState(withTabInHistoryState(window.history.state, activeTab), '', window.location.href);
+  }, [activeTab]);
 
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>

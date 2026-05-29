@@ -207,7 +207,7 @@ export default function ItemCard({
           comments={comments}
           commentsExpanded={commentsExpanded}
           onVote={onVote}
-          onToggleComments={onToggleComments}
+          onToggleComments={onViewDetail}
           onAddComment={onAddComment}
           onViewProfile={onViewProfile}
           variant="card"

@@ -292,6 +292,35 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
   }
 }
 
+export async function uploadProfilePhoto(file: File, userId: string): Promise<string | null> {
+  try {
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const filePath = `profiles/${userId}_${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from('items')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true,
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    const { data: publicData } = supabase.storage.from('items').getPublicUrl(filePath);
+    return publicData?.publicUrl || null;
+  } catch (err) {
+    console.warn('Profile photo upload failed, using data URL fallback:', err);
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
 export function normalizeSupabaseItem(row: ItemPost): ItemPost {
   return normalizeItemMedia(row);
 }

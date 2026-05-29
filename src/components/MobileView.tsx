@@ -55,8 +55,8 @@ export default function MobileView({
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
 
   return (
-    <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-app text-app">
-      <header className="shrink-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-30">
+    <div id="mobile_device_workspace" className="relative h-[100dvh] overflow-hidden bg-app text-app">
+      <header className="fixed top-0 left-0 right-0 sbn-glass-nav px-4 py-3 flex items-center justify-between gap-2 z-40">
         <BrandLogo
           imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
           subtitle={userProfile.neighborhood}
@@ -75,7 +75,10 @@ export default function MobileView({
         </div>
       </header>
 
-      <div className="flex-1 overflow-hidden relative" id="mobile_viewport_card">
+      <div
+        className="absolute inset-0 pt-[4.25rem] pb-[4.25rem] overflow-hidden relative"
+        id="mobile_viewport_card"
+      >
         {activeTab === 'map' && (
           <div className="absolute inset-0">
             <SacramentoMapView
@@ -141,7 +144,7 @@ export default function MobileView({
 
         {activeTab === 'chats' && (
           <div
-            className="absolute inset-0 flex flex-col min-h-0 overflow-hidden pb-[4.25rem]"
+            className="absolute inset-0 flex flex-col min-h-0 overflow-hidden"
             id="mobile_messaging_dock"
           >
             <ChatSystem
@@ -158,7 +161,7 @@ export default function MobileView({
         )}
 
         {activeTab === 'profile' && (
-          <div className="absolute inset-0 overflow-y-auto pb-[4.25rem] bg-app" id="mobile_profile_dock">
+          <div className="absolute inset-0 overflow-y-auto bg-app" id="mobile_profile_dock">
             <div className="sbn-page-header px-4 pt-4 pb-2">
               <h2>{IN_APP.profileTitle}</h2>
             </div>
@@ -171,7 +174,7 @@ export default function MobileView({
         )}
       </div>
 
-      <footer id="mobile_sticky_footer_nav" className="sbn-mobile-nav shrink-0 z-30">
+      <footer id="mobile_sticky_footer_nav" className="fixed bottom-0 left-0 right-0 sbn-mobile-nav z-40">
         <div className="grid grid-cols-4 h-[4.25rem] px-2">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button

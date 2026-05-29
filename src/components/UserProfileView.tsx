@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, SACRAMENTO_NEIGHBORHOODS } from '../types';
-import { getNeighborStats, NeighborStats, upsertSupabaseProfile } from '../supabase';
+import {
+  getNeighborStats,
+  NeighborStats,
+  upsertSupabaseProfile,
+  uploadProfilePhoto,
+} from '../supabase';
 import {
   MapPin,
   User,
@@ -14,6 +19,7 @@ import {
   Package,
   ChevronUp,
   ChevronDown,
+  Camera,
 } from 'lucide-react';
 import CommunityFooter from './CommunityFooter';
 import { IN_APP } from '../siteContent';
@@ -33,6 +39,10 @@ export default function UserProfileView({
   const [displayName, setDisplayName] = useState(userProfile.displayName);
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [bio, setBio] = useState(userProfile.bio || '');
+  const [photoURL, setPhotoURL] = useState(
+    userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`,
+  );
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [stats, setStats] = useState<NeighborStats | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -41,6 +51,13 @@ export default function UserProfileView({
   useEffect(() => {
     getNeighborStats(userProfile.uid).then(setStats);
   }, [userProfile.uid]);
+
+  useEffect(() => {
+    setPhotoURL(
+      userProfile.photoURL ||
+        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`,
+    );
+  }, [userProfile.photoURL, userProfile.displayName]);
 
   // PWA Prompt status
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -133,6 +150,7 @@ export default function UserProfileView({
       displayName: displayName.trim(),
       neighborhood,
       bio: bio.trim(),
+      photoURL,
     };
 
     try {
@@ -158,6 +176,33 @@ export default function UserProfileView({
     }
   };
 
+  const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Please select an image file.');
+      return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      setErrorMsg('Image is too large. Please use a file under 6MB.');
+      return;
+    }
+
+    setErrorMsg('');
+    setIsPhotoUploading(true);
+    const uploadedUrl = await uploadProfilePhoto(file, userProfile.uid);
+    setIsPhotoUploading(false);
+
+    if (!uploadedUrl) {
+      setErrorMsg('Could not upload profile photo. Try a different image.');
+      return;
+    }
+
+    setPhotoURL(uploadedUrl);
+    setSuccessMsg('Photo uploaded. Tap Save Profile Changes to publish it.');
+  };
+
   const sectionShell = fullBleed
     ? 'border-b border-app px-4 py-6 bg-surface'
     : 'bg-surface border border-app rounded-2xl p-6 shadow-md';
@@ -177,11 +222,29 @@ export default function UserProfileView({
           className={`${fullBleed ? sectionShell : 'md:col-span-1'} flex flex-col items-center text-center h-fit`}
         >
           <img
-            src={userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`}
+            src={photoURL}
             referrerPolicy="no-referrer"
             alt={userProfile.displayName}
             className="w-24 h-24 rounded-full border-2 border-[#FF4500] shadow-md animate-fade-in"
             id="profile_card_avatar"
+          />
+          <label
+            htmlFor="profile_photo_upload"
+            className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${
+              isPhotoUploading
+                ? 'bg-accent text-on-accent border-accent'
+                : 'bg-inset text-app border-app hover:bg-surface-hover cursor-pointer'
+            }`}
+          >
+            <Camera className={`w-3.5 h-3.5 ${isPhotoUploading ? 'animate-pulse' : ''}`} />
+            {isPhotoUploading ? 'Uploading…' : 'Change photo'}
+          </label>
+          <input
+            id="profile_photo_upload"
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoPick}
+            className="hidden"
           />
           <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{userProfile.displayName}</h3>
           
