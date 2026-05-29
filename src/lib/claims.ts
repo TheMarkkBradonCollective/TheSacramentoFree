@@ -1,8 +1,25 @@
 /** In-chat copy when a poster marks an item claimed (identity stays off the public listing). */
-export function formatItemClaimedChatMessage(itemTitle: string): string {
+export function formatItemClaimedChatMessage(itemTitle: string, itemLabels?: string[]): string {
+  const itemsLine =
+    itemLabels && itemLabels.length > 0
+      ? itemLabels.map((l) => `• ${l}`).join('\n')
+      : `"${itemTitle}"`;
+
   return (
-    `✓ "${itemTitle}" was marked as claimed.\n` +
-    `The public listing shows it as claimed only — who picked it up is never shown on the feed or map.`
+    `✓ Confirmed pickup:\n${itemsLine}\n` +
+    `The public listing shows what is still available — who picked up is never shown on the feed or map.`
+  );
+}
+
+export function formatSelfClaimRequestMessage(claimerName: string, itemLabels: string[]): string {
+  const list =
+    itemLabels.length > 0
+      ? itemLabels.map((l) => `• ${l}`).join('\n')
+      : '• (this listing)';
+
+  return (
+    `📦 ${claimerName} says they have claimed (contactless pickup):\n${list}\n` +
+    `Please confirm in chat when you verify the pickup.`
   );
 }
 

@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest } from './types';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canStaffBan, canStaffEditUser, canStaffSuspend, canViewAuditLog } from './lib/roles';
+import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
+import { blockReasonLabel } from './lib/blockReasons';
+import { normalizeUserRole, type UserRole, canStaffBan, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -590,6 +592,31 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
   }
 }
 
+export async function uploadReportProofImage(file: File, reportId: string): Promise<string | null> {
+  try {
+    const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
+    const filePath = `reports/${reportId}_${Date.now()}.${safeExt}`;
+
+    const { error } = await supabase.storage.from('items').upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+    if (error) throw error;
+
+    const { data: publicData } = supabase.storage.from('items').getPublicUrl(filePath);
+    return publicData?.publicUrl || null;
+  } catch {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
 export async function uploadProfilePhoto(file: File, userId: string): Promise<string | null> {
   const extRaw = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
@@ -1084,62 +1111,433 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
   }
 }
 
-export async function recordItemClaimInChat(params: {
+export function buildDmChatId(uidA: string, uidB: string): string {
+  return [uidA, uidB].sort().join('_');
+}
+
+function normalizeListingSubItem(row: Record<string, unknown>): ListingSubItem {
+  return {
+    id: String(row.id),
+    itemId: String(row.itemId),
+    label: String(row.label),
+    sortOrder: Number(row.sortOrder ?? 0),
+    status: row.status === 'claimed' ? 'claimed' : 'available',
+    claimedAt: row.claimedAt ? String(row.claimedAt) : null,
+  };
+}
+
+function normalizeClaimRequest(row: Record<string, unknown>): ItemClaimRequest {
+  let subItemIds: string[] = [];
+  try {
+    const parsed = JSON.parse(String(row.subItemIds ?? '[]'));
+    if (Array.isArray(parsed)) subItemIds = parsed.map(String);
+  } catch {
+    subItemIds = [];
+  }
+
+  return {
+    id: String(row.id),
+    itemId: String(row.itemId),
+    giverUserId: String(row.giverUserId),
+    claimerUserId: String(row.claimerUserId),
+    claimerName: String(row.claimerName),
+    subItemIds,
+    status: row.status === 'confirmed' ? 'confirmed' : row.status === 'rejected' ? 'rejected' : 'pending',
+    chatId: String(row.chatId),
+    createdAt: String(row.createdAt ?? row.created_at ?? ''),
+  };
+}
+
+export async function getListingSubitems(itemId: string): Promise<ListingSubItem[]> {
+  try {
+    const { data, error } = await supabase
+      .from('listing_subitems')
+      .select('*')
+      .eq('itemId', itemId)
+      .order('sortOrder', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      return [];
+    }
+    return (data ?? []).map((row) => normalizeListingSubItem(row as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+export async function replaceListingSubitems(
+  itemId: string,
+  labels: string[],
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  const trimmed = labels.map((l) => l.trim()).filter(Boolean);
+  if (trimmed.length === 0) {
+    return { ok: true };
+  }
+
+  try {
+    const existing = await getListingSubitems(itemId);
+    const claimed = existing.filter((s) => s.status === 'claimed');
+
+    const { error: deleteError } = await supabase
+      .from('listing_subitems')
+      .delete()
+      .eq('itemId', itemId)
+      .eq('status', 'available');
+
+    if (deleteError && deleteError.code !== '42P01') {
+      return { ok: false, errorMessage: deleteError.message };
+    }
+
+    const claimedLabels = new Set(claimed.map((c) => c.label.toLowerCase()));
+    const rows = trimmed
+      .filter((label) => !claimedLabels.has(label.toLowerCase()))
+      .map((label, index) => ({
+        id: `sub_${itemId}_${index}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        itemId,
+        label,
+        sortOrder: claimed.length + index,
+        status: 'available',
+      }));
+
+    if (rows.length === 0) return { ok: true };
+
+    const { error: insertError } = await supabase.from('listing_subitems').insert(rows);
+    if (insertError) {
+      if (insertError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run section 15 in supabase-setup.sql (listing_subitems).' };
+      }
+      return { ok: false, errorMessage: insertError.message };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not save items.' };
+  }
+}
+
+async function syncListingCompletionStatus(itemId: string): Promise<boolean> {
+  const subitems = await getListingSubitems(itemId);
+  if (subitems.length > 0) {
+    const allClaimed = subitems.every((s) => s.status === 'claimed');
+    if (allClaimed) {
+      return updateSupabaseItemStatus(itemId, 'completed');
+    }
+    return true;
+  }
+
+  const { count } = await supabase
+    .from('item_claims')
+    .select('id', { count: 'exact', head: true })
+    .eq('itemId', itemId)
+    .is('subItemId', null);
+
+  if ((count ?? 0) > 0) {
+    return updateSupabaseItemStatus(itemId, 'completed');
+  }
+  return true;
+}
+
+async function recordPartialItemClaims(params: {
   itemId: string;
+  itemTitle: string;
   giverUserId: string;
   claimerUserId: string;
   chatId: string;
+  subItemIds: string[] | null;
+  claimRequestId?: string;
   claimMessage: string;
-}): Promise<{ ok: boolean; errorMessage?: string }> {
+  actorUserId: string;
+}): Promise<{ ok: boolean; errorMessage?: string; confirmedLabels?: string[] }> {
+  const subitems = await getListingSubitems(params.itemId);
+  const now = new Date().toISOString();
+  const confirmedLabels: string[] = [];
+
   try {
-    const claimId = `claim_${params.itemId}_${Date.now()}`;
-
-    const { error: claimError } = await supabase.from('item_claims').insert({
-      id: claimId,
-      itemId: params.itemId,
-      giverUserId: params.giverUserId,
-      claimerUserId: params.claimerUserId,
-      chatId: params.chatId,
-      kind: 'giveaway',
-      createdAt: new Date().toISOString(),
-    });
-
-    if (claimError) {
-      const msg = String(claimError.message || '').toLowerCase();
-      if (msg.includes('duplicate') || msg.includes('unique')) {
-        return { ok: false, errorMessage: 'This item was already marked as claimed.' };
+    if (subitems.length > 0) {
+      const ids = params.subItemIds ?? [];
+      if (ids.length === 0) {
+        return { ok: false, errorMessage: 'Select at least one item to confirm.' };
       }
-      if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
-        return {
-          ok: false,
-          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see supabase-setup.sql).',
-        };
+
+      for (const subId of ids) {
+        const sub = subitems.find((s) => s.id === subId);
+        if (!sub) return { ok: false, errorMessage: 'One of the selected items was not found.' };
+        if (sub.status === 'claimed') {
+          return { ok: false, errorMessage: `"${sub.label}" was already claimed.` };
+        }
       }
-      return { ok: false, errorMessage: claimError.message || 'Could not record claim.' };
+
+      for (const subId of ids) {
+        const sub = subitems.find((s) => s.id === subId)!;
+        const claimId = `claim_${params.itemId}_${subId}_${Date.now()}`;
+
+        const { error: claimError } = await supabase.from('item_claims').insert({
+          id: claimId,
+          itemId: params.itemId,
+          subItemId: subId,
+          claimRequestId: params.claimRequestId || null,
+          giverUserId: params.giverUserId,
+          claimerUserId: params.claimerUserId,
+          chatId: params.chatId,
+          kind: 'giveaway',
+          createdAt: now,
+        });
+
+        if (claimError) {
+          const msg = String(claimError.message || '').toLowerCase();
+          if (msg.includes('duplicate') || msg.includes('unique')) {
+            return { ok: false, errorMessage: `"${sub.label}" was already claimed.` };
+          }
+          if (claimError.code === '42P01') {
+            return { ok: false, errorMessage: 'Run section 15 in supabase-setup.sql (multi-item claims).' };
+          }
+          return { ok: false, errorMessage: claimError.message };
+        }
+
+        await supabase
+          .from('listing_subitems')
+          .update({ status: 'claimed', claimedAt: now })
+          .eq('id', subId);
+
+        confirmedLabels.push(sub.label);
+      }
+    } else {
+      const claimId = `claim_${params.itemId}_${Date.now()}`;
+      const { error: claimError } = await supabase.from('item_claims').insert({
+        id: claimId,
+        itemId: params.itemId,
+        subItemId: null,
+        claimRequestId: params.claimRequestId || null,
+        giverUserId: params.giverUserId,
+        claimerUserId: params.claimerUserId,
+        chatId: params.chatId,
+        kind: 'giveaway',
+        createdAt: now,
+      });
+
+      if (claimError) {
+        const msg = String(claimError.message || '').toLowerCase();
+        if (msg.includes('duplicate') || msg.includes('unique')) {
+          return { ok: false, errorMessage: 'This item was already marked as claimed.' };
+        }
+        return { ok: false, errorMessage: claimError.message };
+      }
+      confirmedLabels.push(params.itemTitle);
     }
 
-    const statusOk = await updateSupabaseItemStatus(params.itemId, 'completed');
-    if (!statusOk) {
-      return { ok: false, errorMessage: 'Claim saved but listing status could not be updated.' };
-    }
+    await syncListingCompletionStatus(params.itemId);
 
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const msgOk = await createSupabaseMessage(
       params.chatId,
       params.claimMessage,
-      params.giverUserId,
+      params.actorUserId,
       messageId,
     );
 
     if (!msgOk) {
-      return { ok: false, errorMessage: 'Item marked claimed but chat message failed to send.' };
+      return { ok: false, errorMessage: 'Pickup recorded but chat message failed to send.' };
     }
+
+    return { ok: true, confirmedLabels };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not record pickup.' };
+  }
+}
+
+export async function submitSelfClaimRequest(params: {
+  item: ItemPost;
+  claimer: UserProfile;
+  subItemIds: string[];
+}): Promise<{ ok: boolean; chatId?: string; errorMessage?: string }> {
+  if (params.item.type !== 'giveaway' || params.item.status !== 'active') {
+    return { ok: false, errorMessage: 'This listing is not available to claim.' };
+  }
+  if (params.item.userId === params.claimer.uid) {
+    return { ok: false, errorMessage: 'You cannot claim your own listing.' };
+  }
+
+  const subitems = await getListingSubitems(params.item.id);
+  let targetIds = params.subItemIds;
+
+  if (subitems.length > 0) {
+    const available = subitems.filter((s) => s.status === 'available');
+    if (targetIds.length === 0) {
+      return { ok: false, errorMessage: 'Select at least one item you picked up.' };
+    }
+    for (const id of targetIds) {
+      if (!available.some((s) => s.id === id)) {
+        return { ok: false, errorMessage: 'One of the selected items is no longer available.' };
+      }
+    }
+  } else {
+    targetIds = [];
+  }
+
+  const chatId = buildDmChatId(params.claimer.uid, params.item.userId);
+  const chatPayload = {
+    id: chatId,
+    participantIds: [params.claimer.uid, params.item.userId].sort(),
+    participantNames: {
+      [params.claimer.uid]: params.claimer.displayName,
+      [params.item.userId]: params.item.userDisplayName,
+    },
+    participantPhotos: {
+      [params.claimer.uid]: params.claimer.photoURL || '',
+      [params.item.userId]: params.item.userPhotoURL || '',
+    },
+    lastMessageAt: new Date().toISOString(),
+    lastMessageText: '',
+    lastMessageSenderId: params.claimer.uid,
+    itemId: params.item.id,
+    itemTitle: params.item.title,
+  };
+
+  const chatOk = await getOrCreateSupabaseChat(chatId, chatPayload);
+  if (!chatOk) {
+    return { ok: false, errorMessage: 'Could not open chat with the poster.' };
+  }
+
+  const requestId = `clreq_${params.item.id}_${Date.now()}`;
+  const { error: reqError } = await supabase.from('item_claim_requests').insert({
+    id: requestId,
+    itemId: params.item.id,
+    giverUserId: params.item.userId,
+    claimerUserId: params.claimer.uid,
+    claimerName: params.claimer.displayName,
+    subItemIds: JSON.stringify(targetIds),
+    status: 'pending',
+    chatId,
+    createdAt: new Date().toISOString(),
+  });
+
+  if (reqError) {
+    if (reqError.code === '42P01') {
+      return { ok: false, errorMessage: 'Run section 15 in supabase-setup.sql (item_claim_requests).' };
+    }
+    return { ok: false, errorMessage: reqError.message };
+  }
+
+  const labels =
+    subitems.length > 0
+      ? subitems.filter((s) => targetIds.includes(s.id)).map((s) => s.label)
+      : [params.item.title];
+
+  const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const msgOk = await createSupabaseMessage(
+    chatId,
+    formatSelfClaimRequestMessage(params.claimer.displayName, labels),
+    params.claimer.uid,
+    messageId,
+  );
+
+  if (!msgOk) {
+    return { ok: false, errorMessage: 'Claim request saved but message failed to send.' };
+  }
+
+  return { ok: true, chatId };
+}
+
+export async function getPendingClaimRequestsForChat(chatId: string): Promise<ItemClaimRequest[]> {
+  try {
+    const { data, error } = await supabase
+      .from('item_claim_requests')
+      .select('*')
+      .eq('chatId', chatId)
+      .eq('status', 'pending')
+      .order('createdAt', { ascending: true });
+
+    if (error) return [];
+    return (data ?? []).map((row) => normalizeClaimRequest(row as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+export async function confirmClaimRequest(params: {
+  requestId: string;
+  actor: UserProfile;
+  subItemIds?: string[];
+  itemTitle: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('item_claim_requests')
+      .select('*')
+      .eq('id', params.requestId)
+      .maybeSingle();
+
+    if (error || !data) return { ok: false, errorMessage: 'Claim request not found.' };
+    const request = normalizeClaimRequest(data as Record<string, unknown>);
+
+    if (request.status !== 'pending') {
+      return { ok: false, errorMessage: 'This claim request was already handled.' };
+    }
+    if (request.giverUserId !== params.actor.uid) {
+      return { ok: false, errorMessage: 'Only the poster can confirm pickups.' };
+    }
+
+    const ids = params.subItemIds ?? request.subItemIds;
+    const subitems = await getListingSubitems(request.itemId);
+    const labels =
+      subitems.length > 0
+        ? subitems.filter((s) => ids.includes(s.id)).map((s) => s.label)
+        : [params.itemTitle];
+
+    const result = await recordPartialItemClaims({
+      itemId: request.itemId,
+      itemTitle: params.itemTitle,
+      giverUserId: request.giverUserId,
+      claimerUserId: request.claimerUserId,
+      chatId: request.chatId,
+      subItemIds: subitems.length > 0 ? ids : null,
+      claimRequestId: request.id,
+      claimMessage: formatItemClaimedChatMessage(params.itemTitle, labels),
+      actorUserId: params.actor.uid,
+    });
+
+    if (!result.ok) return result;
+
+    await supabase
+      .from('item_claim_requests')
+      .update({ status: 'confirmed' })
+      .eq('id', request.id);
 
     return { ok: true };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Could not mark as claimed.';
-    return { ok: false, errorMessage: message };
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not confirm claim.' };
   }
+}
+
+export async function recordItemClaimInChat(params: {
+  itemId: string;
+  itemTitle: string;
+  giverUserId: string;
+  claimerUserId: string;
+  chatId: string;
+  claimMessage: string;
+  subItemIds?: string[];
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const subitems = await getListingSubitems(params.itemId);
+
+  const ids = subitems.length > 0 ? params.subItemIds ?? [] : null;
+  const labels =
+    subitems.length > 0 && ids
+      ? subitems.filter((s) => ids.includes(s.id)).map((s) => s.label)
+      : [params.itemTitle];
+
+  const result = await recordPartialItemClaims({
+    itemId: params.itemId,
+    itemTitle: params.itemTitle,
+    giverUserId: params.giverUserId,
+    claimerUserId: params.claimerUserId,
+    chatId: params.chatId,
+    subItemIds: ids,
+    claimMessage: formatItemClaimedChatMessage(params.itemTitle, labels),
+    actorUserId: params.giverUserId,
+  });
+
+  return result;
 }
 
 export async function markItemFulfilledFromChat(params: {
@@ -1445,18 +1843,45 @@ export async function getBlockStatus(
   }
 }
 
-export async function blockUser(
-  blockerUserId: string,
-  blockedUserId: string,
-): Promise<{ ok: boolean; errorMessage?: string }> {
-  if (blockerUserId === blockedUserId) {
+export async function blockUser(params: {
+  blocker: UserProfile;
+  blockedUserId: string;
+  blockedUserName: string;
+  reasonCode: string;
+  details?: string;
+  proofFile?: File | null;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const { blocker, blockedUserId, blockedUserName, reasonCode, details, proofFile } = params;
+
+  if (blocker.uid === blockedUserId) {
     return { ok: false, errorMessage: 'You cannot block yourself.' };
   }
+  if (!reasonCode.trim()) {
+    return { ok: false, errorMessage: 'Please select a reason for blocking.' };
+  }
+  if (reasonCode === 'other' && !details?.trim()) {
+    return { ok: false, errorMessage: 'Please describe why you are blocking this neighbor.' };
+  }
+
+  const reasonLabel = blockReasonLabel(reasonCode);
+  const reportId = `report_block_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  let proofImageUrl: string | null = null;
+
+  if (proofFile) {
+    proofImageUrl = await uploadReportProofImage(proofFile, reportId);
+  }
+
+  const reasonText = details?.trim()
+    ? `${reasonLabel}\n\n${details.trim()}`
+    : reasonLabel;
+
   try {
     const { error } = await supabase.from('user_blocks').upsert(
       {
-        blockerUserId,
+        blockerUserId: blocker.uid,
         blockedUserId,
+        reason: reasonText,
+        proofImageUrl,
         createdAt: new Date().toISOString(),
       },
       { onConflict: 'blockerUserId,blockedUserId' },
@@ -1468,6 +1893,61 @@ export async function blockUser(
       }
       return { ok: false, errorMessage: error.message };
     }
+
+    const reportBody = [
+      `Automatic report — neighbor was blocked.`,
+      '',
+      `Blocked neighbor: ${blockedUserName}`,
+      `Blocked user id: ${blockedUserId}`,
+      '',
+      `Reason: ${reasonLabel}`,
+      details?.trim() ? `\nDetails:\n${details.trim()}` : '',
+      proofImageUrl ? '\n\nScreenshot proof attached for staff review.' : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const { error: reportError } = await supabase.from('user_reports').insert({
+      id: reportId,
+      reporterUserId: blocker.uid,
+      reporterName: blocker.displayName,
+      subject: `Block: ${blockedUserName}`,
+      body: reportBody,
+      reportedUserId: blockedUserId,
+      reportedUserName: blockedUserName,
+      proofImageUrl,
+      source: 'block',
+      status: 'new',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (reportError) {
+      if (reportError.code === '42P01') {
+        return {
+          ok: true,
+          errorMessage: 'Neighbor blocked, but reports table is missing — run sections 12 and 16 in supabase-setup.sql.',
+        };
+      }
+      const missingColumn =
+        String(reportError.message || '').includes('source') ||
+        String(reportError.message || '').includes('proofImageUrl');
+      if (missingColumn) {
+        await supabase.from('user_reports').insert({
+          id: reportId,
+          reporterUserId: blocker.uid,
+          reporterName: blocker.displayName,
+          subject: `Block: ${blockedUserName}`,
+          body: reportBody,
+          reportedUserId: blockedUserId,
+          reportedUserName: blockedUserName,
+          status: 'new',
+          createdAt: new Date().toISOString(),
+        });
+      } else {
+        console.warn('Block succeeded but staff report failed:', reportError);
+      }
+    }
+
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not block user.' };
@@ -1960,3 +2440,306 @@ export async function staffUpdateUserProfile(params: {
 }
 
 export { canViewAuditLog };
+
+/**
+ * --- REPORTS & SUPPORT TICKETS ---
+ */
+
+function normalizeReport(row: Record<string, unknown>): UserReport {
+  const sourceRaw = row.source;
+  return {
+    id: String(row.id),
+    reporterUserId: String(row.reporterUserId),
+    reporterName: String(row.reporterName),
+    subject: String(row.subject),
+    body: String(row.body),
+    reportedUserId: row.reportedUserId ? String(row.reportedUserId) : null,
+    reportedUserName: row.reportedUserName ? String(row.reportedUserName) : null,
+    proofImageUrl: row.proofImageUrl ? String(row.proofImageUrl) : null,
+    source: sourceRaw === 'block' ? 'block' : 'manual',
+    status: (row.status === 'reviewed' ? 'reviewed' : 'new') as UserReport['status'],
+    createdAt: String(row.createdAt ?? row.created_at ?? ''),
+  };
+}
+
+function normalizeTicket(row: Record<string, unknown>): SupportTicket {
+  return {
+    id: String(row.id),
+    openerUserId: String(row.openerUserId),
+    openerName: String(row.openerName),
+    openerRole: normalizeUserRole(row.openerRole),
+    minStaffRank: Number(row.minStaffRank ?? 1),
+    subject: String(row.subject),
+    status: row.status === 'closed' ? 'closed' : 'open',
+    closedByUserId: row.closedByUserId ? String(row.closedByUserId) : null,
+    createdAt: String(row.createdAt ?? row.created_at ?? ''),
+    updatedAt: String(row.updatedAt ?? row.updated_at ?? ''),
+  };
+}
+
+function normalizeTicketMessage(row: Record<string, unknown>): SupportTicketMessage {
+  return {
+    id: String(row.id),
+    ticketId: String(row.ticketId),
+    senderUserId: String(row.senderUserId),
+    senderName: String(row.senderName),
+    text: String(row.text),
+    createdAt: String(row.createdAt ?? row.created_at ?? ''),
+  };
+}
+
+export async function submitUserReport(params: {
+  reporter: UserProfile;
+  subject: string;
+  body: string;
+  reportedUserId?: string;
+  reportedUserName?: string;
+  proofImageUrl?: string | null;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const subject = params.subject.trim();
+  const body = params.body.trim();
+  if (!subject || !body) {
+    return { ok: false, errorMessage: 'Please add a subject and description.' };
+  }
+
+  try {
+    const { error } = await supabase.from('user_reports').insert({
+      id: `report_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      reporterUserId: params.reporter.uid,
+      reporterName: params.reporter.displayName,
+      subject,
+      body,
+      reportedUserId: params.reportedUserId || null,
+      reportedUserName: params.reportedUserName || null,
+      proofImageUrl: params.proofImageUrl || null,
+      source: 'manual',
+      status: 'new',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (error) {
+      if (error.code === '42P01') {
+        return { ok: false, errorMessage: 'Run section 12 in supabase-setup.sql (user_reports).' };
+      }
+      return { ok: false, errorMessage: error.message };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send report.' };
+  }
+}
+
+export async function getStaffUserReports(limit = 100): Promise<UserReport[]> {
+  try {
+    const { data, error } = await supabase
+      .from('user_reports')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      return [];
+    }
+    return (data ?? []).map((row) => normalizeReport(row as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+export async function markUserReportReviewed(
+  reportId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('user_reports')
+      .update({ status: 'reviewed' })
+      .eq('id', reportId);
+
+    if (error) return { ok: false, errorMessage: error.message };
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not update report.' };
+  }
+}
+
+export async function createSupportTicket(params: {
+  opener: UserProfile;
+  subject: string;
+  message: string;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  const subject = params.subject.trim();
+  const message = params.message.trim();
+  if (!subject || !message) {
+    return { ok: false, errorMessage: 'Please add a subject and message.' };
+  }
+
+  const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const openerRole = normalizeUserRole(params.opener.role);
+  const minStaffRank = minStaffRankForTicket(openerRole);
+  const now = new Date().toISOString();
+
+  try {
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.opener.uid,
+      openerName: params.opener.displayName,
+      openerRole,
+      minStaffRank,
+      subject,
+      status: 'open',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run sections 13–14 in supabase-setup.sql (support tickets).' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const { error: msgError } = await supabase.from('support_ticket_messages').insert({
+      id: `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      ticketId,
+      senderUserId: params.opener.uid,
+      senderName: params.opener.displayName,
+      text: message,
+      createdAt: now,
+    });
+
+    if (msgError) return { ok: false, errorMessage: msgError.message };
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open ticket.' };
+  }
+}
+
+export async function getSupportTicketsForUser(userId: string): Promise<SupportTicket[]> {
+  try {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('openerUserId', userId)
+      .order('updatedAt', { ascending: false });
+
+    if (error) return [];
+    return (data ?? []).map((row) => normalizeTicket(row as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+export async function getSupportTicketsForStaff(viewer: UserProfile): Promise<SupportTicket[]> {
+  try {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .order('updatedAt', { ascending: false });
+
+    if (error) return [];
+
+    return (data ?? [])
+      .map((row) => normalizeTicket(row as Record<string, unknown>))
+      .filter((ticket) => canViewerAccessTicket(viewer, ticket));
+  } catch {
+    return [];
+  }
+}
+
+export async function getSupportTicketMessages(ticketId: string): Promise<SupportTicketMessage[]> {
+  try {
+    const { data, error } = await supabase
+      .from('support_ticket_messages')
+      .select('*')
+      .eq('ticketId', ticketId)
+      .order('createdAt', { ascending: true });
+
+    if (error) return [];
+    return (data ?? []).map((row) => normalizeTicketMessage(row as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+export async function getSupportTicketById(ticketId: string): Promise<SupportTicket | null> {
+  try {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('id', ticketId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return normalizeTicket(data as Record<string, unknown>);
+  } catch {
+    return null;
+  }
+}
+
+export async function addSupportTicketMessage(params: {
+  ticketId: string;
+  sender: UserProfile;
+  text: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const text = params.text.trim();
+  if (!text) return { ok: false, errorMessage: 'Message cannot be empty.' };
+
+  const ticket = await getSupportTicketById(params.ticketId);
+  if (!ticket) return { ok: false, errorMessage: 'Ticket not found.' };
+  if (ticket.status === 'closed') return { ok: false, errorMessage: 'This ticket is closed.' };
+  if (!canViewerAccessTicket(params.sender, ticket)) {
+    return { ok: false, errorMessage: 'You cannot reply to this ticket.' };
+  }
+
+  const now = new Date().toISOString();
+
+  try {
+    const { error: msgError } = await supabase.from('support_ticket_messages').insert({
+      id: `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      ticketId: params.ticketId,
+      senderUserId: params.sender.uid,
+      senderName: params.sender.displayName,
+      text,
+      createdAt: now,
+    });
+
+    if (msgError) return { ok: false, errorMessage: msgError.message };
+
+    await supabase
+      .from('support_tickets')
+      .update({ updatedAt: now })
+      .eq('id', params.ticketId);
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send message.' };
+  }
+}
+
+export async function closeSupportTicket(params: {
+  ticketId: string;
+  user: UserProfile;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const ticket = await getSupportTicketById(params.ticketId);
+  if (!ticket) return { ok: false, errorMessage: 'Ticket not found.' };
+  if (!canViewerAccessTicket(params.user, ticket)) {
+    return { ok: false, errorMessage: 'You cannot close this ticket.' };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('support_tickets')
+      .update({
+        status: 'closed',
+        closedByUserId: params.user.uid,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('id', params.ticketId);
+
+    if (error) return { ok: false, errorMessage: error.message };
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not close ticket.' };
+  }
+}

@@ -95,3 +95,40 @@ export function canStaffEditUser(role?: UserProfile['role']): boolean {
   const r = normalizeUserRole(role);
   return r === 'city_manager' || r === 'director';
 }
+
+/** Numeric rank for ticket visibility (higher = more authority). */
+export const ROLE_RANK: Record<UserRole, number> = {
+  user: 0,
+  city_moderator: 1,
+  city_administrator: 2,
+  city_manager: 3,
+  director: 4,
+};
+
+export function roleRank(role?: UserProfile['role']): number {
+  return ROLE_RANK[normalizeUserRole(role)] ?? 0;
+}
+
+/** Minimum staff rank required to view/handle a ticket opened by someone at openerRole. */
+export function minStaffRankForTicket(openerRole?: UserProfile['role']): number {
+  const rank = roleRank(openerRole);
+  if (rank === 0) return ROLE_RANK.city_moderator;
+  return Math.min(rank + 1, ROLE_RANK.director);
+}
+
+export function canViewerAccessTicket(
+  viewer: Pick<UserProfile, 'uid' | 'role'>,
+  ticket: { openerUserId: string; minStaffRank: number },
+): boolean {
+  if (viewer.uid === ticket.openerUserId) return true;
+  if (!isStaffRole(viewer.role)) return false;
+  return roleRank(viewer.role) >= ticket.minStaffRank;
+}
+
+export function canViewStaffReports(role?: UserProfile['role']): boolean {
+  return isStaffRole(role);
+}
+
+export function canViewStaffTicketInbox(role?: UserProfile['role']): boolean {
+  return isStaffRole(role);
+}

@@ -16,11 +16,11 @@ import {
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
-import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage } from '../lib/claims';
+import { formatItemFulfilledChatMessage } from '../lib/claims';
 import {
   markItemFulfilledFromChat,
-  recordItemClaimInChat,
 } from '../supabase';
+import ChatClaimActions from './ChatClaimActions';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -259,45 +259,6 @@ export default function ChatSystem({
     const linkedItem = items.find((i) => i.id === selectedChat?.itemId);
     if (!linkedItem) return;
     await sendChatText(formatPickupLocationMessage(linkedItem));
-  };
-
-  const handleMarkClaimedByThisNeighbor = async () => {
-    if (!selectedChat) return;
-    const linkedItem = items.find((i) => i.id === selectedChat.itemId);
-    if (!linkedItem || linkedItem.userId !== userProfile.uid) return;
-
-    const claimerUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
-    if (!claimerUserId) {
-      setErrorMsg('Could not identify the neighbor in this chat.');
-      return;
-    }
-
-    if (
-      !confirm(
-        'Mark this item as claimed by the neighbor in this chat? The feed will show "Claimed" only — their name stays private on the listing.',
-      )
-    ) {
-      return;
-    }
-
-    setIsSending(true);
-    setErrorMsg('');
-    const result = await recordItemClaimInChat({
-      itemId: linkedItem.id,
-      giverUserId: userProfile.uid,
-      claimerUserId,
-      chatId: selectedChat.id,
-      claimMessage: formatItemClaimedChatMessage(linkedItem.title),
-    });
-    setIsSending(false);
-
-    if (result.ok) {
-      onItemsChanged?.();
-      const loadedMessages = await getSupabaseMessages(selectedChat.id);
-      setMessages(loadedMessages);
-    } else {
-      setErrorMsg(result.errorMessage || 'Could not mark as claimed.');
-    }
   };
 
   const handleMarkFulfilled = async () => {
@@ -616,6 +577,8 @@ export default function ChatSystem({
               linkedItem.type === 'giveaway' &&
               linkedItem.status === 'active';
 
+            const claimerUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
+
             const showMarkFulfilledBtn =
               !!linkedItem &&
               !isChatDisabled &&
@@ -752,17 +715,18 @@ export default function ChatSystem({
                       Send pickup location / address
                     </button>
                   )}
-                  {showMarkClaimedBtn && (
-                    <button
-                      type="button"
-                      onClick={handleMarkClaimedByThisNeighbor}
+                  {showMarkClaimedBtn && claimerUserId && (
+                    <ChatClaimActions
+                      chatId={selectedChat.id}
+                      linkedItem={linkedItem}
+                      viewer={userProfile}
+                      claimerUserId={claimerUserId}
                       disabled={isSending}
-                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
-                      id="chat_mark_claimed_btn"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      This neighbor claimed it
-                    </button>
+                      onChanged={() => {
+                        onItemsChanged?.();
+                        void getSupabaseMessages(selectedChat.id).then(setMessages);
+                      }}
+                    />
                   )}
                   {showMarkFulfilledBtn && (
                     <button

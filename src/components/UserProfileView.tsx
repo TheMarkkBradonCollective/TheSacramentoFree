@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import CommunityFooter from './CommunityFooter';
 import StaffModerationPanel from './StaffModerationPanel';
+import AccountHelpSection from './AccountHelpSection';
 import { canAccessStaffDirectory } from '../lib/roles';
 import { IN_APP } from '../siteContent';
 
@@ -573,6 +574,10 @@ export default function UserProfileView({
           <StaffModerationPanel viewer={userProfile} onViewProfile={onViewProfile} />
         </div>
       )}
+
+      <div className={fullBleed ? `${sectionShell} border-t-0` : 'mt-6'}>
+        <AccountHelpSection user={userProfile} />
+      </div>
 
       <div className={fullBleed ? '' : 'mt-6'}>
         <CommunityFooter compact />

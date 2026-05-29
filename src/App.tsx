@@ -611,6 +611,13 @@ export default function App() {
     setActiveTab('chats');
   }, []);
 
+  const handleClaimSubmitted = useCallback((chatId: string) => {
+    setDetailItem(null);
+    setInitialSelectedChatId(chatId);
+    setActiveTab('chats');
+    void loadItems(false);
+  }, [loadItems]);
+
   const handleBlockListChanged = useCallback(() => {
     void reloadBlockedUsers();
   }, [reloadBlockedUsers]);
@@ -681,6 +688,7 @@ export default function App() {
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
                   onInitiateChat={handleInitiateChat}
+                  onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
@@ -703,6 +711,7 @@ export default function App() {
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
                   onInitiateChat={handleInitiateChat}
+                  onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
@@ -725,6 +734,7 @@ export default function App() {
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
                   onInitiateChat={handleInitiateChat}
+                  onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
@@ -783,6 +793,8 @@ export default function App() {
                           setDetailItem(null);
                         }
                   }
+                  userProfile={userProfile}
+                  onClaimSubmitted={handleClaimSubmitted}
                 />
               )}
 

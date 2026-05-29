@@ -1,25 +1,31 @@
--- See supabase-setup.sql in the project root for the full, up-to-date script.
--- Run it in Supabase Dashboard → SQL Editor → New query → Run
---
--- ⚠️  USERS IN AUTH BUT NOT IN public.users  ⚠️
--- Run sections 9 and 10 from supabase-setup.sql to:
---   • Add a trigger so every future signup auto-creates a public.users row (section 9)
---   • Backfill all existing orphaned auth users into public.users (section 10)
--- Without this, users who signed up before the profile write succeeded will be invisible.
---
--- QUICK FIX if posts fail when a photo is attached (image uploads but listing won't save):
--- ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
---
--- CLAIMS (inbox "This neighbor claimed it" + profile counters): run section 7 in supabase-setup.sql
--- ISO FULFILL (reverse credit + "Received from neighbor"): adds item_claims.kind column in section 7
---
--- USER BLOCKS (mutual invisibility — posts, profiles, chats): run section 8 in supabase-setup.sql
---
--- DM REQUESTS (request to message from neighbor profile): run section 9 in supabase-setup.sql
---
--- STAFF MODERATION (suspend / ban + audit log): run sections 10–11 in supabase-setup.sql
---
--- LIVE UPDATES (no refresh for new posts/messages/votes/blocks/requests): run the REALTIME block in supabase-setup.sql
---
--- PROFILE PHOTOS: run the avatars bucket block in supabase-setup.sql (storage section)
-
+-- See supabase-setup.sql in the project root for the full, up-to-date script.
+-- Run it in Supabase Dashboard → SQL Editor → New query → Run
+--
+-- ⚠️  USERS IN AUTH BUT NOT IN public.users  ⚠️
+-- Run sections 9 and 10 from supabase-setup.sql to:
+--   • Add a trigger so every future signup auto-creates a public.users row (section 9)
+--   • Backfill all existing orphaned auth users into public.users (section 10)
+-- Without this, users who signed up before the profile write succeeded will be invisible.
+--
+-- QUICK FIX if posts fail when a photo is attached (image uploads but listing won't save):
+-- ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+--
+-- CLAIMS (inbox "This neighbor claimed it" + profile counters): run section 7 in supabase-setup.sql
+-- ISO FULFILL (reverse credit + "Received from neighbor"): adds item_claims.kind column in section 7
+--
+-- USER BLOCKS (mutual invisibility — posts, profiles, chats): run section 8 in supabase-setup.sql
+--
+-- DM REQUESTS (request to message from neighbor profile): run section 9 in supabase-setup.sql
+--
+-- STAFF MODERATION (suspend / ban + audit log): run sections 10–11 in supabase-setup.sql
+--
+-- USER REPORTS & SUPPORT TICKETS: run sections 12–14 in supabase-setup.sql
+--
+-- MULTI-ITEM PICKUP & CONTACTLESS CLAIM: run section 15 in supabase-setup.sql
+--
+-- BLOCK REASON + PROOF + AUTO STAFF REPORT: run section 16 in supabase-setup.sql
+--
+-- LIVE UPDATES (no refresh for new posts/messages/votes/blocks/requests): run the REALTIME block in supabase-setup.sql
+--
+-- PROFILE PHOTOS: run the avatars bucket block in supabase-setup.sql (storage section)
+

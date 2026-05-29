@@ -1,5 +1,6 @@
 import { ArrowLeft, Calendar, ExternalLink, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
-import { ItemPost, extractGPSCoordinates } from '../types';
+import { useEffect, useState } from 'react';
+import { ItemPost, extractGPSCoordinates, ItemComment, ListingSubItem, UserProfile } from '../types';
 import {
   canViewerSeeExactLocation,
   categoryRequiresGps,
@@ -16,13 +17,19 @@ import {
 import ListingPhotoGallery from './ListingPhotoGallery';
 import ListingEngagement from './ListingEngagement';
 import { PostVoteState } from '../hooks/useItemsEngagement';
-import { ItemComment } from '../types';
+import { SubItemAvailabilityList } from './SubItemPicker';
+import ClaimAtPickupButton from './ClaimAtPickupButton';
+import { getListingSubitems } from '../supabase';
 
 interface ItemDetailViewProps {
   item: ItemPost;
   currentUserId: string;
+  userProfile?: UserProfile;
+  userLat?: number | null;
+  userLng?: number | null;
   onClose: () => void;
   onMessage?: () => void;
+  onClaimSubmitted?: (chatId: string) => void;
   onEdit: () => void;
   onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active') => void;
   onDelete?: () => void;
@@ -37,8 +44,12 @@ interface ItemDetailViewProps {
 export default function ItemDetailView({
   item,
   currentUserId,
+  userProfile,
+  userLat = null,
+  userLng = null,
   onClose,
   onMessage,
+  onClaimSubmitted,
   onEdit,
   onUpdateStatus,
   onDelete,
@@ -49,7 +60,17 @@ export default function ItemDetailView({
   onAddComment,
   updating = false,
 }: ItemDetailViewProps) {
+  const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const isOwner = item.userId === currentUserId;
+
+  useEffect(() => {
+    void getListingSubitems(item.id).then(setSubitems);
+  }, [item.id]);
+
+  const partialClaimed =
+    subitems.length > 0 &&
+    subitems.some((s) => s.status === 'claimed') &&
+    subitems.some((s) => s.status === 'available');
   const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
   const detailsText = getListingDetailsText(item.description);
   const pickupNotesText = parsePickupNotes(item.description);
@@ -113,6 +134,11 @@ export default function ItemDetailView({
             {item.status === 'completed' && (
               <span className="sbn-badge sbn-badge-done">
                 {item.type === 'giveaway' ? 'Claimed' : 'Fulfilled'}
+              </span>
+            )}
+            {partialClaimed && (
+              <span className="sbn-badge sbn-badge-done">
+                {subitems.filter((s) => s.status === 'claimed').length}/{subitems.length} claimed
               </span>
             )}
             {item.status === 'withdrawn' && <span className="sbn-badge">Withdrawn</span>}
@@ -196,6 +222,8 @@ export default function ItemDetailView({
             )}
           </section>
 
+          <SubItemAvailabilityList subitems={subitems} />
+
           <ListingEngagement
             posterUserId={item.userId}
             currentUserId={currentUserId}
@@ -254,7 +282,7 @@ export default function ItemDetailView({
                     Withdraw
                   </button>
                   <p className="col-span-2 text-[11px] text-muted text-center leading-snug">
-                    Mark as claimed or fulfilled from the Messages tab in this chat.
+                    Confirm neighbor pickups from Messages, or when they self-claim at the pin.
                   </p>
                 </div>
               ) : (
@@ -284,15 +312,27 @@ export default function ItemDetailView({
               </button>
             </>
           ) : (
-            <div className="flex gap-3">
-              <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
-                Back
-              </button>
-              {item.status === 'active' && onMessage && (
-                <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
-                  <MessageSquare className="w-4 h-4" />
-                  Message
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-3">
+                <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
+                  Back
                 </button>
+                {item.status === 'active' && onMessage && (
+                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
+                    <MessageSquare className="w-4 h-4" />
+                    Message
+                  </button>
+                )}
+              </div>
+              {item.status === 'active' && userProfile && onClaimSubmitted && (
+                <ClaimAtPickupButton
+                  item={item}
+                  user={userProfile}
+                  userLat={userLat}
+                  userLng={userLng}
+                  onClaimSubmitted={onClaimSubmitted}
+                  className="w-full"
+                />
               )}
             </div>
           )}

@@ -30,6 +30,46 @@ export interface ModerationAuditEntry {
   createdAt: string;
 }
 
+export type ReportStatus = 'new' | 'reviewed';
+
+export interface UserReport {
+  id: string;
+  reporterUserId: string;
+  reporterName: string;
+  subject: string;
+  body: string;
+  reportedUserId?: string | null;
+  reportedUserName?: string | null;
+  proofImageUrl?: string | null;
+  source?: 'manual' | 'block';
+  status: ReportStatus;
+  createdAt: string;
+}
+
+export type TicketStatus = 'open' | 'closed';
+
+export interface SupportTicket {
+  id: string;
+  openerUserId: string;
+  openerName: string;
+  openerRole: UserProfile['role'];
+  minStaffRank: number;
+  subject: string;
+  status: TicketStatus;
+  closedByUserId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  ticketId: string;
+  senderUserId: string;
+  senderName: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface ItemPost {
   id: string;
   title: string;
@@ -82,6 +122,31 @@ export interface ItemComment {
   userNeighborhood: string;
   text: string;
   createdAt: any;
+}
+
+export type SubItemStatus = 'available' | 'claimed';
+
+export interface ListingSubItem {
+  id: string;
+  itemId: string;
+  label: string;
+  sortOrder: number;
+  status: SubItemStatus;
+  claimedAt?: string | null;
+}
+
+export type ClaimRequestStatus = 'pending' | 'confirmed' | 'rejected';
+
+export interface ItemClaimRequest {
+  id: string;
+  itemId: string;
+  giverUserId: string;
+  claimerUserId: string;
+  claimerName: string;
+  subItemIds: string[];
+  status: ClaimRequestStatus;
+  chatId: string;
+  createdAt: string;
 }
 
 export type MessageRequestStatus = 'pending' | 'accepted' | 'declined';

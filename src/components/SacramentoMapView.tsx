@@ -15,6 +15,7 @@ import {
   type LatLng,
 } from '../lib/mapRoute';
 import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation } from 'lucide-react';
+import ClaimAtPickupButton from './ClaimAtPickupButton';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 
@@ -26,6 +27,7 @@ interface SacramentoMapViewProps {
   selectedNeighborhood?: string;
   searchTerm?: string;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onClaimSubmitted?: (chatId: string) => void;
   onViewItem?: (item: ItemPost) => void;
   onEditItem?: (item: ItemPost) => void;
   /** @deprecated Use onViewItem */
@@ -149,6 +151,7 @@ export default function SacramentoMapView({
   selectedNeighborhood,
   searchTerm,
   onInitiateChat,
+  onClaimSubmitted,
   onViewItem,
   onEditItem,
   onItemDetail,
@@ -955,21 +958,33 @@ export default function SacramentoMapView({
                             </button>
                           )
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onInitiateChat(
-                                selectedPost.userId,
-                                selectedPost.userDisplayName,
-                                selectedPost.userPhotoURL,
-                                selectedPost,
-                              )
-                            }
-                            className="sbn-btn sbn-btn-primary sbn-btn-sm"
-                          >
-                            <MessageSquare className="w-3 h-3" />
-                            Message
-                          </button>
+                          <>
+                            {onClaimSubmitted && (
+                              <ClaimAtPickupButton
+                                item={selectedPost}
+                                user={userProfile}
+                                userLat={userLocation?.lat ?? null}
+                                userLng={userLocation?.lng ?? null}
+                                onClaimSubmitted={onClaimSubmitted}
+                                compact
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onInitiateChat(
+                                  selectedPost.userId,
+                                  selectedPost.userDisplayName,
+                                  selectedPost.userPhotoURL,
+                                  selectedPost,
+                                )
+                              }
+                              className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              Message
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -1437,21 +1452,33 @@ export default function SacramentoMapView({
                         </button>
                       )
                     ) : (
-                      <button
-                        id="map_message_btn"
-                        onClick={() =>
-                          onInitiateChat(
-                            selectedPost.userId,
-                            selectedPost.userDisplayName,
-                            selectedPost.userPhotoURL,
-                            selectedPost,
-                          )
-                        }
-                        className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
-                      >
-                        <MessageSquare className="w-3 h-3" />
-                        <span>Message</span>
-                      </button>
+                      <>
+                        {onClaimSubmitted && (
+                          <ClaimAtPickupButton
+                            item={selectedPost}
+                            user={userProfile}
+                            userLat={userLocation?.lat ?? null}
+                            userLng={userLocation?.lng ?? null}
+                            onClaimSubmitted={onClaimSubmitted}
+                            compact
+                          />
+                        )}
+                        <button
+                          id="map_message_btn"
+                          onClick={() =>
+                            onInitiateChat(
+                              selectedPost.userId,
+                              selectedPost.userDisplayName,
+                              selectedPost.userPhotoURL,
+                              selectedPost,
+                            )
+                          }
+                          className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          <span>Message</span>
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

@@ -135,7 +135,7 @@ CREATE INDEX IF NOT EXISTS item_comments_item_id_idx ON public.item_comments ("i
 -- 7. Private claim records (claimer identity not on public listings)
 CREATE TABLE IF NOT EXISTS public.item_claims (
   id TEXT PRIMARY KEY,
-  "itemId" TEXT NOT NULL UNIQUE,
+  "itemId" TEXT NOT NULL,
   "giverUserId" TEXT NOT NULL,
   "claimerUserId" TEXT NOT NULL,
   "chatId" TEXT NOT NULL,
@@ -286,6 +286,155 @@ CREATE INDEX IF NOT EXISTS moderation_audit_created_idx ON public.moderation_aud
 CREATE INDEX IF NOT EXISTS moderation_audit_target_idx ON public.moderation_audit_log ("targetUserId");
 
 -- =========================================================
+-- 12. User reports (one-way, no follow-up — all neighbors)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.user_reports (
+  id TEXT PRIMARY KEY,
+  "reporterUserId" TEXT NOT NULL,
+  "reporterName" TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  "reportedUserId" TEXT,
+  "reportedUserName" TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.user_reports DROP CONSTRAINT IF EXISTS user_reports_status_check;
+ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_status_check
+  CHECK (status IN ('new', 'reviewed'));
+
+ALTER TABLE public.user_reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read user reports" ON public.user_reports;
+CREATE POLICY "Allow read user reports" ON public.user_reports FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write user reports" ON public.user_reports;
+CREATE POLICY "Allow write user reports" ON public.user_reports FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS user_reports_created_idx ON public.user_reports ("createdAt" DESC);
+
+-- =========================================================
+-- 13. Support tickets (two-way help — mods+ for neighbors; higher tier for staff-opened)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.support_tickets (
+  id TEXT PRIMARY KEY,
+  "openerUserId" TEXT NOT NULL,
+  "openerName" TEXT NOT NULL,
+  "openerRole" TEXT NOT NULL DEFAULT 'user',
+  "minStaffRank" INTEGER NOT NULL DEFAULT 1,
+  subject TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  "closedByUserId" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.support_tickets DROP CONSTRAINT IF EXISTS support_tickets_status_check;
+ALTER TABLE public.support_tickets ADD CONSTRAINT support_tickets_status_check
+  CHECK (status IN ('open', 'closed'));
+
+ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read support tickets" ON public.support_tickets;
+CREATE POLICY "Allow read support tickets" ON public.support_tickets FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write support tickets" ON public.support_tickets;
+CREATE POLICY "Allow write support tickets" ON public.support_tickets FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS support_tickets_opener_idx ON public.support_tickets ("openerUserId");
+CREATE INDEX IF NOT EXISTS support_tickets_status_idx ON public.support_tickets (status, "updatedAt" DESC);
+
+-- =========================================================
+-- 14. Support ticket messages
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.support_ticket_messages (
+  id TEXT PRIMARY KEY,
+  "ticketId" TEXT NOT NULL,
+  "senderUserId" TEXT NOT NULL,
+  "senderName" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.support_ticket_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read ticket messages" ON public.support_ticket_messages;
+CREATE POLICY "Allow read ticket messages" ON public.support_ticket_messages FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write ticket messages" ON public.support_ticket_messages;
+CREATE POLICY "Allow write ticket messages" ON public.support_ticket_messages FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS support_ticket_messages_ticket_idx ON public.support_ticket_messages ("ticketId", "createdAt");
+
+-- =========================================================
+-- 15. Multi-item listings + contactless self-claim at pickup
+-- =========================================================
+ALTER TABLE public.item_claims DROP CONSTRAINT IF EXISTS item_claims_itemId_key;
+ALTER TABLE public.item_claims ADD COLUMN IF NOT EXISTS "subItemId" TEXT;
+ALTER TABLE public.item_claims ADD COLUMN IF NOT EXISTS "claimRequestId" TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS item_claims_subitem_unique
+  ON public.item_claims ("itemId", "subItemId")
+  WHERE "subItemId" IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS item_claims_single_item_unique
+  ON public.item_claims ("itemId")
+  WHERE "subItemId" IS NULL;
+
+CREATE TABLE IF NOT EXISTS public.listing_subitems (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL,
+  label TEXT NOT NULL,
+  "sortOrder" INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'available',
+  "claimedAt" TIMESTAMPTZ
+);
+
+ALTER TABLE public.listing_subitems DROP CONSTRAINT IF EXISTS listing_subitems_status_check;
+ALTER TABLE public.listing_subitems ADD CONSTRAINT listing_subitems_status_check
+  CHECK (status IN ('available', 'claimed'));
+
+ALTER TABLE public.listing_subitems ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read listing subitems" ON public.listing_subitems;
+CREATE POLICY "Allow read listing subitems" ON public.listing_subitems FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write listing subitems" ON public.listing_subitems;
+CREATE POLICY "Allow write listing subitems" ON public.listing_subitems FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS listing_subitems_item_idx ON public.listing_subitems ("itemId", "sortOrder");
+
+CREATE TABLE IF NOT EXISTS public.item_claim_requests (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL,
+  "giverUserId" TEXT NOT NULL,
+  "claimerUserId" TEXT NOT NULL,
+  "claimerName" TEXT NOT NULL,
+  "subItemIds" TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  "chatId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.item_claim_requests DROP CONSTRAINT IF EXISTS item_claim_requests_status_check;
+ALTER TABLE public.item_claim_requests ADD CONSTRAINT item_claim_requests_status_check
+  CHECK (status IN ('pending', 'confirmed', 'rejected'));
+
+ALTER TABLE public.item_claim_requests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read claim requests" ON public.item_claim_requests;
+CREATE POLICY "Allow read claim requests" ON public.item_claim_requests FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write claim requests" ON public.item_claim_requests;
+CREATE POLICY "Allow write claim requests" ON public.item_claim_requests FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS item_claim_requests_chat_idx ON public.item_claim_requests ("chatId", status);
+CREATE INDEX IF NOT EXISTS item_claim_requests_item_idx ON public.item_claim_requests ("itemId", status);
+
+-- =========================================================
+-- 16. Block reason + proof + staff auto-report fields
+-- =========================================================
+ALTER TABLE public.user_blocks ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE public.user_blocks ADD COLUMN IF NOT EXISTS "proofImageUrl" TEXT;
+
+ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS "proofImageUrl" TEXT;
+ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';
+ALTER TABLE public.user_reports DROP CONSTRAINT IF EXISTS user_reports_source_check;
+ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_source_check
+  CHECK (source IN ('manual', 'block'));
+
+-- =========================================================
 -- 8. REALTIME — live feed, chat, votes without page refresh
 -- Run once in SQL Editor. Safe to re-run (skips tables already added).
 -- =========================================================
@@ -294,7 +443,7 @@ DECLARE
   tbl TEXT;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
-    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log'
+    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'listing_subitems', 'item_claim_requests', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log', 'user_reports', 'support_tickets', 'support_ticket_messages'
   ]
   LOOP
     IF NOT EXISTS (

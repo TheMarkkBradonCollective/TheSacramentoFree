@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType, mapGPSToPercent, NEIGHBORHOOD_COORDS, findClosestNeighborhood, findClosestNeighborhoodByLatLng } from '../types';
-import { createSupabaseItem, updateSupabaseItem, uploadItemImage } from '../supabase';
+import { createSupabaseItem, updateSupabaseItem, uploadItemImage, getListingSubitems, replaceListingSubitems } from '../supabase';
 import {
   buildListingDescription,
   categoryRequiresGps,
@@ -11,7 +11,7 @@ import {
   extractListingImageUrls,
   MAX_LISTING_PHOTOS,
 } from '../lib/listingContent';
-import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil } from 'lucide-react';
+import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil, Plus } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
 
@@ -45,6 +45,8 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
   const [customCoords, setCustomCoords] = useState<{ x: number; y: number } | null>(null);
   const [locationIsPublic, setLocationIsPublic] = useState(true);
   const [pickupAddress, setPickupAddress] = useState('');
+  const [multipleItems, setMultipleItems] = useState(false);
+  const [subItemLabels, setSubItemLabels] = useState<string[]>(['']);
 
   const activeCategory = type === 'looking' ? isoCategory : category;
 
@@ -71,10 +73,21 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       setIsoCategory(
         ISO_CATEGORIES.includes(editItem.category) ? editItem.category : ISO_CATEGORIES[0],
       );
+      setMultipleItems(false);
+      setSubItemLabels(['']);
     } else {
       setCategory(
         ITEM_CATEGORIES.includes(editItem.category) ? editItem.category : ITEM_CATEGORIES[0],
       );
+      void getListingSubitems(editItem.id).then((subs) => {
+        if (subs.length > 0) {
+          setMultipleItems(true);
+          setSubItemLabels(subs.map((s) => s.label));
+        } else {
+          setMultipleItems(false);
+          setSubItemLabels(['']);
+        }
+      });
     }
   }, [editItem]);
 
@@ -173,6 +186,15 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       return;
     }
 
+    if (type === 'giveaway' && multipleItems) {
+      const labels = subItemLabels.map((l) => l.trim()).filter(Boolean);
+      if (labels.length < 2) {
+        setIsSubmitting(false);
+        setErrorMsg('Add at least two items when using multiple items mode.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setErrorMsg('');
 
@@ -239,6 +261,18 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             (isEditing ? 'Unable to save changes. Please try again.' : 'Unable to publish listing. Please try again.'),
         );
         return;
+      }
+
+      if (type === 'giveaway' && multipleItems) {
+        const subResult = await replaceListingSubitems(
+          itemId,
+          subItemLabels.map((l) => l.trim()).filter(Boolean),
+        );
+        if (!subResult.ok) {
+          setIsSubmitting(false);
+          setErrorMsg(subResult.errorMessage || 'Listing saved but items list failed to save.');
+          return;
+        }
       }
 
       onSuccess(listing);
@@ -346,6 +380,66 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
               className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-app font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
             />
           </div>
+
+          {type === 'giveaway' && (
+            <div className="space-y-2 border border-app rounded-xl p-3.5 bg-inset/30">
+              <label className="flex items-center gap-2.5 text-xs font-semibold text-app cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="rounded border-app text-accent focus:ring-accent"
+                  checked={multipleItems}
+                  onChange={(e) => {
+                    setMultipleItems(e.target.checked);
+                    if (e.target.checked && subItemLabels.every((l) => !l.trim())) {
+                      setSubItemLabels(['', '']);
+                    }
+                  }}
+                />
+                Multiple items in this post
+              </label>
+              <p className="text-[10px] text-muted leading-snug pl-6">
+                Neighbors can claim items one at a time. The post stays open until everything is picked up.
+              </p>
+              {multipleItems && (
+                <div className="space-y-2 pl-1 pt-1">
+                  {subItemLabels.map((label, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={label}
+                        maxLength={80}
+                        placeholder={`Item ${idx + 1} (e.g. Blue armchair)`}
+                        onChange={(e) => {
+                          const next = [...subItemLabels];
+                          next[idx] = e.target.value;
+                          setSubItemLabels(next);
+                        }}
+                        className="block flex-1 px-3 py-2 bg-inset border border-app rounded-xl text-xs text-app font-medium focus:border-[#FF4500] focus:outline-hidden"
+                      />
+                      {subItemLabels.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setSubItemLabels(subItemLabels.filter((_, i) => i !== idx))}
+                          className="p-2 text-muted hover:text-red-400"
+                          aria-label="Remove item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSubItemLabels([...subItemLabels, ''])}
+                    className="text-xs font-bold text-accent inline-flex items-center gap-1 pl-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add another item
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {type === 'giveaway' ? (
             /* Category selection */

@@ -14,8 +14,6 @@ import {
 import { UserProfile } from '../types';
 import {
   acceptMessageRequest,
-  blockUser,
-  chatIdForUsers,
   declineMessageRequest,
   getBlockStatus,
   getLatestMessageRequestBetween,
@@ -27,6 +25,7 @@ import {
   setUserRole,
   unblockUser,
 } from '../supabase';
+import BlockNeighborModal from './BlockNeighborModal';
 import { ItemPost } from '../types';
 import RoleBadge from './RoleBadge';
 import { ASSIGNABLE_ROLE_OPTIONS } from '../lib/roles';
@@ -68,6 +67,7 @@ export default function NeighborProfileView({
   const [actionError, setActionError] = useState('');
   const [requestSending, setRequestSending] = useState(false);
   const [blockBusy, setBlockBusy] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   const [requestBusy, setRequestBusy] = useState(false);
 
   const isSelf = userId === currentUserId;
@@ -211,19 +211,15 @@ export default function NeighborProfileView({
     onOpenChat?.(chatId);
   };
 
-  const handleBlock = async () => {
-    if (!profile) return;
-    if (!confirm(`Block ${profile.displayName}? You will not see each other's posts or messages.`)) return;
-    setBlockBusy(true);
-    setActionError('');
-    const result = await blockUser(currentUserId, userId);
-    setBlockBusy(false);
-    if (result.ok) {
-      onBlockListChanged?.();
-      onClose();
-    } else {
-      setActionError(result.errorMessage || 'Could not block user.');
-    }
+  const handleBlock = () => {
+    if (!profile || !currentUserProfile) return;
+    setShowBlockModal(true);
+  };
+
+  const handleBlocked = () => {
+    setShowBlockModal(false);
+    onBlockListChanged?.();
+    onClose();
   };
 
   const handleUnblock = async () => {
@@ -408,12 +404,17 @@ export default function NeighborProfileView({
                   <button
                     type="button"
                     onClick={handleBlock}
-                    disabled={blockBusy}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-900/50 text-red-400 text-sm font-semibold hover:bg-red-950/30 transition-colors"
+                    disabled={blockBusy || !currentUserProfile}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-900/50 text-red-400 text-sm font-semibold hover:bg-red-950/30 transition-colors disabled:opacity-50"
                   >
                     <Ban className="w-4 h-4" />
                     Block neighbor
                   </button>
+                )}
+                {!blockStatus.iBlockedThem && (
+                  <p className="text-[10px] text-muted mt-2 leading-snug text-center">
+                    Requires a reason. Staff gets an automatic report; you can attach a screenshot.
+                  </p>
                 )}
               </div>
             )}
@@ -514,6 +515,16 @@ export default function NeighborProfileView({
           </div>
         )}
       </div>
+
+      {showBlockModal && profile && currentUserProfile && (
+        <BlockNeighborModal
+          blocker={currentUserProfile}
+          blockedUserId={userId}
+          blockedUserName={profile.displayName}
+          onClose={() => setShowBlockModal(false)}
+          onBlocked={handleBlocked}
+        />
+      )}
     </div>
   );
 }

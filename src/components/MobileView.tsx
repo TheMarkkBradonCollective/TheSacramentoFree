@@ -17,6 +17,7 @@ interface MobileViewProps {
   setActiveTab: (tab: 'feed' | 'chats' | 'profile' | 'map') => void;
   onOpenNewPost: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
   onEditItem: (item: ItemPost) => void;
@@ -43,6 +44,7 @@ export default function MobileView({
   setActiveTab,
   onOpenNewPost,
   onInitiateChat,
+  onClaimSubmitted,
   onViewItem,
   onViewProfile,
   onEditItem,
@@ -94,6 +96,7 @@ export default function MobileView({
             selectedType={selectedMobileType}
             selectedCategory={selectedMobileCategory}
             onInitiateChat={onInitiateChat}
+            onClaimSubmitted={onClaimSubmitted}
             onViewItem={onViewItem}
             onEditItem={onEditItem}
             isFullScreenMobile
