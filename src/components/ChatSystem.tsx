@@ -181,6 +181,8 @@ export default function ChatSystem({
       (payload) => {
         const row = payload.new as Message | null;
         if (!row?.id || !active) return;
+        // Own sends are added optimistically in sendChatText — skip to avoid duplicates.
+        if (row.senderId === userProfile.uid) return;
         setMessages((prev) => {
           if (prev.some((m) => m.id === row.id)) return prev;
           return [...prev, row];
@@ -201,28 +203,32 @@ export default function ChatSystem({
     setIsSending(true);
     setErrorMsg('');
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const trimmed = text.trim();
+    const optimistic: Message = {
+      id: messageId,
+      senderId: userProfile.uid,
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === messageId)) return prev;
+      return [...prev, optimistic];
+    });
 
     try {
       const success = await createSupabaseMessage(
         selectedChat.id,
-        text.trim(),
+        trimmed,
         userProfile.uid,
         messageId,
       );
       if (success) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: messageId,
-            senderId: userProfile.uid,
-            text: text.trim(),
-            createdAt: new Date().toISOString(),
-          },
-        ]);
         return true;
       }
       throw new Error('Supabase message write failed');
     } catch (err) {
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
       setErrorMsg('Failed to send message. Please try again.');
       console.error(err);
       return false;
