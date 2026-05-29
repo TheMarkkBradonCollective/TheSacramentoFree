@@ -264,6 +264,36 @@ export async function syncProfilePhotoAcrossApp(
 /**
  * --- PROFILES ---
  */
+
+const DIRECTOR_UIDS = new Set(['204b071f-100c-401d-b76d-40c594e1f132']);
+const DIRECTOR_EMAIL = 'sigsecspec@gmail.com';
+
+export function isDirectorUser(uid: string, email?: string | null): boolean {
+  return DIRECTOR_UIDS.has(uid) || (email?.toLowerCase() === DIRECTOR_EMAIL);
+}
+
+/** Instant profile from Supabase auth — never blocks on the database. */
+export function profileFromAuthUser(user: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}): UserProfile {
+  const email = user.email?.trim() || '';
+  const isDirector = isDirectorUser(user.id, email);
+  const meta = user.user_metadata ?? {};
+
+  return {
+    uid: user.id,
+    displayName: String(meta.displayName || email.split('@')[0] || 'Sacramento Neighbor'),
+    photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.id)}`,
+    email: email || 'neighbor@sacramentobuynothing.org',
+    neighborhood: String(meta.neighborhood || 'Midtown'),
+    bio: typeof meta.bio === 'string' ? meta.bio : undefined,
+    createdAt: new Date().toISOString(),
+    role: isDirector ? 'director' : 'user',
+  };
+}
+
 export async function getSupabaseProfile(uid: string): Promise<UserProfile | null> {
   try {
     const { data, error } = await supabase
@@ -408,7 +438,7 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
-      role: profile.email?.toLowerCase() === 'sigsecspec@gmail.com' ? 'director' : (profile.role || 'user'),
+      role: isDirectorUser(profile.uid, profile.email) ? 'director' : (profile.role || 'user'),
       createdAt: coerceToIsoDate(profile.createdAt),
     };
 
@@ -441,7 +471,7 @@ export async function upsertSupabaseProfile(
     }
 
     if (photoURL) {
-      await syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
+      void syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
     }
 
     setSupabaseConfigurationState(true);

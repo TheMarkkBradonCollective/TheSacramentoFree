@@ -19,7 +19,9 @@ import {
   supabase, 
   getPublicNeighborProfile,
   getSupabaseProfile, 
-  upsertSupabaseProfile, 
+  upsertSupabaseProfile,
+  profileFromAuthUser,
+  isDirectorUser,
   getSupabaseItems,
   getOrCreateSupabaseChat,
   updateSupabaseItemStatus,
@@ -54,9 +56,8 @@ export default function App() {
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
-  const profileLoadRef = useRef<Promise<void> | null>(null);
+  const profileSyncRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
   const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>(() => {
     if (typeof window === 'undefined') return 'map';
@@ -247,91 +248,79 @@ export default function App() {
       new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
     ]);
 
-  const handleUserAuthenticated = useCallback(async (user: any) => {
-    setIsProfileLoading(true);
-    setErrorMsg('');
-
-    let profile: UserProfile | null = null;
-
-    try {
-      profile = await withTimeout(getSupabaseProfile(user.id), 8000, null);
-    } catch (sbErr) {
-      console.warn('Supabase profile fetch failed:', sbErr);
-    }
-
-    if (profile && profile.email === 'sigsecspec@gmail.com') {
-      profile.role = 'director';
-    }
-
-    if (!profile) {
-      profile = {
-        uid: user.id,
-        displayName: user.user_metadata?.displayName || user.email?.split('@')[0] || 'Sacramento Neighbor',
-        photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.id)}`,
-        email: user.email || 'neighbor@sacramentobuynothing.org',
-        neighborhood: user.user_metadata?.neighborhood || 'Midtown',
-        bio: user.user_metadata?.bio || 'Sacramento Buy Nothing collective member.',
-        createdAt: new Date().toISOString(),
-        role: user.email === 'sigsecspec@gmail.com' ? 'director' : 'user',
-      };
-
-      await withTimeout(upsertSupabaseProfile(profile), 8000, { ok: false });
-    }
-
-    setUserProfile(profile);
-    setIsProfileLoading(false);
+  /** Enter the app immediately from auth metadata — DB sync runs in background. */
+  const applySession = useCallback((user: any) => {
+    setSessionUser(user);
+    setUserProfile(profileFromAuthUser(user));
     setIsAuthLoading(false);
+    setAuthBootstrapping(false);
   }, []);
 
-  const loadProfileForUser = useCallback(
-    (user: any): Promise<void> => {
-      if (!user?.id) return Promise.resolve();
-      if (profileLoadRef.current) {
-        return profileLoadRef.current;
-      }
-      const task = handleUserAuthenticated(user).finally(() => {
-        if (profileLoadRef.current === task) {
-          profileLoadRef.current = null;
+  const syncProfileFromDb = useCallback(async (user: any) => {
+    if (!user?.id) return;
+    if (profileSyncRef.current === user.id) return;
+    profileSyncRef.current = user.id;
+
+    try {
+      const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
+      if (fromDb) {
+        if (isDirectorUser(user.id, user.email)) {
+          fromDb.role = 'director';
         }
-      });
-      profileLoadRef.current = task;
-      return task;
-    },
-    [handleUserAuthenticated],
-  );
+        setUserProfile(fromDb);
+        return;
+      }
+
+      const seed = profileFromAuthUser(user);
+      void upsertSupabaseProfile(seed);
+    } catch (err) {
+      console.warn('Background profile sync failed:', err);
+    } finally {
+      if (profileSyncRef.current === user.id) {
+        profileSyncRef.current = null;
+      }
+    }
+  }, []);
 
   // 1. Subscribe to Supabase Auth State changes
   useEffect(() => {
     let cancelled = false;
 
+    const finishBootstrap = () => {
+      if (!cancelled) {
+        setAuthBootstrapping(false);
+        setIsAuthLoading(false);
+      }
+    };
+
+    const bootFailsafe = setTimeout(finishBootstrap, 4000);
+
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error } = await withTimeout(
+          supabase.auth.getSession(),
+          5000,
+          { data: { session: null }, error: null },
+        );
         if (cancelled) return;
         if (error) {
           console.warn('Error checking supabase session:', error);
         }
 
         if (session?.user) {
-          setIsProfileLoading(true);
-          setSessionUser(session.user);
-          await handleUserAuthenticated(session.user);
+          applySession(session.user);
+          void syncProfileFromDb(session.user);
         } else {
           setSessionUser(null);
           setUserProfile(null);
-          setIsAuthLoading(false);
-          setIsProfileLoading(false);
         }
       } catch (err) {
         if (!cancelled) {
           console.warn('Error checking supabase session:', err);
-          setIsAuthLoading(false);
-          setIsProfileLoading(false);
         }
       } finally {
-        if (!cancelled) {
-          setAuthBootstrapping(false);
-        }
+        clearTimeout(bootFailsafe);
+        finishBootstrap();
       }
     };
 
@@ -341,27 +330,27 @@ export default function App() {
       if (cancelled) return;
 
       if (session?.user) {
-        setIsProfileLoading(true);
-        setSessionUser(session.user);
-        // Defer async work — awaiting inside this callback can deadlock Supabase auth.
+        applySession(session.user);
+        // Defer DB sync — never await inside this callback (Supabase auth deadlock).
         setTimeout(() => {
           if (!cancelled) {
-            loadProfileForUser(session.user);
+            void syncProfileFromDb(session.user);
           }
         }, 0);
       } else if (event === 'SIGNED_OUT') {
+        profileSyncRef.current = null;
         setSessionUser(null);
         setUserProfile(null);
         setIsAuthLoading(false);
-        setIsProfileLoading(false);
       }
     });
 
     return () => {
       cancelled = true;
+      clearTimeout(bootFailsafe);
       subscription.unsubscribe();
     };
-  }, [handleUserAuthenticated, loadProfileForUser]);
+  }, [applySession, syncProfileFromDb]);
 
   const loadItems = useCallback(async (isBackground = false) => {
     if (!userProfile) return;
@@ -425,9 +414,8 @@ export default function App() {
       }
 
       if (data.user) {
-        setIsProfileLoading(true);
-        setSessionUser(data.user);
-        await handleUserAuthenticated(data.user);
+        applySession(data.user);
+        void syncProfileFromDb(data.user);
         return true;
       }
       setIsAuthLoading(false);
@@ -489,10 +477,8 @@ export default function App() {
           throw new Error('Registration completed! Check your email inbox to verify your account.');
         }
 
-        setIsProfileLoading(false);
-        setSessionUser(data.user);
+        applySession(data.user);
         setUserProfile(newProfile);
-        setIsAuthLoading(false);
         return true;
       }
       setIsAuthLoading(false);
@@ -572,8 +558,6 @@ export default function App() {
     const participants = [userProfile.uid, posterUid].sort();
     const chatId = participants.join('_');
 
-    setIsProfileLoading(true);
-
     try {
       const payload = {
         id: chatId,
@@ -603,8 +587,6 @@ export default function App() {
       // Fallback local UI session activation
       setInitialSelectedChatId(chatId);
       setActiveTab('chats');
-    } finally {
-      setIsProfileLoading(false);
     }
   };
 
@@ -627,11 +609,10 @@ export default function App() {
           errorMsg={errorMsg}
           isAuthLoading={isAuthLoading}
         />
-      ) : authBootstrapping || isProfileLoading ? (
+      ) : authBootstrapping ? (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center mesh-bg">
           <div className="w-11 h-11 border-2 border-accent border-t-transparent rounded-full animate-spin" aria-hidden />
-          <p className="font-display text-lg font-bold text-app">Signing you in…</p>
-          <p className="text-sm text-muted max-w-xs">Setting up your neighbor profile.</p>
+          <p className="font-display text-lg font-bold text-app">Loading…</p>
         </div>
       ) : (
         <>
