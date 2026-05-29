@@ -26,6 +26,7 @@ interface TabletViewProps {
   onClearInitialChat: () => void;
   onRefresh: () => void;
   engagement: ItemsEngagementApi;
+  blockedUserIds?: Set<string>;
 }
 
 const TABS = [
@@ -51,6 +52,7 @@ export default function TabletView({
   onClearInitialChat,
   onRefresh,
   engagement,
+  blockedUserIds = new Set(),
 }: TabletViewProps) {
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen mesh-bg text-app">
@@ -148,6 +150,7 @@ export default function TabletView({
                 initialSelectedChatId={initialSelectedChatId}
                 onClearInitialChat={onClearInitialChat}
                 items={items}
+                blockedUserIds={blockedUserIds}
                 onViewProfile={onViewProfile}
                 onItemsChanged={onRefresh}
                 className="h-full min-h-0 border-0 rounded-none"

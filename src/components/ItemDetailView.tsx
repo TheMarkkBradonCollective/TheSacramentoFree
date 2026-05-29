@@ -22,7 +22,7 @@ interface ItemDetailViewProps {
   item: ItemPost;
   currentUserId: string;
   onClose: () => void;
-  onMessage: () => void;
+  onMessage?: () => void;
   onEdit: () => void;
   onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active') => void;
   onDelete?: () => void;
@@ -92,7 +92,7 @@ export default function ItemDetailView({
         {isOwner && item.status === 'active' ? (
           <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
         ) : !isOwner ? (
-          item.status === 'active' && (
+          item.status === 'active' && onMessage && (
             <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
               <MessageSquare className="w-4 h-4" />
               Message
@@ -288,7 +288,7 @@ export default function ItemDetailView({
               <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
                 Back
               </button>
-              {item.status === 'active' && (
+              {item.status === 'active' && onMessage && (
                 <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
                   <MessageSquare className="w-4 h-4" />
                   Message

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest } from './types';
 import { normalizeItemMedia } from './lib/listingContent';
+import { normalizeUserRole, type UserRole } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT NOT NULL,
   neighborhood TEXT NOT NULL,
   bio TEXT,
-  role TEXT NOT NULL DEFAULT 'user', -- 'user', 'moderator', 'admin', 'director'
+  role TEXT NOT NULL DEFAULT 'user', -- user | city_moderator | city_administrator | city_manager | director
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -224,7 +225,7 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     email: String(row.email ?? ''),
     neighborhood: String(row.neighborhood ?? 'Sacramento'),
     bio: typeof row.bio === 'string' ? row.bio : undefined,
-    role: (row.role as UserProfile['role']) ?? 'user',
+    role: normalizeUserRole(row.role),
     createdAt: row.createdAt ?? row.created_at,
   };
 }
@@ -391,7 +392,15 @@ async function buildProfileFromChats(uid: string): Promise<UserProfile | null> {
 }
 
 /** Public neighbor card — users table first, then listings, comments, or chat metadata. */
-export async function getPublicNeighborProfile(uid: string): Promise<UserProfile | null> {
+export async function getPublicNeighborProfile(
+  uid: string,
+  viewerId?: string,
+): Promise<UserProfile | null> {
+  if (viewerId && viewerId !== uid) {
+    const hidden = await areUsersBlocked(viewerId, uid);
+    if (hidden) return null;
+  }
+
   const fromUsers = await getSupabaseProfile(uid);
   if (fromUsers) return fromUsers;
 
@@ -930,7 +939,7 @@ export interface CommunityStats {
 /** Director-only: update another user's role. */
 export async function setUserRole(
   uid: string,
-  role: 'user' | 'moderator' | 'admin' | 'director',
+  role: UserRole,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
     const { error } = await supabase
@@ -1314,4 +1323,321 @@ export async function createSupabaseItemComment(comment: ItemComment): Promise<b
     handleSupabaseError(err, 'item_comments');
     return false;
   }
+}
+
+/**
+ * --- BLOCKS & DM REQUESTS ---
+ */
+
+export function chatIdForUsers(uidA: string, uidB: string): string {
+  return [uidA, uidB].sort().join('_');
+}
+
+export async function areUsersBlocked(userId: string, otherUserId: string): Promise<boolean> {
+  if (!userId || !otherUserId || userId === otherUserId) return false;
+  try {
+    const { data, error } = await supabase
+      .from('user_blocks')
+      .select('blockerUserId')
+      .or(
+        `and(blockerUserId.eq.${userId},blockedUserId.eq.${otherUserId}),and(blockerUserId.eq.${otherUserId},blockedUserId.eq.${userId})`,
+      )
+      .limit(1);
+
+    if (error) {
+      if (error.code === '42P01') return false;
+      return false;
+    }
+    return (data?.length ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function getHiddenUserIds(userId: string): Promise<string[]> {
+  if (!userId) return [];
+  try {
+    const [blockedByMe, blockedMe] = await Promise.all([
+      supabase.from('user_blocks').select('blockedUserId').eq('blockerUserId', userId),
+      supabase.from('user_blocks').select('blockerUserId').eq('blockedUserId', userId),
+    ]);
+
+    if (blockedByMe.error?.code === '42P01' || blockedMe.error?.code === '42P01') {
+      return [];
+    }
+
+    const ids = new Set<string>();
+    for (const row of blockedByMe.data ?? []) {
+      if (row.blockedUserId) ids.add(String(row.blockedUserId));
+    }
+    for (const row of blockedMe.data ?? []) {
+      if (row.blockerUserId) ids.add(String(row.blockerUserId));
+    }
+    return [...ids];
+  } catch {
+    return [];
+  }
+}
+
+export async function getBlockStatus(
+  viewerId: string,
+  otherUserId: string,
+): Promise<{ isHidden: boolean; iBlockedThem: boolean; theyBlockedMe: boolean }> {
+  if (!viewerId || !otherUserId || viewerId === otherUserId) {
+    return { isHidden: false, iBlockedThem: false, theyBlockedMe: false };
+  }
+
+  try {
+    const [iBlockedRes, theyBlockedRes] = await Promise.all([
+      supabase
+        .from('user_blocks')
+        .select('blockerUserId')
+        .eq('blockerUserId', viewerId)
+        .eq('blockedUserId', otherUserId)
+        .maybeSingle(),
+      supabase
+        .from('user_blocks')
+        .select('blockerUserId')
+        .eq('blockerUserId', otherUserId)
+        .eq('blockedUserId', viewerId)
+        .maybeSingle(),
+    ]);
+
+    const iBlockedThem = !!iBlockedRes.data;
+    const theyBlockedMe = !!theyBlockedRes.data;
+    return { isHidden: iBlockedThem || theyBlockedMe, iBlockedThem, theyBlockedMe };
+  } catch {
+    return { isHidden: false, iBlockedThem: false, theyBlockedMe: false };
+  }
+}
+
+export async function blockUser(
+  blockerUserId: string,
+  blockedUserId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (blockerUserId === blockedUserId) {
+    return { ok: false, errorMessage: 'You cannot block yourself.' };
+  }
+  try {
+    const { error } = await supabase.from('user_blocks').upsert(
+      {
+        blockerUserId,
+        blockedUserId,
+        createdAt: new Date().toISOString(),
+      },
+      { onConflict: 'blockerUserId,blockedUserId' },
+    );
+
+    if (error) {
+      if (error.code === '42P01') {
+        return { ok: false, errorMessage: 'Blocks table missing — run section 8 in supabase-setup.sql.' };
+      }
+      return { ok: false, errorMessage: error.message };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not block user.' };
+  }
+}
+
+export async function unblockUser(
+  blockerUserId: string,
+  blockedUserId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('user_blocks')
+      .delete()
+      .eq('blockerUserId', blockerUserId)
+      .eq('blockedUserId', blockedUserId);
+
+    if (error) {
+      return { ok: false, errorMessage: error.message };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not unblock user.' };
+  }
+}
+
+export async function getLatestMessageRequestBetween(
+  userA: string,
+  userB: string,
+): Promise<MessageRequest | null> {
+  try {
+    const { data, error } = await supabase
+      .from('message_requests')
+      .select('*')
+      .or(
+        `and(fromUserId.eq.${userA},toUserId.eq.${userB}),and(fromUserId.eq.${userB},toUserId.eq.${userA})`,
+      )
+      .order('createdAt', { ascending: false })
+      .limit(1);
+
+    if (error || !data?.length) return null;
+    return data[0] as MessageRequest;
+  } catch {
+    return null;
+  }
+}
+
+export async function getIncomingMessageRequests(userId: string): Promise<MessageRequest[]> {
+  try {
+    const { data, error } = await supabase
+      .from('message_requests')
+      .select('*')
+      .eq('toUserId', userId)
+      .eq('status', 'pending')
+      .order('createdAt', { ascending: false });
+
+    if (error) return [];
+    return (data ?? []) as MessageRequest[];
+  } catch {
+    return [];
+  }
+}
+
+export async function sendMessageRequest(params: {
+  fromUser: UserProfile;
+  toUserId: string;
+  message?: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const { fromUser, toUserId, message } = params;
+  if (fromUser.uid === toUserId) {
+    return { ok: false, errorMessage: 'You cannot message yourself.' };
+  }
+
+  if (await areUsersBlocked(fromUser.uid, toUserId)) {
+    return { ok: false, errorMessage: 'This neighbor is not available.' };
+  }
+
+  const existing = await getLatestMessageRequestBetween(fromUser.uid, toUserId);
+  if (existing?.status === 'pending') {
+    return { ok: false, errorMessage: 'A message request is already pending.' };
+  }
+  if (existing?.status === 'accepted') {
+    return { ok: false, errorMessage: 'You can already message this neighbor.' };
+  }
+
+  try {
+    const { error } = await supabase.from('message_requests').insert({
+      id: `dmreq_${fromUser.uid}_${toUserId}_${Date.now()}`,
+      fromUserId: fromUser.uid,
+      toUserId,
+      fromUserName: fromUser.displayName,
+      fromUserPhoto: fromUser.photoURL ?? null,
+      message: message?.trim() || null,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (error) {
+      if (error.code === '42P01') {
+        return { ok: false, errorMessage: 'Message requests table missing — run section 9 in supabase-setup.sql.' };
+      }
+      return { ok: false, errorMessage: error.message };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send request.' };
+  }
+}
+
+export async function acceptMessageRequest(
+  requestId: string,
+  accepter: UserProfile,
+): Promise<{ ok: boolean; chatId?: string; errorMessage?: string }> {
+  try {
+    const { data: request, error: fetchError } = await supabase
+      .from('message_requests')
+      .select('*')
+      .eq('id', requestId)
+      .maybeSingle();
+
+    if (fetchError || !request) {
+      return { ok: false, errorMessage: 'Request not found.' };
+    }
+
+    const req = request as MessageRequest;
+    if (req.toUserId !== accepter.uid) {
+      return { ok: false, errorMessage: 'You cannot accept this request.' };
+    }
+    if (req.status !== 'pending') {
+      return { ok: false, errorMessage: 'This request was already handled.' };
+    }
+
+    const requesterId = req.fromUserId;
+    const chatId = chatIdForUsers(accepter.uid, requesterId);
+    const requesterProfile = await getPublicNeighborProfile(requesterId, accepter.uid);
+
+    const payload = {
+      id: chatId,
+      participantIds: [accepter.uid, requesterId].sort(),
+      participantNames: {
+        [accepter.uid]: accepter.displayName,
+        [requesterId]: requesterProfile?.displayName || req.fromUserName,
+      },
+      participantPhotos: {
+        [accepter.uid]: accepter.photoURL || '',
+        [requesterId]: requesterProfile?.photoURL || req.fromUserPhoto || '',
+      },
+      lastMessageText: req.message || 'Message request accepted — say hello!',
+      lastMessageAt: new Date().toISOString(),
+      lastMessageSenderId: accepter.uid,
+      itemId: '',
+      itemTitle: '',
+    };
+
+    const chatOk = await getOrCreateSupabaseChat(chatId, payload);
+    if (!chatOk) {
+      return { ok: false, errorMessage: 'Could not open chat.' };
+    }
+
+    const { error: updateError } = await supabase
+      .from('message_requests')
+      .update({ status: 'accepted' })
+      .eq('id', requestId);
+
+    if (updateError) {
+      return { ok: false, errorMessage: updateError.message };
+    }
+
+    return { ok: true, chatId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not accept request.' };
+  }
+}
+
+export async function declineMessageRequest(
+  requestId: string,
+  userId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data: request } = await supabase
+      .from('message_requests')
+      .select('toUserId, status')
+      .eq('id', requestId)
+      .maybeSingle();
+
+    if (!request || request.toUserId !== userId) {
+      return { ok: false, errorMessage: 'Request not found.' };
+    }
+
+    const { error } = await supabase
+      .from('message_requests')
+      .update({ status: 'declined' })
+      .eq('id', requestId);
+
+    if (error) return { ok: false, errorMessage: error.message };
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not decline request.' };
+  }
+}
+
+export function filterChatsByBlocked(chats: Chat[], userId: string, hiddenIds: Set<string>): Chat[] {
+  return chats.filter((chat) => {
+    const otherId = chat.participantIds.find((id) => id !== userId);
+    return !otherId || !hiddenIds.has(otherId);
+  });
 }

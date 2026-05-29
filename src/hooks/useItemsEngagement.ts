@@ -17,6 +17,7 @@ export interface PostVoteState {
 export function useItemsEngagement(
   itemIds: string[],
   userProfile: UserProfile | null,
+  blockedUserIds: Set<string> = new Set(),
 ) {
   const [itemVotes, setItemVotes] = useState<Record<string, PostVoteState>>({});
   const [itemComments, setItemComments] = useState<Record<string, ItemComment[]>>({});
@@ -32,8 +33,9 @@ export function useItemsEngagement(
   );
 
   const getCommentsForPost = useCallback(
-    (postId: string): ItemComment[] => itemComments[postId] ?? [],
-    [itemComments],
+    (postId: string): ItemComment[] =>
+      (itemComments[postId] ?? []).filter((comment) => !blockedUserIds.has(comment.userId)),
+    [itemComments, blockedUserIds],
   );
 
   useEffect(() => {

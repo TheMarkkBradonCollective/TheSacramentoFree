@@ -8,7 +8,7 @@ export interface UserProfile {
   email: string;
   neighborhood: string;
   bio?: string;
-  role?: 'user' | 'moderator' | 'admin' | 'director';
+  role?: 'user' | 'city_moderator' | 'city_administrator' | 'city_manager' | 'director';
   createdAt: any;
 }
 
@@ -64,6 +64,25 @@ export interface ItemComment {
   userNeighborhood: string;
   text: string;
   createdAt: any;
+}
+
+export type MessageRequestStatus = 'pending' | 'accepted' | 'declined';
+
+export interface MessageRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  fromUserName: string;
+  fromUserPhoto?: string;
+  message?: string;
+  status: MessageRequestStatus;
+  createdAt: any;
+}
+
+export interface UserBlock {
+  blockerUserId: string;
+  blockedUserId: string;
+  createdAt?: any;
 }
 
 export const SACRAMENTO_NEIGHBORHOODS = [

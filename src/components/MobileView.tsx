@@ -26,6 +26,7 @@ interface MobileViewProps {
   onClearInitialChat: () => void;
   onRefresh: () => void;
   engagement: ItemsEngagementApi;
+  blockedUserIds?: Set<string>;
 }
 
 const NAV_ITEMS = [
@@ -51,6 +52,7 @@ export default function MobileView({
   onClearInitialChat,
   onRefresh,
   engagement,
+  blockedUserIds = new Set(),
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
@@ -159,6 +161,7 @@ export default function MobileView({
             initialSelectedChatId={initialSelectedChatId}
             onClearInitialChat={onClearInitialChat}
             items={items}
+            blockedUserIds={blockedUserIds}
             onViewProfile={onViewProfile}
             onItemsChanged={onRefresh}
             fullBleed

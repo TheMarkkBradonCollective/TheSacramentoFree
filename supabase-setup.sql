@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT NOT NULL,
   neighborhood TEXT NOT NULL,
   bio TEXT,
-  role TEXT NOT NULL DEFAULT 'user',
+  role TEXT NOT NULL DEFAULT 'user', -- user | city_moderator | city_administrator | city_manager | director
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -157,6 +157,48 @@ CREATE POLICY "Allow write item claims" ON public.item_claims FOR ALL USING (tru
 CREATE INDEX IF NOT EXISTS item_claims_claimer_idx ON public.item_claims ("claimerUserId");
 CREATE INDEX IF NOT EXISTS item_claims_giver_idx ON public.item_claims ("giverUserId");
 
+-- 8. User blocks (mutual invisibility — either direction hides both users from each other)
+CREATE TABLE IF NOT EXISTS public.user_blocks (
+  "blockerUserId" TEXT NOT NULL,
+  "blockedUserId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("blockerUserId", "blockedUserId")
+);
+
+ALTER TABLE public.user_blocks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read user blocks" ON public.user_blocks;
+CREATE POLICY "Allow read user blocks" ON public.user_blocks FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write user blocks" ON public.user_blocks;
+CREATE POLICY "Allow write user blocks" ON public.user_blocks FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS user_blocks_blocker_idx ON public.user_blocks ("blockerUserId");
+CREATE INDEX IF NOT EXISTS user_blocks_blocked_idx ON public.user_blocks ("blockedUserId");
+
+-- 9. Message requests (DM permission before opening a chat)
+CREATE TABLE IF NOT EXISTS public.message_requests (
+  id TEXT PRIMARY KEY,
+  "fromUserId" TEXT NOT NULL,
+  "toUserId" TEXT NOT NULL,
+  "fromUserName" TEXT NOT NULL,
+  "fromUserPhoto" TEXT,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.message_requests DROP CONSTRAINT IF EXISTS message_requests_status_check;
+ALTER TABLE public.message_requests ADD CONSTRAINT message_requests_status_check
+  CHECK (status IN ('pending', 'accepted', 'declined'));
+
+ALTER TABLE public.message_requests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read message requests" ON public.message_requests;
+CREATE POLICY "Allow read message requests" ON public.message_requests FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write message requests" ON public.message_requests;
+CREATE POLICY "Allow write message requests" ON public.message_requests FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS message_requests_to_idx ON public.message_requests ("toUserId", status);
+CREATE INDEX IF NOT EXISTS message_requests_from_idx ON public.message_requests ("fromUserId", status);
+
 -- =========================================================
 -- STORAGE: public bucket for listing photos
 -- =========================================================
@@ -218,7 +260,7 @@ DECLARE
   tbl TEXT;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
-    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'users'
+    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'users', 'user_blocks', 'message_requests'
   ]
   LOOP
     IF NOT EXISTS (
@@ -321,4 +363,8 @@ WHERE au.id::text NOT IN (SELECT uid FROM public.users)
 -- =========================================================
 -- OPTIONAL: set community director role (run after you sign up)
 -- UPDATE public.users SET role = 'director' WHERE email = 'you@example.com';
+--
+-- OPTIONAL: migrate legacy role slugs (moderator → city_administrator, admin → city_manager)
+-- UPDATE public.users SET role = 'city_administrator' WHERE role = 'moderator';
+-- UPDATE public.users SET role = 'city_manager' WHERE role = 'admin';
 -- =========================================================

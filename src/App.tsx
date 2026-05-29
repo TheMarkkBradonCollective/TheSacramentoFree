@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useItemsEngagement } from './hooks/useItemsEngagement';
 import { useItemsRealtime } from './hooks/useItemsRealtime';
+import { useBlockedUsers } from './hooks/useBlockedUsers';
 import { UserProfile, ItemPost } from './types';
 import Navbar from './components/Navbar';
 import PublicSite from './components/public/PublicSite';
@@ -17,7 +18,6 @@ import TabletView from './components/TabletView';
 import DesktopView from './components/DesktopView';
 import { 
   supabase, 
-  getPublicNeighborProfile,
   getSupabaseProfile, 
   upsertSupabaseProfile,
   profileFromAuthUser,
@@ -69,8 +69,13 @@ export default function App() {
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [items, setItems] = useState<ItemPost[]>([]);
-  const itemIds = useMemo(() => items.map((i) => i.id), [items]);
-  const engagement = useItemsEngagement(itemIds, userProfile);
+  const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
+  const visibleItems = useMemo(
+    () => items.filter((item) => !blockedUserIds.has(item.userId)),
+    [items, blockedUserIds],
+  );
+  const itemIds = useMemo(() => visibleItems.map((i) => i.id), [visibleItems]);
+  const engagement = useItemsEngagement(itemIds, userProfile, blockedUserIds);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -553,6 +558,7 @@ export default function App() {
   // Initiate Chat when clicking Msg icon on post card
   const handleInitiateChat = async (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
     if (!userProfile) return;
+    if (blockedUserIds.has(posterUid)) return;
 
     // Generate unique alphabetical chat ID to bypass duplicates
     const participants = [userProfile.uid, posterUid].sort();
@@ -590,14 +596,40 @@ export default function App() {
     }
   };
 
-  const handleProfileMessage = async () => {
-    if (!viewProfileUid || !userProfile || viewProfileUid === userProfile.uid) return;
-    const neighbor = await getPublicNeighborProfile(viewProfileUid);
-    if (!neighbor) return;
+  const handleViewProfile = useCallback(
+    (uid: string) => {
+      if (blockedUserIds.has(uid)) return;
+      setViewProfileUid(uid);
+    },
+    [blockedUserIds],
+  );
+
+  const handleOpenChatFromProfile = useCallback((chatId: string) => {
     setViewProfileUid(null);
-    await handleInitiateChat(neighbor.uid, neighbor.displayName, neighbor.photoURL);
+    setInitialSelectedChatId(chatId);
     setActiveTab('chats');
-  };
+  }, []);
+
+  const handleBlockListChanged = useCallback(() => {
+    void reloadBlockedUsers();
+  }, [reloadBlockedUsers]);
+
+  useEffect(() => {
+    if (viewProfileUid && blockedUserIds.has(viewProfileUid)) {
+      setViewProfileUid(null);
+    }
+    if (detailItem && blockedUserIds.has(detailItem.userId)) {
+      setDetailItem(null);
+    }
+    if (initialSelectedChatId && userProfile) {
+      const otherId = initialSelectedChatId
+        .split('_')
+        .find((id) => id !== userProfile.uid);
+      if (otherId && blockedUserIds.has(otherId)) {
+        setInitialSelectedChatId(null);
+      }
+    }
+  }, [blockedUserIds, viewProfileUid, detailItem, initialSelectedChatId, userProfile]);
 
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
@@ -622,7 +654,7 @@ export default function App() {
             <>
                {deviceType === 'mobile' ? (
                 <MobileView
-                  items={items}
+                  items={visibleItems}
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
@@ -634,7 +666,8 @@ export default function App() {
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
-                  onViewProfile={setViewProfileUid}
+                  onViewProfile={handleViewProfile}
+                  blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
                     setEditingItem(item);
                     setDetailItem(null);
@@ -643,7 +676,7 @@ export default function App() {
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
-                  items={items}
+                  items={visibleItems}
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
@@ -655,7 +688,8 @@ export default function App() {
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
-                  onViewProfile={setViewProfileUid}
+                  onViewProfile={handleViewProfile}
+                  blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
                     setEditingItem(item);
                     setDetailItem(null);
@@ -664,7 +698,7 @@ export default function App() {
                 />
               ) : (
                 <DesktopView
-                  items={items}
+                  items={visibleItems}
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
@@ -676,7 +710,8 @@ export default function App() {
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
-                  onViewProfile={setViewProfileUid}
+                  onViewProfile={handleViewProfile}
+                  blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
                     setEditingItem(item);
                     setDetailItem(null);
@@ -690,11 +725,10 @@ export default function App() {
                   userId={viewProfileUid}
                   currentUserId={userProfile.uid}
                   currentUserProfile={userProfile}
-                  listingHints={items}
+                  listingHints={visibleItems}
                   onClose={() => setViewProfileUid(null)}
-                  onMessage={
-                    viewProfileUid !== userProfile.uid ? handleProfileMessage : undefined
-                  }
+                  onOpenChat={handleOpenChatFromProfile}
+                  onBlockListChanged={handleBlockListChanged}
                 />
               )}
 
@@ -710,20 +744,24 @@ export default function App() {
                   }}
                   onUpdateStatus={handleDetailUpdateStatus}
                   onDelete={handleDetailDelete}
-                  onViewProfile={setViewProfileUid}
+                  onViewProfile={handleViewProfile}
                   voteState={engagement.getVotesForPost(detailItem.id)}
                   comments={engagement.getCommentsForPost(detailItem.id)}
                   onVote={(dir) => engagement.handleVote(detailItem.id, detailItem.userId, dir)}
                   onAddComment={(text) => engagement.handleAddComment(detailItem.id, text)}
-                  onMessage={() => {
-                    handleInitiateChat(
-                      detailItem.userId,
-                      detailItem.userDisplayName,
-                      detailItem.userPhotoURL,
-                      detailItem,
-                    );
-                    setDetailItem(null);
-                  }}
+                  onMessage={
+                    blockedUserIds.has(detailItem.userId)
+                      ? undefined
+                      : () => {
+                          handleInitiateChat(
+                            detailItem.userId,
+                            detailItem.userDisplayName,
+                            detailItem.userPhotoURL,
+                            detailItem,
+                          );
+                          setDetailItem(null);
+                        }
+                  }
                 />
               )}
 

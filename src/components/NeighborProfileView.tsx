@@ -1,10 +1,37 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, Gift, MapPin, MessageSquare, Package, ShieldCheck } from 'lucide-react';
+import {
+  ArrowLeft,
+  Ban,
+  ChevronDown,
+  ChevronUp,
+  Gift,
+  MapPin,
+  MessageSquare,
+  Package,
+  ShieldCheck,
+  UserX,
+} from 'lucide-react';
 import { UserProfile } from '../types';
-import { getNeighborStats, getPublicNeighborProfile, NeighborStats, profileFromListingAuthor, setUserRole } from '../supabase';
+import {
+  acceptMessageRequest,
+  blockUser,
+  chatIdForUsers,
+  declineMessageRequest,
+  getBlockStatus,
+  getLatestMessageRequestBetween,
+  getNeighborStats,
+  getPublicNeighborProfile,
+  NeighborStats,
+  profileFromListingAuthor,
+  sendMessageRequest,
+  setUserRole,
+  unblockUser,
+} from '../supabase';
 import { ItemPost } from '../types';
 import RoleBadge from './RoleBadge';
+import { ASSIGNABLE_ROLE_OPTIONS } from '../lib/roles';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import type { MessageRequest } from '../types';
 
 interface NeighborProfileViewProps {
   userId: string;
@@ -12,7 +39,8 @@ interface NeighborProfileViewProps {
   currentUserProfile?: UserProfile;
   listingHints?: ItemPost[];
   onClose: () => void;
-  onMessage?: () => void;
+  onOpenChat?: (chatId: string) => void;
+  onBlockListChanged?: () => void;
 }
 
 export default function NeighborProfileView({
@@ -21,13 +49,27 @@ export default function NeighborProfileView({
   currentUserProfile,
   listingHints = [],
   onClose,
-  onMessage,
+  onOpenChat,
+  onBlockListChanged,
 }: NeighborProfileViewProps) {
   const hintListing = listingHints.find((item) => item.userId === userId);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<NeighborStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [blockStatus, setBlockStatus] = useState({
+    isHidden: false,
+    iBlockedThem: false,
+    theyBlockedMe: false,
+  });
+  const [dmRequest, setDmRequest] = useState<MessageRequest | null>(null);
+  const [requestNote, setRequestNote] = useState('');
+  const [actionMsg, setActionMsg] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [requestSending, setRequestSending] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
+  const [requestBusy, setRequestBusy] = useState(false);
+
   const isSelf = userId === currentUserId;
   const isDirector = currentUserProfile?.role === 'director';
 
@@ -35,8 +77,22 @@ export default function NeighborProfileView({
   const [roleMsg, setRoleMsg] = useState('');
   const [roleSaving, setRoleSaving] = useState(false);
 
-  useEffect(() => {
-    let active = true;
+  const loadProfileData = async () => {
+    const [status, loadedProfile, loadedStats, latestRequest] = await Promise.all([
+      getBlockStatus(currentUserId, userId),
+      getPublicNeighborProfile(userId, currentUserId),
+      getNeighborStats(userId),
+      getLatestMessageRequestBetween(currentUserId, userId),
+    ]);
+
+    setBlockStatus(status);
+    if (status.isHidden && !status.iBlockedThem) {
+      setProfile(null);
+      setStats(null);
+      setDmRequest(null);
+      setLoading(false);
+      return;
+    }
 
     const localSeed: UserProfile | null =
       userId === currentUserId && currentUserProfile
@@ -45,51 +101,46 @@ export default function NeighborProfileView({
           ? profileFromListingAuthor(userId, hintListing)
           : null;
 
-    setProfile(localSeed);
-    setLoading(true);
+    const resolved = loadedProfile ?? localSeed;
+    setProfile(resolved);
+    setSelectedRole(resolved?.role ?? 'user');
+    setStats(loadedStats);
+    setDmRequest(latestRequest);
+    setLoading(false);
+  };
 
-    (async () => {
-      const [loadedProfile, loadedStats] = await Promise.all([
-        getPublicNeighborProfile(userId),
-        getNeighborStats(userId),
-      ]);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setActionMsg('');
+    setActionError('');
+
+    void loadProfileData().then(() => {
       if (!active) return;
-      const resolved = loadedProfile ?? localSeed;
-      setProfile(resolved);
-      setSelectedRole(resolved?.role ?? 'user');
-      setStats(loadedStats);
-      setLoading(false);
-    })();
+    });
 
     const reload = debounceRealtime(() => {
-      if (!active) return;
-      void Promise.all([getPublicNeighborProfile(userId), getNeighborStats(userId)]).then(
-        ([loadedProfile, loadedStats]) => {
-          if (!active) return;
-          setProfile(loadedProfile ?? localSeed);
-          setStats(loadedStats);
-        },
-      );
+      if (active) void loadProfileData();
     }, 250);
 
     const unsubItems = subscribePostgresChanges(
       { channelName: `live-profile-items-${userId}`, table: 'items', event: '*' },
       () => reload(),
     );
-    const unsubVotes = subscribePostgresChanges(
-      { channelName: `live-profile-votes-${userId}`, table: 'item_votes', event: '*' },
+    const unsubRequests = subscribePostgresChanges(
+      { channelName: `live-dm-req-${currentUserId}-${userId}`, table: 'message_requests', event: '*' },
       () => reload(),
     );
-    const unsubClaims = subscribePostgresChanges(
-      { channelName: `live-profile-claims-${userId}`, table: 'item_claims', event: '*' },
+    const unsubBlocks = subscribePostgresChanges(
+      { channelName: `live-block-${currentUserId}-${userId}`, table: 'user_blocks', event: '*' },
       () => reload(),
     );
 
     return () => {
       active = false;
       unsubItems();
-      unsubVotes();
-      unsubClaims();
+      unsubRequests();
+      unsubBlocks();
     };
   }, [userId, currentUserId, currentUserProfile, hintListing?.id]);
 
@@ -100,19 +151,96 @@ export default function NeighborProfileView({
     const result = await setUserRole(profile.uid, selectedRole);
     setRoleSaving(false);
     if (result.ok) {
-      setProfile((prev) => prev ? { ...prev, role: selectedRole } : prev);
+      setProfile((prev) => (prev ? { ...prev, role: selectedRole } : prev));
       setRoleMsg('Role updated successfully.');
     } else {
       setRoleMsg(result.errorMessage || 'Failed to update role.');
     }
   };
 
-  const ROLE_OPTIONS: { value: UserProfile['role']; label: string; description: string }[] = [
-    { value: 'user',      label: '🏡 Local Neighbor',        description: 'Standard community member' },
-    { value: 'moderator', label: '🤝 Community Moderator',   description: 'Can help manage listings & community' },
-    { value: 'admin',     label: '🛡️ Circle Admin',          description: 'Trusted admin with elevated access' },
-    { value: 'director',  label: '🌻 Sunflower Director',    description: 'Full owner-level access' },
-  ];
+  const handleSendRequest = async () => {
+    if (!currentUserProfile) return;
+    setRequestSending(true);
+    setActionError('');
+    setActionMsg('');
+    const result = await sendMessageRequest({
+      fromUser: currentUserProfile,
+      toUserId: userId,
+      message: requestNote,
+    });
+    setRequestSending(false);
+    if (result.ok) {
+      setActionMsg('Message request sent. They can accept to start chatting.');
+      setRequestNote('');
+      void loadProfileData();
+    } else {
+      setActionError(result.errorMessage || 'Could not send request.');
+    }
+  };
+
+  const handleAcceptRequest = async () => {
+    if (!currentUserProfile || !dmRequest) return;
+    setRequestBusy(true);
+    setActionError('');
+    const result = await acceptMessageRequest(dmRequest.id, currentUserProfile);
+    setRequestBusy(false);
+    if (result.ok && result.chatId) {
+      onClose();
+      onOpenChat?.(result.chatId);
+    } else {
+      setActionError(result.errorMessage || 'Could not accept request.');
+    }
+  };
+
+  const handleDeclineRequest = async () => {
+    if (!dmRequest) return;
+    setRequestBusy(true);
+    const result = await declineMessageRequest(dmRequest.id, currentUserId);
+    setRequestBusy(false);
+    if (result.ok) {
+      setActionMsg('Request declined.');
+      void loadProfileData();
+    } else {
+      setActionError(result.errorMessage || 'Could not decline request.');
+    }
+  };
+
+  const handleOpenExistingChat = () => {
+    const chatId = chatIdForUsers(currentUserId, userId);
+    onClose();
+    onOpenChat?.(chatId);
+  };
+
+  const handleBlock = async () => {
+    if (!profile) return;
+    if (!confirm(`Block ${profile.displayName}? You will not see each other's posts or messages.`)) return;
+    setBlockBusy(true);
+    setActionError('');
+    const result = await blockUser(currentUserId, userId);
+    setBlockBusy(false);
+    if (result.ok) {
+      onBlockListChanged?.();
+      onClose();
+    } else {
+      setActionError(result.errorMessage || 'Could not block user.');
+    }
+  };
+
+  const handleUnblock = async () => {
+    setBlockBusy(true);
+    setActionError('');
+    const result = await unblockUser(currentUserId, userId);
+    setBlockBusy(false);
+    if (result.ok) {
+      setActionMsg('Neighbor unblocked.');
+      onBlockListChanged?.();
+      void loadProfileData();
+    } else {
+      setActionError(result.errorMessage || 'Could not unblock user.');
+    }
+  };
+
+  const ROLE_OPTIONS = ASSIGNABLE_ROLE_OPTIONS;
 
   const joinedLabel = profile?.createdAt
     ? new Date(
@@ -121,6 +249,12 @@ export default function NeighborProfileView({
           : profile.createdAt,
       ).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
     : null;
+
+  const showMessageButton = dmRequest?.status === 'accepted';
+  const pendingOutgoing =
+    dmRequest?.status === 'pending' && dmRequest.fromUserId === currentUserId;
+  const pendingIncoming =
+    dmRequest?.status === 'pending' && dmRequest.toUserId === currentUserId;
 
   return (
     <div
@@ -139,8 +273,8 @@ export default function NeighborProfileView({
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="font-display font-bold text-base text-app flex-1">Neighbor profile</h1>
-        {!isSelf && onMessage && (
-          <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+        {!isSelf && showMessageButton && onOpenChat && (
+          <button type="button" onClick={handleOpenExistingChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
             <MessageSquare className="w-4 h-4" />
             Message
           </button>
@@ -148,8 +282,13 @@ export default function NeighborProfileView({
       </header>
 
       <div className="max-w-md mx-auto p-6 pb-12">
-        {loading && !profile ? (
+        {loading && !profile && !blockStatus.theyBlockedMe ? (
           <p className="text-center text-sm text-muted py-16">Loading profile…</p>
+        ) : blockStatus.theyBlockedMe || (blockStatus.isHidden && !blockStatus.iBlockedThem) ? (
+          <div className="text-center py-16 space-y-3">
+            <UserX className="w-12 h-12 text-muted mx-auto" />
+            <p className="text-sm text-muted">This neighbor profile is not available.</p>
+          </div>
         ) : !profile ? (
           <p className="text-center text-sm text-muted py-16">This neighbor profile is not available.</p>
         ) : (
@@ -178,6 +317,106 @@ export default function NeighborProfileView({
                 </div>
               )}
             </div>
+
+            {!isSelf && !blockStatus.iBlockedThem && (
+              <div className="sbn-card p-4 space-y-3">
+                <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">Connect</h3>
+
+                {pendingIncoming && dmRequest && (
+                  <div className="rounded-xl border border-accent/30 bg-accent-soft/40 p-3 space-y-2">
+                    <p className="text-sm font-semibold text-app">
+                      {dmRequest.fromUserName} wants to message you
+                    </p>
+                    {dmRequest.message && (
+                      <p className="text-xs text-muted italic">&ldquo;{dmRequest.message}&rdquo;</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAcceptRequest}
+                        disabled={requestBusy}
+                        className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeclineRequest}
+                        disabled={requestBusy}
+                        className="sbn-btn sbn-btn-secondary sbn-btn-sm flex-1"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showMessageButton && (
+                  <button type="button" onClick={handleOpenExistingChat} className="sbn-btn sbn-btn-primary w-full">
+                    <MessageSquare className="w-4 h-4" />
+                    Open messages
+                  </button>
+                )}
+
+                {!showMessageButton && !pendingIncoming && !pendingOutgoing && (
+                  <>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Send a message request. They choose whether to start a private chat.
+                    </p>
+                    <textarea
+                      value={requestNote}
+                      onChange={(e) => setRequestNote(e.target.value)}
+                      placeholder="Optional: say hello or mention what you're reaching out about…"
+                      className="sbn-input w-full text-sm min-h-[4.5rem] resize-y"
+                      maxLength={280}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendRequest}
+                      disabled={requestSending}
+                      className="sbn-btn sbn-btn-primary w-full"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      {requestSending ? 'Sending…' : 'Request to message'}
+                    </button>
+                  </>
+                )}
+
+                {pendingOutgoing && (
+                  <p className="text-xs text-muted text-center py-2">
+                    Message request sent — waiting for {profile.displayName} to accept.
+                  </p>
+                )}
+
+                {actionMsg && <p className="text-xs text-emerald-400 font-semibold">{actionMsg}</p>}
+                {actionError && <p className="text-xs text-red-400 font-semibold">{actionError}</p>}
+              </div>
+            )}
+
+            {!isSelf && (
+              <div className="sbn-card p-4">
+                {blockStatus.iBlockedThem ? (
+                  <button
+                    type="button"
+                    onClick={handleUnblock}
+                    disabled={blockBusy}
+                    className="sbn-btn sbn-btn-secondary w-full text-sm"
+                  >
+                    Unblock {profile.displayName}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleBlock}
+                    disabled={blockBusy}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-900/50 text-red-400 text-sm font-semibold hover:bg-red-950/30 transition-colors"
+                  >
+                    <Ban className="w-4 h-4" />
+                    Block neighbor
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="sbn-card p-4 text-center">
@@ -209,7 +448,6 @@ export default function NeighborProfileView({
               </div>
             ) : null}
 
-            {/* Director-only team management panel */}
             {isDirector && !isSelf && (
               <div className="sbn-card p-5 border border-amber-500/25 bg-amber-500/5">
                 <div className="flex items-center gap-2 mb-4">
@@ -264,7 +502,7 @@ export default function NeighborProfileView({
                   disabled={roleSaving || selectedRole === profile.role}
                   className="sbn-btn sbn-btn-primary sbn-btn-sm w-full disabled:opacity-50"
                 >
-                  {roleSaving ? 'Saving…' : selectedRole === profile.role ? 'Role unchanged' : `Set as ${ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}`}
+                  {roleSaving ? 'Saving…' : selectedRole === profile.role ? 'Role unchanged' : `Set as ${ROLE_OPTIONS.find((r) => r.value === selectedRole)?.label}`}
                 </button>
               </div>
             )}

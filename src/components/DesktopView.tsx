@@ -25,6 +25,7 @@ interface DesktopViewProps {
   onClearInitialChat: () => void;
   onRefresh: () => void;
   engagement: ItemsEngagementApi;
+  blockedUserIds?: Set<string>;
 }
 
 export default function DesktopView({
@@ -43,6 +44,7 @@ export default function DesktopView({
   onClearInitialChat,
   onRefresh,
   engagement,
+  blockedUserIds = new Set(),
 }: DesktopViewProps) {
   return (
     <div id="desktop_device_workspace" className="min-h-screen flex flex-col mesh-bg text-app">
@@ -95,6 +97,7 @@ export default function DesktopView({
                 initialSelectedChatId={initialSelectedChatId}
                 onClearInitialChat={onClearInitialChat}
                 items={items}
+                blockedUserIds={blockedUserIds}
                 onViewProfile={onViewProfile}
                 onItemsChanged={onRefresh}
                 className="h-full min-h-0 border-0 rounded-none"

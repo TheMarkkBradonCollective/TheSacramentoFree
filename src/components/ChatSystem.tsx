@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Chat, Message, UserProfile, ItemPost } from '../types';
-import { getSupabaseChats, getSupabaseMessages, createSupabaseMessage } from '../supabase';
+import { Chat, Message, UserProfile, ItemPost, MessageRequest } from '../types';
+import { getSupabaseChats, getSupabaseMessages, createSupabaseMessage, filterChatsByBlocked, getIncomingMessageRequests, acceptMessageRequest, declineMessageRequest } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
   MessageSquare,
@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Navigation,
   CheckCircle,
+  UserPlus,
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
@@ -26,6 +27,7 @@ interface ChatSystemProps {
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
   items: ItemPost[];
+  blockedUserIds?: Set<string>;
   className?: string;
   /** Edge-to-edge layout (mobile tab) — no outer card chrome */
   fullBleed?: boolean;
@@ -38,12 +40,15 @@ export default function ChatSystem({
   initialSelectedChatId,
   onClearInitialChat,
   items,
+  blockedUserIds = new Set(),
   className = '',
   fullBleed = false,
   onViewProfile,
   onItemsChanged,
 }: ChatSystemProps) {
   const [chats, setChats] = useState<Chat[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<MessageRequest[]>([]);
+  const [requestBusyId, setRequestBusyId] = useState<string | null>(null);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -87,20 +92,27 @@ export default function ChatSystem({
 
     const loadChats = async () => {
       try {
-        const loadedChats = await getSupabaseChats(userProfile.uid);
+        const [loadedChats, requests] = await Promise.all([
+          getSupabaseChats(userProfile.uid),
+          getIncomingMessageRequests(userProfile.uid),
+        ]);
         if (!active) return;
 
-        loadedChats.sort((a, b) => {
+        const visibleChats = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
+        visibleChats.sort((a, b) => {
           const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
           const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
           return timeB - timeA;
         });
 
-        setChats(loadedChats);
+        const visibleRequests = requests.filter((r) => !blockedUserIds.has(r.fromUserId));
+
+        setChats(visibleChats);
+        setIncomingRequests(visibleRequests);
         setIsChatsLoading(false);
 
         if (initialSelectedChatId) {
-          const target = loadedChats.find((c) => c.id === initialSelectedChatId);
+          const target = visibleChats.find((c) => c.id === initialSelectedChatId);
           if (target) {
             setSelectedChat((prev) => prev ?? target);
           }
@@ -127,12 +139,18 @@ export default function ChatSystem({
       () => refreshChats(),
     );
 
+    const unsubRequests = subscribePostgresChanges(
+      { channelName: `live-dm-requests-${userProfile.uid}`, table: 'message_requests', event: '*' },
+      () => refreshChats(),
+    );
+
     return () => {
       active = false;
       unsubChats();
       unsubMessagesForInbox();
+      unsubRequests();
     };
-  }, [userProfile.uid, initialSelectedChatId]);
+  }, [userProfile.uid, initialSelectedChatId, blockedUserIds]);
 
   useEffect(() => {
     if (!selectedChat) {
@@ -359,6 +377,48 @@ export default function ChatSystem({
     return `${chat.itemTitle} · ${messengerName}`;
   };
 
+  const handleAcceptRequest = async (request: MessageRequest) => {
+    setRequestBusyId(request.id);
+    setErrorMsg('');
+    try {
+      const result = await acceptMessageRequest(request.id, userProfile);
+      if (!result.ok) {
+        setErrorMsg(result.errorMessage || 'Could not accept request.');
+        return;
+      }
+      const loadedChats = await getSupabaseChats(userProfile.uid);
+      const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
+      visible.sort((a, b) => {
+        const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+        return timeB - timeA;
+      });
+      setChats(visible);
+      setIncomingRequests((prev) => prev.filter((r) => r.id !== request.id));
+      if (result.chatId) {
+        const target = visible.find((c) => c.id === result.chatId);
+        if (target) setSelectedChat(target);
+      }
+    } finally {
+      setRequestBusyId(null);
+    }
+  };
+
+  const handleDeclineRequest = async (request: MessageRequest) => {
+    setRequestBusyId(request.id);
+    setErrorMsg('');
+    try {
+      const result = await declineMessageRequest(request.id, userProfile.uid);
+      if (!result.ok) {
+        setErrorMsg(result.errorMessage || 'Could not decline request.');
+        return;
+      }
+      setIncomingRequests((prev) => prev.filter((r) => r.id !== request.id));
+    } finally {
+      setRequestBusyId(null);
+    }
+  };
+
   const mobileConversationRowBase = fullBleed
     ? 'item-feed-card rounded-2xl border border-app'
     : 'border-b border-app';
@@ -387,13 +447,77 @@ export default function ChatSystem({
       >
         <div className="shrink-0 px-4 py-3 border-b border-app flex items-center justify-between gap-2">
           <h3 className="font-display font-semibold text-sm text-app">Messages</h3>
-          <span className="sbn-badge text-[10px]">{chats.length}</span>
+          <span className="sbn-badge text-[10px]">
+            {chats.length + incomingRequests.length}
+          </span>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto" id="chat_rooms_scrollable">
+          {incomingRequests.length > 0 && (
+            <div className="border-b border-app">
+              <div className="px-4 py-2 flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wide">
+                <UserPlus className="w-3.5 h-3.5" />
+                Message requests
+              </div>
+              {incomingRequests.map((request) => {
+                const busy = requestBusyId === request.id;
+                const photo =
+                  request.fromUserPhoto ||
+                  `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(request.fromUserName)}`;
+                return (
+                  <div
+                    key={request.id}
+                    className={`p-3 flex flex-col gap-2 ${fullBleed ? 'mx-3 mt-2 item-feed-card rounded-2xl border border-app' : 'border-b border-app'}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onViewProfile?.(request.fromUserId)}
+                        className="shrink-0 rounded-full"
+                      >
+                        <img
+                          src={photo}
+                          referrerPolicy="no-referrer"
+                          alt=""
+                          className="w-10 h-10 rounded-full border border-app object-cover"
+                        />
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm text-app truncate">{request.fromUserName}</p>
+                        {request.message ? (
+                          <p className="text-xs text-muted mt-0.5 line-clamp-2">{request.message}</p>
+                        ) : (
+                          <p className="text-xs text-muted mt-0.5 italic">Wants to message you</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void handleAcceptRequest(request)}
+                        className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void handleDeclineRequest(request)}
+                        className="sbn-btn sbn-btn-secondary sbn-btn-sm flex-1"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {isChatsLoading ? (
             <div className="p-6 text-center text-sm text-muted">Loading conversations…</div>
-          ) : chats.length === 0 ? (
+          ) : chats.length === 0 && incomingRequests.length === 0 ? (
             <div className="p-8 text-center">
               <MessageSquare className="w-10 h-10 text-muted mx-auto mb-3" />
               <p className="font-semibold text-app text-sm">No messages yet</p>
