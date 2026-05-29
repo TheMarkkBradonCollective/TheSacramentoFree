@@ -42,6 +42,13 @@ interface StaffModerationPanelProps {
   onViewProfile: (userId: string) => void;
 }
 
+function neighborAvatarUrl(user: StaffUserRow): string {
+  if (user.photoURL?.startsWith('http://') || user.photoURL?.startsWith('https://')) {
+    return user.photoURL;
+  }
+  return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.displayName || user.uid)}`;
+}
+
 function statusLabel(user: StaffUserRow): string {
   if (user.accountStatus === 'banned') return 'Banned';
   if (user.accountStatus === 'suspended') {
@@ -144,6 +151,7 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
     setErr('');
 
     if (action === 'view') {
+      closePanel();
       onViewProfile(user.uid);
       return;
     }
@@ -343,22 +351,30 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                       key={user.uid}
                       className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-xl border border-app bg-surface"
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-sm text-app truncate">{user.displayName}</p>
-                        <p className="text-[11px] text-muted truncate">{user.email}</p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          {user.role && user.role !== 'user' && <RoleBadge role={user.role} />}
-                          <span
-                            className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                              isBanned
-                                ? 'bg-red-500/15 text-red-400'
-                                : isSuspended
-                                  ? 'bg-amber-500/15 text-amber-500'
-                                  : 'bg-emerald-500/10 text-emerald-500'
-                            }`}
-                          >
-                            {statusLabel(user)}
-                          </span>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <img
+                          src={neighborAvatarUrl(user)}
+                          alt=""
+                          className="w-10 h-10 rounded-full border border-app object-cover shrink-0 bg-inset"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm text-app truncate">{user.displayName}</p>
+                          <p className="text-[11px] text-muted truncate">{user.email}</p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            {user.role && user.role !== 'user' && <RoleBadge role={user.role} />}
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                                isBanned
+                                  ? 'bg-red-500/15 text-red-400'
+                                  : isSuspended
+                                    ? 'bg-amber-500/15 text-amber-500'
+                                    : 'bg-emerald-500/10 text-emerald-500'
+                              }`}
+                            >
+                              {statusLabel(user)}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
