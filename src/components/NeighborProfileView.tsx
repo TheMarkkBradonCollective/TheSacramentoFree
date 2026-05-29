@@ -29,7 +29,11 @@ import {
 } from '../supabase';
 import { ItemPost } from '../types';
 import RoleBadge from './RoleBadge';
-import { ASSIGNABLE_ROLE_OPTIONS } from '../lib/roles';
+import {
+  assignableRoleOptionsFor,
+  canAssignRolesToUser,
+  canManageTeamMembers,
+} from '../lib/roles';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { MessageRequest } from '../types';
 
@@ -71,7 +75,13 @@ export default function NeighborProfileView({
   const [requestBusy, setRequestBusy] = useState(false);
 
   const isSelf = userId === currentUserId;
-  const isDirector = currentUserProfile?.role === 'director';
+  const actorRole = currentUserProfile?.role;
+  const canManageTarget =
+    canManageTeamMembers(actorRole) &&
+    !isSelf &&
+    profile &&
+    canAssignRolesToUser(actorRole, profile.role);
+  const roleOptions = assignableRoleOptionsFor(actorRole);
 
   const [selectedRole, setSelectedRole] = useState<UserProfile['role']>('user');
   const [roleMsg, setRoleMsg] = useState('');
@@ -146,6 +156,14 @@ export default function NeighborProfileView({
 
   const handleRoleSave = async () => {
     if (!profile || !selectedRole) return;
+    if (!canAssignRolesToUser(actorRole, profile.role)) {
+      setRoleMsg('You cannot change this neighbor\'s role.');
+      return;
+    }
+    if (!roleOptions.some((option) => option.value === selectedRole)) {
+      setRoleMsg('That role is not available for your account.');
+      return;
+    }
     setRoleSaving(true);
     setRoleMsg('');
     const result = await setUserRole(profile.uid, selectedRole);
@@ -240,7 +258,7 @@ export default function NeighborProfileView({
     }
   };
 
-  const ROLE_OPTIONS = ASSIGNABLE_ROLE_OPTIONS;
+  const ROLE_OPTIONS = roleOptions;
 
   const joinedLabel = profile?.createdAt
     ? new Date(
@@ -448,7 +466,7 @@ export default function NeighborProfileView({
               </div>
             ) : null}
 
-            {isDirector && !isSelf && (
+            {canManageTarget && (
               <div className="sbn-card p-5 border border-amber-500/25 bg-amber-500/5">
                 <div className="flex items-center gap-2 mb-4">
                   <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />

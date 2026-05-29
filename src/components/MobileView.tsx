@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'feed' as const, label: 'Feed', icon: List },
   { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
-  { id: 'profile' as const, label: 'You', icon: User },
+  { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ];
 
 export default function MobileView({
@@ -100,6 +100,7 @@ export default function MobileView({
             mapVisible={activeTab === 'map'}
             colorGuideOpen={colorGuideOpen}
             onColorGuideOpenChange={setColorGuideOpen}
+            onOpenNewPost={onOpenNewPost}
           />
           <div className="absolute top-3 left-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
             <div className="flex gap-2 overflow-x-auto flex-1 min-w-0 pb-1">
@@ -123,14 +124,6 @@ export default function MobileView({
               🎨 Index
             </button>
           </div>
-          <button
-            type="button"
-            onClick={onOpenNewPost}
-            className="sbn-fab absolute bottom-4 right-4 z-20"
-            aria-label="New post"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
         </div>
 
         <div
@@ -194,6 +187,7 @@ export default function MobileView({
             userProfile={userProfile}
             onUpdateProfile={onUpdateProfile}
             onProfilePhotoSaved={onRefresh}
+            onViewMember={onViewProfile}
             fullBleed
           />
         </div>

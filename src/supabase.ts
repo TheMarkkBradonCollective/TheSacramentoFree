@@ -936,7 +936,7 @@ export interface CommunityStats {
   requestsFulfilled: number;
 }
 
-/** Director-only: update another user's role. */
+/** Director or City Manager: update another user's role. */
 export async function setUserRole(
   uid: string,
   role: UserRole,
@@ -954,6 +954,28 @@ export async function setUserRole(
     return { ok: true };
   } catch (err: any) {
     return { ok: false, errorMessage: err?.message || 'Could not update role.' };
+  }
+}
+
+/** All registered neighbors — for director / city manager team directory. */
+export async function getAllCommunityUsers(): Promise<UserProfile[]> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid, displayName, photoURL, email, neighborhood, bio, role, createdAt')
+      .order('displayName', { ascending: true });
+
+    if (error) {
+      handleSupabaseError(error, 'users');
+      return [];
+    }
+
+    return (data ?? [])
+      .map((row) => normalizeUserProfileRow(row as Record<string, unknown>))
+      .filter((profile): profile is UserProfile => profile !== null);
+  } catch (err) {
+    console.warn('Failed to load community users:', err);
+    return [];
   }
 }
 

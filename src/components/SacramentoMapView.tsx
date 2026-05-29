@@ -36,6 +36,7 @@ interface SacramentoMapViewProps {
   /** Controlled color guide overlay (mobile toolbar). */
   colorGuideOpen?: boolean;
   onColorGuideOpenChange?: (open: boolean) => void;
+  onOpenNewPost?: () => void;
 }
 
 // Map each post category to a specific distinct color for blips
@@ -155,6 +156,7 @@ export default function SacramentoMapView({
   mapVisible = true,
   colorGuideOpen: colorGuideOpenProp,
   onColorGuideOpenChange,
+  onOpenNewPost,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -698,21 +700,21 @@ export default function SacramentoMapView({
           id="leaflet_map_immersive_mobile"
         />
 
-        {/* Mobile map controls: zoom + locate */}
-        <div className="absolute bottom-24 right-4 z-20 flex flex-col items-center gap-2">
-          <div className="flex flex-col bg-surface/95 backdrop-blur-sm border border-app p-0.5 rounded-xl shadow-app">
+        {/* Mobile map controls — left: +/- on top, Center + New post row below */}
+        <div className="absolute top-14 left-3 z-20 flex flex-col gap-2 pointer-events-auto" id="mobile_map_controls_left">
+          <div className="flex flex-col bg-surface border border-app p-0.5 rounded-xl shadow-app w-11">
             <button
               onClick={handleZoomIn}
-              className="w-11 h-11 flex items-center justify-center text-app hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-t-lg"
+              className="w-11 h-11 flex items-center justify-center text-app bg-surface hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-t-lg"
               title="Zoom in"
               id="mobile_zoom_in_btn"
             >
               <Plus className="w-5 h-5" />
             </button>
-            <div className="h-[1px] bg-app/20 mx-1" />
+            <div className="h-px bg-app mx-1" />
             <button
               onClick={handleZoomOut}
-              className="w-11 h-11 flex items-center justify-center text-app hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-b-lg"
+              className="w-11 h-11 flex items-center justify-center text-app bg-surface hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-b-lg"
               title="Zoom out"
               id="mobile_zoom_out_btn"
             >
@@ -720,20 +722,34 @@ export default function SacramentoMapView({
             </button>
           </div>
 
-          <button
-            onClick={handleLocateUser}
-            className={`w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border ${
-              isLocating
-                ? 'bg-accent text-on-accent border-accent'
-                : followUser
-                  ? 'bg-accent/15 text-accent border-accent'
-                  : 'bg-surface/95 backdrop-blur-sm text-app hover:bg-surface-hover border-app'
-            }`}
-            id="mobile_floating_locator_btn"
-            title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
-          >
-            <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleLocateUser}
+              className={`h-11 min-w-[5.5rem] px-3 rounded-xl shadow-app flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer border font-semibold text-[10px] uppercase tracking-wide ${
+                isLocating
+                  ? 'bg-accent text-on-accent border-accent'
+                  : followUser
+                    ? 'bg-accent text-on-accent border-accent'
+                    : 'bg-surface text-app hover:bg-surface-hover border-app'
+              }`}
+              id="mobile_floating_locator_btn"
+              title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
+            >
+              <Compass className={`w-4 h-4 shrink-0 ${isLocating ? 'animate-spin' : ''}`} />
+              Center
+            </button>
+            {onOpenNewPost && (
+              <button
+                type="button"
+                onClick={onOpenNewPost}
+                className="sbn-fab w-11 h-11 min-w-11 shrink-0"
+                aria-label="New post"
+                id="mobile_map_new_post_btn"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Location error toast */}

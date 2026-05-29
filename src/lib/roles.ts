@@ -67,3 +67,31 @@ export function isStaffRole(role?: UserProfile['role']): boolean {
     normalized === 'director'
   );
 }
+
+/** Director + City Manager can browse the full member list. */
+export function canManageTeamMembers(role?: UserProfile['role']): boolean {
+  const normalized = normalizeUserRole(role);
+  return normalized === 'director' || normalized === 'city_manager';
+}
+
+/** Whether this leader may edit the target neighbor's role. */
+export function canAssignRolesToUser(
+  actorRole?: UserProfile['role'],
+  targetRole?: UserProfile['role'],
+): boolean {
+  const actor = normalizeUserRole(actorRole);
+  const target = normalizeUserRole(targetRole);
+  if (!canManageTeamMembers(actor)) return false;
+  if (actor === 'city_manager' && target === 'director') return false;
+  return true;
+}
+
+/** Role options shown in team management for the acting user. */
+export function assignableRoleOptionsFor(actorRole?: UserProfile['role']) {
+  const actor = normalizeUserRole(actorRole);
+  if (actor === 'director') return ASSIGNABLE_ROLE_OPTIONS;
+  if (actor === 'city_manager') {
+    return ASSIGNABLE_ROLE_OPTIONS.filter((option) => option.value !== 'director');
+  }
+  return [];
+}

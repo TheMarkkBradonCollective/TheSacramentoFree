@@ -169,6 +169,7 @@ export default function TabletView({
                 userProfile={userProfile}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
+                onViewMember={onViewProfile}
               />
             </div>
           </div>
