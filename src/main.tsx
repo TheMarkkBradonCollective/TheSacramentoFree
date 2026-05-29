@@ -2,20 +2,10 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { ThemeProvider } from './theme/ThemeContext';
+import { registerServiceWorker } from './pwa/registerServiceWorker';
 import './index.css';
 
-// Register PWA service worker with the browser
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => {
-        console.log('ServiceWorker registration successful with scope: ', reg.scope);
-      })
-      .catch((err) => {
-        console.warn('ServiceWorker registration failed: ', err);
-      });
-  });
-}
+registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
