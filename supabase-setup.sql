@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS public.users (
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Add columns that may be missing if the table was created from an older script
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "photoURL" TEXT;
+
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read users" ON public.users;
 CREATE POLICY "Allow public read users" ON public.users FOR SELECT USING (true);
@@ -249,7 +254,7 @@ BEGIN
     email,
     neighborhood,
     bio,
-    role,
+    "role",
     "createdAt"
   )
   VALUES (
@@ -291,7 +296,7 @@ INSERT INTO public.users (
   "photoURL",
   email,
   neighborhood,
-  role,
+  "role",
   "createdAt"
 )
 SELECT
