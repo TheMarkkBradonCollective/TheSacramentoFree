@@ -5,6 +5,9 @@ import ItemGrid from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import { Compass, List, MessageSquare, User, Plus, LogOut, Layers } from 'lucide-react';
+import CommunityFooter from './CommunityFooter';
+import { IN_APP } from '../siteContent';
+import ThemeToggle from './ThemeToggle';
 
 interface TabletViewProps {
   items: ItemPost[];
@@ -34,20 +37,20 @@ export default function TabletView({
   onRefresh
 }: TabletViewProps) {
   return (
-    <div id="tablet_device_workspace" className="flex flex-col min-h-screen bg-[#0B0C0D] font-sans text-white">
+    <div id="tablet_device_workspace" className="flex flex-col min-h-screen bg-app font-sans text-app">
       
       {/* Tablet Header Navigator */}
-      <header id="tablet_navbar" className="sticky top-0 z-40 bg-[#1A1A1B] border-b border-[#343536] text-white p-4 flex items-center justify-between shadow-md">
+      <header id="tablet_navbar" className="sticky top-0 z-40 bg-surface border-b border-app text-app p-4 flex items-center justify-between shadow-md">
         <div className="flex items-center space-x-3 select-none" id="tablet_brand">
           <div className="p-2 bg-[#FF4500] text-white rounded-xl flex items-center justify-center">
             <Layers className="w-4 h-4" />
           </div>
           <div className="text-left">
-            <h1 className="text-sm font-bold tracking-tight text-white font-display leading-none">
+            <h1 className="text-sm font-bold tracking-tight text-app font-display leading-none">
               Sacramento <span className="text-[#FF4500] font-bold">Buy Nothing</span>
             </h1>
-            <span className="text-[10px] font-medium text-zinc-400 tracking-normal block mt-0.5">
-              Our community sharing circle
+            <span className="text-[10px] font-medium text-muted tracking-normal block mt-0.5">
+              {IN_APP.brandSubtitle}
             </span>
           </div>
         </div>
@@ -60,7 +63,7 @@ export default function TabletView({
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'feed'
                 ? 'bg-[#FF4500] text-white border-[#FF4500]'
-                : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
+                : 'bg-inset border-app text-[#D4D4D8] hover:text-app'
             }`}
           >
             <List className="w-3.5 h-3.5" />
@@ -73,7 +76,7 @@ export default function TabletView({
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'map'
                 ? 'bg-[#FF4500] text-white border-[#FF4500]'
-                : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
+                : 'bg-inset border-app text-[#D4D4D8] hover:text-app'
             }`}
           >
             <Compass className="w-3.5 h-3.5 text-[#FF4500]" />
@@ -86,7 +89,7 @@ export default function TabletView({
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'chats'
                 ? 'bg-[#FF4500] text-white border-[#FF4500]'
-                : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
+                : 'bg-inset border-app text-[#D4D4D8] hover:text-app'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -99,7 +102,7 @@ export default function TabletView({
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all inline-flex items-center space-x-1.5 cursor-pointer border ${
               activeTab === 'profile'
                 ? 'bg-[#FF4500] text-white border-[#FF4500]'
-                : 'bg-[#0F0F0F] border-[#343536] text-[#D4D4D8] hover:text-white'
+                : 'bg-inset border-app text-[#D4D4D8] hover:text-app'
             }`}
           >
             <User className="w-3.5 h-3.5" />
@@ -109,20 +112,21 @@ export default function TabletView({
 
         {/* Global actions */}
         <div className="flex items-center space-x-3" id="tablet_actions">
+          <ThemeToggle />
           <button
             id="tablet_header_post"
             onClick={onOpenNewPost}
             className="px-4 py-2 bg-[#FF4500] hover:bg-[#E03D00] text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer inline-flex items-center"
           >
             <Plus className="w-3.5 h-3.5 mr-1" />
-            <span>Share or Request</span>
+            <span>{IN_APP.shareOrRequest}</span>
           </button>
 
           <button
             id="tablet_header_logout"
             onClick={onLogout}
             title="Sign Out"
-            className="p-2 text-zinc-400 hover:text-white hover:bg-[#252526] rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-muted hover:text-app hover:bg-surface-hover rounded-xl transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -135,10 +139,10 @@ export default function TabletView({
         {/* Browse Feed */}
         {activeTab === 'feed' && (
           <div className="space-y-4" id="tablet_feed_pane">
-            <div className="border border-[#343536] bg-[#1A1A1B] rounded-2xl p-4">
-              <h3 className="text-sm font-bold text-white tracking-tight font-display text-left">Gifts Shared with Love</h3>
-              <p className="text-xs text-zinc-400 mt-1 font-semibold text-left">
-                Gifts & needed items around Greater Sacramento • {items.length} total items found.
+            <div className="border border-app bg-surface rounded-2xl p-4">
+              <h3 className="text-sm font-bold text-app tracking-tight font-display text-left">{IN_APP.feedTitle}</h3>
+              <p className="text-xs text-muted mt-1 font-semibold text-left">
+                {IN_APP.feedDescription} · {items.length} active listings.
               </p>
             </div>
             <ItemGrid
@@ -147,22 +151,23 @@ export default function TabletView({
               onInitiateChat={onInitiateChat}
               onRefresh={onRefresh}
             />
+            <CommunityFooter />
           </div>
         )}
 
         {/* Explore Map View */}
         {activeTab === 'map' && (
           <div className="space-y-4" id="tablet_map_pane">
-            <div className="border border-[#343536] bg-[#1A1A1B] rounded-2xl p-4">
-              <h4 className="text-sm font-bold text-white tracking-tight font-display flex items-center gap-1.5 leading-none">
+            <div className="border border-app bg-surface rounded-2xl p-4">
+              <h4 className="text-sm font-bold text-app tracking-tight font-display flex items-center gap-1.5 leading-none">
                 <span className="w-2.5 h-2.5 bg-[#FF4500] inline-block animate-pulse rounded-full" />
-                Our Neighborhood Map
+                {IN_APP.mapTitle}
               </h4>
-              <p className="text-xs text-zinc-400 mt-2 leading-normal font-medium text-left">
-                Sacramento Community • Click any marker to see descriptions & arrange neighbor coordinate chats!
+              <p className="text-xs text-muted mt-2 leading-normal font-medium text-left">
+                {IN_APP.mapDescription}
               </p>
             </div>
-            <div className="border border-[#343536] p-3.5 bg-[#1A1A1B] rounded-2xl shadow-xs h-[550px]">
+            <div className="border border-app p-3.5 bg-surface rounded-2xl shadow-xs h-[550px]">
               <SacramentoMapView
                 items={items}
                 userProfile={userProfile}
@@ -174,7 +179,7 @@ export default function TabletView({
 
         {/* Cozy Chats System */}
         {activeTab === 'chats' && (
-          <div className="bg-[#1A1A1B] border border-[#343536] rounded-2xl shadow-sm p-4 font-sans" id="tablet_chats_pane">
+          <div className="bg-surface border border-app rounded-2xl shadow-sm p-4 font-sans" id="tablet_chats_pane">
             <ChatSystem
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
@@ -186,7 +191,7 @@ export default function TabletView({
 
         {/* Member account card */}
         {activeTab === 'profile' && (
-          <div className="bg-[#1A1A1B] border border-[#343536] rounded-2xl shadow-sm p-4" id="tablet_profile_pane">
+          <div className="bg-surface border border-app rounded-2xl shadow-sm p-4" id="tablet_profile_pane">
             <UserProfileView
               userProfile={userProfile}
               onUpdateProfile={onUpdateProfile}

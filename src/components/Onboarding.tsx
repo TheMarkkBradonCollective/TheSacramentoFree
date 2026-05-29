@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../types';
 import { upsertSupabaseProfile } from '../supabase';
-import { MapPin, User, Heart, Sparkles } from 'lucide-react';
+import { MapPin, User, Heart } from 'lucide-react';
+import { IN_APP, SITE } from '../siteContent';
 import { UserProfile } from '../types';
 
 interface OnboardingProps {
@@ -43,32 +44,31 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
       const success = await upsertSupabaseProfile(newProfile);
       
       if (!success) {
-        console.warn('Note: Profile table upsert succeeded locally but DB may still be sync-pending.');
+        throw new Error('Profile could not be saved to the database.');
       }
 
-      // Save to local storage cache immediately
-      localStorage.setItem(`profile_${newProfile.uid}`, JSON.stringify(newProfile));
       onComplete(newProfile);
     } catch (error) {
       setIsSubmitting(false);
-      setErrorMsg('Failed to initialize community profile. Operating in local-offline registration fallback.');
+      setErrorMsg('Failed to initialize profile in the database. Please try again.');
       console.error(error);
     }
   };
 
   return (
-    <div id="onboarding_viewport" className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#0B0C0D] font-sans">
-      <div className="max-w-md w-full bg-[#1A1A1B] p-8 rounded-2xl border border-[#343536] shadow-xl">
+    <div id="onboarding_viewport" className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-app font-sans">
+      <div className="max-w-md w-full bg-surface p-8 rounded-2xl border border-app shadow-xl">
         <div className="text-center mb-8">
           <div className="inline-flex p-3 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-[#FF4500] mb-4" id="onboarding_icon_wrapper">
             <Heart className="w-8 h-8 text-[#FF4500]" />
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight font-display">
-            Welcome to the sharing circle!
+          <h2 className="text-2xl font-bold text-app tracking-tight font-display">
+            {IN_APP.onboardingTitle}
           </h2>
-          <p className="mt-2 text-sm text-zinc-450 leading-relaxed">
-            Let's set up your friendly profile so your Sacramento neighbors can say hello and share beautiful items.
+          <p className="mt-2 text-sm text-subtle leading-relaxed">
+            {IN_APP.onboardingBody}
           </p>
+          <p className="mt-2 text-xs font-bold text-[#FF4500]">{SITE.freeRule}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5" id="onboarding_form">
@@ -80,12 +80,12 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
 
           {/* Display Name */}
           <div className="space-y-1.5">
-            <label htmlFor="on_display_name" className="text-xs font-bold text-zinc-450 uppercase tracking-wide block">
+            <label htmlFor="on_display_name" className="text-xs font-bold text-subtle uppercase tracking-wide block">
               YOUR NAME OR NICKNAME
             </label>
             <div className="relative rounded-xl shadow-xs">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <User className="h-4 w-4 text-zinc-550" />
+                <User className="h-4 w-4 text-subtle" />
               </div>
               <input
                 type="text"
@@ -94,41 +94,41 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="e.g. Grandma Rosie, TreeHugger Sam"
-                className="block w-full pl-11 pr-3 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-sm text-white placeholder-zinc-500 font-medium focus:outline-hidden focus:border-[#FF4500]"
+                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm text-white placeholder:text-subtle font-medium focus:outline-hidden focus:border-[#FF4500]"
               />
             </div>
           </div>
 
           {/* Neighborhood Selector */}
           <div className="space-y-1.5">
-            <label htmlFor="on_neighborhood" className="text-xs font-bold text-zinc-450 uppercase tracking-wide block">
+            <label htmlFor="on_neighborhood" className="text-xs font-bold text-subtle uppercase tracking-wide block">
               YOUR SACRAMENTO NEIGHBORHOOD
             </label>
             <div className="relative rounded-xl shadow-xs">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <MapPin className="h-4 w-4 text-zinc-550" />
+                <MapPin className="h-4 w-4 text-subtle" />
               </div>
               <select
                 id="on_neighborhood"
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
-                className="block w-full pl-11 pr-3 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-sm font-bold text-white appearance-none cursor-pointer focus:outline-hidden focus:border-[#FF4500]"
+                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm font-bold text-white appearance-none cursor-pointer focus:outline-hidden focus:border-[#FF4500]"
               >
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                  <option key={n} value={n} className="bg-[#1A1A1B] text-white">
+                  <option key={n} value={n} className="bg-surface text-app">
                     {n}
                   </option>
                 ))}
               </select>
             </div>
-            <p className="text-xs text-zinc-500 leading-relaxed">
+            <p className="text-xs text-subtle leading-relaxed">
               We'll match you with listing offers near your home neighborhood.
             </p>
           </div>
 
           {/* Profile Biography */}
           <div className="space-y-1.5">
-            <label htmlFor="on_bio" className="text-xs font-bold text-zinc-450 uppercase tracking-wide block">
+            <label htmlFor="on_bio" className="text-xs font-bold text-subtle uppercase tracking-wide block">
               TELL NEIGHBORS ABOUT YOURSELF (BIO)
             </label>
             <textarea
@@ -138,9 +138,9 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
               onChange={(e) => setBio(e.target.value)}
               placeholder="e.g., 'Just moved to Curtis Park. Excited to meet neighbors, reduce waste, and find warm homes for extra garden tomatoes!'"
               maxLength={500}
-              className="block w-full p-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-sm text-white placeholder-zinc-500 font-medium resize-none focus:outline-hidden focus:border-[#FF4500]"
+              className="block w-full p-3 bg-inset border border-app rounded-xl text-sm text-white placeholder:text-subtle font-medium resize-none focus:outline-hidden focus:border-[#FF4500]"
             />
-            <div className="text-right text-[10px] text-zinc-500 font-mono font-medium">
+            <div className="text-right text-[10px] text-subtle font-mono font-medium">
               {bio.length}/500 chars
             </div>
           </div>
@@ -156,9 +156,9 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
           </button>
         </form>
 
-        <div className="mt-6 flex items-center justify-center space-x-2 text-xs text-zinc-550 font-semibold border-t border-[#343536] pt-6">
+        <div className="mt-6 flex items-center justify-center space-x-2 text-xs text-subtle font-semibold border-t border-app pt-6">
           <Heart className="w-3.5 h-3.5 text-[#FF4500] animate-pulse" />
-          <span>Sacramento Community Love</span>
+          <span>{SITE.tagline}</span>
         </div>
       </div>
     </div>

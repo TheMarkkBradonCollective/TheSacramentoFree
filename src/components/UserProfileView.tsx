@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, SACRAMENTO_NEIGHBORHOODS } from '../types';
 import { upsertSupabaseProfile } from '../supabase';
-import { MapPin, User, CheckCircle, Save, AlertCircle, Download, Smartphone, Share2, HelpCircle } from 'lucide-react';
+import { MapPin, User, CheckCircle, Save, AlertCircle, Download, Smartphone, Share2 } from 'lucide-react';
+import CommunityFooter from './CommunityFooter';
+import { IN_APP } from '../siteContent';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -85,7 +87,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         );
       default:
         return (
-          <span className="inline-block mt-2 px-3 py-1 bg-[#0F0F0F] border border-[#343536] text-zinc-350 text-[10px] font-bold tracking-wider uppercase rounded-full">
+          <span className="inline-block mt-2 px-3 py-1 bg-inset border border-app text-zinc-350 text-[10px] font-bold tracking-wider uppercase rounded-full">
             🏡 Local Neighbor
           </span>
         );
@@ -116,25 +118,17 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
       };
 
       // Sync to Supabase
-      await upsertSupabaseProfile(updatedProfile);
-      
-      // Set in cache
-      localStorage.setItem(`profile_${userProfile.uid}`, JSON.stringify(updatedProfile));
+      const success = await upsertSupabaseProfile(updatedProfile);
+      if (!success) {
+        throw new Error('Profile save failed');
+      }
       onUpdateProfile(updatedProfile);
 
       setSuccessMsg('Profile settings synced successfully.');
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
       console.warn('Failed to commit profile updates:', err);
-      // Still update local state so they see the change
-      const updatedProfile = {
-        ...userProfile,
-        ...updateData
-      };
-      localStorage.setItem(`profile_${userProfile.uid}`, JSON.stringify(updatedProfile));
-      onUpdateProfile(updatedProfile);
-      setSuccessMsg('Profile settings updated locally (offline mode).');
-      setTimeout(() => setSuccessMsg(''), 4000);
+      setErrorMsg('Unable to save profile to the database. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -144,7 +138,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
     <div className="space-y-6" id="profile_root_container">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans" id="profile_views_grid">
         {/* Short card overview */}
-        <div className="md:col-span-1 bg-[#1A1A1B] border border-[#343536] rounded-2xl p-6 h-fit shadow-md flex flex-col items-center text-center">
+        <div className="md:col-span-1 bg-surface border border-app rounded-2xl p-6 h-fit shadow-md flex flex-col items-center text-center">
           <img
             src={userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`}
             referrerPolicy="no-referrer"
@@ -152,7 +146,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
             className="w-24 h-24 rounded-full border-2 border-[#FF4500] shadow-md animate-fade-in"
             id="profile_card_avatar"
           />
-          <h3 className="text-xl font-bold text-white mt-4 tracking-tight">{userProfile.displayName}</h3>
+          <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{userProfile.displayName}</h3>
           
           {getRoleBadge()}
 
@@ -161,26 +155,26 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
             <span>{userProfile.neighborhood} Sector</span>
           </div>
 
-          <p className="text-xs text-zinc-400 mt-4 border-b border-[#343536] pb-4 w-full">
+          <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
             Joined our sharing circle: {new Date(userProfile.createdAt?.seconds ? userProfile.createdAt.seconds * 1000 : userProfile.createdAt).toLocaleDateString()}
           </p>
           
           {userProfile.bio ? (
-            <p className="mt-4 text-xs font-medium text-zinc-300 italic leading-relaxed text-left w-full bg-[#0F0F0F] p-3 rounded-xl border border-[#343536]">
+            <p className="mt-4 text-xs font-medium text-muted italic leading-relaxed text-left w-full bg-inset p-3 rounded-xl border border-app">
               "{userProfile.bio}"
             </p>
           ) : (
-            <p className="mt-4 text-xs font-semibold text-zinc-500 italic text-left w-full bg-[#0F0F0F] p-3 rounded-xl border border-dashed border-[#343536]">
+            <p className="mt-4 text-xs font-semibold text-subtle italic text-left w-full bg-inset p-3 rounded-xl border border-dashed border-app">
               No biography specified yet. Update your profile to tell neighbors what kinds of items you like to share or receive!
             </p>
           )}
         </div>
 
         {/* Settings Form */}
-        <div className="md:col-span-2 bg-[#1A1A1B] border border-[#343536] rounded-2xl p-6 shadow-md" id="profile_credentials_form_box">
-          <h3 className="text-lg font-bold text-white tracking-tight mb-5 flex items-center space-x-2 border-b border-[#343536] pb-3 font-display">
+        <div className="md:col-span-2 bg-surface border border-app rounded-2xl p-6 shadow-md" id="profile_credentials_form_box">
+          <h3 className="text-lg font-bold text-app tracking-tight mb-5 flex items-center space-x-2 border-b border-app pb-3 font-display">
             <User className="w-5 h-5 text-[#FF4500]" />
-            <span>My Community Profile Settings</span>
+            <span>{IN_APP.profileTitle}</span>
           </h3>
 
           <form onSubmit={handleSave} className="space-y-5" id="profile_edit_form">
@@ -200,41 +194,41 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
 
             {/* Email PII restricted - Non Editable */}
             <div className="space-y-1.5">
-              <label className="text-sm font-bold text-zinc-400 uppercase block">My Email Address (Private)</label>
+              <label className="text-sm font-bold text-muted uppercase block">My Email Address (Private)</label>
               <input
                 type="text"
                 value={userProfile.email}
                 disabled
-                className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs font-mono text-zinc-500 cursor-not-allowed opacity-60"
+                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-mono text-subtle cursor-not-allowed opacity-60"
               />
-              <p className="text-xs text-zinc-500 leading-relaxed">Your email is kept confidential and only used for your secure sign-in.</p>
+              <p className="text-xs text-subtle leading-relaxed">Your email is kept confidential and only used for your secure sign-in.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" id="profile_inputs_row">
               {/* Display Name */}
               <div className="space-y-1.5">
-                <label htmlFor="pref_display_name" className="text-xs font-bold text-zinc-400 uppercase block">My Friendly Display Name</label>
+                <label htmlFor="pref_display_name" className="text-xs font-bold text-muted uppercase block">My Friendly Display Name</label>
                 <input
                   type="text"
                   id="pref_display_name"
                   required
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-white text-xs font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-white text-xs font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
                 />
               </div>
 
               {/* Neighborhood select */}
               <div className="space-y-1.5">
-                <label htmlFor="pref_neighborhood" className="text-xs font-bold text-zinc-400 uppercase block">My Home Neighborhood</label>
+                <label htmlFor="pref_neighborhood" className="text-xs font-bold text-muted uppercase block">My Home Neighborhood</label>
                 <select
                   id="pref_neighborhood"
                   value={neighborhood}
                   onChange={(e) => setNeighborhood(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-white text-xs font-bold cursor-pointer focus:border-[#FF4500] focus:outline-hidden"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-white text-xs font-bold cursor-pointer focus:border-[#FF4500] focus:outline-hidden"
                 >
                   {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                    <option key={n} value={n} className="bg-[#1A1A1B] text-white select-dark-opt">{n}</option>
+                    <option key={n} value={n} className="bg-surface text-app select-dark-opt">{n}</option>
                   ))}
                 </select>
               </div>
@@ -242,7 +236,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
 
             {/* Bio text */}
             <div className="space-y-1.5">
-              <label htmlFor="pref_bio" className="text-xs font-bold text-zinc-400 uppercase block">About Me / What I Love to Share</label>
+              <label htmlFor="pref_bio" className="text-xs font-bold text-muted uppercase block">About Me / What I Love to Share</label>
               <textarea
                 id="pref_bio"
                 rows={4}
@@ -250,9 +244,9 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                 placeholder="Tell your neighbors who you are and why sharing matters to your household."
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                className="block w-full p-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs text-white placeholder-zinc-500 font-semibold resize-none focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+                className="block w-full p-3 bg-inset border border-app rounded-xl text-xs text-white placeholder:text-subtle font-semibold resize-none focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
               />
-              <div className="text-right text-[10px] text-zinc-500 font-mono font-medium">{bio.length}/500 chars</div>
+              <div className="text-right text-[10px] text-subtle font-mono font-medium">{bio.length}/500 chars</div>
             </div>
 
             {/* Save Button */}
@@ -262,7 +256,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
               disabled={isSaving}
               className="w-full flex items-center justify-center space-x-2 py-3.5 bg-[#FF4500] hover:bg-[#E03D00] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
             >
-              <Save className="w-4 h-4 text-white" />
+              <Save className="w-4 h-4 text-app" />
               <span>{isSaving ? 'Saving Changes...' : 'Save Profile Changes'}</span>
             </button>
           </form>
@@ -270,15 +264,15 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
       </div>
 
       {/* Modern PWA App Installation Widget */}
-      <div className="bg-[#111112] border border-[#343536] rounded-2xl p-6 shadow-lg animate-fade-in" id="pwa_installs_section">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-[#343536]/70 pb-6 mb-6">
+      <div className="bg-surface border border-app rounded-2xl p-6 shadow-lg animate-fade-in" id="pwa_installs_section">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-app/70 pb-6 mb-6">
           <div className="max-w-xl">
             <div className="flex items-center gap-2 mb-2">
               <Smartphone className="w-4 h-4 text-[#FF4500]" />
               <span className="text-[10px] text-[#FF4500] font-black uppercase tracking-widest font-mono">Mobile App Download Hub</span>
             </div>
-            <h3 className="text-base font-bold text-white tracking-tight">Run Sacramento Buy Nothing on your Phone</h3>
-            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            <h3 className="text-base font-bold text-app tracking-tight">Run Sacramento Buy Nothing on your Phone</h3>
+            <p className="text-xs text-muted mt-1 leading-relaxed">
               Install our Progressive Web App (PWA) directly from your browser. Enjoy full-screen viewing, faster loads with local storage caches, and easier neighborhood-level sharing.
             </p>
           </div>
@@ -299,7 +293,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                 <span>Download PWA App Directly</span>
               </button>
             ) : (
-              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider bg-[#1A1A1B] p-2.5 border border-[#343536] rounded-xl text-center select-none" id="pwa_installed_manual_warn">
+              <div className="text-[10px] text-subtle font-bold uppercase tracking-wider bg-surface p-2.5 border border-app rounded-xl text-center select-none" id="pwa_installed_manual_warn">
                 📱 Install manually directly via your browser instructions below
               </div>
             )}
@@ -309,13 +303,13 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
         {/* Dynamic Mobile Guide Tabs */}
         {!isAppInstalled && (
           <div className="space-y-4">
-            <div className="flex border-b border-[#242526]">
+            <div className="flex border-b border-app">
               <button
                 onClick={() => setActiveManualPlatform('ios')}
                 className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'ios'
                     ? 'border-[#FF4500] text-white'
-                    : 'border-transparent text-zinc-550 hover:text-zinc-300'
+                    : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >
                  Apple iPhone (iOS)
@@ -325,7 +319,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                 className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'android'
                     ? 'border-[#FF4500] text-white'
-                    : 'border-transparent text-zinc-550 hover:text-zinc-300'
+                    : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >
                 🤖 Android / Samsung
@@ -335,7 +329,7 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
                 className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'chrome'
                     ? 'border-[#FF4500] text-white'
-                    : 'border-transparent text-zinc-550 hover:text-zinc-300'
+                    : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >
                 🖥️ PC / Mac Desktop
@@ -343,29 +337,29 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
             </div>
 
             {/* Platform Guides */}
-            <div className="bg-[#161617] border border-[#242526] p-4 rounded-xl text-zinc-300 space-y-3">
+            <div className="bg-inset border border-app p-4 rounded-xl text-muted space-y-3">
               {activeManualPlatform === 'ios' && (
                 <div className="space-y-3" id="guide_ios_list">
-                  <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">How to Install on Apple Safari (iPhone/iPad):</p>
-                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-zinc-300 leading-relaxed pl-1.5">
-                    <li>Open this web-app in your premium <strong className="text-white font-bold">Safari</strong> browser.</li>
+                  <p className="text-xs text-muted font-semibold uppercase tracking-wider">How to Install on Apple Safari (iPhone/iPad):</p>
+                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-muted leading-relaxed pl-1.5">
+                    <li>Open this web-app in your premium <strong className="text-app font-bold">Safari</strong> browser.</li>
                     <li>
-                      Tap the <strong className="text-white font-bold">Share</strong> button at the bottom navigation drawer
-                      <span className="inline-flex mx-1.5 p-1 bg-zinc-800 rounded text-zinc-300 align-middle"><Share2 className="w-3.5 h-3.5" /></span>
+                      Tap the <strong className="text-app font-bold">Share</strong> button at the bottom navigation drawer
+                      <span className="inline-flex mx-1.5 p-1 bg-zinc-800 rounded text-muted align-middle"><Share2 className="w-3.5 h-3.5" /></span>
                     </li>
-                    <li>Scroll down and tap <strong className="text-white font-bold">Add to Home Screen</strong>.</li>
-                    <li>Tap <strong className="text-white font-bold">Add</strong> in the upper right. Now launch the app directly from your standard home screen! No App Store required!</li>
+                    <li>Scroll down and tap <strong className="text-app font-bold">Add to Home Screen</strong>.</li>
+                    <li>Tap <strong className="text-app font-bold">Add</strong> in the upper right. Now launch the app directly from your standard home screen! No App Store required!</li>
                   </ol>
                 </div>
               )}
 
               {activeManualPlatform === 'android' && (
                 <div className="space-y-3" id="guide_android_list">
-                  <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">How to Install on Google Chrome/Samsung Internet for Android:</p>
-                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-zinc-300 leading-relaxed pl-1.5">
-                    <li>Open this web-app in <strong className="text-white font-bold">Google Chrome</strong>.</li>
-                    <li>Tap the standard three-dot menu icon <strong className="text-white font-bold">(⋮)</strong> in Chrome's top right corner.</li>
-                    <li>Select <strong className="text-white font-bold">Install app</strong> or <strong className="text-white font-bold">Add to Home Screen</strong>.</li>
+                  <p className="text-xs text-muted font-semibold uppercase tracking-wider">How to Install on Google Chrome/Samsung Internet for Android:</p>
+                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-muted leading-relaxed pl-1.5">
+                    <li>Open this web-app in <strong className="text-app font-bold">Google Chrome</strong>.</li>
+                    <li>Tap the standard three-dot menu icon <strong className="text-app font-bold">(⋮)</strong> in Chrome's top right corner.</li>
+                    <li>Select <strong className="text-app font-bold">Install app</strong> or <strong className="text-app font-bold">Add to Home Screen</strong>.</li>
                     <li>Confirm the dialog prompt. The Sacramento Buy Nothing icon will be set up instantly on your app drawer!</li>
                   </ol>
                 </div>
@@ -373,14 +367,14 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
 
               {activeManualPlatform === 'chrome' && (
                 <div className="space-y-3" id="guide_desktop_list">
-                  <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">How to install as a Native Desktop App (Chrome / Edge):</p>
-                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-zinc-300 leading-relaxed pl-1.5">
+                  <p className="text-xs text-muted font-semibold uppercase tracking-wider">How to install as a Native Desktop App (Chrome / Edge):</p>
+                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-muted leading-relaxed pl-1.5">
                     <li>Look at your browser's horizontal address bar (URL bar).</li>
                     <li>
-                      Inside the right-side of the bar, click on the <strong className="text-white font-bold">PWA Install Monitor icon</strong>
+                      Inside the right-side of the bar, click on the <strong className="text-app font-bold">PWA Install Monitor icon</strong>
                       (resembles a monitor with a downward arrow or an overlapped square with plus symbol).
                     </li>
-                    <li>Click <strong className="text-white font-bold">Install</strong>. It creates a taskbar shortcut and opens in its own lightweight window!</li>
+                    <li>Click <strong className="text-app font-bold">Install</strong>. It creates a taskbar shortcut and opens in its own lightweight window!</li>
                   </ol>
                 </div>
               )}
@@ -390,20 +384,22 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
 
         {/* Feature benefits highlight */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-          <div className="p-3.5 bg-[#1B1B1C] border border-[#2A2B2C]/50 rounded-xl">
-            <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-1">⚡ Instant Launch</h4>
-            <p className="text-[10px] text-zinc-400">Loads immediately from standard device caches, loading your active neighborhood grid in an instant.</p>
+          <div className="p-3.5 bg-inset border border-app/50 rounded-xl">
+            <h4 className="text-[11px] font-black text-app uppercase tracking-widest mb-1">⚡ Instant Launch</h4>
+            <p className="text-[10px] text-muted">Loads immediately from standard device caches, loading your active neighborhood grid in an instant.</p>
           </div>
-          <div className="p-3.5 bg-[#1B1B1C] border border-[#2A2B2C]/50 rounded-xl">
-            <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-1">📦 Porch Syncing</h4>
-            <p className="text-[10px] text-zinc-400">Stores chats and active coordinate locations offline so you never drop your pickup coordinates.</p>
+          <div className="p-3.5 bg-inset border border-app/50 rounded-xl">
+            <h4 className="text-[11px] font-black text-app uppercase tracking-widest mb-1">📦 Porch Syncing</h4>
+            <p className="text-[10px] text-muted">Stores chats and active coordinate locations offline so you never drop your pickup coordinates.</p>
           </div>
-          <div className="p-3.5 bg-[#1B1B1C] border border-[#2A2B2C]/50 rounded-xl">
-            <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-1">🎨 Borderless View</h4>
-            <p className="text-[10px] text-zinc-400">Hides browser tab clutter and URL headers to let you focus entirely on friendly neighborly exchanges.</p>
+          <div className="p-3.5 bg-inset border border-app/50 rounded-xl">
+            <h4 className="text-[11px] font-black text-app uppercase tracking-widest mb-1">🎨 Borderless View</h4>
+            <p className="text-[10px] text-muted">Hides browser tab clutter and URL headers to let you focus entirely on friendly neighborly exchanges.</p>
           </div>
         </div>
       </div>
+
+      <CommunityFooter />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Chat, Message, UserProfile, ItemPost } from '../types';
 import { getSupabaseChats, getSupabaseMessages, createSupabaseMessage } from '../supabase';
 import { MessageSquare, Send, AlertCircle, MapPin, Gift, Box, ChevronLeft } from 'lucide-react';
+import { IN_APP } from '../siteContent';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -20,6 +21,21 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
   const [errorMsg, setErrorMsg] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const formatTime = (value: any) => {
+    if (!value) return '';
+    try {
+      if (typeof value === 'string') {
+        return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      if (value?.seconds) {
+        return new Date(value.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
 
   // Scroll messages viewport to bottom
   const scrollToBottom = () => {
@@ -171,7 +187,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
       >
         <div className="p-4 border-b border-zinc-200 bg-zinc-55 flex items-center justify-between">
           <h3 className="text-xs font-black text-black tracking-widest uppercase">ACTIVE CHATS</h3>
-          <span className="px-2.5 py-0.5 bg-black border border-black text-white text-[9px] font-black uppercase tracking-widest">
+          <span className="px-2.5 py-0.5 bg-black border border-black text-app text-[9px] font-black uppercase tracking-widest">
             {chats.length} active
           </span>
         </div>
@@ -179,12 +195,12 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
          {/* Chat Channels list container */}
          <div className="flex-1 overflow-y-auto space-y-0 p-0" id="chat_rooms_scrollable">
            {isChatsLoading ? (
-             <div className="p-4 text-center text-xs text-zinc-550 font-black uppercase tracking-wider">CONNECTING THREADS...</div>
+             <div className="p-4 text-center text-xs text-subtle font-black uppercase tracking-wider">CONNECTING THREADS...</div>
            ) : chats.length === 0 ? (
-             <div className="p-8 text-center text-xs text-zinc-400">
-               <MessageSquare className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
+             <div className="p-8 text-center text-xs text-muted">
+               <MessageSquare className="w-8 h-8 text-muted mx-auto mb-3" />
                <p className="font-bold text-zinc-900 uppercase tracking-widest text-[10px]">No matches routed</p>
-               <p className="text-[10px] text-zinc-450 mt-1.5 font-semibold">Select 'Message Neighbor' on any listing to open a chat channel.</p>
+               <p className="text-[10px] text-subtle mt-1.5 font-semibold">{IN_APP.chatsDescription}</p>
              </div>
            ) : (
              chats.map((chat) => {
@@ -216,7 +232,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                      <div className="flex items-center justify-between">
                        <p className="text-xs font-black text-black uppercase tracking-tight truncate" title={displayTitle}>{displayTitle}</p>
                        {chat.lastMessageAt && (
-                        <span className="text-[8.5px] text-zinc-400 font-mono font-bold">
+                        <span className="text-[8.5px] text-muted font-mono font-bold">
                           {new Date(chat.lastMessageAt.seconds ? chat.lastMessageAt.seconds * 1000 : chat.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
@@ -230,7 +246,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                       </span>
                     )}
 
-                    <p className="text-xs text-zinc-500 mt-1.5 line-clamp-1 truncate font-semibold">
+                    <p className="text-xs text-subtle mt-1.5 line-clamp-1 truncate font-semibold">
                       {chat.lastMessageText || 'Communication open.'}
                     </p>
                   </div>
@@ -266,7 +282,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                         setSelectedChat(null);
                         onClearInitialChat();
                       }}
-                      className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-none md:hidden shrink-0 cursor-pointer"
+                      className="p-1.5 text-muted hover:text-black hover:bg-zinc-100 rounded-none md:hidden shrink-0 cursor-pointer"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -288,7 +304,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                           <span>MATCHING cargo: {selectedChat.itemTitle}</span>
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-1.5 text-[9px] text-zinc-500 mt-1 uppercase tracking-widest font-black">
+                        <div className="flex items-center space-x-1.5 text-[9px] text-subtle mt-1 uppercase tracking-widest font-black">
                           <MapPin className="w-3 h-3 text-brand-sage" />
                           <span>ROUTED METROPOLITAN COMMUNICATOR</span>
                         </div>
@@ -307,8 +323,8 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                   )}
 
                   {messages.length === 0 ? (
-                    <div className="text-center py-16 text-xs text-zinc-400 font-semibold uppercase tracking-wider space-y-2.5">
-                      <MessageSquare className="w-7 h-7 text-zinc-300 mx-auto" />
+                    <div className="text-center py-16 text-xs text-muted font-semibold uppercase tracking-wider space-y-2.5">
+                      <MessageSquare className="w-7 h-7 text-muted mx-auto" />
                       <p>Send an initial transmission to initiate porch pickup logistics.</p>
                     </div>
                   ) : (
@@ -324,19 +340,17 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                           <div
                             className={`max-w-[70%] rounded-none px-4 py-3 text-xs font-semibold shadow-3xs ${
                               isUser
-                                ? 'bg-black text-white'
+                                ? 'bg-black text-app'
                                 : 'bg-white border border-zinc-200 text-black'
                             }`}
                           >
                             <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
                             <span 
                               className={`text-[8px] font-mono mt-1 w-full block text-right font-black uppercase tracking-wider ${
-                                isUser ? 'text-zinc-400' : 'text-zinc-450'
+                                isUser ? 'text-muted' : 'text-subtle'
                               }`}
                             >
-                              {msg.createdAt?.seconds 
-                                ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                : 'sending...'}
+                              {formatTime(msg.createdAt) || 'sending...'}
                             </span>
                           </div>
                         </div>
@@ -349,8 +363,8 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                 {/* Message input tray */}
                 <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-zinc-200 flex flex-col space-y-2" id="input_tray">
                   {isChatDisabled && (
-                    <div className="p-2.5 bg-zinc-100 border border-zinc-200 text-zinc-500 text-[10px] font-bold uppercase tracking-wider flex items-center space-x-2 select-none" id="chat_disabled_status_banner">
-                      <AlertCircle className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <div className="p-2.5 bg-zinc-100 border border-zinc-200 text-subtle text-[10px] font-bold uppercase tracking-wider flex items-center space-x-2 select-none" id="chat_disabled_status_banner">
+                      <AlertCircle className="w-4 h-4 text-muted shrink-0" />
                       <span>This listing has been claimed/completed. This chat is now read-only.</span>
                     </div>
                   )}
@@ -370,7 +384,7 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
                       type="submit"
                       id="message_send_btn"
                       disabled={!inputText.trim() || isSending || !!isChatDisabled}
-                      className="px-5 py-3 bg-black hover:bg-zinc-800 text-white rounded-none font-black text-xs uppercase tracking-widest shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="px-5 py-3 bg-black hover:bg-zinc-800 text-app rounded-none font-black text-xs uppercase tracking-widest shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Send className="w-3.5 h-3.5" />
                     </button>
@@ -381,10 +395,10 @@ export default function ChatSystem({ userProfile, initialSelectedChatId, onClear
           })()
         ) : (
           <div className="text-center py-20 px-4 bg-[#F6F6F6] h-full flex flex-col justify-center items-center" id="messages_not_selected_state">
-            <MessageSquare className="w-12 h-12 text-zinc-300 mb-4" />
+            <MessageSquare className="w-12 h-12 text-muted mb-4" />
             <h3 className="text-xs font-black text-black tracking-widest uppercase">NO ACTIVE CHAT SELECTED</h3>
-            <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-2 font-semibold leading-relaxed">
-              Select any active chat thread on the sidebar index, or select 'Message Neighbor' on live listings to coordinate contactless porch handovers.
+            <p className="text-xs text-subtle max-w-sm mx-auto mt-2 font-semibold leading-relaxed">
+              {IN_APP.chatsDescription}
             </p>
           </div>
         )}

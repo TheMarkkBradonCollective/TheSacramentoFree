@@ -4,7 +4,10 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, Plus, Navigation2, Compass, Tag, LogOut } from 'lucide-react';
+import { Map, List, MessageSquare, User, Plus, Compass, LogOut } from 'lucide-react';
+import CommunityFooter from './CommunityFooter';
+import { IN_APP, SITE } from '../siteContent';
+import ThemeToggle from './ThemeToggle';
 
 interface MobileViewProps {
   items: ItemPost[];
@@ -38,25 +41,28 @@ export default function MobileView({
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
 
   return (
-    <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-[#0B0C0D] font-sans text-white relative">
+    <div id="mobile_device_workspace" className="flex flex-col h-[100dvh] overflow-hidden bg-app font-sans text-app relative">
       
       {/* Floating Header Banner */}
-      <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between bg-[#1A1A1B] text-white px-4 py-3 shadow-lg border border-[#343536] rounded-2xl" id="mobile_floating_header">
+      <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between bg-surface text-app px-4 py-3 shadow-lg border border-app rounded-2xl" id="mobile_floating_header">
         <div className="flex items-center space-x-2">
           <div className="w-2.5 h-2.5 rounded-full bg-[#FF4500] animate-ping" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF4500]">SAC CIRCLE</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF4500]">{SITE.shortName}</span>
         </div>
-        <div className="text-[10px] font-bold uppercase tracking-wider text-white truncate max-w-[140px]" id="mobile_neighborhood_header">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-app truncate max-w-[100px]" id="mobile_neighborhood_header">
           {userProfile.neighborhood.toUpperCase()} CIRCLE
         </div>
-        <button
-          onClick={onLogout}
-          className="text-zinc-400 hover:text-white p-1 transition-colors cursor-pointer"
-          id="mobile_logout_floating_btn"
-          title="Sign Out"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <ThemeToggle />
+          <button
+            onClick={onLogout}
+            className="text-muted hover:text-app p-1 transition-colors cursor-pointer"
+            id="mobile_logout_floating_btn"
+            title="Sign Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Primary Context Workspace Container */}
@@ -79,7 +85,7 @@ export default function MobileView({
                 id="pill_all_types"
                 onClick={() => setSelectedMobileType('all')}
                 className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'all' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-[#1A1A1B] text-zinc-300 border-[#343536] shadow-sm'
+                  selectedMobileType === 'all' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
                 }`}
               >
                 All Circle Gifts
@@ -88,7 +94,7 @@ export default function MobileView({
                 id="pill_gives_only"
                 onClick={() => setSelectedMobileType('giveaway')}
                 className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'giveaway' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-[#1A1A1B] text-zinc-300 border-[#343536] shadow-sm'
+                  selectedMobileType === 'giveaway' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
                 }`}
               >
                 Gives 🎁
@@ -97,7 +103,7 @@ export default function MobileView({
                 id="pill_asks_only"
                 onClick={() => setSelectedMobileType('looking')}
                 className={`py-1.5 px-3 rounded-full text-[10px] font-bold tracking-wide shrink-0 transition-all border ${
-                  selectedMobileType === 'looking' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-[#1A1A1B] text-zinc-300 border-[#343536] shadow-sm'
+                  selectedMobileType === 'looking' ? 'bg-[#FF4500] text-white border-[#FF4500]' : 'bg-surface text-muted border-app shadow-sm'
                 }`}
               >
                 Asks 🔍
@@ -121,11 +127,11 @@ export default function MobileView({
 
         {/* Directory/Feed Section */}
         {activeTab === 'feed' && (
-          <div className="absolute inset-0 overflow-y-auto bg-[#0B0C0D] p-4 pt-20" id="mobile_directory_drawer">
-            <div className="mb-4 bg-[#1A1A1B] border border-[#343536] p-4 rounded-2xl shadow-xs">
-              <h2 className="text-sm font-bold text-white font-display text-left">Gifts Floating Nearby</h2>
-              <p className="text-xs text-zinc-400 mt-0.5 font-medium leading-normal text-left">
-                {items.length} warm offers found in our community circle.
+          <div className="absolute inset-0 overflow-y-auto bg-app p-4 pt-20" id="mobile_directory_drawer">
+            <div className="mb-4 bg-surface border border-app p-4 rounded-2xl shadow-xs">
+              <h2 className="text-sm font-bold text-app font-display text-left">{IN_APP.feedTitle}</h2>
+              <p className="text-xs text-muted mt-0.5 font-medium leading-normal text-left">
+                {IN_APP.feedDescription} · {items.length} active listings.
               </p>
             </div>
             <ItemGrid
@@ -134,12 +140,13 @@ export default function MobileView({
               onInitiateChat={onInitiateChat}
               onRefresh={onRefresh}
             />
+            <CommunityFooter />
           </div>
         )}
 
         {/* Chats Segment */}
         {activeTab === 'chats' && (
-          <div className="absolute inset-0 bg-[#0B0C0D] pt-20" id="mobile_messaging_dock font-sans">
+          <div className="absolute inset-0 bg-app pt-20" id="mobile_messaging_dock font-sans">
             <ChatSystem
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
@@ -151,7 +158,7 @@ export default function MobileView({
 
         {/* User Profile Segment */}
         {activeTab === 'profile' && (
-          <div className="absolute inset-0 bg-[#0B0C0D] overflow-y-auto p-4 pt-20" id="mobile_profile_dock">
+          <div className="absolute inset-0 bg-app overflow-y-auto p-4 pt-20" id="mobile_profile_dock">
             <UserProfileView
               userProfile={userProfile}
               onUpdateProfile={onUpdateProfile}
@@ -161,7 +168,7 @@ export default function MobileView({
       </div>
 
       {/* Immersive Bottom Nav Rail (Uber/Mobile layout) */}
-      <footer id="mobile_sticky_footer_nav" className="bg-[#1A1A1B] border-t border-[#343536] text-white shadow-2xl pb-safe z-30 font-sans">
+      <footer id="mobile_sticky_footer_nav" className="bg-surface border-t border-app text-app shadow-2xl pb-safe z-30 font-sans">
         <div className="grid grid-cols-4 h-16 w-full text-center">
           
           {/* Map Portal */}
@@ -169,7 +176,7 @@ export default function MobileView({
             id="mobile_nav_map"
             onClick={() => setActiveTab('map')}
             className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'map' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-zinc-400 hover:text-white'
+              activeTab === 'map' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-muted hover:text-white'
             }`}
           >
             <Compass className="w-5 h-5" />
@@ -181,7 +188,7 @@ export default function MobileView({
             id="mobile_nav_feed"
             onClick={() => setActiveTab('feed')}
             className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'feed' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-zinc-400 hover:text-white'
+              activeTab === 'feed' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-muted hover:text-white'
             }`}
           >
             <List className="w-5 h-5" />
@@ -193,7 +200,7 @@ export default function MobileView({
             id="mobile_nav_chats"
             onClick={() => setActiveTab('chats')}
             className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'chats' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-zinc-400 hover:text-white'
+              activeTab === 'chats' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-muted hover:text-white'
             }`}
           >
             <div className="relative">
@@ -208,7 +215,7 @@ export default function MobileView({
             id="mobile_nav_profile"
             onClick={() => setActiveTab('profile')}
             className={`flex flex-col items-center justify-center space-y-1 h-full select-none transition-all ${
-              activeTab === 'profile' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-zinc-400 hover:text-white'
+              activeTab === 'profile' ? 'text-[#FF4500] border-t-2 border-[#FF4500] bg-black/20' : 'text-muted hover:text-white'
             }`}
           >
             <User className="w-5 h-5" />

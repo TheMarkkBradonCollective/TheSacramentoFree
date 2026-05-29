@@ -1,7 +1,7 @@
 {
-  "name": "Sacramento buy nothing",
+  "name": "Sacramento Buy Nothing",
   "short_name": "Sac Buy Nothing",
-  "description": "Sacramento local community for sharing free items & requesting neighborly support.",
+  "description": "A community-powered platform where Sacramento neighbors give away items and request what they need — completely free. No selling. No bidding. No flipping.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",

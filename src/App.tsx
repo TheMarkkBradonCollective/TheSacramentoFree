@@ -18,7 +18,8 @@ import {
   getSupabaseItems, 
   getOrCreateSupabaseChat 
 } from './supabase';
-import { Gift, MapPin, MessageSquare, Heart, Sparkles } from 'lucide-react';
+import { Gift, Heart } from 'lucide-react';
+import { SITE } from './siteContent';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 
@@ -143,13 +144,6 @@ export default function App() {
     }
   }, [deviceType]);
 
-  // Sync profile update to localStorage
-  useEffect(() => {
-    if (userProfile?.uid) {
-      localStorage.setItem(`profile_${userProfile.uid}`, JSON.stringify(userProfile));
-    }
-  }, [userProfile]);
-
   const handleUserAuthenticated = async (user: any) => {
     setIsProfileLoading(true);
     setErrorMsg('');
@@ -163,16 +157,6 @@ export default function App() {
       profile = await Promise.race([getProfilePromise, profileTimeout]);
     } catch (sbErr) {
       console.warn('Supabase profile fetch failed:', sbErr);
-    }
-
-    // If neither worked, try localStorage fallback
-    if (!profile) {
-      const cachedProfileStr = localStorage.getItem(`profile_${user.id}`);
-      if (cachedProfileStr) {
-        try {
-          profile = JSON.parse(cachedProfileStr);
-        } catch (_) {}
-      }
     }
 
     if (profile && profile.email === 'sigsecspec@gmail.com') {
@@ -195,7 +179,6 @@ export default function App() {
       try {
         await upsertSupabaseProfile(profile);
       } catch (_) {}
-      localStorage.setItem(`profile_${profile.uid}`, JSON.stringify(profile));
     }
 
     setUserProfile(profile);
@@ -211,14 +194,8 @@ export default function App() {
     const safetyTimeout = setTimeout(() => {
       if (!authCompleted) {
         console.warn('Database session check didn\'t finish within safety threshold. Auto-bypassing...');
-        const cachedGuest = localStorage.getItem('supabase_guest_profile');
-        if (cachedGuest) {
-          try {
-            const guest = JSON.parse(cachedGuest);
-            setSessionUser(guest);
-            setUserProfile(guest);
-          } catch (_) {}
-        }
+        setSessionUser(null);
+        setUserProfile(null);
         setIsAuthLoading(false);
         setIsProfileLoading(false);
       }
@@ -238,21 +215,8 @@ export default function App() {
           setSessionUser(session.user);
           await handleUserAuthenticated(session.user);
         } else {
-          // Check if there is a cached guest user
-          const cachedGuest = localStorage.getItem('supabase_guest_profile');
-          if (cachedGuest) {
-            try {
-              const guest = JSON.parse(cachedGuest);
-              setSessionUser(guest);
-              setUserProfile(guest);
-            } catch (_) {
-              setSessionUser(null);
-              setUserProfile(null);
-            }
-          } else {
-            setSessionUser(null);
-            setUserProfile(null);
-          }
+          setSessionUser(null);
+          setUserProfile(null);
           setIsAuthLoading(false);
         }
       } catch (err) {
@@ -271,20 +235,8 @@ export default function App() {
         setSessionUser(session.user);
         await handleUserAuthenticated(session.user);
       } else {
-        const cachedGuest = localStorage.getItem('supabase_guest_profile');
-        if (cachedGuest) {
-          try {
-            const guest = JSON.parse(cachedGuest);
-            setSessionUser(guest);
-            setUserProfile(guest);
-          } catch (_) {
-            setSessionUser(null);
-            setUserProfile(null);
-          }
-        } else {
-          setSessionUser(null);
-          setUserProfile(null);
-        }
+        setSessionUser(null);
+        setUserProfile(null);
         setIsAuthLoading(false);
       }
     });
@@ -302,41 +254,10 @@ export default function App() {
     }
     try {
       const loadedItems = await getSupabaseItems();
-
-      // Merge current local drafted items so that user's offline submissions show up too
-      const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
-      let localListings: ItemPost[] = [];
-      try {
-        localListings = JSON.parse(localListingsStr);
-      } catch (_) {}
-
-      // Filter local items to avoid repeating items loaded from server
-      const serverIds = new Set(loadedItems.map(item => item.id));
-      const filteredLocal = localListings.filter(item => !serverIds.has(item.id));
-
-      // Merge order
-      const finalItems = [...filteredLocal, ...loadedItems];
-      
-      if (finalItems.length > 0) {
-        localStorage.setItem('cached_items', JSON.stringify(finalItems));
-        setItems(finalItems);
-      } else {
-        setItems([...filteredLocal, ...DEFAULT_OFFLINE_ITEMS]);
-      }
+      setItems(loadedItems);
     } catch (err) {
-      console.warn('Supabase items fetch failed, using offline fallback:', err);
-
-      const cachedStr = localStorage.getItem('cached_items');
-      let finalCached: ItemPost[] = [];
-      if (cachedStr) {
-        try {
-          finalCached = JSON.parse(cachedStr);
-        } catch (_) {}
-      }
-      if (finalCached.length === 0) {
-        finalCached = DEFAULT_OFFLINE_ITEMS;
-      }
-      setItems(finalCached);
+      console.warn('Supabase items fetch failed:', err);
+      setItems(DEFAULT_OFFLINE_ITEMS);
     } finally {
       if (!isBackground) {
         setIsItemsLoading(false);
@@ -389,29 +310,11 @@ export default function App() {
       setIsAuthLoading(false);
       return false;
     } catch (err: any) {
-      console.warn('Supabase sign-in failed, checking safe local ledger database fallback...', err);
-      
-      // 1. Try local cooperative registered users fallback
-      let localUsers: Record<string, any> = {};
-      try {
-        localUsers = JSON.parse(localStorage.getItem('local_cooperative_users') || '{}');
-      } catch (_) {}
-
-      const localUser = localUsers[email.trim().toLowerCase()];
-      if (localUser && localUser.password === password) {
-        const profile = localUser.profile;
-        localStorage.setItem('supabase_guest_profile', JSON.stringify(profile));
-        localStorage.setItem(`profile_${profile.uid}`, JSON.stringify(profile));
-        setSessionUser(profile);
-        setUserProfile(profile);
-        setIsAuthLoading(false);
-        return true;
-      }
-
+      console.warn('Supabase sign-in failed:', err);
       setIsAuthLoading(false);
       const friendlyErr = String(err?.message || err || '');
       if (friendlyErr.toLowerCase().includes('failed to fetch') || friendlyErr.toLowerCase().includes('fetch')) {
-        setErrorMsg('Connection offline (Failed to Fetch). The cloud database is unreachable. Check your adblocker or select Guest Access to continue offline.');
+        setErrorMsg('Connection failed. The database is unreachable. Please check your network and try again.');
       } else {
         setErrorMsg(friendlyErr || 'Signature detour error.');
       }
@@ -428,7 +331,6 @@ export default function App() {
   ): Promise<boolean> => {
     setIsAuthLoading(true);
     setErrorMsg('');
-    const normEmail = email.trim().toLowerCase();
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -458,7 +360,6 @@ export default function App() {
         };
 
         await upsertSupabaseProfile(newProfile);
-        localStorage.setItem(`profile_${newProfile.uid}`, JSON.stringify(newProfile));
         
         if (!data.session) {
           setIsAuthLoading(false);
@@ -473,75 +374,12 @@ export default function App() {
       setIsAuthLoading(false);
       return false;
     } catch (err: any) {
-      console.warn('Supabase sign-up failed or offline, implementing local cooperative ledger routing...', err);
-      
-      // 2. Try registering locally instead of showing failure or blocked detours
-      let localUsers: Record<string, any> = {};
-      try {
-        localUsers = JSON.parse(localStorage.getItem('local_cooperative_users') || '{}');
-      } catch (_) {}
-
-      if (localUsers[normEmail]) {
-        setIsAuthLoading(false);
-        const existsErr = new Error('This email is already registered as a local neighbor. Please Sign In.');
-        setErrorMsg(existsErr.message);
-        throw existsErr;
-      }
-
-      // Generate local client account credentials
-      const localId = 'user_' + Math.random().toString(36).substring(2, 11);
-      const randSeed = encodeURIComponent(displayName || localId);
-      const guestProfile: UserProfile = {
-        uid: localId,
-        displayName: displayName,
-        photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${randSeed}`,
-        email: email,
-        neighborhood: neighborhood,
-        bio: bio || 'Sacramento Buy Nothing collective member.',
-        createdAt: new Date().toISOString()
-      };
-
-      // Store locally
-      localUsers[normEmail] = {
-        id: localId,
-        email: email,
-        password: password,
-        profile: guestProfile
-      };
-
-      localStorage.setItem('local_cooperative_users', JSON.stringify(localUsers));
-      localStorage.setItem('supabase_guest_profile', JSON.stringify(guestProfile));
-      localStorage.setItem(`profile_${localId}`, JSON.stringify(guestProfile));
-
-      setSessionUser(guestProfile);
-      setUserProfile(guestProfile);
+      console.warn('Supabase sign-up failed:', err);
       setIsAuthLoading(false);
-      return true;
+      const friendlyErr = String(err?.message || err || '');
+      setErrorMsg(friendlyErr || 'Unable to register right now.');
+      throw err;
     }
-  };
-
-  // Handle Quick Guest Login
-  const handleGuestLogin = () => {
-    setIsAuthLoading(true);
-    setErrorMsg('');
-    const guestProfile: UserProfile = {
-      uid: 'guest_' + Math.random().toString(36).substring(2, 11),
-      displayName: 'Sacramento Guest ' + Math.floor(100 + Math.random() * 900),
-      photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=Guest_${Date.now()}`,
-      email: 'guest@sacramentobuynothing.org',
-      neighborhood: 'Midtown',
-      bio: 'Visiting Sacramento guest user.',
-      createdAt: new Date().toISOString()
-    };
-    
-    localStorage.setItem('supabase_guest_profile', JSON.stringify(guestProfile));
-    localStorage.setItem(`profile_${guestProfile.uid}`, JSON.stringify(guestProfile));
-    
-    setTimeout(() => {
-      setSessionUser(guestProfile);
-      setUserProfile(guestProfile);
-      setIsAuthLoading(false);
-    }, 450);
   };
 
   // Sign out
@@ -549,7 +387,6 @@ export default function App() {
     try {
       await supabase.auth.signOut();
     } catch (_) {}
-    localStorage.removeItem('supabase_guest_profile');
     setSessionUser(null);
     setUserProfile(null);
     setActiveTab('feed');
@@ -592,16 +429,6 @@ export default function App() {
       // Sync Chat room details to Supabase
       await getOrCreateSupabaseChat(chatId, payload);
 
-      // Local storage backup
-      const localChatsKey = 'local_chats';
-      let localChats: any[] = [];
-      try {
-        localChats = JSON.parse(localStorage.getItem(localChatsKey) || '[]');
-      } catch (_) {}
-      const filteredLocalList = localChats.filter(c => c.id !== chatId);
-      filteredLocalList.push(payload);
-      localStorage.setItem(localChatsKey, JSON.stringify(filteredLocalList));
-
       setInitialSelectedChatId(chatId);
       setActiveTab('chats');
     } catch (err) {
@@ -615,13 +442,12 @@ export default function App() {
   };
 
   return (
-    <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-zinc-100 antialiased font-sans">
+    <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {/* 2. Authentication Landing View */}
       {!sessionUser ? (
         <LandingPage 
           onEmailSignIn={handleEmailSignIn} 
           onEmailSignUp={handleEmailSignUp} 
-          onGuestLogin={handleGuestLogin} 
           errorMsg={errorMsg} 
         />
       ) : (
@@ -695,7 +521,7 @@ export default function App() {
       {showInstallBanner && !isAlreadyInstalled && (
         <div 
           id="pwa_floating_install_banner" 
-          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-6 sm:right-6 sm:max-w-xs md:max-w-md z-50 bg-[#0B0C0D] border border-zinc-800 border-l-[4px] border-l-[#FF4500] shadow-2xl p-4 rounded-xl transition-all duration-300 text-white font-sans animate-fade-in"
+          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-6 sm:right-6 sm:max-w-xs md:max-w-md z-50 bg-surface border border-app border-l-[4px] border-l-[#FF4500] shadow-2xl p-4 rounded-xl transition-all duration-300 text-app font-sans animate-fade-in"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start space-x-3">
@@ -704,21 +530,21 @@ export default function App() {
               </div>
               <div className="min-w-0">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-[#FF4500]">Download Mobile App</h4>
-                <p className="text-xs font-bold text-white mt-1">Sacramento Buy Nothing</p>
-                <div className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed font-semibold">
+                <p className="text-xs font-bold text-app mt-1">{SITE.name}</p>
+                <div className="text-[11px] text-muted mt-1.5 leading-relaxed font-semibold">
                   {isIOS ? (
                     <span>
-                      Tap Safari's <strong className="text-white font-bold">Share</strong> button and choose <strong className="text-white font-bold">Add to Home Screen</strong> to install.
+                      Tap Safari's <strong className="text-app font-bold">Share</strong> button and choose <strong className="text-app font-bold">Add to Home Screen</strong> to install.
                     </span>
                   ) : (
-                    <span>Add to your device home screen for fast loading, borderless viewing, and offline sharing!</span>
+                    <span>Add to your home screen for quick access to free local gifting across Sacramento.</span>
                   )}
                 </div>
               </div>
             </div>
             <button 
               onClick={handleDismissPrompt}
-              className="text-zinc-500 hover:text-white p-1 hover:bg-[#1A1A1B] rounded-lg transition-colors cursor-pointer shrink-0"
+              className="text-subtle hover:text-app p-1 hover:bg-surface rounded-lg transition-colors cursor-pointer shrink-0"
               title="Dismiss Installation Banner"
               id="pwa_banner_dismiss_btn"
             >
@@ -732,7 +558,7 @@ export default function App() {
             <div className="mt-3 flex items-center justify-end space-x-3 pt-2.5 border-t border-[#1A1A1B]">
               <button
                 onClick={handleDismissPrompt}
-                className="px-3.5 py-1.5 text-[11px] font-extrabold text-zinc-400 hover:text-white rounded-lg transition-all cursor-pointer"
+                className="px-3.5 py-1.5 text-[11px] font-extrabold text-muted hover:text-app rounded-lg transition-all cursor-pointer"
               >
                 LATER
               </button>

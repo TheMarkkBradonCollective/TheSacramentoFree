@@ -47,6 +47,23 @@ export interface Message {
   createdAt: any;
 }
 
+export interface ItemVote {
+  itemId: string;
+  userId: string;
+  voteType: 'up' | 'down';
+}
+
+export interface ItemComment {
+  id: string;
+  itemId: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  userNeighborhood: string;
+  text: string;
+  createdAt: any;
+}
+
 export const SACRAMENTO_NEIGHBORHOODS = [
   'Midtown',
   'Downtown',

@@ -15,40 +15,140 @@
   --color-brand-sage-dark: #000000;
 }
 
+/* Light mode (default class on html) */
+:root,
+.light {
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f4f4f5;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f4f4f5;
+  --color-inset: #fafafa;
+  --color-border: #e4e4e7;
+  --color-text: #09090b;
+  --color-text-muted: #52525b;
+  --color-text-subtle: #71717a;
+  --color-accent: #ff4500;
+  --color-accent-hover: #e03d00;
+  --color-accent-soft: #fff4f0;
+  --color-card: #ffffff;
+  --color-card-muted: #f9fafb;
+  --color-shadow: rgba(0, 0, 0, 0.08);
+}
+
+/* Dark mode */
+.dark {
+  --color-bg: #0b0c0d;
+  --color-bg-secondary: #030303;
+  --color-surface: #1a1a1b;
+  --color-surface-hover: #252526;
+  --color-inset: #0f0f0f;
+  --color-border: #343536;
+  --color-text: #fafafa;
+  --color-text-muted: #a1a1aa;
+  --color-text-subtle: #71717a;
+  --color-accent: #ff4500;
+  --color-accent-hover: #e03d00;
+  --color-accent-soft: rgba(255, 69, 0, 0.12);
+  --color-card: #ffffff;
+  --color-card-muted: #f4f4f5;
+  --color-shadow: rgba(0, 0, 0, 0.35);
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
 @layer utilities {
-  /* Reddit neutral/dark background */
+  .bg-app {
+    background-color: var(--color-bg);
+  }
+  .bg-app-secondary {
+    background-color: var(--color-bg-secondary);
+  }
+  .bg-surface {
+    background-color: var(--color-surface);
+  }
+  .bg-surface-hover {
+    background-color: var(--color-surface-hover);
+  }
+  .bg-inset {
+    background-color: var(--color-inset);
+  }
+  .bg-accent-soft {
+    background-color: var(--color-accent-soft);
+  }
+  .bg-card {
+    background-color: var(--color-card);
+  }
+  .bg-card-muted {
+    background-color: var(--color-card-muted);
+  }
+  .text-app {
+    color: var(--color-text);
+  }
+  .text-muted {
+    color: var(--color-text-muted);
+  }
+  .text-subtle {
+    color: var(--color-text-subtle);
+  }
+  .border-app {
+    border-color: var(--color-border);
+  }
+  .hover\:bg-surface-hover:hover {
+    background-color: var(--color-surface-hover);
+  }
+  .shadow-app {
+    box-shadow: 0 4px 12px var(--color-shadow);
+  }
+
   .mesh-bg {
-    background-color: #030303;
+    background-color: var(--color-bg);
     background-image: none !important;
   }
-  
-  /* Solid high contrast containers styled with black/orange */
+
   .glass {
-    background: #1A1A1B;
-    border: 1px solid #343536;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 6px var(--color-shadow);
   }
-  
+
   .glass-card {
-    background: #1A1A1B;
-    border: 1px solid #343536;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px var(--color-shadow);
   }
 
   .search-glass {
-    background: #1A1A1B;
-    border: 1px solid #FF4500;
+    background: var(--color-surface);
+    border: 1px solid var(--color-accent);
   }
 }
 
-/* Custom global overrides for high-contrast interactive items */
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none !important;
-  border-color: var(--color-brand-orange) !important;
+  border-color: var(--color-accent) !important;
   box-shadow: 0 0 0 2px rgba(255, 69, 0, 0.15) !important;
 }
 
 button {
   transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Feed listing cards stay readable in both themes */
+.light .item-feed-card {
+  background-color: #ffffff;
+  color: #09090b;
+  border-color: #e4e4e7;
+}
+
+.dark .item-feed-card {
+  background-color: #ffffff;
+  color: #09090b;
+  border-color: #e4e4e7;
 }

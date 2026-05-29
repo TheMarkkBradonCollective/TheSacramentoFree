@@ -72,17 +72,17 @@ export default function InstallPrompt() {
   return (
     <div 
       id="pwa_install_container" 
-      className="p-4 bg-[#1A1A1B] border border-[#FF4500]/50 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-sans text-white mx-4 mt-4 transition-all animate-fade-in"
+      className="p-4 bg-surface border border-[#FF4500]/50 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-sans text-white mx-4 mt-4 transition-all animate-fade-in"
     >
       <div className="flex items-start space-x-3.5 flex-1 min-w-0" id="pwa_text_info">
         <div className="p-2.5 bg-[#FF4500]/15 border border-[#FF4500]/30 rounded-xl flex items-center justify-center shrink-0">
           <Smartphone className="w-5 h-5 text-[#FF4500]" />
         </div>
         <div className="text-left min-w-0">
-          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5 leading-none">
+          <h4 className="text-xs font-black text-app uppercase tracking-wider flex items-center gap-1.5 leading-none">
             Download Mobile App
           </h4>
-          <p className="text-[11px] text-zinc-400 mt-1.5 font-medium leading-relaxed">
+          <p className="text-[11px] text-muted mt-1.5 font-medium leading-relaxed">
             {isIOS 
               ? "Install Sacramento Buy Nothing in one tap! Tap the Share icon at the bottom of Safari, then select 'Add to Home Screen' to download."
               : "Get instant offline coordination, offline loading, and desktop sharing by downloading our official web application."
@@ -103,7 +103,7 @@ export default function InstallPrompt() {
           </button>
         )}
         {isIOS && (
-          <div className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-bold rounded-lg shrink-0">
+          <div className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-800 border border-zinc-700 text-muted text-[10px] font-bold rounded-lg shrink-0">
             <Share className="w-3.5 h-3.5 text-[#FF4500]" />
             <span>Tap Share icon</span>
           </div>
@@ -111,7 +111,7 @@ export default function InstallPrompt() {
         <button
           id="pwa_btn_dismiss"
           onClick={() => setShowPrompt(false)}
-          className="p-1 px-1.5 hover:bg-zinc-805 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+          className="p-1 px-1.5 hover:bg-zinc-805 text-muted hover:text-app rounded-lg transition-colors cursor-pointer"
           title="Dismiss"
         >
           <X className="w-4 h-4" />

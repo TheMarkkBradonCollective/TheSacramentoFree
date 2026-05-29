@@ -347,7 +347,7 @@ export default function SacramentoMapView({
         .bindPopup(`
           <div class="p-1.5 font-sans">
             <b class="text-[10px] uppercase font-black text-blue-600 tracking-wide">Your Location</b>
-            <p class="text-[10px] text-zinc-500 mt-0.5 font-semibold">
+            <p class="text-[10px] text-subtle mt-0.5 font-semibold">
               Centering Buy Nothing listings near you
             </p>
           </div>
@@ -514,7 +514,7 @@ export default function SacramentoMapView({
             </div>
             <button
               onClick={() => setLocationError(null)}
-              className="text-zinc-400 hover:text-black p-1 text-xs font-black cursor-pointer bg-zinc-50"
+              className="text-muted hover:text-black p-1 text-xs font-black cursor-pointer bg-zinc-50"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -552,13 +552,13 @@ export default function SacramentoMapView({
                 <div className="flex items-center justify-between border-b border-zinc-250 pb-3 mb-4 shrink-0">
                   <div>
                     <h4 className="text-xs font-black text-black uppercase tracking-widest">Category Legend Index</h4>
-                    <p className="text-[8.5px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5">
+                    <p className="text-[8.5px] text-muted font-bold uppercase tracking-wider mt-0.5">
                       Operational Buy Nothing Map Indicators
                     </p>
                   </div>
                   <button
                     onClick={() => setShowColorGuide(false)}
-                    className="p-1.5 text-zinc-500 hover:text-black cursor-pointer bg-zinc-100"
+                    className="p-1.5 text-subtle hover:text-black cursor-pointer bg-zinc-100"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -612,7 +612,7 @@ export default function SacramentoMapView({
                   <button
                     onClick={handlePrevPost}
                     disabled={activeItems.length <= 1}
-                    className="text-zinc-500 hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                    className="text-subtle hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                     title="Slide Left"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
@@ -623,7 +623,7 @@ export default function SacramentoMapView({
                   <button
                     onClick={handleNextPost}
                     disabled={activeItems.length <= 1}
-                    className="text-zinc-500 hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                    className="text-subtle hover:text-black disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                     title="Slide Right"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -632,7 +632,7 @@ export default function SacramentoMapView({
 
                 <button
                   onClick={() => setSelectedPost(null)}
-                  className="absolute top-3 right-3 text-zinc-400 hover:text-black transition-colors cursor-pointer bg-zinc-50 p-1"
+                  className="absolute top-3 right-3 text-muted hover:text-black transition-colors cursor-pointer bg-zinc-50 p-1"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -649,8 +649,8 @@ export default function SacramentoMapView({
                     </div>
                   ) : (
                     <div className="w-16 h-16 bg-zinc-100 border border-zinc-200 shrink-0 flex flex-col items-center justify-center text-center">
-                      <Tag className="w-4 h-4 text-zinc-400" />
-                      <span className="text-[6.5px] text-zinc-400 font-extrabold tracking-widest mt-1">NO CARGO</span>
+                      <Tag className="w-4 h-4 text-muted" />
+                      <span className="text-[6.5px] text-muted font-extrabold tracking-widest mt-1">NO CARGO</span>
                     </div>
                   )}
 
@@ -658,7 +658,7 @@ export default function SacramentoMapView({
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`inline-block px-1.5 py-0.5 text-[6.5px] font-black uppercase tracking-wider ${
-                          selectedPost.type === 'giveaway' ? 'bg-black text-white' : 'bg-white border border-black text-black'
+                          selectedPost.type === 'giveaway' ? 'bg-black text-app' : 'bg-white border border-black text-black'
                         }`}>
                           {selectedPost.type === 'giveaway' ? 'GIVEAWAY' : 'WANTED'}
                         </span>
@@ -671,7 +671,7 @@ export default function SacramentoMapView({
                         {selectedPost.title}
                       </h4>
 
-                      <p className="text-[9.5px] text-zinc-550 mt-0.5 line-clamp-1 break-words font-semibold font-sans">
+                      <p className="text-[9.5px] text-subtle mt-0.5 line-clamp-1 break-words font-semibold font-sans">
                         {selectedPost.description}
                       </p>
                     </div>
@@ -702,20 +702,20 @@ export default function SacramentoMapView({
 
   // Standard interactive map layouts for desktop/tablet
   return (
-    <div id="sacramento_interactive_map_view" className="bg-[#1A1A1B] border border-[#343536] p-5 rounded-2xl font-sans flex flex-col space-y-4 text-white">
+    <div id="sacramento_interactive_map_view" className="bg-surface border border-app p-5 rounded-2xl font-sans flex flex-col space-y-4 text-app">
       {selectedType === undefined && (
-        <div className="flex flex-col space-y-1 pb-2 border-b border-[#343536]">
+        <div className="flex flex-col space-y-1 pb-2 border-b border-app">
           <span className="text-[9px] font-black text-[#FF4500] uppercase tracking-widest font-mono flex items-center gap-1.5">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#FF4500] animate-ping"></span>
             Sacramento Neighborhood Map
           </span>
-          <h2 className="text-sm font-bold text-white tracking-tight">Interactive Community Items</h2>
+          <h2 className="text-sm font-bold text-app tracking-tight">Interactive Community Items</h2>
         </div>
       )}
 
       {/* Internal Filter Controls if running in standalone mode */}
       {selectedType === undefined && (
-        <div className="bg-[#0F0F0F] border border-[#343536] p-4 rounded-xl space-y-3" id="map_internal_filters">
+        <div className="bg-inset border border-app p-4 rounded-xl space-y-3" id="map_internal_filters">
           <div className="flex flex-col xs:flex-row gap-2.5">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -724,17 +724,17 @@ export default function SacramentoMapView({
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
                 placeholder="Search pins (e.g. table, books)..."
-                className="w-full px-3.5 py-2 bg-[#1A1A1B] border border-[#343536] text-xs text-white placeholder-zinc-500 font-semibold rounded-xl focus:outline-hidden focus:border-[#FF4500]"
+                className="w-full px-3.5 py-2 bg-surface border border-app text-xs text-white placeholder:text-subtle font-semibold rounded-xl focus:outline-hidden focus:border-[#FF4500]"
                 id="map_internal_search_input"
               />
             </div>
 
             {/* Type buttons */}
-            <div className="flex bg-[#1A1A1B] p-1 border border-[#343536] gap-1 rounded-xl shrink-0" id="map_internal_type_selector">
+            <div className="flex bg-surface p-1 border border-app gap-1 rounded-xl shrink-0" id="map_internal_type_selector">
               <button
                 onClick={() => { setLocalType('all'); setLocalCategory('All Categories'); }}
                 className={`px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg ${
-                  localType === 'all' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-zinc-400 hover:text-white'
+                  localType === 'all' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-muted hover:text-white'
                 }`}
               >
                 All
@@ -742,7 +742,7 @@ export default function SacramentoMapView({
               <button
                 onClick={() => { setLocalType('giveaway'); setLocalCategory('All Categories'); }}
                 className={`px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg ${
-                  localType === 'giveaway' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-zinc-400 hover:text-white'
+                  localType === 'giveaway' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-muted hover:text-white'
                 }`}
               >
                 Gives
@@ -750,7 +750,7 @@ export default function SacramentoMapView({
               <button
                 onClick={() => { setLocalType('looking'); setLocalCategory('All Categories'); }}
                 className={`px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg ${
-                  localType === 'looking' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-zinc-400 hover:text-white'
+                  localType === 'looking' ? 'bg-[#FF4500] text-white shadow-xs' : 'text-muted hover:text-white'
                 }`}
               >
                 Asks
@@ -760,52 +760,52 @@ export default function SacramentoMapView({
 
           <div className="grid grid-cols-2 gap-2.5" id="map_internal_dropdowns">
             {/* Category selection */}
-            <div className="flex items-center space-x-1.5 bg-[#1A1A1B] px-3 py-2 border border-[#343536] rounded-xl">
-              <Tag className="w-3.5 h-3.5 text-zinc-450 shrink-0" />
+            <div className="flex items-center space-x-1.5 bg-surface px-3 py-2 border border-app rounded-xl">
+              <Tag className="w-3.5 h-3.5 text-subtle shrink-0" />
               <select
                 value={localCategory}
                 onChange={(e) => setLocalCategory(e.target.value)}
-                className="w-full bg-transparent text-[11px] text-white font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
+                className="w-full bg-transparent text-[11px] text-app font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
                 id="map_internal_category_select"
               >
-                <option value="All Categories" className="bg-[#1A1A1B] text-white">All Categories</option>
+                <option value="All Categories" className="bg-surface text-app">All Categories</option>
                 {localType === 'all' ? (
                   <>
-                    <optgroup label="OFFERS / GIFTS" className="text-[10px] bg-[#0F0F0F] text-[#FF4500] uppercase font-bold">
+                    <optgroup label="OFFERS / GIFTS" className="text-[10px] bg-inset text-[#FF4500] uppercase font-bold">
                       {ITEM_CATEGORIES.map((c) => (
-                        <option key={`map_giv_${c}`} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
+                        <option key={`map_giv_${c}`} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
                       ))}
                     </optgroup>
-                    <optgroup label="ISO / REQUESTS" className="text-[10px] bg-[#0F0F0F] text-zinc-300 uppercase font-bold">
+                    <optgroup label="ISO / REQUESTS" className="text-[10px] bg-inset text-muted uppercase font-bold">
                       {ISO_CATEGORIES.map((c) => (
-                        <option key={`map_iso_${c}`} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
+                        <option key={`map_iso_${c}`} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
                       ))}
                     </optgroup>
                   </>
                 ) : localType === 'giveaway' ? (
                   ITEM_CATEGORIES.map((c) => (
-                    <option key={`map_giv_only_${c}`} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
+                    <option key={`map_giv_only_${c}`} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
                   ))
                 ) : (
                   ISO_CATEGORIES.map((c) => (
-                    <option key={`map_iso_only_${c}`} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
+                    <option key={`map_iso_only_${c}`} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
                   ))
                 )}
               </select>
             </div>
 
             {/* Neighborhood selection */}
-            <div className="flex items-center space-x-1.5 bg-[#1A1A1B] px-3 py-2 border border-[#343536] rounded-xl">
+            <div className="flex items-center space-x-1.5 bg-surface px-3 py-2 border border-app rounded-xl">
               <MapPin className="w-3.5 h-3.5 text-[#FF4500] shrink-0" />
               <select
                 value={localNeighborhood}
                 onChange={(e) => setLocalNeighborhood(e.target.value)}
-                className="w-full bg-transparent text-[11px] text-white font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
+                className="w-full bg-transparent text-[11px] text-app font-bold focus:outline-hidden cursor-pointer uppercase tracking-wider font-sans"
                 id="map_internal_neighborhood_select"
               >
-                <option value="All Neighborhoods" className="bg-[#1A1A1B] text-white">All Neighborhoods</option>
+                <option value="All Neighborhoods" className="bg-surface text-app">All Neighborhoods</option>
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                  <option key={n} value={n} className="bg-[#1A1A1B] text-white">{n.toUpperCase()}</option>
+                  <option key={n} value={n} className="bg-surface text-app">{n.toUpperCase()}</option>
                 ))}
               </select>
             </div>
@@ -813,36 +813,36 @@ export default function SacramentoMapView({
         </div>
       )}
 
-      <div className="flex items-center justify-between border-b border-[#343536] pb-2.5">
+      <div className="flex items-center justify-between border-b border-app pb-2.5">
         <div>
           <h3 className="text-[11px] font-black text-[#FF4500] uppercase tracking-widest flex items-center gap-1.5">
             <span className="inline-block w-2.5 h-2.5 bg-[#FF4500] animate-pulse rounded-full"></span>
             Sacramento Activity Map
           </h3>
-          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5" id="active_pins_count_display">
+          <p className="text-[10px] text-muted font-bold uppercase tracking-wider mt-0.5" id="active_pins_count_display">
             Sacramento Neighborhoods • {activeItems.length} active listings
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <div className="hidden sm:flex items-center space-x-1.5 bg-[#0F0F0F] border border-[#343536] px-2.5 py-1 rounded-lg select-none">
-            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-mono">NEIGHBORHOOD GPS</span>
+          <div className="hidden sm:flex items-center space-x-1.5 bg-inset border border-app px-2.5 py-1 rounded-lg select-none">
+            <span className="text-[9px] font-black text-subtle uppercase tracking-wider font-mono">NEIGHBORHOOD GPS</span>
           </div>
         </div>
       </div>
 
       {/* Map Sandbox Visualizer */}
-      <div className="relative w-full aspect-square md:aspect-[4/3] bg-[#0F0F0F] border border-[#343536] rounded-2xl overflow-hidden select-none" id="sacramento_district_grid_canvas_font_sans">
+      <div className="relative w-full aspect-square md:aspect-[4/3] bg-inset border border-app rounded-2xl overflow-hidden select-none" id="sacramento_district_grid_canvas_font_sans">
         {/* Real Leaflet Map Render Surface */}
         <div ref={mapContainerRef} className="w-full h-full z-0" id="leaflet_map_render_canvas" />
 
         {/* Legend Overlay Map Cards */}
-        <div className="absolute top-3 left-3 bg-[#1A1A1B]/95 border border-[#343536] p-3 z-10 space-y-1.5 shadow-xl max-w-[155px] scale-90 origin-top-left rounded-xl text-white">
-          <span className="text-[8.5px] font-black text-zinc-450 uppercase tracking-widest block font-mono">Legend</span>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-300">
-            <span className="w-2.5 h-2.5 rounded-full border border-[#343536] bg-[#FF4500] block shrink-0"></span>
+        <div className="absolute top-3 left-3 bg-surface/95 border border-app p-3 z-10 space-y-1.5 shadow-xl max-w-[155px] scale-90 origin-top-left rounded-xl text-app">
+          <span className="text-[8.5px] font-black text-subtle uppercase tracking-widest block font-mono">Legend</span>
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted">
+            <span className="w-2.5 h-2.5 rounded-full border border-app bg-[#FF4500] block shrink-0"></span>
             <span>GIVEAWAY LIST</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-300">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted">
             <span className="w-2.5 h-2.5 rounded-full border border-white bg-white block shrink-0"></span>
             <span>WANTED REQ (ISO)</span>
           </div>
@@ -859,7 +859,7 @@ export default function SacramentoMapView({
         {/* Custom Map Controller HUD Panel (Zoom & Live Locating) on the opposite side, stacked vertically with Locate at bottom under zoom */}
         <div className="absolute bottom-3 right-3 z-10 flex flex-col items-center gap-2 shadow-xl select-none" id="custom_map_hud_panel">
           {/* Zoom Actions Container */}
-          <div className="flex flex-col bg-[#1A1A1B]/95 border border-[#343536] p-0.5 rounded-xl shadow-md">
+          <div className="flex flex-col bg-surface/95 border border-app p-0.5 rounded-xl shadow-md">
             <button
               onClick={handleZoomIn}
               className="w-8.5 h-8.5 flex items-center justify-center text-white hover:bg-zinc-800 hover:text-[#FF4500] transition-colors cursor-pointer rounded-t-lg"
@@ -885,7 +885,7 @@ export default function SacramentoMapView({
             className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
               isLocating 
                 ? 'bg-[#FF4500] text-white border-[#FF4500]' 
-                : 'bg-[#1A1A1B]/95 border-[#343536] text-white hover:bg-zinc-800 hover:text-[#FF4500]'
+                : 'bg-surface/95 border-app text-white hover:bg-zinc-800 hover:text-[#FF4500]'
             }`}
             title="Locate Me / Center to User"
             id="custom_locate_user_btn"
@@ -904,17 +904,17 @@ export default function SacramentoMapView({
               className="absolute inset-0 bg-[#000]/80 backdrop-blur-xs z-40 flex flex-col p-4 overflow-hidden font-sans"
               id="map_category_color_guide_overlay"
             >
-              <div className="bg-[#1A1A1B] border border-[#343536] rounded-2xl flex-1 flex flex-col p-4 overflow-hidden max-h-full text-white">
-                <div className="flex items-center justify-between border-b border-[#343536] pb-2 mb-3 shrink-0">
+              <div className="bg-surface border border-app rounded-2xl flex-1 flex flex-col p-4 overflow-hidden max-h-full text-app">
+                <div className="flex items-center justify-between border-b border-app pb-2 mb-3 shrink-0">
                   <div>
-                    <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Category Colors Index</h4>
-                    <p className="text-[8.5px] text-zinc-400 font-bold uppercase tracking-wider block mt-0.5">
+                    <h4 className="text-[10px] font-black text-app uppercase tracking-widest">Category Colors Index</h4>
+                    <p className="text-[8.5px] text-muted font-bold uppercase tracking-wider block mt-0.5">
                       {selectedType === undefined ? 'Touch color to isolate on map' : 'Color map reference'}
                     </p>
                   </div>
                   <button
                     onClick={() => setShowColorGuide(false)}
-                    className="p-1 px-2 text-zinc-400 hover:text-white cursor-pointer bg-[#0F0F0F] rounded-lg border border-[#343536]"
+                    className="p-1 px-2 text-muted hover:text-app cursor-pointer bg-inset rounded-lg border border-app"
                     id="close_color_guide_btn"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -943,14 +943,14 @@ export default function SacramentoMapView({
                             }`}
                           >
                             <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: col }} />
-                            <span className="truncate uppercase text-[8.5px] font-bold text-zinc-300">{cat}</span>
+                            <span className="truncate uppercase text-[8.5px] font-bold text-muted">{cat}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="border-t border-[#343536] pt-3">
+                  <div className="border-t border-app pt-3">
                     <h5 className="text-[9px] font-extrabold text-amber-500 uppercase tracking-wider mb-2 font-mono">Asks / ISO Colors</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
                       {ISO_CATEGORIES.map((cat) => {
@@ -971,7 +971,7 @@ export default function SacramentoMapView({
                             }`}
                           >
                             <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: col }} />
-                            <span className="truncate uppercase text-[8.5px] font-bold text-zinc-300">{cat}</span>
+                            <span className="truncate uppercase text-[8.5px] font-bold text-muted">{cat}</span>
                           </div>
                         );
                       })}
@@ -999,14 +999,14 @@ export default function SacramentoMapView({
 
         {/* Fallback Empty Guide - Beautiful, non-blocking friendly popup overlay */}
         {activeItems.length === 0 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#1A1A1B]/95 backdrop-blur-md border border-[#FF4500]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md border border-[#FF4500]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
             <div className="flex items-start space-x-3 text-left">
               <div className="p-2 bg-[#FF4500]/10 text-[#FF4500] rounded-xl shrink-0 mt-0.5">
                 <MapPin className="w-4 h-4" />
               </div>
               <div className="space-y-0.5">
-                <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Quiet Neighborhood Sector</h4>
-                <p className="text-[10px] text-zinc-400 font-semibold leading-relaxed">
+                <h4 className="text-[11px] font-black text-app uppercase tracking-widest">Quiet Neighborhood Sector</h4>
+                <p className="text-[10px] text-muted font-semibold leading-relaxed">
                   No active listings or ISO request pins match your selected filters. Create a new post or modify your filtering to light up the map!
                 </p>
               </div>
@@ -1025,25 +1025,25 @@ export default function SacramentoMapView({
             exit={{ opacity: 0, x: slideDirection === 'right' ? -80 : 80 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
             id="map_item_detail_card"
-            className="border border-[#343536] bg-[#1A1A1B] p-4 relative font-sans text-white rounded-2xl shadow-xl"
+            className="border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl"
           >
             {/* Sliding Pagination Controls */}
-            <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-[#0F0F0F] border border-[#343536] px-2 py-0.5 rounded-lg animate-fade-in">
+            <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-inset border border-app px-2 py-0.5 rounded-lg animate-fade-in">
               <button
                 onClick={handlePrevPost}
                 disabled={activeItems.length <= 1}
-                className="text-zinc-400 hover:text-white disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                 title="Slide Left"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-[10px] font-bold font-mono text-zinc-400 min-w-[28px] text-center">
+              <span className="text-[10px] font-bold font-mono text-muted min-w-[28px] text-center">
                 {currentIndex + 1}/{activeItems.length}
               </span>
               <button
                 onClick={handleNextPost}
                 disabled={activeItems.length <= 1}
-                className="text-zinc-400 hover:text-white disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                 title="Slide Right"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1054,7 +1054,7 @@ export default function SacramentoMapView({
             <button
               id="close_map_card_btn"
               onClick={() => setSelectedPost(null)}
-              className="absolute top-3 right-3 text-zinc-400 hover:text-white transition-colors cursor-pointer bg-[#0F0F0F] border border-[#343536] p-1 rounded-lg"
+              className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
               title="Close panel"
             >
               <X className="w-4 h-4" />
@@ -1063,7 +1063,7 @@ export default function SacramentoMapView({
             <div className="flex gap-4 text-left">
               {/* Cargo Image preview */}
               {selectedPost.imageUrl ? (
-                <div className="w-18 h-18 sm:w-24 sm:h-24 border border-[#343536] shrink-0 bg-[#0B0C0D] rounded-xl overflow-hidden">
+                <div className="w-18 h-18 sm:w-24 sm:h-24 border border-app shrink-0 bg-app rounded-xl overflow-hidden">
                   <img
                     src={selectedPost.imageUrl}
                     alt={selectedPost.title}
@@ -1072,9 +1072,9 @@ export default function SacramentoMapView({
                   />
                 </div>
               ) : (
-                <div className="w-18 h-18 sm:w-24 sm:h-24 bg-[#0B0C0D] border border-[#343536] shrink-0 flex flex-col items-center justify-center text-center rounded-xl">
-                  <Tag className="w-5 h-5 text-zinc-500" />
-                  <span className="text-[6.5px] text-zinc-500 font-bold tracking-widest mt-1 block">NO IMAGE</span>
+                <div className="w-18 h-18 sm:w-24 sm:h-24 bg-app border border-app shrink-0 flex flex-col items-center justify-center text-center rounded-xl">
+                  <Tag className="w-5 h-5 text-subtle" />
+                  <span className="text-[6.5px] text-subtle font-bold tracking-widest mt-1 block">NO IMAGE</span>
                 </div>
               )}
 
@@ -1082,7 +1082,7 @@ export default function SacramentoMapView({
                 <div>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider ${
-                      selectedPost.type === 'giveaway' ? 'bg-[#FF4500] text-white font-mono' : 'bg-[#0F0F0F] border border-[#343536] text-zinc-300 font-mono'
+                      selectedPost.type === 'giveaway' ? 'bg-[#FF4500] text-white font-mono' : 'bg-inset border border-app text-muted font-mono'
                     }`}>
                       {selectedPost.type === 'giveaway' ? '🎁 GIFT OFFER' : '🔍 ASK'}
                     </span>
@@ -1091,17 +1091,17 @@ export default function SacramentoMapView({
                     </span>
                   </div>
 
-                  <h4 className="text-xs sm:text-sm font-bold text-white font-display mt-2 truncate">
+                  <h4 className="text-xs sm:text-sm font-bold text-app font-display mt-2 truncate">
                     {selectedPost.title}
                   </h4>
 
-                  <p className="text-[10.5px] text-zinc-400 mt-1 line-clamp-2 leading-tight break-words font-medium">
+                  <p className="text-[10.5px] text-muted mt-1 line-clamp-2 leading-tight break-words font-medium">
                     {selectedPost.description}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[#343536] flex-wrap gap-2.5">
-                  <div className="flex items-center space-x-1 text-[10px] font-bold text-white uppercase">
+                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-app flex-wrap gap-2.5">
+                  <div className="flex items-center space-x-1 text-[10px] font-bold text-app uppercase">
                     <MapPin className="w-3.5 h-3.5 text-[#FF4500] shrink-0" />
                     <span>{selectedPost.neighborhood}</span>
                   </div>
@@ -1119,7 +1119,7 @@ export default function SacramentoMapView({
                       <button
                         id="map_view_card_btn"
                         onClick={() => onItemDetail(selectedPost)}
-                        className="px-3 py-1.5 bg-[#343536] hover:bg-[#444546] text-white text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-zinc-700/50"
+                        className="px-3 py-1.5 bg-[#343536] hover:bg-[#444546] text-app text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-zinc-700/50"
                       >
                         <Eye className="w-3 h-3" />
                         <span>View Details</span>

@@ -1,7 +1,15 @@
-import { useState } from 'react';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
+import { useEffect, useState } from 'react';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile, ItemComment } from '../types';
 import { Search as SearchIcon, MapPin, Tag, MessageSquare, AlertCircle, Trash2, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
-import { updateSupabaseItemStatus, deleteSupabaseItem } from '../supabase';
+import {
+  updateSupabaseItemStatus,
+  deleteSupabaseItem,
+  getSupabaseItemVotes,
+  setSupabaseItemVote,
+  getSupabaseItemComments,
+  createSupabaseItemComment
+} from '../supabase';
+import { SITE } from '../siteContent';
 
 interface ItemGridProps {
   items: ItemPost[];
@@ -16,89 +24,6 @@ interface PostVoteState {
   downvotes: number;
 }
 
-interface PostCommentType {
-  id: string;
-  userName: string;
-  userPhoto?: string;
-  text: string;
-  createdAt: string;
-  userNeighborhood: string;
-}
-
-const getInitialVotesForPost = (postId: string): PostVoteState => {
-  let hash1 = 0;
-  let hash2 = 0;
-  for (let i = 0; i < postId.length; i++) {
-    hash1 = (hash1 * 31 + postId.charCodeAt(i)) % 17;
-    hash2 = (hash2 * 13 + postId.charCodeAt(i)) % 7;
-  }
-  const initialUp = (hash1 % 8) + 2; // 2-9 upvotes
-  const initialDown = hash2 % 3;     // 0-2 downvotes
-  return {
-    userVote: null,
-    upvotes: initialUp,
-    downvotes: initialDown,
-  };
-};
-
-const getInitialCommentsForPost = (postId: string, category: string, title: string): PostCommentType[] => {
-  let hash = 0;
-  for (let i = 0; i < postId.length; i++) {
-    hash = (hash * 31 + postId.charCodeAt(i)) % 1000;
-  }
-
-  const seedCommentsList = [
-    {
-      text: "Is this still available for porch pickup? I can come get it right away!",
-      user: "Midtown Sarah",
-      neighborhood: "Midtown",
-      offsetMinutes: 120
-    },
-    {
-      text: "I want to be next in line if the first neighbor passes! 💚",
-      user: "Oak Park Jerry",
-      neighborhood: "Oak Park",
-      offsetMinutes: 90
-    },
-    {
-      text: "Such a beautiful item! Thank you for sharing with our community.",
-      user: "Elk Grove Resident",
-      neighborhood: "Elk Grove",
-      offsetMinutes: 240
-    },
-    {
-      text: "Sent a private chat to see if we can arrange details, thank you!",
-      user: "Downtown Dan",
-      neighborhood: "Downtown",
-      offsetMinutes: 30
-    },
-    {
-      text: "This would go perfectly in my community art class project. Hope to grab it!",
-      user: "Tahoe Park Art",
-      neighborhood: "Tahoe Park",
-      offsetMinutes: 180
-    }
-  ];
-
-  const commentCount = (hash % 2) + 1; // 1 or 2 comments
-  const selected: PostCommentType[] = [];
-  
-  for (let i = 0; i < commentCount; i++) {
-    const commentSeed = seedCommentsList[(hash + i) % seedCommentsList.length];
-    const createdTime = new Date(Date.now() - commentSeed.offsetMinutes * 60 * 1000).toISOString();
-    selected.push({
-      id: `${postId}_comment_seed_${i}`,
-      userName: commentSeed.user,
-      userPhoto: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(commentSeed.user)}`,
-      text: commentSeed.text,
-      createdAt: createdTime,
-      userNeighborhood: commentSeed.neighborhood
-    });
-  }
-  
-  return selected.sort((a,b) => a.createdAt.localeCompare(b.createdAt));
-};
-
 export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh }: ItemGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | 'giveaway' | 'looking'>('all');
@@ -106,33 +31,54 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
-  const [customVotes, setCustomVotes] = useState<Record<string, PostVoteState>>(() => {
-    try {
-      const saved = localStorage.getItem('sbn_custom_votes');
-      return saved ? JSON.parse(saved) : {};
-    } catch (_) {
-      return {};
-    }
-  });
-
-  const [customComments, setCustomComments] = useState<Record<string, PostCommentType[]>>(() => {
-    try {
-      const saved = localStorage.getItem('sbn_custom_comments');
-      return saved ? JSON.parse(saved) : {};
-    } catch (_) {
-      return {};
-    }
-  });
+  const [itemVotes, setItemVotes] = useState<Record<string, PostVoteState>>({});
+  const [itemComments, setItemComments] = useState<Record<string, ItemComment[]>>({});
 
   const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
 
-  const getVotesForPost = (postId: string): PostVoteState => {
-    return customVotes[postId] || getInitialVotesForPost(postId);
-  };
+  const getVotesForPost = (postId: string): PostVoteState => itemVotes[postId] || { userVote: null, upvotes: 0, downvotes: 0 };
+  const getCommentsForPost = (postId: string): ItemComment[] => itemComments[postId] || [];
 
-  const getCommentsForPost = (postId: string, category: string, title: string): PostCommentType[] => {
-    return customComments[postId] || getInitialCommentsForPost(postId, category, title);
-  };
+  useEffect(() => {
+    let mounted = true;
+    const loadEngagement = async () => {
+      const itemIds = items.map((item) => item.id);
+      if (itemIds.length === 0) {
+        if (!mounted) return;
+        setItemVotes({});
+        setItemComments({});
+        return;
+      }
+
+      const [votes, comments] = await Promise.all([
+        getSupabaseItemVotes(itemIds),
+        getSupabaseItemComments(itemIds)
+      ]);
+      if (!mounted) return;
+
+      const nextVotes: Record<string, PostVoteState> = {};
+      for (const itemId of itemIds) {
+        const votesForItem = votes.filter((vote) => vote.itemId === itemId);
+        nextVotes[itemId] = {
+          userVote: (votesForItem.find((vote) => vote.userId === userProfile.uid)?.voteType || null) as 'up' | 'down' | null,
+          upvotes: votesForItem.filter((vote) => vote.voteType === 'up').length,
+          downvotes: votesForItem.filter((vote) => vote.voteType === 'down').length
+        };
+      }
+      setItemVotes(nextVotes);
+
+      const nextComments: Record<string, ItemComment[]> = {};
+      for (const itemId of itemIds) {
+        nextComments[itemId] = comments.filter((comment) => comment.itemId === itemId);
+      }
+      setItemComments(nextComments);
+    };
+
+    loadEngagement();
+    return () => {
+      mounted = false;
+    };
+  }, [items, userProfile.uid]);
 
   const handleVote = (itemId: string, direction: 'up' | 'down') => {
     const current = getVotesForPost(itemId);
@@ -154,24 +100,31 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
       else newDownvotes += 1;
     }
 
-    const updated = {
-      ...customVotes,
+    setItemVotes((prev) => ({
+      ...prev,
       [itemId]: {
         userVote: newUserVote,
         upvotes: newUpvotes,
         downvotes: newDownvotes
       }
-    };
+    }));
 
-    setCustomVotes(updated);
-    localStorage.setItem('sbn_custom_votes', JSON.stringify(updated));
+    setSupabaseItemVote(itemId, userProfile.uid, newUserVote).catch((err) => {
+      console.warn('Failed to persist vote:', err);
+      setItemVotes((prev) => ({
+        ...prev,
+        [itemId]: current
+      }));
+    });
   };
 
   const handleAddComment = (itemId: string, text: string) => {
-    const current = getCommentsForPost(itemId, '', '');
+    const current = getCommentsForPost(itemId);
     
-    const newComment: PostCommentType = {
+    const newComment: ItemComment = {
       id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      itemId,
+      userId: userProfile.uid,
       userName: userProfile.displayName,
       userPhoto: userProfile.photoURL,
       text: text,
@@ -179,13 +132,18 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
       userNeighborhood: userProfile.neighborhood || 'Midtown'
     };
 
-    const updated = {
-      ...customComments,
+    setItemComments((prev) => ({
+      ...prev,
       [itemId]: [...current, newComment]
-    };
+    }));
 
-    setCustomComments(updated);
-    localStorage.setItem('sbn_custom_comments', JSON.stringify(updated));
+    createSupabaseItemComment(newComment).catch((err) => {
+      console.warn('Failed to persist comment:', err);
+      setItemComments((prev) => ({
+        ...prev,
+        [itemId]: current
+      }));
+    });
   };
 
   const toggleComments = (postId: string) => {
@@ -198,29 +156,6 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   // Status transitions
   const handleUpdateStatus = async (itemId: string, newStatus: 'completed' | 'withdrawn' | 'active') => {
     setUpdatingItemId(itemId);
-    
-    // Update local storage immediately for seamless offline response
-    const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
-    let localListings: ItemPost[] = [];
-    try {
-      localListings = JSON.parse(localListingsStr);
-    } catch (_) {}
-    localListings = localListings.map(item => {
-      if (item.id === itemId) return { ...item, status: newStatus, updatedAt: new Date().toISOString() };
-      return item;
-    });
-    localStorage.setItem('local_user_listings', JSON.stringify(localListings));
-
-    const cachedStr = localStorage.getItem('cached_items') || '[]';
-    let cachedItems: ItemPost[] = [];
-    try {
-      cachedItems = JSON.parse(cachedStr);
-    } catch (_) {}
-    cachedItems = cachedItems.map(item => {
-      if (item.id === itemId) return { ...item, status: newStatus, updatedAt: new Date().toISOString() };
-      return item;
-    });
-    localStorage.setItem('cached_items', JSON.stringify(cachedItems));
 
     try {
       await updateSupabaseItemStatus(itemId, newStatus);
@@ -236,32 +171,6 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   const handleDeleteItem = async (itemId: string) => {
     if (!confirm('Are you sure you want to permanently delete this listing?')) return;
     setUpdatingItemId(itemId);
-
-    // Delete from local storage immediately for seamless offline response
-    const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
-    let localListings: ItemPost[] = [];
-    try {
-      localListings = JSON.parse(localListingsStr);
-    } catch (_) {}
-    localListings = localListings.filter(item => item.id !== itemId);
-    localStorage.setItem('local_user_listings', JSON.stringify(localListings));
-
-    const cachedStr = localStorage.getItem('cached_items') || '[]';
-    let cachedItems: ItemPost[] = [];
-    try {
-      cachedItems = JSON.parse(cachedStr);
-    } catch (_) {}
-    cachedItems = cachedItems.filter(item => item.id !== itemId);
-    localStorage.setItem('cached_items', JSON.stringify(cachedItems));
-
-    // Also delete associated chats from local storage
-    const localChatsKey = 'local_chats';
-    let localChats: any[] = [];
-    try {
-      localChats = JSON.parse(localStorage.getItem(localChatsKey) || '[]');
-    } catch (_) {}
-    localChats = localChats.filter(c => c.itemId !== itemId);
-    localStorage.setItem(localChatsKey, JSON.stringify(localChats));
 
     try {
       await deleteSupabaseItem(itemId);
@@ -295,14 +204,14 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
     
     // Votes and comments context
     const { userVote, upvotes, downvotes } = getVotesForPost(item.id);
-    const commentsForPost = getCommentsForPost(item.id, item.category, item.title);
+    const commentsForPost = getCommentsForPost(item.id);
     const netScore = upvotes - downvotes;
 
     return (
       <div
         key={item.id}
         id={`item_card_${item.id}`}
-        className={`flex flex-row bg-white rounded-none border border-zinc-200 hover:border-black transition-all group ${
+        className={`item-feed-card flex flex-row rounded-none border hover:border-black transition-all group ${
           item.status !== 'active' ? 'opacity-65 bg-zinc-50' : ''
         }`}
       >
@@ -316,7 +225,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
             id={`vote_up_${item.id}`}
             onClick={() => handleVote(item.id, 'up')}
             className={`p-1.5 transition-all rounded-none hover:bg-orange-50 group/voteup shrink-0 cursor-pointer ${
-              userVote === 'up' ? 'text-brand-orange scale-110 font-bold' : 'text-zinc-400 hover:text-brand-orange'
+              userVote === 'up' ? 'text-brand-orange scale-110 font-bold' : 'text-muted hover:text-brand-orange'
             }`}
             title="Interested (Upvote)"
           >
@@ -330,7 +239,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
             }`} id={`vote_score_${item.id}`}>
               {netScore > 0 ? `+${netScore}` : netScore}
             </span>
-            <span className="text-[7px] font-black text-zinc-400 uppercase tracking-widest block scale-85 mt-0.5 font-mono">NET</span>
+            <span className="text-[7px] font-black text-muted uppercase tracking-widest block scale-85 mt-0.5 font-mono">NET</span>
           </div>
 
           {/* Down Arrow (Not Interested) */}
@@ -338,7 +247,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
             id={`vote_down_${item.id}`}
             onClick={() => handleVote(item.id, 'down')}
             className={`p-1.5 transition-all rounded-none hover:bg-blue-50 group/votedown shrink-0 cursor-pointer ${
-              userVote === 'down' ? 'text-blue-600 scale-110 font-bold' : 'text-zinc-400 hover:text-blue-550'
+              userVote === 'down' ? 'text-blue-600 scale-110 font-bold' : 'text-muted hover:text-blue-550'
             }`}
             title="Not Interested (Downvote)"
           >
@@ -346,14 +255,14 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
           </button>
 
           {/* Operational indicators */}
-          <div className="mt-5 border-t border-zinc-200/80 pt-3 flex flex-col space-y-2 text-[7px] text-zinc-400 font-bold uppercase tracking-widest text-center leading-none scale-90">
+          <div className="mt-5 border-t border-zinc-200/80 pt-3 flex flex-col space-y-2 text-[7px] text-muted font-bold uppercase tracking-widest text-center leading-none scale-90">
             <div title="Neighbors Interested" className="flex flex-col items-center">
               <span className="text-zinc-650 font-black mb-0.5 font-mono text-[9px]">{upvotes}</span>
               <span className="text-brand-orange font-mono">INT 💚</span>
             </div>
             <div title="Neighbors Not Interested" className="flex flex-col items-center pt-1">
               <span className="text-zinc-650 font-black mb-0.5 font-mono text-[9px]">{downvotes}</span>
-              <span className="text-zinc-500 font-mono">PASS ✕</span>
+              <span className="text-subtle font-mono">PASS ✕</span>
             </div>
           </div>
         </div>
@@ -366,7 +275,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
               {/* Badge row */}
               <div className="flex items-center justify-between mb-4">
                 {item.type === 'giveaway' ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-none text-[8px] font-black uppercase tracking-widest bg-black text-white border border-black">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-none text-[8px] font-black uppercase tracking-widest bg-black text-app border border-black">
                     Giveaway
                   </span>
                 ) : (
@@ -399,7 +308,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
               </h4>
 
               {/* Category */}
-              <span className="inline-block mt-1 text-[9.5px] font-black text-zinc-400 font-mono tracking-widest uppercase">
+              <span className="inline-block mt-1 text-[9.5px] font-black text-muted font-mono tracking-widest uppercase">
                 {item.category}
               </span>
 
@@ -422,7 +331,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
             </div>
 
             {/* Metadata Row with centralized comments toggler */}
-            <div className="mt-5 pt-4 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-zinc-500">
+            <div className="mt-5 pt-4 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-subtle">
               <div className="flex items-center space-x-1.5 shrink-0">
                 <MapPin className="w-3.5 h-3.5 text-brand-sage shrink-0" />
                 <span className="font-extrabold text-black uppercase tracking-wide">{item.neighborhood}</span>
@@ -432,18 +341,18 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                 id={`comments_toggle_btn_${item.id}`}
                 onClick={() => toggleComments(item.id)}
                 className={`inline-flex items-center space-x-1.5 text-[10px] font-extrabold transition-colors cursor-pointer py-1 px-2.5 ${
-                  expandedPostComments[item.id] ? 'bg-black text-white' : 'bg-zinc-100 text-zinc-650 hover:bg-zinc-200'
+                  expandedPostComments[item.id] ? 'bg-black text-app' : 'bg-zinc-100 text-zinc-650 hover:bg-zinc-200'
                 }`}
               >
-                <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${expandedPostComments[item.id] ? 'text-brand-orange' : 'text-zinc-400'}`} />
+                <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${expandedPostComments[item.id] ? 'text-brand-orange' : 'text-muted'}`} />
                 <span>
                   {commentsForPost.length} {commentsForPost.length === 1 ? 'REPLY' : 'REPLIES'}
                 </span>
               </button>
 
               <div className="flex items-center space-x-1 shrink-0">
-                <Calendar className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                <span className="font-bold text-zinc-500 uppercase">
+                <Calendar className="w-3.5 h-3.5 text-muted shrink-0" />
+                <span className="font-bold text-subtle uppercase">
                   {item.createdAt 
                     ? new Date(item.createdAt.seconds ? item.createdAt.seconds * 1000 : item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
                     : 'Recent'}
@@ -520,7 +429,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                 />
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 bg-black hover:bg-zinc-900 text-white text-[9px] font-black uppercase tracking-widest rounded-none shrink-0 cursor-pointer font-sans"
+                  className="px-3.5 py-1.5 bg-black hover:bg-zinc-900 text-app text-[9px] font-black uppercase tracking-widest rounded-none shrink-0 cursor-pointer font-sans"
                 >
                   POST
                 </button>
@@ -575,7 +484,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                         id={`relist_btn_${item.id}`}
                         disabled={updatingItemId === item.id}
                         onClick={() => handleUpdateStatus(item.id, 'active')}
-                        className="px-2.5 py-1.5 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-none text-[9.5px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                        className="px-2.5 py-1.5 bg-brand-orange hover:bg-brand-orange-hover text-app rounded-none text-[9.5px] font-black uppercase tracking-wider transition-colors cursor-pointer"
                       >
                         Relist
                       </button>
@@ -583,7 +492,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                         id={`delete_btn_${item.id}`}
                         disabled={updatingItemId === item.id}
                         onClick={() => handleDeleteItem(item.id)}
-                        className="p-1.5 text-zinc-400 hover:text-[#E11900] hover:bg-red-500/10 rounded-none transition-colors cursor-pointer"
+                        className="p-1.5 text-muted hover:text-[#E11900] hover:bg-red-500/10 rounded-none transition-colors cursor-pointer"
                         title="Delete listing"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -596,13 +505,13 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
                   <button
                     id={`message_btn_${item.id}`}
                     onClick={() => onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)}
-                    className="px-4 py-2 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[10px] uppercase tracking-widest rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none"
+                    className="px-4 py-2 bg-brand-orange hover:bg-brand-orange-hover text-app font-black text-[10px] uppercase tracking-widest rounded-none inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>MESSAGE NEIGHBOR</span>
                   </button>
                 ) : (
-                  <span className="text-[9px] font-black text-zinc-550 uppercase tracking-widest font-mono">Withdrawn / Archived</span>
+                  <span className="text-[9px] font-black text-subtle uppercase tracking-widest font-mono">Withdrawn / Archived</span>
                 )
               )}
             </div>
@@ -615,12 +524,12 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
   return (
     <div className="space-y-6" id="item_feed_wrapper">
       {/* Search & Filtering Area */}
-      <div className="bg-white rounded-none p-6 border border-zinc-200 shadow-xs" id="filter_panel">
+      <div className="bg-card rounded-none p-6 border border-zinc-200 shadow-xs" id="filter_panel">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Main search Input */}
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <SearchIcon className="h-4.5 w-4.5 text-zinc-500" />
+              <SearchIcon className="h-4.5 w-4.5 text-subtle" />
             </div>
             <input
               type="text"
@@ -639,7 +548,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
               onClick={() => { setSelectedType('all'); setSelectedCategory('All Categories'); }}
               className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider cursor-pointer transition-all rounded-none ${
                 selectedType === 'all' 
-                  ? 'bg-black text-white shadow-xs' 
+                  ? 'bg-black text-app shadow-xs' 
                   : 'text-zinc-600 hover:text-black'
               }`}
             >
@@ -650,7 +559,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
               onClick={() => { setSelectedType('giveaway'); setSelectedCategory('All Categories'); }}
               className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider cursor-pointer transition-all rounded-none ${
                 selectedType === 'giveaway' 
-                  ? 'bg-black text-white shadow-xs' 
+                  ? 'bg-black text-app shadow-xs' 
                   : 'text-zinc-650 hover:text-black'
               }`}
             >
@@ -661,7 +570,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
               onClick={() => { setSelectedType('looking'); setSelectedCategory('All Categories'); }}
               className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider cursor-pointer transition-all rounded-none ${
                 selectedType === 'looking' 
-                  ? 'bg-black text-white shadow-xs' 
+                  ? 'bg-black text-app shadow-xs' 
                   : 'text-zinc-650 hover:text-black'
               }`}
             >
@@ -674,7 +583,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 border-t border-zinc-150 pt-4" id="compound_selectors">
           {/* Category Dropdown */}
           <div className="flex items-center space-x-2.5 bg-zinc-50 rounded-none px-3 py-2 border border-zinc-200" id="category_select_group">
-            <Tag className="w-4 h-4 text-zinc-500 shrink-0" />
+            <Tag className="w-4 h-4 text-subtle shrink-0" />
             <select
               id="filter_category_select"
               value={selectedCategory}
@@ -684,12 +593,12 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
               <option value="All Categories" className="bg-white">All Categories</option>
               {selectedType === 'all' ? (
                 <>
-                  <optgroup label="OFFERS / GIFTS" className="text-[10px] font-black tracking-widest text-zinc-400 bg-zinc-100 uppercase">
+                  <optgroup label="OFFERS / GIFTS" className="text-[10px] font-black tracking-widest text-muted bg-zinc-100 uppercase">
                     {ITEM_CATEGORIES.map((c) => (
                       <option key={`all_giveaway_${c}`} value={c} className="bg-white text-xs text-black normal-case font-bold">{c.toUpperCase()}</option>
                     ))}
                   </optgroup>
-                  <optgroup label="IN SEARCH OF / ASKS" className="text-[10px] font-black tracking-widest text-zinc-400 bg-zinc-100 uppercase">
+                  <optgroup label="IN SEARCH OF / ASKS" className="text-[10px] font-black tracking-widest text-muted bg-zinc-100 uppercase">
                     {ISO_CATEGORIES.map((c) => (
                       <option key={`all_looking_${c}`} value={c} className="bg-white text-xs text-black normal-case font-bold">{c.toUpperCase()}</option>
                     ))}
@@ -732,10 +641,10 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onRefresh
       {/* Bulletin Listings Feed */}
       {filteredItems.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-none border border-dashed border-zinc-300 p-8" id="empty_feed_state">
-          <AlertCircle className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
-          <h3 className="text-xs font-black text-black uppercase tracking-widest">No listings match operational filters</h3>
-          <p className="text-xs text-zinc-500 mt-2 max-w-sm mx-auto font-semibold">
-            Re-adjust your filter configurations above.
+          <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
+          <h3 className="text-xs font-black text-black uppercase tracking-widest">No listings match your filters</h3>
+          <p className="text-xs text-subtle mt-2 max-w-sm mx-auto font-semibold">
+            Give what you can. Ask for what you need. {SITE.tagline}
           </p>
         </div>
       ) : (

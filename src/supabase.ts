@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment } from './types';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -91,6 +91,39 @@ DROP POLICY IF EXISTS "Allow insert messages" ON public.messages;
 CREATE POLICY "Allow insert messages" ON public.messages FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Allow edit or update" ON public.messages;
 CREATE POLICY "Allow edit or update" ON public.messages FOR ALL USING (true);
+
+-- 5. Create item votes
+CREATE TABLE IF NOT EXISTS public.item_votes (
+  "itemId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("itemId", "userId")
+);
+
+ALTER TABLE public.item_votes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read item votes" ON public.item_votes;
+CREATE POLICY "Allow read item votes" ON public.item_votes FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write item votes" ON public.item_votes;
+CREATE POLICY "Allow write item votes" ON public.item_votes FOR ALL USING (true);
+
+-- 6. Create item comments
+CREATE TABLE IF NOT EXISTS public.item_comments (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.item_comments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read item comments" ON public.item_comments;
+CREATE POLICY "Allow read item comments" ON public.item_comments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write item comments" ON public.item_comments;
+CREATE POLICY "Allow write item comments" ON public.item_comments FOR ALL USING (true);
 `;
 
 // Helper states to track connection warnings on UI
@@ -315,6 +348,16 @@ export async function updateSupabaseItemStatus(itemId: string, status: string): 
 
 export async function deleteSupabaseItem(itemId: string): Promise<boolean> {
   try {
+    await supabase
+      .from('item_votes')
+      .delete()
+      .eq('itemId', itemId);
+
+    await supabase
+      .from('item_comments')
+      .delete()
+      .eq('itemId', itemId);
+
     // 1. Fetch associated chats first to cascade-delete their messages
     const { data: associatedChats, error: selectErr } = await supabase
       .from('chats')
@@ -517,6 +560,115 @@ export async function createSupabaseMessage(chatId: string, text: string, sender
   } catch (err: any) {
     console.error('Supabase write message failed:', err);
     handleSupabaseError(err, 'messages');
+    return false;
+  }
+}
+
+/**
+ * --- ITEM VOTES ---
+ */
+export async function getSupabaseItemVotes(itemIds: string[]): Promise<ItemVote[]> {
+  if (itemIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from('item_votes')
+      .select('*')
+      .in('itemId', itemIds);
+
+    if (error) {
+      handleSupabaseError(error, 'item_votes');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []) as ItemVote[];
+  } catch (err: any) {
+    handleSupabaseError(err, 'item_votes');
+    return [];
+  }
+}
+
+export async function setSupabaseItemVote(itemId: string, userId: string, voteType: 'up' | 'down' | null): Promise<boolean> {
+  try {
+    if (!voteType) {
+      const { error: deleteError } = await supabase
+        .from('item_votes')
+        .delete()
+        .eq('itemId', itemId)
+        .eq('userId', userId);
+
+      if (deleteError) {
+        handleSupabaseError(deleteError, 'item_votes');
+        return false;
+      }
+      setSupabaseConfigurationState(true);
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('item_votes')
+      .upsert(
+        { itemId, userId, voteType, createdAt: new Date().toISOString() },
+        { onConflict: 'itemId,userId' }
+      );
+
+    if (error) {
+      handleSupabaseError(error, 'item_votes');
+      return false;
+    }
+
+    setSupabaseConfigurationState(true);
+    return true;
+  } catch (err: any) {
+    handleSupabaseError(err, 'item_votes');
+    return false;
+  }
+}
+
+/**
+ * --- ITEM COMMENTS ---
+ */
+export async function getSupabaseItemComments(itemIds: string[]): Promise<ItemComment[]> {
+  if (itemIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from('item_comments')
+      .select('*')
+      .in('itemId', itemIds)
+      .order('createdAt', { ascending: true });
+
+    if (error) {
+      handleSupabaseError(error, 'item_comments');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []) as ItemComment[];
+  } catch (err: any) {
+    handleSupabaseError(err, 'item_comments');
+    return [];
+  }
+}
+
+export async function createSupabaseItemComment(comment: ItemComment): Promise<boolean> {
+  try {
+    const payload = {
+      ...comment,
+      createdAt: comment.createdAt ? new Date(comment.createdAt).toISOString() : new Date().toISOString()
+    };
+    const { error } = await supabase
+      .from('item_comments')
+      .insert(payload);
+
+    if (error) {
+      handleSupabaseError(error, 'item_comments');
+      return false;
+    }
+
+    setSupabaseConfigurationState(true);
+    return true;
+  } catch (err: any) {
+    handleSupabaseError(err, 'item_comments');
     return false;
   }
 }

@@ -3,6 +3,7 @@ import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY
 import { createSupabaseItem, uploadItemImage } from '../supabase';
 import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
+import { RULES } from '../siteContent';
 
 // Neighborhood center coordinates as percentages (0-100) of our map sandbox
 const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
@@ -212,53 +213,34 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
       const success = await createSupabaseItem(newItem);
       
       if (!success) {
-        console.warn('Note: Listing creation completed with offline-mode validation queueing.');
+        throw new Error('Listing could not be created in the database.');
       }
-
-      // Save to local drafted listings cache
-      const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
-      let localListings: ItemPost[] = [];
-      try {
-        localListings = JSON.parse(localListingsStr);
-      } catch (_) {}
-      localListings.unshift(newItem);
-      localStorage.setItem('local_user_listings', JSON.stringify(localListings));
 
       onSuccess(newItem);
       onClose();
     } catch (err) {
       setIsSubmitting(false);
-      // Fallback
-      const localListingsStr = localStorage.getItem('local_user_listings') || '[]';
-      let localListings: ItemPost[] = [];
-      try {
-        localListings = JSON.parse(localListingsStr);
-      } catch (_) {}
-      localListings.unshift(newItem);
-      localStorage.setItem('local_user_listings', JSON.stringify(localListings));
-
-      onSuccess(newItem);
-      onClose();
+      setErrorMsg('Unable to publish listing to the database. Please try again.');
     }
   };
 
   return (
     <div id="post_modal_overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 overflow-y-auto font-sans">
-      <div className="relative w-full max-w-md bg-[#1A1A1B] rounded-2xl border border-[#343536] shadow-2xl overflow-hidden my-8" id="post_modal_box">
+      <div className="relative w-full max-w-md bg-surface rounded-2xl border border-app shadow-2xl overflow-hidden my-8" id="post_modal_box">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#343536] bg-[#0B0C0D]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-app bg-app">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 bg-[#FF4500] text-white rounded-xl flex items-center justify-center">
               {type === 'looking' ? <Search className="w-4 h-4" /> : <Gift className="w-4 h-4" />}
             </div>
-            <h3 className="text-sm font-bold text-white tracking-tight font-display">
+            <h3 className="text-sm font-bold text-app tracking-tight font-display">
               {type === 'looking' ? 'Post a New Request (ISO)' : 'Share a New Gift'}
             </h3>
           </div>
           <button
             id="close_modal_btn"
             onClick={onClose}
-            className="p-1.5 text-zinc-400 hover:text-white hover:bg-[#252526] rounded-xl transition-colors cursor-pointer"
+            className="p-1.5 text-muted hover:text-app hover:bg-surface-hover rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-4.5 h-4.5" />
           </button>
@@ -274,7 +256,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
           {/* Type Toggle (Giveaway vs Looking for) */}
           <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">What kind of post is this?</span>
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">What kind of post is this?</span>
             <div className="grid grid-cols-2 gap-3.5" id="listing_type_grid">
               <button
                 type="button"
@@ -283,7 +265,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                 className={`py-3 px-4 rounded-xl text-xs font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-2 cursor-pointer ${
                   type === 'giveaway'
                     ? 'bg-[#FF4500] border-[#FF4500] text-white shadow-xs'
-                    : 'bg-[#0F0F0F] border-[#343536] text-zinc-300 hover:bg-[#252526]'
+                    : 'bg-inset border-app text-muted hover:bg-surface-hover'
                 }`}
               >
                 <Gift className="w-4 h-4" />
@@ -297,7 +279,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                 className={`py-3 px-4 rounded-xl text-xs font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-2 cursor-pointer ${
                   type === 'looking'
                     ? 'bg-[#FF4500] border-[#FF4500] text-white shadow-xs'
-                    : 'bg-[#0F0F0F] border-[#343536] text-zinc-300 hover:bg-[#252526]'
+                    : 'bg-inset border-app text-muted hover:bg-surface-hover'
                 }`}
               >
                 <Search className="w-4 h-4" />
@@ -308,7 +290,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
           {/* Item Title */}
           <div className="space-y-1.5">
-            <label htmlFor="post_title" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+            <label htmlFor="post_title" className="text-[10px] font-bold text-muted uppercase tracking-wider block">
               {type === 'looking' ? 'What are you looking for? (ISO Request)' : 'What are you sharing?'}
             </label>
             <input
@@ -319,22 +301,22 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               value={title}
               maxLength={100}
               onChange={(e) => setTitle(e.target.value)}
-              className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs text-white font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+              className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-white font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
             />
           </div>
 
           {type === 'giveaway' ? (
             /* Category selection */
             <div className="space-y-1.5" id="post_category_section">
-              <label htmlFor="post_category" className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block font-bold">Sector Category</label>
+              <label htmlFor="post_category" className="text-[10px] font-black text-muted uppercase tracking-widest block font-bold">Sector Category</label>
               <select
                 id="post_category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
               >
                 {ITEM_CATEGORIES.map((c) => (
-                  <option key={c} value={c} className="bg-[#1A1A1B] text-white">{c.toUpperCase()}</option>
+                  <option key={c} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
                 ))}
               </select>
             </div>
@@ -343,30 +325,30 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Seeking Category */}
                 <div className="space-y-1.5">
-                  <label htmlFor="post_iso_category" className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block font-bold">Category of Need</label>
+                  <label htmlFor="post_iso_category" className="text-[10px] font-black text-muted uppercase tracking-widest block font-bold">Category of Need</label>
                   <select
                     id="post_iso_category"
                     value={isoCategory}
                     onChange={(e) => setIsoCategory(e.target.value)}
-                    className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
                   >
                     {ISO_CATEGORIES.map((c) => (
-                      <option key={c} value={c} className="bg-[#1A1A1B] text-white select-dark-opt">{c.toUpperCase()}</option>
+                      <option key={c} value={c} className="bg-surface text-app select-dark-opt">{c.toUpperCase()}</option>
                     ))}
                   </select>
                 </div>
 
                 {/* Transit preference */}
                 <div className="space-y-1.5">
-                  <label htmlFor="post_collection_method" className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block font-bold">Transit arrangement</label>
+                  <label htmlFor="post_collection_method" className="text-[10px] font-black text-muted uppercase tracking-widest block font-bold">Transit arrangement</label>
                   <select
                     id="post_collection_method"
                     value={collectionMethod}
                     onChange={(e) => setCollectionMethod(e.target.value)}
-                    className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
                   >
                     {ISO_DELIVERY_PREFS.map((m) => (
-                      <option key={m} value={m} className="bg-[#1A1A1B] text-white select-dark-opt">{m.toUpperCase()}</option>
+                      <option key={m} value={m} className="bg-surface text-app select-dark-opt">{m.toUpperCase()}</option>
                     ))}
                   </select>
                 </div>
@@ -375,8 +357,8 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
           )}
 
           {/* Unified Location Selector Sector */}
-          <div className="space-y-2 border-t border-[#343536] pt-4" id="post_location_coordinates_section">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block font-mono">Exchange Sector (Pick-up Location)</label>
+          <div className="space-y-2 border-t border-app pt-4" id="post_location_coordinates_section">
+            <label className="text-[10px] font-black text-muted uppercase tracking-widest block font-mono">Exchange Sector (Pick-up Location)</label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <select
@@ -386,10 +368,10 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     setNeighborhood(e.target.value);
                     setGpsStatus('');
                   }}
-                  className="block w-full px-3.5 py-3 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-white cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
                 >
                   {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                    <option key={`unified_neigh_${n}`} value={n} className="bg-[#1A1A1B] text-white select-dark-opt">{n.toUpperCase()}</option>
+                    <option key={`unified_neigh_${n}`} value={n} className="bg-surface text-app select-dark-opt">{n.toUpperCase()}</option>
                   ))}
                 </select>
               </div>
@@ -400,9 +382,9 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                 onClick={handleDetectGPS}
                 disabled={gpsLoading}
                 title="Detect current location via GPS"
-                className="px-3.5 bg-[#0F0F0F] hover:bg-[#252526] border border-[#343536] rounded-xl text-zinc-300 flex items-center justify-center cursor-pointer transition-all select-none disabled:opacity-50"
+                className="px-3.5 bg-inset hover:bg-surface-hover border border-app rounded-xl text-muted flex items-center justify-center cursor-pointer transition-all select-none disabled:opacity-50"
               >
-                <Navigation className={`w-4 h-4 text-zinc-300 ${gpsLoading ? 'animate-spin text-[#FF4500]' : ''}`} />
+                <Navigation className={`w-4 h-4 text-muted ${gpsLoading ? 'animate-spin text-[#FF4500]' : ''}`} />
               </button>
 
               {/* Map Button */}
@@ -413,7 +395,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                 className={`px-3.5 border rounded-xl flex items-center justify-center cursor-pointer transition-all select-none ${
                   showMiniMap
                     ? 'bg-[#FF4500] border-[#FF4500] text-white'
-                    : 'bg-[#0F0F0F] hover:bg-[#252526] border-[#343536] text-zinc-300'
+                    : 'bg-inset hover:bg-surface-hover border-app text-muted'
                 }`}
               >
                 <Map className="w-4 h-4 text-current" />
@@ -422,7 +404,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
             {/* GPS Feedback text */}
             {gpsStatus && (
-              <p className="text-[9.5px] font-black text-zinc-400 tracking-wider uppercase flex items-center gap-1.5 mt-1 font-mono">
+              <p className="text-[9.5px] font-black text-muted tracking-wider uppercase flex items-center gap-1.5 mt-1 font-mono">
                 <span className="w-1.5 h-1.5 bg-[#FF4500] rounded-full inline-block animate-ping"></span>
                 {gpsStatus}
               </p>
@@ -430,9 +412,9 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
             {/* Micro Sacramento Map Picker */}
             {showMiniMap &&
-              <div className="border border-[#343536] bg-[#0F0F0F] p-2 mt-2 select-none relative rounded-xl" id="sac_mini_map_picker_container">
-                <div className="flex items-center justify-between pb-1.5 border-b border-[#343536] mb-2">
-                  <span className="text-[8.5px] font-black text-zinc-500 uppercase tracking-widest font-mono">Sacramento District map Grid</span>
+              <div className="border border-app bg-inset p-2 mt-2 select-none relative rounded-xl" id="sac_mini_map_picker_container">
+                <div className="flex items-center justify-between pb-1.5 border-b border-app mb-2">
+                  <span className="text-[8.5px] font-black text-subtle uppercase tracking-widest font-mono">Sacramento District map Grid</span>
                   <span className="text-[9px] font-extrabold text-[#FF4500] uppercase font-mono">{neighborhood.toUpperCase()} SECTOR</span>
                 </div>
                 <div 
@@ -448,7 +430,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     setNeighborhood(nearest);
                     setGpsStatus(`SET CUSTOM LOCATION PIN POINT: ${clampedX.toFixed(1)}%, ${clampedY.toFixed(1)}% 📍`);
                   }}
-                  className="relative w-full aspect-video bg-[#0A0A0B] border border-[#343536] overflow-hidden cursor-crosshair rounded-lg" 
+                  className="relative w-full aspect-video bg-[#0A0A0B] border border-app overflow-hidden cursor-crosshair rounded-lg" 
                   id="mini_svg_canvas"
                 >
                   {/* Rivers */}
@@ -487,14 +469,14 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                             <MapPin className="w-3.5 h-3.5 text-[#FF4500]" />
                           </span>
                         </span>
-                        <span className="text-[7.5px] bg-black text-white px-1 py-0.5 font-bold uppercase tracking-widest whitespace-nowrap shadow-md mt-1 scale-90">
+                        <span className="text-[7.5px] bg-black text-app px-1 py-0.5 font-bold uppercase tracking-widest whitespace-nowrap shadow-md mt-1 scale-90">
                           {customCoords ? 'Precise Spot' : 'Sector Center'}
                         </span>
                       </div>
                     );
                   })()}
                 </div>
-                <div className="text-[8.5px] text-zinc-550 font-bold uppercase tracking-wider mt-1.5 block text-center select-none font-mono">
+                <div className="text-[8.5px] text-subtle font-bold uppercase tracking-wider mt-1.5 block text-center select-none font-mono">
                   {customCoords ? '🟢 Precise map coordinates locked successfully.' : 'Click any point on the map screen above to set a custom precise spot'}
                 </div>
               </div>
@@ -503,14 +485,14 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
           {/* Picture Upload Box */}
           <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-sans">Add a Photo (Optional)</span>
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider block font-sans">Add a Photo (Optional)</span>
             
             {imagePreview ? (
-              <div className="relative border border-[#343536] bg-[#0F0F0F] p-2 rounded-2xl text-center" id="item_image_preview_container">
+              <div className="relative border border-app bg-inset p-2 rounded-2xl text-center" id="item_image_preview_container">
                 <img
                   src={imagePreview}
                   alt="Item Preview"
-                  className="max-h-48 mx-auto object-cover border border-[#343536] rounded-xl"
+                  className="max-h-48 mx-auto object-cover border border-app rounded-xl"
                 />
                 <button
                   type="button"
@@ -519,7 +501,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     setImagePreview('');
                   }}
                   id="remove_preview_btn"
-                  className="absolute top-4 right-4 bg-black/80 hover:bg-black text-white p-2 rounded-full transition-colors cursor-pointer"
+                  className="absolute top-4 right-4 bg-black/80 hover:bg-black text-app p-2 rounded-full transition-colors cursor-pointer"
                   title="Remove image"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -533,7 +515,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                 onDrop={handleDrop}
                 onClick={() => document.getElementById('item_file_input')?.click()}
                 className={`border-2 border-dashed p-6 text-center cursor-pointer transition-all select-none rounded-2xl flex flex-col items-center justify-center space-y-2 ${
-                  dragActive ? 'border-[#FF4500] bg-[#FF4500]/10' : 'border-[#343536] hover:border-[#FF4500] bg-[#0F0F0F]'
+                  dragActive ? 'border-[#FF4500] bg-[#FF4500]/10' : 'border-app hover:border-[#FF4500] bg-inset'
                 }`}
                 id="image_drag_drop_zone"
               >
@@ -548,11 +530,11 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
                     }
                   }}
                 />
-                <Camera className="w-6 h-6 text-zinc-400 group-hover:text-[#FF4500] transition-colors" />
-                <div className="text-xs text-zinc-300 font-bold tracking-wide">
+                <Camera className="w-6 h-6 text-muted group-hover:text-[#FF4500] transition-colors" />
+                <div className="text-xs text-muted font-bold tracking-wide">
                   Drag & Drop or Click to Upload
                 </div>
-                <div className="text-[10px] text-zinc-500 font-sans tracking-tight">
+                <div className="text-[10px] text-subtle font-sans tracking-tight">
                   PNG, JPG, OR WEBP (UP TO 5MB)
                 </div>
               </div>
@@ -561,7 +543,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label htmlFor="post_description" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-sans">
+            <label htmlFor="post_description" className="text-[10px] font-bold text-muted uppercase tracking-wider block font-sans">
               {type === 'looking' ? 'Request Details & Context' : 'Details & Pickup Notes'}
             </label>
             <textarea
@@ -572,9 +554,9 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               placeholder={type === 'looking' ? "Describe what you are looking for, why you need it, and your transit arrangement flexibility." : "Describe the item, its condition, and how neighbors can pick it up (like contactless porch pickup)."}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="block w-full p-3.5 bg-[#0F0F0F] border border-[#343536] rounded-xl text-xs text-white placeholder-zinc-500 font-semibold resize-none focus:outline-hidden"
+              className="block w-full p-3.5 bg-inset border border-app rounded-xl text-xs text-app placeholder:text-subtle font-semibold resize-none focus:outline-hidden"
             />
-            <div className="text-right text-[10px] text-zinc-500 font-mono font-medium">
+            <div className="text-right text-[10px] text-subtle font-mono font-medium">
               {description.length}/1000 chars
             </div>
           </div>
@@ -582,9 +564,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
           {/* Guidelines info notice */}
           <div className="p-3.5 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-xl flex items-start space-x-2.5 text-xs text-white font-semibold" id="buy_nothing_alert">
             <Info className="w-4 h-4 text-[#FF4500] shrink-0 mt-0.5" />
-            <span>
-              <strong>Everything is 100% free:</strong> Absolutely no selling, trades, or money allowed. Everything shared here is a pure gift!
-            </span>
+            <span>{RULES.postReminder}</span>
           </div>
 
           {/* Form Actions */}
@@ -593,7 +573,7 @@ export default function PostItemModal({ userProfile, onClose, onSuccess }: PostI
               type="button"
               id="cancel_post_btn"
               onClick={onClose}
-              className="flex-1 py-3 bg-[#0F0F0F] hover:bg-[#252526] border border-[#343536] rounded-xl text-xs font-bold uppercase tracking-wider text-zinc-300 transition-colors cursor-pointer"
+              className="flex-1 py-3 bg-inset hover:bg-surface-hover border border-app rounded-xl text-xs font-bold uppercase tracking-wider text-muted transition-colors cursor-pointer"
             >
               Cancel
             </button>
