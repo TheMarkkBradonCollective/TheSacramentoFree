@@ -29,10 +29,14 @@ export default function FullScreenPanel({ title, subtitle, onClose, children, fi
       </header>
       <div
         className={
-          fillBody ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : 'flex-1 min-h-0 overflow-y-auto'
+          fillBody
+            ? 'flex-1 min-h-0 flex flex-col overflow-hidden'
+            : 'flex-1 min-h-0 overflow-y-auto'
         }
       >
-        {children}
+        <div className={fillBody ? 'flex-1 min-h-0 flex flex-col overflow-hidden sbn-panel-content !p-0 max-w-none' : 'sbn-panel-content'}>
+          {children}
+        </div>
       </div>
     </div>
   );

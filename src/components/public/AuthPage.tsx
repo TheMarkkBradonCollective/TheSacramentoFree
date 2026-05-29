@@ -87,6 +87,7 @@ export default function AuthPage({
     <PublicPageShell
       title="Sign in or join"
       subtitle={`${SITE.freeRule} Create an account to post, message neighbors, and browse the gift feed.`}
+      showBack={false}
     >
       <div className="bg-surface border border-app rounded-2xl overflow-hidden max-w-md">
         <div className="flex border-b border-app">

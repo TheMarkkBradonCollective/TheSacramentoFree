@@ -277,7 +277,7 @@ export default function NeighborProfileView({
         )}
       </header>
 
-      <div className="max-w-md mx-auto p-6 pb-12">
+      <div className="sbn-page-content pb-12">
         {loading && !profile && !blockStatus.theyBlockedMe ? (
           <p className="text-center text-sm text-muted py-16">Loading profile…</p>
         ) : blockStatus.theyBlockedMe || (blockStatus.isHidden && !blockStatus.iBlockedThem) ? (

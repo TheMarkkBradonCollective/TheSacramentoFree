@@ -61,7 +61,8 @@ export default function TabletView({
 }: TabletViewProps) {
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen mesh-bg text-app">
-      <header id="tablet_navbar" className="sticky top-0 z-40 sbn-glass-nav px-5 py-3 flex items-center justify-between gap-4">
+      <header id="tablet_navbar" className="sticky top-0 z-40 sbn-glass-nav">
+        <div className="max-w-5xl mx-auto px-5 py-3 flex items-center justify-between gap-4">
         <BrandLogo subtitle={userProfile.neighborhood} showTitle />
 
         <nav className="flex gap-1" id="tablet_nav">
@@ -93,6 +94,7 @@ export default function TabletView({
           >
             <LogOut className="w-4 h-4" />
           </button>
+        </div>
         </div>
       </header>
 

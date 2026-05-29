@@ -193,6 +193,7 @@ export default function SacramentoMapView({
   const followUserRef = useRef(true);
   const selectedPostRef = useRef<ItemPost | null>(null);
   const hasInitialMapCenterRef = useRef(false);
+  const [mapReady, setMapReady] = useState(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [followUser, setFollowUser] = useState(true);
@@ -463,6 +464,7 @@ export default function SacramentoMapView({
     routeLayerRef.current = routeLayer;
 
     mapRef.current = map;
+    setMapReady(true);
 
     const onUserPanMap = () => {
       setFollowUser(false);
@@ -492,6 +494,7 @@ export default function SacramentoMapView({
       map.off('dragstart', onUserPanMap);
       stopLiveLocationWatch();
       hasInitialMapCenterRef.current = false;
+      setMapReady(false);
       map.remove();
       mapRef.current = null;
       markersGroupRef.current = null;
@@ -579,7 +582,7 @@ export default function SacramentoMapView({
   useEffect(() => {
     const map = mapRef.current;
     const markersGroup = markersGroupRef.current;
-    if (!map || !markersGroup) return;
+    if (!mapReady || !map || !markersGroup) return;
 
     markersGroup.clearLayers();
 
@@ -613,7 +616,7 @@ export default function SacramentoMapView({
         });
     });
 
-  }, [blipPositions, selectedPost, activeItems]);
+  }, [blipPositions, selectedPost, activeItems, mapReady, mapVisible]);
 
   // Route layer — separate from blips so marker refreshes don't wipe the line.
   useEffect(() => {

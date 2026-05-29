@@ -77,6 +77,7 @@ export default function App() {
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
+  const loadItemsRef = useRef<(isBackground?: boolean, attempt?: number) => Promise<void>>(async () => {});
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     if (typeof window === 'undefined') return 'map';
     return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
@@ -362,6 +363,11 @@ export default function App() {
             void syncProfileFromDb(session.user);
           }
         }, 0);
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          setTimeout(() => {
+            if (!cancelled) void loadItemsRef.current(true);
+          }, 100);
+        }
       } else if (event === 'SIGNED_OUT') {
         profileSyncRef.current = null;
         clearSessionCache();
@@ -378,7 +384,7 @@ export default function App() {
     };
   }, [applySession, syncProfileFromDb]);
 
-  const loadItems = useCallback(async (isBackground = false) => {
+  const loadItems = useCallback(async (isBackground = false, attempt = 0) => {
     if (!userProfile || !sessionUser) return;
     if (!isBackground) {
       setIsItemsLoading(true);
@@ -394,10 +400,20 @@ export default function App() {
       });
       if (loadedItems.length > 0) {
         writeCachedItems(loadedItems);
+      } else if (attempt < 2) {
+        // Auth token may not be attached yet on cold refresh — retry shortly.
+        window.setTimeout(() => {
+          void loadItemsRef.current(true, attempt + 1);
+        }, 1200 * (attempt + 1));
       }
     } catch (err) {
       console.warn('Supabase items fetch failed:', err);
       setItems((current) => (current.length === 0 ? DEFAULT_OFFLINE_ITEMS : current));
+      if (attempt < 2) {
+        window.setTimeout(() => {
+          void loadItemsRef.current(true, attempt + 1);
+        }, 1200 * (attempt + 1));
+      }
     } finally {
       if (!isBackground) {
         setIsItemsLoading(false);
@@ -405,7 +421,11 @@ export default function App() {
     }
   }, [userProfile?.uid, sessionUser]);
 
-  const sessionReady = !!sessionUser && !!userProfile && !authBootstrapping;
+  useEffect(() => {
+    loadItemsRef.current = loadItems;
+  }, [loadItems]);
+
+  const sessionReady = !!sessionUser && !!userProfile;
 
   // 2. Load listings once auth is ready, then keep in sync via Supabase Realtime
   useEffect(() => {
@@ -563,7 +583,10 @@ export default function App() {
 
   const refreshDetailItem = useCallback(async () => {
     const loadedItems = await getSupabaseItems();
-    setItems(loadedItems);
+    setItems((current) => {
+      if (loadedItems.length === 0 && current.length > 0) return current;
+      return loadedItems;
+    });
     setDetailItem((current) => {
       if (!current) return null;
       return loadedItems.find((i) => i.id === current.id) ?? null;

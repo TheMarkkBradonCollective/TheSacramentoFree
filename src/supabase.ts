@@ -658,7 +658,11 @@ export function normalizeSupabaseItem(row: ItemPost): ItemPost {
 }
 
 function normalizeItemFromRow(row: ItemPost): ItemPost {
-  return normalizeSupabaseItem(row);
+  return normalizeSupabaseItem({
+    ...row,
+    status: row.status || 'active',
+    type: row.type || 'giveaway',
+  });
 }
 
 function isMissingImageUrlColumnError(error: { code?: string; message?: string } | null): boolean {

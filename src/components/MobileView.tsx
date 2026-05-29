@@ -137,22 +137,24 @@ export default function MobileView({
           id="mobile_directory_drawer"
           aria-hidden={activeTab !== 'feed'}
         >
-          <div className="sbn-page-header">
-            <h2>{IN_APP.feedTitle}</h2>
-            <p>
-              {IN_APP.feedDescription} · {items.length} listings
-            </p>
+          <div className="max-w-2xl mx-auto">
+            <div className="sbn-page-header">
+              <h2>{IN_APP.feedTitle}</h2>
+              <p>
+                {IN_APP.feedDescription} · {items.length} listings
+              </p>
+            </div>
+            <CommunityStatsBar items={items} variant="compact" />
+            <ItemGrid
+              items={items}
+              userProfile={userProfile}
+              engagement={engagement}
+              onInitiateChat={onInitiateChat}
+              onViewItem={onViewItem}
+              onViewProfile={onViewProfile}
+              onRefresh={onRefresh}
+            />
           </div>
-          <CommunityStatsBar items={items} variant="compact" />
-          <ItemGrid
-            items={items}
-            userProfile={userProfile}
-            engagement={engagement}
-            onInitiateChat={onInitiateChat}
-            onViewItem={onViewItem}
-            onViewProfile={onViewProfile}
-            onRefresh={onRefresh}
-          />
           <button
             type="button"
             onClick={onOpenNewPost}
@@ -187,15 +189,17 @@ export default function MobileView({
           id="mobile_profile_dock"
           aria-hidden={activeTab !== 'profile'}
         >
-          <div className="sbn-page-header px-4 pt-4 pb-2">
-            <h2>{IN_APP.profileTitle}</h2>
+          <div className="max-w-2xl mx-auto">
+            <div className="sbn-page-header px-4 pt-4 pb-2">
+              <h2>{IN_APP.profileTitle}</h2>
+            </div>
+            <UserProfileView
+              userProfile={userProfile}
+              onUpdateProfile={onUpdateProfile}
+              onProfilePhotoSaved={onRefresh}
+              fullBleed
+            />
           </div>
-          <UserProfileView
-            userProfile={userProfile}
-            onUpdateProfile={onUpdateProfile}
-            onProfilePhotoSaved={onRefresh}
-            fullBleed
-          />
         </div>
 
         <div
@@ -203,15 +207,17 @@ export default function MobileView({
           id="mobile_menu_dock"
           aria-hidden={activeTab !== 'menu'}
         >
-          <div className="sbn-page-header px-4 pt-4 pb-2">
-            <h2>{IN_APP.menuTitle}</h2>
-            <p className="text-sm text-muted mt-1">{IN_APP.menuDescription}</p>
+          <div className="max-w-2xl mx-auto">
+            <div className="sbn-page-header px-4 pt-4 pb-2">
+              <h2>{IN_APP.menuTitle}</h2>
+              <p className="text-sm text-muted mt-1">{IN_APP.menuDescription}</p>
+            </div>
+            <CommunityMenuView
+              userProfile={userProfile}
+              onViewProfile={onViewProfile}
+              fullBleed
+            />
           </div>
-          <CommunityMenuView
-            userProfile={userProfile}
-            onViewProfile={onViewProfile}
-            fullBleed
-          />
         </div>
       </main>
 

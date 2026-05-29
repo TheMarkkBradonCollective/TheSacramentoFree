@@ -304,6 +304,40 @@ option {
   max-width: 36rem;
 }
 
+/* Shared content column — aligns page body with header chrome */
+.sbn-page-content {
+  width: 100%;
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sbn-panel-content {
+  width: 100%;
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem 1rem 2rem;
+}
+
+.sbn-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sbn-back-btn:hover {
+  color: var(--color-text);
+  background: var(--color-inset);
+}
+
 .sbn-badge {
   display: inline-flex;
   align-items: center;

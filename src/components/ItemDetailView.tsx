@@ -139,7 +139,7 @@ export default function ItemDetailView({
         ) : null}
       </header>
 
-      <div className="max-w-2xl mx-auto pb-36">
+      <div className="sbn-page-content pb-36">
         <ListingPhotoGallery urls={photos} title={item.title} />
 
         <div className="p-5 sm:p-6 space-y-5">

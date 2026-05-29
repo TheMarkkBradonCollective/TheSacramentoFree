@@ -17,7 +17,8 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
 
 export default function HomePage({ onNavigate }: HomePageProps) {
   return (
-    <div className="max-w-2xl mx-auto px-4 py-12 md:py-16 sbn-hero-glow">
+    <div className="max-w-5xl mx-auto px-4 py-12 md:py-16">
+      <div className="sbn-page-content sbn-hero-glow">
       <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl mb-6" />
 
       <span className="sbn-badge sbn-badge-give">
@@ -88,6 +89,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         <p className="font-display font-bold text-app">Why community matters</p>
         <p className="mt-1 text-sm text-muted">Trust, mutual aid, and less waste in Sacramento.</p>
       </button>
+      </div>
     </div>
   );
 }
