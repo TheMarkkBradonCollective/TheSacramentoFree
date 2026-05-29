@@ -413,3 +413,7 @@ button {
 .sbn-fab:active {
   transform: scale(0.95);
 }
+
+.safe-area-pb {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}

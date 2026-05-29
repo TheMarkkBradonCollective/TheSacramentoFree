@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, SACRAMENTO_NEIGHBORHOODS } from '../types';
-import { upsertSupabaseProfile } from '../supabase';
-import { MapPin, User, CheckCircle, Save, AlertCircle, Download, Smartphone, Share2 } from 'lucide-react';
+import { getNeighborStats, NeighborStats, upsertSupabaseProfile } from '../supabase';
+import {
+  MapPin,
+  User,
+  CheckCircle,
+  Save,
+  AlertCircle,
+  Download,
+  Smartphone,
+  Share2,
+  Gift,
+  Package,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import CommunityFooter from './CommunityFooter';
 import { IN_APP } from '../siteContent';
 
@@ -15,8 +28,13 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [bio, setBio] = useState(userProfile.bio || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [stats, setStats] = useState<NeighborStats | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    getNeighborStats(userProfile.uid).then(setStats);
+  }, [userProfile.uid]);
 
   // PWA Prompt status
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -153,6 +171,29 @@ export default function UserProfileView({ userProfile, onUpdateProfile }: UserPr
           <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-xs font-bold text-accent mt-3">
             <MapPin className="w-3.5 h-3.5 text-accent" />
             <span>{userProfile.neighborhood} Sector</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mt-4 w-full">
+            <div className="bg-inset border border-app rounded-xl p-3 text-center">
+              <Gift className="w-5 h-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-lg font-bold text-app">{stats?.itemsGiven ?? '—'}</p>
+              <p className="text-[10px] text-muted">Items given</p>
+            </div>
+            <div className="bg-inset border border-app rounded-xl p-3 text-center">
+              <Package className="w-5 h-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-lg font-bold text-app">{stats?.itemsClaimed ?? '—'}</p>
+              <p className="text-[10px] text-muted">Items claimed</p>
+            </div>
+            <div className="bg-inset border border-app rounded-xl p-3 text-center">
+              <ChevronUp className="w-5 h-5 text-accent mx-auto mb-1" />
+              <p className="font-display text-lg font-bold text-app">{stats?.upvotesReceived ?? '—'}</p>
+              <p className="text-[10px] text-muted">Upvotes received</p>
+            </div>
+            <div className="bg-inset border border-app rounded-xl p-3 text-center">
+              <ChevronDown className="w-5 h-5 text-muted mx-auto mb-1" />
+              <p className="font-display text-lg font-bold text-app">{stats?.downvotesReceived ?? '—'}</p>
+              <p className="text-[10px] text-muted">Downvotes received</p>
+            </div>
           </div>
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">

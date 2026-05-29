@@ -1,161 +1,49 @@
-import { useEffect, useState } from 'react';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile, ItemComment } from '../types';
+import { useState } from 'react';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import { Search as SearchIcon, MapPin, Tag, AlertCircle } from 'lucide-react';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
-import {
-  updateSupabaseItemStatus,
-  deleteSupabaseItem,
-  getSupabaseItemVotes,
-  setSupabaseItemVote,
-  getSupabaseItemComments,
-  createSupabaseItemComment
-} from '../supabase';
+import { updateSupabaseItemStatus, deleteSupabaseItem } from '../supabase';
+import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { SITE } from '../siteContent';
+
+export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
 interface ItemGridProps {
   items: ItemPost[];
   userProfile: UserProfile;
+  engagement: ItemsEngagementApi;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onViewItem: (item: ItemPost) => void;
+  onViewProfile: (userId: string) => void;
   onRefresh: () => void;
 }
 
-interface PostVoteState {
-  userVote: 'up' | 'down' | null;
-  upvotes: number;
-  downvotes: number;
-}
-
-export default function ItemGrid({ items, userProfile, onInitiateChat, onViewItem, onRefresh }: ItemGridProps) {
+export default function ItemGrid({
+  items,
+  userProfile,
+  engagement,
+  onInitiateChat,
+  onViewItem,
+  onViewProfile,
+  onRefresh,
+}: ItemGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | 'giveaway' | 'looking'>('all');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
-  const [itemVotes, setItemVotes] = useState<Record<string, PostVoteState>>({});
-  const [itemComments, setItemComments] = useState<Record<string, ItemComment[]>>({});
-
-  const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
 
-  const getVotesForPost = (postId: string): PostVoteState => itemVotes[postId] || { userVote: null, upvotes: 0, downvotes: 0 };
-  const getCommentsForPost = (postId: string): ItemComment[] => itemComments[postId] || [];
-
-  useEffect(() => {
-    let mounted = true;
-    const loadEngagement = async () => {
-      const itemIds = items.map((item) => item.id);
-      if (itemIds.length === 0) {
-        if (!mounted) return;
-        setItemVotes({});
-        setItemComments({});
-        return;
-      }
-
-      const [votes, comments] = await Promise.all([
-        getSupabaseItemVotes(itemIds),
-        getSupabaseItemComments(itemIds)
-      ]);
-      if (!mounted) return;
-
-      const nextVotes: Record<string, PostVoteState> = {};
-      for (const itemId of itemIds) {
-        const votesForItem = votes.filter((vote) => vote.itemId === itemId);
-        nextVotes[itemId] = {
-          userVote: (votesForItem.find((vote) => vote.userId === userProfile.uid)?.voteType || null) as 'up' | 'down' | null,
-          upvotes: votesForItem.filter((vote) => vote.voteType === 'up').length,
-          downvotes: votesForItem.filter((vote) => vote.voteType === 'down').length
-        };
-      }
-      setItemVotes(nextVotes);
-
-      const nextComments: Record<string, ItemComment[]> = {};
-      for (const itemId of itemIds) {
-        nextComments[itemId] = comments.filter((comment) => comment.itemId === itemId);
-      }
-      setItemComments(nextComments);
-    };
-
-    loadEngagement();
-    return () => {
-      mounted = false;
-    };
-  }, [items, userProfile.uid]);
-
-  const handleVote = (itemId: string, direction: 'up' | 'down') => {
-    const current = getVotesForPost(itemId);
-    
-    let newUserVote: 'up' | 'down' | null = null;
-    let newUpvotes = current.upvotes;
-    let newDownvotes = current.downvotes;
-
-    if (current.userVote === direction) {
-      newUserVote = null;
-      if (direction === 'up') newUpvotes = Math.max(0, newUpvotes - 1);
-      else newDownvotes = Math.max(0, newDownvotes - 1);
-    } else {
-      if (current.userVote === 'up') newUpvotes = Math.max(0, newUpvotes - 1);
-      if (current.userVote === 'down') newDownvotes = Math.max(0, newDownvotes - 1);
-
-      newUserVote = direction;
-      if (direction === 'up') newUpvotes += 1;
-      else newDownvotes += 1;
-    }
-
-    setItemVotes((prev) => ({
-      ...prev,
-      [itemId]: {
-        userVote: newUserVote,
-        upvotes: newUpvotes,
-        downvotes: newDownvotes
-      }
-    }));
-
-    setSupabaseItemVote(itemId, userProfile.uid, newUserVote).catch((err) => {
-      console.warn('Failed to persist vote:', err);
-      setItemVotes((prev) => ({
-        ...prev,
-        [itemId]: current
-      }));
-    });
-  };
-
-  const handleAddComment = (itemId: string, text: string) => {
-    const current = getCommentsForPost(itemId);
-    
-    const newComment: ItemComment = {
-      id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      itemId,
-      userId: userProfile.uid,
-      userName: userProfile.displayName,
-      userPhoto: userProfile.photoURL,
-      text: text,
-      createdAt: new Date().toISOString(),
-      userNeighborhood: userProfile.neighborhood || 'Midtown'
-    };
-
-    setItemComments((prev) => ({
-      ...prev,
-      [itemId]: [...current, newComment]
-    }));
-
-    createSupabaseItemComment(newComment).catch((err) => {
-      console.warn('Failed to persist comment:', err);
-      setItemComments((prev) => ({
-        ...prev,
-        [itemId]: current
-      }));
-    });
-  };
-
-  const toggleComments = (postId: string) => {
-    setExpandedPostComments(prev => ({
-      ...prev,
-      [postId]: !prev[postId]
-    }));
-  };
+  const {
+    getVotesForPost,
+    getCommentsForPost,
+    expandedPostComments,
+    toggleComments,
+    handleVote,
+    handleAddComment,
+  } = engagement;
 
   // Status transitions
   const handleUpdateStatus = async (itemId: string, newStatus: 'completed' | 'withdrawn' | 'active') => {
@@ -317,7 +205,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onViewIte
               comments={getCommentsForPost(item.id)}
               commentsExpanded={!!expandedPostComments[item.id]}
               updating={updatingItemId === item.id}
-              onVote={(dir) => handleVote(item.id, dir)}
+              onVote={(dir) => handleVote(item.id, item.userId, dir)}
               onToggleComments={() => toggleComments(item.id)}
               onAddComment={(text) => handleAddComment(item.id, text)}
               onUpdateStatus={(status) => handleUpdateStatus(item.id, status)}
@@ -327,6 +215,7 @@ export default function ItemGrid({ items, userProfile, onInitiateChat, onViewIte
               onMessage={() =>
                 onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)
               }
+              onViewProfile={onViewProfile}
             />
           ))}
         </div>

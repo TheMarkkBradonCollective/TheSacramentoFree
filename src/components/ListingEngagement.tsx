@@ -1,0 +1,175 @@
+import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { ItemComment } from '../types';
+import { PostVoteState } from '../hooks/useItemsEngagement';
+
+interface ListingEngagementProps {
+  posterUserId: string;
+  currentUserId: string;
+  voteState: PostVoteState;
+  comments: ItemComment[];
+  commentsExpanded: boolean;
+  onVote: (direction: 'up' | 'down') => void;
+  onToggleComments?: () => void;
+  onAddComment: (text: string) => void;
+  onViewProfile?: (userId: string) => void;
+  /** card = compact with toggle; detail = full section always open */
+  variant?: 'card' | 'detail';
+}
+
+export default function ListingEngagement({
+  posterUserId,
+  currentUserId,
+  voteState,
+  comments,
+  commentsExpanded,
+  onVote,
+  onToggleComments,
+  onAddComment,
+  onViewProfile,
+  variant = 'card',
+}: ListingEngagementProps) {
+  const isOwner = posterUserId === currentUserId;
+  const { userVote, upvotes, downvotes } = voteState;
+  const netScore = upvotes - downvotes;
+  const showComments = variant === 'detail' || commentsExpanded;
+
+  const voteBtnClass = (active: boolean, disabled: boolean) =>
+    `flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+      disabled
+        ? 'opacity-50 cursor-not-allowed border-app text-muted'
+        : active
+          ? 'bg-accent-soft border-accent text-accent'
+          : 'border-app text-muted hover:border-accent'
+    }`;
+
+  return (
+    <section
+      className={variant === 'detail' ? 'sbn-card p-4 space-y-3' : ''}
+      id={variant === 'detail' ? 'listing_engagement_detail' : undefined}
+    >
+      {variant === 'detail' && (
+        <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">Community</h3>
+      )}
+
+      <div className={`flex items-center gap-2 ${variant === 'card' ? 'mt-4' : ''}`}>
+        <button
+          type="button"
+          disabled={isOwner}
+          onClick={() => onVote('up')}
+          className={voteBtnClass(userVote === 'up', isOwner)}
+          title={isOwner ? "You can't vote on your own listing" : 'Interested'}
+        >
+          <ChevronUp className="w-4 h-4" />
+          {upvotes}
+        </button>
+        <span className="text-xs font-bold text-app min-w-[1.5rem] text-center">
+          {netScore > 0 ? `+${netScore}` : netScore}
+        </span>
+        <button
+          type="button"
+          disabled={isOwner}
+          onClick={() => onVote('down')}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+            isOwner
+              ? 'opacity-50 cursor-not-allowed border-app text-muted'
+              : userVote === 'down'
+                ? 'bg-inset border-app text-app'
+                : 'border-app text-muted hover:border-app'
+          }`}
+          title={isOwner ? "You can't vote on your own listing" : 'Not for me'}
+        >
+          <ChevronDown className="w-4 h-4" />
+          {downvotes}
+        </button>
+        {variant === 'card' && onToggleComments && (
+          <button
+            type="button"
+            onClick={onToggleComments}
+            className={`ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              commentsExpanded
+                ? 'bg-accent text-on-accent border-accent'
+                : 'border-app text-muted hover:border-accent'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            {comments.length}
+          </button>
+        )}
+        {variant === 'detail' && (
+          <span className="ml-auto text-xs text-muted flex items-center gap-1">
+            <MessageSquare className="w-3.5 h-3.5" />
+            {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+          </span>
+        )}
+      </div>
+
+      {isOwner && variant === 'detail' && (
+        <p className="text-[11px] text-muted">Vote counts are from neighbors — you can&apos;t vote on your own post.</p>
+      )}
+
+      {showComments && (
+        <div
+          className={
+            variant === 'detail'
+              ? 'space-y-3 pt-1 border-t border-app'
+              : 'mt-4 pt-4 border-t border-app space-y-3'
+          }
+        >
+          {comments.length === 0 ? (
+            <p className="text-xs text-muted italic text-center py-2">No comments yet — say hello!</p>
+          ) : (
+            <ul className={`space-y-2 ${variant === 'detail' ? 'max-h-64' : 'max-h-48'} overflow-y-auto`}>
+              {comments.map((comment) => (
+                <li key={comment.id} className="bg-inset rounded-xl p-3 border border-app">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onViewProfile?.(comment.userId)}
+                      className="flex items-center gap-2 min-w-0 text-left hover:opacity-90 cursor-pointer"
+                      disabled={!onViewProfile}
+                    >
+                      <img
+                        src={
+                          comment.userPhoto ||
+                          `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(comment.userName)}`
+                        }
+                        alt=""
+                        className="w-6 h-6 rounded-full border border-app"
+                        referrerPolicy="no-referrer"
+                      />
+                      <span className="text-xs font-bold text-app">{comment.userName}</span>
+                    </button>
+                    <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
+                  </div>
+                  <p className="text-sm text-muted mt-1.5 leading-relaxed">{comment.text}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const input = e.currentTarget.elements.namedItem('commentText') as HTMLInputElement;
+              if (input?.value.trim()) {
+                onAddComment(input.value.trim());
+                input.value = '';
+              }
+            }}
+            className="flex gap-2"
+          >
+            <input
+              type="text"
+              name="commentText"
+              placeholder="Add a comment…"
+              className="sbn-input flex-1 text-sm py-2"
+              required
+            />
+            <button type="submit" className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+              Post
+            </button>
+          </form>
+        </div>
+      )}
+    </section>
+  );
+}

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment } from './types';
+import { normalizeItemMedia } from './lib/listingContent';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -292,12 +293,7 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
 }
 
 function normalizeItemFromRow(row: ItemPost): ItemPost {
-  if (row.imageUrl) return row;
-  const match = row.description?.match(/\[Photo\]:\s*(https?:\/\/\S+)/);
-  if (match) {
-    return { ...row, imageUrl: match[1] };
-  }
-  return row;
+  return normalizeItemMedia(row);
 }
 
 function isMissingImageUrlColumnError(error: { code?: string; message?: string } | null): boolean {
@@ -617,6 +613,139 @@ export async function getSupabaseMessages(chatId: string): Promise<Message[]> {
     handleSupabaseError(err, 'messages');
     return [];
   }
+}
+
+export interface NeighborStats {
+  itemsGiven: number;
+  itemsClaimed: number;
+  /** Upvotes neighbors cast on this user's listings */
+  upvotesReceived: number;
+  /** Downvotes neighbors cast on this user's listings */
+  downvotesReceived: number;
+}
+
+export async function getNeighborStats(uid: string): Promise<NeighborStats> {
+  const empty = {
+    itemsGiven: 0,
+    itemsClaimed: 0,
+    upvotesReceived: 0,
+    downvotesReceived: 0,
+  };
+  try {
+    const [givenRes, claimedRes, itemsRes] = await Promise.all([
+      supabase
+        .from('items')
+        .select('id', { count: 'exact', head: true })
+        .eq('userId', uid)
+        .eq('type', 'giveaway')
+        .eq('status', 'completed'),
+      supabase
+        .from('item_claims')
+        .select('id', { count: 'exact', head: true })
+        .eq('claimerUserId', uid),
+      supabase.from('items').select('id').eq('userId', uid),
+    ]);
+
+    let upvotesReceived = 0;
+    let downvotesReceived = 0;
+    const itemIds = (itemsRes.data ?? []).map((row) => row.id as string);
+
+    if (itemIds.length > 0) {
+      const { data: votes } = await supabase
+        .from('item_votes')
+        .select('voteType')
+        .in('itemId', itemIds);
+
+      for (const vote of votes ?? []) {
+        if (vote.voteType === 'up') upvotesReceived += 1;
+        else if (vote.voteType === 'down') downvotesReceived += 1;
+      }
+    }
+
+    return {
+      itemsGiven: givenRes.count ?? 0,
+      itemsClaimed: claimedRes.error ? 0 : (claimedRes.count ?? 0),
+      upvotesReceived,
+      downvotesReceived,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+export async function recordItemClaimInChat(params: {
+  itemId: string;
+  giverUserId: string;
+  claimerUserId: string;
+  chatId: string;
+  claimMessage: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const claimId = `claim_${params.itemId}_${Date.now()}`;
+
+    const { error: claimError } = await supabase.from('item_claims').insert({
+      id: claimId,
+      itemId: params.itemId,
+      giverUserId: params.giverUserId,
+      claimerUserId: params.claimerUserId,
+      chatId: params.chatId,
+      createdAt: new Date().toISOString(),
+    });
+
+    if (claimError) {
+      const msg = String(claimError.message || '').toLowerCase();
+      if (msg.includes('duplicate') || msg.includes('unique')) {
+        return { ok: false, errorMessage: 'This item was already marked as claimed.' };
+      }
+      if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
+        return {
+          ok: false,
+          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see supabase-setup.sql).',
+        };
+      }
+      return { ok: false, errorMessage: claimError.message || 'Could not record claim.' };
+    }
+
+    const statusOk = await updateSupabaseItemStatus(params.itemId, 'completed');
+    if (!statusOk) {
+      return { ok: false, errorMessage: 'Claim saved but listing status could not be updated.' };
+    }
+
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const msgOk = await createSupabaseMessage(
+      params.chatId,
+      params.claimMessage,
+      params.giverUserId,
+      messageId,
+    );
+
+    if (!msgOk) {
+      return { ok: false, errorMessage: 'Item marked claimed but chat message failed to send.' };
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Could not mark as claimed.';
+    return { ok: false, errorMessage: message };
+  }
+}
+
+export async function markItemFulfilledFromChat(params: {
+  itemId: string;
+  ownerUserId: string;
+  chatId: string;
+  message: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const statusOk = await updateSupabaseItemStatus(params.itemId, 'completed');
+  if (!statusOk) {
+    return { ok: false, errorMessage: 'Could not update listing status.' };
+  }
+  const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const msgOk = await createSupabaseMessage(params.chatId, params.message, params.ownerUserId, messageId);
+  if (!msgOk) {
+    return { ok: false, errorMessage: 'Listing updated but chat message failed.' };
+  }
+  return { ok: true };
 }
 
 export async function createSupabaseMessage(chatId: string, text: string, senderId: string, messageId: string): Promise<boolean> {

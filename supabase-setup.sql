@@ -127,6 +127,25 @@ CREATE POLICY "Allow write item comments" ON public.item_comments FOR ALL USING 
 
 CREATE INDEX IF NOT EXISTS item_comments_item_id_idx ON public.item_comments ("itemId");
 
+-- 7. Private claim records (claimer identity not on public listings)
+CREATE TABLE IF NOT EXISTS public.item_claims (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL UNIQUE,
+  "giverUserId" TEXT NOT NULL,
+  "claimerUserId" TEXT NOT NULL,
+  "chatId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.item_claims ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read item claims" ON public.item_claims;
+CREATE POLICY "Allow read item claims" ON public.item_claims FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write item claims" ON public.item_claims;
+CREATE POLICY "Allow write item claims" ON public.item_claims FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS item_claims_claimer_idx ON public.item_claims ("claimerUserId");
+CREATE INDEX IF NOT EXISTS item_claims_giver_idx ON public.item_claims ("giverUserId");
+
 -- =========================================================
 -- STORAGE: public bucket for listing photos
 -- =========================================================

@@ -3,3 +3,5 @@
 --
 -- QUICK FIX if posts fail when a photo is attached (image uploads but listing won't save):
 -- ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+--
+-- CLAIMS (inbox "This neighbor claimed it" + profile counters): run section 7 in supabase-setup.sql

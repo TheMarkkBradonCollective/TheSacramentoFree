@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates } from '../types';
 import { canViewerSeeExactLocation, stripListingMetadata } from '../lib/itemLocation';
-import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus } from 'lucide-react';
+import { extractListingImageUrls } from '../lib/listingContent';
+import { MapPin, MessageSquare, Info, X, Tag, Heart, Calendar, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 
@@ -14,6 +15,7 @@ interface SacramentoMapViewProps {
   searchTerm?: string;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onViewItem?: (item: ItemPost) => void;
+  onEditItem?: (item: ItemPost) => void;
   /** @deprecated Use onViewItem */
   onItemDetail?: (item: ItemPost) => void;
   isFullScreenMobile?: boolean;
@@ -133,6 +135,7 @@ export default function SacramentoMapView({
   searchTerm,
   onInitiateChat,
   onViewItem,
+  onEditItem,
   onItemDetail,
   isFullScreenMobile = false
 }: SacramentoMapViewProps) {
@@ -157,9 +160,14 @@ export default function SacramentoMapView({
   const mapRef = useRef<L.Map | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const geoWatchIdRef = useRef<number | null>(null);
+  const followUserRef = useRef(true);
+  const selectedPostRef = useRef<ItemPost | null>(null);
+  const hasInitialMapCenterRef = useRef(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
+  const [followUser, setFollowUser] = useState(true);
+  const [isLocating, setIsLocating] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const routeFetchIdRef = useRef(0);
@@ -169,29 +177,124 @@ export default function SacramentoMapView({
   const defaultCoord = NEIGHBORHOOD_COORDS[userNeighborhood] || { x: 53, y: 40 };
   const fallbackLatLng = useMemo(() => convertPercentToLatLng(defaultCoord.x, defaultCoord.y), [defaultCoord]);
 
-  // Geolocation trigger
-  const handleLocateUser = () => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation sensor access is unsupported by this device.');
+  useEffect(() => {
+    selectedPostRef.current = selectedPost;
+  }, [selectedPost]);
+
+  useEffect(() => {
+    followUserRef.current = followUser;
+  }, [followUser]);
+
+  const createUserLocationIcon = () =>
+    L.divIcon({
+      html: `
+        <div class="relative flex items-center justify-center">
+          <span class="absolute inline-flex h-10 w-10 rounded-full bg-blue-500/25 animate-ping"></span>
+          <span class="absolute inline-flex h-6 w-6 rounded-full bg-blue-500/40"></span>
+          <div class="h-4.5 w-4.5 rounded-full bg-blue-600 border-2.5 border-white shadow-xl flex items-center justify-center">
+            <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+          </div>
+        </div>
+      `,
+      className: 'custom-user-avatar-marker',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+
+  const applyLiveUserPosition = (latitude: number, longitude: number) => {
+    setUserLocation({ lat: latitude, lng: longitude });
+    setIsLocating(false);
+    setLocationError(null);
+
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (userMarkerRef.current) {
+      userMarkerRef.current.setLatLng([latitude, longitude]);
+    } else {
+      const userMarker = L.marker([latitude, longitude], {
+        icon: createUserLocationIcon(),
+        zIndexOffset: 500,
+      })
+        .addTo(map)
+        .bindPopup(`
+          <div class="p-1.5 font-sans">
+            <b class="text-[10px] uppercase font-black text-blue-600 tracking-wide">Your Location</b>
+            <p class="text-[10px] text-subtle mt-0.5 font-semibold">Live GPS — map follows you while moving</p>
+          </div>
+        `);
+      userMarkerRef.current = userMarker;
+    }
+
+    if (!followUserRef.current || selectedPostRef.current) return;
+
+    if (!hasInitialMapCenterRef.current) {
+      map.setView([latitude, longitude], 14, { animate: false });
+      hasInitialMapCenterRef.current = true;
       return;
     }
+
+    map.panTo([latitude, longitude], { animate: true, duration: 0.35 });
+  };
+
+  const handleGeolocationError = (error: GeolocationPositionError) => {
+    console.warn('Geolocation failed:', error);
+    setIsLocating(false);
+    if (error.code === error.PERMISSION_DENIED) {
+      setLocationError('Location permission denied. Enable GPS in your browser to follow the map.');
+    } else {
+      setLocationError('Could not get GPS. Check permissions and try again.');
+    }
+  };
+
+  const startLiveLocationWatch = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported on this device.');
+      setIsLocating(false);
+      return;
+    }
+    if (geoWatchIdRef.current != null) return;
+
+    setIsLocating(true);
+    setLocationError(null);
+
+    geoWatchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
+      handleGeolocationError,
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 },
+    );
+  };
+
+  const stopLiveLocationWatch = () => {
+    if (geoWatchIdRef.current != null) {
+      navigator.geolocation.clearWatch(geoWatchIdRef.current);
+      geoWatchIdRef.current = null;
+    }
+  };
+
+  /** Re-enable follow mode and center on the latest GPS fix. */
+  const handleLocateUser = () => {
+    setFollowUser(true);
+    followUserRef.current = true;
+
+    if (userLocation && mapRef.current) {
+      mapRef.current.setView([userLocation.lat, userLocation.lng], Math.max(mapRef.current.getZoom(), 14), {
+        animate: true,
+      });
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported on this device.');
+      return;
+    }
+
     setIsLocating(true);
     setLocationError(null);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-        setIsLocating(false);
-        if (mapRef.current) {
-          mapRef.current.setView([latitude, longitude], 14, { animate: true });
-        }
-      },
-      (error) => {
-        console.warn('Geolocation sensor lookup failed:', error);
-        setIsLocating(false);
-        setLocationError('Could not retrieve precise GPS. Access blocked or timed out.');
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
+      (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
+      handleGeolocationError,
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   };
 
@@ -314,8 +417,13 @@ export default function SacramentoMapView({
 
     mapRef.current = map;
 
-    // Detect user position automatically at startup
-    handleLocateUser();
+    const onUserPanMap = () => {
+      setFollowUser(false);
+      followUserRef.current = false;
+    };
+    map.on('dragstart', onUserPanMap);
+
+    startLiveLocationWatch();
 
     // Trigger immediate and asynchronous container size invalidation to solve hidden tab layout bug
     map.invalidateSize();
@@ -334,6 +442,9 @@ export default function SacramentoMapView({
     return () => {
       clearTimeout(timer);
       resizeObserver.disconnect();
+      map.off('dragstart', onUserPanMap);
+      stopLiveLocationWatch();
+      hasInitialMapCenterRef.current = false;
       map.remove();
       mapRef.current = null;
       markersGroupRef.current = null;
@@ -341,45 +452,11 @@ export default function SacramentoMapView({
     };
   }, []);
 
-  // Update user popup marker location dynamically
+  // Resume map follow when a listing popup is closed and follow mode is on
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    if (userMarkerRef.current) {
-      userMarkerRef.current.remove();
-      userMarkerRef.current = null;
-    }
-
-    if (userLocation) {
-      const userIcon = L.divIcon({
-        html: `
-          <div class="relative flex items-center justify-center">
-            <span class="absolute inline-flex h-10 w-10 rounded-full bg-blue-500/25 animate-ping"></span>
-            <span class="absolute inline-flex h-6 w-6 rounded-full bg-blue-500/40"></span>
-            <div class="h-4.5 w-4.5 rounded-full bg-blue-600 border-2.5 border-white shadow-xl flex items-center justify-center">
-              <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
-            </div>
-          </div>
-        `,
-        className: 'custom-user-avatar-marker',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-      });
-
-      const userMarker = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon, zIndexOffset: 500 })
-        .addTo(map)
-        .bindPopup(`
-          <div class="p-1.5 font-sans">
-            <b class="text-[10px] uppercase font-black text-blue-600 tracking-wide">Your Location</b>
-            <p class="text-[10px] text-subtle mt-0.5 font-semibold">
-              Centering Buy Nothing listings near you
-            </p>
-          </div>
-        `);
-      userMarkerRef.current = userMarker;
-    }
-  }, [userLocation]);
+    if (selectedPost || !followUser || !userLocation || !mapRef.current) return;
+    mapRef.current.panTo([userLocation.lat, userLocation.lng], { animate: true });
+  }, [selectedPost, followUser]);
 
   const routeEndpoints = useMemo(() => {
     if (!selectedPost) return null;
@@ -534,10 +611,12 @@ export default function SacramentoMapView({
             className={`w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border ${
               isLocating
                 ? 'bg-accent text-on-accent border-accent'
-                : 'bg-surface/95 backdrop-blur-sm text-app hover:bg-surface-hover border-app'
+                : followUser
+                  ? 'bg-accent/15 text-accent border-accent'
+                  : 'bg-surface/95 backdrop-blur-sm text-app hover:bg-surface-hover border-app'
             }`}
             id="mobile_floating_locator_btn"
-            title="Recenter map"
+            title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
           >
             <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
           </button>
@@ -669,20 +748,31 @@ export default function SacramentoMapView({
                 </button>
 
                 <div className="flex gap-3 mt-2">
-                  {selectedPost.imageUrl ? (
-                    <div className="w-16 h-16 rounded-xl border border-app shrink-0 overflow-hidden">
+                  {(() => {
+                    const photos = selectedPost.imageUrls?.length
+                      ? selectedPost.imageUrls
+                      : extractListingImageUrls(selectedPost);
+                    const thumb = photos[0];
+                    return thumb ? (
+                    <div className="relative w-16 h-16 rounded-xl border border-app shrink-0 overflow-hidden">
                       <img
-                        src={selectedPost.imageUrl}
+                        src={thumb}
                         alt={selectedPost.title}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                       />
+                      {photos.length > 1 && (
+                        <span className="absolute bottom-0.5 right-0.5 text-[7px] font-bold bg-black/75 text-white px-1 rounded">
+                          +{photos.length - 1}
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <div className="w-16 h-16 bg-inset border border-app rounded-xl shrink-0 flex flex-col items-center justify-center">
                       <Tag className="w-4 h-4 text-muted" />
                     </div>
-                  )}
+                  );
+                  })()}
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
@@ -723,21 +813,34 @@ export default function SacramentoMapView({
                             View
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onInitiateChat(
-                              selectedPost.userId,
-                              selectedPost.userDisplayName,
-                              selectedPost.userPhotoURL,
-                              selectedPost,
-                            )
-                          }
-                          className="sbn-btn sbn-btn-primary sbn-btn-sm"
-                        >
-                          <MessageSquare className="w-3 h-3" />
-                          Message
-                        </button>
+                        {selectedPost.userId === userProfile.uid ? (
+                          onEditItem && (
+                            <button
+                              type="button"
+                              onClick={() => onEditItem(selectedPost)}
+                              className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Edit
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onInitiateChat(
+                                selectedPost.userId,
+                                selectedPost.userDisplayName,
+                                selectedPost.userPhotoURL,
+                                selectedPost,
+                              )
+                            }
+                            className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                          >
+                            <MessageSquare className="w-3 h-3" />
+                            Message
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -933,11 +1036,13 @@ export default function SacramentoMapView({
           <button
             onClick={handleLocateUser}
             className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
-              isLocating 
+              isLocating
                 ? 'bg-accent text-on-accent border-accent'
-                : 'bg-surface/95 border-app text-app hover:bg-surface-hover hover:text-accent'
+                : followUser
+                  ? 'bg-accent/15 border-accent text-accent'
+                  : 'bg-surface/95 border-app text-app hover:bg-surface-hover hover:text-accent'
             }`}
-            title="Locate Me / Center to User"
+            title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
             id="custom_locate_user_btn"
           >
             <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
@@ -1112,21 +1217,32 @@ export default function SacramentoMapView({
 
             <div className="flex gap-4 text-left">
               {/* Cargo Image preview */}
-              {selectedPost.imageUrl ? (
-                <div className="w-18 h-18 sm:w-24 sm:h-24 border border-app shrink-0 bg-app rounded-xl overflow-hidden">
+              {(() => {
+                const photos = selectedPost.imageUrls?.length
+                  ? selectedPost.imageUrls
+                  : extractListingImageUrls(selectedPost);
+                const thumb = photos[0];
+                return thumb ? (
+                <div className="relative w-18 h-18 sm:w-24 sm:h-24 border border-app shrink-0 bg-app rounded-xl overflow-hidden">
                   <img
-                    src={selectedPost.imageUrl}
+                    src={thumb}
                     alt={selectedPost.title}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover rounded-none"
                   />
+                  {photos.length > 1 && (
+                    <span className="absolute bottom-1 right-1 text-[7px] font-bold bg-black/75 text-white px-1 rounded">
+                      +{photos.length - 1}
+                    </span>
+                  )}
                 </div>
               ) : (
                 <div className="w-18 h-18 sm:w-24 sm:h-24 bg-app border border-app shrink-0 flex flex-col items-center justify-center text-center rounded-xl">
                   <Tag className="w-5 h-5 text-subtle" />
                   <span className="text-[6.5px] text-subtle font-bold tracking-widest mt-1 block">NO IMAGE</span>
                 </div>
-              )}
+              );
+              })()}
 
               <div className="flex-1 min-w-0 flex flex-col justify-between font-sans">
                 <div>
@@ -1157,14 +1273,6 @@ export default function SacramentoMapView({
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <button
-                      id="map_message_btn"
-                      onClick={() => onInitiateChat(selectedPost.userId, selectedPost.userDisplayName, selectedPost.userPhotoURL, selectedPost)}
-                      className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
-                    >
-                      <MessageSquare className="w-3 h-3" />
-                      <span>Say Hello</span>
-                    </button>
                     {openItemDetail && (
                       <button
                         id="map_view_card_btn"
@@ -1173,7 +1281,36 @@ export default function SacramentoMapView({
                         className="px-3 py-1.5 bg-inset hover:bg-surface-hover text-app text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-app"
                       >
                         <Eye className="w-3 h-3" />
-                        <span>View details</span>
+                        <span>View</span>
+                      </button>
+                    )}
+                    {selectedPost.userId === userProfile.uid ? (
+                      onEditItem && (
+                        <button
+                          id="map_edit_card_btn"
+                          type="button"
+                          onClick={() => onEditItem(selectedPost)}
+                          className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        id="map_message_btn"
+                        onClick={() =>
+                          onInitiateChat(
+                            selectedPost.userId,
+                            selectedPost.userDisplayName,
+                            selectedPost.userPhotoURL,
+                            selectedPost,
+                          )
+                        }
+                        className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        <span>Message</span>
                       </button>
                     )}
                   </div>

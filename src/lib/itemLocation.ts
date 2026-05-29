@@ -1,4 +1,5 @@
 import { ItemPost, PostType, extractGPSCoordinates } from '../types';
+import { getListingDetailsText, parseListingDetails, parsePickupNotes } from './listingContent';
 
 export const CATEGORIES_REQUIRING_GPS = ['Curb Alert', 'Porch Pickup'] as const;
 
@@ -25,13 +26,7 @@ export function canViewerSeeExactLocation(
 }
 
 export function stripListingMetadata(description: string): string {
-  let text = description || '';
-  text = text.replace(/^\[TRANSPORT:\s*.+?\]\s*\n\n/s, '');
-  text = text.replace(/\[LOCATION:\s*(public|private)\]\s*/gi, '');
-  text = text.replace(/\n\n\[GPS:\s*[\d.]+,[\d.]+\]\s*/g, '');
-  text = text.replace(/\n\n\[Photo\]:\s*https?:\/\/\S+\s*/g, '');
-  text = text.replace(/\[ADDRESS:\s*.+?\]\s*/gi, '');
-  return text.trim();
+  return getListingDetailsText(description);
 }
 
 export function convertPercentToLatLng(x: number, y: number): { lat: number; lng: number } {
@@ -46,7 +41,8 @@ export function convertPercentToLatLng(x: number, y: number): { lat: number; lng
 
 export function buildListingDescription(params: {
   type: PostType;
-  body: string;
+  details: string;
+  pickupNotes?: string;
   collectionMethod?: string;
   customCoords: { x: number; y: number } | null;
   locationIsPublic: boolean;
@@ -58,7 +54,11 @@ export function buildListingDescription(params: {
     parts.push(`[TRANSPORT: ${params.collectionMethod}]`, '');
   }
 
-  parts.push(params.body.trim());
+  parts.push(`[DETAILS]\n${params.details.trim()}\n[/DETAILS]`);
+
+  if (params.pickupNotes?.trim()) {
+    parts.push(`[PICKUP_NOTES]\n${params.pickupNotes.trim()}\n[/PICKUP_NOTES]`);
+  }
 
   if (params.pickupAddress?.trim()) {
     parts.push('', `[ADDRESS: ${params.pickupAddress.trim()}]`);
@@ -99,40 +99,52 @@ export function formatPickupLocationMessage(item: ItemPost): string {
 }
 
 export function parseItemForEditForm(item: ItemPost) {
-  let description = item.description || '';
+  const full = item.description || '';
   let collectionMethod = 'Willing to pick up (I have transport)';
   let customCoords: { x: number; y: number } | null = null;
   let pickupAddress: string | null = null;
-  const locationIsPublic = !isLocationPrivate(description);
+  const locationIsPublic = !isLocationPrivate(full);
 
+  let details = parseListingDetails(full);
+  const pickupNotes = parsePickupNotes(full);
+
+  let working = full;
   if (item.type === 'looking') {
-    const transportMatch = description.match(/^\[TRANSPORT:\s*(.+?)\]\s*\n\n/s);
+    const transportMatch = working.match(/^\[TRANSPORT:\s*(.+?)\]\s*\n\n/s);
     if (transportMatch) {
       collectionMethod = transportMatch[1].trim();
-      description = description.slice(transportMatch[0].length);
+      working = working.slice(transportMatch[0].length);
     }
   }
 
-  pickupAddress = parsePickupAddress(description);
-  if (pickupAddress) {
-    description = description.replace(/\[ADDRESS:\s*.+?\]\s*/gi, '').trim();
-  }
+  working = working.replace(/\[PICKUP_NOTES\][\s\S]*?\[\/PICKUP_NOTES\]\s*/gi, '');
+  working = working.replace(/\[DETAILS\][\s\S]*?\[\/DETAILS\]\s*/gi, '');
 
-  description = description.replace(/\[LOCATION:\s*(public|private)\]\s*/gi, '').trim();
-
-  const gpsMatch = description.match(/\n\n\[GPS:\s*([\d.]+),([\d.]+)\]\s*$/);
-  if (gpsMatch) {
-    customCoords = { x: parseFloat(gpsMatch[1]), y: parseFloat(gpsMatch[2]) };
-    description = description.slice(0, gpsMatch.index).trim();
-  }
-
-  const photoMatch = description.match(/\n\n\[Photo\]:\s*(https?:\/\/\S+)\s*$/);
-  if (photoMatch) {
-    description = description.slice(0, photoMatch.index).trim();
+  if (!details) {
+    pickupAddress = parsePickupAddress(working);
+    if (pickupAddress) {
+      working = working.replace(/\[ADDRESS:\s*.+?\]\s*/gi, '').trim();
+    }
+    working = working.replace(/\[LOCATION:\s*(public|private)\]\s*/gi, '').trim();
+    const gpsMatch = working.match(/\n\n\[GPS:\s*([\d.]+),([\d.]+)\]\s*$/);
+    if (gpsMatch) {
+      customCoords = { x: parseFloat(gpsMatch[1]), y: parseFloat(gpsMatch[2]) };
+      working = working.slice(0, gpsMatch.index).trim();
+    }
+    working = working.replace(/\n\n\[PHOTOS:[^\]]+\]\s*/gi, '');
+    working = working.replace(/\n\n\[Photo\]:\s*https?:\/\/\S+\s*/g, '');
+    details = working.trim();
+  } else {
+    pickupAddress = parsePickupAddress(full);
+    const gpsMatch = full.match(/\[GPS:\s*([\d.]+),([\d.]+)\]/);
+    if (gpsMatch) {
+      customCoords = { x: parseFloat(gpsMatch[1]), y: parseFloat(gpsMatch[2]) };
+    }
   }
 
   return {
-    description: description.trim(),
+    details: details.trim(),
+    pickupNotes,
     collectionMethod,
     customCoords,
     pickupAddress: pickupAddress || '',

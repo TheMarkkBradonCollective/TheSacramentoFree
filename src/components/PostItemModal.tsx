@@ -6,6 +6,11 @@ import {
   categoryRequiresGps,
   parseItemForEditForm,
 } from '../lib/itemLocation';
+import {
+  appendPhotosToDescription,
+  extractListingImageUrls,
+  MAX_LISTING_PHOTOS,
+} from '../lib/listingContent';
 import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
@@ -90,7 +95,8 @@ interface PostItemModalProps {
 export default function PostItemModal({ userProfile, editItem = null, onClose, onSuccess }: PostItemModalProps) {
   const isEditing = !!editItem;
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [details, setDetails] = useState('');
+  const [pickupNotes, setPickupNotes] = useState('');
   const [type, setType] = useState<PostType>('giveaway');
   const [category, setCategory] = useState(ITEM_CATEGORIES[0]);
   const [isoCategory, setIsoCategory] = useState(ISO_CATEGORIES[0]);
@@ -98,8 +104,8 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [savedImageUrls, setSavedImageUrls] = useState<string[]>([]);
+  const [pendingImages, setPendingImages] = useState<{ id: string; file: File; preview: string }[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
   // GPS and Map selection utility state
@@ -117,7 +123,8 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
 
     const parsed = parseItemForEditForm(editItem);
     setTitle(editItem.title);
-    setDescription(parsed.description);
+    setDetails(parsed.details);
+    setPickupNotes(parsed.pickupNotes);
     setType(editItem.type);
     setNeighborhood(editItem.neighborhood);
     setCollectionMethod(parsed.collectionMethod);
@@ -125,8 +132,8 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     setLocationIsPublic(parsed.locationIsPublic);
     setPickupAddress(parsed.pickupAddress);
     setShowMiniMap(!!parsed.customCoords);
-    setImageFile(null);
-    setImagePreview(editItem.imageUrl || '');
+    setPendingImages([]);
+    setSavedImageUrls(extractListingImageUrls(editItem));
     setErrorMsg('');
     setGpsStatus('');
 
@@ -174,12 +181,40 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     );
   };
 
-  const handleImageChange = (file: File) => {
-    if (file && file.type.startsWith('image/')) {
-      setImageFile(file);
-      const url = URL.createObjectURL(file);
-      setImagePreview(url);
+  const totalPhotoCount = savedImageUrls.length + pendingImages.length;
+
+  const addImageFiles = (files: FileList | File[]) => {
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (list.length === 0) return;
+
+    const slotsLeft = MAX_LISTING_PHOTOS - totalPhotoCount;
+    const toAdd = list.slice(0, Math.max(0, slotsLeft));
+    if (toAdd.length === 0) {
+      setErrorMsg(`You can add up to ${MAX_LISTING_PHOTOS} photos per listing.`);
+      return;
     }
+
+    setPendingImages((prev) => [
+      ...prev,
+      ...toAdd.map((file) => ({
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        file,
+        preview: URL.createObjectURL(file),
+      })),
+    ]);
+    setErrorMsg('');
+  };
+
+  const removeSavedImage = (url: string) => {
+    setSavedImageUrls((prev) => prev.filter((u) => u !== url));
+  };
+
+  const removePendingImage = (id: string) => {
+    setPendingImages((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target?.preview) URL.revokeObjectURL(target.preview);
+      return prev.filter((p) => p.id !== id);
+    });
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -196,15 +231,15 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleImageChange(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files?.length) {
+      addImageFiles(e.dataTransfer.files);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) {
-      setErrorMsg('Please specify a title and description.');
+    if (!title.trim() || !details.trim()) {
+      setErrorMsg('Please add a title and item details.');
       return;
     }
 
@@ -215,17 +250,16 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       ? editItem.id
       : `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    let imageUrl = isEditing && editItem ? editItem.imageUrl : undefined;
-    if (imageFile) {
+    const imageUrls: string[] = [...savedImageUrls];
+    for (let i = 0; i < pendingImages.length; i++) {
       try {
-        const url = await uploadItemImage(imageFile, itemId);
-        if (url?.startsWith('http://') || url?.startsWith('https://')) {
-          imageUrl = url;
-        }
+        const url = await uploadItemImage(pendingImages[i].file, `${itemId}_${i}`);
+        if (url) imageUrls.push(url);
       } catch (err) {
         console.warn('Image uploading failed:', err);
       }
     }
+    const imageUrl = imageUrls[0];
 
     const finalCategory = type === 'looking' ? isoCategory : category;
 
@@ -235,14 +269,16 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       return;
     }
 
-    const finalDescription = buildListingDescription({
+    let finalDescription = buildListingDescription({
       type,
-      body: description.trim(),
+      details: details.trim(),
+      pickupNotes: pickupNotes.trim() || undefined,
       collectionMethod,
       customCoords,
       locationIsPublic: categoryRequiresGps(finalCategory) ? true : locationIsPublic,
       pickupAddress: pickupAddress.trim() || undefined,
     });
+    finalDescription = appendPhotosToDescription(finalDescription, imageUrls);
 
     const listing: ItemPost = {
       id: itemId,
@@ -258,6 +294,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       createdAt: isEditing && editItem ? editItem.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       imageUrl,
+      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     };
 
     try {
@@ -435,9 +472,20 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             </div>
           )}
 
-          {/* Unified Location Selector Sector */}
-          <div className="space-y-2 border-t border-app pt-4" id="post_location_coordinates_section">
-            <label className="text-[10px] font-black text-muted uppercase tracking-widest block font-mono">Exchange Sector (Pick-up Location)</label>
+          {/* Pickup location: GPS pin + street address */}
+          <div className="space-y-3 border-t border-app pt-4" id="post_location_coordinates_section">
+            <div>
+              <label className="text-[10px] font-black text-muted uppercase tracking-widest block font-mono">
+                Pickup location (GPS + address)
+              </label>
+              <p className="text-[10px] text-muted mt-1 leading-snug">
+                Pin the spot on the map and add a street address. Curb Alert and Porch Pickup require a GPS pin.
+                If the pin is hidden from the public map, share GPS and address in messages.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-app bg-inset/40 p-3 space-y-2">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">Map pin (GPS)</span>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <select
@@ -504,26 +552,16 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                   className="mt-0.5 accent-[#FF4500]"
                 />
                 <span>
-                  Show exact pickup spot on the public map. If unchecked, you can share the address in messages
-                  instead.
+                  Show exact pickup spot on the public map. If unchecked, share GPS and address in chat instead.
                 </span>
               </label>
             )}
 
-            {type === 'giveaway' && (
-              <div className="space-y-1">
-                <label htmlFor="pickup_address" className="text-[10px] font-bold text-muted uppercase tracking-wider block">
-                  Street address (optional)
-                </label>
-                <input
-                  id="pickup_address"
-                  type="text"
-                  value={pickupAddress}
-                  onChange={(e) => setPickupAddress(e.target.value)}
-                  placeholder="Only shared when you send location in chat"
-                  className="sbn-input text-xs"
-                />
-              </div>
+            {customCoords && (
+              <p className="text-[10px] font-semibold text-accent flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                GPS pin set — neighbors {locationIsPublic || categoryRequiresGps(activeCategory) ? 'can' : 'cannot'} see it on the map until you share in chat.
+              </p>
             )}
 
             {/* Micro Sacramento Map Picker */}
@@ -597,40 +635,77 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 </div>
               </div>
             }
+            </div>
+
+            <div className="rounded-xl border border-app bg-inset/40 p-3 space-y-1.5">
+              <label htmlFor="pickup_address" className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                Street address
+              </label>
+              <input
+                id="pickup_address"
+                type="text"
+                value={pickupAddress}
+                onChange={(e) => setPickupAddress(e.target.value)}
+                placeholder="e.g. 1234 Oak St, Sacramento — optional; sent with GPS in chat"
+                className="sbn-input text-xs"
+                autoComplete="street-address"
+              />
+              <p className="text-[10px] text-muted leading-snug">
+                {pickupAddress.trim()
+                  ? 'Saved with this listing. Use “Send pickup location / address” in chat to share it.'
+                  : 'Optional. Helpful for porch or curb pickup when combined with a GPS pin.'}
+              </p>
+            </div>
           </div>
 
-          {/* Picture Upload Box */}
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider block font-sans">Add a Photo (Optional)</span>
-            
-            {imagePreview ? (
-              <div className="relative border border-app bg-inset p-2 rounded-2xl text-center" id="item_image_preview_container">
-                <img
-                  src={imagePreview}
-                  alt="Item Preview"
-                  className="max-h-48 mx-auto object-cover border border-app rounded-xl"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImageFile(null);
-                    setImagePreview('');
-                  }}
-                  id="remove_preview_btn"
-                  className="absolute top-4 right-4 bg-black/80 hover:bg-black text-app p-2 rounded-full transition-colors cursor-pointer"
-                  title="Remove image"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+          {/* Photos */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block font-sans">
+                Photos (optional, up to {MAX_LISTING_PHOTOS})
+              </span>
+              <span className="text-[10px] text-subtle font-mono">{totalPhotoCount}/{MAX_LISTING_PHOTOS}</span>
+            </div>
+
+            {(savedImageUrls.length > 0 || pendingImages.length > 0) && (
+              <div className="grid grid-cols-3 gap-2" id="item_image_preview_grid">
+                {savedImageUrls.map((url) => (
+                  <div key={url} className="relative aspect-square rounded-xl overflow-hidden border border-app bg-inset">
+                    <img src={url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <button
+                      type="button"
+                      onClick={() => removeSavedImage(url)}
+                      className="absolute top-1 right-1 bg-black/80 hover:bg-black text-app p-1.5 rounded-full cursor-pointer"
+                      title="Remove photo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {pendingImages.map((img) => (
+                  <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden border border-app bg-inset">
+                    <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePendingImage(img.id)}
+                      className="absolute top-1 right-1 bg-black/80 hover:bg-black text-app p-1.5 rounded-full cursor-pointer"
+                      title="Remove photo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
+            )}
+
+            {totalPhotoCount < MAX_LISTING_PHOTOS && (
               <div
                 onDragEnter={handleDrag}
                 onDragOver={handleDrag}
                 onDragLeave={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => document.getElementById('item_file_input')?.click()}
-                className={`border-2 border-dashed p-6 text-center cursor-pointer transition-all select-none rounded-2xl flex flex-col items-center justify-center space-y-2 ${
+                className={`border-2 border-dashed p-5 text-center cursor-pointer transition-all select-none rounded-2xl flex flex-col items-center justify-center space-y-2 ${
                   dragActive ? 'border-[#FF4500] bg-[#FF4500]/10' : 'border-app hover:border-[#FF4500] bg-inset'
                 }`}
                 id="image_drag_drop_zone"
@@ -640,41 +715,60 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                   id="item_file_input"
                   className="hidden"
                   accept="image/*"
+                  multiple
                   onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleImageChange(e.target.files[0]);
-                    }
+                    if (e.target.files?.length) addImageFiles(e.target.files);
+                    e.target.value = '';
                   }}
                 />
-                <Camera className="w-6 h-6 text-muted group-hover:text-accent transition-colors" />
-                <div className="text-xs text-muted font-bold tracking-wide">
-                  Drag & Drop or Click to Upload
-                </div>
-                <div className="text-[10px] text-subtle font-sans tracking-tight">
-                  PNG, JPG, OR WEBP (UP TO 5MB)
-                </div>
+                <Camera className="w-6 h-6 text-muted" />
+                <div className="text-xs text-muted font-bold tracking-wide">Add photos</div>
+                <div className="text-[10px] text-subtle">Drag & drop or tap — PNG, JPG, WEBP</div>
               </div>
             )}
           </div>
 
-          {/* Description */}
+          {/* Details */}
           <div className="space-y-1.5">
-            <label htmlFor="post_description" className="text-[10px] font-bold text-muted uppercase tracking-wider block font-sans">
-              {type === 'looking' ? 'Request Details & Context' : 'Details & Pickup Notes'}
+            <label htmlFor="post_details" className="text-[10px] font-bold text-muted uppercase tracking-wider block font-sans">
+              {type === 'looking' ? 'Request details' : 'Item details'}
             </label>
             <textarea
-              id="post_description"
+              id="post_details"
               required
               rows={4}
               maxLength={1000}
-              placeholder={type === 'looking' ? "Describe what you are looking for, why you need it, and your transit arrangement flexibility." : "Describe the item, its condition, and how neighbors can pick it up (like contactless porch pickup)."}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              placeholder={
+                type === 'looking'
+                  ? 'What you need, condition preferences, timing, etc.'
+                  : 'Describe the item, condition, size, and anything helpful for neighbors.'
+              }
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
               className="block w-full p-3.5 bg-inset border border-app rounded-xl text-xs text-app placeholder:text-subtle font-semibold resize-none focus:outline-hidden"
             />
-            <div className="text-right text-[10px] text-subtle font-mono font-medium">
-              {description.length}/1000 chars
-            </div>
+            <div className="text-right text-[10px] text-subtle font-mono font-medium">{details.length}/1000</div>
+          </div>
+
+          {/* Pickup notes */}
+          <div className="space-y-1.5">
+            <label htmlFor="post_pickup_notes" className="text-[10px] font-bold text-muted uppercase tracking-wider block font-sans">
+              {type === 'looking' ? 'Pickup / meetup notes (optional)' : 'Pickup notes (optional)'}
+            </label>
+            <textarea
+              id="post_pickup_notes"
+              rows={3}
+              maxLength={500}
+              placeholder={
+                type === 'looking'
+                  ? 'When you can pick up, stairs, gate code to share in chat later, etc.'
+                  : 'Porch instructions, best times, ring doorbell or not, curb side, etc.'
+              }
+              value={pickupNotes}
+              onChange={(e) => setPickupNotes(e.target.value)}
+              className="block w-full p-3.5 bg-inset border border-app rounded-xl text-xs text-app placeholder:text-subtle font-semibold resize-none focus:outline-hidden"
+            />
+            <div className="text-right text-[10px] text-subtle font-mono font-medium">{pickupNotes.length}/500</div>
           </div>
 
           {/* Guidelines info notice */}

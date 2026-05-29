@@ -26,6 +26,8 @@ export interface ItemPost {
   createdAt: any;
   updatedAt: any;
   imageUrl?: string;
+  /** All photos (first matches imageUrl). Parsed from description when not set. */
+  imageUrls?: string[];
 }
 
 export interface Chat {

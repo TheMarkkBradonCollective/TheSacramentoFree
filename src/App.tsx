@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useItemsEngagement } from './hooks/useItemsEngagement';
 import { UserProfile, ItemPost } from './types';
 import Navbar from './components/Navbar';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
 import ItemDetailView from './components/ItemDetailView';
+import NeighborProfileView from './components/NeighborProfileView';
 import ItemGrid from './components/ItemGrid';
 import ChatSystem from './components/ChatSystem';
 import UserProfileView from './components/UserProfileView';
@@ -16,8 +18,10 @@ import {
   supabase, 
   getSupabaseProfile, 
   upsertSupabaseProfile, 
-  getSupabaseItems, 
-  getOrCreateSupabaseChat 
+  getSupabaseItems,
+  getOrCreateSupabaseChat,
+  updateSupabaseItemStatus,
+  deleteSupabaseItem,
 } from './supabase';
 import { Gift, Heart } from 'lucide-react';
 import { SITE } from './siteContent';
@@ -33,8 +37,13 @@ export default function App() {
   const profileLoadRef = useRef<Promise<void> | null>(null);
   const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'chats' | 'profile'>('map');
   const [showPostModal, setShowPostModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
+  const [detailUpdating, setDetailUpdating] = useState(false);
+  const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [items, setItems] = useState<ItemPost[]>([]);
+  const itemIds = useMemo(() => items.map((i) => i.id), [items]);
+  const engagement = useItemsEngagement(itemIds, userProfile);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -416,6 +425,49 @@ export default function App() {
     setUserProfile(newProfile);
   };
 
+  useEffect(() => {
+    if (detailItem) {
+      engagement.setCommentsExpanded(detailItem.id, true);
+    }
+  }, [detailItem?.id]);
+
+  const refreshDetailItem = useCallback(async () => {
+    const loadedItems = await getSupabaseItems();
+    setItems(loadedItems);
+    setDetailItem((current) => {
+      if (!current) return null;
+      return loadedItems.find((i) => i.id === current.id) ?? null;
+    });
+  }, []);
+
+  const handleDetailUpdateStatus = async (status: 'completed' | 'withdrawn' | 'active') => {
+    if (!detailItem) return;
+    setDetailUpdating(true);
+    try {
+      await updateSupabaseItemStatus(detailItem.id, status);
+      await refreshDetailItem();
+    } catch (err) {
+      console.warn('Failed to update listing status:', err);
+    } finally {
+      setDetailUpdating(false);
+    }
+  };
+
+  const handleDetailDelete = async () => {
+    if (!detailItem) return;
+    if (!confirm('Are you sure you want to permanently delete this listing?')) return;
+    setDetailUpdating(true);
+    try {
+      await deleteSupabaseItem(detailItem.id);
+      setDetailItem(null);
+      await loadItems(false);
+    } catch (err) {
+      console.warn('Failed to delete listing:', err);
+    } finally {
+      setDetailUpdating(false);
+    }
+  };
+
   // Initiate Chat when clicking Msg icon on post card
   const handleInitiateChat = async (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
     if (!userProfile) return;
@@ -460,6 +512,15 @@ export default function App() {
     }
   };
 
+  const handleProfileMessage = async () => {
+    if (!viewProfileUid || !userProfile || viewProfileUid === userProfile.uid) return;
+    const neighbor = await getSupabaseProfile(viewProfileUid);
+    if (!neighbor) return;
+    setViewProfileUid(null);
+    await handleInitiateChat(neighbor.uid, neighbor.displayName, neighbor.photoURL);
+    setActiveTab('chats');
+  };
+
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {/* 2. Authentication Landing View */}
@@ -496,6 +557,12 @@ export default function App() {
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
+                  onViewProfile={setViewProfileUid}
+                  onEditItem={(item) => {
+                    setEditingItem(item);
+                    setDetailItem(null);
+                  }}
+                  engagement={engagement}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -511,6 +578,12 @@ export default function App() {
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
+                  onViewProfile={setViewProfileUid}
+                  onEditItem={(item) => {
+                    setEditingItem(item);
+                    setDetailItem(null);
+                  }}
+                  engagement={engagement}
                 />
               ) : (
                 <DesktopView
@@ -526,6 +599,23 @@ export default function App() {
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
+                  onViewProfile={setViewProfileUid}
+                  onEditItem={(item) => {
+                    setEditingItem(item);
+                    setDetailItem(null);
+                  }}
+                  engagement={engagement}
+                />
+              )}
+
+              {viewProfileUid && (
+                <NeighborProfileView
+                  userId={viewProfileUid}
+                  currentUserId={userProfile.uid}
+                  onClose={() => setViewProfileUid(null)}
+                  onMessage={
+                    viewProfileUid !== userProfile.uid ? handleProfileMessage : undefined
+                  }
                 />
               )}
 
@@ -533,7 +623,19 @@ export default function App() {
                 <ItemDetailView
                   item={detailItem}
                   currentUserId={userProfile.uid}
+                  updating={detailUpdating}
                   onClose={() => setDetailItem(null)}
+                  onEdit={() => {
+                    setEditingItem(detailItem);
+                    setDetailItem(null);
+                  }}
+                  onUpdateStatus={handleDetailUpdateStatus}
+                  onDelete={handleDetailDelete}
+                  onViewProfile={setViewProfileUid}
+                  voteState={engagement.getVotesForPost(detailItem.id)}
+                  comments={engagement.getCommentsForPost(detailItem.id)}
+                  onVote={(dir) => engagement.handleVote(detailItem.id, detailItem.userId, dir)}
+                  onAddComment={(text) => engagement.handleAddComment(detailItem.id, text)}
                   onMessage={() => {
                     handleInitiateChat(
                       detailItem.userId,
@@ -546,15 +648,19 @@ export default function App() {
                 />
               )}
 
-              {/* Posting Dialog Overlay */}
-              {showPostModal && (
+              {(showPostModal || editingItem) && (
                 <PostItemModal
                   userProfile={userProfile}
-                  onClose={() => setShowPostModal(false)}
-                  onSuccess={(newItem) => {
+                  editItem={editingItem}
+                  onClose={() => {
+                    setShowPostModal(false);
+                    setEditingItem(null);
+                  }}
+                  onSuccess={() => {
                     loadItems(false);
                     setActiveTab('feed');
                     setShowPostModal(false);
+                    setEditingItem(null);
                   }}
                 />
               )}

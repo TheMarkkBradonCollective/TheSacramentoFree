@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ItemPost, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
-import ItemGrid from './ItemGrid';
+import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import { Map, List, MessageSquare, User, Plus, LogOut } from 'lucide-react';
@@ -17,11 +17,14 @@ interface MobileViewProps {
   onOpenNewPost: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onViewItem: (item: ItemPost) => void;
+  onViewProfile: (userId: string) => void;
+  onEditItem: (item: ItemPost) => void;
   onLogout: () => void;
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
   onRefresh: () => void;
+  engagement: ItemsEngagementApi;
 }
 
 const NAV_ITEMS = [
@@ -39,11 +42,14 @@ export default function MobileView({
   onOpenNewPost,
   onInitiateChat,
   onViewItem,
+  onViewProfile,
+  onEditItem,
   onLogout,
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
   onRefresh,
+  engagement,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
@@ -78,6 +84,7 @@ export default function MobileView({
               selectedCategory={selectedMobileCategory}
               onInitiateChat={onInitiateChat}
               onViewItem={onViewItem}
+              onEditItem={onEditItem}
               isFullScreenMobile
             />
             <div className="absolute top-3 left-3 right-3 z-20 flex gap-2 overflow-x-auto pb-1">
@@ -114,8 +121,10 @@ export default function MobileView({
             <ItemGrid
               items={items}
               userProfile={userProfile}
+              engagement={engagement}
               onInitiateChat={onInitiateChat}
               onViewItem={onViewItem}
+              onViewProfile={onViewProfile}
               onRefresh={onRefresh}
             />
             <CommunityFooter compact />
@@ -131,12 +140,18 @@ export default function MobileView({
         )}
 
         {activeTab === 'chats' && (
-          <div className="absolute inset-0 overflow-hidden p-2 pb-20" id="mobile_messaging_dock">
+          <div
+            className="absolute inset-0 flex flex-col min-h-0 overflow-hidden px-2 pt-2 pb-[4.5rem]"
+            id="mobile_messaging_dock"
+          >
             <ChatSystem
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
               onClearInitialChat={onClearInitialChat}
               items={items}
+              onViewProfile={onViewProfile}
+              onItemsChanged={onRefresh}
+              className="flex-1 min-h-0 shadow-app"
             />
           </div>
         )}
