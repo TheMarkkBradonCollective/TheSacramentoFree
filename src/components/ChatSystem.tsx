@@ -14,12 +14,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
-import {
-  formatPickupLocationMessage,
-  hasStoredGps,
-  isLocationPrivate,
-  parsePickupAddress,
-} from '../lib/itemLocation';
+import { formatPickupLocationMessage } from '../lib/itemLocation';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage } from '../lib/claims';
 import {
   markItemFulfilledFromChat,
@@ -342,6 +337,14 @@ export default function ChatSystem({
     return `${chat.itemTitle} · ${messengerName}`;
   };
 
+  const mobileConversationRowBase = fullBleed
+    ? 'item-feed-card rounded-2xl border border-app'
+    : 'border-b border-app';
+
+  const mobileMessageCardBase = fullBleed
+    ? 'item-feed-card rounded-2xl border border-app'
+    : 'rounded-2xl';
+
   return (
     <div
       id="chat_app_viewport"
@@ -389,10 +392,14 @@ export default function ChatSystem({
                     setSelectedChat(chat);
                     onClearInitialChat();
                   }}
-                  className={`w-full text-left p-3 flex items-start gap-3 border-b border-app transition-colors cursor-pointer ${
+                  className={`w-full text-left p-3 flex items-start gap-3 transition-colors cursor-pointer ${
+                    mobileConversationRowBase
+                  } ${
                     isSelected
                       ? 'bg-accent-soft border-l-[3px] border-l-accent'
                       : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
+                  } ${
+                    fullBleed ? 'mx-3 mt-2 first:mt-3 mb-0' : ''
                   }`}
                 >
                   <button
@@ -454,13 +461,7 @@ export default function ChatSystem({
             const displayTitleHeader = getFormattedChatTitle(selectedChat);
             const { otherName, otherPhoto } = getRecipientInfo(selectedChat);
             const isListingOwner = linkedItem?.userId === userProfile.uid;
-            const showSendLocationBtn =
-              !!linkedItem &&
-              !isChatDisabled &&
-              isListingOwner &&
-              (!hasStoredGps(linkedItem.description) ||
-                isLocationPrivate(linkedItem.description) ||
-                !!parsePickupAddress(linkedItem.description));
+            const showSendLocationBtn = !!linkedItem && !isChatDisabled && isListingOwner;
 
             const showMarkClaimedBtn =
               !!linkedItem &&
@@ -562,16 +563,20 @@ export default function ChatSystem({
                           id={`message_item_${msg.id}`}
                         >
                           <div
-                            className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm ${
+                            className={`max-w-[85%] sm:max-w-[75%] px-3.5 py-2.5 text-sm ${mobileMessageCardBase} ${
                               isUser
-                                ? 'bg-accent text-on-accent rounded-br-md'
-                                : 'bg-surface border border-app text-app rounded-bl-md'
+                                ? fullBleed
+                                  ? 'bg-surface text-app border-accent/40'
+                                  : 'bg-accent text-on-accent rounded-br-md'
+                                : fullBleed
+                                  ? 'bg-surface text-app'
+                                  : 'bg-surface border border-app text-app rounded-bl-md'
                             }`}
                           >
                             <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
                             <span
                               className={`text-[10px] mt-1 block text-right ${
-                                isUser ? 'text-white/75' : 'text-subtle'
+                                isUser ? (fullBleed ? 'text-subtle' : 'text-white/75') : 'text-subtle'
                               }`}
                             >
                               {formatTime(msg.createdAt) || 'Sending…'}

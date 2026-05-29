@@ -6,7 +6,6 @@ import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import Navbar from './Navbar';
-import CommunityFooter from './CommunityFooter';
 import { IN_APP } from '../siteContent';
 
 interface DesktopViewProps {
@@ -79,7 +78,6 @@ export default function DesktopView({
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
             />
-            <CommunityFooter />
           </div>
         )}
 

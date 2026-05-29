@@ -465,8 +465,8 @@ export default function UserProfileView({
         </div>
       </div>
 
-      <div className={fullBleed ? 'px-4 pb-6' : ''}>
-        <CommunityFooter compact={fullBleed} />
+      <div className={fullBleed ? '' : 'mt-6'}>
+        <CommunityFooter compact />
       </div>
     </div>
   );

@@ -5,7 +5,6 @@ import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import { Map, List, MessageSquare, User, Plus, LogOut } from 'lucide-react';
-import CommunityFooter from './CommunityFooter';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
@@ -129,7 +128,6 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
             />
-            <CommunityFooter compact />
             <button
               type="button"
               onClick={onOpenNewPost}

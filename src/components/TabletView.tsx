@@ -6,7 +6,6 @@ import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import { List, MessageSquare, User, Plus, LogOut, Map } from 'lucide-react';
 import BrandLogo from './BrandLogo';
-import CommunityFooter from './CommunityFooter';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 
@@ -114,7 +113,6 @@ export default function TabletView({
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
             />
-            <CommunityFooter />
           </div>
         )}
 
