@@ -32,7 +32,7 @@ interface ItemDetailViewProps {
   onMessage?: () => void;
   onClaimSubmitted?: (chatId: string) => void;
   onEdit: () => void;
-  onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active') => void;
+  onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold') => void;
   onDelete?: () => void;
   onViewProfile: (userId: string) => void;
   voteState: PostVoteState;
@@ -63,6 +63,8 @@ export default function ItemDetailView({
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const isOwner = item.userId === currentUserId;
+  const isOpenForCoordination =
+    item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
 
   useEffect(() => {
     void getListingSubitems(item.id).then(setSubitems);
@@ -127,10 +129,10 @@ export default function ItemDetailView({
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="font-display font-bold text-base text-app truncate flex-1">Listing details</h1>
-        {isOwner && item.status === 'active' ? (
+        {isOwner && isOpenForCoordination ? (
           <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
         ) : !isOwner ? (
-          item.status === 'active' && onMessage && (
+          isOpenForCoordination && onMessage && (
             <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
               <MessageSquare className="w-4 h-4" />
               Message
@@ -159,6 +161,8 @@ export default function ItemDetailView({
               </span>
             )}
             {item.status === 'withdrawn' && <span className="sbn-badge">Withdrawn</span>}
+            {item.status === 'pending_pickup' && <span className="sbn-badge sbn-badge-done">Pending pickup</span>}
+            {item.status === 'on_hold' && <span className="sbn-badge">On hold</span>}
           </div>
 
           <h2 className="font-display text-2xl sm:text-3xl font-bold text-app leading-tight">{item.title}</h2>
@@ -298,9 +302,76 @@ export default function ItemDetailView({
                   >
                     Withdraw
                   </button>
+                  <button
+                    type="button"
+                    disabled={updating}
+                    onClick={() => onUpdateStatus('completed')}
+                    className="sbn-btn sbn-btn-secondary col-span-2"
+                  >
+                    Mark claimed
+                  </button>
                   <p className="col-span-2 text-[11px] text-muted text-center leading-snug">
                     Confirm neighbor pickups from Messages, or when they self-claim at the pin.
                   </p>
+                </div>
+              ) : item.status === 'pending_pickup' ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={updating}
+                    onClick={() => onUpdateStatus('completed')}
+                    className="sbn-btn sbn-btn-primary"
+                  >
+                    Mark picked up
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updating}
+                    onClick={() => onUpdateStatus('active')}
+                    className="sbn-btn sbn-btn-secondary"
+                  >
+                    Back to active
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updating}
+                    onClick={() => onUpdateStatus('on_hold')}
+                    className="sbn-btn sbn-btn-ghost col-span-2"
+                  >
+                    Put on hold
+                  </button>
+                </div>
+              ) : item.status === 'on_hold' ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={updating}
+                    onClick={() => onUpdateStatus('active')}
+                    className="sbn-btn sbn-btn-primary"
+                  >
+                    Release hold
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updating}
+                    onClick={() => onUpdateStatus('pending_pickup')}
+                    className="sbn-btn sbn-btn-secondary"
+                  >
+                    Pending pickup
+                  </button>
+                </div>
+              ) : item.status === 'completed' ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {onDelete && (
+                    <button
+                      type="button"
+                      disabled={updating}
+                      onClick={onDelete}
+                      className="sbn-btn sbn-btn-ghost text-red-600 dark:text-red-400"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
@@ -334,7 +405,7 @@ export default function ItemDetailView({
                 <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
                   Back
                 </button>
-                {item.status === 'active' && onMessage && (
+                {isOpenForCoordination && onMessage && (
                   <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
                     <MessageSquare className="w-4 h-4" />
                     Message

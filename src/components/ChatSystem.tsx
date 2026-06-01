@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chat, Message, UserProfile, ItemPost, MessageRequest } from '../types';
-import { getSupabaseChats, getSupabaseMessages, createSupabaseMessage, filterChatsByBlocked, getIncomingMessageRequests, acceptMessageRequest, declineMessageRequest } from '../supabase';
+import {
+  getSupabaseChats,
+  getSupabaseMessages,
+  createSupabaseMessage,
+  filterChatsByBlocked,
+  getIncomingMessageRequests,
+  acceptMessageRequest,
+  declineMessageRequest,
+  updateSupabaseItemStatus,
+} from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
   MessageSquare,
@@ -303,6 +312,27 @@ export default function ChatSystem({
     }
   };
 
+  const handleMarkPendingPickup = async () => {
+    if (!selectedChat) return;
+    const linkedItem = items.find((i) => i.id === selectedChat.itemId);
+    if (!linkedItem || linkedItem.userId !== userProfile.uid) return;
+
+    setIsSending(true);
+    setErrorMsg('');
+    const statusOk = await updateSupabaseItemStatus(linkedItem.id, 'pending_pickup');
+    setIsSending(false);
+    if (statusOk) {
+      await sendChatText('Marked this listing as pending pickup.');
+      onItemsChanged?.();
+    } else {
+      setErrorMsg('Could not set listing to pending pickup.');
+    }
+  };
+
+  const handleRequestHold = async () => {
+    await sendChatText('Could you place this on hold for me? I can confirm pickup timing shortly.');
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedChat || !inputText.trim() || isSending) return;
@@ -564,11 +594,20 @@ export default function ChatSystem({
         {selectedChat ? (
           (() => {
             const linkedItem = items.find((i) => i.id === selectedChat.itemId);
-            const isChatDisabled = linkedItem && linkedItem.status !== 'active';
+            const isChatDisabled =
+              linkedItem && (linkedItem.status === 'completed' || linkedItem.status === 'withdrawn');
             const displayTitleHeader = getFormattedChatTitle(selectedChat);
             const { otherName, otherPhoto } = getRecipientInfo(selectedChat);
             const isListingOwner = linkedItem?.userId === userProfile.uid;
             const showSendLocationBtn = !!linkedItem && !isChatDisabled && isListingOwner;
+            const showMarkPendingPickupBtn =
+              !!linkedItem &&
+              !isChatDisabled &&
+              isListingOwner &&
+              linkedItem.type === 'giveaway' &&
+              linkedItem.status === 'active';
+            const showRequestHoldBtn =
+              !!linkedItem && !isChatDisabled && !isListingOwner && linkedItem.status === 'active';
 
             const showMarkClaimedBtn =
               !!linkedItem &&
@@ -715,6 +754,29 @@ export default function ChatSystem({
                       Send pickup location / address
                     </button>
                   )}
+                  {showMarkPendingPickupBtn && (
+                    <button
+                      type="button"
+                      onClick={handleMarkPendingPickup}
+                      disabled={isSending}
+                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
+                      id="chat_mark_pending_pickup_btn"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Mark pending pickup
+                    </button>
+                  )}
+                  {showRequestHoldBtn && (
+                    <button
+                      type="button"
+                      onClick={handleRequestHold}
+                      disabled={isSending}
+                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
+                      id="chat_request_hold_btn"
+                    >
+                      Request hold
+                    </button>
+                  )}
                   {showMarkClaimedBtn && claimerUserId && (
                     <ChatClaimActions
                       chatId={selectedChat.id}
@@ -746,7 +808,7 @@ export default function ChatSystem({
                       id="chat_disabled_status_banner"
                     >
                       <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>This listing is completed — chat is read-only.</span>
+                      <span>This listing is closed — chat is read-only.</span>
                     </div>
                   )}
                   <div className="flex items-end gap-2 w-full">

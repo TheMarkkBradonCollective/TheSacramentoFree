@@ -18,7 +18,7 @@ interface ItemCardProps {
   onVote: (direction: 'up' | 'down') => void;
   onToggleComments: () => void;
   onAddComment: (text: string) => void;
-  onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active') => void;
+  onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold') => void;
   onEdit: () => void;
   onViewDetail: () => void;
   onDelete: () => void;
@@ -44,7 +44,7 @@ export default function ItemCard({
   onViewProfile,
 }: ItemCardProps) {
   const isOwner = item.userId === currentUserId;
-  const inactive = item.status !== 'active';
+  const inactive = item.status === 'completed' || item.status === 'withdrawn';
 
   const dateLabel = item.createdAt
     ? new Date(
@@ -73,6 +73,12 @@ export default function ItemCard({
       {item.status === 'withdrawn' && (
         <span className="sbn-badge sbn-badge-withdrawn text-[10px] sm:text-xs py-0.5">Withdrawn</span>
       )}
+      {item.status === 'pending_pickup' && (
+        <span className="sbn-badge sbn-badge-done text-[10px] sm:text-xs py-0.5">Pending pickup</span>
+      )}
+      {item.status === 'on_hold' && (
+        <span className="sbn-badge text-[10px] sm:text-xs py-0.5">On hold</span>
+      )}
       {item.status === 'active' && (
         <span className="sbn-badge sbn-badge-give text-[10px] sm:text-xs py-0.5 sm:inline-flex hidden">
           Active
@@ -98,13 +104,71 @@ export default function ItemCard({
         <span className="hidden sm:inline ml-1">Edit</span>
       </button>
       {item.status === 'active' ? (
+        <>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onUpdateStatus('withdrawn')}
+            className="sbn-btn sbn-btn-sm sbn-btn-ghost hidden sm:inline-flex"
+          >
+            Withdraw
+          </button>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onUpdateStatus('completed')}
+            className="sbn-btn sbn-btn-sm sbn-btn-secondary hidden sm:inline-flex"
+          >
+            Mark claimed
+          </button>
+        </>
+      ) : item.status === 'pending_pickup' ? (
+        <>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onUpdateStatus('active')}
+            className="sbn-btn sbn-btn-sm sbn-btn-primary hidden sm:inline-flex"
+          >
+            Mark available
+          </button>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onUpdateStatus('completed')}
+            className="sbn-btn sbn-btn-sm sbn-btn-ghost hidden sm:inline-flex"
+          >
+            Mark picked up
+          </button>
+        </>
+      ) : item.status === 'on_hold' ? (
+        <>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onUpdateStatus('active')}
+            className="sbn-btn sbn-btn-sm sbn-btn-primary hidden sm:inline-flex"
+          >
+            Release hold
+          </button>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onUpdateStatus('pending_pickup')}
+            className="sbn-btn sbn-btn-sm sbn-btn-ghost hidden sm:inline-flex"
+          >
+            Pending pickup
+          </button>
+        </>
+      ) : item.status === 'completed' ? (
         <button
           type="button"
           disabled={updating}
-          onClick={() => onUpdateStatus('withdrawn')}
-          className="sbn-btn sbn-btn-sm sbn-btn-ghost hidden sm:inline-flex"
+          onClick={onDelete}
+          className="p-2 text-red-500 hover:bg-red-500/10 rounded-full"
+          title="Delete"
         >
-          Withdraw
+          <Trash2 className="w-4 h-4" />
         </button>
       ) : (
         <>
@@ -128,7 +192,7 @@ export default function ItemCard({
         </>
       )}
     </div>
-  ) : item.status === 'active' || item.status === 'completed' ? (
+  ) : item.status !== 'withdrawn' ? (
     <div className="flex flex-wrap gap-1 justify-end">
       <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
         <Eye className="w-3.5 h-3.5" />
