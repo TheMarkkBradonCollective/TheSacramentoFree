@@ -2909,3 +2909,47 @@ export async function closeSupportTicket(params: {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not close ticket.' };
   }
 }
+
+/**
+ * Permanently removes the signed-in user's account (profile + auth).
+ * Requires `delete_own_account()` in Supabase — see supabase-setup.sql section 16.
+ */
+export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: string }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const uid = sessionData.session?.user?.id;
+  if (!uid) {
+    return { ok: false, errorMessage: 'You must be signed in to delete your account.' };
+  }
+
+  try {
+    const { error: rpcError } = await supabase.rpc('delete_own_account');
+    if (!rpcError) {
+      return { ok: true };
+    }
+
+    const rpcMissing =
+      rpcError.code === '42883' ||
+      rpcError.message?.includes('delete_own_account') ||
+      rpcError.message?.includes('Could not find the function');
+
+    if (!rpcMissing) {
+      return { ok: false, errorMessage: rpcError.message };
+    }
+
+    await supabase.from('user_blocks').delete().or(`blockerUserId.eq.${uid},blockedUserId.eq.${uid}`);
+    await supabase.from('message_requests').delete().or(`fromUserId.eq.${uid},toUserId.eq.${uid}`);
+    const { error: profileError } = await supabase.from('users').delete().eq('uid', uid);
+    if (profileError) {
+      return { ok: false, errorMessage: profileError.message };
+    }
+
+    await supabase.auth.signOut();
+    return {
+      ok: true,
+      errorMessage:
+        'Profile removed. Ask an admin to run section 16 in supabase-setup.sql if you still receive sign-in emails.',
+    };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };
+  }
+}

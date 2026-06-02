@@ -3,7 +3,7 @@ import { useItemsEngagement } from './hooks/useItemsEngagement';
 import { useItemsRealtime } from './hooks/useItemsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
-import { UserProfile, ItemPost } from './types';
+import { UserProfile, ItemPost, PendingChatCompose } from './types';
 import Navbar from './components/Navbar';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
@@ -24,9 +24,8 @@ import {
   profileFromAuthUser,
   isDirectorUser,
   getSupabaseItems,
-  getOrCreateSupabaseChat,
   updateSupabaseItemStatus,
-  deleteSupabaseItem,
+  deleteOwnAccount,
   isAccountRestricted,
 } from './supabase';
 import { APP_LOGO_SRC, SITE } from './siteContent';
@@ -98,8 +97,10 @@ export default function App() {
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Initial Chat Trigger State when clicking "Message Member"
+  // Open existing chat thread (e.g. after claim)
   const [initialSelectedChatId, setInitialSelectedChatId] = useState<string | null>(null);
+  // Draft compose — chat row is created on first sent message
+  const [pendingChatCompose, setPendingChatCompose] = useState<PendingChatCompose | null>(null);
 
   // Responsive device classification configuration
   const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>(() => {
@@ -608,60 +609,38 @@ export default function App() {
     }
   };
 
-  const handleDetailDelete = async () => {
-    if (!detailItem) return;
-    if (!confirm('Are you sure you want to permanently delete this listing?')) return;
-    setDetailUpdating(true);
-    try {
-      await deleteSupabaseItem(detailItem.id);
-      setDetailItem(null);
-      await loadItems(false);
-    } catch (err) {
-      console.warn('Failed to delete listing:', err);
-    } finally {
-      setDetailUpdating(false);
-    }
-  };
-
-  // Initiate Chat when clicking Msg icon on post card
-  const handleInitiateChat = async (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
+  const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
 
-    // Generate unique alphabetical chat ID to bypass duplicates
     const participants = [userProfile.uid, posterUid].sort();
     const chatId = participants.join('_');
 
-    try {
-      const payload = {
-        id: chatId,
-        participantIds: participants,
-        participantNames: {
-          [userProfile.uid]: userProfile.displayName,
-          [posterUid]: posterName
-        },
-        participantPhotos: {
-          [userProfile.uid]: userProfile.photoURL || '',
-          [posterUid]: posterPhoto || ''
-        },
-        lastMessageAt: new Date().toISOString(),
-        lastMessageText: `Proposed an exchange for: "${item?.title || 'item'}"`,
-        lastMessageSenderId: userProfile.uid,
-        itemId: item?.id || '',
-        itemTitle: item?.title || ''
-      };
+    setInitialSelectedChatId(null);
+    setPendingChatCompose({
+      chatId,
+      otherUserId: posterUid,
+      otherUserName: posterName,
+      otherUserPhoto: posterPhoto,
+      itemId: item?.id,
+      itemTitle: item?.title,
+    });
+    setActiveTab('chats');
+  };
 
-      // Sync Chat room details to Supabase
-      await getOrCreateSupabaseChat(chatId, payload);
+  const handleDeleteAccount = async () => {
+    if (!userProfile) return;
+    const confirmed = confirm(
+      'Permanently delete your account? Your listings will stay visible but you will lose access. This cannot be undone.',
+    );
+    if (!confirmed) return;
 
-      setInitialSelectedChatId(chatId);
-      setActiveTab('chats');
-    } catch (err) {
-      console.warn('Exchange coordination could not be synced:', err);
-      // Fallback local UI session activation
-      setInitialSelectedChatId(chatId);
-      setActiveTab('chats');
+    const result = await deleteOwnAccount();
+    if (!result.ok) {
+      setErrorMsg(result.errorMessage || 'Could not delete account.');
+      return;
     }
+    await handleLogOut();
   };
 
   const handleViewProfile = useCallback(
@@ -756,6 +735,9 @@ export default function App() {
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  pendingChatCompose={pendingChatCompose}
+                  onClearPendingChatCompose={() => setPendingChatCompose(null)}
+                  onDeleteAccount={handleDeleteAccount}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
                   onViewProfile={handleViewProfile}
@@ -779,6 +761,9 @@ export default function App() {
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  pendingChatCompose={pendingChatCompose}
+                  onClearPendingChatCompose={() => setPendingChatCompose(null)}
+                  onDeleteAccount={handleDeleteAccount}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
                   onViewProfile={handleViewProfile}
@@ -802,6 +787,9 @@ export default function App() {
                   onUpdateProfile={(updated) => setUserProfile(updated)}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  pendingChatCompose={pendingChatCompose}
+                  onClearPendingChatCompose={() => setPendingChatCompose(null)}
+                  onDeleteAccount={handleDeleteAccount}
                   onRefresh={loadItems}
                   onViewItem={setDetailItem}
                   onViewProfile={handleViewProfile}
@@ -837,7 +825,6 @@ export default function App() {
                     setDetailItem(null);
                   }}
                   onUpdateStatus={handleDetailUpdateStatus}
-                  onDelete={handleDetailDelete}
                   onViewProfile={handleViewProfile}
                   voteState={engagement.getVotesForPost(detailItem.id)}
                   comments={engagement.getCommentsForPost(detailItem.id)}

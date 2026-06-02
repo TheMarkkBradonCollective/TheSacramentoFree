@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Chat, Message, UserProfile, ItemPost, MessageRequest } from '../types';
+import { Chat, Message, UserProfile, ItemPost, MessageRequest, PendingChatCompose } from '../types';
 import {
   getSupabaseChats,
   getSupabaseMessages,
   createSupabaseMessage,
+  getOrCreateSupabaseChat,
   filterChatsByBlocked,
   getIncomingMessageRequests,
   acceptMessageRequest,
@@ -35,6 +36,8 @@ interface ChatSystemProps {
   userProfile: UserProfile;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  pendingChatCompose?: PendingChatCompose | null;
+  onClearPendingChatCompose?: () => void;
   items: ItemPost[];
   blockedUserIds?: Set<string>;
   className?: string;
@@ -48,6 +51,8 @@ export default function ChatSystem({
   userProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  pendingChatCompose = null,
+  onClearPendingChatCompose,
   items,
   blockedUserIds = new Set(),
   className = '',
@@ -125,6 +130,31 @@ export default function ChatSystem({
           if (target) {
             setSelectedChat((prev) => prev ?? target);
           }
+        } else if (pendingChatCompose) {
+          const existing = visibleChats.find((c) => c.id === pendingChatCompose.chatId);
+          if (existing) {
+            setSelectedChat((prev) => prev ?? existing);
+            onClearPendingChatCompose?.();
+          } else {
+            const c = pendingChatCompose;
+            const draft: Chat = {
+              id: c.chatId,
+              participantIds: [userProfile.uid, c.otherUserId].sort(),
+              participantNames: {
+                [userProfile.uid]: userProfile.displayName,
+                [c.otherUserId]: c.otherUserName,
+              },
+              participantPhotos: {
+                [userProfile.uid]: userProfile.photoURL || '',
+                [c.otherUserId]: c.otherUserPhoto || '',
+              },
+              lastMessageAt: '',
+              itemId: c.itemId || '',
+              itemTitle: c.itemTitle || '',
+            };
+            setSelectedChat((prev) => prev ?? draft);
+            setMessages([]);
+          }
         }
       } catch (err) {
         console.warn('Failed to load chats from Supabase:', err);
@@ -159,7 +189,29 @@ export default function ChatSystem({
       unsubMessagesForInbox();
       unsubRequests();
     };
-  }, [userProfile.uid, initialSelectedChatId, blockedUserIds]);
+  }, [userProfile.uid, initialSelectedChatId, pendingChatCompose, blockedUserIds, onClearPendingChatCompose, userProfile.displayName, userProfile.photoURL]);
+
+  useEffect(() => {
+    if (!pendingChatCompose || initialSelectedChatId) return;
+    const c = pendingChatCompose;
+    const draft: Chat = {
+      id: c.chatId,
+      participantIds: [userProfile.uid, c.otherUserId].sort(),
+      participantNames: {
+        [userProfile.uid]: userProfile.displayName,
+        [c.otherUserId]: c.otherUserName,
+      },
+      participantPhotos: {
+        [userProfile.uid]: userProfile.photoURL || '',
+        [c.otherUserId]: c.otherUserPhoto || '',
+      },
+      lastMessageAt: '',
+      itemId: c.itemId || '',
+      itemTitle: c.itemTitle || '',
+    };
+    setSelectedChat(draft);
+    setMessages([]);
+  }, [pendingChatCompose, initialSelectedChatId, userProfile.uid, userProfile.displayName, userProfile.photoURL]);
 
   useEffect(() => {
     if (!selectedChat) {
@@ -224,6 +276,53 @@ export default function ChatSystem({
     };
   }, [selectedChat?.id, userProfile.uid]);
 
+  const ensureChatExists = async (firstMessageText: string): Promise<boolean> => {
+    if (!selectedChat) return false;
+
+    const inList = chats.some((c) => c.id === selectedChat.id);
+    if (inList && !pendingChatCompose) return true;
+
+    if (!pendingChatCompose || pendingChatCompose.chatId !== selectedChat.id) {
+      return true;
+    }
+
+    const c = pendingChatCompose;
+    const participants = [userProfile.uid, c.otherUserId].sort();
+    const payload = {
+      id: c.chatId,
+      participantIds: participants,
+      participantNames: {
+        [userProfile.uid]: userProfile.displayName,
+        [c.otherUserId]: c.otherUserName,
+      },
+      participantPhotos: {
+        [userProfile.uid]: userProfile.photoURL || '',
+        [c.otherUserId]: c.otherUserPhoto || '',
+      },
+      lastMessageText: firstMessageText,
+      lastMessageAt: new Date().toISOString(),
+      lastMessageSenderId: userProfile.uid,
+      itemId: c.itemId || '',
+      itemTitle: c.itemTitle || '',
+    };
+
+    const ok = await getOrCreateSupabaseChat(c.chatId, payload);
+    if (!ok) return false;
+
+    onClearPendingChatCompose?.();
+    const loadedChats = await getSupabaseChats(userProfile.uid);
+    const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
+    visible.sort((a, b) => {
+      const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      return timeB - timeA;
+    });
+    setChats(visible);
+    const created = visible.find((chat) => chat.id === c.chatId);
+    if (created) setSelectedChat(created);
+    return true;
+  };
+
   const sendChatText = async (text: string) => {
     if (!selectedChat || !text.trim() || isSending) return false;
 
@@ -231,6 +330,13 @@ export default function ChatSystem({
     setErrorMsg('');
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const trimmed = text.trim();
+
+    const chatReady = await ensureChatExists(trimmed);
+    if (!chatReady) {
+      setIsSending(false);
+      setErrorMsg('Could not start conversation. Please try again.');
+      return false;
+    }
     const optimistic: Message = {
       id: messageId,
       senderId: userProfile.uid,
@@ -637,6 +743,7 @@ export default function ChatSystem({
                     onClick={() => {
                       setSelectedChat(null);
                       onClearInitialChat();
+                      onClearPendingChatCompose?.();
                     }}
                     className="p-2 rounded-full text-muted hover:text-app hover:bg-inset md:hidden shrink-0 cursor-pointer"
                     aria-label="Back to conversations"

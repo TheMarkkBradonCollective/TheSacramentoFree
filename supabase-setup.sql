@@ -546,6 +546,37 @@ WHERE au.id::text NOT IN (SELECT uid FROM public.users)
   AND au.email IS NOT NULL;
 
 -- =========================================================
+-- 16. Self-service account deletion (authenticated users)
+-- =========================================================
+CREATE OR REPLACE FUNCTION public.delete_own_account()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  user_uid text := auth.uid()::text;
+BEGIN
+  IF user_uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  DELETE FROM public.user_blocks
+  WHERE "blockerUserId" = user_uid OR "blockedUserId" = user_uid;
+
+  DELETE FROM public.message_requests
+  WHERE "fromUserId" = user_uid OR "toUserId" = user_uid;
+
+  DELETE FROM public.users WHERE uid = user_uid;
+
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.delete_own_account() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
+
+-- =========================================================
 -- OPTIONAL: set community director role (run after you sign up)
 -- UPDATE public.users SET role = 'director' WHERE email = 'you@example.com';
 --

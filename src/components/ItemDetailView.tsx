@@ -33,7 +33,6 @@ interface ItemDetailViewProps {
   onClaimSubmitted?: (chatId: string) => void;
   onEdit: () => void;
   onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold') => void;
-  onDelete?: () => void;
   onViewProfile: (userId: string) => void;
   voteState: PostVoteState;
   comments: ItemComment[];
@@ -53,7 +52,6 @@ export default function ItemDetailView({
   onClaimSubmitted,
   onEdit,
   onUpdateStatus,
-  onDelete,
   onViewProfile,
   voteState,
   comments,
@@ -360,21 +358,8 @@ export default function ItemDetailView({
                     Pending pickup
                   </button>
                 </div>
-              ) : item.status === 'completed' ? (
+              ) : item.status === 'withdrawn' ? (
                 <div className="grid grid-cols-1 gap-2">
-                  {onDelete && (
-                    <button
-                      type="button"
-                      disabled={updating}
-                      onClick={onDelete}
-                      className="sbn-btn sbn-btn-ghost text-red-600 dark:text-red-400"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={updating}
@@ -383,18 +368,8 @@ export default function ItemDetailView({
                   >
                     Relist
                   </button>
-                  {onDelete && (
-                    <button
-                      type="button"
-                      disabled={updating}
-                      onClick={onDelete}
-                      className="sbn-btn sbn-btn-ghost text-red-600 dark:text-red-400"
-                    >
-                      Delete
-                    </button>
-                  )}
                 </div>
-              )}
+              ) : null}
               <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary w-full">
                 Back
               </button>

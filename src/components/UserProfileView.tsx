@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Save,
   AlertCircle,
+  Trash2,
   Download,
   Smartphone,
   Share2,
@@ -32,6 +33,7 @@ interface UserProfileViewProps {
   onUpdateProfile: (updated: UserProfile) => void;
   /** Refresh feed/listings after avatar is saved */
   onProfilePhotoSaved?: () => void;
+  onDeleteAccount?: () => void | Promise<void>;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
   fullBleed?: boolean;
 }
@@ -47,6 +49,7 @@ export default function UserProfileView({
   userPosts = [],
   onUpdateProfile,
   onProfilePhotoSaved,
+  onDeleteAccount,
   fullBleed = false,
 }: UserProfileViewProps) {
   const [displayName, setDisplayName] = useState(userProfile.displayName);
@@ -60,6 +63,7 @@ export default function UserProfileView({
   const [stats, setStats] = useState<NeighborStats | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     getNeighborStats(userProfile.uid).then(setStats);
@@ -568,6 +572,41 @@ export default function UserProfileView({
       <div className={fullBleed ? '' : 'mt-6'}>
         <CommunityFooter compact />
       </div>
+
+      {onDeleteAccount && (
+        <div
+          className={
+            fullBleed
+              ? sectionShell
+              : 'bg-surface border border-red-900/40 rounded-2xl p-6 shadow-md'
+          }
+          id="account_delete_section"
+        >
+          <h3 className="text-sm font-bold text-red-500 uppercase tracking-wider mb-2">Delete account</h3>
+          <p className="text-xs text-muted leading-relaxed mb-4">
+            Permanently remove your profile and sign-in access. Your past listings stay in the community feed.
+          </p>
+          <button
+            type="button"
+            disabled={isDeletingAccount}
+            onClick={async () => {
+              setIsDeletingAccount(true);
+              setErrorMsg('');
+              try {
+                await onDeleteAccount();
+              } catch {
+                setErrorMsg('Could not delete account. Please try again.');
+              } finally {
+                setIsDeletingAccount(false);
+              }
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-900/50 text-red-500 text-xs font-bold uppercase tracking-wider hover:bg-red-950/30 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>{isDeletingAccount ? 'Deleting…' : 'Delete my account'}</span>
+          </button>
+        </div>
+      )}
 
       <div className={fullBleed ? sectionShell : 'bg-surface border border-app rounded-2xl p-6 shadow-md'}>
         <div className="flex items-center justify-between gap-3 mb-3">

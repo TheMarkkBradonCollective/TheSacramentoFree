@@ -1,5 +1,5 @@
 import React from 'react';
-import { ItemPost, UserProfile } from '../types';
+import { ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
@@ -27,6 +27,9 @@ interface TabletViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  pendingChatCompose?: PendingChatCompose | null;
+  onClearPendingChatCompose?: () => void;
+  onDeleteAccount?: () => void | Promise<void>;
   onRefresh: () => void;
   engagement: ItemsEngagementApi;
   blockedUserIds?: Set<string>;
@@ -55,6 +58,9 @@ export default function TabletView({
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  pendingChatCompose = null,
+  onClearPendingChatCompose,
+  onDeleteAccount,
   onRefresh,
   engagement,
   blockedUserIds = new Set(),
@@ -157,6 +163,8 @@ export default function TabletView({
                 userProfile={userProfile}
                 initialSelectedChatId={initialSelectedChatId}
                 onClearInitialChat={onClearInitialChat}
+                pendingChatCompose={pendingChatCompose}
+                onClearPendingChatCompose={onClearPendingChatCompose}
                 items={items}
                 blockedUserIds={blockedUserIds}
                 onViewProfile={onViewProfile}
@@ -178,6 +186,7 @@ export default function TabletView({
                 userPosts={items.filter((item) => item.userId === userProfile.uid)}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
+                onDeleteAccount={onDeleteAccount}
               />
             </div>
           </div>

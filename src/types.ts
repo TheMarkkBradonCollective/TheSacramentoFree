@@ -101,6 +101,16 @@ export interface Chat {
   itemTitle?: string;
 }
 
+/** Compose UI before the chat row exists in the database (first outbound message creates it). */
+export interface PendingChatCompose {
+  chatId: string;
+  otherUserId: string;
+  otherUserName: string;
+  otherUserPhoto?: string;
+  itemId?: string;
+  itemTitle?: string;
+}
+
 export interface Message {
   id: string;
   senderId: string;

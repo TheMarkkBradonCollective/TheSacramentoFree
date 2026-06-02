@@ -3,7 +3,7 @@ import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, Us
 import { Search as SearchIcon, MapPin, Tag, AlertCircle } from 'lucide-react';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
-import { updateSupabaseItemStatus, deleteSupabaseItem } from '../supabase';
+import { updateSupabaseItemStatus } from '../supabase';
 import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { SITE } from '../siteContent';
 
@@ -57,21 +57,6 @@ export default function ItemGrid({
       onRefresh();
     } catch (err) {
       console.warn('Supabase update status failed:', err);
-      onRefresh();
-    } finally {
-      setUpdatingItemId(null);
-    }
-  };
-
-  const handleDeleteItem = async (itemId: string) => {
-    if (!confirm('Are you sure you want to permanently delete this listing?')) return;
-    setUpdatingItemId(itemId);
-
-    try {
-      await deleteSupabaseItem(itemId);
-      onRefresh();
-    } catch (err) {
-      console.warn('Supabase delete item failed:', err);
       onRefresh();
     } finally {
       setUpdatingItemId(null);
@@ -216,7 +201,6 @@ export default function ItemGrid({
               onUpdateStatus={(status) => handleUpdateStatus(item.id, status)}
               onEdit={() => setEditingItem(item)}
               onViewDetail={() => onViewItem(item)}
-              onDelete={() => handleDeleteItem(item.id)}
               onMessage={() =>
                 onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)
               }

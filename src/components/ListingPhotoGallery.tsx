@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ListingImage from './ListingImage';
+import ImageLightbox from './ImageLightbox';
 
 interface ListingPhotoGalleryProps {
   urls: string[];
@@ -9,6 +10,7 @@ interface ListingPhotoGalleryProps {
 
 export default function ListingPhotoGallery({ urls, title, className = '' }: ListingPhotoGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (urls.length === 0) return null;
 
@@ -16,7 +18,12 @@ export default function ListingPhotoGallery({ urls, title, className = '' }: Lis
 
   return (
     <div className={className}>
-      <div className="aspect-[4/3] sm:aspect-video bg-inset overflow-hidden relative">
+      <button
+        type="button"
+        onClick={() => setLightboxOpen(true)}
+        className="aspect-[4/3] sm:aspect-video bg-inset overflow-hidden relative w-full block cursor-zoom-in"
+        aria-label="View full size photo"
+      >
         <ListingImage
           src={active}
           alt={title}
@@ -29,7 +36,10 @@ export default function ListingPhotoGallery({ urls, title, className = '' }: Lis
             {activeIndex + 1} / {urls.length}
           </span>
         )}
-      </div>
+      </button>
+      {lightboxOpen && (
+        <ImageLightbox src={active} alt={title} onClose={() => setLightboxOpen(false)} />
+      )}
       {urls.length > 1 && (
         <div className="flex gap-2 p-3 overflow-x-auto bg-inset/50 border-t border-app">
           {urls.map((url, i) => (

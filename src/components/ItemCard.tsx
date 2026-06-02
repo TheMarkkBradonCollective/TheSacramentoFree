@@ -1,4 +1,4 @@
-import { Calendar, Eye, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
+import { Calendar, Eye, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
 import { ItemComment, ItemPost } from '../types';
 import { stripListingMetadata } from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
@@ -21,7 +21,6 @@ interface ItemCardProps {
   onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold') => void;
   onEdit: () => void;
   onViewDetail: () => void;
-  onDelete: () => void;
   onMessage: () => void;
   onViewProfile: (userId: string) => void;
 }
@@ -39,7 +38,6 @@ export default function ItemCard({
   onUpdateStatus,
   onEdit,
   onViewDetail,
-  onDelete,
   onMessage,
   onViewProfile,
 }: ItemCardProps) {
@@ -160,37 +158,16 @@ export default function ItemCard({
             Pending pickup
           </button>
         </>
-      ) : item.status === 'completed' ? (
+      ) : item.status === 'withdrawn' ? (
         <button
           type="button"
           disabled={updating}
-          onClick={onDelete}
-          className="p-2 text-red-500 hover:bg-red-500/10 rounded-full"
-          title="Delete"
+          onClick={() => onUpdateStatus('active')}
+          className="sbn-btn sbn-btn-sm sbn-btn-primary hidden sm:inline-flex"
         >
-          <Trash2 className="w-4 h-4" />
+          Relist
         </button>
-      ) : (
-        <>
-          <button
-            type="button"
-            disabled={updating}
-            onClick={() => onUpdateStatus('active')}
-            className="sbn-btn sbn-btn-sm sbn-btn-primary hidden sm:inline-flex"
-          >
-            Relist
-          </button>
-          <button
-            type="button"
-            disabled={updating}
-            onClick={onDelete}
-            className="p-2 text-red-500 hover:bg-red-500/10 rounded-full"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </>
-      )}
+      ) : null}
     </div>
   ) : item.status !== 'withdrawn' ? (
     <div className="flex flex-wrap gap-1 justify-end">
