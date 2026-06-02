@@ -251,6 +251,10 @@ export default function NeighborProfileView({
     dmRequest?.status === 'pending' && dmRequest.fromUserId === currentUserId;
   const pendingIncoming =
     dmRequest?.status === 'pending' && dmRequest.toUserId === currentUserId;
+  const neighborPosts = listingHints
+    .filter((item) => item.userId === userId)
+    .slice()
+    .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime());
 
   return (
     <div
@@ -448,6 +452,29 @@ export default function NeighborProfileView({
                 <p className="text-sm text-app leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
               </div>
             ) : null}
+
+            <div className="sbn-card p-4">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
+                  {isSelf ? 'Your posts' : `${profile.displayName}'s posts`}
+                </h3>
+                <span className="text-xs text-muted">{neighborPosts.length}</span>
+              </div>
+              {neighborPosts.length === 0 ? (
+                <p className="text-xs text-muted">No posts to show.</p>
+              ) : (
+                <div className="space-y-2">
+                  {neighborPosts.map((post) => (
+                    <div key={post.id} className="rounded-xl border border-app bg-inset p-3">
+                      <p className="text-sm font-semibold text-app">{post.title}</p>
+                      <p className="text-xs text-muted mt-0.5">
+                        {post.category} · {post.status.replace('_', ' ')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {isDirector && !isSelf && (
               <div className="sbn-card p-5 border border-amber-500/25 bg-amber-500/5">

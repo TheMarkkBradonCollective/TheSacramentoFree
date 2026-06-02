@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, SACRAMENTO_NEIGHBORHOODS } from '../types';
+import { UserProfile, SACRAMENTO_NEIGHBORHOODS, ItemPost } from '../types';
 import {
   getNeighborStats,
   NeighborStats,
@@ -28,6 +28,7 @@ import { IN_APP } from '../siteContent';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
+  userPosts?: ItemPost[];
   onUpdateProfile: (updated: UserProfile) => void;
   /** Refresh feed/listings after avatar is saved */
   onProfilePhotoSaved?: () => void;
@@ -43,6 +44,7 @@ function sanitizeRemotePhoto(url?: string): string | undefined {
 
 export default function UserProfileView({
   userProfile,
+  userPosts = [],
   onUpdateProfile,
   onProfilePhotoSaved,
   fullBleed = false,
@@ -565,6 +567,30 @@ export default function UserProfileView({
 
       <div className={fullBleed ? '' : 'mt-6'}>
         <CommunityFooter compact />
+      </div>
+
+      <div className={fullBleed ? sectionShell : 'bg-surface border border-app rounded-2xl p-6 shadow-md'}>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h3 className="text-sm font-bold text-app uppercase tracking-wider">Your posts</h3>
+          <span className="text-xs text-muted">{userPosts.length}</span>
+        </div>
+        {userPosts.length === 0 ? (
+          <p className="text-xs text-muted">You have not posted anything yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {userPosts
+              .slice()
+              .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime())
+              .map((post) => (
+                <div key={post.id} className="rounded-xl border border-app bg-inset p-3">
+                  <p className="text-sm font-semibold text-app">{post.title}</p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {post.category} · {post.status.replace('_', ' ')}
+                  </p>
+                </div>
+              ))}
+          </div>
+        )}
       </div>
     </div>
   );

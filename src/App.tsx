@@ -593,7 +593,9 @@ export default function App() {
     });
   }, []);
 
-  const handleDetailUpdateStatus = async (status: 'completed' | 'withdrawn' | 'active') => {
+  const handleDetailUpdateStatus = async (
+    status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold',
+  ) => {
     if (!detailItem) return;
     setDetailUpdating(true);
     try {

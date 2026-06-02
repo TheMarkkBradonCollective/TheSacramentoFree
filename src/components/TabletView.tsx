@@ -175,6 +175,7 @@ export default function TabletView({
             <div className="sbn-card p-6">
               <UserProfileView
                 userProfile={userProfile}
+                userPosts={items.filter((item) => item.userId === userProfile.uid)}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
               />

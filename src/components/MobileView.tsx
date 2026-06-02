@@ -197,6 +197,7 @@ export default function MobileView({
             </div>
             <UserProfileView
               userProfile={userProfile}
+              userPosts={items.filter((item) => item.userId === userProfile.uid)}
               onUpdateProfile={onUpdateProfile}
               onProfilePhotoSaved={onRefresh}
               fullBleed

@@ -4,6 +4,7 @@ import {
   confirmClaimRequest,
   getListingSubitems,
   getPendingClaimRequestsForChat,
+  rejectClaimRequest,
   recordItemClaimInChat,
 } from '../supabase';
 import SubItemPicker from './SubItemPicker';
@@ -104,6 +105,23 @@ export default function ChatClaimActions({
     }
   };
 
+  const handleRejectRequest = async (request: ItemClaimRequest) => {
+    if (!confirm(`Decline pickup request from ${request.claimerName}?`)) return;
+    setBusy(true);
+    setErr('');
+    const result = await rejectClaimRequest({
+      requestId: request.id,
+      actor: viewer,
+    });
+    setBusy(false);
+    if (result.ok) {
+      onChanged();
+      await reload();
+    } else {
+      setErr(result.errorMessage || 'Could not decline request.');
+    }
+  };
+
   const handleManualConfirm = async () => {
     const labels =
       isMulti && manualSelected.length > 0
@@ -163,15 +181,25 @@ export default function ChatClaimActions({
               </>
             )}
           </p>
-          <button
-            type="button"
-            disabled={disabled || busy}
-            onClick={() => void handleConfirmRequest(req)}
-            className="w-full sbn-btn sbn-btn-primary sbn-btn-sm justify-center"
-          >
-            <CheckCircle className="w-4 h-4" />
-            Confirm pickup
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={disabled || busy}
+              onClick={() => void handleConfirmRequest(req)}
+              className="w-full sbn-btn sbn-btn-primary sbn-btn-sm justify-center"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Confirm pickup
+            </button>
+            <button
+              type="button"
+              disabled={disabled || busy}
+              onClick={() => void handleRejectRequest(req)}
+              className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
+            >
+              Deny
+            </button>
+          </div>
         </div>
       ))}
 

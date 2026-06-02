@@ -118,6 +118,7 @@ export default function DesktopView({
             <div className="sbn-card p-6 md:p-8">
               <UserProfileView
                 userProfile={userProfile}
+                userPosts={items.filter((item) => item.userId === userProfile.uid)}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
               />

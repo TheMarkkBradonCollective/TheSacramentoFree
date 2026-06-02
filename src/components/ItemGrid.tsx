@@ -46,7 +46,10 @@ export default function ItemGrid({
   } = engagement;
 
   // Status transitions
-  const handleUpdateStatus = async (itemId: string, newStatus: 'completed' | 'withdrawn' | 'active') => {
+  const handleUpdateStatus = async (
+    itemId: string,
+    newStatus: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold',
+  ) => {
     setUpdatingItemId(itemId);
 
     try {

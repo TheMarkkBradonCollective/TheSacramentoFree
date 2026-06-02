@@ -1556,6 +1556,46 @@ export async function confirmClaimRequest(params: {
   }
 }
 
+export async function rejectClaimRequest(params: {
+  requestId: string;
+  actor: UserProfile;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('item_claim_requests')
+      .select('*')
+      .eq('id', params.requestId)
+      .maybeSingle();
+
+    if (error || !data) return { ok: false, errorMessage: 'Claim request not found.' };
+    const request = normalizeClaimRequest(data as Record<string, unknown>);
+    if (request.status !== 'pending') {
+      return { ok: false, errorMessage: 'This claim request was already handled.' };
+    }
+    if (request.giverUserId !== params.actor.uid) {
+      return { ok: false, errorMessage: 'Only the poster can reject pickups.' };
+    }
+
+    const { error: updateError } = await supabase
+      .from('item_claim_requests')
+      .update({ status: 'rejected' })
+      .eq('id', params.requestId);
+    if (updateError) return { ok: false, errorMessage: updateError.message };
+
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    await createSupabaseMessage(
+      request.chatId,
+      `Pickup request was declined by the poster.`,
+      params.actor.uid,
+      messageId,
+    );
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not reject claim.' };
+  }
+}
+
 export async function recordItemClaimInChat(params: {
   itemId: string;
   itemTitle: string;

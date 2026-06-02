@@ -1,4 +1,4 @@
-export type PostStatus = 'active' | 'completed' | 'withdrawn';
+export type PostStatus = 'active' | 'pending_pickup' | 'on_hold' | 'completed' | 'withdrawn';
 export type PostType = 'giveaway' | 'looking';
 export type AccountStatus = 'active' | 'suspended' | 'banned';
 
