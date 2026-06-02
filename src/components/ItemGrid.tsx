@@ -43,6 +43,7 @@ export default function ItemGrid({
     toggleComments,
     handleVote,
     handleAddComment,
+    handleDeleteComment,
   } = engagement;
 
   // Status transitions
@@ -198,6 +199,8 @@ export default function ItemGrid({
               onVote={(dir) => handleVote(item.id, item.userId, dir)}
               onToggleComments={() => toggleComments(item.id)}
               onAddComment={(text) => handleAddComment(item.id, text)}
+              onDeleteComment={(commentId) => void handleDeleteComment(item.id, commentId)}
+              userProfile={userProfile}
               onUpdateStatus={(status) => handleUpdateStatus(item.id, status)}
               onEdit={() => setEditingItem(item)}
               onViewDetail={() => onViewItem(item)}

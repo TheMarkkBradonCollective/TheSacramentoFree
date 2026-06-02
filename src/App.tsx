@@ -631,7 +631,7 @@ export default function App() {
   const handleDeleteAccount = async () => {
     if (!userProfile) return;
     const confirmed = confirm(
-      'Permanently delete your account? Your listings will stay visible but you will lose access. This cannot be undone.',
+      'Permanently delete your account? All your listings, comments, messages, and profile data will be removed. This cannot be undone.',
     );
     if (!confirmed) return;
 
@@ -830,6 +830,9 @@ export default function App() {
                   comments={engagement.getCommentsForPost(detailItem.id)}
                   onVote={(dir) => engagement.handleVote(detailItem.id, detailItem.userId, dir)}
                   onAddComment={(text) => engagement.handleAddComment(detailItem.id, text)}
+                  onDeleteComment={(commentId) =>
+                    void engagement.handleDeleteComment(detailItem.id, commentId)
+                  }
                   onMessage={
                     blockedUserIds.has(detailItem.userId)
                       ? undefined

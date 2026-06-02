@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { ItemComment, ItemVote, UserProfile } from '../types';
 import {
   createSupabaseItemComment,
+  deleteSupabaseItemComment,
   getSupabaseItemComments,
   getSupabaseItemVotes,
   setSupabaseItemVote,
@@ -214,6 +215,21 @@ export function useItemsEngagement(
     });
   };
 
+  const handleDeleteComment = async (itemId: string, commentId: string) => {
+    if (!uid) return;
+    if (!confirm('Remove your comment?')) return;
+
+    const current = getCommentsForPost(itemId);
+    const next = current.filter((c) => c.id !== commentId);
+    setItemComments((prev) => ({ ...prev, [itemId]: next }));
+
+    const result = await deleteSupabaseItemComment(commentId, uid);
+    if (!result.ok) {
+      setItemComments((prev) => ({ ...prev, [itemId]: current }));
+      console.warn('Failed to delete comment:', result.errorMessage);
+    }
+  };
+
   const toggleComments = (postId: string) => {
     setExpandedPostComments((prev) => ({
       ...prev,
@@ -233,5 +249,6 @@ export function useItemsEngagement(
     setCommentsExpanded,
     handleVote,
     handleAddComment,
+    handleDeleteComment,
   };
 }

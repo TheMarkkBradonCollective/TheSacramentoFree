@@ -4,7 +4,7 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canStaffBan, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket } from './lib/roles';
+import { normalizeUserRole, type UserRole, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -852,6 +852,10 @@ export async function updateSupabaseItemStatus(itemId: string, status: string): 
 
 export async function deleteSupabaseItem(itemId: string): Promise<boolean> {
   try {
+    await supabase.from('item_claim_requests').delete().eq('itemId', itemId);
+    await supabase.from('item_claims').delete().eq('itemId', itemId);
+    await supabase.from('listing_subitems').delete().eq('itemId', itemId);
+
     await supabase
       .from('item_votes')
       .delete()
@@ -1841,6 +1845,30 @@ export async function createSupabaseItemComment(comment: ItemComment): Promise<b
   } catch (err: any) {
     handleSupabaseError(err, 'item_comments');
     return false;
+  }
+}
+
+export async function deleteSupabaseItemComment(
+  commentId: string,
+  userId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error, count } = await supabase
+      .from('item_comments')
+      .delete({ count: 'exact' })
+      .eq('id', commentId)
+      .eq('userId', userId);
+
+    if (error) {
+      handleSupabaseError(error, 'item_comments');
+      return { ok: false, errorMessage: error.message };
+    }
+    if (count === 0) {
+      return { ok: false, errorMessage: 'Comment not found or already removed.' };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete comment.' };
   }
 }
 
@@ -2910,10 +2938,134 @@ export async function closeSupportTicket(params: {
   }
 }
 
+/** Client-side purge when account-deletion RPCs are not installed yet. */
+async function purgeUserCommunityDataClient(uid: string): Promise<void> {
+  const { data: items } = await supabase.from('items').select('id').eq('userId', uid);
+  for (const row of items ?? []) {
+    await deleteSupabaseItem(row.id);
+  }
+
+  await supabase.from('item_votes').delete().eq('userId', uid);
+  await supabase.from('item_comments').delete().eq('userId', uid);
+  await supabase
+    .from('item_claims')
+    .delete()
+    .or(`giverUserId.eq.${uid},claimerUserId.eq.${uid}`);
+  await supabase
+    .from('item_claim_requests')
+    .delete()
+    .or(`giverUserId.eq.${uid},claimerUserId.eq.${uid}`);
+
+  const { data: chats } = await supabase
+    .from('chats')
+    .select('id')
+    .contains('participantIds', JSON.stringify([uid]));
+  const chatIds = (chats ?? []).map((c) => c.id);
+  if (chatIds.length > 0) {
+    await supabase.from('messages').delete().in('chatId', chatIds);
+    await supabase.from('chats').delete().in('id', chatIds);
+  }
+  await supabase.from('messages').delete().eq('senderId', uid);
+
+  await supabase
+    .from('user_blocks')
+    .delete()
+    .or(`blockerUserId.eq.${uid},blockedUserId.eq.${uid}`);
+  await supabase
+    .from('message_requests')
+    .delete()
+    .or(`fromUserId.eq.${uid},toUserId.eq.${uid}`);
+  await supabase
+    .from('user_reports')
+    .delete()
+    .or(`reporterUserId.eq.${uid},reportedUserId.eq.${uid}`);
+
+  const { data: tickets } = await supabase.from('support_tickets').select('id').eq('openerUserId', uid);
+  const ticketIds = (tickets ?? []).map((t) => t.id);
+  if (ticketIds.length > 0) {
+    await supabase.from('support_ticket_messages').delete().in('ticketId', ticketIds);
+    await supabase.from('support_tickets').delete().in('id', ticketIds);
+  }
+  await supabase.from('support_ticket_messages').delete().eq('senderUserId', uid);
+
+  await supabase
+    .from('moderation_audit_log')
+    .delete()
+    .or(`actorUserId.eq.${uid},targetUserId.eq.${uid}`);
+}
+
 /**
  * Permanently removes the signed-in user's account (profile + auth).
- * Requires `delete_own_account()` in Supabase — see supabase-setup.sql section 16.
+ * Requires `delete_own_account()` in Supabase — run supabase-sql/account-deletion.sql.
  */
+export async function staffDeleteUserAccount(params: {
+  actor: UserProfile;
+  targetUserId: string;
+  targetName: string;
+  targetRole?: UserProfile['role'];
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canStaffDeleteAccount(params.actor.role)) {
+    return { ok: false, errorMessage: 'You do not have permission to delete accounts.' };
+  }
+  if (params.actor.uid === params.targetUserId) {
+    return { ok: false, errorMessage: 'Use your account settings to delete your own account.' };
+  }
+
+  const targetRole = normalizeUserRole(params.targetRole);
+  if (
+    normalizeUserRole(params.actor.role) === 'city_manager' &&
+    roleRank(targetRole) >= roleRank('city_manager')
+  ) {
+    return { ok: false, errorMessage: 'Only a director can delete leadership accounts.' };
+  }
+
+  try {
+    const { error: rpcError } = await supabase.rpc('staff_delete_user_account', {
+      target_uid: params.targetUserId,
+    });
+
+    if (!rpcError) {
+      await writeModerationAudit({
+        actor: params.actor,
+        target: { uid: params.targetUserId, displayName: params.targetName },
+        action: 'delete_account',
+        detail: 'Account and all community data permanently removed',
+      });
+      return { ok: true };
+    }
+
+    const rpcMissing =
+      rpcError.code === '42883' ||
+      rpcError.message?.includes('staff_delete_user_account') ||
+      rpcError.message?.includes('Could not find the function');
+
+    if (!rpcMissing) {
+      return { ok: false, errorMessage: rpcError.message };
+    }
+
+    await purgeUserCommunityDataClient(params.targetUserId);
+    const { error: profileError } = await supabase.from('users').delete().eq('uid', params.targetUserId);
+    if (profileError) {
+      return { ok: false, errorMessage: profileError.message };
+    }
+
+    await writeModerationAudit({
+      actor: params.actor,
+      target: { uid: params.targetUserId, displayName: params.targetName },
+      action: 'delete_account',
+      detail: 'Community data removed (run supabase-sql/account-deletion.sql for full auth removal)',
+    });
+
+    return {
+      ok: true,
+      errorMessage:
+        'Community data removed. Run supabase-sql/account-deletion.sql to fully remove sign-in access.',
+    };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };
+  }
+}
+
 export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: string }> {
   const { data: sessionData } = await supabase.auth.getSession();
   const uid = sessionData.session?.user?.id;
@@ -2936,8 +3088,7 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
       return { ok: false, errorMessage: rpcError.message };
     }
 
-    await supabase.from('user_blocks').delete().or(`blockerUserId.eq.${uid},blockedUserId.eq.${uid}`);
-    await supabase.from('message_requests').delete().or(`fromUserId.eq.${uid},toUserId.eq.${uid}`);
+    await purgeUserCommunityDataClient(uid);
     const { error: profileError } = await supabase.from('users').delete().eq('uid', uid);
     if (profileError) {
       return { ok: false, errorMessage: profileError.message };
@@ -2947,7 +3098,7 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     return {
       ok: true,
       errorMessage:
-        'Profile removed. Ask an admin to run section 16 in supabase-setup.sql if you still receive sign-in emails.',
+        'Community data removed. Ask an admin to run supabase-sql/account-deletion.sql if you still receive sign-in emails.',
     };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };

@@ -96,6 +96,12 @@ export function canStaffEditUser(role?: UserProfile['role']): boolean {
   return r === 'city_manager' || r === 'director';
 }
 
+/** Permanently delete a neighbor account (manager + director). */
+export function canStaffDeleteAccount(role?: UserProfile['role']): boolean {
+  const r = normalizeUserRole(role);
+  return r === 'city_manager' || r === 'director';
+}
+
 /** Numeric rank for ticket visibility (higher = more authority). */
 export const ROLE_RANK: Record<UserRole, number> = {
   user: 0,

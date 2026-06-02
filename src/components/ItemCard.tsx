@@ -1,5 +1,5 @@
 import { Calendar, Eye, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
-import { ItemComment, ItemPost } from '../types';
+import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata } from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
 import ListingEngagement from './ListingEngagement';
@@ -18,6 +18,8 @@ interface ItemCardProps {
   onVote: (direction: 'up' | 'down') => void;
   onToggleComments: () => void;
   onAddComment: (text: string) => void;
+  onDeleteComment?: (commentId: string) => void;
+  userProfile?: UserProfile;
   onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold') => void;
   onEdit: () => void;
   onViewDetail: () => void;
@@ -35,6 +37,8 @@ export default function ItemCard({
   onVote,
   onToggleComments,
   onAddComment,
+  onDeleteComment,
+  userProfile,
   onUpdateStatus,
   onEdit,
   onViewDetail,
@@ -251,6 +255,8 @@ export default function ItemCard({
           onVote={onVote}
           onToggleComments={onViewDetail}
           onAddComment={onAddComment}
+          onDeleteComment={onDeleteComment}
+          userProfile={userProfile}
           onViewProfile={onViewProfile}
           variant="card"
         />

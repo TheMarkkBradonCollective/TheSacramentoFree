@@ -4,6 +4,7 @@ import {
   Ban,
   ChevronDown,
   ChevronUp,
+  Flag,
   Gift,
   MapPin,
   MessageSquare,
@@ -14,6 +15,7 @@ import {
 import { UserProfile } from '../types';
 import {
   acceptMessageRequest,
+  chatIdForUsers,
   declineMessageRequest,
   getBlockStatus,
   getLatestMessageRequestBetween,
@@ -26,6 +28,7 @@ import {
   unblockUser,
 } from '../supabase';
 import BlockNeighborModal from './BlockNeighborModal';
+import ReportNeighborModal from './ReportNeighborModal';
 import { ItemPost } from '../types';
 import RoleBadge from './RoleBadge';
 import { ASSIGNABLE_ROLE_OPTIONS } from '../lib/roles';
@@ -68,6 +71,7 @@ export default function NeighborProfileView({
   const [requestSending, setRequestSending] = useState(false);
   const [blockBusy, setBlockBusy] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [requestBusy, setRequestBusy] = useState(false);
 
   const isSelf = userId === currentUserId;
@@ -393,8 +397,8 @@ export default function NeighborProfileView({
               </div>
             )}
 
-            {!isSelf && (
-              <div className="sbn-card p-4">
+            {!isSelf && currentUserProfile && (
+              <div className="sbn-card p-4 space-y-2">
                 {blockStatus.iBlockedThem ? (
                   <button
                     type="button"
@@ -405,20 +409,28 @@ export default function NeighborProfileView({
                     Unblock {profile.displayName}
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleBlock}
-                    disabled={blockBusy || !currentUserProfile}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-900/50 text-red-400 text-sm font-semibold hover:bg-red-950/30 transition-colors disabled:opacity-50"
-                  >
-                    <Ban className="w-4 h-4" />
-                    Block neighbor
-                  </button>
-                )}
-                {!blockStatus.iBlockedThem && (
-                  <p className="text-[10px] text-muted mt-2 leading-snug text-center">
-                    Requires a reason. Staff gets an automatic report; you can attach a screenshot.
-                  </p>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowReportModal(true)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-app text-app text-sm font-semibold hover:bg-inset transition-colors"
+                    >
+                      <Flag className="w-4 h-4 text-red-400" />
+                      Report neighbor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBlock}
+                      disabled={blockBusy}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-900/50 text-red-400 text-sm font-semibold hover:bg-red-950/30 transition-colors disabled:opacity-50"
+                    >
+                      <Ban className="w-4 h-4" />
+                      Block neighbor
+                    </button>
+                    <p className="text-[10px] text-muted leading-snug text-center">
+                      Reports go to staff for review. Blocking requires a reason and hides you from each other.
+                    </p>
+                  </>
                 )}
               </div>
             )}
@@ -550,6 +562,19 @@ export default function NeighborProfileView({
           blockedUserName={profile.displayName}
           onClose={() => setShowBlockModal(false)}
           onBlocked={handleBlocked}
+        />
+      )}
+
+      {showReportModal && currentUserProfile && profile && (
+        <ReportNeighborModal
+          reporter={currentUserProfile}
+          reportedUserId={userId}
+          reportedUserName={profile.displayName}
+          onClose={() => setShowReportModal(false)}
+          onSubmitted={() => {
+            setShowReportModal(false);
+            setActionMsg('Report sent to staff for review.');
+          }}
         />
       )}
     </div>

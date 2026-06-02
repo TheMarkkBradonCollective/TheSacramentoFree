@@ -8,6 +8,7 @@ import {
   staffBanUser,
   staffUnbanUser,
   staffUpdateUserProfile,
+  staffDeleteUserAccount,
   getStaffUserReports,
   markUserReportReviewed,
   getSupportTicketsForStaff,
@@ -17,6 +18,7 @@ import {
   canAccessStaffDirectory,
   canStaffBan,
   canStaffEditUser,
+  canStaffDeleteAccount,
   canStaffSuspend,
   canViewAuditLog,
   canViewStaffReports,
@@ -85,6 +87,7 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
   const canSuspend = canStaffSuspend(viewer.role);
   const canBan = canStaffBan(viewer.role);
   const canEdit = canStaffEditUser(viewer.role);
+  const canDeleteAccount = canStaffDeleteAccount(viewer.role);
 
   const reloadDirectory = useCallback(async () => {
     setLoading(true);
@@ -277,6 +280,29 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
         await reloadDirectory();
       } else {
         setErr(result.errorMessage || 'Unban failed.');
+      }
+      return;
+    }
+
+    if (action === 'delete_account') {
+      if (
+        !confirm(
+          `Permanently delete ${user.displayName}'s account? All their listings, comments, messages, and profile data will be removed. This cannot be undone.`,
+        )
+      ) {
+        return;
+      }
+      const result = await staffDeleteUserAccount({
+        actor: viewer,
+        targetUserId: user.uid,
+        targetName: user.displayName,
+        targetRole: user.role,
+      });
+      if (result.ok) {
+        setMsg(result.errorMessage || `${user.displayName}'s account deleted.`);
+        await reloadDirectory();
+      } else {
+        setErr(result.errorMessage || 'Could not delete account.');
       }
     }
   };
@@ -481,6 +507,9 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
                         )}
                         {canBan && user.uid !== viewer.uid && isBanned && (
                           <option value="unban">Unban / unblock</option>
+                        )}
+                        {canDeleteAccount && user.uid !== viewer.uid && (
+                          <option value="delete_account">Delete account permanently</option>
                         )}
                       </select>
                     </li>

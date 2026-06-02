@@ -584,7 +584,7 @@ export default function UserProfileView({
         >
           <h3 className="text-sm font-bold text-red-500 uppercase tracking-wider mb-2">Delete account</h3>
           <p className="text-xs text-muted leading-relaxed mb-4">
-            Permanently remove your profile and sign-in access. Your past listings stay in the community feed.
+            Permanently remove your profile, listings, comments, messages, and sign-in access.
           </p>
           <button
             type="button"

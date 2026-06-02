@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
-import { ItemComment } from '../types';
+import { ChevronDown, ChevronUp, Flag, MessageSquare, Trash2 } from 'lucide-react';
+import { ItemComment, UserProfile } from '../types';
+import ReportNeighborModal from './ReportNeighborModal';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 
 interface ListingEngagementProps {
@@ -12,6 +13,8 @@ interface ListingEngagementProps {
   onVote: (direction: 'up' | 'down') => void;
   onToggleComments?: () => void;
   onAddComment: (text: string) => void;
+  onDeleteComment?: (commentId: string) => void;
+  userProfile?: UserProfile | null;
   onViewProfile?: (userId: string) => void;
   /** card = compact with toggle; detail = full section always open */
   variant?: 'card' | 'detail';
@@ -26,6 +29,8 @@ export default function ListingEngagement({
   onVote,
   onToggleComments,
   onAddComment,
+  onDeleteComment,
+  userProfile,
   onViewProfile,
   variant = 'card',
 }: ListingEngagementProps) {
@@ -34,6 +39,7 @@ export default function ListingEngagement({
   const { userVote, upvotes, downvotes } = voteState;
   const netScore = upvotes - downvotes;
   const [showAllComments, setShowAllComments] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
 
   const visibleComments = useMemo(() => {
     if (variant !== 'detail') return comments;
@@ -124,31 +130,61 @@ export default function ListingEngagement({
           ) : (
             <>
               <ul className="space-y-2 max-h-64 overflow-y-auto">
-                {visibleComments.map((comment) => (
-                <li key={comment.id} className="bg-inset rounded-xl p-3 border border-app">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onViewProfile?.(comment.userId)}
-                      className="flex items-center gap-2 min-w-0 text-left hover:opacity-90 cursor-pointer"
-                      disabled={!onViewProfile}
-                    >
-                      <img
-                        src={
-                          comment.userPhoto ||
-                          `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(comment.userName)}`
-                        }
-                        alt=""
-                        className="w-6 h-6 rounded-full border border-app"
-                        referrerPolicy="no-referrer"
-                      />
-                      <span className="text-xs font-bold text-app">{comment.userName}</span>
-                    </button>
-                    <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
-                  </div>
-                  <p className="text-sm text-muted mt-1.5 leading-relaxed">{comment.text}</p>
-                </li>
-                ))}
+                {visibleComments.map((comment) => {
+                  const isOwnComment = comment.userId === currentUserId;
+                  const canReport = userProfile && !isOwnComment && comment.userId !== posterUserId;
+                  return (
+                    <li key={comment.id} className="bg-inset rounded-xl p-3 border border-app">
+                      <div className="flex items-start gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onViewProfile?.(comment.userId)}
+                          className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-90 cursor-pointer"
+                          disabled={!onViewProfile}
+                        >
+                          <img
+                            src={
+                              comment.userPhoto ||
+                              `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(comment.userName)}`
+                            }
+                            alt=""
+                            className="w-6 h-6 rounded-full border border-app shrink-0"
+                            referrerPolicy="no-referrer"
+                          />
+                          <span className="text-xs font-bold text-app">{comment.userName}</span>
+                          <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
+                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isOwnComment && onDeleteComment && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteComment(comment.id)}
+                              className="p-1.5 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
+                              title="Remove your comment"
+                              aria-label="Remove your comment"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {canReport && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setReportTarget({ userId: comment.userId, userName: comment.userName })
+                              }
+                              className="p-1.5 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
+                              title={`Report ${comment.userName}`}
+                              aria-label={`Report ${comment.userName}`}
+                            >
+                              <Flag className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted mt-1.5 leading-relaxed">{comment.text}</p>
+                    </li>
+                  );
+                })}
               </ul>
               {hasHiddenComments && (
                 <button
@@ -184,6 +220,15 @@ export default function ListingEngagement({
             </button>
           </form>
         </div>
+      )}
+
+      {reportTarget && userProfile && (
+        <ReportNeighborModal
+          reporter={userProfile}
+          reportedUserId={reportTarget.userId}
+          reportedUserName={reportTarget.userName}
+          onClose={() => setReportTarget(null)}
+        />
       )}
     </section>
   );

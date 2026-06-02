@@ -38,6 +38,7 @@ interface ItemDetailViewProps {
   comments: ItemComment[];
   onVote: (direction: 'up' | 'down') => void;
   onAddComment: (text: string) => void;
+  onDeleteComment?: (commentId: string) => void;
   updating?: boolean;
 }
 
@@ -57,6 +58,7 @@ export default function ItemDetailView({
   comments,
   onVote,
   onAddComment,
+  onDeleteComment,
   updating = false,
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
@@ -251,6 +253,8 @@ export default function ItemDetailView({
             commentsExpanded
             onVote={onVote}
             onAddComment={onAddComment}
+            onDeleteComment={onDeleteComment}
+            userProfile={userProfile}
             onViewProfile={onViewProfile}
             variant="detail"
           />
