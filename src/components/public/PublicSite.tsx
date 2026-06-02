@@ -9,6 +9,7 @@ import RulesPage from './pages/RulesPage';
 import NeighborhoodsPage from './pages/NeighborhoodsPage';
 import CommunityPage from './pages/CommunityPage';
 import AuthPage from './AuthPage';
+import { ItemPost } from '../../types';
 
 interface PublicSiteProps {
   onEmailSignIn: (email: string, password: string) => Promise<boolean>;
@@ -21,6 +22,10 @@ interface PublicSiteProps {
   ) => Promise<boolean>;
   errorMsg?: string;
   isAuthLoading?: boolean;
+  items?: ItemPost[];
+  isItemsLoading?: boolean;
+  onViewListing?: (item: ItemPost) => void;
+  onRequireSignIn?: () => void;
 }
 
 export default function PublicSite({
@@ -28,6 +33,10 @@ export default function PublicSite({
   onEmailSignUp,
   errorMsg,
   isAuthLoading,
+  items = [],
+  isItemsLoading = false,
+  onViewListing,
+  onRequireSignIn,
 }: PublicSiteProps) {
   const { route, navigate } = usePublicRoute();
 
@@ -60,7 +69,15 @@ export default function PublicSite({
         );
       case 'home':
       default:
-        return <HomePage onNavigate={navigate} />;
+        return (
+          <HomePage
+            onNavigate={navigate}
+            items={items}
+            isItemsLoading={isItemsLoading}
+            onViewListing={onViewListing}
+            onRequireSignIn={onRequireSignIn}
+          />
+        );
     }
   };
 

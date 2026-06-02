@@ -39,6 +39,7 @@ import {
   sessionStubFromProfile,
 } from './lib/sessionCache';
 import AppBootSplash from './components/AppBootSplash';
+import GuestItemDetailView from './components/public/GuestItemDetailView';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -385,42 +386,45 @@ export default function App() {
     };
   }, [applySession, syncProfileFromDb]);
 
-  const loadItems = useCallback(async (isBackground = false, attempt = 0) => {
-    if (!userProfile || !sessionUser) return;
-    if (!isBackground) {
-      setIsItemsLoading(true);
-    }
-    try {
-      const loadedItems = await getSupabaseItems();
-      setItems((current) => {
-        if (loadedItems.length === 0 && current.length > 0) {
-          console.warn('Items fetch returned empty — keeping cached listings until auth syncs.');
-          return current;
-        }
-        return loadedItems;
-      });
-      if (loadedItems.length > 0) {
-        writeCachedItems(loadedItems);
-      } else if (attempt < 2) {
-        // Auth token may not be attached yet on cold refresh — retry shortly.
-        window.setTimeout(() => {
-          void loadItemsRef.current(true, attempt + 1);
-        }, 1200 * (attempt + 1));
-      }
-    } catch (err) {
-      console.warn('Supabase items fetch failed:', err);
-      setItems((current) => (current.length === 0 ? DEFAULT_OFFLINE_ITEMS : current));
-      if (attempt < 2) {
-        window.setTimeout(() => {
-          void loadItemsRef.current(true, attempt + 1);
-        }, 1200 * (attempt + 1));
-      }
-    } finally {
+  const loadItems = useCallback(
+    async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
+      const isGuest = options?.guest === true;
+      if (!isGuest && (!userProfile || !sessionUser)) return;
       if (!isBackground) {
-        setIsItemsLoading(false);
+        setIsItemsLoading(true);
       }
-    }
-  }, [userProfile?.uid, sessionUser]);
+      try {
+        const loadedItems = await getSupabaseItems();
+        setItems((current) => {
+          if (!isGuest && loadedItems.length === 0 && current.length > 0) {
+            console.warn('Items fetch returned empty — keeping cached listings until auth syncs.');
+            return current;
+          }
+          return loadedItems;
+        });
+        if (loadedItems.length > 0) {
+          writeCachedItems(loadedItems);
+        } else if (!isGuest && attempt < 2) {
+          window.setTimeout(() => {
+            void loadItemsRef.current(true, attempt + 1);
+          }, 1200 * (attempt + 1));
+        }
+      } catch (err) {
+        console.warn('Supabase items fetch failed:', err);
+        setItems((current) => (current.length === 0 ? DEFAULT_OFFLINE_ITEMS : current));
+        if (!isGuest && attempt < 2) {
+          window.setTimeout(() => {
+            void loadItemsRef.current(true, attempt + 1);
+          }, 1200 * (attempt + 1));
+        }
+      } finally {
+        if (!isBackground) {
+          setIsItemsLoading(false);
+        }
+      }
+    },
+    [userProfile?.uid, sessionUser],
+  );
 
   useEffect(() => {
     loadItemsRef.current = loadItems;
@@ -428,14 +432,17 @@ export default function App() {
 
   const sessionReady = !!sessionUser && !!userProfile;
 
-  // 2. Load listings once auth is ready, then keep in sync via Supabase Realtime
+  const [guestDetailItem, setGuestDetailItem] = useState<ItemPost | null>(null);
+
+  // Load public listing preview for guests
   useEffect(() => {
-    if (!sessionReady) {
-      if (!userProfile && !authBootstrapping) {
-        setItems([]);
-      }
-      return;
-    }
+    if (authBootstrapping || sessionUser) return;
+    void loadItems(false, 0, { guest: true });
+  }, [authBootstrapping, sessionUser, loadItems]);
+
+  // Load listings once auth is ready, then keep in sync via Supabase Realtime
+  useEffect(() => {
+    if (!sessionReady) return;
     loadItems(false);
   }, [sessionReady, userProfile?.uid, loadItems, authBootstrapping]);
 
@@ -692,12 +699,30 @@ export default function App() {
       {authBootstrapping && !sessionUser ? (
         <AppBootSplash />
       ) : !sessionUser ? (
-        <PublicSite
-          onEmailSignIn={handleEmailSignIn}
-          onEmailSignUp={handleEmailSignUp}
-          errorMsg={errorMsg}
-          isAuthLoading={isAuthLoading}
-        />
+        <>
+          <PublicSite
+            onEmailSignIn={handleEmailSignIn}
+            onEmailSignUp={handleEmailSignUp}
+            errorMsg={errorMsg}
+            isAuthLoading={isAuthLoading}
+            items={items}
+            isItemsLoading={isItemsLoading}
+            onViewListing={setGuestDetailItem}
+            onRequireSignIn={() => {
+              window.location.hash = '#/login';
+            }}
+          />
+          {guestDetailItem && (
+            <GuestItemDetailView
+              item={guestDetailItem}
+              onClose={() => setGuestDetailItem(null)}
+              onRequireSignIn={() => {
+                setGuestDetailItem(null);
+                window.location.hash = '#/login';
+              }}
+            />
+          )}
+        </>
       ) : (
         <>
           {!userProfile ? (

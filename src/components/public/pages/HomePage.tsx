@@ -1,11 +1,17 @@
 import { ArrowRight, Heart, MapPin, Shield, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import CommunityStatsBar from '../../CommunityStatsBar';
+import GuestListingPreview from '../GuestListingPreview';
 import { SITE } from '../../../siteContent';
 import type { PublicRoute } from '../../../public/routes';
+import { ItemPost } from '../../../types';
 
 interface HomePageProps {
   onNavigate: (route: PublicRoute) => void;
+  items?: ItemPost[];
+  isItemsLoading?: boolean;
+  onViewListing?: (item: ItemPost) => void;
+  onRequireSignIn?: () => void;
 }
 
 const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: typeof Heart }[] = [
@@ -15,7 +21,13 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
   { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 34+ areas.', icon: MapPin },
 ];
 
-export default function HomePage({ onNavigate }: HomePageProps) {
+export default function HomePage({
+  onNavigate,
+  items = [],
+  isItemsLoading = false,
+  onViewListing,
+  onRequireSignIn,
+}: HomePageProps) {
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 md:py-16">
       <div className="sbn-page-content sbn-hero-glow">
@@ -55,11 +67,20 @@ export default function HomePage({ onNavigate }: HomePageProps) {
 
       <div className="mt-10">
         <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">Community at a glance</p>
-        <CommunityStatsBar variant="full" />
+        <CommunityStatsBar items={items} variant="full" />
       </div>
 
+      {onViewListing && onRequireSignIn && (
+        <GuestListingPreview
+          items={items}
+          isLoading={isItemsLoading}
+          onViewItem={onViewListing}
+          onRequireSignIn={onRequireSignIn}
+        />
+      )}
+
       <h2 className="mt-14 font-display text-xl font-bold text-app">Explore the community</h2>
-      <p className="mt-1 text-sm text-muted">Browse without an account.</p>
+      <p className="mt-1 text-sm text-muted">Learn how we keep gifting local and free.</p>
 
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {EXPLORE_LINKS.map(({ route, title, blurb, icon: Icon }) => (
