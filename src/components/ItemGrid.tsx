@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
-import { Search as SearchIcon, MapPin, Tag, AlertCircle } from 'lucide-react';
+import { Bookmark, Search as SearchIcon, MapPin, Tag, AlertCircle } from 'lucide-react';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
 import { updateSupabaseItemStatus } from '../supabase';
 import { useItemsEngagement } from '../hooks/useItemsEngagement';
+import { useSavedItems } from '../hooks/useSavedItems';
 import { SITE } from '../siteContent';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
@@ -32,9 +33,12 @@ export default function ItemGrid({
   const [selectedType, setSelectedType] = useState<'all' | 'giveaway' | 'looking'>('all');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
+
+  const { savedIds, toggleSaved, isSaved } = useSavedItems();
 
   const {
     getVotesForPost,
@@ -79,7 +83,10 @@ export default function ItemGrid({
     // 4. Neighborhood Filter
     const matchesNeighborhood = selectedNeighborhood === 'All Neighborhoods' || item.neighborhood === selectedNeighborhood;
 
-    return matchesSearch && matchesType && matchesCategory && matchesNeighborhood;
+    // 5. Saved Filter
+    const matchesSaved = !showSavedOnly || savedIds.has(item.id);
+
+    return matchesSearch && matchesType && matchesCategory && matchesNeighborhood && matchesSaved;
   });
 
   return (
@@ -107,12 +114,22 @@ export default function ItemGrid({
                 onClick={() => {
                   setSelectedType(type);
                   setSelectedCategory('All Categories');
+                  setShowSavedOnly(false);
                 }}
-                className={`sbn-chip ${selectedType === type ? 'sbn-chip-active' : ''}`}
+                className={`sbn-chip ${selectedType === type && !showSavedOnly ? 'sbn-chip-active' : ''}`}
               >
                 {type === 'all' ? 'All' : type === 'giveaway' ? 'Giving' : 'Looking for'}
               </button>
             ))}
+            <button
+              type="button"
+              id="type_saved_btn"
+              onClick={() => setShowSavedOnly((v) => !v)}
+              className={`sbn-chip flex items-center gap-1.5 ${showSavedOnly ? 'sbn-chip-active' : ''}`}
+            >
+              <Bookmark className={`w-3 h-3 ${showSavedOnly ? 'fill-current' : ''}`} />
+              Saved
+            </button>
           </div>
         </div>
 
@@ -182,8 +199,19 @@ export default function ItemGrid({
           <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
           <h3 className="font-display text-lg font-bold text-app">No listings found</h3>
           <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
-            Try different filters, or be the first to post. {SITE.tagline}
+            {showSavedOnly
+              ? 'You haven\'t saved any listings yet. Tap the bookmark icon on any listing to save it.'
+              : `Try different filters, or be the first to post. ${SITE.tagline}`}
           </p>
+          {showSavedOnly && (
+            <button
+              type="button"
+              onClick={() => setShowSavedOnly(false)}
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm mt-4"
+            >
+              Browse all listings
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5" id="items_grid_cards">
@@ -196,6 +224,8 @@ export default function ItemGrid({
               comments={getCommentsForPost(item.id)}
               commentsExpanded={!!expandedPostComments[item.id]}
               updating={updatingItemId === item.id}
+              isSaved={isSaved(item.id)}
+              onSave={toggleSaved}
               onVote={(dir) => handleVote(item.id, item.userId, dir)}
               onToggleComments={() => toggleComments(item.id)}
               onAddComment={(text) => handleAddComment(item.id, text)}

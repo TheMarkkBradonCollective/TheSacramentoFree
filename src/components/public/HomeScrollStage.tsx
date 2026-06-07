@@ -50,7 +50,7 @@ export default function HomeScrollStage({ children }: HomeScrollStageProps) {
   return (
     <div
       ref={rootRef}
-      className="home-scroll-stage relative max-w-5xl mx-auto px-4 py-12 md:py-16"
+      className="home-scroll-stage relative max-w-5xl mx-auto px-4 py-8 md:py-16"
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
     >
