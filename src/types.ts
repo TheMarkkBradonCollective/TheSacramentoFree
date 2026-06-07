@@ -210,6 +210,7 @@ export const SACRAMENTO_NEIGHBORHOODS = [
   'Fair Oaks',
   'Folsom',
   'Foothill Farms',
+  'Old Foothill Farms',
   'La Riviera',
   'North Highlands',
   'Orangevale',
@@ -238,6 +239,7 @@ export const ITEM_CATEGORIES = [
   'Food & Pantry',
   'Health & Beauty',
   'Pet Supplies',
+  'Labor & Services',
   'Other / Custom'
 ];
 
@@ -252,6 +254,7 @@ export const ISO_CATEGORIES = [
   'Clothing Needed',
   'Electronics / Media Wanted',
   'Pet Supplies Needed',
+  'Labor & Services Needed',
   'Help / Labor Request',
   'Other Seeking Support'
 ];
@@ -325,6 +328,7 @@ export const NEIGHBORHOOD_LAT_LONGS: Record<string, { lat: number; lng: number }
   'Fair Oaks': { lat: 38.6446, lng: -121.272 },
   'Folsom': { lat: 38.6779, lng: -121.176 },
   'Foothill Farms': { lat: 38.678, lng: -121.346 },
+  'Old Foothill Farms': { lat: 38.662, lng: -121.362 },
   'La Riviera': { lat: 38.568, lng: -121.366 },
   'North Highlands': { lat: 38.6681, lng: -121.3726 },
   'Orangevale': { lat: 38.6785, lng: -121.2254 },

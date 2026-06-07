@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, ExternalLink, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
+import { ArrowLeft, Bookmark, Calendar, ExternalLink, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ItemPost, extractGPSCoordinates, ItemComment, ListingSubItem, UserProfile } from '../types';
 import {
@@ -21,6 +21,7 @@ import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import { getListingSubitems } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { useSavedItems } from '../hooks/useSavedItems';
 
 interface ItemDetailViewProps {
   item: ItemPost;
@@ -65,6 +66,8 @@ export default function ItemDetailView({
   const isOwner = item.userId === currentUserId;
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
+
+  const { isSaved, toggleSaved } = useSavedItems();
 
   useEffect(() => {
     void getListingSubitems(item.id).then(setSubitems);
@@ -129,6 +132,19 @@ export default function ItemDetailView({
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="font-display font-bold text-base text-app truncate flex-1">Listing details</h1>
+        <button
+          type="button"
+          onClick={() => toggleSaved(item.id)}
+          title={isSaved(item.id) ? 'Remove from saved' : 'Save this listing'}
+          className={`p-2 rounded-full transition-colors shrink-0 ${
+            isSaved(item.id)
+              ? 'text-accent bg-accent-soft'
+              : 'text-muted hover:text-accent hover:bg-inset'
+          }`}
+          aria-label={isSaved(item.id) ? 'Remove from saved' : 'Save listing'}
+        >
+          <Bookmark className={`w-5 h-5 ${isSaved(item.id) ? 'fill-current' : ''}`} />
+        </button>
         {isOwner && isOpenForCoordination ? (
           <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
         ) : !isOwner ? (

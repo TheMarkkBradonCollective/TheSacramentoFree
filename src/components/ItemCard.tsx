@@ -1,4 +1,4 @@
-import { Calendar, Eye, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
+import { Bookmark, Calendar, Eye, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
 import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata } from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
@@ -15,6 +15,8 @@ interface ItemCardProps {
   comments: ItemComment[];
   commentsExpanded: boolean;
   updating: boolean;
+  isSaved?: boolean;
+  onSave?: (itemId: string) => void;
   onVote: (direction: 'up' | 'down') => void;
   onToggleComments: () => void;
   onAddComment: (text: string) => void;
@@ -34,6 +36,8 @@ export default function ItemCard({
   comments,
   commentsExpanded,
   updating,
+  isSaved = false,
+  onSave,
   onVote,
   onToggleComments,
   onAddComment,
@@ -282,7 +286,24 @@ export default function ItemCard({
             </div>
           </button>
 
-          {actionButtons}
+          <div className="flex items-center gap-1">
+            {onSave && (
+              <button
+                type="button"
+                onClick={() => onSave(item.id)}
+                title={isSaved ? 'Remove from saved' : 'Save this listing'}
+                className={`p-1.5 rounded-full transition-colors ${
+                  isSaved
+                    ? 'text-accent bg-accent-soft'
+                    : 'text-muted hover:text-accent hover:bg-accent-soft'
+                }`}
+                aria-label={isSaved ? 'Remove from saved' : 'Save listing'}
+              >
+                <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
+              </button>
+            )}
+            {actionButtons}
+          </div>
         </div>
       </div>
     </article>
