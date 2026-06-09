@@ -433,7 +433,7 @@ export default function UserProfileView({
         </div>
       </div>
 
-      <NotificationSettings userId={userProfile.uid} fullBleed={fullBleed} />
+      <NotificationSettings userId={userProfile.uid} userRole={userProfile.role} fullBleed={fullBleed} />
 
       {/* Modern PWA App Installation Widget */}
       <div

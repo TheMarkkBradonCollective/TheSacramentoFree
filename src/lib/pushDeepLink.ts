@@ -7,6 +7,7 @@ export interface PushDeepLinkTarget {
   requestId?: string;
   profile?: boolean;
   notifications?: boolean;
+  staffPanel?: 'tickets' | 'reports';
 }
 
 export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
@@ -24,9 +25,13 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
 
   if (path === 'notifications') return { tab: 'menu', notifications: true };
   if (path === 'profile') return { tab: 'profile', profile: true };
+  if (path === 'staff/tickets') return { tab: 'menu', staffPanel: 'tickets' };
+  if (path === 'staff/reports') return { tab: 'menu', staffPanel: 'reports' };
 
   const listingMatch = path.match(/^listing\/([^/]+)/);
   if (listingMatch) return { tab: 'feed', listingId: listingMatch[1] };
+
+  if (path === 'messages') return { tab: 'chats' };
 
   const messageMatch = path.match(/^messages\/([^/]+)/);
   if (messageMatch) return { tab: 'chats', conversationId: messageMatch[1] };
@@ -45,6 +50,18 @@ export function pushUrlForConversation(conversationId: string): string {
   return `/messages/${conversationId}`;
 }
 
+export function pushUrlForMessageRequests(): string {
+  return '/messages';
+}
+
 export function pushUrlForRequest(requestId: string): string {
   return `/requests/${requestId}`;
+}
+
+export function pushUrlForStaffTickets(): string {
+  return '/staff/tickets';
+}
+
+export function pushUrlForStaffReports(): string {
+  return '/staff/reports';
 }

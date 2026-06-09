@@ -901,7 +901,11 @@ export async function updateSupabaseItem(
   }
 }
 
-export async function updateSupabaseItemStatus(itemId: string, status: string): Promise<boolean> {
+export async function updateSupabaseItemStatus(
+  itemId: string,
+  status: string,
+  actorUserId?: string,
+): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('items')
@@ -911,6 +915,12 @@ export async function updateSupabaseItemStatus(itemId: string, status: string): 
     if (error) {
       handleSupabaseError(error, 'items');
       return false;
+    }
+
+    if (status === 'pending_pickup' && actorUserId) {
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) => m.pushAfterPendingPickup(itemId, actorUserId)),
+      );
     }
 
     setSupabaseConfigurationState(true);
@@ -2988,6 +2998,7 @@ export async function blockUser(params: {
       createdAt: new Date().toISOString(),
     });
 
+    let reportSaved = !reportError;
     if (reportError) {
       if (reportError.code === '42P01') {
         return {
@@ -2999,7 +3010,7 @@ export async function blockUser(params: {
         String(reportError.message || '').includes('source') ||
         String(reportError.message || '').includes('proofImageUrl');
       if (missingColumn) {
-        await supabase.from('user_reports').insert({
+        const { error: retryError } = await supabase.from('user_reports').insert({
           id: reportId,
           reporterUserId: blocker.uid,
           reporterName: blocker.displayName,
@@ -3010,9 +3021,24 @@ export async function blockUser(params: {
           status: 'new',
           createdAt: new Date().toISOString(),
         });
+        reportSaved = !retryError;
       } else {
         console.warn('Block succeeded but staff report failed:', reportError);
       }
+    }
+
+    if (reportSaved) {
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushAfterUserReport({
+            reportId,
+            reporterUserId: blocker.uid,
+            reporterName: blocker.displayName,
+            subject: `Block: ${blockedUserName}`,
+            preview: reportBody,
+          }),
+        ),
+      );
     }
 
     return { ok: true };
@@ -3101,8 +3127,9 @@ export async function sendMessageRequest(params: {
   }
 
   try {
+    const requestId = `dmreq_${fromUser.uid}_${toUserId}_${Date.now()}`;
     const { error } = await supabase.from('message_requests').insert({
-      id: `dmreq_${fromUser.uid}_${toUserId}_${Date.now()}`,
+      id: requestId,
       fromUserId: fromUser.uid,
       toUserId,
       fromUserName: fromUser.displayName,
@@ -3118,6 +3145,18 @@ export async function sendMessageRequest(params: {
       }
       return { ok: false, errorMessage: error.message };
     }
+
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAfterMessageRequest({
+          requestId,
+          toUserId,
+          fromUserName: fromUser.displayName,
+          message: message?.trim() || null,
+        }),
+      ),
+    );
+
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send request.' };
@@ -3182,6 +3221,16 @@ export async function acceptMessageRequest(
     if (updateError) {
       return { ok: false, errorMessage: updateError.message };
     }
+
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAfterMessageRequestAccepted({
+          chatId,
+          requesterUserId: requesterId,
+          accepterName: accepter.displayName,
+        }),
+      ),
+    );
 
     return { ok: true, chatId };
   } catch (err: unknown) {
@@ -3448,6 +3497,16 @@ export async function staffBanUser(params: {
       detail: params.note?.trim() || 'Platform ban',
     });
 
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAccountStatusChange(
+          params.targetUserId,
+          'Account disabled',
+          'Your account has been disabled by community staff.',
+        ),
+      ),
+    );
+
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not ban user.' };
@@ -3476,6 +3535,12 @@ export async function staffUnbanUser(params: {
       target: { uid: params.targetUserId, displayName: params.targetName },
       action: 'unban',
     });
+
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAccountStatusChange(params.targetUserId, 'Account restored', 'Your account has been re-enabled.'),
+      ),
+    );
 
     return { ok: true };
   } catch (err: unknown) {
@@ -3666,6 +3731,19 @@ export async function submitUserReport(params: {
       }
       return { ok: false, errorMessage: error.message };
     }
+
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAfterUserReport({
+          reportId,
+          reporterUserId: params.reporter.uid,
+          reporterName: params.reporter.displayName,
+          subject,
+          preview: body,
+        }),
+      ),
+    );
+
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send report.' };
@@ -3762,6 +3840,21 @@ export async function createSupportTicket(params: {
     });
 
     if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    const preview = message || (imageUrl ? 'Sent a photo' : 'Opened a help ticket');
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAfterSupportTicketOpened({
+          ticketId,
+          openerUserId: params.opener.uid,
+          openerName: params.opener.displayName,
+          subject,
+          preview,
+          minStaffRank,
+        }),
+      ),
+    );
+
     return { ok: true, ticketId };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open ticket.' };
@@ -3873,8 +3966,9 @@ export async function addSupportTicketMessage(params: {
       .update({ updatedAt: now })
       .eq('id', params.ticketId);
 
+    const preview = text || (imageUrl ? 'Sent a photo' : 'New reply');
+
     if (params.sender.uid !== ticket.openerUserId) {
-      const preview = text || (imageUrl ? 'Sent a photo' : 'New reply');
       firePush(() =>
         import('./lib/pushIntegration').then((m) =>
           m.pushAfterSupportReply({
@@ -3882,6 +3976,19 @@ export async function addSupportTicketMessage(params: {
             openerUserId: ticket.openerUserId,
             subject: ticket.subject,
             preview,
+          }),
+        ),
+      );
+    } else {
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushAfterSupportUserMessage({
+            ticketId: params.ticketId,
+            openerUserId: ticket.openerUserId,
+            openerName: params.sender.displayName,
+            subject: ticket.subject,
+            preview,
+            minStaffRank: ticket.minStaffRank,
           }),
         ),
       );

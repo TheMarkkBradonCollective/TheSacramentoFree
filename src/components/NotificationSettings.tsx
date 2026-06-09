@@ -1,9 +1,17 @@
 import { Bell, BellOff, MapPin } from 'lucide-react';
-import { ITEM_CATEGORIES, ISO_CATEGORIES, type NotificationPreferences, type NearbyRadiusMiles } from '../types';
+import {
+  ITEM_CATEGORIES,
+  ISO_CATEGORIES,
+  type NotificationPreferences,
+  type NearbyRadiusMiles,
+  type UserProfile,
+} from '../types';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { isStaffRole } from '../lib/roles';
 
 interface NotificationSettingsProps {
   userId: string;
+  userRole?: UserProfile['role'];
   fullBleed?: boolean;
 }
 
@@ -27,6 +35,11 @@ const PREF_SECTIONS: {
     title: 'Messages & support',
     items: [
       { key: 'messages', label: 'Direct messages', description: 'Chat messages from neighbors' },
+      {
+        key: 'messageRequests',
+        label: 'Message requests',
+        description: 'When a neighbor asks to chat or accepts your request',
+      },
       { key: 'support', label: 'Support tickets', description: 'Staff replies on your help tickets' },
     ],
   },
@@ -104,7 +117,27 @@ function SwitchRow({
   );
 }
 
-export default function NotificationSettings({ userId, fullBleed = false }: NotificationSettingsProps) {
+const STAFF_PREF_SECTION = {
+  title: 'Staff moderation',
+  items: [
+    {
+      key: 'staffSupport' as const,
+      label: 'Support inbox',
+      description: 'New help tickets and neighbor replies on open tickets',
+    },
+    {
+      key: 'staffReports' as const,
+      label: 'Neighbor reports',
+      description: 'New reports submitted for staff review',
+    },
+  ],
+};
+
+export default function NotificationSettings({
+  userId,
+  userRole,
+  fullBleed = false,
+}: NotificationSettingsProps) {
   const {
     permission,
     isSubscribed,
@@ -232,6 +265,25 @@ export default function NotificationSettings({ userId, fullBleed = false }: Noti
             </div>
           </div>
         ))}
+
+        {isStaffRole(userRole) && (
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
+              {STAFF_PREF_SECTION.title}
+            </h4>
+            <div className="rounded-xl border border-app bg-inset/30 px-3">
+              {STAFF_PREF_SECTION.items.map((toggle) => (
+                <SwitchRow
+                  key={toggle.key}
+                  label={toggle.label}
+                  description={toggle.description}
+                  checked={Boolean(preferences[toggle.key])}
+                  onChange={(value) => setPref(toggle.key, value)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={`mt-6 pt-4 border-t border-app ${masterDisabled ? 'opacity-50 pointer-events-none' : ''}`}>

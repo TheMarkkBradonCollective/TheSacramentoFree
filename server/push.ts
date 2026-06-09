@@ -9,6 +9,8 @@ export type PushEventType =
   | 'pickup_scheduled'
   | 'pickup_reminder'
   | 'new_message'
+  | 'message_request'
+  | 'message_request_accepted'
   | 'new_comment'
   | 'listing_approved'
   | 'listing_denied'
@@ -20,6 +22,8 @@ export type PushEventType =
   | 'announcement'
   | 'account_update'
   | 'support_reply'
+  | 'staff_support'
+  | 'staff_report'
   | 'saved_item_update'
   | 'listing_status';
 
@@ -36,6 +40,7 @@ export interface NotificationPreferencesRow {
   userId: string;
   enabled: boolean;
   messages: boolean;
+  messageRequests: boolean;
   support: boolean;
   claims: boolean;
   gifts: boolean;
@@ -48,6 +53,8 @@ export interface NotificationPreferencesRow {
   newListings: boolean;
   savedItems: boolean;
   accountUpdates: boolean;
+  staffSupport: boolean;
+  staffReports: boolean;
   nearbyRadiusMiles: number;
   followedCategories: string[];
 }
@@ -68,6 +75,8 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   pickup_scheduled: 'pickupReminders',
   pickup_reminder: 'pickupReminders',
   new_message: 'messages',
+  message_request: 'messageRequests',
+  message_request_accepted: 'messageRequests',
   new_comment: 'comments',
   listing_approved: 'listingStatus',
   listing_denied: 'listingStatus',
@@ -80,6 +89,8 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   announcement: 'announcements',
   account_update: 'accountUpdates',
   support_reply: 'support',
+  staff_support: 'staffSupport',
+  staff_report: 'staffReports',
   saved_item_update: 'savedItems',
 };
 
@@ -98,6 +109,7 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     userId: String(row.userId),
     enabled: row.enabled !== false,
     messages: row.messages !== false,
+    messageRequests: row.messageRequests !== false,
     support: row.support !== false,
     claims: row.claims !== false,
     gifts: row.gifts !== false,
@@ -110,6 +122,8 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     newListings: row.newListings !== false,
     savedItems: row.savedItems !== false,
     accountUpdates: row.accountUpdates !== false,
+    staffSupport: row.staffSupport !== false,
+    staffReports: row.staffReports !== false,
     nearbyRadiusMiles: Number(row.nearbyRadiusMiles ?? 10),
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
   };
@@ -137,6 +151,7 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         userId: uid,
         enabled: true,
         messages: true,
+        messageRequests: true,
         support: true,
         claims: true,
         gifts: true,
@@ -149,6 +164,8 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         newListings: true,
         savedItems: true,
         accountUpdates: true,
+        staffSupport: true,
+        staffReports: true,
         nearbyRadiusMiles: 10,
         followedCategories: [],
       });

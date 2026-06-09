@@ -11,6 +11,8 @@ import { canAccessStaffDirectory } from '../lib/roles';
 interface CommunityMenuViewProps {
   userProfile: UserProfile;
   onViewProfile: (userId: string) => void;
+  initialStaffPanel?: 'tickets' | 'reports' | null;
+  onClearInitialStaffPanel?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
   fullBleed?: boolean;
 }
@@ -18,6 +20,8 @@ interface CommunityMenuViewProps {
 export default function CommunityMenuView({
   userProfile,
   onViewProfile,
+  initialStaffPanel = null,
+  onClearInitialStaffPanel,
   fullBleed = false,
 }: CommunityMenuViewProps) {
   const sectionShell = fullBleed ? 'px-4 py-5 border-t border-app/40' : '';
@@ -82,7 +86,12 @@ export default function CommunityMenuView({
 
       {canAccessStaffDirectory(userProfile.role) && (
         <div className={fullBleed ? `${sectionShell} border-t-0` : ''}>
-          <StaffModerationPanel viewer={userProfile} onViewProfile={onViewProfile} />
+          <StaffModerationPanel
+            viewer={userProfile}
+            onViewProfile={onViewProfile}
+            initialPanel={initialStaffPanel}
+            onClearInitialPanel={onClearInitialStaffPanel}
+          />
         </div>
       )}
 

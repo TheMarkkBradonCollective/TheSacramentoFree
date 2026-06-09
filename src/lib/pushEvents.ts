@@ -1,7 +1,14 @@
 import { convertPercentToLatLng, extractGPSCoordinates } from '../types';
 import type { ItemPost } from '../types';
 import { sendPushNotification } from './pushNotifications';
-import { pushUrlForConversation, pushUrlForListing, pushUrlForRequest } from './pushDeepLink';
+import {
+  pushUrlForConversation,
+  pushUrlForListing,
+  pushUrlForMessageRequests,
+  pushUrlForRequest,
+  pushUrlForStaffReports,
+  pushUrlForStaffTickets,
+} from './pushDeepLink';
 
 function itemCoords(item: ItemPost): { lat: number; lng: number } | null {
   const gps = extractGPSCoordinates(item.description);
@@ -72,6 +79,44 @@ export async function notifyItemGifted(params: {
     listingId: params.item.id,
     recipientUserIds: [params.posterUserId, params.claimerUserId],
     tag: `gifted-${params.item.id}`,
+  });
+}
+
+export async function notifyMessageRequest(params: {
+  requestId: string;
+  recipientUserId: string;
+  senderName: string;
+  preview?: string | null;
+}) {
+  const preview = params.preview?.trim();
+  const body = preview
+    ? `${params.senderName}: ${preview.slice(0, 120)}`
+    : `${params.senderName} wants to message you`;
+
+  await sendPushNotification({
+    eventType: 'message_request',
+    title: 'New message request',
+    body,
+    url: pushUrlForMessageRequests(),
+    recipientUserIds: [params.recipientUserId],
+    tag: `dm-req-${params.requestId}`,
+    data: { requestId: params.requestId },
+  });
+}
+
+export async function notifyMessageRequestAccepted(params: {
+  chatId: string;
+  recipientUserId: string;
+  accepterName: string;
+}) {
+  await sendPushNotification({
+    eventType: 'message_request_accepted',
+    title: 'Message request accepted',
+    body: `${params.accepterName} accepted your message request`,
+    url: pushUrlForConversation(params.chatId),
+    conversationId: params.chatId,
+    recipientUserIds: [params.recipientUserId],
+    tag: `dm-accepted-${params.chatId}`,
   });
 }
 
@@ -202,6 +247,44 @@ export async function notifyAccountUpdate(params: {
     url: '/profile',
     recipientUserIds: [params.userId],
     tag: `account-${params.userId}`,
+  });
+}
+
+export async function notifyStaffSupport(params: {
+  ticketId: string;
+  openerName: string;
+  subject: string;
+  preview: string;
+  minStaffRank: number;
+  excludeUserIds?: string[];
+}) {
+  await sendPushNotification({
+    eventType: 'staff_support',
+    title: 'New support ticket activity',
+    body: `${params.openerName}: ${params.subject} — ${params.preview.slice(0, 100)}`,
+    url: pushUrlForStaffTickets(),
+    excludeUserIds: params.excludeUserIds,
+    minStaffRank: params.minStaffRank,
+    tag: `staff-ticket-${params.ticketId}`,
+    data: { ticketId: params.ticketId },
+  });
+}
+
+export async function notifyStaffReport(params: {
+  reportId: string;
+  reporterName: string;
+  subject: string;
+  preview: string;
+  excludeUserIds?: string[];
+}) {
+  await sendPushNotification({
+    eventType: 'staff_report',
+    title: 'New neighbor report',
+    body: `${params.reporterName}: ${params.subject} — ${params.preview.slice(0, 100)}`,
+    url: pushUrlForStaffReports(),
+    excludeUserIds: params.excludeUserIds,
+    tag: `staff-report-${params.reportId}`,
+    data: { reportId: params.reportId },
   });
 }
 

@@ -104,6 +104,7 @@ export default function App() {
   const [detailEventUpdating, setDetailEventUpdating] = useState(false);
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
+  const [initialStaffPanel, setInitialStaffPanel] = useState<'tickets' | 'reports' | null>(null);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
@@ -668,7 +669,7 @@ export default function App() {
     if (!detailItem) return;
     setDetailUpdating(true);
     try {
-      await updateSupabaseItemStatus(detailItem.id, status);
+      await updateSupabaseItemStatus(detailItem.id, status, userProfile?.uid);
       await refreshDetailItem();
     } catch (err) {
       console.warn('Failed to update listing status:', err);
@@ -756,6 +757,9 @@ export default function App() {
       }
       if (target.requestId) {
         setActiveTab('chats');
+      }
+      if (target.staffPanel) {
+        setInitialStaffPanel(target.staffPanel);
       }
     },
     [items],
@@ -879,6 +883,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  initialStaffPanel={initialStaffPanel}
+                  onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -912,6 +918,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  initialStaffPanel={initialStaffPanel}
+                  onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
                 />
               ) : (
                 <DesktopView
@@ -945,6 +953,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  initialStaffPanel={initialStaffPanel}
+                  onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
                 />
               )}
 

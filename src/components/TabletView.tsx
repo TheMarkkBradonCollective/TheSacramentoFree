@@ -43,6 +43,8 @@ interface TabletViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
+  initialStaffPanel?: 'tickets' | 'reports' | null;
+  onClearInitialStaffPanel?: () => void;
 }
 
 const TABS = [
@@ -82,6 +84,8 @@ export default function TabletView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
+  initialStaffPanel = null,
+  onClearInitialStaffPanel,
 }: TabletViewProps) {
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen h-dvh mesh-bg text-app overflow-hidden">
@@ -242,7 +246,12 @@ export default function TabletView({
               <p>{IN_APP.menuDescription}</p>
             </div>
             <div className="sbn-card p-6">
-              <CommunityMenuView userProfile={userProfile} onViewProfile={onViewProfile} />
+              <CommunityMenuView
+                userProfile={userProfile}
+                onViewProfile={onViewProfile}
+                initialStaffPanel={initialStaffPanel}
+                onClearInitialStaffPanel={onClearInitialStaffPanel}
+              />
             </div>
           </div>
         )}

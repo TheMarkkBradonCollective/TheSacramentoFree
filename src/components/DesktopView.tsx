@@ -42,6 +42,8 @@ interface DesktopViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
+  initialStaffPanel?: 'tickets' | 'reports' | null;
+  onClearInitialStaffPanel?: () => void;
 }
 
 export default function DesktopView({
@@ -72,6 +74,8 @@ export default function DesktopView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
+  initialStaffPanel = null,
+  onClearInitialStaffPanel,
 }: DesktopViewProps) {
   return (
     <div id="desktop_device_workspace" className="min-h-screen h-dvh flex flex-col mesh-bg text-app overflow-hidden">
@@ -184,7 +188,12 @@ export default function DesktopView({
               <p>{IN_APP.menuDescription}</p>
             </div>
             <div className="sbn-card p-6 md:p-8">
-              <CommunityMenuView userProfile={userProfile} onViewProfile={onViewProfile} />
+              <CommunityMenuView
+                userProfile={userProfile}
+                onViewProfile={onViewProfile}
+                initialStaffPanel={initialStaffPanel}
+                onClearInitialStaffPanel={onClearInitialStaffPanel}
+              />
             </div>
           </div>
         )}

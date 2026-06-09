@@ -1,4 +1,4 @@
-import { getUserRole, isStaffRole, supabaseAdmin } from './auth';
+import { getUserRole, isStaffRole, roleRank, STAFF_ROLES, supabaseAdmin } from './auth';
 import {
   getPreferencesForUsers,
   sendPushToUsers,
@@ -24,6 +24,7 @@ export interface PushSendBody {
   itemLat?: number;
   itemLng?: number;
   cities?: string[];
+  minStaffRank?: number;
 }
 
 async function resolveRecipients(body: PushSendBody, callerId: string): Promise<string[]> {
@@ -79,6 +80,25 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
       .map((u) => String((u as { uid: string }).uid));
   }
 
+  if (eventType === 'staff_support' || eventType === 'staff_report') {
+    const minRank =
+      eventType === 'staff_report'
+        ? 1
+        : typeof body.minStaffRank === 'number'
+          ? body.minStaffRank
+          : 1;
+
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role').in('role', [...STAFF_ROLES]);
+
+    return (users || [])
+      .filter((u) => {
+        const uid = String((u as { uid: string }).uid);
+        if (!uid || uid === callerId) return false;
+        return roleRank(String((u as { role: string }).role)) >= minRank;
+      })
+      .map((u) => String((u as { uid: string }).uid));
+  }
+
   if (eventType === 'announcement') {
     const role = await getUserRole(callerId);
     if (!isStaffRole(role)) return [];
@@ -109,6 +129,12 @@ export async function runPushSend(
   }
 
   const recipients = await resolveRecipients(body, callerId);
+  const explicitRecipients = body.recipientUserIds?.filter(Boolean) || [];
+  const excludeIds =
+    explicitRecipients.length > 0
+      ? body.excludeUserIds || []
+      : [callerId, ...(body.excludeUserIds || [])];
+
   const payload: PushPayload = {
     title: body.title,
     body: body.body,
@@ -124,7 +150,7 @@ export async function runPushSend(
   };
 
   const result = await sendPushToUsers(recipients, payload, {
-    excludeUserIds: [callerId, ...(body.excludeUserIds || [])],
+    excludeUserIds: excludeIds,
   });
 
   return { status: 200, body: { ok: true, recipients: recipients.length, ...result } };
