@@ -6,12 +6,14 @@ import StaffMessage from './StaffMessage';
 interface PublishedStaffMessagesProps {
   userProfile?: UserProfile | null;
   compact?: boolean;
+  showVotes?: boolean;
   onRequireSignIn?: () => void;
 }
 
 export default function PublishedStaffMessages({
   userProfile,
   compact = false,
+  showVotes = true,
   onRequireSignIn,
 }: PublishedStaffMessagesProps) {
   const { messages, loading } = usePublishedStaffMessages();
@@ -39,6 +41,7 @@ export default function PublishedStaffMessages({
           compact={compact}
           canEdit={userProfile?.uid === message.userId}
           onSave={userProfile?.uid === message.userId ? saveMessage : undefined}
+          showVotes={showVotes}
           onRequireSignIn={onRequireSignIn}
         />
       ))}

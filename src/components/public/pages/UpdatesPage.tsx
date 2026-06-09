@@ -11,9 +11,9 @@ export default function UpdatesPage({ onRequireSignIn, userProfile }: UpdatesPag
   return (
     <PublicPageShell
       title="Updates"
-      subtitle="What’s new in Sacramento Buy Nothing — posted by your director. Tap to read more and vote."
+      subtitle="What’s new in Sacramento Buy Nothing — posted by your director. Tap any update to read more."
     >
-      <UpdatesList userProfile={userProfile} onRequireSignIn={onRequireSignIn} />
+      <UpdatesList userProfile={userProfile} onRequireSignIn={onRequireSignIn} showVotes={false} />
     </PublicPageShell>
   );
 }

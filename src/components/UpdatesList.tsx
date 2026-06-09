@@ -10,6 +10,7 @@ import AppUpdateEditModal from './AppUpdateEditModal';
 interface UpdatesListProps {
   userProfile?: UserProfile | null;
   onRequireSignIn?: () => void;
+  showVotes?: boolean;
 }
 
 function formatUpdateDate(iso: string): string {
@@ -25,9 +26,16 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function UpdatesList({ userProfile, onRequireSignIn }: UpdatesListProps) {
+export default function UpdatesList({
+  userProfile,
+  onRequireSignIn,
+  showVotes = true,
+}: UpdatesListProps) {
   const { updates, loading, createUpdate, saveUpdate, removeUpdate, canManage } = useAppUpdates(userProfile);
-  const updateIds = useMemo(() => updates.map((update) => update.id), [updates]);
+  const updateIds = useMemo(
+    () => (showVotes ? updates.map((update) => update.id) : []),
+    [showVotes, updates],
+  );
   const { getVoteState, handleVote } = useCommunityContentVotes('update', updateIds, userProfile);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingUpdate, setEditingUpdate] = useState<AppUpdateRecord | null>(null);
@@ -131,14 +139,16 @@ export default function UpdatesList({ userProfile, onRequireSignIn }: UpdatesLis
                     )}
                   </div>
 
-                  <ContentVoteButtons
-                    voteState={getVoteState(update.id)}
-                    onVote={(dir) => handleVote(update.id, dir)}
-                    onRequireSignIn={onRequireSignIn}
-                    signedIn={signedIn}
-                    feedbackNote="Votes are shared with your director."
-                    compact
-                  />
+                  {showVotes && (
+                    <ContentVoteButtons
+                      voteState={getVoteState(update.id)}
+                      onVote={(dir) => handleVote(update.id, dir)}
+                      onRequireSignIn={onRequireSignIn}
+                      signedIn={signedIn}
+                      feedbackNote="Votes are shared with your director."
+                      compact
+                    />
+                  )}
                 </PublicCard>
               </li>
             );

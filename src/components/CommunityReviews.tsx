@@ -12,6 +12,7 @@ interface CommunityReviewsProps {
   blockedUserIds?: Set<string>;
   compact?: boolean;
   preview?: boolean;
+  showVotes?: boolean;
   onRequireSignIn?: () => void;
   onSeeAll?: () => void;
 }
@@ -81,6 +82,7 @@ export default function CommunityReviews({
   blockedUserIds = new Set(),
   compact = false,
   preview = false,
+  showVotes = true,
   onRequireSignIn,
   onSeeAll,
 }: CommunityReviewsProps) {
@@ -89,9 +91,10 @@ export default function CommunityReviews({
     blockedUserIds,
   );
   const reviewIds = useMemo(() => reviews.map((r) => r.id), [reviews]);
+  const withVotes = showVotes && !preview;
   const { getVoteState, handleVote } = useCommunityContentVotes(
     'review',
-    preview ? [] : reviewIds,
+    withVotes ? reviewIds : [],
     userProfile,
   );
   const [rating, setRating] = useState(myReview?.rating ?? 5);
@@ -186,7 +189,7 @@ export default function CommunityReviews({
       ) : (
         <ul className={`mt-4 space-y-3 ${compact ? 'max-h-56 overflow-y-auto' : ''}`}>
           {reviews.map((review) => (
-            <li key={review.id}>{renderReviewCard(review, true)}</li>
+            <li key={review.id}>{renderReviewCard(review, withVotes)}</li>
           ))}
         </ul>
       )}

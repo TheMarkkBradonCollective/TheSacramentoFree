@@ -13,10 +13,10 @@ export default function ReviewsPage({ onRequireSignIn }: ReviewsPageProps) {
       title="Reviews"
       subtitle="What neighbors think of the app — and notes from our team when you scroll down."
     >
-      <CommunityReviews onRequireSignIn={onRequireSignIn} />
+      <CommunityReviews onRequireSignIn={onRequireSignIn} showVotes={false} />
       <div className="space-y-5 mt-8">
-        <DirectorMessage onRequireSignIn={onRequireSignIn} />
-        <PublishedStaffMessages onRequireSignIn={onRequireSignIn} />
+        <DirectorMessage onRequireSignIn={onRequireSignIn} showVotes={false} />
+        <PublishedStaffMessages onRequireSignIn={onRequireSignIn} showVotes={false} />
       </div>
     </PublicPageShell>
   );
