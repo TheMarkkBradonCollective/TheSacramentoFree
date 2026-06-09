@@ -70,22 +70,6 @@ export default function HomePage({
       </DepthSection>
 
       <DepthSection depth={2} className="mt-6">
-        <DepthPanel>
-          <LeadershipMessagesCarousel onRequireSignIn={onRequireSignIn} />
-        </DepthPanel>
-      </DepthSection>
-
-      <DepthSection depth={2} className="mt-6">
-        <DepthPanel>
-          <CommunityReviews
-            preview
-            onRequireSignIn={onRequireSignIn}
-            onSeeAll={() => onNavigate('reviews')}
-          />
-        </DepthPanel>
-      </DepthSection>
-
-      <DepthSection depth={2} className="mt-6">
         <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">Community at a glance</p>
         <DepthPanel className="sbn-card p-1">
           <CommunityStatsBar items={items} variant="full" />
@@ -103,6 +87,22 @@ export default function HomePage({
           />
         </DepthSection>
       )}
+
+      <DepthSection depth={2} className="mt-6">
+        <DepthPanel>
+          <LeadershipMessagesCarousel onRequireSignIn={onRequireSignIn} />
+        </DepthPanel>
+      </DepthSection>
+
+      <DepthSection depth={2} className="mt-6">
+        <DepthPanel>
+          <CommunityReviews
+            preview
+            onRequireSignIn={onRequireSignIn}
+            onSeeAll={() => onNavigate('reviews')}
+          />
+        </DepthPanel>
+      </DepthSection>
 
       <DepthSection depth={2} className="mt-14">
         <h2 className="font-display text-xl font-bold text-app">Explore the community</h2>
