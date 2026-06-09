@@ -49,7 +49,11 @@ const PREF_SECTIONS: {
     items: [
       { key: 'newListings', label: 'New listings', description: 'New free items in areas you follow' },
       { key: 'nearbyListings', label: 'Nearby listings', description: 'Free items near your neighborhood' },
-      { key: 'requests', label: 'Requests', description: 'Neighbors seeking items' },
+      {
+        key: 'requests',
+        label: 'Requests',
+        description: 'Neighbors seeking items, nearby ISO posts, and claim requests on your listings',
+      },
       {
         key: 'savedItems',
         label: 'Saved items',

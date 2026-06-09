@@ -28,21 +28,19 @@ export async function notifyNewListingPosted(item: ItemPost) {
     tag: `${eventType}-${item.id}`,
   });
 
-  if (!isRequest) {
-    await sendPushNotification({
-      eventType: 'nearby_item',
-      title: 'Nearby free item',
-      body: `${item.title} in ${item.neighborhood}`,
-      url: pushUrlForListing(item.id),
-      listingId: item.id,
-      category: item.category,
-      neighborhood: item.neighborhood,
-      itemLat: coords?.lat,
-      itemLng: coords?.lng,
-      excludeUserIds: [item.userId],
-      tag: `nearby-${item.id}`,
-    });
-  }
+  await sendPushNotification({
+    eventType: isRequest ? 'nearby_request' : 'nearby_item',
+    title: isRequest ? 'Nearby neighbor request' : 'Nearby free item',
+    body: `${item.title} in ${item.neighborhood}`,
+    url: pushUrlForListing(item.id),
+    listingId: item.id,
+    category: item.category,
+    neighborhood: item.neighborhood,
+    itemLat: coords?.lat,
+    itemLng: coords?.lng,
+    excludeUserIds: [item.userId],
+    tag: isRequest ? `nearby-req-${item.id}` : `nearby-${item.id}`,
+  });
 }
 
 export async function notifyItemClaimed(params: {
@@ -245,7 +243,7 @@ export async function notifyClaimRequestSubmitted(params: {
   requestId: string;
 }) {
   await sendPushNotification({
-    eventType: 'item_claimed',
+    eventType: 'claim_request',
     title: 'New claim request',
     body: `${params.claimerName} wants to claim "${params.item.title}"`,
     url: pushUrlForRequest(params.requestId),
@@ -253,5 +251,21 @@ export async function notifyClaimRequestSubmitted(params: {
     requestId: params.requestId,
     recipientUserIds: [params.item.userId],
     tag: `claim-req-${params.requestId}`,
+  });
+}
+
+export async function notifyRequestFulfilled(params: {
+  item: ItemPost;
+  helperUserId: string;
+  ownerName: string;
+}) {
+  await sendPushNotification({
+    eventType: 'request_fulfilled',
+    title: 'Request fulfilled',
+    body: `${params.ownerName} marked "${params.item.title}" as fulfilled`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.helperUserId],
+    tag: `fulfilled-${params.item.id}`,
   });
 }

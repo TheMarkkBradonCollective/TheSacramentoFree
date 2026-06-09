@@ -14,6 +14,9 @@ export type PushEventType =
   | 'listing_denied'
   | 'listing_expiring'
   | 'nearby_item'
+  | 'nearby_request'
+  | 'claim_request'
+  | 'request_fulfilled'
   | 'announcement'
   | 'account_update'
   | 'support_reply'
@@ -71,6 +74,9 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   listing_expiring: 'listingStatus',
   listing_status: 'listingStatus',
   nearby_item: 'nearbyListings',
+  nearby_request: 'requests',
+  claim_request: 'requests',
+  request_fulfilled: 'requests',
   announcement: 'announcements',
   account_update: 'accountUpdates',
   support_reply: 'support',
