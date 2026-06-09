@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, AppReview } from './types';
-import { DIRECTOR_MESSAGE } from './siteContent';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, CityManagerMessageContent, AppReview } from './types';
+import { CITY_MANAGER_MESSAGE, DIRECTOR_MESSAGE } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
@@ -2309,6 +2309,100 @@ export async function updateSupabaseDirectorMessage(
     return {
       ok: false,
       errorMessage: err instanceof Error ? err.message : 'Could not save director message.',
+    };
+  }
+}
+
+export function defaultCityManagerMessageContent(): CityManagerMessageContent {
+  return {
+    id: 'main',
+    managerName: CITY_MANAGER_MESSAGE.name,
+    managerTitle: CITY_MANAGER_MESSAGE.title,
+    headline: CITY_MANAGER_MESSAGE.headline,
+    goal: CITY_MANAGER_MESSAGE.goal,
+    promises: [...CITY_MANAGER_MESSAGE.promises],
+    closing: CITY_MANAGER_MESSAGE.closing,
+    updatedAt: new Date().toISOString(),
+    updatedByUserId: null,
+  };
+}
+
+function normalizeCityManagerMessageRow(row: Record<string, unknown>): CityManagerMessageContent {
+  const rawPromises = row.promises;
+  const promises = Array.isArray(rawPromises)
+    ? rawPromises.map(String).filter(Boolean)
+    : defaultCityManagerMessageContent().promises;
+
+  return {
+    id: String(row.id || 'main'),
+    managerName: String(row.managerName || CITY_MANAGER_MESSAGE.name),
+    managerTitle: String(row.managerTitle || CITY_MANAGER_MESSAGE.title),
+    headline: String(row.headline || CITY_MANAGER_MESSAGE.headline),
+    goal: String(row.goal || CITY_MANAGER_MESSAGE.goal),
+    promises,
+    closing: String(row.closing || CITY_MANAGER_MESSAGE.closing),
+    updatedAt: coerceToIsoDate(row.updatedAt),
+    updatedByUserId: row.updatedByUserId ? String(row.updatedByUserId) : null,
+  };
+}
+
+export async function getSupabaseCityManagerMessage(): Promise<CityManagerMessageContent> {
+  try {
+    const { data, error } = await supabase
+      .from('city_manager_message')
+      .select('*')
+      .eq('id', 'main')
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === '42P01') return defaultCityManagerMessageContent();
+      handleSupabaseError(error, 'city_manager_message');
+      return defaultCityManagerMessageContent();
+    }
+
+    if (!data) return defaultCityManagerMessageContent();
+    setSupabaseConfigurationState(true);
+    return normalizeCityManagerMessageRow(data as Record<string, unknown>);
+  } catch {
+    return defaultCityManagerMessageContent();
+  }
+}
+
+export async function updateSupabaseCityManagerMessage(
+  content: CityManagerMessageContent,
+  actor: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  const role = normalizeUserRole(actor.role);
+  if (role !== 'city_manager' && role !== 'director') {
+    return { ok: false, errorMessage: 'Only the city manager or director can edit this message.' };
+  }
+
+  try {
+    const payload = {
+      id: 'main',
+      managerName: content.managerName.trim(),
+      managerTitle: content.managerTitle.trim(),
+      headline: content.headline.trim(),
+      goal: content.goal.trim(),
+      promises: content.promises.map((p) => p.trim()).filter(Boolean),
+      closing: content.closing.trim(),
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: actor.uid,
+    };
+
+    const { error } = await supabase.from('city_manager_message').upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      handleSupabaseError(error, 'city_manager_message');
+      return { ok: false, errorMessage: error.message || 'Could not save city manager message.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not save city manager message.',
     };
   }
 }

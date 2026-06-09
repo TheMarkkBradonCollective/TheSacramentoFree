@@ -11,11 +11,12 @@ interface PublicNavProps {
 
 const COMMUNITY_LINKS: { route: PublicRoute; label: string }[] = [
   { route: 'community', label: 'Community' },
+  { route: 'reviews', label: 'Reviews' },
   { route: 'updates', label: 'Updates' },
 ];
 
 function isCommunityRoute(route: PublicRoute): boolean {
-  return route === 'community' || route === 'updates';
+  return route === 'community' || route === 'updates' || route === 'reviews';
 }
 
 export default function PublicNav({ route, onNavigate }: PublicNavProps) {

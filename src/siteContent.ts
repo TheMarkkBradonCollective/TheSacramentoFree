@@ -133,6 +133,11 @@ export type AppUpdate = {
 export const APP_UPDATES: AppUpdate[] = [
   {
     date: '2026-06-09',
+    title: 'Reviews page & team messages',
+    body: 'Swipe through reviews and notes from the director and city manager on the home page — or open Reviews for the full list.',
+  },
+  {
+    date: '2026-06-09',
     title: 'Cleaner feed filters',
     body: 'Filters and sorting now live in one “Filters & sort” panel so the feed stays easy to scroll.',
   },
@@ -319,6 +324,21 @@ export const DIRECTOR_MESSAGE = {
     'I do not want your information for anything beyond making the community work, and I will never sell it.',
   ],
   closing: 'Thank you for being part of this community.',
+} as const;
+
+export const CITY_MANAGER_MESSAGE = {
+  name: 'Sacramento Buy Nothing',
+  title: 'City Manager',
+  headline: 'A note from your city manager',
+  goal:
+    'I help keep our Sacramento circle welcoming, fair, and focused on neighbors helping neighbors — with moderation, support, and community leadership.',
+  promises: [
+    'I am here when something feels off or unsafe.',
+    'Reports and tickets get real attention from staff.',
+    'We protect the free, local spirit of this community.',
+    'Your voice matters in how we grow together.',
+  ],
+  closing: 'Reach out anytime through Help & support — we are listening.',
 } as const;
 
 export const IN_APP = {

@@ -10,6 +10,7 @@ import RulesPage from './pages/RulesPage';
 import NeighborhoodsPage from './pages/NeighborhoodsPage';
 import CommunityPage from './pages/CommunityPage';
 import UpdatesPage from './pages/UpdatesPage';
+import ReviewsPage from './pages/ReviewsPage';
 import AuthPage from './AuthPage';
 import { ItemPost } from '../../types';
 
@@ -62,6 +63,8 @@ export default function PublicSite({
         return <CommunityPage />;
       case 'updates':
         return <UpdatesPage />;
+      case 'reviews':
+        return <ReviewsPage onRequireSignIn={onRequireSignIn} />;
       case 'login':
         return (
           <AuthPage

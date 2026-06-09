@@ -131,6 +131,52 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------
+-- 18b. City manager message (city manager / director edits in app)
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.city_manager_message (
+  id TEXT PRIMARY KEY DEFAULT 'main',
+  "managerName" TEXT NOT NULL,
+  "managerTitle" TEXT NOT NULL,
+  headline TEXT NOT NULL,
+  goal TEXT NOT NULL,
+  promises JSONB NOT NULL DEFAULT '[]'::jsonb,
+  closing TEXT NOT NULL,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedByUserId" TEXT
+);
+
+ALTER TABLE public.city_manager_message ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read city manager message" ON public.city_manager_message;
+CREATE POLICY "Allow read city manager message" ON public.city_manager_message FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write city manager message" ON public.city_manager_message;
+CREATE POLICY "Allow write city manager message" ON public.city_manager_message FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO public.city_manager_message (
+  id,
+  "managerName",
+  "managerTitle",
+  headline,
+  goal,
+  promises,
+  closing
+)
+VALUES (
+  'main',
+  'Sacramento Buy Nothing',
+  'City Manager',
+  'A note from your city manager',
+  'I help keep our Sacramento circle welcoming, fair, and focused on neighbors helping neighbors — with moderation, support, and community leadership.',
+  '[
+    "I am here when something feels off or unsafe.",
+    "Reports and tickets get real attention from staff.",
+    "We protect the free, local spirit of this community.",
+    "Your voice matters in how we grow together."
+  ]'::jsonb,
+  'Reach out anytime through Help & support — we are listening.'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------
 -- 19. App reviews (one per neighbor, 0–5 in half-star steps)
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.app_reviews (
@@ -171,7 +217,7 @@ DECLARE
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'community_events', 'event_rsvps', 'event_comments',
-    'director_message', 'app_reviews'
+    'director_message', 'city_manager_message', 'app_reviews'
   ]
   LOOP
     IF NOT EXISTS (
