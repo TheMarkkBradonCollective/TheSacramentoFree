@@ -105,7 +105,7 @@ export default function HomePage({
       </DepthSection>
 
       <DepthSection depth={2} className="mt-14">
-        <h2 className="font-display text-xl font-bold text-app">Explore the community</h2>
+        <h2 className="font-display text-xl font-bold text-app">About the community</h2>
         <p className="mt-1 text-sm text-muted">Learn how we keep gifting local and free.</p>
 
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
