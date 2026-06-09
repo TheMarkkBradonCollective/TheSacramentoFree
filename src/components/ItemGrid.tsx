@@ -3,9 +3,11 @@ import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CA
 import {
   ArrowDownUp,
   Bookmark,
+  ChevronDown,
   CircleDot,
   Search as SearchIcon,
   MapPin,
+  SlidersHorizontal,
   Tag,
   AlertCircle,
   ThumbsUp,
@@ -139,6 +141,7 @@ export default function ItemGrid({
   const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
@@ -182,13 +185,24 @@ export default function ItemGrid({
     });
   };
 
-  const hasExtraFilters =
-    selectedType !== 'all' ||
+  const hasRefineFilters =
     selectedStatus !== 'all' ||
     selectedVoteFilter !== 'all' ||
     sortBy !== 'newest' ||
     selectedCategory !== 'All Categories' ||
-    selectedNeighborhood !== 'All Neighborhoods' ||
+    selectedNeighborhood !== 'All Neighborhoods';
+
+  const refineFilterCount = [
+    selectedCategory !== 'All Categories',
+    selectedNeighborhood !== 'All Neighborhoods',
+    selectedStatus !== 'all',
+    selectedVoteFilter !== 'all',
+    sortBy !== 'newest',
+  ].filter(Boolean).length;
+
+  const hasExtraFilters =
+    selectedType !== 'all' ||
+    hasRefineFilters ||
     searchTerm.trim() !== '' ||
     activeQuickPicks.size > 0;
 
@@ -327,108 +341,131 @@ export default function ItemGrid({
           </div>
         </div>
 
-        <div className="space-y-3 pt-3 border-t border-app">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Refine results</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FilterSelect
-              id="filter_category_select"
-              label="Category"
-              icon={Tag}
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-            >
-              <option value="All Categories">All categories</option>
-              {selectedType === 'all' ? (
-                <>
-                  <optgroup label="Giving">
-                    {ITEM_CATEGORIES.map((c) => (
-                      <option key={`all_giveaway_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Looking for">
-                    {ISO_CATEGORIES.map((c) => (
-                      <option key={`all_looking_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                </>
-              ) : selectedType === 'giveaway' ? (
-                ITEM_CATEGORIES.map((c) => (
-                  <option key={`giveaway_only_${c}`} value={c}>
-                    {c}
-                  </option>
-                ))
-              ) : (
-                ISO_CATEGORIES.map((c) => (
-                  <option key={`looking_only_${c}`} value={c}>
-                    {c}
-                  </option>
-                ))
-              )}
-            </FilterSelect>
-
-            <FilterSelect
-              id="filter_neighborhood_select"
-              label="Neighborhood"
-              icon={MapPin}
-              value={selectedNeighborhood}
-              onChange={setSelectedNeighborhood}
-            >
-              <option value="All Neighborhoods">All neighborhoods</option>
-              {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </FilterSelect>
-
-            <FilterSelect
-              id="filter_status_select"
-              label="Listing status"
-              icon={CircleDot}
-              value={selectedStatus}
-              onChange={(v) => setSelectedStatus(v as StatusFilter)}
-            >
-              {STATUS_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </FilterSelect>
-
-            <FilterSelect
-              id="filter_vote_select"
-              label="Interest & comments"
-              icon={ThumbsUp}
-              value={selectedVoteFilter}
-              onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
-            >
-              {VOTE_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </FilterSelect>
-          </div>
-        </div>
-
         <div className="pt-3 border-t border-app">
-          <FilterSelect
-            id="filter_sort_select"
-            label="Sort results"
-            icon={ArrowDownUp}
-            value={sortBy}
-            onChange={(v) => setSortBy(v as SortOption)}
+          <button
+            type="button"
+            id="feed_filters_sort_toggle"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-app bg-inset px-4 py-3 text-left hover:border-accent/40 transition-colors"
           >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </FilterSelect>
+            <span className="flex items-center gap-2 min-w-0">
+              <SlidersHorizontal className="w-4 h-4 text-accent shrink-0" aria-hidden />
+              <span className="text-sm font-semibold text-app">Filters &amp; sort</span>
+              {refineFilterCount > 0 && (
+                <span className="text-[10px] font-bold uppercase tracking-wide text-accent bg-accent-soft px-2 py-0.5 rounded-full shrink-0">
+                  {refineFilterCount} active
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              className={`w-4 h-4 text-muted shrink-0 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+              aria-hidden
+            />
+          </button>
+
+          {filtersOpen && (
+            <div className="mt-3 space-y-3 rounded-xl border border-app bg-surface/50 p-3 sm:p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FilterSelect
+                  id="filter_category_select"
+                  label="Category"
+                  icon={Tag}
+                  value={selectedCategory}
+                  onChange={setSelectedCategory}
+                >
+                  <option value="All Categories">All categories</option>
+                  {selectedType === 'all' ? (
+                    <>
+                      <optgroup label="Giving">
+                        {ITEM_CATEGORIES.map((c) => (
+                          <option key={`all_giveaway_${c}`} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Looking for">
+                        {ISO_CATEGORIES.map((c) => (
+                          <option key={`all_looking_${c}`} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </>
+                  ) : selectedType === 'giveaway' ? (
+                    ITEM_CATEGORIES.map((c) => (
+                      <option key={`giveaway_only_${c}`} value={c}>
+                        {c}
+                      </option>
+                    ))
+                  ) : (
+                    ISO_CATEGORIES.map((c) => (
+                      <option key={`looking_only_${c}`} value={c}>
+                        {c}
+                      </option>
+                    ))
+                  )}
+                </FilterSelect>
+
+                <FilterSelect
+                  id="filter_neighborhood_select"
+                  label="Neighborhood"
+                  icon={MapPin}
+                  value={selectedNeighborhood}
+                  onChange={setSelectedNeighborhood}
+                >
+                  <option value="All Neighborhoods">All neighborhoods</option>
+                  {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </FilterSelect>
+
+                <FilterSelect
+                  id="filter_status_select"
+                  label="Listing status"
+                  icon={CircleDot}
+                  value={selectedStatus}
+                  onChange={(v) => setSelectedStatus(v as StatusFilter)}
+                >
+                  {STATUS_FILTER_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </FilterSelect>
+
+                <FilterSelect
+                  id="filter_vote_select"
+                  label="Interest & comments"
+                  icon={ThumbsUp}
+                  value={selectedVoteFilter}
+                  onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
+                >
+                  {VOTE_FILTER_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </FilterSelect>
+              </div>
+
+              <FilterSelect
+                id="filter_sort_select"
+                label="Sort results"
+                icon={ArrowDownUp}
+                value={sortBy}
+                onChange={(v) => setSortBy(v as SortOption)}
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </FilterSelect>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">
