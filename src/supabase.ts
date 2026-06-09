@@ -9,8 +9,14 @@ import { normalizeUserRole, type UserRole, canEditOwnStaffMessage, canManageAppU
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
-const supabaseUrl = metaEnv.NEXT_PUBLIC_SUPABASE_URL || metaEnv.VITE_SUPABASE_URL || 'https://nezmabanjoqdzikliysd.supabase.co';
-const supabaseKey = metaEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_TmJr2L0c5ZbR7GSiFztjKQ_MHyiBfPe';
+const supabaseUrl =
+  metaEnv.VITE_SUPABASE_URL ||
+  metaEnv.NEXT_PUBLIC_SUPABASE_URL ||
+  'https://nezmabanjoqdzikliysd.supabase.co';
+const supabaseKey =
+  metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  metaEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  'sb_publishable_TmJr2L0c5ZbR7GSiFztjKQ_MHyiBfPe';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
