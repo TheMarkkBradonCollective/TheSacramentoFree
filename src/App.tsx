@@ -46,6 +46,8 @@ import {
 } from './lib/sessionCache';
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
+import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
+import { usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -727,6 +729,45 @@ export default function App() {
   const handleBlockListChanged = useCallback(() => {
     void reloadBlockedUsers();
   }, [reloadBlockedUsers]);
+
+  const handlePushDeepLink = useCallback(
+    (target: PushDeepLinkTarget) => {
+      if (target.tab) setActiveTab(target.tab);
+      if (target.conversationId) {
+        setInitialSelectedChatId(target.conversationId);
+        setActiveTab('chats');
+      }
+      if (target.listingId) {
+        const existing = items.find((item) => item.id === target.listingId);
+        if (existing) {
+          setDetailItem(existing);
+        } else {
+          void getSupabaseItems().then((loaded) => {
+            const match = loaded.find((item) => item.id === target.listingId);
+            if (match) setDetailItem(match);
+          });
+        }
+      }
+      if (target.requestId) {
+        setActiveTab('chats');
+      }
+    },
+    [items],
+  );
+
+  usePushDeepLinkNavigation(handlePushDeepLink);
+
+  useEffect(() => {
+    if (!userProfile) return;
+    const target = parsePushDeepLink(window.location.pathname);
+    if (target) handlePushDeepLink(target);
+  }, [userProfile, handlePushDeepLink]);
+
+  useEffect(() => {
+    if (!userProfile) return;
+    const userPosts = items.filter((item) => item.userId === userProfile.uid);
+    void import('./lib/pushIntegration').then((m) => m.pushListingExpiryReminders(userProfile.uid, userPosts));
+  }, [userProfile, items]);
 
   useEffect(() => {
     if (viewProfileUid && blockedUserIds.has(viewProfileUid)) {

@@ -2,6 +2,24 @@ export type PostStatus = 'active' | 'pending_pickup' | 'on_hold' | 'completed' |
 export type PostType = 'giveaway' | 'looking';
 export type AccountStatus = 'active' | 'suspended' | 'banned';
 
+export type NearbyRadiusMiles = 0 | 5 | 10 | 25 | 50;
+
+export interface NotificationPreferences {
+  enabled: boolean;
+  messages: boolean;
+  claims: boolean;
+  gifts: boolean;
+  comments: boolean;
+  nearbyListings: boolean;
+  requests: boolean;
+  announcements: boolean;
+  pickupReminders: boolean;
+  newListings: boolean;
+  accountUpdates: boolean;
+  nearbyRadiusMiles: NearbyRadiusMiles;
+  followedCategories: string[];
+}
+
 export interface UserProfile {
   uid: string;
   displayName: string;

@@ -14,6 +14,10 @@ const supabaseKey = metaEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || metaEnv.VITE
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+function firePush(task: () => Promise<void>) {
+  task().catch((err) => console.warn('[push]', err));
+}
+
 // SQL Setup script to help users prepare their Supabase PostgreSQL database
 export const SQL_SETUP_SCRIPT = `-- =========================================================
 -- SACRAMENTO BUY_NOTHING SUPABASE SCHEMAS
@@ -830,6 +834,7 @@ export async function createSupabaseItem(
     }
 
     setSupabaseConfigurationState(true);
+    firePush(() => import('./lib/pushIntegration').then((m) => m.pushAfterItemCreated(item)));
     return { ok: true };
   } catch (err: any) {
     console.error('createSupabaseItem exception:', err);
@@ -1451,6 +1456,31 @@ async function recordPartialItemClaims(params: {
       return { ok: false, errorMessage: 'Pickup recorded but chat message failed to send.' };
     }
 
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAfterClaimConfirmed({
+          itemId: params.itemId,
+          itemTitle: params.itemTitle,
+          posterUserId: params.giverUserId,
+          claimerUserId: params.claimerUserId,
+          claimerName: '',
+        }),
+      ),
+    );
+
+    const { data: completedItem } = await supabase
+      .from('items')
+      .select('status')
+      .eq('id', params.itemId)
+      .maybeSingle();
+    if ((completedItem as { status?: string } | null)?.status === 'completed') {
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushAfterItemCompleted(params.itemId, params.giverUserId, params.claimerUserId),
+        ),
+      );
+    }
+
     return { ok: true, confirmedLabels };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not record pickup.' };
@@ -1546,6 +1576,16 @@ export async function submitSelfClaimRequest(params: {
   if (!msgOk) {
     return { ok: false, errorMessage: 'Claim request saved but message failed to send.' };
   }
+
+  firePush(() =>
+    import('./lib/pushIntegration').then((m) =>
+      m.pushAfterClaimRequest({
+        item: params.item,
+        claimerName: params.claimer.displayName,
+        requestId,
+      }),
+    ),
+  );
 
   return { ok: true, chatId };
 }
@@ -1749,6 +1789,12 @@ export async function markItemFulfilledFromChat(params: {
       return { ok: false, errorMessage: 'Request marked fulfilled but chat message failed.' };
     }
 
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAfterItemCompleted(params.itemId, params.ownerUserId, params.helperUserId),
+      ),
+    );
+
     return { ok: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Could not mark as fulfilled.';
@@ -1792,6 +1838,9 @@ export async function createSupabaseMessage(chatId: string, text: string, sender
     }
 
     setSupabaseConfigurationState(true);
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text)),
+    );
     return true;
   } catch (err: any) {
     console.error('Supabase write message failed:', err);
@@ -1902,6 +1951,7 @@ export async function createSupabaseItemComment(comment: ItemComment): Promise<b
     }
 
     setSupabaseConfigurationState(true);
+    firePush(() => import('./lib/pushIntegration').then((m) => m.pushAfterComment(comment)));
     return true;
   } catch (err: any) {
     handleSupabaseError(err, 'item_comments');
@@ -2304,6 +2354,9 @@ export async function updateSupabaseDirectorMessage(
     }
 
     setSupabaseConfigurationState(true);
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) => m.pushDirectorAnnouncement(content.headline.trim())),
+    );
     return { ok: true };
   } catch (err: unknown) {
     return {
@@ -3038,6 +3091,16 @@ export async function staffSuspendUser(params: {
       detail: `${params.durationDays} day(s) until ${until.toLocaleString()}${params.note ? ` — ${params.note}` : ''}`,
     });
 
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAccountStatusChange(
+          params.targetUserId,
+          'Account suspended',
+          `Your account is suspended for ${params.durationDays} day(s).`,
+        ),
+      ),
+    );
+
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not suspend user.' };
@@ -3066,6 +3129,12 @@ export async function staffUnsuspendUser(params: {
       target: { uid: params.targetUserId, displayName: params.targetName },
       action: 'unsuspend',
     });
+
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAccountStatusChange(params.targetUserId, 'Account restored', 'Your account suspension has been lifted.'),
+      ),
+    );
 
     return { ok: true };
   } catch (err: unknown) {

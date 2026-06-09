@@ -1,3 +1,5 @@
+// Legacy service worker — the app registers /service-worker.js instead.
+// This file remains for browsers that cached an older registration.
 const CACHE_NAME = 'sac-buy-nothing-v3';
 
 const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
