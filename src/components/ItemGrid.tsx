@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
   Bookmark,
   CircleDot,
-  MessageSquare,
   Search as SearchIcon,
   MapPin,
   Tag,
@@ -43,10 +42,45 @@ const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
-  { value: 'most_upvotes', label: 'Most upvotes' },
+  { value: 'most_upvotes', label: 'Most interested (upvotes)' },
   { value: 'most_comments', label: 'Most comments' },
-  { value: 'top_score', label: 'Top score (up − down)' },
+  { value: 'top_score', label: 'Highest score (upvotes − downvotes)' },
 ];
+
+function FilterSelect({
+  id,
+  label,
+  icon: Icon,
+  value,
+  onChange,
+  children,
+}: {
+  id: string;
+  label: string;
+  icon: typeof Tag;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block space-y-1.5" htmlFor={id}>
+      <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
+        <Icon className="w-3 h-3 shrink-0" aria-hidden />
+        {label}
+      </span>
+      <div className="flex items-center rounded-xl border border-app bg-inset px-3 py-2.5">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+        >
+          {children}
+        </select>
+      </div>
+    </label>
+  );
+}
 
 interface ItemGridProps {
   items: ItemPost[];
@@ -110,6 +144,7 @@ export default function ItemGrid({
   };
 
   const hasExtraFilters =
+    selectedType !== 'all' ||
     selectedStatus !== 'all' ||
     selectedVoteFilter !== 'all' ||
     sortBy !== 'newest' ||
@@ -188,20 +223,22 @@ export default function ItemGrid({
   return (
     <>
     <div className="space-y-6" id="item_feed_wrapper">
-      <div className="sbn-card p-5" id="filter_panel">
-        <div className="flex flex-col lg:flex-row gap-3">
-          <div className="relative flex-1">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-            <input
-              type="text"
-              id="feed_search_input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search listings…"
-              className="sbn-input"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 shrink-0" id="feed_type_filter">
+      <div className="sbn-card p-4 sm:p-5 space-y-4" id="filter_panel">
+        <div className="relative">
+          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+          <input
+            type="text"
+            id="feed_search_input"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search listings…"
+            className="sbn-input w-full"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
+          <div className="flex flex-wrap gap-2" id="feed_type_filter">
             {(['all', 'giveaway', 'looking'] as const).map((type) => (
               <button
                 key={type}
@@ -229,32 +266,56 @@ export default function ItemGrid({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
-          <p className="text-xs text-muted">
-            {filteredItems.length} listing{filteredItems.length === 1 ? '' : 's'}
-            {hasExtraFilters ? ' matching filters' : ''}
-          </p>
-          {hasExtraFilters && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={clearFilters}
-              className="sbn-chip text-xs flex items-center gap-1"
-              id="feed_clear_filters_btn"
+              onClick={() => {
+                setSelectedVoteFilter('has_interest');
+                setSortBy('most_upvotes');
+                setShowSavedOnly(false);
+              }}
+              className={`sbn-chip ${selectedVoteFilter === 'has_interest' && sortBy === 'most_upvotes' ? 'sbn-chip-active' : ''}`}
             >
-              <X className="w-3 h-3" />
-              Clear filters
+              Trending
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStatus('active');
+                setSelectedType('giveaway');
+                setSelectedVoteFilter('all');
+                setShowSavedOnly(false);
+              }}
+              className={`sbn-chip ${selectedStatus === 'active' && selectedType === 'giveaway' && !showSavedOnly ? 'sbn-chip-active' : ''}`}
+            >
+              Free stuff
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStatus('active');
+                setSelectedType('looking');
+                setSelectedVoteFilter('all');
+                setShowSavedOnly(false);
+              }}
+              className={`sbn-chip ${selectedStatus === 'active' && selectedType === 'looking' && !showSavedOnly ? 'sbn-chip-active' : ''}`}
+            >
+              ISO requests
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pt-4 border-t border-app">
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
-            <Tag className="w-4 h-4 text-subtle shrink-0" />
-            <select
+        <div className="space-y-3 pt-3 border-t border-app">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Refine results</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FilterSelect
               id="filter_category_select"
+              label="Category"
+              icon={Tag}
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+              onChange={setSelectedCategory}
             >
               <option value="All Categories">All categories</option>
               {selectedType === 'all' ? (
@@ -287,15 +348,14 @@ export default function ItemGrid({
                   </option>
                 ))
               )}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
-            <MapPin className="w-4 h-4 text-accent shrink-0" />
-            <select
+            </FilterSelect>
+
+            <FilterSelect
               id="filter_neighborhood_select"
+              label="Neighborhood"
+              icon={MapPin}
               value={selectedNeighborhood}
-              onChange={(e) => setSelectedNeighborhood(e.target.value)}
-              className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+              onChange={setSelectedNeighborhood}
             >
               <option value="All Neighborhoods">All neighborhoods</option>
               {SACRAMENTO_NEIGHBORHOODS.map((n) => (
@@ -303,89 +363,71 @@ export default function ItemGrid({
                   {n}
                 </option>
               ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
-            <CircleDot className="w-4 h-4 text-subtle shrink-0" />
-            <select
+            </FilterSelect>
+
+            <FilterSelect
               id="filter_status_select"
+              label="Listing status"
+              icon={CircleDot}
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value as StatusFilter)}
-              className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+              onChange={(v) => setSelectedStatus(v as StatusFilter)}
             >
               {STATUS_FILTER_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
-            <ThumbsUp className="w-4 h-4 text-accent shrink-0" />
-            <select
+            </FilterSelect>
+
+            <FilterSelect
               id="filter_vote_select"
+              label="Interest & comments"
+              icon={ThumbsUp}
               value={selectedVoteFilter}
-              onChange={(e) => setSelectedVoteFilter(e.target.value as VoteFilter)}
-              className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+              onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
             >
               {VOTE_FILTER_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </FilterSelect>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
-            <ArrowDownUp className="w-4 h-4 text-subtle shrink-0" />
-            <select
-              id="filter_sort_select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+        </div>
+
+        <div className="pt-3 border-t border-app">
+          <FilterSelect
+            id="filter_sort_select"
+            label="Sort results"
+            icon={ArrowDownUp}
+            value={sortBy}
+            onChange={(v) => setSortBy(v as SortOption)}
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </FilterSelect>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">
+          <p className="text-xs text-muted">
+            <span className="font-semibold text-app">{filteredItems.length}</span> listing
+            {filteredItems.length === 1 ? '' : 's'}
+            {hasExtraFilters ? ' match your filters' : ''}
+          </p>
+          {hasExtraFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="sbn-chip text-xs flex items-center gap-1"
+              id="feed_clear_filters_btn"
             >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset sm:col-span-2 lg:col-span-1">
-            <MessageSquare className="w-4 h-4 text-subtle shrink-0" />
-            <span className="text-sm font-medium text-muted whitespace-nowrap">Quick:</span>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedVoteFilter('has_interest');
-                  setSortBy('most_upvotes');
-                }}
-                className={`sbn-chip text-[11px] py-1 px-2 ${selectedVoteFilter === 'has_interest' && sortBy === 'most_upvotes' ? 'sbn-chip-active' : ''}`}
-              >
-                Trending
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedStatus('active');
-                  setSelectedType('giveaway');
-                }}
-                className={`sbn-chip text-[11px] py-1 px-2 ${selectedStatus === 'active' && selectedType === 'giveaway' ? 'sbn-chip-active' : ''}`}
-              >
-                Free stuff
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedStatus('active');
-                  setSelectedType('looking');
-                }}
-                className={`sbn-chip text-[11px] py-1 px-2 ${selectedStatus === 'active' && selectedType === 'looking' ? 'sbn-chip-active' : ''}`}
-              >
-                ISO requests
-              </button>
-            </div>
-          </div>
+              <X className="w-3 h-3" />
+              Clear all
+            </button>
+          )}
         </div>
       </div>
 

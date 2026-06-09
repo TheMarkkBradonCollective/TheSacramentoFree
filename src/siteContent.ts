@@ -129,14 +129,35 @@ export const SUPPORT = {
   gofundmeBlurb:
     'Sacramento Buy Nothing is 100% free and ad-free — no paywalls, no ads, and your data is never sold. Running it still costs real money every month.',
   gofundmeDetail:
-    'This app is built and maintained with Cursor (AI-assisted development), Supabase (database, auth, and live updates), Vercel (hosting the website), and GoDaddy (domain name). Each of those services adds to the monthly bill so neighbors can keep giving freely.',
+    'Behind the scenes, four paid services keep Sacramento Buy Nothing online. None of them are free long-term — together they are the monthly bill for a community app that will never charge neighbors or show ads.',
   costItems: [
-  { name: 'Cursor', role: 'Building & improving the app' },
-  { name: 'Supabase', role: 'Database, sign-in, and realtime' },
-  { name: 'Vercel', role: 'Hosting the site online' },
-  { name: 'GoDaddy', role: 'Custom domain name' },
+    {
+      name: 'Cursor',
+      title: 'Building & updating the app',
+      description:
+        'Software that helps write and improve the website — new features, bug fixes, and design changes. Think of it as the workshop where the app gets built and maintained, with a monthly subscription fee.',
+    },
+    {
+      name: 'Supabase',
+      title: 'Accounts, posts & messages',
+      description:
+        'The online database that stores profiles, listings, chats, events, and reviews. It also powers sign-in and live updates so new posts appear without refreshing. Billed monthly based on usage.',
+    },
+    {
+      name: 'Vercel',
+      title: 'Hosting the site 24/7',
+      description:
+        'Puts the app on the internet so anyone can open it on a phone or computer, day or night. Like renting space on a server — paid monthly so the site stays fast and online.',
+    },
+    {
+      name: 'GoDaddy',
+      title: 'The web address (domain name)',
+      description:
+        'Pays for the custom link you share with neighbors (instead of a long, random technical URL). Renewed yearly so the community always has the same address.',
+    },
   ] as const,
-  gofundmeClosing: 'If this community helps you, a small donation on GoFundMe helps cover these costs.',
+  gofundmeClosing:
+    'Every dollar on GoFundMe goes toward keeping these bills paid so the app can stay free for everyone.',
   gofundmeButton: 'Support on GoFundMe',
 } as const;
 
