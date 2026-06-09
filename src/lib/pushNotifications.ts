@@ -170,7 +170,10 @@ export type PushEventType =
   | 'listing_expiring'
   | 'nearby_item'
   | 'announcement'
-  | 'account_update';
+  | 'account_update'
+  | 'support_reply'
+  | 'saved_item_update'
+  | 'listing_status';
 
 export interface SendPushOptions {
   eventType: PushEventType;
@@ -312,14 +315,17 @@ export async function sendPushNotification(options: SendPushOptions): Promise<vo
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enabled: true,
   messages: true,
+  support: true,
   claims: true,
   gifts: true,
   comments: true,
+  listingStatus: true,
   nearbyListings: true,
   requests: true,
   announcements: true,
   pickupReminders: true,
   newListings: true,
+  savedItems: true,
   accountUpdates: true,
   nearbyRadiusMiles: 10,
   followedCategories: [],
@@ -329,14 +335,17 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
   return {
     enabled: row.enabled !== false,
     messages: row.messages !== false,
+    support: row.support !== false,
     claims: row.claims !== false,
     gifts: row.gifts !== false,
     comments: row.comments !== false,
+    listingStatus: row.listingStatus !== false,
     nearbyListings: row.nearbyListings !== false,
     requests: row.requests !== false,
     announcements: row.announcements !== false,
     pickupReminders: row.pickupReminders !== false,
     newListings: row.newListings !== false,
+    savedItems: row.savedItems !== false,
     accountUpdates: row.accountUpdates !== false,
     nearbyRadiusMiles: (Number(row.nearbyRadiusMiles) || 10) as NearbyRadiusMiles,
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],

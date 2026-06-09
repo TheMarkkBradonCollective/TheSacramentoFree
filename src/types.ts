@@ -7,14 +7,17 @@ export type NearbyRadiusMiles = 0 | 5 | 10 | 25 | 50;
 export interface NotificationPreferences {
   enabled: boolean;
   messages: boolean;
+  support: boolean;
   claims: boolean;
   gifts: boolean;
   comments: boolean;
+  listingStatus: boolean;
   nearbyListings: boolean;
   requests: boolean;
   announcements: boolean;
   pickupReminders: boolean;
   newListings: boolean;
+  savedItems: boolean;
   accountUpdates: boolean;
   nearbyRadiusMiles: NearbyRadiusMiles;
   followedCategories: string[];

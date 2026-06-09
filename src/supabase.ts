@@ -3873,6 +3873,20 @@ export async function addSupportTicketMessage(params: {
       .update({ updatedAt: now })
       .eq('id', params.ticketId);
 
+    if (params.sender.uid !== ticket.openerUserId) {
+      const preview = text || (imageUrl ? 'Sent a photo' : 'New reply');
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushAfterSupportReply({
+            ticketId: params.ticketId,
+            openerUserId: ticket.openerUserId,
+            subject: ticket.subject,
+            preview,
+          }),
+        ),
+      );
+    }
+
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send message.' };

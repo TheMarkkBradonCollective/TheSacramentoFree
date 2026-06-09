@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useItemsEngagement } from './hooks/useItemsEngagement';
 import { useItemsRealtime } from './hooks/useItemsRealtime';
+import { useSavedItemPushAlerts } from './hooks/useSavedItemPushAlerts';
 import { useEventsEngagement } from './hooks/useEventsEngagement';
 import { useEventsRealtime } from './hooks/useEventsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
@@ -495,6 +496,7 @@ export default function App() {
   }, [sessionReady, userProfile?.uid, loadEvents]);
 
   useItemsRealtime(sessionReady, setItems);
+  useSavedItemPushAlerts(sessionReady, userProfile?.uid, items);
   useEventsRealtime(sessionReady, setEvents);
   useAuthorProfilesRealtime(sessionReady, setItems);
 

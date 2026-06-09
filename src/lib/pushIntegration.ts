@@ -12,6 +12,7 @@ import {
   notifyNewMessage,
   notifyPickupScheduled,
   notifyClaimRequestSubmitted,
+  notifySupportReply,
 } from './pushEvents';
 
 async function getItemById(itemId: string): Promise<ItemPost | null> {
@@ -134,6 +135,20 @@ export async function pushDirectorAnnouncement(headline: string) {
 
 export async function pushAccountStatusChange(userId: string, title: string, body: string) {
   await notifyAccountUpdate({ userId, title, body });
+}
+
+export async function pushAfterSupportReply(params: {
+  ticketId: string;
+  openerUserId: string;
+  subject: string;
+  preview: string;
+}) {
+  await notifySupportReply({
+    ticketId: params.ticketId,
+    recipientUserId: params.openerUserId,
+    subject: params.subject,
+    preview: params.preview,
+  });
 }
 
 const EXPIRY_DAYS = 14;

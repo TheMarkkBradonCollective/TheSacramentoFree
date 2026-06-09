@@ -15,18 +15,58 @@ const RADIUS_OPTIONS: { value: NearbyRadiusMiles; label: string }[] = [
   { value: 0, label: 'Entire city only' },
 ];
 
-const PREF_TOGGLES: { key: keyof NotificationPreferences; label: string; description: string }[] = [
-  { key: 'messages', label: 'Messages', description: 'Direct messages from neighbors' },
-  { key: 'claims', label: 'Claims', description: 'When someone claims your item' },
-  { key: 'gifts', label: 'Gifts', description: 'When an item is marked gifted' },
-  { key: 'comments', label: 'Comments', description: 'New comments on your listings' },
-  { key: 'nearbyListings', label: 'Nearby listings', description: 'Free items near you' },
-  { key: 'requests', label: 'Requests', description: 'Neighbors seeking items' },
-  { key: 'announcements', label: 'Community announcements', description: 'News from community leaders' },
-  { key: 'pickupReminders', label: 'Pickup reminders', description: 'Scheduled pickups and nudges' },
+type BooleanPrefKey = {
+  [K in keyof NotificationPreferences]: NotificationPreferences[K] extends boolean ? K : never;
+}[keyof NotificationPreferences];
+
+const PREF_SECTIONS: {
+  title: string;
+  items: { key: BooleanPrefKey; label: string; description: string }[];
+}[] = [
+  {
+    title: 'Messages & support',
+    items: [
+      { key: 'messages', label: 'Direct messages', description: 'Chat messages from neighbors' },
+      { key: 'support', label: 'Support tickets', description: 'Staff replies on your help tickets' },
+    ],
+  },
+  {
+    title: 'Your listings',
+    items: [
+      { key: 'claims', label: 'Claims', description: 'When someone claims your item' },
+      { key: 'gifts', label: 'Gifts', description: 'When an item is marked gifted' },
+      { key: 'comments', label: 'Comments', description: 'New comments on your listings' },
+      {
+        key: 'listingStatus',
+        label: 'Listing status',
+        description: 'Approved, denied, expiring, and other status changes',
+      },
+      { key: 'pickupReminders', label: 'Pickup reminders', description: 'Scheduled pickups and nudges' },
+    ],
+  },
+  {
+    title: 'Discover',
+    items: [
+      { key: 'newListings', label: 'New listings', description: 'New free items in areas you follow' },
+      { key: 'nearbyListings', label: 'Nearby listings', description: 'Free items near your neighborhood' },
+      { key: 'requests', label: 'Requests', description: 'Neighbors seeking items' },
+      {
+        key: 'savedItems',
+        label: 'Saved items',
+        description: 'When a bookmarked listing is claimed or changes status',
+      },
+    ],
+  },
+  {
+    title: 'Community',
+    items: [
+      { key: 'announcements', label: 'Announcements', description: 'News from community leaders' },
+      { key: 'accountUpdates', label: 'Account updates', description: 'Account notices and important alerts' },
+    ],
+  },
 ];
 
-function ToggleRow({
+function SwitchRow({
   label,
   description,
   checked,
@@ -40,19 +80,23 @@ function ToggleRow({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex items-start justify-between gap-3 py-2.5 border-b border-app/60 last:border-0">
-      <span>
-        <span className="block text-sm font-semibold text-app">{label}</span>
-        <span className="block text-[11px] text-muted mt-0.5">{description}</span>
-      </span>
-      <input
-        type="checkbox"
-        className="mt-1 h-4 w-4 accent-[#FF4500]"
-        checked={checked}
+    <div className="flex items-center justify-between gap-3 py-3 border-b border-app/60 last:border-0">
+      <div className="min-w-0 flex-1 pr-2">
+        <div className="text-sm font-semibold text-app">{label}</div>
+        <div className="text-[11px] text-muted mt-0.5 leading-snug">{description}</div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-    </label>
+        onClick={() => onChange(!checked)}
+        className={`sbn-switch shrink-0 ${checked ? 'sbn-switch-on' : ''}`}
+      >
+        <span className="sbn-switch-thumb" aria-hidden />
+      </button>
+    </div>
   );
 }
 
@@ -90,7 +134,8 @@ export default function NotificationSettings({ userId, fullBleed = false }: Noti
         <h3 className="text-lg font-bold text-app">Push notifications</h3>
       </div>
       <p className="text-xs text-muted mb-4">
-        Get real-time alerts for listings, messages, claims, and community news — even when the app is closed.
+        Get real-time alerts for listings, messages, support, saved items, and community news — even when the app
+        is closed.
       </p>
 
       {permission === 'unsupported' && (
@@ -157,22 +202,31 @@ export default function NotificationSettings({ userId, fullBleed = false }: Noti
         </p>
       )}
 
-      <ToggleRow
-        label="All notifications"
-        description="Master switch for push alerts"
-        checked={preferences.enabled}
-        onChange={(value) => setPref('enabled', value)}
-      />
+      <div className="rounded-xl border border-app bg-inset/30 px-3">
+        <SwitchRow
+          label="All notifications"
+          description="Master switch for push alerts"
+          checked={preferences.enabled}
+          onChange={(value) => setPref('enabled', value)}
+        />
+      </div>
 
-      <div className={`mt-4 space-y-0 ${masterDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
-        {PREF_TOGGLES.map((toggle) => (
-          <ToggleRow
-            key={toggle.key}
-            label={toggle.label}
-            description={toggle.description}
-            checked={Boolean(preferences[toggle.key])}
-            onChange={(value) => setPref(toggle.key, value)}
-          />
+      <div className={`mt-5 space-y-5 ${masterDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+        {PREF_SECTIONS.map((section) => (
+          <div key={section.title}>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">{section.title}</h4>
+            <div className="rounded-xl border border-app bg-inset/30 px-3">
+              {section.items.map((toggle) => (
+                <SwitchRow
+                  key={toggle.key}
+                  label={toggle.label}
+                  description={toggle.description}
+                  checked={Boolean(preferences[toggle.key])}
+                  onChange={(value) => setPref(toggle.key, value)}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
