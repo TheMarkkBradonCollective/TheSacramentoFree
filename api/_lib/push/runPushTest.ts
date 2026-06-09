@@ -1,8 +1,9 @@
-import { supabaseAdmin } from './supabaseAdmin';
 import { sendWebPush, type PushSubscriptionKeys } from './vapid';
 import { configureVapidAsync } from './webPushLoader';
 
 async function getSavedSubscriptions(userId: string): Promise<PushSubscriptionKeys[]> {
+  const { getSupabaseAdmin } = await import('./supabaseAdmin');
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data, error } = await supabaseAdmin.from('push_subscriptions').select('*').eq('userId', userId);
   if (error || !data?.length) return [];
   return data.map((row) => ({
@@ -62,6 +63,8 @@ export async function runPushTest(params: {
     else {
       failed += 1;
       if (result.removed) {
+        const { getSupabaseAdmin } = await import('./supabaseAdmin');
+        const supabaseAdmin = await getSupabaseAdmin();
         await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
       }
     }
