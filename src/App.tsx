@@ -50,6 +50,7 @@ import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
 import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { usePushDeepLinkNavigation } from './hooks/usePushNotifications';
+import PushNotificationCelebration from './components/PushNotificationCelebration';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -1072,6 +1073,13 @@ export default function App() {
             </>
           )}
         </>
+      )}
+
+      {userProfile && !accountRestriction.restricted && (
+        <PushNotificationCelebration
+          userId={userProfile.uid}
+          onGoToProfile={() => setActiveTab('profile')}
+        />
       )}
 
       {/* Floating PWA Install Helper Banner */}

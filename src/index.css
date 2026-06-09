@@ -714,3 +714,157 @@ button {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Push notification celebration — border lights + confetti */
+.push-celebration-lights {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.push-celebration-lights__edge {
+  position: absolute;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-accent) 70%, #ffd166),
+    var(--color-accent),
+    color-mix(in srgb, var(--color-accent) 70%, #ffd166),
+    transparent
+  );
+  opacity: 0.85;
+  filter: blur(0.5px);
+  animation: push-celebration-edge-pulse 2.4s ease-in-out infinite;
+}
+
+.push-celebration-lights__edge--top,
+.push-celebration-lights__edge--bottom {
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.push-celebration-lights__edge--top {
+  top: 0;
+  animation-delay: 0s;
+}
+
+.push-celebration-lights__edge--bottom {
+  bottom: 0;
+  animation-delay: 0.6s;
+}
+
+.push-celebration-lights__edge--left,
+.push-celebration-lights__edge--right {
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--color-accent) 70%, #ffd166),
+    var(--color-accent),
+    color-mix(in srgb, var(--color-accent) 70%, #ffd166),
+    transparent
+  );
+}
+
+.push-celebration-lights__edge--left {
+  left: 0;
+  animation-delay: 0.3s;
+}
+
+.push-celebration-lights__edge--right {
+  right: 0;
+  animation-delay: 0.9s;
+}
+
+.push-celebration-lights__corner {
+  position: absolute;
+  width: min(28vw, 180px);
+  height: min(28vw, 180px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-accent) 55%, transparent) 0%,
+    transparent 70%
+  );
+  animation: push-celebration-corner-glow 2.8s ease-in-out infinite;
+}
+
+.push-celebration-lights__corner--tl {
+  top: -8%;
+  left: -8%;
+}
+
+.push-celebration-lights__corner--tr {
+  top: -8%;
+  right: -8%;
+  animation-delay: 0.7s;
+}
+
+.push-celebration-lights__corner--bl {
+  bottom: -8%;
+  left: -8%;
+  animation-delay: 1.1s;
+}
+
+.push-celebration-lights__corner--br {
+  bottom: -8%;
+  right: -8%;
+  animation-delay: 1.5s;
+}
+
+.push-celebration-confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.push-celebration-confetti__piece {
+  position: absolute;
+  top: 0;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-shadow) 80%, transparent);
+  will-change: transform, opacity;
+}
+
+@keyframes push-celebration-edge-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    filter: blur(1px) brightness(0.9);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0.5px) brightness(1.15);
+  }
+}
+
+@keyframes push-celebration-corner-glow {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .push-celebration-lights__edge,
+  .push-celebration-lights__corner {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .push-celebration-confetti {
+    display: none;
+  }
+}
