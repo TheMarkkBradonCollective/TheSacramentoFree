@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import GoFundMeFooter from '../GoFundMeFooter';
+import PageScrollFooter from '../PageScrollFooter';
 import { usePublicRoute } from '../../public/usePublicRoute';
 import PublicNav from './PublicNav';
 import HomePage from './pages/HomePage';
@@ -91,10 +91,12 @@ export default function PublicSite({
   };
 
   return (
-    <div className="min-h-screen bg-app text-app font-sans flex flex-col">
+    <div className="min-h-screen h-dvh bg-app text-app font-sans flex flex-col overflow-hidden">
       <PublicNav route={route} onNavigate={navigate} />
-      <main className="flex-1">{renderPage()}</main>
-      <GoFundMeFooter />
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        {renderPage()}
+        <PageScrollFooter />
+      </main>
     </div>
   );
 }

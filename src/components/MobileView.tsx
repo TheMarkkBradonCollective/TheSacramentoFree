@@ -13,7 +13,7 @@ import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
 import { AppTab } from '../lib/appTabs';
-import GoFundMeFooter from './GoFundMeFooter';
+import PageScrollFooter from './PageScrollFooter';
 
 interface MobileViewProps {
   items: ItemPost[];
@@ -114,9 +114,10 @@ export default function MobileView({
       >
         {/* Keep map mounted so Leaflet keeps size; hide when another tab is active */}
         <div
-          className={`relative h-full w-full min-h-0 ${activeTab === 'map' ? '' : 'hidden'}`}
+          className={`relative h-full w-full min-h-0 overflow-y-auto flex flex-col ${activeTab === 'map' ? '' : 'hidden'}`}
           aria-hidden={activeTab !== 'map'}
         >
+          <div className="relative flex-1 min-h-[min(70vh,32rem)] w-full shrink-0">
           <SacramentoMapView
             items={items}
             userProfile={userProfile}
@@ -154,6 +155,8 @@ export default function MobileView({
               🎨 Index
             </button>
           </div>
+          </div>
+          <PageScrollFooter className="-mx-0" />
         </div>
 
         <div
@@ -178,6 +181,7 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
             />
+            <PageScrollFooter className="-mx-4" />
           </div>
           <button
             type="button"
@@ -209,6 +213,7 @@ export default function MobileView({
               onRefresh={onRefreshEvents}
               isLoading={isEventsLoading}
             />
+            <PageScrollFooter className="-mx-4" />
           </div>
           <button
             type="button"
@@ -222,23 +227,26 @@ export default function MobileView({
         </div>
 
         <div
-          className={`h-full w-full min-h-0 flex flex-col overflow-hidden ${activeTab === 'chats' ? '' : 'hidden'}`}
+          className={`h-full w-full min-h-0 overflow-y-auto flex flex-col ${activeTab === 'chats' ? '' : 'hidden'}`}
           id="mobile_messaging_dock"
           aria-hidden={activeTab !== 'chats'}
         >
-          <ChatSystem
-            userProfile={userProfile}
-            initialSelectedChatId={initialSelectedChatId}
-            onClearInitialChat={onClearInitialChat}
-            pendingChatCompose={pendingChatCompose}
-            onClearPendingChatCompose={onClearPendingChatCompose}
-            items={items}
-            blockedUserIds={blockedUserIds}
-            onViewProfile={onViewProfile}
-            onItemsChanged={onRefresh}
-            fullBleed
-            className="h-full min-h-0"
-          />
+          <div className="flex-1 min-h-[min(70vh,28rem)] flex flex-col overflow-hidden shrink-0">
+            <ChatSystem
+              userProfile={userProfile}
+              initialSelectedChatId={initialSelectedChatId}
+              onClearInitialChat={onClearInitialChat}
+              pendingChatCompose={pendingChatCompose}
+              onClearPendingChatCompose={onClearPendingChatCompose}
+              items={items}
+              blockedUserIds={blockedUserIds}
+              onViewProfile={onViewProfile}
+              onItemsChanged={onRefresh}
+              fullBleed
+              className="h-full min-h-0"
+            />
+          </div>
+          <PageScrollFooter />
         </div>
 
         <div
@@ -258,6 +266,7 @@ export default function MobileView({
               onDeleteAccount={onDeleteAccount}
               fullBleed
             />
+            <PageScrollFooter className="-mx-4" />
           </div>
         </div>
 
@@ -276,11 +285,10 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               fullBleed
             />
+            <PageScrollFooter className="-mx-4" />
           </div>
         </div>
       </main>
-
-      <GoFundMeFooter />
 
       <footer id="mobile_sticky_footer_nav" className="sbn-mobile-nav">
         <div className="grid grid-cols-6 h-[4.25rem] px-0.5">

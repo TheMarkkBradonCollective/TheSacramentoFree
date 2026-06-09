@@ -12,7 +12,7 @@ import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { AppTab } from '../lib/appTabs';
-import GoFundMeFooter from './GoFundMeFooter';
+import PageScrollFooter from './PageScrollFooter';
 
 interface DesktopViewProps {
   items: ItemPost[];
@@ -72,7 +72,7 @@ export default function DesktopView({
   blockedUserIds = new Set(),
 }: DesktopViewProps) {
   return (
-    <div id="desktop_device_workspace" className="min-h-screen flex flex-col mesh-bg text-app">
+    <div id="desktop_device_workspace" className="min-h-screen h-dvh flex flex-col mesh-bg text-app overflow-hidden">
       <Navbar
         userProfile={userProfile}
         activeTab={activeTab}
@@ -81,7 +81,7 @@ export default function DesktopView({
         onLogout={onLogout}
       />
 
-      <main id="desktop_main" className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main id="desktop_main" className="flex-1 min-h-0 overflow-y-auto max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
         {activeTab === 'feed' && (
           <div className="space-y-6" id="desktop_feed_view_root">
             <div className="sbn-page-header">
@@ -205,9 +205,9 @@ export default function DesktopView({
             </div>
           </div>
         )}
-      </main>
 
-      <GoFundMeFooter />
+        <PageScrollFooter />
+      </main>
     </div>
   );
 }

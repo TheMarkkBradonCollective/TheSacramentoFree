@@ -13,7 +13,7 @@ import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import CommunityStatsBar from './CommunityStatsBar';
 import { AppTab } from '../lib/appTabs';
-import GoFundMeFooter from './GoFundMeFooter';
+import PageScrollFooter from './PageScrollFooter';
 
 interface TabletViewProps {
   items: ItemPost[];
@@ -82,7 +82,7 @@ export default function TabletView({
   blockedUserIds = new Set(),
 }: TabletViewProps) {
   return (
-    <div id="tablet_device_workspace" className="flex flex-col min-h-screen mesh-bg text-app">
+    <div id="tablet_device_workspace" className="flex flex-col min-h-screen h-dvh mesh-bg text-app overflow-hidden">
       <header id="tablet_navbar" className="sticky top-0 z-40 sbn-glass-nav">
         <div className="max-w-5xl mx-auto px-5 py-3 flex items-center justify-between gap-4">
         <BrandLogo subtitle={userProfile.neighborhood} showTitle />
@@ -120,7 +120,7 @@ export default function TabletView({
         </div>
       </header>
 
-      <main id="tablet_content_container" className="flex-1 max-w-5xl w-full mx-auto p-5">
+      <main id="tablet_content_container" className="flex-1 min-h-0 overflow-y-auto max-w-5xl w-full mx-auto p-5">
         {activeTab === 'feed' && (
           <div className="space-y-5" id="tablet_feed_pane">
             <div className="sbn-page-header">
@@ -244,9 +244,9 @@ export default function TabletView({
             </div>
           </div>
         )}
-      </main>
 
-      <GoFundMeFooter />
+        <PageScrollFooter />
+      </main>
     </div>
   );
 }
