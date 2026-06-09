@@ -16,6 +16,7 @@ import PostItemModal from './PostItemModal';
 import { updateSupabaseItemStatus } from '../supabase';
 import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
+import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
@@ -38,6 +39,35 @@ const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
   { value: 'has_interest', label: 'Has upvotes' },
   { value: 'has_comments', label: 'Has comments' },
 ];
+
+type QuickPick = 'trending' | 'trading' | 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
+
+const QUICK_PICKS: { id: QuickPick; label: string }[] = [
+  { id: 'trending', label: 'Trending' },
+  { id: 'trading', label: 'Trading' },
+  { id: 'saved', label: 'Saved' },
+  { id: 'my_neighborhood', label: 'My area' },
+  { id: 'with_photos', label: 'With photos' },
+  { id: 'needs_pickup', label: 'Needs pickup' },
+];
+
+const TRADING_CATEGORIES = new Set([
+  'Borrow Request',
+  'Labor & Services',
+  'Labor & Services Needed',
+  'Help / Labor Request',
+]);
+
+function isTradingListing(item: ItemPost): boolean {
+  if (TRADING_CATEGORIES.has(item.category)) return true;
+  const text = `${item.title} ${item.description} ${item.category}`.toLowerCase();
+  return /\b(trade|trading|swap|barter|borrow)\b/.test(text);
+}
+
+function needsPickupListing(item: ItemPost): boolean {
+  if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
+  return /pickup|curb|porch/i.test(item.category);
+}
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
@@ -108,7 +138,7 @@ export default function ItemGrid({
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
   const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
@@ -143,6 +173,15 @@ export default function ItemGrid({
     }
   };
 
+  const toggleQuickPick = (pick: QuickPick) => {
+    setActiveQuickPicks((prev) => {
+      const next = new Set(prev);
+      if (next.has(pick)) next.delete(pick);
+      else next.add(pick);
+      return next;
+    });
+  };
+
   const hasExtraFilters =
     selectedType !== 'all' ||
     selectedStatus !== 'all' ||
@@ -151,7 +190,7 @@ export default function ItemGrid({
     selectedCategory !== 'All Categories' ||
     selectedNeighborhood !== 'All Neighborhoods' ||
     searchTerm.trim() !== '' ||
-    showSavedOnly;
+    activeQuickPicks.size > 0;
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -161,7 +200,7 @@ export default function ItemGrid({
     setSelectedStatus('all');
     setSelectedVoteFilter('all');
     setSortBy('newest');
-    setShowSavedOnly(false);
+    setActiveQuickPicks(new Set());
   };
 
   const filteredItems = useMemo(() => {
@@ -174,7 +213,6 @@ export default function ItemGrid({
       if (selectedType !== 'all' && item.type !== selectedType) return false;
       if (selectedCategory !== 'All Categories' && item.category !== selectedCategory) return false;
       if (selectedNeighborhood !== 'All Neighborhoods' && item.neighborhood !== selectedNeighborhood) return false;
-      if (showSavedOnly && !savedIds.has(item.id)) return false;
       if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
 
       const votes = getVotesForPost(item.id);
@@ -183,6 +221,15 @@ export default function ItemGrid({
       if (selectedVoteFilter === 'i_interested' && votes.userVote !== 'up') return false;
       if (selectedVoteFilter === 'has_interest' && votes.upvotes === 0) return false;
       if (selectedVoteFilter === 'has_comments' && commentCount === 0) return false;
+
+      if (activeQuickPicks.has('saved') && !savedIds.has(item.id)) return false;
+      if (activeQuickPicks.has('my_neighborhood') && item.neighborhood !== userProfile.neighborhood) {
+        return false;
+      }
+      if (activeQuickPicks.has('with_photos') && extractListingImageUrls(item).length === 0) return false;
+      if (activeQuickPicks.has('needs_pickup') && !needsPickupListing(item)) return false;
+      if (activeQuickPicks.has('trading') && !isTradingListing(item)) return false;
+      if (activeQuickPicks.has('trending') && votes.upvotes === 0) return false;
 
       return true;
     });
@@ -211,11 +258,12 @@ export default function ItemGrid({
     selectedType,
     selectedCategory,
     selectedNeighborhood,
-    showSavedOnly,
     savedIds,
     selectedStatus,
     selectedVoteFilter,
     sortBy,
+    activeQuickPicks,
+    userProfile.neighborhood,
     getVotesForPost,
     getCommentsForPost,
   ]);
@@ -247,63 +295,35 @@ export default function ItemGrid({
                 onClick={() => {
                   setSelectedType(type);
                   setSelectedCategory('All Categories');
-                  setShowSavedOnly(false);
                 }}
-                className={`sbn-chip ${selectedType === type && !showSavedOnly ? 'sbn-chip-active' : ''}`}
+                className={`sbn-chip ${selectedType === type ? 'sbn-chip-active' : ''}`}
               >
                 {type === 'all' ? 'All' : type === 'giveaway' ? 'Giving' : 'Looking for'}
               </button>
             ))}
-            <button
-              type="button"
-              id="type_saved_btn"
-              onClick={() => setShowSavedOnly((v) => !v)}
-              className={`sbn-chip flex items-center gap-1.5 ${showSavedOnly ? 'sbn-chip-active' : ''}`}
-            >
-              <Bookmark className={`w-3 h-3 ${showSavedOnly ? 'fill-current' : ''}`} />
-              Saved
-            </button>
           </div>
         </div>
 
         <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+            <p className="text-[10px] text-subtle">Tap to combine multiple</p>
+          </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedVoteFilter('has_interest');
-                setSortBy('most_upvotes');
-                setShowSavedOnly(false);
-              }}
-              className={`sbn-chip ${selectedVoteFilter === 'has_interest' && sortBy === 'most_upvotes' ? 'sbn-chip-active' : ''}`}
-            >
-              Trending
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedStatus('active');
-                setSelectedType('giveaway');
-                setSelectedVoteFilter('all');
-                setShowSavedOnly(false);
-              }}
-              className={`sbn-chip ${selectedStatus === 'active' && selectedType === 'giveaway' && !showSavedOnly ? 'sbn-chip-active' : ''}`}
-            >
-              Free stuff
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedStatus('active');
-                setSelectedType('looking');
-                setSelectedVoteFilter('all');
-                setShowSavedOnly(false);
-              }}
-              className={`sbn-chip ${selectedStatus === 'active' && selectedType === 'looking' && !showSavedOnly ? 'sbn-chip-active' : ''}`}
-            >
-              ISO requests
-            </button>
+            {QUICK_PICKS.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                id={`quick_pick_${id}`}
+                onClick={() => toggleQuickPick(id)}
+                className={`sbn-chip flex items-center gap-1.5 ${activeQuickPicks.has(id) ? 'sbn-chip-active' : ''}`}
+              >
+                {id === 'saved' && (
+                  <Bookmark className={`w-3 h-3 ${activeQuickPicks.has('saved') ? 'fill-current' : ''}`} />
+                )}
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -436,19 +456,19 @@ export default function ItemGrid({
           <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
           <h3 className="font-display text-lg font-bold text-app">No listings found</h3>
           <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
-            {showSavedOnly
+            {activeQuickPicks.has('saved')
               ? 'You haven\'t saved any listings yet. Tap the bookmark icon on any listing to save it.'
               : selectedVoteFilter === 'i_interested'
                 ? 'No listings you have marked as interested yet. Vote up on posts you want to follow.'
                 : `Try different filters, or be the first to post. ${SITE.tagline}`}
           </p>
-          {showSavedOnly && (
+          {activeQuickPicks.size > 0 && (
             <button
               type="button"
-              onClick={() => setShowSavedOnly(false)}
+              onClick={() => setActiveQuickPicks(new Set())}
               className="sbn-btn sbn-btn-secondary sbn-btn-sm mt-4"
             >
-              Browse all listings
+              Clear quick picks
             </button>
           )}
         </div>
