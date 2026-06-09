@@ -1,28 +1,6 @@
-import webpush from 'web-push';
+import { configureVapidAsync, getWebPushModule, isVapidConfigured } from './webPushLoader';
 
-let configured = false;
-
-export function ensureVapidConfigured(): boolean {
-  if (configured) return true;
-
-  const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || '';
-  const privateKey = process.env.VAPID_PRIVATE_KEY || '';
-  const subject = process.env.VAPID_SUBJECT || process.env.APP_URL || 'mailto:support@sacbuynothing.org';
-
-  if (!publicKey || !privateKey) return false;
-
-  try {
-    webpush.setVapidDetails(subject, publicKey, privateKey);
-    configured = true;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function getVapidPublicKey(): string {
-  return process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || '';
-}
+export { getVapidPublicKey } from './webPushLoader';
 
 export interface PushSubscriptionKeys {
   endpoint: string;
@@ -38,11 +16,15 @@ export interface PushNotificationPayload {
   data?: Record<string, string>;
 }
 
+export async function ensureVapidConfigured(): Promise<boolean> {
+  return configureVapidAsync();
+}
+
 export async function sendWebPush(
   subscription: PushSubscriptionKeys,
   payload: PushNotificationPayload,
 ): Promise<{ ok: boolean; removed: boolean }> {
-  if (!ensureVapidConfigured()) {
+  if (!(await ensureVapidConfigured())) {
     return { ok: false, removed: false };
   }
 
@@ -56,6 +38,7 @@ export async function sendWebPush(
   });
 
   try {
+    const webpush = await getWebPushModule();
     await webpush.sendNotification(
       {
         endpoint: subscription.endpoint,
@@ -68,4 +51,9 @@ export async function sendWebPush(
     const status = (err as { statusCode?: number }).statusCode;
     return { ok: false, removed: status === 404 || status === 410 };
   }
+}
+
+/** @deprecated Use isVapidConfigured from webPushLoader after configureVapidAsync */
+export function isVapidReady(): boolean {
+  return isVapidConfigured();
 }

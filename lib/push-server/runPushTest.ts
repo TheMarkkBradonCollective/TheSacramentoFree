@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './supabaseAdmin';
-import { ensureVapidConfigured, sendWebPush, type PushSubscriptionKeys } from './vapid';
+import { sendWebPush, type PushSubscriptionKeys } from './vapid';
+import { configureVapidAsync } from './webPushLoader';
 
 async function getSavedSubscriptions(userId: string): Promise<PushSubscriptionKeys[]> {
   const { data, error } = await supabaseAdmin.from('push_subscriptions').select('*').eq('userId', userId);
@@ -17,7 +18,7 @@ export async function runPushTest(params: {
   userId: string;
   subscription?: PushSubscriptionKeys | null;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
-  if (!ensureVapidConfigured()) {
+  if (!(await configureVapidAsync())) {
     return {
       status: 503,
       body: {
