@@ -191,7 +191,22 @@ export interface SendPushOptions {
   data?: Record<string, string>;
 }
 
-export async function sendTestPushNotification(): Promise<{ ok: boolean; errorMessage?: string }> {
+async function showLocalTestNotification(): Promise<void> {
+  const registration = await navigator.serviceWorker.ready;
+  await registration.showNotification('Test notification', {
+    body: 'Sacramento Buy Nothing notifications are working on this device.',
+    icon: '/icon.svg',
+    badge: '/icon.svg',
+    tag: 'sbn-test-local',
+    data: { url: '/' },
+  });
+}
+
+export async function sendTestPushNotification(): Promise<{
+  ok: boolean;
+  errorMessage?: string;
+  localOnly?: boolean;
+}> {
   const token = await getAccessToken();
   if (!token) {
     return { ok: false, errorMessage: 'Sign in to test notifications.' };
@@ -217,12 +232,16 @@ export async function sendTestPushNotification(): Promise<{ ok: boolean; errorMe
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      if (res.status === 404) {
-        return {
-          ok: false,
-          errorMessage:
-            'Push API server is not reachable. Run npm run dev (starts Vite + push server) or deploy with npm start.',
-        };
+      if (res.status === 404 || res.status === 502 || res.status === 503) {
+        try {
+          await showLocalTestNotification();
+          return {
+            ok: true,
+            localOnly: true,
+          };
+        } catch {
+          // fall through to server error below
+        }
       }
       return { ok: false, errorMessage: json.error || 'Could not send test notification.' };
     }
@@ -235,14 +254,19 @@ export async function sendTestPushNotification(): Promise<{ ok: boolean; errorMe
       };
     }
     return { ok: true };
-  } catch (err) {
-    return {
-      ok: false,
-      errorMessage:
-        err instanceof Error
-          ? err.message
-          : 'Could not reach the push API. Make sure the push server is running.',
-    };
+  } catch {
+    try {
+      await showLocalTestNotification();
+      return { ok: true, localOnly: true };
+    } catch (err) {
+      return {
+        ok: false,
+        errorMessage:
+          err instanceof Error
+            ? err.message
+            : 'Could not reach the push API. Run npm run dev and set VAPID keys in .env.',
+      };
+    }
   }
 }
 
