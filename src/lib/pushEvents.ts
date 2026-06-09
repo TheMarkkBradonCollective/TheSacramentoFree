@@ -1,5 +1,5 @@
 import { convertPercentToLatLng, extractGPSCoordinates } from '../types';
-import type { ItemPost } from '../types';
+import type { DirectorAlertCategory, ItemPost } from '../types';
 import { sendPushNotification } from './pushNotifications';
 import {
   pushUrlForConversation,
@@ -252,6 +252,7 @@ export async function notifyAccountUpdate(params: {
 }
 
 export async function notifyDirectorAlert(params: {
+  category: DirectorAlertCategory;
   title: string;
   body: string;
   tag?: string;
@@ -264,6 +265,7 @@ export async function notifyDirectorAlert(params: {
     url: pushUrlForDirectorOverview(),
     excludeUserIds: params.excludeUserIds,
     tag: params.tag || 'director-alert',
+    data: { directorCategory: params.category },
   });
 }
 

@@ -602,6 +602,7 @@ export async function upsertSupabaseProfile(
       firePush(() =>
         import('./lib/pushIntegration').then((m) =>
           m.pushDirectorAlert({
+            category: 'join',
             title: 'New neighbor joined',
             body: `${payload.displayName} joined from ${payload.neighborhood}`,
             tag: `director-join-${profile.uid}`,
@@ -1171,6 +1172,7 @@ export async function setUserRole(
       firePush(() =>
         import('./lib/pushIntegration').then((m) =>
           m.pushDirectorAlert({
+            category: 'moderation',
             title: 'Role changed',
             body: `${context.actorName} set ${context.targetName} to ${roleLabel(role)}`,
             tag: `director-role-${uid}`,
@@ -3576,6 +3578,7 @@ export async function staffSuspendUser(params: {
             `Your account is suspended for ${params.durationDays} day(s).`,
           ),
           m.pushDirectorAlert({
+            category: 'moderation',
             title: 'Neighbor suspended',
             body: `${params.actor.displayName} suspended ${params.targetName} for ${params.durationDays} day(s)`,
             tag: `director-suspend-${params.targetUserId}`,
@@ -3623,6 +3626,7 @@ export async function staffUnsuspendUser(params: {
             'Your account suspension has been lifted.',
           ),
           m.pushDirectorAlert({
+            category: 'moderation',
             title: 'Suspension lifted',
             body: `${params.actor.displayName} unsuspended ${params.targetName}`,
             tag: `director-unsuspend-${params.targetUserId}`,
@@ -3684,6 +3688,7 @@ export async function staffBanUser(params: {
             'Your account has been disabled by community staff.',
           ),
           m.pushDirectorAlert({
+            category: 'moderation',
             title: 'Neighbor banned',
             body: `${params.actor.displayName} banned ${params.targetName}`,
             tag: `director-ban-${params.targetUserId}`,
@@ -3727,6 +3732,7 @@ export async function staffUnbanUser(params: {
         Promise.all([
           m.pushAccountStatusChange(params.targetUserId, 'Account restored', 'Your account has been re-enabled.'),
           m.pushDirectorAlert({
+            category: 'moderation',
             title: 'Ban lifted',
             body: `${params.actor.displayName} unbanned ${params.targetName}`,
             tag: `director-unban-${params.targetUserId}`,
@@ -4332,6 +4338,7 @@ export async function staffDeleteUserAccount(params: {
       firePush(() =>
         import('./lib/pushIntegration').then((m) =>
           m.pushDirectorAlert({
+            category: 'moderation',
             title: 'Account deleted by staff',
             body: `${params.actor.displayName} removed ${params.targetName}'s account`,
             tag: `director-delete-${params.targetUserId}`,
@@ -4367,6 +4374,7 @@ export async function staffDeleteUserAccount(params: {
     firePush(() =>
       import('./lib/pushIntegration').then((m) =>
         m.pushDirectorAlert({
+          category: 'moderation',
           title: 'Account deleted by staff',
           body: `${params.actor.displayName} removed ${params.targetName}'s account`,
           tag: `director-delete-${params.targetUserId}`,
@@ -4408,6 +4416,7 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     firePush(() =>
       import('./lib/pushIntegration').then((m) =>
         m.pushDirectorAlert({
+          category: 'leave',
           title: 'Neighbor left',
           body: `${leavingName} deleted their account (${leavingArea})`,
           tag: `director-leave-${uid}`,

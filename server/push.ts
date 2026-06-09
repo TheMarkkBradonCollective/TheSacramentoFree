@@ -57,9 +57,28 @@ export interface NotificationPreferencesRow {
   staffSupport: boolean;
   staffReports: boolean;
   directorAlerts: boolean;
+  directorJoins: boolean;
+  directorLeaves: boolean;
+  directorModeration: boolean;
+  directorReports: boolean;
+  directorTickets: boolean;
+  directorListings: boolean;
+  directorMessageRequests: boolean;
+  directorClaimRequests: boolean;
   nearbyRadiusMiles: number;
   followedCategories: string[];
 }
+
+const DIRECTOR_CATEGORY_PREF_MAP: Record<string, keyof NotificationPreferencesRow> = {
+  join: 'directorJoins',
+  leave: 'directorLeaves',
+  moderation: 'directorModeration',
+  report: 'directorReports',
+  ticket: 'directorTickets',
+  listing: 'directorListings',
+  message_request: 'directorMessageRequests',
+  claim_request: 'directorClaimRequests',
+};
 
 interface PushSubscriptionRow {
   id: string;
@@ -128,6 +147,14 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     staffSupport: row.staffSupport !== false,
     staffReports: row.staffReports !== false,
     directorAlerts: row.directorAlerts !== false,
+    directorJoins: row.directorJoins !== false,
+    directorLeaves: row.directorLeaves !== false,
+    directorModeration: row.directorModeration !== false,
+    directorReports: row.directorReports !== false,
+    directorTickets: row.directorTickets !== false,
+    directorListings: row.directorListings !== false,
+    directorMessageRequests: row.directorMessageRequests !== false,
+    directorClaimRequests: row.directorClaimRequests !== false,
     nearbyRadiusMiles: Number(row.nearbyRadiusMiles ?? 10),
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
   };
@@ -138,6 +165,15 @@ export function userAllowsEvent(prefs: NotificationPreferencesRow, eventType: Pu
   const key = EVENT_PREF_MAP[eventType];
   if (key === 'enabled') return prefs.enabled;
   return Boolean(prefs[key]);
+}
+
+export function userAllowsDirectorAlert(prefs: NotificationPreferencesRow, category?: string): boolean {
+  if (!prefs.enabled || prefs.directorAlerts === false) return false;
+  if (!category) return true;
+
+  const key = DIRECTOR_CATEGORY_PREF_MAP[category];
+  if (!key) return true;
+  return prefs[key] !== false;
 }
 
 export async function getPreferencesForUsers(userIds: string[]): Promise<Map<string, NotificationPreferencesRow>> {
@@ -171,6 +207,14 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         staffSupport: true,
         staffReports: true,
         directorAlerts: true,
+        directorJoins: true,
+        directorLeaves: true,
+        directorModeration: true,
+        directorReports: true,
+        directorTickets: true,
+        directorListings: true,
+        directorMessageRequests: true,
+        directorClaimRequests: true,
         nearbyRadiusMiles: 10,
         followedCategories: [],
       });
@@ -242,7 +286,11 @@ export async function sendPushToUsers(
     const prefsMap = await getPreferencesForUsers(targets);
     allowed = targets.filter((uid) => {
       const prefs = prefsMap.get(uid);
-      return prefs && userAllowsEvent(prefs, payload.eventType);
+      if (!prefs) return false;
+      if (payload.eventType === 'director_alert') {
+        return userAllowsDirectorAlert(prefs, payload.data?.directorCategory);
+      }
+      return userAllowsEvent(prefs, payload.eventType);
     });
   }
 

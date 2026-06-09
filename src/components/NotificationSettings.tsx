@@ -133,16 +133,48 @@ const STAFF_PREF_SECTION = {
   ],
 };
 
-const DIRECTOR_PREF_SECTION = {
-  title: 'Director oversight',
-  items: [
-    {
-      key: 'directorAlerts' as const,
-      label: 'Platform activity',
-      description: 'Joins, leaves, bans, suspensions, reports, tickets, listings, and more',
-    },
-  ],
-};
+const DIRECTOR_CATEGORY_PREFS = [
+  {
+    key: 'directorJoins' as const,
+    label: 'New neighbors',
+    description: 'When someone joins the community',
+  },
+  {
+    key: 'directorLeaves' as const,
+    label: 'Account departures',
+    description: 'When a neighbor deletes their own account',
+  },
+  {
+    key: 'directorModeration' as const,
+    label: 'Moderation actions',
+    description: 'Suspensions, bans, role changes, and staff deletions',
+  },
+  {
+    key: 'directorReports' as const,
+    label: 'Neighbor reports',
+    description: 'Manual reports and block reports',
+  },
+  {
+    key: 'directorTickets' as const,
+    label: 'Support tickets',
+    description: 'New tickets and neighbor replies',
+  },
+  {
+    key: 'directorListings' as const,
+    label: 'New listings',
+    description: 'Giveaways and neighbor requests posted',
+  },
+  {
+    key: 'directorMessageRequests' as const,
+    label: 'Message requests',
+    description: 'When neighbors ask to start a chat',
+  },
+  {
+    key: 'directorClaimRequests' as const,
+    label: 'Claim requests',
+    description: 'Pickup requests on listings',
+  },
+] as const;
 
 export default function NotificationSettings({
   userId,
@@ -168,9 +200,40 @@ export default function NotificationSettings({
     : 'bg-surface border border-app rounded-2xl p-6 shadow-md';
 
   const masterDisabled = !preferences.enabled || permission === 'denied' || permission === 'unsupported';
+  const directorMasterDisabled = masterDisabled || !preferences.directorAlerts;
 
   const setPref = (key: keyof NotificationPreferences, value: boolean | number | string[]) => {
     void updatePreferences({ ...preferences, [key]: value });
+  };
+
+  const setDirectorMaster = (value: boolean) => {
+    if (!value) {
+      void updatePreferences({
+        ...preferences,
+        directorAlerts: false,
+        directorJoins: false,
+        directorLeaves: false,
+        directorModeration: false,
+        directorReports: false,
+        directorTickets: false,
+        directorListings: false,
+        directorMessageRequests: false,
+        directorClaimRequests: false,
+      });
+      return;
+    }
+    void updatePreferences({
+      ...preferences,
+      directorAlerts: true,
+      directorJoins: true,
+      directorLeaves: true,
+      directorModeration: true,
+      directorReports: true,
+      directorTickets: true,
+      directorListings: true,
+      directorMessageRequests: true,
+      directorClaimRequests: true,
+    });
   };
 
   const allCategories = [...ITEM_CATEGORIES, ...ISO_CATEGORIES];
@@ -299,10 +362,20 @@ export default function NotificationSettings({
         {isDirectorRole(userRole) && (
           <div>
             <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
-              {DIRECTOR_PREF_SECTION.title}
+              Director oversight
             </h4>
-            <div className="rounded-xl border border-app bg-inset/30 px-3">
-              {DIRECTOR_PREF_SECTION.items.map((toggle) => (
+            <div className={`rounded-xl border border-app bg-inset/30 px-3 ${masterDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+              <SwitchRow
+                label="All director alerts"
+                description="Master switch for platform-wide director notifications"
+                checked={Boolean(preferences.directorAlerts)}
+                onChange={setDirectorMaster}
+              />
+            </div>
+            <div
+              className={`rounded-xl border border-app bg-inset/30 px-3 mt-2 ${directorMasterDisabled ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              {DIRECTOR_CATEGORY_PREFS.map((toggle) => (
                 <SwitchRow
                   key={toggle.key}
                   label={toggle.label}

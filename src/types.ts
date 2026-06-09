@@ -23,6 +23,14 @@ export interface NotificationPreferences {
   staffSupport: boolean;
   staffReports: boolean;
   directorAlerts: boolean;
+  directorJoins: boolean;
+  directorLeaves: boolean;
+  directorModeration: boolean;
+  directorReports: boolean;
+  directorTickets: boolean;
+  directorListings: boolean;
+  directorMessageRequests: boolean;
+  directorClaimRequests: boolean;
   nearbyRadiusMiles: NearbyRadiusMiles;
   followedCategories: string[];
 }
@@ -43,6 +51,16 @@ export interface UserProfile {
 export interface StaffUserRow extends UserProfile {
   accountStatus: AccountStatus;
 }
+
+export type DirectorAlertCategory =
+  | 'join'
+  | 'leave'
+  | 'moderation'
+  | 'report'
+  | 'ticket'
+  | 'listing'
+  | 'message_request'
+  | 'claim_request';
 
 export interface DirectorActivityItem {
   id: string;

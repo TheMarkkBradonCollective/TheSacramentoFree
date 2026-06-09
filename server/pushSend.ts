@@ -149,10 +149,10 @@ export async function runPushSend(
     tag: body.tag,
     eventType: body.eventType,
     data: {
-      ...(body.data || {}),
       listingId: body.listingId || '',
       conversationId: body.conversationId || '',
       requestId: body.requestId || '',
+      ...(body.data || {}),
     },
   };
 

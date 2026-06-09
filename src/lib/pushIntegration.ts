@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import type { ItemPost } from '../types';
+import type { DirectorAlertCategory, ItemPost } from '../types';
 import {
   notifyAccountUpdate,
   notifyCommunityAnnouncement,
@@ -22,6 +22,7 @@ import {
 } from './pushEvents';
 
 export async function pushDirectorAlert(params: {
+  category: DirectorAlertCategory;
   title: string;
   body: string;
   tag?: string;
@@ -40,6 +41,7 @@ export async function pushAfterItemCreated(item: ItemPost) {
   await notifyNewListingPosted(item);
   await notifyListingApproved(item);
   await pushDirectorAlert({
+    category: 'listing',
     title: item.type === 'looking' ? 'New neighbor request' : 'New listing posted',
     body: `${item.userDisplayName}: ${item.title} (${item.neighborhood})`,
     tag: `director-listing-${item.id}`,
@@ -54,6 +56,7 @@ export async function pushAfterClaimRequest(params: {
 }) {
   await notifyClaimRequestSubmitted(params);
   await pushDirectorAlert({
+    category: 'claim_request',
     title: 'Claim request',
     body: `${params.claimerName} requested pickup: ${params.item.title}`,
     tag: `director-claim-${params.requestId}`,
@@ -119,6 +122,7 @@ export async function pushAfterMessageRequest(params: {
     preview: params.message,
   });
   await pushDirectorAlert({
+    category: 'message_request',
     title: 'Message request',
     body: `${params.fromUserName} asked to start a chat`,
     tag: `director-dmreq-${params.requestId}`,
@@ -240,6 +244,7 @@ export async function pushAfterSupportTicketOpened(params: {
     excludeUserIds: [params.openerUserId],
   });
   await pushDirectorAlert({
+    category: 'ticket',
     title: 'Support ticket opened',
     body: `${params.openerName}: ${params.subject}`,
     tag: `director-ticket-${params.ticketId}`,
@@ -264,6 +269,7 @@ export async function pushAfterSupportUserMessage(params: {
     excludeUserIds: [params.openerUserId],
   });
   await pushDirectorAlert({
+    category: 'ticket',
     title: 'Support ticket reply',
     body: `${params.openerName} replied on: ${params.subject}`,
     tag: `director-ticket-reply-${params.ticketId}`,
@@ -286,6 +292,7 @@ export async function pushAfterUserReport(params: {
     excludeUserIds: [params.reporterUserId],
   });
   await pushDirectorAlert({
+    category: 'report',
     title: 'Neighbor report',
     body: `${params.reporterName}: ${params.subject}`,
     tag: `director-report-${params.reportId}`,
