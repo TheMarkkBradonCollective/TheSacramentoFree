@@ -4,7 +4,7 @@
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 15,
-      "includeFiles": "node_modules/web-push/**"
+      "includeFiles": "{api/_lib/**,node_modules/web-push/**}"
     }
   },
   "rewrites": [
