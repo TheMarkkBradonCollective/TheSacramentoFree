@@ -71,7 +71,7 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
 let vapidConfigured = false;
 
 export function configureVapid() {
-  const publicKey = process.env.VAPID_PUBLIC_KEY || '';
+  const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || '';
   const privateKey = process.env.VAPID_PRIVATE_KEY || '';
   const subject = process.env.VAPID_SUBJECT || process.env.APP_URL || 'mailto:support@sacbuynothing.org';
 
@@ -91,7 +91,7 @@ export function configureVapid() {
 }
 
 export function getVapidPublicKey(): string {
-  return process.env.VAPID_PUBLIC_KEY || '';
+  return process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || '';
 }
 
 export function isVapidConfigured(): boolean {
