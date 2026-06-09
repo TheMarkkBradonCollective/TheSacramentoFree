@@ -7,10 +7,11 @@ import { requireAuth, supabaseAdmin, getUserRole, isStaffRole, type AuthedReques
 import {
   configureVapid,
   getVapidPublicKey,
+  isVapidConfigured,
   sendPushToUsers,
+  getSubscriptionsForUsers,
   getPreferencesForUsers,
   withinRadius,
-  coordsForNeighborhood,
   type PushEventType,
   type PushPayload,
 } from './push.js';
@@ -159,7 +160,25 @@ async function resolveRecipients(body: SendBody, callerId: string): Promise<stri
 }
 
 app.post('/api/push/test', requireAuth, async (req: AuthedRequest, res) => {
+  if (!isVapidConfigured()) {
+    res.status(503).json({
+      error:
+        'Push server is missing valid VAPID keys. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in the server environment.',
+    });
+    return;
+  }
+
   const callerId = req.user!.id;
+  const savedSubscriptions = await getSubscriptionsForUsers([callerId]);
+  if (!savedSubscriptions.length) {
+    res.status(400).json({
+      error:
+        'No push subscription is saved for this account on the server. Tap Enable notifications on this device, then try again.',
+      subscriptionCount: 0,
+    });
+    return;
+  }
+
   const payload: PushPayload = {
     title: 'Test notification',
     body: 'Sacramento Buy Nothing push alerts are working on this device.',
@@ -169,7 +188,17 @@ app.post('/api/push/test', requireAuth, async (req: AuthedRequest, res) => {
     data: { test: 'true' },
   };
 
-  const result = await sendPushToUsers([callerId], payload);
+  const result = await sendPushToUsers([callerId], payload, { skipPreferenceCheck: true });
+
+  if (result.sent === 0) {
+    res.status(502).json({
+      error:
+        'Push delivery failed for this device. Try turning notifications off and on again, or use a different browser.',
+      ...result,
+    });
+    return;
+  }
+
   res.json({ ok: true, ...result });
 });
 
