@@ -43,6 +43,26 @@ async function persistPushSubscription(subscription: PushSubscription, userId: s
     throw new Error('Invalid push subscription from this browser.');
   }
 
+  const token = await getAccessToken();
+  if (token) {
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subscription: json,
+        userAgent: navigator.userAgent.slice(0, 512),
+      }),
+    });
+    const body = await readJsonResponse(res);
+    if (res.ok) return;
+    throw new Error(
+      typeof body.error === 'string' ? body.error : 'Could not save push subscription on the server.',
+    );
+  }
+
   const row = {
     id: crypto.randomUUID(),
     userId,
@@ -68,6 +88,25 @@ async function persistPushSubscription(subscription: PushSubscription, userId: s
 }
 
 async function removePushSubscription(userId: string, endpoint?: string): Promise<void> {
+  const token = await getAccessToken();
+  if (token) {
+    const res = await fetch('/api/push/unsubscribe', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ endpoint }),
+    });
+    const body = await readJsonResponse(res);
+    if (!res.ok) {
+      throw new Error(
+        typeof body.error === 'string' ? body.error : 'Could not remove push subscription on the server.',
+      );
+    }
+    return;
+  }
+
   let query = supabase.from('push_subscriptions').delete().eq('userId', userId);
   if (endpoint) query = query.eq('endpoint', endpoint);
   const { error } = await query;
@@ -307,18 +346,36 @@ export async function sendTestPushNotification(): Promise<{
 
 export async function sendPushNotification(options: SendPushOptions): Promise<void> {
   const token = await getAccessToken();
-  if (!token) return;
+  if (!token) {
+    console.warn('[push] send skipped: not signed in');
+    return;
+  }
 
-  await fetch('/api/push/send', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(options),
-  }).catch((err) => {
+  try {
+    const res = await fetch('/api/push/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(options),
+    });
+    const json = await readJsonResponse(res);
+    if (!res.ok) {
+      console.warn('[push] send rejected:', res.status, json);
+      return;
+    }
+    if (Number(json.sent) === 0) {
+      console.warn('[push] send reached 0 devices:', {
+        eventType: options.eventType,
+        recipients: json.recipients,
+        skipped: json.skipped,
+        subscriptionCount: json.subscriptionCount,
+      });
+    }
+  } catch (err) {
     console.warn('[push] send failed:', err);
-  });
+  }
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {

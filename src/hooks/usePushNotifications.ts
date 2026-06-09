@@ -53,7 +53,11 @@ export function usePushNotifications(userId?: string) {
 
   useEffect(() => {
     if (!userId || permission !== 'granted') return;
-    void ensurePushSubscription().then(() => checkSubscription());
+    void ensurePushSubscription()
+      .then(() => checkSubscription())
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Could not sync push subscription');
+      });
   }, [userId, permission, checkSubscription]);
 
   useEffect(() => {
@@ -101,8 +105,8 @@ export function usePushNotifications(userId?: string) {
     if (result.ok) {
       setTestMessage(
         result.localOnly
-          ? `Local test notification shown.${result.serverHint ? ` Server: ${result.serverHint}` : ''}`
-          : 'Test notification sent — check your device.',
+          ? `Local test only — server push did not deliver.${result.serverHint ? ` ${result.serverHint}` : ''}`
+          : 'Test notification sent from the server — check your device.',
       );
     } else {
       setError(result.errorMessage || 'Could not send test notification.');
