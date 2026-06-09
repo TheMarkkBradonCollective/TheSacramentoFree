@@ -12,6 +12,7 @@ import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { AppTab } from '../lib/appTabs';
+import GoFundMeFooter from './GoFundMeFooter';
 
 interface DesktopViewProps {
   items: ItemPost[];
@@ -205,6 +206,8 @@ export default function DesktopView({
           </div>
         )}
       </main>
+
+      <GoFundMeFooter />
     </div>
   );
 }

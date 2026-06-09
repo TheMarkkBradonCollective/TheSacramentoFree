@@ -24,7 +24,6 @@ import {
   ChevronDown,
   Camera,
 } from 'lucide-react';
-import CommunityFooter from './CommunityFooter';
 import NotificationSettings from './NotificationSettings';
 import { IN_APP } from '../siteContent';
 
@@ -570,10 +569,6 @@ export default function UserProfileView({
             <p className="text-[10px] text-muted">Hides browser tab clutter and URL headers to let you focus entirely on friendly neighborly exchanges.</p>
           </div>
         </div>
-      </div>
-
-      <div className={fullBleed ? '' : 'mt-6'}>
-        <CommunityFooter compact />
       </div>
 
       {onDeleteAccount && (

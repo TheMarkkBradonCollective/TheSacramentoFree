@@ -13,6 +13,7 @@ import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
 import { AppTab } from '../lib/appTabs';
+import GoFundMeFooter from './GoFundMeFooter';
 
 interface MobileViewProps {
   items: ItemPost[];
@@ -278,6 +279,8 @@ export default function MobileView({
           </div>
         </div>
       </main>
+
+      <GoFundMeFooter />
 
       <footer id="mobile_sticky_footer_nav" className="sbn-mobile-nav">
         <div className="grid grid-cols-6 h-[4.25rem] px-0.5">

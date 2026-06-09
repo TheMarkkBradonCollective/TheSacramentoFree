@@ -3,9 +3,9 @@ import { Pencil } from 'lucide-react';
 import { UserProfile } from '../types';
 import AccountHelpSection from './AccountHelpSection';
 import StaffModerationPanel from './StaffModerationPanel';
-import CommunityFooter from './CommunityFooter';
-import DirectorMessageEditModal from './DirectorMessageEditModal';
+import LeaderMessageEditModal from './LeaderMessageEditModal';
 import { useDirectorMessage } from '../hooks/useDirectorMessage';
+import { useCityManagerMessage } from '../hooks/useCityManagerMessage';
 import { canAccessStaffDirectory } from '../lib/roles';
 
 interface CommunityMenuViewProps {
@@ -21,21 +21,44 @@ export default function CommunityMenuView({
   fullBleed = false,
 }: CommunityMenuViewProps) {
   const sectionShell = fullBleed ? 'px-4 py-5 border-t border-app/40' : '';
-  const { message, saveMessage, canEdit } = useDirectorMessage(userProfile);
-  const [editingWelcome, setEditingWelcome] = useState(false);
+  const { message: directorMessage, saveMessage: saveDirectorMessage, canEdit: canEditDirector } =
+    useDirectorMessage(userProfile);
+  const { message: cityManagerMessage, saveMessage: saveCityManagerMessage, canEdit: canEditCityManager } =
+    useCityManagerMessage(userProfile);
+  const [editingDirector, setEditingDirector] = useState(false);
+  const [editingCityManager, setEditingCityManager] = useState(false);
 
   return (
     <div className={fullBleed ? 'pb-6' : 'space-y-6'}>
-      {canEdit && (
+      {canEditDirector && (
         <div className={fullBleed ? sectionShell : ''}>
           <div className="sbn-card p-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-app">Public welcome message</p>
-              <p className="text-xs text-muted mt-0.5">Shown on the home page before sign-in.</p>
+              <p className="text-xs text-muted mt-0.5">Director note on the home and reviews pages.</p>
             </div>
             <button
               type="button"
-              onClick={() => setEditingWelcome(true)}
+              onClick={() => setEditingDirector(true)}
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
+          </div>
+        </div>
+      )}
+
+      {canEditCityManager && (
+        <div className={fullBleed ? sectionShell : ''}>
+          <div className="sbn-card p-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-app">City manager message</p>
+              <p className="text-xs text-muted mt-0.5">Shown on the home and reviews pages.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditingCityManager(true)}
               className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0"
             >
               <Pencil className="w-3.5 h-3.5" />
@@ -55,15 +78,57 @@ export default function CommunityMenuView({
         </div>
       )}
 
-      <div className={fullBleed ? 'px-4' : ''}>
-        <CommunityFooter compact />
-      </div>
+      {editingDirector && (
+        <LeaderMessageEditModal
+          editTitle="Edit director message"
+          values={{
+            name: directorMessage.directorName,
+            title: directorMessage.directorTitle,
+            headline: directorMessage.headline,
+            goal: directorMessage.goal,
+            promises: directorMessage.promises,
+            closing: directorMessage.closing,
+          }}
+          onClose={() => setEditingDirector(false)}
+          onSave={async (next) =>
+            saveDirectorMessage({
+              ...directorMessage,
+              directorName: next.name,
+              directorTitle: next.title,
+              headline: next.headline,
+              goal: next.goal,
+              promises: next.promises,
+              closing: next.closing,
+              updatedAt: new Date().toISOString(),
+            })
+          }
+        />
+      )}
 
-      {editingWelcome && (
-        <DirectorMessageEditModal
-          message={message}
-          onClose={() => setEditingWelcome(false)}
-          onSave={saveMessage}
+      {editingCityManager && (
+        <LeaderMessageEditModal
+          editTitle="Edit city manager message"
+          values={{
+            name: cityManagerMessage.managerName,
+            title: cityManagerMessage.managerTitle,
+            headline: cityManagerMessage.headline,
+            goal: cityManagerMessage.goal,
+            promises: cityManagerMessage.promises,
+            closing: cityManagerMessage.closing,
+          }}
+          onClose={() => setEditingCityManager(false)}
+          onSave={async (next) =>
+            saveCityManagerMessage({
+              ...cityManagerMessage,
+              managerName: next.name,
+              managerTitle: next.title,
+              headline: next.headline,
+              goal: next.goal,
+              promises: next.promises,
+              closing: next.closing,
+              updatedAt: new Date().toISOString(),
+            })
+          }
         />
       )}
     </div>

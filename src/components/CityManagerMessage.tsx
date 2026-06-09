@@ -1,26 +1,26 @@
 import { useState } from 'react';
 import { UserProfile } from '../types';
-import { useDirectorMessage } from '../hooks/useDirectorMessage';
+import { useCityManagerMessage } from '../hooks/useCityManagerMessage';
 import LeaderMessageCard from './LeaderMessageCard';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 
-interface DirectorMessageProps {
+interface CityManagerMessageProps {
   userProfile?: UserProfile | null;
   compact?: boolean;
 }
 
-export default function DirectorMessage({ userProfile, compact = false }: DirectorMessageProps) {
-  const { message, loading, saveMessage, canEdit } = useDirectorMessage(userProfile);
+export default function CityManagerMessage({ userProfile, compact = false }: CityManagerMessageProps) {
+  const { message, loading, saveMessage, canEdit } = useCityManagerMessage(userProfile);
   const [editing, setEditing] = useState(false);
 
   return (
     <>
       <LeaderMessageCard
-        variant="director"
-        headingId="director_message_heading"
+        variant="city_manager"
+        headingId="city_manager_message_heading"
         headline={message.headline}
-        name={message.directorName}
-        title={message.directorTitle}
+        name={message.managerName}
+        title={message.managerTitle}
         goal={message.goal}
         promises={message.promises}
         closing={message.closing}
@@ -32,10 +32,10 @@ export default function DirectorMessage({ userProfile, compact = false }: Direct
 
       {editing && (
         <LeaderMessageEditModal
-          editTitle="Edit director message"
+          editTitle="Edit city manager message"
           values={{
-            name: message.directorName,
-            title: message.directorTitle,
+            name: message.managerName,
+            title: message.managerTitle,
             headline: message.headline,
             goal: message.goal,
             promises: message.promises,
@@ -45,8 +45,8 @@ export default function DirectorMessage({ userProfile, compact = false }: Direct
           onSave={async (next) =>
             saveMessage({
               ...message,
-              directorName: next.name,
-              directorTitle: next.title,
+              managerName: next.name,
+              managerTitle: next.title,
               headline: next.headline,
               goal: next.goal,
               promises: next.promises,

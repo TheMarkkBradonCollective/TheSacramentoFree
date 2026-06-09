@@ -250,6 +250,18 @@ export interface DirectorMessageContent {
   updatedByUserId?: string | null;
 }
 
+export interface CityManagerMessageContent {
+  id: string;
+  managerName: string;
+  managerTitle: string;
+  headline: string;
+  goal: string;
+  promises: string[];
+  closing: string;
+  updatedAt: string;
+  updatedByUserId?: string | null;
+}
+
 /** App rating — 0 to 5 in 0.5 steps */
 export type AppReviewRating = 0 | 0.5 | 1 | 1.5 | 2 | 2.5 | 3 | 3.5 | 4 | 4.5 | 5;
 

@@ -42,29 +42,15 @@ const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
   { value: 'has_comments', label: 'Has comments' },
 ];
 
-type QuickPick = 'trending' | 'trading' | 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
+type QuickPick = 'trending' | 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
 
 const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'trending', label: 'Trending' },
-  { id: 'trading', label: 'Trading' },
   { id: 'saved', label: 'Saved' },
   { id: 'my_neighborhood', label: 'My area' },
   { id: 'with_photos', label: 'With photos' },
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
-
-const TRADING_CATEGORIES = new Set([
-  'Borrow Request',
-  'Labor & Services',
-  'Labor & Services Needed',
-  'Help / Labor Request',
-]);
-
-function isTradingListing(item: ItemPost): boolean {
-  if (TRADING_CATEGORIES.has(item.category)) return true;
-  const text = `${item.title} ${item.description} ${item.category}`.toLowerCase();
-  return /\b(trade|trading|swap|barter|borrow)\b/.test(text);
-}
 
 function needsPickupListing(item: ItemPost): boolean {
   if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
@@ -242,7 +228,6 @@ export default function ItemGrid({
       }
       if (activeQuickPicks.has('with_photos') && extractListingImageUrls(item).length === 0) return false;
       if (activeQuickPicks.has('needs_pickup') && !needsPickupListing(item)) return false;
-      if (activeQuickPicks.has('trading') && !isTradingListing(item)) return false;
       if (activeQuickPicks.has('trending') && votes.upvotes === 0) return false;
 
       return true;

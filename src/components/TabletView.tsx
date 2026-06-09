@@ -13,6 +13,7 @@ import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import CommunityStatsBar from './CommunityStatsBar';
 import { AppTab } from '../lib/appTabs';
+import GoFundMeFooter from './GoFundMeFooter';
 
 interface TabletViewProps {
   items: ItemPost[];
@@ -244,6 +245,8 @@ export default function TabletView({
           </div>
         )}
       </main>
+
+      <GoFundMeFooter />
     </div>
   );
 }
