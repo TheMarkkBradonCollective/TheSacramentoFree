@@ -11,11 +11,11 @@ export default function ReviewsPage({ onRequireSignIn }: ReviewsPageProps) {
   return (
     <PublicPageShell
       title="Reviews"
-      subtitle="Messages from our team and what neighbors think of the app."
+      subtitle="What neighbors think of the app — plus notes from our director and city manager."
     >
+      <CommunityReviews onRequireSignIn={onRequireSignIn} />
       <DirectorMessage />
       <CityManagerMessage />
-      <CommunityReviews onRequireSignIn={onRequireSignIn} />
     </PublicPageShell>
   );
 }
