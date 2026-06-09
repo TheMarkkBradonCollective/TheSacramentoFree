@@ -1,6 +1,7 @@
 import { ArrowRight, Heart, MapPin, Shield, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import DirectorMessage from '../../DirectorMessage';
+import CommunityReviews from '../../CommunityReviews';
 import CommunityStatsBar from '../../CommunityStatsBar';
 import GuestListingPreview from '../GuestListingPreview';
 import HomeScrollStage, { DepthPanel, DepthSection } from '../HomeScrollStage';
@@ -71,6 +72,12 @@ export default function HomePage({
       <DepthSection depth={2} className="mt-6">
         <DepthPanel>
           <DirectorMessage />
+        </DepthPanel>
+      </DepthSection>
+
+      <DepthSection depth={2} className="mt-6">
+        <DepthPanel>
+          <CommunityReviews onRequireSignIn={onRequireSignIn} />
         </DepthPanel>
       </DepthSection>
 

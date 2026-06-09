@@ -13,6 +13,7 @@ import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import CommunityStatsBar from './CommunityStatsBar';
 import DirectorMessage from './DirectorMessage';
+import CommunityReviews from './CommunityReviews';
 import { AppTab } from '../lib/appTabs';
 
 interface TabletViewProps {
@@ -136,7 +137,8 @@ export default function TabletView({
                 </button>
               </div>
             </div>
-            <DirectorMessage compact />
+            <DirectorMessage userProfile={userProfile} compact />
+            <CommunityReviews userProfile={userProfile} blockedUserIds={blockedUserIds} compact />
             <CommunityStatsBar items={items} variant="full" />
             <ItemGrid
               items={items}

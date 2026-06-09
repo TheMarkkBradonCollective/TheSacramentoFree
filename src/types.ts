@@ -220,6 +220,33 @@ export interface EventComment {
   createdAt: any;
 }
 
+export interface DirectorMessageContent {
+  id: string;
+  directorName: string;
+  directorTitle: string;
+  headline: string;
+  goal: string;
+  promises: string[];
+  closing: string;
+  updatedAt: string;
+  updatedByUserId?: string | null;
+}
+
+/** App rating — 0 to 5 in 0.5 steps */
+export type AppReviewRating = 0 | 0.5 | 1 | 1.5 | 2 | 2.5 | 3 | 3.5 | 4 | 4.5 | 5;
+
+export interface AppReview {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  userNeighborhood: string;
+  rating: number;
+  text?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const SACRAMENTO_NEIGHBORHOODS = [
   'Midtown',
   'Downtown',

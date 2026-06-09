@@ -9,6 +9,7 @@ import CommunityMenuView from './CommunityMenuView';
 import Navbar from './Navbar';
 import CommunityStatsBar from './CommunityStatsBar';
 import DirectorMessage from './DirectorMessage';
+import CommunityReviews from './CommunityReviews';
 import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
@@ -97,7 +98,8 @@ export default function DesktopView({
                 </button>
               </div>
             </div>
-            <DirectorMessage compact />
+            <DirectorMessage userProfile={userProfile} compact />
+            <CommunityReviews userProfile={userProfile} blockedUserIds={blockedUserIds} compact />
             <CommunityStatsBar items={items} variant="full" />
             <ItemGrid
               items={items}

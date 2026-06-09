@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, AppReview } from './types';
+import { DIRECTOR_MESSAGE } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
@@ -2217,6 +2218,197 @@ export async function deleteSupabaseEventComment(
 }
 
 /**
+ * --- DIRECTOR MESSAGE & APP REVIEWS ---
+ */
+export function defaultDirectorMessageContent(): DirectorMessageContent {
+  return {
+    id: 'main',
+    directorName: DIRECTOR_MESSAGE.name,
+    directorTitle: DIRECTOR_MESSAGE.title,
+    headline: DIRECTOR_MESSAGE.headline,
+    goal: DIRECTOR_MESSAGE.goal,
+    promises: [...DIRECTOR_MESSAGE.promises],
+    closing: DIRECTOR_MESSAGE.closing,
+    updatedAt: new Date().toISOString(),
+    updatedByUserId: null,
+  };
+}
+
+function normalizeDirectorMessageRow(row: Record<string, unknown>): DirectorMessageContent {
+  const rawPromises = row.promises;
+  const promises = Array.isArray(rawPromises)
+    ? rawPromises.map(String).filter(Boolean)
+    : defaultDirectorMessageContent().promises;
+
+  return {
+    id: String(row.id || 'main'),
+    directorName: String(row.directorName || DIRECTOR_MESSAGE.name),
+    directorTitle: String(row.directorTitle || DIRECTOR_MESSAGE.title),
+    headline: String(row.headline || DIRECTOR_MESSAGE.headline),
+    goal: String(row.goal || DIRECTOR_MESSAGE.goal),
+    promises,
+    closing: String(row.closing || DIRECTOR_MESSAGE.closing),
+    updatedAt: coerceToIsoDate(row.updatedAt),
+    updatedByUserId: row.updatedByUserId ? String(row.updatedByUserId) : null,
+  };
+}
+
+export async function getSupabaseDirectorMessage(): Promise<DirectorMessageContent> {
+  try {
+    const { data, error } = await supabase
+      .from('director_message')
+      .select('*')
+      .eq('id', 'main')
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === '42P01') return defaultDirectorMessageContent();
+      handleSupabaseError(error, 'director_message');
+      return defaultDirectorMessageContent();
+    }
+
+    if (!data) return defaultDirectorMessageContent();
+    setSupabaseConfigurationState(true);
+    return normalizeDirectorMessageRow(data as Record<string, unknown>);
+  } catch {
+    return defaultDirectorMessageContent();
+  }
+}
+
+export async function updateSupabaseDirectorMessage(
+  content: DirectorMessageContent,
+  actor: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (normalizeUserRole(actor.role) !== 'director') {
+    return { ok: false, errorMessage: 'Only the director can edit this message.' };
+  }
+
+  try {
+    const payload = {
+      id: 'main',
+      directorName: content.directorName.trim(),
+      directorTitle: content.directorTitle.trim(),
+      headline: content.headline.trim(),
+      goal: content.goal.trim(),
+      promises: content.promises.map((p) => p.trim()).filter(Boolean),
+      closing: content.closing.trim(),
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: actor.uid,
+    };
+
+    const { error } = await supabase.from('director_message').upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      handleSupabaseError(error, 'director_message');
+      return { ok: false, errorMessage: error.message || 'Could not save director message.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not save director message.',
+    };
+  }
+}
+
+export function snapReviewRating(value: number): number {
+  const snapped = Math.round(value * 2) / 2;
+  return Math.max(0, Math.min(5, snapped));
+}
+
+function normalizeAppReviewRow(row: Record<string, unknown>): AppReview {
+  return {
+    id: String(row.id),
+    userId: String(row.userId),
+    userName: String(row.userName),
+    userPhoto: row.userPhoto ? String(row.userPhoto) : undefined,
+    userNeighborhood: String(row.userNeighborhood || 'Sacramento'),
+    rating: snapReviewRating(Number(row.rating)),
+    text: row.text ? String(row.text) : null,
+    createdAt: coerceToIsoDate(row.createdAt),
+    updatedAt: coerceToIsoDate(row.updatedAt),
+  };
+}
+
+export async function getSupabaseAppReviews(limit = 50): Promise<AppReview[]> {
+  try {
+    const { data, error } = await supabase
+      .from('app_reviews')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      handleSupabaseError(error, 'app_reviews');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []).map((row) => normalizeAppReviewRow(row as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+export async function upsertSupabaseAppReview(
+  review: AppReview,
+  author: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  const rating = snapReviewRating(review.rating);
+  if (rating < 0 || rating > 5) {
+    return { ok: false, errorMessage: 'Rating must be between 0 and 5 stars.' };
+  }
+
+  try {
+    if (author.email) {
+      await upsertSupabaseProfile(author);
+    }
+
+    const payload = {
+      id: review.id || `review_${author.uid}`,
+      userId: author.uid,
+      userName: author.displayName,
+      userPhoto: author.photoURL || null,
+      userNeighborhood: author.neighborhood || 'Sacramento',
+      rating,
+      text: review.text?.trim() || null,
+      createdAt: review.createdAt ? new Date(review.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('app_reviews').upsert(payload, { onConflict: 'userId' });
+
+    if (error) {
+      handleSupabaseError(error, 'app_reviews');
+      return { ok: false, errorMessage: error.message || 'Could not save review.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not save review.' };
+  }
+}
+
+export async function deleteSupabaseAppReview(
+  userId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase.from('app_reviews').delete().eq('userId', userId);
+    if (error) {
+      handleSupabaseError(error, 'app_reviews');
+      return { ok: false, errorMessage: error.message };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete review.' };
+  }
+}
+
+/**
  * --- BLOCKS & DM REQUESTS ---
  */
 
@@ -3298,6 +3490,7 @@ async function purgeUserCommunityDataClient(uid: string): Promise<void> {
   }
   await supabase.from('event_rsvps').delete().eq('userId', uid);
   await supabase.from('event_comments').delete().eq('userId', uid);
+  await supabase.from('app_reviews').delete().eq('userId', uid);
   await supabase
     .from('item_claims')
     .delete()

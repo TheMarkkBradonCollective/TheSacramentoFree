@@ -515,6 +515,68 @@ CREATE POLICY "Allow write event comments" ON public.event_comments FOR ALL USIN
 CREATE INDEX IF NOT EXISTS event_comments_event_idx ON public.event_comments ("eventId");
 
 -- =========================================================
+-- 18. Director message (editable by director in-app)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.director_message (
+  id TEXT PRIMARY KEY DEFAULT 'main',
+  "directorName" TEXT NOT NULL,
+  "directorTitle" TEXT NOT NULL,
+  headline TEXT NOT NULL,
+  goal TEXT NOT NULL,
+  promises JSONB NOT NULL DEFAULT '[]'::jsonb,
+  closing TEXT NOT NULL,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedByUserId" TEXT
+);
+
+ALTER TABLE public.director_message ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read director message" ON public.director_message;
+CREATE POLICY "Allow read director message" ON public.director_message FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write director message" ON public.director_message;
+CREATE POLICY "Allow write director message" ON public.director_message FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO public.director_message (
+  id, "directorName", "directorTitle", headline, goal, promises, closing
+)
+VALUES (
+  'main',
+  'Markeith White',
+  'Buy Nothing Director',
+  'A note from your director',
+  'Sacramento Buy Nothing exists so neighbors can give freely, ask kindly, and keep good things out of the landfill — with no money involved. That is the goal, plain and simple.',
+  '["This app is 100% free — always.","No ads. Ever.","I keep you in mind with every feature I build.","I do not want your information for anything beyond making the community work, and I will never sell it."]'::jsonb,
+  'Thank you for being part of this community.'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================================================
+-- 19. App reviews (0–5 stars, half-star steps, one per user)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.app_reviews (
+  id TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL UNIQUE,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  rating NUMERIC(2,1) NOT NULL,
+  text TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.app_reviews DROP CONSTRAINT IF EXISTS app_reviews_rating_range;
+ALTER TABLE public.app_reviews ADD CONSTRAINT app_reviews_rating_range
+  CHECK (rating >= 0 AND rating <= 5 AND (rating * 2)::int = (rating * 2));
+
+ALTER TABLE public.app_reviews ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read app reviews" ON public.app_reviews;
+CREATE POLICY "Allow read app reviews" ON public.app_reviews FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write app reviews" ON public.app_reviews;
+CREATE POLICY "Allow write app reviews" ON public.app_reviews FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS app_reviews_created_idx ON public.app_reviews ("createdAt" DESC);
+
+-- =========================================================
 -- 8. REALTIME — live feed, chat, votes without page refresh
 -- Run once in SQL Editor. Safe to re-run (skips tables already added).
 -- =========================================================
@@ -523,7 +585,7 @@ DECLARE
   tbl TEXT;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
-    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'listing_subitems', 'item_claim_requests', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log', 'user_reports', 'support_tickets', 'support_ticket_messages', 'community_events', 'event_rsvps', 'event_comments'
+    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'listing_subitems', 'item_claim_requests', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log', 'user_reports', 'support_tickets', 'support_ticket_messages', 'community_events', 'event_rsvps', 'event_comments', 'director_message', 'app_reviews'
   ]
   LOOP
     IF NOT EXISTS (
