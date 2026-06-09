@@ -437,6 +437,84 @@ ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_source_check
   CHECK (source IN ('manual', 'block'));
 
 -- =========================================================
+-- 17. Community events (free gatherings only)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.community_events (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  location TEXT NOT NULL,
+  neighborhood TEXT NOT NULL,
+  "eventStartAt" TIMESTAMPTZ NOT NULL,
+  "eventEndAt" TIMESTAMPTZ,
+  "userId" TEXT NOT NULL,
+  "userDisplayName" TEXT NOT NULL,
+  "userPhotoURL" TEXT,
+  "isFree" BOOLEAN NOT NULL DEFAULT true,
+  status TEXT NOT NULL DEFAULT 'active',
+  "imageUrl" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_status_check;
+ALTER TABLE public.community_events ADD CONSTRAINT community_events_status_check
+  CHECK (status IN ('active', 'cancelled'));
+
+ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_free_only;
+ALTER TABLE public.community_events ADD CONSTRAINT community_events_free_only
+  CHECK ("isFree" = true);
+
+ALTER TABLE public.community_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read community events" ON public.community_events;
+CREATE POLICY "Allow read community events" ON public.community_events FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write community events" ON public.community_events;
+CREATE POLICY "Allow write community events" ON public.community_events FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS community_events_start_idx ON public.community_events ("eventStartAt" ASC);
+CREATE INDEX IF NOT EXISTS community_events_user_idx ON public.community_events ("userId");
+
+CREATE TABLE IF NOT EXISTS public.event_rsvps (
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "rsvpStatus" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("eventId", "userId")
+);
+
+ALTER TABLE public.event_rsvps DROP CONSTRAINT IF EXISTS event_rsvps_status_check;
+ALTER TABLE public.event_rsvps ADD CONSTRAINT event_rsvps_status_check
+  CHECK ("rsvpStatus" IN ('going', 'maybe', 'not_going'));
+
+ALTER TABLE public.event_rsvps ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read event rsvps" ON public.event_rsvps;
+CREATE POLICY "Allow read event rsvps" ON public.event_rsvps FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write event rsvps" ON public.event_rsvps;
+CREATE POLICY "Allow write event rsvps" ON public.event_rsvps FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS event_rsvps_event_idx ON public.event_rsvps ("eventId");
+
+CREATE TABLE IF NOT EXISTS public.event_comments (
+  id TEXT PRIMARY KEY,
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.event_comments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read event comments" ON public.event_comments;
+CREATE POLICY "Allow read event comments" ON public.event_comments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;
+CREATE POLICY "Allow write event comments" ON public.event_comments FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS event_comments_event_idx ON public.event_comments ("eventId");
+
+-- =========================================================
 -- 8. REALTIME — live feed, chat, votes without page refresh
 -- Run once in SQL Editor. Safe to re-run (skips tables already added).
 -- =========================================================
@@ -445,7 +523,7 @@ DECLARE
   tbl TEXT;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
-    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'listing_subitems', 'item_claim_requests', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log', 'user_reports', 'support_tickets', 'support_ticket_messages'
+    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'listing_subitems', 'item_claim_requests', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log', 'user_reports', 'support_tickets', 'support_ticket_messages', 'community_events', 'event_rsvps', 'event_comments'
   ]
   LOOP
     IF NOT EXISTS (

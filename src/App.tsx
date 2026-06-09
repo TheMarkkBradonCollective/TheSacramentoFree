@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useItemsEngagement } from './hooks/useItemsEngagement';
 import { useItemsRealtime } from './hooks/useItemsRealtime';
+import { useEventsEngagement } from './hooks/useEventsEngagement';
+import { useEventsRealtime } from './hooks/useEventsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
-import { UserProfile, ItemPost, PendingChatCompose } from './types';
+import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent } from './types';
 import Navbar from './components/Navbar';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
 import ItemDetailView from './components/ItemDetailView';
+import EventDetailView from './components/EventDetailView';
+import PostEventModal from './components/PostEventModal';
 import NeighborProfileView from './components/NeighborProfileView';
 import ItemGrid from './components/ItemGrid';
 import ChatSystem from './components/ChatSystem';
@@ -24,6 +28,8 @@ import {
   profileFromAuthUser,
   isDirectorUser,
   getSupabaseItems,
+  getSupabaseEvents,
+  cancelSupabaseEvent,
   updateSupabaseItemStatus,
   deleteOwnAccount,
   isAccountRestricted,
@@ -83,11 +89,16 @@ export default function App() {
     return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
   });
   const [showPostModal, setShowPostModal] = useState(false);
+  const [showPostEventModal, setShowPostEventModal] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
+  const [detailEvent, setDetailEvent] = useState<CommunityEvent | null>(null);
+  const [detailEventUpdating, setDetailEventUpdating] = useState(false);
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
   const visibleItems = useMemo(
     () => items.filter((item) => !blockedUserIds.has(item.userId)),
@@ -95,7 +106,14 @@ export default function App() {
   );
   const itemIds = useMemo(() => visibleItems.map((i) => i.id), [visibleItems]);
   const engagement = useItemsEngagement(itemIds, userProfile, blockedUserIds);
+  const visibleEvents = useMemo(
+    () => events.filter((event) => !blockedUserIds.has(event.userId)),
+    [events, blockedUserIds],
+  );
+  const eventIds = useMemo(() => visibleEvents.map((e) => e.id), [visibleEvents]);
+  const eventsEngagement = useEventsEngagement(eventIds, userProfile, blockedUserIds);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
+  const [isEventsLoading, setIsEventsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Open existing chat thread (e.g. after claim)
@@ -452,8 +470,43 @@ export default function App() {
     }
   }, [userProfile]);
 
+  const loadEvents = useCallback(async (isBackground = false) => {
+    if (!userProfile || !sessionUser) return;
+    if (!isBackground) setIsEventsLoading(true);
+    try {
+      const loaded = await getSupabaseEvents();
+      setEvents(loaded);
+    } catch (err) {
+      console.warn('Supabase events fetch failed:', err);
+    } finally {
+      if (!isBackground) setIsEventsLoading(false);
+    }
+  }, [userProfile?.uid, sessionUser]);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    void loadEvents(false);
+  }, [sessionReady, userProfile?.uid, loadEvents]);
+
   useItemsRealtime(sessionReady, setItems);
+  useEventsRealtime(sessionReady, setEvents);
   useAuthorProfilesRealtime(sessionReady, setItems);
+
+  useEffect(() => {
+    if (!detailEvent) return;
+    const updated = events.find((e) => e.id === detailEvent.id);
+    if (!updated) {
+      setDetailEvent(null);
+      return;
+    }
+    if (
+      updated.updatedAt !== detailEvent.updatedAt ||
+      updated.status !== detailEvent.status ||
+      updated.title !== detailEvent.title
+    ) {
+      setDetailEvent(updated);
+    }
+  }, [events, detailEvent]);
 
   // Keep detail view in sync when this listing changes live (not on unrelated feed updates)
   useEffect(() => {
@@ -750,10 +803,12 @@ export default function App() {
                {deviceType === 'mobile' ? (
                 <MobileView
                   items={visibleItems}
+                  events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
+                  onOpenNewEvent={() => setShowPostEventModal(true)}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
@@ -764,7 +819,10 @@ export default function App() {
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
                   onRefresh={loadItems}
+                  onRefreshEvents={() => void loadEvents(false)}
+                  isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -772,14 +830,17 @@ export default function App() {
                     setDetailItem(null);
                   }}
                   engagement={engagement}
+                  eventsEngagement={eventsEngagement}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
                   items={visibleItems}
+                  events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
+                  onOpenNewEvent={() => setShowPostEventModal(true)}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
@@ -790,7 +851,10 @@ export default function App() {
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
                   onRefresh={loadItems}
+                  onRefreshEvents={() => void loadEvents(false)}
+                  isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -798,14 +862,17 @@ export default function App() {
                     setDetailItem(null);
                   }}
                   engagement={engagement}
+                  eventsEngagement={eventsEngagement}
                 />
               ) : (
                 <DesktopView
                   items={visibleItems}
+                  events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
+                  onOpenNewEvent={() => setShowPostEventModal(true)}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
@@ -816,7 +883,10 @@ export default function App() {
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
                   onRefresh={loadItems}
+                  onRefreshEvents={() => void loadEvents(false)}
+                  isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -824,6 +894,7 @@ export default function App() {
                     setDetailItem(null);
                   }}
                   engagement={engagement}
+                  eventsEngagement={eventsEngagement}
                 />
               )}
 
@@ -876,6 +947,38 @@ export default function App() {
                 />
               )}
 
+              {detailEvent && (
+                <EventDetailView
+                  event={detailEvent}
+                  currentUserId={userProfile.uid}
+                  userProfile={userProfile}
+                  rsvpState={eventsEngagement.getRsvpsForEvent(detailEvent.id)}
+                  comments={eventsEngagement.getCommentsForEvent(detailEvent.id)}
+                  onRsvp={(status) =>
+                    eventsEngagement.handleRsvp(detailEvent.id, detailEvent.userId, status)
+                  }
+                  onAddComment={(text) => eventsEngagement.handleAddComment(detailEvent.id, text)}
+                  onDeleteComment={(commentId) =>
+                    void eventsEngagement.handleDeleteComment(detailEvent.id, commentId)
+                  }
+                  onClose={() => setDetailEvent(null)}
+                  onEdit={() => {
+                    setEditingEvent(detailEvent);
+                    setDetailEvent(null);
+                  }}
+                  onCancel={async () => {
+                    if (!confirm('Cancel this event? Neighbors will see it as cancelled.')) return;
+                    setDetailEventUpdating(true);
+                    const result = await cancelSupabaseEvent(detailEvent.id, userProfile.uid);
+                    setDetailEventUpdating(false);
+                    if (result.ok) void loadEvents(true);
+                    else alert(result.errorMessage || 'Could not cancel event.');
+                  }}
+                  onViewProfile={handleViewProfile}
+                  updating={detailEventUpdating}
+                />
+              )}
+
               {(showPostModal || editingItem) && (
                 <PostItemModal
                   userProfile={userProfile}
@@ -889,6 +992,23 @@ export default function App() {
                     setActiveTab('feed');
                     setShowPostModal(false);
                     setEditingItem(null);
+                  }}
+                />
+              )}
+
+              {(showPostEventModal || editingEvent) && (
+                <PostEventModal
+                  userProfile={userProfile}
+                  editEvent={editingEvent}
+                  onClose={() => {
+                    setShowPostEventModal(false);
+                    setEditingEvent(null);
+                  }}
+                  onSuccess={() => {
+                    void loadEvents(false);
+                    setActiveTab('events');
+                    setShowPostEventModal(false);
+                    setEditingEvent(null);
                   }}
                 />
               )}

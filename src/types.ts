@@ -179,6 +179,47 @@ export interface UserBlock {
   createdAt?: any;
 }
 
+export type EventStatus = 'active' | 'cancelled';
+export type EventRsvpStatus = 'going' | 'maybe' | 'not_going';
+
+export interface CommunityEvent {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  neighborhood: string;
+  eventStartAt: string;
+  eventEndAt?: string | null;
+  userId: string;
+  userDisplayName: string;
+  userPhotoURL?: string;
+  /** Community events must always be free — enforced in DB and on create. */
+  isFree: true;
+  status: EventStatus;
+  imageUrl?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface EventRsvp {
+  eventId: string;
+  userId: string;
+  rsvpStatus: EventRsvpStatus;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface EventComment {
+  id: string;
+  eventId: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  userNeighborhood: string;
+  text: string;
+  createdAt: any;
+}
+
 export const SACRAMENTO_NEIGHBORHOODS = [
   'Midtown',
   'Downtown',

@@ -120,7 +120,6 @@ export const FUTURE_FEATURES = [
   'Item categories',
   'Mobile app support',
   'Donation streak badges',
-  'Community events',
   'Local alerts'
 ] as const;
 
@@ -130,6 +129,11 @@ export const IN_APP = {
   feedDescription: 'Give away items, request what you need, and connect with Sacramento neighbors — 100% free.',
   mapTitle: 'Sacramento Neighborhood Map',
   mapDescription: 'Explore free gifts and requests across Sacramento. Message neighbors to arrange porch pickup.',
+  eventsTitle: 'Free Community Events',
+  eventsDescription:
+    'Post and discover free neighborhood gatherings — potlucks, swaps, meetups, and more. No tickets or fees allowed.',
+  eventsTabLabel: 'Events',
+  postEventButton: 'Post Event',
   chatsTitle: 'Neighbor Messages',
   chatsDescription: 'Comment or message to arrange pickup. Keep every exchange free and friendly.',
   profileTitle: 'Your Community Profile',

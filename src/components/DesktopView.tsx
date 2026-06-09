@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
-import { ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
@@ -8,15 +8,19 @@ import UserProfileView from './UserProfileView';
 import CommunityMenuView from './CommunityMenuView';
 import Navbar from './Navbar';
 import CommunityStatsBar from './CommunityStatsBar';
+import EventsView from './EventsView';
+import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { AppTab } from '../lib/appTabs';
 
 interface DesktopViewProps {
   items: ItemPost[];
+  events: CommunityEvent[];
   userProfile: UserProfile;
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
+  onOpenNewEvent: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
@@ -30,16 +34,22 @@ interface DesktopViewProps {
   onClearPendingChatCompose?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
   onRefresh: () => void;
+  onRefreshEvents: () => void;
+  isEventsLoading?: boolean;
+  onViewEvent: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
+  eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
 }
 
 export default function DesktopView({
   items,
+  events,
   userProfile,
   activeTab,
   setActiveTab,
   onOpenNewPost,
+  onOpenNewEvent,
   onInitiateChat,
   onClaimSubmitted,
   onViewItem,
@@ -53,7 +63,11 @@ export default function DesktopView({
   onClearPendingChatCompose,
   onDeleteAccount,
   onRefresh,
+  onRefreshEvents,
+  isEventsLoading = false,
+  onViewEvent,
   engagement,
+  eventsEngagement,
   blockedUserIds = new Set(),
 }: DesktopViewProps) {
   return (
@@ -91,6 +105,31 @@ export default function DesktopView({
               onViewItem={onViewItem}
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
+            />
+          </div>
+        )}
+
+        {activeTab === 'events' && (
+          <div className="space-y-6" id="desktop_events_view_root">
+            <div className="sbn-page-header">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2>{IN_APP.eventsTitle}</h2>
+                  <p>{IN_APP.eventsDescription}</p>
+                </div>
+                <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary shrink-0">
+                  <Plus className="w-4 h-4" /> {IN_APP.postEventButton}
+                </button>
+              </div>
+            </div>
+            <EventsView
+              events={events}
+              userProfile={userProfile}
+              engagement={eventsEngagement}
+              onViewEvent={onViewEvent}
+              onViewProfile={onViewProfile}
+              onRefresh={onRefreshEvents}
+              isLoading={isEventsLoading}
             />
           </div>
         )}

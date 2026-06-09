@@ -1,11 +1,13 @@
 import React from 'react';
-import { ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import CommunityMenuView from './CommunityMenuView';
-import { List, MessageSquare, User, Plus, LogOut, Map, LifeBuoy } from 'lucide-react';
+import { List, MessageSquare, User, Plus, LogOut, Map, LifeBuoy, CalendarDays } from 'lucide-react';
+import EventsView from './EventsView';
+import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import BrandLogo from './BrandLogo';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
@@ -14,10 +16,12 @@ import { AppTab } from '../lib/appTabs';
 
 interface TabletViewProps {
   items: ItemPost[];
+  events: CommunityEvent[];
   userProfile: UserProfile;
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
+  onOpenNewEvent: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
@@ -31,12 +35,17 @@ interface TabletViewProps {
   onClearPendingChatCompose?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
   onRefresh: () => void;
+  onRefreshEvents: () => void;
+  isEventsLoading?: boolean;
+  onViewEvent: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
+  eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
 }
 
 const TABS = [
   { id: 'feed' as const, label: 'Feed', icon: List },
+  { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'chats' as const, label: 'Messages', icon: MessageSquare },
   { id: 'menu' as const, label: IN_APP.menuTabLabel, icon: LifeBuoy },
@@ -45,10 +54,12 @@ const TABS = [
 
 export default function TabletView({
   items,
+  events,
   userProfile,
   activeTab,
   setActiveTab,
   onOpenNewPost,
+  onOpenNewEvent,
   onInitiateChat,
   onClaimSubmitted,
   onViewItem,
@@ -62,7 +73,11 @@ export default function TabletView({
   onClearPendingChatCompose,
   onDeleteAccount,
   onRefresh,
+  onRefreshEvents,
+  isEventsLoading = false,
+  onViewEvent,
   engagement,
+  eventsEngagement,
   blockedUserIds = new Set(),
 }: TabletViewProps) {
   return (
@@ -129,6 +144,31 @@ export default function TabletView({
               onViewItem={onViewItem}
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
+            />
+          </div>
+        )}
+
+        {activeTab === 'events' && (
+          <div className="space-y-5" id="tablet_events_pane">
+            <div className="sbn-page-header">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2>{IN_APP.eventsTitle}</h2>
+                  <p>{IN_APP.eventsDescription}</p>
+                </div>
+                <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary shrink-0">
+                  <Plus className="w-4 h-4" /> {IN_APP.postEventButton}
+                </button>
+              </div>
+            </div>
+            <EventsView
+              events={events}
+              userProfile={userProfile}
+              engagement={eventsEngagement}
+              onViewEvent={onViewEvent}
+              onViewProfile={onViewProfile}
+              onRefresh={onRefreshEvents}
+              isLoading={isEventsLoading}
             />
           </div>
         )}

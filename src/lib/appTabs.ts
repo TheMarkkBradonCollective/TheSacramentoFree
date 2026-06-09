@@ -1,4 +1,4 @@
-export const APP_TABS = ['feed', 'map', 'chats', 'menu', 'profile'] as const;
+export const APP_TABS = ['feed', 'events', 'map', 'chats', 'menu', 'profile'] as const;
 export type AppTab = (typeof APP_TABS)[number];
 
 export function parseAppTab(value: string | null): AppTab | null {

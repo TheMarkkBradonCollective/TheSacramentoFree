@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment } from './types';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
@@ -131,6 +131,66 @@ DROP POLICY IF EXISTS "Allow read item comments" ON public.item_comments;
 CREATE POLICY "Allow read item comments" ON public.item_comments FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write item comments" ON public.item_comments;
 CREATE POLICY "Allow write item comments" ON public.item_comments FOR ALL USING (true);
+
+-- 7. Community events (free gatherings only)
+CREATE TABLE IF NOT EXISTS public.community_events (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  location TEXT NOT NULL,
+  neighborhood TEXT NOT NULL,
+  "eventStartAt" TIMESTAMPTZ NOT NULL,
+  "eventEndAt" TIMESTAMPTZ,
+  "userId" TEXT NOT NULL,
+  "userDisplayName" TEXT NOT NULL,
+  "userPhotoURL" TEXT,
+  "isFree" BOOLEAN NOT NULL DEFAULT true,
+  status TEXT NOT NULL DEFAULT 'active',
+  "imageUrl" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_free_only;
+ALTER TABLE public.community_events ADD CONSTRAINT community_events_free_only CHECK ("isFree" = true);
+
+ALTER TABLE public.community_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read community events" ON public.community_events;
+CREATE POLICY "Allow read community events" ON public.community_events FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write community events" ON public.community_events;
+CREATE POLICY "Allow write community events" ON public.community_events FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.event_rsvps (
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "rsvpStatus" TEXT NOT NULL CHECK ("rsvpStatus" IN ('going', 'maybe', 'not_going')),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("eventId", "userId")
+);
+
+ALTER TABLE public.event_rsvps ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read event rsvps" ON public.event_rsvps;
+CREATE POLICY "Allow read event rsvps" ON public.event_rsvps FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write event rsvps" ON public.event_rsvps;
+CREATE POLICY "Allow write event rsvps" ON public.event_rsvps FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.event_comments (
+  id TEXT PRIMARY KEY,
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.event_comments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read event comments" ON public.event_comments;
+CREATE POLICY "Allow read event comments" ON public.event_comments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;
+CREATE POLICY "Allow write event comments" ON public.event_comments FOR ALL USING (true);
 `;
 
 // Helper states to track connection warnings on UI
@@ -1873,6 +1933,290 @@ export async function deleteSupabaseItemComment(
 }
 
 /**
+ * --- COMMUNITY EVENTS ---
+ */
+export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
+  return {
+    ...row,
+    isFree: true as const,
+    status: row.status || 'active',
+    eventStartAt: coerceToIsoDate(row.eventStartAt),
+    eventEndAt: row.eventEndAt ? coerceToIsoDate(row.eventEndAt) : null,
+    createdAt: coerceToIsoDate(row.createdAt),
+    updatedAt: coerceToIsoDate(row.updatedAt),
+  };
+}
+
+export async function getSupabaseEvents(): Promise<CommunityEvent[]> {
+  try {
+    const { data, error } = await supabase
+      .from('community_events')
+      .select('*')
+      .order('eventStartAt', { ascending: true });
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []).map((row) => normalizeSupabaseEvent(row as CommunityEvent));
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return [];
+  }
+}
+
+export async function createSupabaseEvent(
+  event: CommunityEvent,
+  author?: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    if (!event.isFree) {
+      return { ok: false, errorMessage: 'Only free community events are allowed.' };
+    }
+
+    if (author?.email) {
+      await upsertSupabaseProfile(author);
+    }
+
+    const payload = {
+      ...event,
+      isFree: true,
+      status: event.status || 'active',
+      eventStartAt: new Date(event.eventStartAt).toISOString(),
+      eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
+      createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : new Date().toISOString(),
+      imageUrl:
+        event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
+          ? event.imageUrl
+          : null,
+    };
+
+    const { error } = await supabase.from('community_events').insert(payload);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not save event.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not save event.',
+    };
+  }
+}
+
+export async function updateSupabaseEvent(
+  event: CommunityEvent,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    if (!event.isFree) {
+      return { ok: false, errorMessage: 'Only free community events are allowed.' };
+    }
+
+    const { error } = await supabase
+      .from('community_events')
+      .update({
+        title: event.title,
+        description: event.description,
+        location: event.location,
+        neighborhood: event.neighborhood,
+        eventStartAt: new Date(event.eventStartAt).toISOString(),
+        eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
+        status: event.status,
+        imageUrl:
+          event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
+            ? event.imageUrl
+            : null,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('id', event.id)
+      .eq('userId', event.userId);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not update event.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not update event.',
+    };
+  }
+}
+
+export async function cancelSupabaseEvent(
+  eventId: string,
+  userId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({ status: 'cancelled', updatedAt: new Date().toISOString() })
+      .eq('id', eventId)
+      .eq('userId', userId);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not cancel event.' };
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not cancel event.',
+    };
+  }
+}
+
+export async function deleteSupabaseEvent(eventId: string): Promise<void> {
+  await supabase.from('event_rsvps').delete().eq('eventId', eventId);
+  await supabase.from('event_comments').delete().eq('eventId', eventId);
+  await supabase.from('community_events').delete().eq('id', eventId);
+}
+
+export async function getSupabaseEventRsvps(eventIds: string[]): Promise<EventRsvp[]> {
+  if (eventIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from('event_rsvps')
+      .select('*')
+      .in('eventId', eventIds);
+
+    if (error) {
+      handleSupabaseError(error, 'event_rsvps');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []) as EventRsvp[];
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'event_rsvps');
+    return [];
+  }
+}
+
+export async function setSupabaseEventRsvp(
+  eventId: string,
+  userId: string,
+  rsvpStatus: EventRsvp['rsvpStatus'] | null,
+): Promise<boolean> {
+  try {
+    if (!rsvpStatus) {
+      const { error: deleteError } = await supabase
+        .from('event_rsvps')
+        .delete()
+        .eq('eventId', eventId)
+        .eq('userId', userId);
+
+      if (deleteError) {
+        handleSupabaseError(deleteError, 'event_rsvps');
+        return false;
+      }
+      return true;
+    }
+
+    const { error } = await supabase.from('event_rsvps').upsert(
+      {
+        eventId,
+        userId,
+        rsvpStatus,
+        updatedAt: new Date().toISOString(),
+      },
+      { onConflict: 'eventId,userId' },
+    );
+
+    if (error) {
+      handleSupabaseError(error, 'event_rsvps');
+      return false;
+    }
+
+    setSupabaseConfigurationState(true);
+    return true;
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'event_rsvps');
+    return false;
+  }
+}
+
+export async function getSupabaseEventComments(eventIds: string[]): Promise<EventComment[]> {
+  if (eventIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from('event_comments')
+      .select('*')
+      .in('eventId', eventIds)
+      .order('createdAt', { ascending: true });
+
+    if (error) {
+      handleSupabaseError(error, 'event_comments');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []) as EventComment[];
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'event_comments');
+    return [];
+  }
+}
+
+export async function createSupabaseEventComment(comment: EventComment): Promise<boolean> {
+  try {
+    const payload = {
+      ...comment,
+      createdAt: comment.createdAt ? new Date(comment.createdAt).toISOString() : new Date().toISOString(),
+    };
+    const { error } = await supabase.from('event_comments').insert(payload);
+
+    if (error) {
+      handleSupabaseError(error, 'event_comments');
+      return false;
+    }
+
+    setSupabaseConfigurationState(true);
+    return true;
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'event_comments');
+    return false;
+  }
+}
+
+export async function deleteSupabaseEventComment(
+  commentId: string,
+  userId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error, count } = await supabase
+      .from('event_comments')
+      .delete({ count: 'exact' })
+      .eq('id', commentId)
+      .eq('userId', userId);
+
+    if (error) {
+      handleSupabaseError(error, 'event_comments');
+      return { ok: false, errorMessage: error.message };
+    }
+    if (count === 0) {
+      return { ok: false, errorMessage: 'Comment not found or already removed.' };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete comment.' };
+  }
+}
+
+/**
  * --- BLOCKS & DM REQUESTS ---
  */
 
@@ -2947,6 +3291,13 @@ async function purgeUserCommunityDataClient(uid: string): Promise<void> {
 
   await supabase.from('item_votes').delete().eq('userId', uid);
   await supabase.from('item_comments').delete().eq('userId', uid);
+
+  const { data: userEvents } = await supabase.from('community_events').select('id').eq('userId', uid);
+  for (const row of userEvents ?? []) {
+    await deleteSupabaseEvent(row.id);
+  }
+  await supabase.from('event_rsvps').delete().eq('userId', uid);
+  await supabase.from('event_comments').delete().eq('userId', uid);
   await supabase
     .from('item_claims')
     .delete()

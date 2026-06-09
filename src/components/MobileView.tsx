@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import CommunityMenuView from './CommunityMenuView';
-import { Map, List, MessageSquare, User, Plus, LogOut, LifeBuoy } from 'lucide-react';
+import { Map, List, MessageSquare, User, Plus, LogOut, LifeBuoy, CalendarDays } from 'lucide-react';
+import EventsView from './EventsView';
+import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
@@ -14,10 +16,12 @@ import { AppTab } from '../lib/appTabs';
 
 interface MobileViewProps {
   items: ItemPost[];
+  events: CommunityEvent[];
   userProfile: UserProfile;
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
+  onOpenNewEvent: () => void;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
@@ -31,13 +35,18 @@ interface MobileViewProps {
   onClearPendingChatCompose?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
   onRefresh: () => void;
+  onRefreshEvents: () => void;
+  isEventsLoading?: boolean;
+  onViewEvent: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
+  eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
 }
 
 const NAV_ITEMS = [
   { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'feed' as const, label: 'Feed', icon: List },
+  { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
   { id: 'menu' as const, label: IN_APP.menuTabLabel, icon: LifeBuoy },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
@@ -45,10 +54,12 @@ const NAV_ITEMS = [
 
 export default function MobileView({
   items,
+  events,
   userProfile,
   activeTab,
   setActiveTab,
   onOpenNewPost,
+  onOpenNewEvent,
   onInitiateChat,
   onClaimSubmitted,
   onViewItem,
@@ -62,7 +73,11 @@ export default function MobileView({
   onClearPendingChatCompose,
   onDeleteAccount,
   onRefresh,
+  onRefreshEvents,
+  isEventsLoading = false,
+  onViewEvent,
   engagement,
+  eventsEngagement,
   blockedUserIds = new Set(),
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
@@ -175,6 +190,37 @@ export default function MobileView({
         </div>
 
         <div
+          className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 ${activeTab === 'events' ? '' : 'hidden'}`}
+          id="mobile_events_dock"
+          aria-hidden={activeTab !== 'events'}
+        >
+          <div className="max-w-2xl mx-auto">
+            <div className="sbn-page-header">
+              <h2>{IN_APP.eventsTitle}</h2>
+              <p>{IN_APP.eventsDescription}</p>
+            </div>
+            <EventsView
+              events={events}
+              userProfile={userProfile}
+              engagement={eventsEngagement}
+              onViewEvent={onViewEvent}
+              onViewProfile={onViewProfile}
+              onRefresh={onRefreshEvents}
+              isLoading={isEventsLoading}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={onOpenNewEvent}
+            className="sbn-fab fixed right-4 z-20"
+            style={{ bottom: 'calc(var(--sbn-mobile-nav-h) + 1rem)' }}
+            aria-label="Post event"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div
           className={`h-full w-full min-h-0 flex flex-col overflow-hidden ${activeTab === 'chats' ? '' : 'hidden'}`}
           id="mobile_messaging_dock"
           aria-hidden={activeTab !== 'chats'}
@@ -234,7 +280,7 @@ export default function MobileView({
       </main>
 
       <footer id="mobile_sticky_footer_nav" className="sbn-mobile-nav">
-        <div className="grid grid-cols-5 h-[4.25rem] px-1">
+        <div className="grid grid-cols-6 h-[4.25rem] px-0.5">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
