@@ -1,1 +1,1 @@
-export { supabaseAdmin } from '../../api/_lib/push/supabaseAdmin';
+export { getSupabaseAdmin } from '../../api/_lib/push/supabaseAdmin';
