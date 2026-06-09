@@ -1,6 +1,17 @@
-import { useState } from 'react';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
-import { Bookmark, Search as SearchIcon, MapPin, Tag, AlertCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
+import {
+  ArrowDownUp,
+  Bookmark,
+  CircleDot,
+  MessageSquare,
+  Search as SearchIcon,
+  MapPin,
+  Tag,
+  AlertCircle,
+  ThumbsUp,
+  X,
+} from 'lucide-react';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
 import { updateSupabaseItemStatus } from '../supabase';
@@ -9,6 +20,33 @@ import { useSavedItems } from '../hooks/useSavedItems';
 import { SITE } from '../siteContent';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
+
+type StatusFilter = 'all' | Exclude<PostStatus, 'withdrawn'>;
+type VoteFilter = 'all' | 'i_interested' | 'has_interest' | 'has_comments';
+type SortOption = 'newest' | 'oldest' | 'most_upvotes' | 'most_comments' | 'top_score';
+
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'active', label: 'Available' },
+  { value: 'pending_pickup', label: 'Pending pickup' },
+  { value: 'on_hold', label: 'On hold' },
+  { value: 'completed', label: 'Completed' },
+];
+
+const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
+  { value: 'all', label: 'All interest' },
+  { value: 'i_interested', label: 'I voted interested' },
+  { value: 'has_interest', label: 'Has upvotes' },
+  { value: 'has_comments', label: 'Has comments' },
+];
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'most_upvotes', label: 'Most upvotes' },
+  { value: 'most_comments', label: 'Most comments' },
+  { value: 'top_score', label: 'Top score (up − down)' },
+];
 
 interface ItemGridProps {
   items: ItemPost[];
@@ -33,6 +71,9 @@ export default function ItemGrid({
   const [selectedType, setSelectedType] = useState<'all' | 'giveaway' | 'looking'>('all');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
+  const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
@@ -68,28 +109,81 @@ export default function ItemGrid({
     }
   };
 
-  // Run modular filters
-  const filteredItems = items.filter((item) => {
-    if (item.status === 'withdrawn') return false;
+  const hasExtraFilters =
+    selectedStatus !== 'all' ||
+    selectedVoteFilter !== 'all' ||
+    sortBy !== 'newest' ||
+    selectedCategory !== 'All Categories' ||
+    selectedNeighborhood !== 'All Neighborhoods' ||
+    searchTerm.trim() !== '' ||
+    showSavedOnly;
 
-    // 1. Text Search
-    const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
-    const matchesSearch = searchString.includes(searchTerm.toLowerCase());
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedType('all');
+    setSelectedCategory('All Categories');
+    setSelectedNeighborhood('All Neighborhoods');
+    setSelectedStatus('all');
+    setSelectedVoteFilter('all');
+    setSortBy('newest');
+    setShowSavedOnly(false);
+  };
 
-    // 2. Type Filter
-    const matchesType = selectedType === 'all' || item.type === selectedType;
+  const filteredItems = useMemo(() => {
+    const filtered = items.filter((item) => {
+      if (item.status === 'withdrawn') return false;
 
-    // 3. Category Filter
-    const matchesCategory = selectedCategory === 'All Categories' || item.category === selectedCategory;
+      const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
+      if (!searchString.includes(searchTerm.toLowerCase())) return false;
 
-    // 4. Neighborhood Filter
-    const matchesNeighborhood = selectedNeighborhood === 'All Neighborhoods' || item.neighborhood === selectedNeighborhood;
+      if (selectedType !== 'all' && item.type !== selectedType) return false;
+      if (selectedCategory !== 'All Categories' && item.category !== selectedCategory) return false;
+      if (selectedNeighborhood !== 'All Neighborhoods' && item.neighborhood !== selectedNeighborhood) return false;
+      if (showSavedOnly && !savedIds.has(item.id)) return false;
+      if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
 
-    // 5. Saved Filter
-    const matchesSaved = !showSavedOnly || savedIds.has(item.id);
+      const votes = getVotesForPost(item.id);
+      const commentCount = getCommentsForPost(item.id).length;
 
-    return matchesSearch && matchesType && matchesCategory && matchesNeighborhood && matchesSaved;
-  });
+      if (selectedVoteFilter === 'i_interested' && votes.userVote !== 'up') return false;
+      if (selectedVoteFilter === 'has_interest' && votes.upvotes === 0) return false;
+      if (selectedVoteFilter === 'has_comments' && commentCount === 0) return false;
+
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'most_upvotes':
+          return getVotesForPost(b.id).upvotes - getVotesForPost(a.id).upvotes;
+        case 'most_comments':
+          return getCommentsForPost(b.id).length - getCommentsForPost(a.id).length;
+        case 'top_score': {
+          const scoreA = getVotesForPost(a.id).upvotes - getVotesForPost(a.id).downvotes;
+          const scoreB = getVotesForPost(b.id).upvotes - getVotesForPost(b.id).downvotes;
+          return scoreB - scoreA;
+        }
+        case 'newest':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+  }, [
+    items,
+    searchTerm,
+    selectedType,
+    selectedCategory,
+    selectedNeighborhood,
+    showSavedOnly,
+    savedIds,
+    selectedStatus,
+    selectedVoteFilter,
+    sortBy,
+    getVotesForPost,
+    getCommentsForPost,
+  ]);
 
   return (
     <>
@@ -135,7 +229,25 @@ export default function ItemGrid({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-app">
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+          <p className="text-xs text-muted">
+            {filteredItems.length} listing{filteredItems.length === 1 ? '' : 's'}
+            {hasExtraFilters ? ' matching filters' : ''}
+          </p>
+          {hasExtraFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="sbn-chip text-xs flex items-center gap-1"
+              id="feed_clear_filters_btn"
+            >
+              <X className="w-3 h-3" />
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pt-4 border-t border-app">
           <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
             <Tag className="w-4 h-4 text-subtle shrink-0" />
             <select
@@ -193,6 +305,87 @@ export default function ItemGrid({
               ))}
             </select>
           </div>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
+            <CircleDot className="w-4 h-4 text-subtle shrink-0" />
+            <select
+              id="filter_status_select"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value as StatusFilter)}
+              className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+            >
+              {STATUS_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
+            <ThumbsUp className="w-4 h-4 text-accent shrink-0" />
+            <select
+              id="filter_vote_select"
+              value={selectedVoteFilter}
+              onChange={(e) => setSelectedVoteFilter(e.target.value as VoteFilter)}
+              className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+            >
+              {VOTE_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset">
+            <ArrowDownUp className="w-4 h-4 text-subtle shrink-0" />
+            <select
+              id="filter_sort_select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-app bg-inset sm:col-span-2 lg:col-span-1">
+            <MessageSquare className="w-4 h-4 text-subtle shrink-0" />
+            <span className="text-sm font-medium text-muted whitespace-nowrap">Quick:</span>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedVoteFilter('has_interest');
+                  setSortBy('most_upvotes');
+                }}
+                className={`sbn-chip text-[11px] py-1 px-2 ${selectedVoteFilter === 'has_interest' && sortBy === 'most_upvotes' ? 'sbn-chip-active' : ''}`}
+              >
+                Trending
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStatus('active');
+                  setSelectedType('giveaway');
+                }}
+                className={`sbn-chip text-[11px] py-1 px-2 ${selectedStatus === 'active' && selectedType === 'giveaway' ? 'sbn-chip-active' : ''}`}
+              >
+                Free stuff
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStatus('active');
+                  setSelectedType('looking');
+                }}
+                className={`sbn-chip text-[11px] py-1 px-2 ${selectedStatus === 'active' && selectedType === 'looking' ? 'sbn-chip-active' : ''}`}
+              >
+                ISO requests
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -203,7 +396,9 @@ export default function ItemGrid({
           <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
             {showSavedOnly
               ? 'You haven\'t saved any listings yet. Tap the bookmark icon on any listing to save it.'
-              : `Try different filters, or be the first to post. ${SITE.tagline}`}
+              : selectedVoteFilter === 'i_interested'
+                ? 'No listings you have marked as interested yet. Vote up on posts you want to follow.'
+                : `Try different filters, or be the first to post. ${SITE.tagline}`}
           </p>
           {showSavedOnly && (
             <button
