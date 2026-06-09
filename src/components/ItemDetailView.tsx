@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Calendar, ExternalLink, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
+import { ArrowLeft, Bookmark, Calendar, ExternalLink, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ItemPost, extractGPSCoordinates, ItemComment, ListingSubItem, UserProfile } from '../types';
 import {
@@ -40,6 +40,7 @@ interface ItemDetailViewProps {
   onVote: (direction: 'up' | 'down') => void;
   onAddComment: (text: string) => void;
   onDeleteComment?: (commentId: string) => void;
+  onDelete?: () => void;
   updating?: boolean;
 }
 
@@ -60,6 +61,7 @@ export default function ItemDetailView({
   onVote,
   onAddComment,
   onDeleteComment,
+  onDelete,
   updating = false,
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
@@ -118,7 +120,7 @@ export default function ItemDetailView({
   return (
     <div
       id="item_detail_fullscreen"
-      className="fixed inset-0 z-[60] bg-app overflow-y-auto"
+      className="fixed inset-0 z-[80] bg-app overflow-y-auto"
       role="dialog"
       aria-modal="true"
     >
@@ -379,7 +381,7 @@ export default function ItemDetailView({
                   </button>
                 </div>
               ) : item.status === 'withdrawn' ? (
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={updating}
@@ -388,6 +390,17 @@ export default function ItemDetailView({
                   >
                     Relist
                   </button>
+                  {onDelete && (
+                    <button
+                      type="button"
+                      disabled={updating}
+                      onClick={onDelete}
+                      className="sbn-btn sbn-btn-ghost text-red-400 border-red-900/50 hover:bg-red-950/30"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  )}
                 </div>
               ) : null}
               <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary w-full">

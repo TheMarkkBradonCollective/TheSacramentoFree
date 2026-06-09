@@ -32,6 +32,7 @@ import {
   getSupabaseEvents,
   cancelSupabaseEvent,
   updateSupabaseItemStatus,
+  deleteSupabaseItem,
   deleteOwnAccount,
   isAccountRestricted,
 } from './supabase';
@@ -677,6 +678,32 @@ export default function App() {
     }
   };
 
+  const handleDeletePost = useCallback(
+    async (post: ItemPost) => {
+      if (!userProfile || post.userId !== userProfile.uid || post.status !== 'withdrawn') return;
+
+      const confirmed = confirm(`Permanently delete "${post.title}"? This cannot be undone.`);
+      if (!confirmed) return;
+
+      setDetailUpdating(true);
+      try {
+        const ok = await deleteSupabaseItem(post.id);
+        if (!ok) {
+          setErrorMsg('Could not delete post.');
+          return;
+        }
+        if (detailItem?.id === post.id) setDetailItem(null);
+        await loadItems(false);
+      } catch (err) {
+        console.warn('Failed to delete post:', err);
+        setErrorMsg('Could not delete post.');
+      } finally {
+        setDetailUpdating(false);
+      }
+    },
+    [userProfile, detailItem?.id, loadItems],
+  );
+
   const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
@@ -869,6 +896,7 @@ export default function App() {
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
@@ -902,6 +930,7 @@ export default function App() {
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
@@ -935,6 +964,7 @@ export default function App() {
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
@@ -966,6 +996,8 @@ export default function App() {
                   listingHints={visibleItems}
                   onClose={() => setViewProfileUid(null)}
                   onOpenChat={handleOpenChatFromProfile}
+                  onViewPost={setDetailItem}
+                  onDeletePost={handleDeletePost}
                   onBlockListChanged={handleBlockListChanged}
                 />
               )}
@@ -981,6 +1013,11 @@ export default function App() {
                     setDetailItem(null);
                   }}
                   onUpdateStatus={handleDetailUpdateStatus}
+                  onDelete={
+                    detailItem.status === 'withdrawn' && detailItem.userId === userProfile.uid
+                      ? () => void handleDeletePost(detailItem)
+                      : undefined
+                  }
                   onViewProfile={handleViewProfile}
                   voteState={engagement.getVotesForPost(detailItem.id)}
                   comments={engagement.getCommentsForPost(detailItem.id)}

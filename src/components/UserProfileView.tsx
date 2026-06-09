@@ -25,11 +25,14 @@ import {
   Camera,
 } from 'lucide-react';
 import NotificationSettings from './NotificationSettings';
+import ProfilePostList from './ProfilePostList';
 import { IN_APP } from '../siteContent';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
   userPosts?: ItemPost[];
+  onViewPost?: (post: ItemPost) => void;
+  onDeletePost?: (post: ItemPost) => void;
   onUpdateProfile: (updated: UserProfile) => void;
   /** Refresh feed/listings after avatar is saved */
   onProfilePhotoSaved?: () => void;
@@ -47,6 +50,8 @@ function sanitizeRemotePhoto(url?: string): string | undefined {
 export default function UserProfileView({
   userProfile,
   userPosts = [],
+  onViewPost,
+  onDeletePost,
   onUpdateProfile,
   onProfilePhotoSaved,
   onDeleteAccount,
@@ -616,23 +621,14 @@ export default function UserProfileView({
           <h3 className="text-sm font-bold text-app uppercase tracking-wider">Your posts</h3>
           <span className="text-xs text-muted">{userPosts.length}</span>
         </div>
-        {userPosts.length === 0 ? (
-          <p className="text-xs text-muted">You have not posted anything yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {userPosts
-              .slice()
-              .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime())
-              .map((post) => (
-                <div key={post.id} className="rounded-xl border border-app bg-inset p-3">
-                  <p className="text-sm font-semibold text-app">{post.title}</p>
-                  <p className="text-xs text-muted mt-0.5">
-                    {post.category} · {post.status.replace('_', ' ')}
-                  </p>
-                </div>
-              ))}
-          </div>
-        )}
+        <ProfilePostList
+          posts={userPosts
+            .slice()
+            .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime())}
+          emptyMessage="You have not posted anything yet."
+          onViewPost={onViewPost}
+          onDeletePost={onDeletePost}
+        />
       </div>
     </div>
   );
