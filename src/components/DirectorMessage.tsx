@@ -1,16 +1,23 @@
 import { useState } from 'react';
 import { UserProfile } from '../types';
 import { useDirectorMessage } from '../hooks/useDirectorMessage';
+import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityContentVotes';
 import LeaderMessageCard from './LeaderMessageCard';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 
 interface DirectorMessageProps {
   userProfile?: UserProfile | null;
   compact?: boolean;
+  onRequireSignIn?: () => void;
 }
 
-export default function DirectorMessage({ userProfile, compact = false }: DirectorMessageProps) {
+export default function DirectorMessage({
+  userProfile,
+  compact = false,
+  onRequireSignIn,
+}: DirectorMessageProps) {
   const { message, loading, saveMessage, canEdit } = useDirectorMessage(userProfile);
+  const { getVoteState, handleVote } = useCommunityContentVotes('leader_message', ['director'], userProfile);
   const [editing, setEditing] = useState(false);
 
   return (
@@ -28,6 +35,10 @@ export default function DirectorMessage({ userProfile, compact = false }: Direct
         loading={loading}
         canEdit={canEdit}
         onEdit={() => setEditing(true)}
+        voteState={getVoteState('director') ?? EMPTY_VOTE}
+        onVote={(dir) => handleVote('director', dir)}
+        onRequireSignIn={onRequireSignIn}
+        signedIn={Boolean(userProfile)}
       />
 
       {editing && (

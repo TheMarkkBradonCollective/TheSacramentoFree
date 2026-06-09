@@ -71,7 +71,7 @@ export default function HomePage({
 
       <DepthSection depth={2} className="mt-6">
         <DepthPanel>
-          <LeadershipMessagesCarousel />
+          <LeadershipMessagesCarousel onRequireSignIn={onRequireSignIn} />
         </DepthPanel>
       </DepthSection>
 

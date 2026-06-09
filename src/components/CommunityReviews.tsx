@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, MessageSquare, Trash2 } from 'lucide-react';
-import { UserProfile } from '../types';
+import { AppReview, ContentVoteState, UserProfile } from '../types';
 import { useAppReviews } from '../hooks/useAppReviews';
+import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityContentVotes';
 import StarRating from './StarRating';
+import ContentVoteButtons from './ContentVoteButtons';
 import HorizontalSnapRow, { SnapSlide } from './HorizontalSnapRow';
 
 interface CommunityReviewsProps {
@@ -14,7 +16,21 @@ interface CommunityReviewsProps {
   onSeeAll?: () => void;
 }
 
-function ReviewCard({ review }: { review: ReturnType<typeof useAppReviews>['reviews'][number] }) {
+function ReviewCard({
+  review,
+  voteState,
+  onVote,
+  onRequireSignIn,
+  signedIn,
+  isOwnReview,
+}: {
+  review: AppReview;
+  voteState: ContentVoteState;
+  onVote: (direction: 'up' | 'down') => void;
+  onRequireSignIn?: () => void;
+  signedIn: boolean;
+  isOwnReview: boolean;
+}) {
   return (
     <div className="bg-inset rounded-xl p-3 border border-app h-full">
       <div className="flex items-start gap-2">
@@ -41,6 +57,15 @@ function ReviewCard({ review }: { review: ReturnType<typeof useAppReviews>['revi
               <span>{review.text}</span>
             </p>
           )}
+          <ContentVoteButtons
+            voteState={voteState}
+            onVote={onVote}
+            onRequireSignIn={onRequireSignIn}
+            signedIn={signedIn}
+            disabled={isOwnReview}
+            disabledReason="You can't vote on your own review"
+            compact
+          />
         </div>
       </div>
     </div>
@@ -59,6 +84,8 @@ export default function CommunityReviews({
     userProfile,
     blockedUserIds,
   );
+  const reviewIds = useMemo(() => reviews.map((r) => r.id), [reviews]);
+  const { getVoteState, handleVote } = useCommunityContentVotes('review', reviewIds, userProfile);
   const [rating, setRating] = useState(myReview?.rating ?? 5);
   const [text, setText] = useState(myReview?.text || '');
   const [submitting, setSubmitting] = useState(false);
@@ -88,6 +115,18 @@ export default function CommunityReviews({
   };
 
   const previewReviews = reviews.slice(0, 12);
+  const signedIn = Boolean(userProfile);
+
+  const renderReviewCard = (review: AppReview, showVotes: boolean) => (
+    <ReviewCard
+      review={review}
+      voteState={showVotes ? getVoteState(review.id) : EMPTY_VOTE}
+      onVote={(dir) => handleVote(review.id, dir, { blockSelfId: review.userId })}
+      onRequireSignIn={onRequireSignIn}
+      signedIn={signedIn}
+      isOwnReview={userProfile?.uid === review.userId}
+    />
+  );
 
   return (
     <section
@@ -130,17 +169,15 @@ export default function CommunityReviews({
           <HorizontalSnapRow label="Community reviews">
             {previewReviews.map((review) => (
               <SnapSlide key={review.id} className="w-[min(100%,18rem)]">
-                <ReviewCard review={review} />
+                {renderReviewCard(review, false)}
               </SnapSlide>
             ))}
           </HorizontalSnapRow>
         </div>
       ) : (
-        <ul className={`mt-4 space-y-3 ${compact ? 'max-h-56' : 'max-h-72'} overflow-y-auto`}>
+        <ul className={`mt-4 space-y-3 ${compact ? 'max-h-56 overflow-y-auto' : ''}`}>
           {reviews.map((review) => (
-            <li key={review.id}>
-              <ReviewCard review={review} />
-            </li>
+            <li key={review.id}>{renderReviewCard(review, true)}</li>
           ))}
         </ul>
       )}

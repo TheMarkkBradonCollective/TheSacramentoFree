@@ -14,8 +14,8 @@ export default function ReviewsPage({ onRequireSignIn }: ReviewsPageProps) {
       subtitle="What neighbors think of the app — and a note from our director when you scroll down."
     >
       <CommunityReviews onRequireSignIn={onRequireSignIn} />
-      <DirectorMessage />
-      <CityManagerMessage />
+      <DirectorMessage onRequireSignIn={onRequireSignIn} />
+      <CityManagerMessage onRequireSignIn={onRequireSignIn} />
     </PublicPageShell>
   );
 }

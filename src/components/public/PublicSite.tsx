@@ -62,7 +62,7 @@ export default function PublicSite({
       case 'community':
         return <CommunityPage />;
       case 'updates':
-        return <UpdatesPage />;
+        return <UpdatesPage onRequireSignIn={onRequireSignIn} />;
       case 'reviews':
         return <ReviewsPage onRequireSignIn={onRequireSignIn} />;
       case 'gofundme':

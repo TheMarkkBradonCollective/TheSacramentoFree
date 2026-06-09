@@ -1,16 +1,27 @@
 import { useState } from 'react';
 import { UserProfile } from '../types';
 import { useCityManagerMessage } from '../hooks/useCityManagerMessage';
+import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityContentVotes';
 import LeaderMessageCard from './LeaderMessageCard';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 
 interface CityManagerMessageProps {
   userProfile?: UserProfile | null;
   compact?: boolean;
+  onRequireSignIn?: () => void;
 }
 
-export default function CityManagerMessage({ userProfile, compact = false }: CityManagerMessageProps) {
+export default function CityManagerMessage({
+  userProfile,
+  compact = false,
+  onRequireSignIn,
+}: CityManagerMessageProps) {
   const { message, loading, saveMessage, canEdit, isPublished } = useCityManagerMessage(userProfile);
+  const { getVoteState, handleVote } = useCommunityContentVotes(
+    'leader_message',
+    ['city_manager'],
+    userProfile,
+  );
   const [editing, setEditing] = useState(false);
 
   if (loading) {
@@ -39,6 +50,10 @@ export default function CityManagerMessage({ userProfile, compact = false }: Cit
         compact={compact}
         canEdit={canEdit}
         onEdit={() => setEditing(true)}
+        voteState={getVoteState('city_manager') ?? EMPTY_VOTE}
+        onVote={(dir) => handleVote('city_manager', dir)}
+        onRequireSignIn={onRequireSignIn}
+        signedIn={Boolean(userProfile)}
       />
 
       {editing && (

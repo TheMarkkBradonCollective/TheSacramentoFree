@@ -277,6 +277,23 @@ export interface AppReview {
   updatedAt: string;
 }
 
+export type CommunityContentVoteTarget = 'update' | 'review' | 'leader_message';
+
+export interface CommunityContentVote {
+  id: string;
+  targetType: CommunityContentVoteTarget;
+  targetId: string;
+  userId: string;
+  voteType: 'up' | 'down';
+  createdAt: string;
+}
+
+export interface ContentVoteState {
+  userVote: 'up' | 'down' | null;
+  upvotes: number;
+  downvotes: number;
+}
+
 export const SACRAMENTO_NEIGHBORHOODS = [
   'Midtown',
   'Downtown',

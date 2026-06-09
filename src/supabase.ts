@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, CityManagerMessageContent, AppReview } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, CityManagerMessageContent, AppReview, CommunityContentVote, CommunityContentVoteTarget } from './types';
 import { CITY_MANAGER_MESSAGE, DIRECTOR_MESSAGE } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
@@ -2551,6 +2551,92 @@ export async function deleteSupabaseAppReview(
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete review.' };
+  }
+}
+
+/**
+ * --- COMMUNITY CONTENT VOTES (updates, reviews, staff messages) ---
+ */
+
+function normalizeCommunityContentVoteRow(row: Record<string, unknown>): CommunityContentVote {
+  return {
+    id: String(row.id),
+    targetType: String(row.targetType) as CommunityContentVoteTarget,
+    targetId: String(row.targetId),
+    userId: String(row.userId),
+    voteType: row.voteType === 'down' ? 'down' : 'up',
+    createdAt: coerceToIsoDate(row.createdAt),
+  };
+}
+
+export async function getSupabaseCommunityContentVotes(
+  targetType: CommunityContentVoteTarget,
+  targetIds: string[],
+): Promise<CommunityContentVote[]> {
+  if (targetIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from('community_content_votes')
+      .select('*')
+      .eq('targetType', targetType)
+      .in('targetId', targetIds);
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      handleSupabaseError(error, 'community_content_votes');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []).map((row) => normalizeCommunityContentVoteRow(row as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+export async function setSupabaseCommunityContentVote(
+  targetType: CommunityContentVoteTarget,
+  targetId: string,
+  userId: string,
+  voteType: 'up' | 'down' | null,
+): Promise<boolean> {
+  try {
+    if (!voteType) {
+      const { error } = await supabase
+        .from('community_content_votes')
+        .delete()
+        .eq('targetType', targetType)
+        .eq('targetId', targetId)
+        .eq('userId', userId);
+      if (error) {
+        handleSupabaseError(error, 'community_content_votes');
+        return false;
+      }
+      return true;
+    }
+
+    const id = `${targetType}_${targetId}_${userId}`;
+    const { error } = await supabase.from('community_content_votes').upsert(
+      {
+        id,
+        targetType,
+        targetId,
+        userId,
+        voteType,
+        createdAt: new Date().toISOString(),
+      },
+      { onConflict: 'id' },
+    );
+
+    if (error) {
+      handleSupabaseError(error, 'community_content_votes');
+      return false;
+    }
+
+    setSupabaseConfigurationState(true);
+    return true;
+  } catch {
+    return false;
   }
 }
 

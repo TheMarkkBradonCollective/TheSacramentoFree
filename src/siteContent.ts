@@ -126,15 +126,35 @@ export const FUTURE_FEATURES = [
 export type AppUpdate = {
   date: string;
   title: string;
+  /** Short summary on the updates list */
   body: string;
+  /** Full story when a neighbor taps “Read more” */
+  detail?: string;
 };
+
+export function appUpdateId(update: Pick<AppUpdate, 'date' | 'title'>): string {
+  const slug = update.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${update.date}_${slug}`;
+}
 
 /** Newest first — plain-language changelog for neighbors. */
 export const APP_UPDATES: AppUpdate[] = [
   {
     date: '2026-06-09',
+    title: 'Vote on updates, reviews & team notes',
+    body: 'Upvote or downvote changelog entries, neighbor reviews, and staff messages. Update votes go to your director.',
+    detail:
+      'Tap an update to read the full story, then weigh in with an up or down vote. Reviews and messages from the director or city manager can be voted on too. Sign in to vote — you cannot vote on your own review.',
+  },
+  {
+    date: '2026-06-09',
     title: 'GoFundMe footer improvements',
-    body: 'Removed from the map tab. Tap the footer on any other page for the full cost breakdown — signed-in neighbors get a full-screen view.',
+    body: 'Removed from the map tab. Tap the footer elsewhere for the full breakdown.',
+    detail:
+      'The compact GoFundMe strip no longer sits under the map. On every other scrollable page it appears at the very bottom. Tap it to open the full cost page — or a full-screen panel when you are signed in.',
   },
   {
     date: '2026-06-09',
@@ -149,12 +169,9 @@ export const APP_UPDATES: AppUpdate[] = [
   {
     date: '2026-06-09',
     title: 'Updates & Reviews pages',
-    body: 'This changelog plus a Reviews page with team messages and neighbor ratings — both in the menu under Community.',
-  },
-  {
-    date: '2026-06-09',
-    title: 'City manager message',
-    body: 'A welcome note from city leadership, alongside the director message. Swipe between them on the home page.',
+    body: 'Changelog and neighbor reviews — both in the menu under Community.',
+    detail:
+      'The Updates page lists everything we have shipped, oldest to newest. Reviews let neighbors rate the app and read a note from the director. Upvotes and downvotes on updates go straight to your director as feedback.',
   },
   {
     date: '2026-06-09',

@@ -1,4 +1,6 @@
 import { Heart, Pencil, Shield } from 'lucide-react';
+import { ContentVoteState } from '../types';
+import ContentVoteButtons from './ContentVoteButtons';
 
 export type LeaderMessageVariant = 'director' | 'city_manager';
 
@@ -40,6 +42,10 @@ export interface LeaderMessageCardProps {
   loading?: boolean;
   canEdit?: boolean;
   onEdit?: () => void;
+  voteState?: ContentVoteState;
+  onVote?: (direction: 'up' | 'down') => void;
+  onRequireSignIn?: () => void;
+  signedIn?: boolean;
 }
 
 export default function LeaderMessageCard({
@@ -55,6 +61,10 @@ export default function LeaderMessageCard({
   loading = false,
   canEdit = false,
   onEdit,
+  voteState,
+  onVote,
+  onRequireSignIn,
+  signedIn = false,
 }: LeaderMessageCardProps) {
   const styles = VARIANT_STYLES[variant];
 
@@ -115,6 +125,16 @@ export default function LeaderMessageCard({
       </ul>
 
       {!compact && <p className="mt-4 text-sm font-semibold text-accent">{closing}</p>}
+
+      {voteState && onVote && (
+        <ContentVoteButtons
+          voteState={voteState}
+          onVote={onVote}
+          onRequireSignIn={onRequireSignIn}
+          signedIn={signedIn}
+          compact
+        />
+      )}
     </section>
   );
 }
