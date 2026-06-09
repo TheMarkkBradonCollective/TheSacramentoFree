@@ -1,95 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import { randomUUID } from 'crypto';
-import { requireAuth, supabaseAdmin, getUserRole, isStaffRole, type AuthedRequest } from './auth.js';
-import {
-  configureVapid,
-  getVapidPublicKey,
-  isVapidConfigured,
-  sendPushToUsers,
-  getSubscriptionsForUsers,
-  getPreferencesForUsers,
-  withinRadius,
-  type PushEventType,
-  type PushPayload,
-} from './push.js';
-
-interface SendBody {
-  eventType: PushEventType;
-  title: string;
-  body: string;
-  url: string;
-  tag?: string;
-  data?: Record<string, string>;
-  recipientUserIds?: string[];
-  excludeUserIds?: string[];
-  listingId?: string;
-  conversationId?: string;
-  requestId?: string;
-  category?: string;
-  neighborhood?: string;
-  itemLat?: number;
-  itemLng?: number;
-  cities?: string[];
-}
-
-async function resolveRecipients(body: SendBody, callerId: string): Promise<string[]> {
-  const explicit = body.recipientUserIds?.filter(Boolean) || [];
-  if (explicit.length) return explicit;
-
-  const eventType = body.eventType;
-
-  if (eventType === 'new_item' || eventType === 'new_request' || eventType === 'nearby_item') {
-    const { data: users } = await supabaseAdmin.from('users').select('uid, neighborhood');
-    const listingNeighborhood = body.neighborhood || '';
-    const category = body.category || '';
-    const itemLatLng =
-      typeof body.itemLat === 'number' && typeof body.itemLng === 'number'
-        ? { lat: body.itemLat, lng: body.itemLng }
-        : null;
-
-    const prefsMap = await getPreferencesForUsers((users || []).map((u) => String((u as { uid: string }).uid)));
-
-    return (users || [])
-      .filter((u) => {
-        const uid = String((u as { uid: string }).uid);
-        if (uid === callerId) return false;
-        const prefs = prefsMap.get(uid);
-        if (!prefs) return false;
-
-        const prefKey =
-          eventType === 'new_request' ? 'requests' : eventType === 'nearby_item' ? 'nearbyListings' : 'newListings';
-        if (!prefs.enabled || !prefs[prefKey]) return false;
-
-        if (eventType === 'nearby_item') {
-          return withinRadius(
-            String((u as { neighborhood: string }).neighborhood),
-            listingNeighborhood,
-            itemLatLng,
-            prefs.nearbyRadiusMiles,
-          );
-        }
-
-        const sameCity = String((u as { neighborhood: string }).neighborhood) === listingNeighborhood;
-        const followsCategory = category && prefs.followedCategories.includes(category);
-        return sameCity || followsCategory;
-      })
-      .map((u) => String((u as { uid: string }).uid));
-  }
-
-  if (eventType === 'announcement') {
-    const role = await getUserRole(callerId);
-    if (!isStaffRole(role)) return [];
-
-    const cities = body.cities?.filter(Boolean) || [];
-    let query = supabaseAdmin.from('users').select('uid');
-    if (cities.length) query = query.in('neighborhood', cities);
-    const { data } = await query;
-    return (data || []).map((u) => String((u as { uid: string }).uid));
-  }
-
-  return [];
-}
+import { requireAuth, supabaseAdmin, type AuthedRequest } from './auth.js';
+import { configureVapid, getVapidPublicKey } from './push.js';
+import { runPushTest } from './pushTest.js';
+import { runPushSend, type PushSendBody } from './pushSend.js';
 
 export function createPushApp() {
   const app = express();
@@ -171,85 +86,16 @@ export function createPushApp() {
   });
 
   app.post('/api/push/test', requireAuth, async (req: AuthedRequest, res) => {
-    if (!isVapidConfigured()) {
-      res.status(503).json({
-        error:
-          'Push server is missing valid VAPID keys. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in the server environment.',
-      });
-      return;
-    }
-
-    const callerId = req.user!.id;
-    const savedSubscriptions = await getSubscriptionsForUsers([callerId]);
-    if (!savedSubscriptions.length) {
-      res.status(400).json({
-        error:
-          'No push subscription is saved for this account on the server. Tap Enable notifications on this device, then try again.',
-        subscriptionCount: 0,
-      });
-      return;
-    }
-
-    const payload: PushPayload = {
-      title: 'Test notification',
-      body: 'Sacramento Buy Nothing push alerts are working on this device.',
-      url: '/',
-      tag: 'sbn-test-push',
-      eventType: 'account_update',
-      data: { test: 'true' },
-    };
-
-    const result = await sendPushToUsers([callerId], payload, { skipPreferenceCheck: true });
-
-    if (result.sent === 0) {
-      res.status(502).json({
-        error:
-          'Push delivery failed for this device. Try turning notifications off and on again, or use a different browser.',
-        ...result,
-      });
-      return;
-    }
-
-    res.json({ ok: true, ...result });
+    const result = await runPushTest({
+      userId: req.user!.id,
+      subscription: req.body?.subscription,
+    });
+    res.status(result.status).json(result.body);
   });
 
   app.post('/api/push/send', requireAuth, async (req: AuthedRequest, res) => {
-    const callerId = req.user!.id;
-    const body = req.body as SendBody;
-
-    if (!body?.eventType || !body?.title || !body?.body || !body?.url) {
-      res.status(400).json({ error: 'eventType, title, body, and url are required' });
-      return;
-    }
-
-    if (body.eventType === 'announcement') {
-      const role = await getUserRole(callerId);
-      if (!isStaffRole(role)) {
-        res.status(403).json({ error: 'Staff access required for announcements' });
-        return;
-      }
-    }
-
-    const recipients = await resolveRecipients(body, callerId);
-    const payload: PushPayload = {
-      title: body.title,
-      body: body.body,
-      url: body.url,
-      tag: body.tag,
-      eventType: body.eventType,
-      data: {
-        ...(body.data || {}),
-        listingId: body.listingId || '',
-        conversationId: body.conversationId || '',
-        requestId: body.requestId || '',
-      },
-    };
-
-    const result = await sendPushToUsers(recipients, payload, {
-      excludeUserIds: [callerId, ...(body.excludeUserIds || [])],
-    });
-
-    res.json({ ok: true, recipients: recipients.length, ...result });
+    const result = await runPushSend(req.user!.id, req.body as PushSendBody);
+    res.status(result.status).json(result.body);
   });
 
   app.get('/api/health', (_req, res) => {
