@@ -12,6 +12,7 @@ import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
+import DirectorMessage from './DirectorMessage';
 import { AppTab } from '../lib/appTabs';
 
 interface MobileViewProps {
@@ -167,6 +168,7 @@ export default function MobileView({
                 {IN_APP.feedDescription} · {items.length} listings
               </p>
             </div>
+            <DirectorMessage compact />
             <CommunityStatsBar items={items} variant="compact" />
             <ItemGrid
               items={items}

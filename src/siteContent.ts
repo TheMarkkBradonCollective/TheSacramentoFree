@@ -123,6 +123,21 @@ export const FUTURE_FEATURES = [
   'Local alerts'
 ] as const;
 
+export const DIRECTOR_MESSAGE = {
+  name: 'Markeith White',
+  title: 'Buy Nothing Director',
+  headline: 'A note from your director',
+  goal:
+    'Sacramento Buy Nothing exists so neighbors can give freely, ask kindly, and keep good things out of the landfill — with no money involved. That is the goal, plain and simple.',
+  promises: [
+    'This app is 100% free — always.',
+    'No ads. Ever.',
+    'I keep you in mind with every feature I build.',
+    'I do not want your information for anything beyond making the community work, and I will never sell it.',
+  ],
+  closing: 'Thank you for being part of this community.',
+} as const;
+
 export const IN_APP = {
   brandSubtitle: 'Neighbors helping neighbors',
   feedTitle: 'Community Gift Feed',

@@ -1,5 +1,6 @@
 import { ArrowRight, Heart, MapPin, Shield, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
+import DirectorMessage from '../../DirectorMessage';
 import CommunityStatsBar from '../../CommunityStatsBar';
 import GuestListingPreview from '../GuestListingPreview';
 import HomeScrollStage, { DepthPanel, DepthSection } from '../HomeScrollStage';
@@ -65,6 +66,12 @@ export default function HomePage({
         </div>
 
         <p className="mt-5 text-sm font-semibold text-accent">{SITE.freeRule}</p>
+      </DepthSection>
+
+      <DepthSection depth={2} className="mt-6">
+        <DepthPanel>
+          <DirectorMessage />
+        </DepthPanel>
       </DepthSection>
 
       <DepthSection depth={2} className="mt-6">
