@@ -1,5 +1,5 @@
 import { supabaseAdmin } from './auth';
-import { configureVapidAsync, getVapidPublicKey, getWebPushModule, isVapidConfigured } from '../lib/push-server/webPushLoader';
+import { configureVapidAsync, getVapidPublicKey, getWebPushModule, isVapidConfigured } from '../api/_lib/push/webPushLoader';
 
 export type PushEventType =
   | 'new_item'

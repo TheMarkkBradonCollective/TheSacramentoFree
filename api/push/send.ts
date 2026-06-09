@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserFromBearer } from '../../lib/push-server/auth';
-import { runPushSend } from '../../lib/push-server/runPushSend';
+import { getUserFromBearer } from '../_lib/push/auth';
+import { runPushSend } from '../_lib/push/runPushSend';
 import { parseJsonBody } from '../_lib/parseBody';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
