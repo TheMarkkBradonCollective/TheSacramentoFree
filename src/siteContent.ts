@@ -123,6 +123,14 @@ export const FUTURE_FEATURES = [
   'Local alerts'
 ] as const;
 
+export const SUPPORT = {
+  gofundmeUrl: 'https://gofund.me/bc824e51b',
+  gofundmeTitle: 'Support the app',
+  gofundmeBlurb:
+    'Sacramento Buy Nothing is 100% free and ad-free. If this app helps your neighborhood, consider chipping in to help cover hosting and development.',
+  gofundmeButton: 'Support on GoFundMe',
+} as const;
+
 export const DIRECTOR_MESSAGE = {
   name: 'Markeith White',
   title: 'Buy Nothing Director',

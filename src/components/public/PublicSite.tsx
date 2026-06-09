@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { SITE } from '../../siteContent';
+import GoFundMeSupport from '../GoFundMeSupport';
 import { usePublicRoute } from '../../public/usePublicRoute';
 import PublicNav from './PublicNav';
 import HomePage from './pages/HomePage';
@@ -85,8 +86,11 @@ export default function PublicSite({
     <div className="min-h-screen bg-app text-app font-sans flex flex-col">
       <PublicNav route={route} onNavigate={navigate} />
       <main className="flex-1">{renderPage()}</main>
-      <footer className="border-t border-app bg-surface py-6 text-center text-xs text-subtle">
-        <p>
+      <footer className="border-t border-app bg-surface px-4 py-8 text-center space-y-5">
+        <div className="max-w-md mx-auto">
+          <GoFundMeSupport />
+        </div>
+        <p className="text-xs text-subtle">
           © {new Date().getFullYear()} {SITE.name} · {SITE.tagline}
         </p>
       </footer>
