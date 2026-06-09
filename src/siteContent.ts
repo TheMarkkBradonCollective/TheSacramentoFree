@@ -133,13 +133,28 @@ export type AppUpdate = {
 export const APP_UPDATES: AppUpdate[] = [
   {
     date: '2026-06-09',
-    title: 'GoFundMe on its own page',
-    body: 'Full cost breakdown moved to a GoFundMe page. Every screen now has a short support link at the bottom.',
+    title: 'GoFundMe footer improvements',
+    body: 'Removed from the map tab. Tap the footer on any other page for the full cost breakdown — signed-in neighbors get a full-screen view.',
   },
   {
     date: '2026-06-09',
-    title: 'Reviews page & team messages',
-    body: 'Swipe through reviews and notes from the director and city manager on the home page — or open Reviews for the full list.',
+    title: 'Push notifications',
+    body: 'Optional alerts for messages, claims, and community activity. Turn them on or off in your account settings.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'GoFundMe on its own page',
+    body: 'Full cost breakdown lives on a dedicated page. Every other screen has a short support link at the bottom.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'Updates & Reviews pages',
+    body: 'This changelog plus a Reviews page with team messages and neighbor ratings — both in the menu under Community.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'City manager message',
+    body: 'A welcome note from city leadership, alongside the director message. Swipe between them on the home page.',
   },
   {
     date: '2026-06-09',
@@ -198,6 +213,11 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     date: '2026-06-02',
+    title: 'Animated public home page',
+    body: 'Scroll-driven motion on the welcome page so the site feels alive before you sign in.',
+  },
+  {
+    date: '2026-06-02',
     title: 'Tap photos to enlarge',
     body: 'Listing images open in a lightbox so you can see details before you message someone.',
   },
@@ -205,6 +225,11 @@ export const APP_UPDATES: AppUpdate[] = [
     date: '2026-06-02',
     title: 'Delete your account',
     body: 'You can remove your account and data when you no longer want to participate.',
+  },
+  {
+    date: '2026-06-02',
+    title: 'Staff safety tools',
+    body: 'Leaders can remove comments, delete accounts, and fully purge data when needed.',
   },
   {
     date: '2026-05-31',
@@ -243,8 +268,8 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     date: '2026-05-29',
-    title: 'Neighbor directory improvements',
-    body: 'View profiles from the directory and see neighbor avatars at a glance.',
+    title: 'Neighbor profiles & avatars',
+    body: 'View profiles from the directory and see neighbor photos at a glance.',
   },
   {
     date: '2026-05-29',
@@ -258,23 +283,163 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     date: '2026-05-29',
-    title: 'Steadier sign-in',
-    body: 'Stay signed in after refreshing, and listings load reliably once you are logged in.',
+    title: 'Steadier sign-in & listings',
+    body: 'Stay signed in after refreshing, and posts load reliably once you are logged in.',
   },
   {
     date: '2026-05-29',
-    title: 'Map & feed fixes',
-    body: 'Listings show correctly on the map and feed, with pickup pins in the right spots.',
+    title: 'Pinned mobile header & nav',
+    body: 'The top bar and bottom tabs stay put while you scroll so the app feels stable on phones.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Live updates everywhere',
+    body: 'New posts, chats, votes, and ticket replies appear without refreshing the page.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Faster photos',
+    body: 'Images load quicker and upload more smoothly when you post listings.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Listing detail page',
+    body: 'Tap any post for the full story — photos, comments, interest votes, and claim options.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Share pickup location in chat',
+    body: 'Send your porch or meetup spot privately when arranging a pickup.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Real driving routes on the map',
+    body: 'Directions to free gifts use real streets instead of straight lines.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Edit your own posts',
+    body: 'Update a listing anytime if details change before it is claimed.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Community stats bar',
+    body: 'See live counts of neighbors, posts, and gifts at the top of the feed.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Community stats on public home',
+    body: 'The welcome page shows how active the community is before you join.',
   },
   {
     date: '2026-05-29',
     title: 'Role badges',
-    body: 'Director and staff roles show on profiles so you know who is helping run things.',
+    body: 'Director and staff roles show on profiles so you know who helps run things.',
   },
   {
     date: '2026-05-29',
-    title: 'Community stats on home',
-    body: 'The public home page shows live counts of neighbors, posts, and gifts shared.',
+    title: 'Director role management',
+    body: 'The director can assign staff roles from neighbor profiles.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Public welcome site',
+    body: 'About, How It Works, Rules, Areas, and Community pages for guests before they sign in.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Fresh design system',
+    body: 'Modern cards, cleaner navigation, better dark/light themes, and a more polished look throughout.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Map opens first',
+    body: 'The neighborhood map is the default tab so you see gifts near you right away.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Post from the feed',
+    body: 'A Post button on the feed view on every screen size — not just the map.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Full-screen mobile chat & profile',
+    body: 'Chat and account pages use the full phone screen, matching map and feed.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Tab history & back button',
+    body: 'Your phone back button moves between tabs the way you expect.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'ISO fulfillment credits',
+    body: 'Neighbors who give generously earn credit when they ask for something they need.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Map color index',
+    body: 'A quick legend on the map explains what each pin color means.',
+  },
+  {
+    date: '2026-05-28',
+    title: 'Everything saved online',
+    body: 'All posts, profiles, and messages now live in the cloud so nothing is lost between devices.',
+  },
+  {
+    date: '2026-05-20',
+    title: 'Install on your home screen',
+    body: 'Add Sacramento Buy Nothing to your phone like an app — works offline for basic browsing.',
+  },
+  {
+    date: '2026-05-20',
+    title: 'Neighbor chat',
+    body: 'Message the person giving something away to arrange porch pickup.',
+  },
+  {
+    date: '2026-05-20',
+    title: 'User roles',
+    body: 'Early staff and director roles so the community can be moderated as it grows.',
+  },
+  {
+    date: '2026-05-20',
+    title: 'Interactive Sacramento map',
+    body: 'Leaflet map with zoom controls, custom pins, and driving directions to free items.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'Photos on listings',
+    body: 'Upload pictures when you post so neighbors know exactly what you are giving away.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'Neighborhood map & feed',
+    body: 'Browse free gifts on a map or in a scrollable feed — giving and looking for items.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'Sacramento neighborhood list',
+    body: 'Pick your area when you join so posts stay local to your part of town.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'Works on phone, tablet & desktop',
+    body: 'Layouts adapt to your screen — one community app wherever you open it.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'Offline-friendly',
+    body: 'Basic browsing still works if your connection drops for a moment.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'Orange & sage branding',
+    body: 'Warm community colors and a local logo — built to feel like Sacramento, not a generic app.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'Sacramento Buy Nothing launches',
+    body: 'The app goes live — a free place for Sacramento neighbors to give, ask, and connect with no money involved.',
   },
 ];
 
