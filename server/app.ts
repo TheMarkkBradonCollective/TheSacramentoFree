@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import { randomUUID } from 'crypto';
-import { requireAuth, supabaseAdmin, type AuthedRequest } from './auth.js';
-import { configureVapid, getVapidPublicKey } from './push.js';
-import { runPushTest } from './pushTest.js';
-import { runPushSend, type PushSendBody } from './pushSend.js';
+import { requireAuth, supabaseAdmin, type AuthedRequest } from './auth';
+import { configureVapid, getVapidPublicKey } from './push';
+import { runPushTest } from './pushTest';
+import { runPushSend, type PushSendBody } from './pushSend';
 
 export function createPushApp() {
   const app = express();

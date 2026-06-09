@@ -1,4 +1,4 @@
-import { getUserRole, isStaffRole, supabaseAdmin } from './auth.js';
+import { getUserRole, isStaffRole, supabaseAdmin } from './auth';
 import {
   configureVapid,
   getPreferencesForUsers,
@@ -6,7 +6,7 @@ import {
   withinRadius,
   type PushEventType,
   type PushPayload,
-} from './push.js';
+} from './push';
 
 configureVapid();
 
