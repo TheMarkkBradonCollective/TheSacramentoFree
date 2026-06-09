@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import type {Connect, Plugin} from 'vite';
 import {defineConfig, loadEnv} from 'vite';
-import {createPushApp} from './server/app';
 
 /** Map common Vercel env names into Vite client build variables. */
 function clientEnvDefines(mode: string): Record<string, string> {
@@ -26,16 +25,25 @@ function clientEnvDefines(mode: string): Record<string, string> {
 }
 
 function pushApiPlugin(): Plugin {
-  let pushApp: ReturnType<typeof createPushApp> | null = null;
+  // Lazy-load dev push API so `vite build` never imports Supabase/server code.
+  let pushApp: ReturnType<typeof import('./server/app').createPushApp> | null = null;
 
   const attach = (server: {middlewares: Connect.Server}) => {
-    pushApp = pushApp || createPushApp();
     server.middlewares.use((req, res, next) => {
       if (!req.url?.startsWith('/api')) {
         next();
         return;
       }
-      pushApp!(req, res, next);
+      if (pushApp) {
+        pushApp(req, res, next);
+        return;
+      }
+      import('./server/app')
+        .then((mod) => {
+          pushApp = mod.createPushApp();
+          pushApp(req, res, next);
+        })
+        .catch(next);
     });
   };
 
