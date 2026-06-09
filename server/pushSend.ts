@@ -32,7 +32,12 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
 
   const eventType = body.eventType;
 
-  if (eventType === 'new_item' || eventType === 'new_request' || eventType === 'nearby_item') {
+  if (
+    eventType === 'new_item' ||
+    eventType === 'new_request' ||
+    eventType === 'nearby_item' ||
+    eventType === 'nearby_request'
+  ) {
     const { data: users } = await supabaseAdmin.from('users').select('uid, neighborhood');
     const listingNeighborhood = body.neighborhood || '';
     const category = body.category || '';
@@ -51,10 +56,14 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
         if (!prefs) return false;
 
         const prefKey =
-          eventType === 'new_request' ? 'requests' : eventType === 'nearby_item' ? 'nearbyListings' : 'newListings';
+          eventType === 'new_request' || eventType === 'nearby_request'
+            ? 'requests'
+            : eventType === 'nearby_item'
+              ? 'nearbyListings'
+              : 'newListings';
         if (!prefs.enabled || !prefs[prefKey]) return false;
 
-        if (eventType === 'nearby_item') {
+        if (eventType === 'nearby_item' || eventType === 'nearby_request') {
           return withinRadius(
             String((u as { neighborhood: string }).neighborhood),
             listingNeighborhood,

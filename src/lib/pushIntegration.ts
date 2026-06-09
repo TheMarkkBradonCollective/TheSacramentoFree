@@ -12,6 +12,7 @@ import {
   notifyNewMessage,
   notifyPickupScheduled,
   notifyClaimRequestSubmitted,
+  notifyRequestFulfilled,
   notifySupportReply,
 } from './pushEvents';
 
@@ -64,6 +65,17 @@ export async function pushAfterClaimConfirmed(params: {
 export async function pushAfterItemCompleted(itemId: string, posterUserId: string, claimerUserId: string) {
   const item = await getItemById(itemId);
   if (!item) return;
+
+  if (item.type === 'looking') {
+    const ownerName = await getUserDisplayName(posterUserId);
+    await notifyRequestFulfilled({
+      item,
+      helperUserId: claimerUserId,
+      ownerName,
+    });
+    return;
+  }
+
   await notifyItemGifted({ item, posterUserId, claimerUserId });
 }
 
