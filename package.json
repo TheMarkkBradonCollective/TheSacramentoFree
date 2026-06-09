@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k \"vite --port=3000 --host=0.0.0.0\" \"tsx server/index.ts\"",
+    "dev": "vite --port=3000 --host=0.0.0.0",
     "dev:client": "vite --port=3000 --host=0.0.0.0",
     "dev:server": "tsx server/index.ts",
+    "dev:full": "concurrently -k \"vite --port=3000 --host=0.0.0.0\" \"tsx server/index.ts\"",
     "build": "vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview",

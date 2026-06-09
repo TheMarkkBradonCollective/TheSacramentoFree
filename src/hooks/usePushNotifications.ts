@@ -99,7 +99,11 @@ export function usePushNotifications(userId?: string) {
     const result = await sendTestPushNotification();
     setIsTesting(false);
     if (result.ok) {
-      setTestMessage('Test notification sent — check your device.');
+      setTestMessage(
+        result.localOnly
+          ? 'Local test notification shown. For background push when the app is closed, deploy with npm start and set VAPID keys.'
+          : 'Test notification sent — check your device.',
+      );
     } else {
       setError(result.errorMessage || 'Could not send test notification.');
     }
