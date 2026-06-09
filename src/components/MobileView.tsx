@@ -42,6 +42,7 @@ interface MobileViewProps {
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
+  onOpenGoFundMe?: () => void;
 }
 
 const NAV_ITEMS = [
@@ -80,6 +81,7 @@ export default function MobileView({
   engagement,
   eventsEngagement,
   blockedUserIds = new Set(),
+  onOpenGoFundMe,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
@@ -114,10 +116,9 @@ export default function MobileView({
       >
         {/* Keep map mounted so Leaflet keeps size; hide when another tab is active */}
         <div
-          className={`relative h-full w-full min-h-0 overflow-y-auto flex flex-col ${activeTab === 'map' ? '' : 'hidden'}`}
+          className={`relative h-full w-full min-h-0 ${activeTab === 'map' ? '' : 'hidden'}`}
           aria-hidden={activeTab !== 'map'}
         >
-          <div className="relative flex-1 min-h-[min(70vh,32rem)] w-full shrink-0">
           <SacramentoMapView
             items={items}
             userProfile={userProfile}
@@ -155,8 +156,6 @@ export default function MobileView({
               🎨 Index
             </button>
           </div>
-          </div>
-          <PageScrollFooter className="-mx-0" />
         </div>
 
         <div
@@ -181,7 +180,7 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
             />
-            <PageScrollFooter className="-mx-4" />
+            <PageScrollFooter className="-mx-4" onOpenDetails={onOpenGoFundMe} />
           </div>
           <button
             type="button"
@@ -213,7 +212,7 @@ export default function MobileView({
               onRefresh={onRefreshEvents}
               isLoading={isEventsLoading}
             />
-            <PageScrollFooter className="-mx-4" />
+            <PageScrollFooter className="-mx-4" onOpenDetails={onOpenGoFundMe} />
           </div>
           <button
             type="button"
@@ -246,7 +245,7 @@ export default function MobileView({
               className="h-full min-h-0"
             />
           </div>
-          <PageScrollFooter />
+          <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
         </div>
 
         <div
@@ -266,7 +265,7 @@ export default function MobileView({
               onDeleteAccount={onDeleteAccount}
               fullBleed
             />
-            <PageScrollFooter className="-mx-4" />
+            <PageScrollFooter className="-mx-4" onOpenDetails={onOpenGoFundMe} />
           </div>
         </div>
 
@@ -285,7 +284,7 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               fullBleed
             />
-            <PageScrollFooter className="-mx-4" />
+            <PageScrollFooter className="-mx-4" onOpenDetails={onOpenGoFundMe} />
           </div>
         </div>
       </main>

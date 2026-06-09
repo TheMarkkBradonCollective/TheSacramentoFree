@@ -95,7 +95,7 @@ export default function PublicSite({
       <PublicNav route={route} onNavigate={navigate} />
       <main className="flex-1 min-h-0 overflow-y-auto">
         {renderPage()}
-        <PageScrollFooter />
+        {route !== 'gofundme' && <PageScrollFooter onOpenDetails={() => navigate('gofundme')} />}
       </main>
     </div>
   );

@@ -41,6 +41,7 @@ interface DesktopViewProps {
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
+  onOpenGoFundMe?: () => void;
 }
 
 export default function DesktopView({
@@ -70,6 +71,7 @@ export default function DesktopView({
   engagement,
   eventsEngagement,
   blockedUserIds = new Set(),
+  onOpenGoFundMe,
 }: DesktopViewProps) {
   return (
     <div id="desktop_device_workspace" className="min-h-screen h-dvh flex flex-col mesh-bg text-app overflow-hidden">
@@ -206,7 +208,7 @@ export default function DesktopView({
           </div>
         )}
 
-        <PageScrollFooter />
+        {activeTab !== 'map' && <PageScrollFooter onOpenDetails={onOpenGoFundMe} />}
       </main>
     </div>
   );

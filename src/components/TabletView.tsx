@@ -42,6 +42,7 @@ interface TabletViewProps {
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
+  onOpenGoFundMe?: () => void;
 }
 
 const TABS = [
@@ -80,6 +81,7 @@ export default function TabletView({
   engagement,
   eventsEngagement,
   blockedUserIds = new Set(),
+  onOpenGoFundMe,
 }: TabletViewProps) {
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen h-dvh mesh-bg text-app overflow-hidden">
@@ -245,7 +247,7 @@ export default function TabletView({
           </div>
         )}
 
-        <PageScrollFooter />
+        {activeTab !== 'map' && <PageScrollFooter onOpenDetails={onOpenGoFundMe} />}
       </main>
     </div>
   );
