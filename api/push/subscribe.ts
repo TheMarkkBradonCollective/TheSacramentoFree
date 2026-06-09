@@ -1,9 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export const config = {
-  runtime: 'nodejs20.x',
-};
 import { getUserFromBearer } from '../_lib/push/auth';
 import { getSupabaseAdmin } from '../_lib/push/supabaseAdmin';
 import { parseJsonBody } from '../_lib/parseBody';

@@ -1,8 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export const config = {
-  runtime: 'nodejs20.x',
-};
 import { getUserFromBearer } from '../_lib/push/auth';
 import { runPushSend, type PushSendBody } from '../_lib/push/runPushSend';
 import { parseJsonBody } from '../_lib/parseBody';
