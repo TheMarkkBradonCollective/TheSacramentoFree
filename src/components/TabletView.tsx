@@ -122,7 +122,7 @@ export default function TabletView({
         </div>
       </header>
 
-      <main id="tablet_content_container" className="flex-1 min-h-0 overflow-y-auto max-w-5xl w-full mx-auto p-5">
+      <main id="tablet_content_container" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-5xl w-full mx-auto p-5">
         {activeTab === 'feed' && (
           <div className="space-y-5" id="tablet_feed_pane">
             <div className="sbn-page-header">

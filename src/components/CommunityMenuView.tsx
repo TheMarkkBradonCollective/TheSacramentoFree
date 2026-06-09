@@ -33,7 +33,7 @@ export default function CommunityMenuView({
   const [editingStaff, setEditingStaff] = useState(false);
 
   return (
-    <div className={fullBleed ? 'pb-6' : 'space-y-6'}>
+    <div className={`${fullBleed ? 'pb-6' : 'space-y-6'} min-w-0 w-full overflow-x-hidden`}>
       {canEditDirector && (
         <div className={fullBleed ? sectionShell : ''}>
           <div className="sbn-card p-4 flex items-center justify-between gap-3">

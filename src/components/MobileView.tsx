@@ -270,11 +270,11 @@ export default function MobileView({
         </div>
 
         <div
-          className={`h-full w-full min-h-0 overflow-y-auto bg-app ${activeTab === 'menu' ? '' : 'hidden'}`}
+          className={`h-full w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none bg-app ${activeTab === 'menu' ? '' : 'hidden'}`}
           id="mobile_menu_dock"
           aria-hidden={activeTab !== 'menu'}
         >
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden">
             <div className="sbn-page-header px-4 pt-4 pb-2">
               <h2>{IN_APP.menuTitle}</h2>
               <p className="text-sm text-muted mt-1">{IN_APP.menuDescription}</p>
@@ -284,7 +284,7 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               fullBleed
             />
-            <PageScrollFooter className="-mx-4" onOpenDetails={onOpenGoFundMe} />
+            <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
           </div>
         </div>
       </main>

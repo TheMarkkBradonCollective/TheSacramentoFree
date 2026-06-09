@@ -28,7 +28,7 @@ function buildConfetti(count: number): ConfettiPiece[] {
     size: 6 + Math.random() * 8,
     color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
     rotate: Math.random() * 360,
-    drift: -40 + Math.random() * 80,
+    drift: -18 + Math.random() * 36,
   }));
 }
 
