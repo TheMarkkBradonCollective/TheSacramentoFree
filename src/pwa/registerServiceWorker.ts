@@ -11,7 +11,7 @@ export function registerServiceWorker() {
 
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register('/service-worker.js')
       .then((registration) => {
         console.log('Service worker registered:', registration.scope);
 

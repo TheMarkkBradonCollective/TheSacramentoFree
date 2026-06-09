@@ -1,0 +1,312 @@
+import webpush from 'web-push';
+import { supabaseAdmin } from './auth.js';
+
+export type PushEventType =
+  | 'new_item'
+  | 'new_request'
+  | 'item_claimed'
+  | 'item_gifted'
+  | 'pickup_scheduled'
+  | 'pickup_reminder'
+  | 'new_message'
+  | 'new_comment'
+  | 'listing_approved'
+  | 'listing_denied'
+  | 'listing_expiring'
+  | 'nearby_item'
+  | 'announcement'
+  | 'account_update';
+
+export interface PushPayload {
+  title: string;
+  body: string;
+  url: string;
+  tag?: string;
+  eventType: PushEventType;
+  data?: Record<string, string>;
+}
+
+export interface NotificationPreferencesRow {
+  userId: string;
+  enabled: boolean;
+  messages: boolean;
+  claims: boolean;
+  gifts: boolean;
+  comments: boolean;
+  nearbyListings: boolean;
+  requests: boolean;
+  announcements: boolean;
+  pickupReminders: boolean;
+  newListings: boolean;
+  accountUpdates: boolean;
+  nearbyRadiusMiles: number;
+  followedCategories: string[];
+}
+
+interface PushSubscriptionRow {
+  id: string;
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | 'enabled'> = {
+  new_item: 'newListings',
+  new_request: 'requests',
+  item_claimed: 'claims',
+  item_gifted: 'gifts',
+  pickup_scheduled: 'pickupReminders',
+  pickup_reminder: 'pickupReminders',
+  new_message: 'messages',
+  new_comment: 'comments',
+  listing_approved: 'newListings',
+  listing_denied: 'newListings',
+  listing_expiring: 'newListings',
+  nearby_item: 'nearbyListings',
+  announcement: 'announcements',
+  account_update: 'accountUpdates',
+};
+
+let vapidConfigured = false;
+
+export function configureVapid() {
+  const publicKey = process.env.VAPID_PUBLIC_KEY || '';
+  const privateKey = process.env.VAPID_PRIVATE_KEY || '';
+  const subject = process.env.VAPID_SUBJECT || process.env.APP_URL || 'mailto:support@sacbuynothing.org';
+
+  if (!publicKey || !privateKey) {
+    console.warn('[push] VAPID keys not configured — push delivery disabled');
+    return false;
+  }
+
+  try {
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+    vapidConfigured = true;
+    return true;
+  } catch (err) {
+    console.warn('[push] Invalid VAPID keys — push delivery disabled:', (err as Error).message);
+    return false;
+  }
+}
+
+export function getVapidPublicKey(): string {
+  return process.env.VAPID_PUBLIC_KEY || '';
+}
+
+function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {
+  return {
+    userId: String(row.userId),
+    enabled: row.enabled !== false,
+    messages: row.messages !== false,
+    claims: row.claims !== false,
+    gifts: row.gifts !== false,
+    comments: row.comments !== false,
+    nearbyListings: row.nearbyListings !== false,
+    requests: row.requests !== false,
+    announcements: row.announcements !== false,
+    pickupReminders: row.pickupReminders !== false,
+    newListings: row.newListings !== false,
+    accountUpdates: row.accountUpdates !== false,
+    nearbyRadiusMiles: Number(row.nearbyRadiusMiles ?? 10),
+    followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
+  };
+}
+
+export function userAllowsEvent(prefs: NotificationPreferencesRow, eventType: PushEventType): boolean {
+  if (!prefs.enabled) return false;
+  const key = EVENT_PREF_MAP[eventType];
+  if (key === 'enabled') return prefs.enabled;
+  return Boolean(prefs[key]);
+}
+
+export async function getPreferencesForUsers(userIds: string[]): Promise<Map<string, NotificationPreferencesRow>> {
+  const map = new Map<string, NotificationPreferencesRow>();
+  if (!userIds.length) return map;
+
+  const { data } = await supabaseAdmin.from('notification_preferences').select('*').in('userId', userIds);
+  for (const row of data || []) {
+    map.set(String((row as Record<string, unknown>).userId), normalizePrefs(row as Record<string, unknown>));
+  }
+
+  for (const uid of userIds) {
+    if (!map.has(uid)) {
+      map.set(uid, {
+        userId: uid,
+        enabled: true,
+        messages: true,
+        claims: true,
+        gifts: true,
+        comments: true,
+        nearbyListings: true,
+        requests: true,
+        announcements: true,
+        pickupReminders: true,
+        newListings: true,
+        accountUpdates: true,
+        nearbyRadiusMiles: 10,
+        followedCategories: [],
+      });
+    }
+  }
+
+  return map;
+}
+
+export async function getSubscriptionsForUsers(userIds: string[]): Promise<PushSubscriptionRow[]> {
+  if (!userIds.length) return [];
+  const { data, error } = await supabaseAdmin.from('push_subscriptions').select('*').in('userId', userIds);
+  if (error) {
+    console.error('[push] subscription query failed:', error.message);
+    return [];
+  }
+  return (data || []) as PushSubscriptionRow[];
+}
+
+async function removeInvalidSubscription(endpoint: string) {
+  await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint);
+}
+
+export async function sendToSubscription(subscription: PushSubscriptionRow, payload: PushPayload) {
+  if (!vapidConfigured) return { ok: false as const, removed: false };
+
+  const pushSubscription = {
+    endpoint: subscription.endpoint,
+    keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+  };
+
+  const notification = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    url: payload.url,
+    tag: payload.tag || payload.eventType,
+    eventType: payload.eventType,
+    data: payload.data || {},
+  });
+
+  try {
+    await webpush.sendNotification(pushSubscription, notification);
+    return { ok: true as const, removed: false };
+  } catch (err: unknown) {
+    const status = (err as { statusCode?: number }).statusCode;
+    if (status === 404 || status === 410) {
+      await removeInvalidSubscription(subscription.endpoint);
+      return { ok: false as const, removed: true };
+    }
+    console.error('[push] send failed:', (err as Error).message);
+    return { ok: false as const, removed: false };
+  }
+}
+
+export async function sendPushToUsers(
+  userIds: string[],
+  payload: PushPayload,
+  options?: { excludeUserIds?: string[] },
+) {
+  const exclude = new Set(options?.excludeUserIds || []);
+  const targets = [...new Set(userIds)].filter((id) => id && !exclude.has(id));
+  if (!targets.length || !vapidConfigured) {
+    return { sent: 0, failed: 0, removed: 0, skipped: targets.length };
+  }
+
+  const prefsMap = await getPreferencesForUsers(targets);
+  const allowed = targets.filter((uid) => {
+    const prefs = prefsMap.get(uid);
+    return prefs && userAllowsEvent(prefs, payload.eventType);
+  });
+
+  const subscriptions = await getSubscriptionsForUsers(allowed);
+  let sent = 0;
+  let failed = 0;
+  let removed = 0;
+
+  await Promise.all(
+    subscriptions.map(async (sub) => {
+      const result = await sendToSubscription(sub, payload);
+      if (result.ok) sent += 1;
+      else {
+        failed += 1;
+        if (result.removed) removed += 1;
+      }
+    }),
+  );
+
+  return { sent, failed, removed, skipped: targets.length - allowed.length };
+}
+
+/** Haversine distance in miles between two lat/lng points. */
+export function distanceMiles(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 3958.8;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+const NEIGHBORHOOD_COORDS: Record<string, { lat: number; lng: number }> = {
+  Midtown: { lat: 38.5724, lng: -121.4784 },
+  Downtown: { lat: 38.5816, lng: -121.4944 },
+  'East Sacramento': { lat: 38.5674, lng: -121.4429 },
+  McKinley: { lat: 38.5608, lng: -121.4693 },
+  'River Park': { lat: 38.5624, lng: -121.4325 },
+  'Oak Park': { lat: 38.5447, lng: -121.4614 },
+  'Tahoe Park': { lat: 38.5455, lng: -121.4326 },
+  'Colonial Heights': { lat: 38.5324, lng: -121.4472 },
+  'Land Park': { lat: 38.5432, lng: -121.4975 },
+  'Curtis Park': { lat: 38.5484, lng: -121.4795 },
+  'Hollywood Park': { lat: 38.534, lng: -121.492 },
+  'South Sacramento': { lat: 38.4952, lng: -121.4468 },
+  'North Sacramento': { lat: 38.606, lng: -121.457 },
+  Natomas: { lat: 38.6368, lng: -121.5034 },
+  Rosemont: { lat: 38.547, lng: -121.41 },
+  Carmichael: { lat: 38.6171, lng: -121.3283 },
+  'Arden Arcade': { lat: 38.6013, lng: -121.3916 },
+  'Del Paso Heights': { lat: 38.625, lng: -121.455 },
+  'Citrus Heights': { lat: 38.7071, lng: -121.2811 },
+  Greenhaven: { lat: 38.4907, lng: -121.5365 },
+  Pocket: { lat: 38.465, lng: -121.505 },
+  'South Land Park': { lat: 38.525, lng: -121.51 },
+  Antelope: { lat: 38.7082, lng: -121.3299 },
+  Auburn: { lat: 38.8966, lng: -121.077 },
+  Davis: { lat: 38.5449, lng: -121.7402 },
+  'El Dorado Hills': { lat: 38.685, lng: -121.082 },
+  'Elk Grove': { lat: 38.4088, lng: -121.3716 },
+  'Fair Oaks': { lat: 38.6446, lng: -121.272 },
+  Folsom: { lat: 38.6779, lng: -121.176 },
+  'Foothill Farms': { lat: 38.678, lng: -121.346 },
+  'Old Foothill Farms': { lat: 38.662, lng: -121.362 },
+  'La Riviera': { lat: 38.568, lng: -121.366 },
+  'North Highlands': { lat: 38.6681, lng: -121.3726 },
+  Orangevale: { lat: 38.6785, lng: -121.2254 },
+  'Rancho Cordova': { lat: 38.5891, lng: -121.3027 },
+  'Rio Linda': { lat: 38.69, lng: -121.4486 },
+  Roseville: { lat: 38.7521, lng: -121.288 },
+  'West Sacramento': { lat: 38.5805, lng: -121.5302 },
+  Woodland: { lat: 38.6785, lng: -121.773 },
+};
+
+export function coordsForNeighborhood(name: string): { lat: number; lng: number } | null {
+  return NEIGHBORHOOD_COORDS[name] || null;
+}
+
+export function withinRadius(
+  viewerNeighborhood: string,
+  itemNeighborhood: string,
+  itemLatLng: { lat: number; lng: number } | null,
+  radiusMiles: number,
+): boolean {
+  if (radiusMiles === 0) {
+    return viewerNeighborhood === itemNeighborhood;
+  }
+
+  const viewerCoords = coordsForNeighborhood(viewerNeighborhood);
+  const itemCoords = itemLatLng || coordsForNeighborhood(itemNeighborhood);
+  if (!viewerCoords || !itemCoords) {
+    return viewerNeighborhood === itemNeighborhood;
+  }
+
+  return distanceMiles(viewerCoords, itemCoords) <= radiusMiles;
+}

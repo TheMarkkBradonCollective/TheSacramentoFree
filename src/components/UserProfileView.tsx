@@ -25,6 +25,7 @@ import {
   Camera,
 } from 'lucide-react';
 import CommunityFooter from './CommunityFooter';
+import NotificationSettings from './NotificationSettings';
 import { IN_APP } from '../siteContent';
 
 interface UserProfileViewProps {
@@ -429,6 +430,8 @@ export default function UserProfileView({
           </form>
         </div>
       </div>
+
+      <NotificationSettings userId={userProfile.uid} fullBleed={fullBleed} />
 
       {/* Modern PWA App Installation Widget */}
       <div
