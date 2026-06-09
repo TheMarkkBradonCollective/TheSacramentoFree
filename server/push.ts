@@ -94,6 +94,10 @@ export function getVapidPublicKey(): string {
   return process.env.VAPID_PUBLIC_KEY || '';
 }
 
+export function isVapidConfigured(): boolean {
+  return vapidConfigured;
+}
+
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {
   return {
     userId: String(row.userId),
@@ -201,19 +205,22 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
 export async function sendPushToUsers(
   userIds: string[],
   payload: PushPayload,
-  options?: { excludeUserIds?: string[] },
+  options?: { excludeUserIds?: string[]; skipPreferenceCheck?: boolean },
 ) {
   const exclude = new Set(options?.excludeUserIds || []);
   const targets = [...new Set(userIds)].filter((id) => id && !exclude.has(id));
   if (!targets.length || !vapidConfigured) {
-    return { sent: 0, failed: 0, removed: 0, skipped: targets.length };
+    return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0 };
   }
 
-  const prefsMap = await getPreferencesForUsers(targets);
-  const allowed = targets.filter((uid) => {
-    const prefs = prefsMap.get(uid);
-    return prefs && userAllowsEvent(prefs, payload.eventType);
-  });
+  let allowed = targets;
+  if (!options?.skipPreferenceCheck) {
+    const prefsMap = await getPreferencesForUsers(targets);
+    allowed = targets.filter((uid) => {
+      const prefs = prefsMap.get(uid);
+      return prefs && userAllowsEvent(prefs, payload.eventType);
+    });
+  }
 
   const subscriptions = await getSubscriptionsForUsers(allowed);
   let sent = 0;
@@ -231,7 +238,13 @@ export async function sendPushToUsers(
     }),
   );
 
-  return { sent, failed, removed, skipped: targets.length - allowed.length };
+  return {
+    sent,
+    failed,
+    removed,
+    skipped: options?.skipPreferenceCheck ? 0 : targets.length - allowed.length,
+    subscriptionCount: subscriptions.length,
+  };
 }
 
 /** Haversine distance in miles between two lat/lng points. */

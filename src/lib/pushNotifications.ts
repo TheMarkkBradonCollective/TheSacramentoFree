@@ -118,7 +118,7 @@ export async function ensurePushSubscription(): Promise<PushSubscription | null>
   const token = await getAccessToken();
   if (!token) return existing;
 
-  await fetch('/api/push/subscribe', {
+  const res = await fetch('/api/push/subscribe', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -128,7 +128,12 @@ export async function ensurePushSubscription(): Promise<PushSubscription | null>
       subscription: existing.toJSON(),
       userAgent: navigator.userAgent,
     }),
-  }).catch(() => {});
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Could not save push subscription on the server.');
+  }
 
   return existing;
 }
@@ -174,6 +179,19 @@ export async function sendTestPushNotification(): Promise<{ ok: boolean; errorMe
     return { ok: false, errorMessage: 'Sign in to test notifications.' };
   }
 
+  if (getPushPermissionState() !== 'granted') {
+    return { ok: false, errorMessage: 'Allow notifications in your browser, then try again.' };
+  }
+
+  try {
+    await ensurePushSubscription();
+  } catch (err) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not refresh push subscription.',
+    };
+  }
+
   try {
     const res = await fetch('/api/push/test', {
       method: 'POST',
@@ -181,12 +199,20 @@ export async function sendTestPushNotification(): Promise<{ ok: boolean; errorMe
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
+      if (res.status === 404) {
+        return {
+          ok: false,
+          errorMessage:
+            'Push API server is not reachable. Run npm run dev (starts Vite + push server) or deploy with npm start.',
+        };
+      }
       return { ok: false, errorMessage: json.error || 'Could not send test notification.' };
     }
     if (json.sent === 0) {
       return {
         ok: false,
         errorMessage:
+          json.error ||
           'No push subscription found on this device. Enable notifications first, then try again.',
       };
     }
@@ -194,7 +220,10 @@ export async function sendTestPushNotification(): Promise<{ ok: boolean; errorMe
   } catch (err) {
     return {
       ok: false,
-      errorMessage: err instanceof Error ? err.message : 'Could not send test notification.',
+      errorMessage:
+        err instanceof Error
+          ? err.message
+          : 'Could not reach the push API. Make sure the push server is running.',
     };
   }
 }
