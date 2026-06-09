@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserFromBearer } from '../../server/vercelAuth';
-import { runPushTest } from '../../server/pushTest';
+import { getUserFromBearer } from '../../lib/push-server/auth';
+import { runPushTest } from '../../lib/push-server/runPushTest';
+import { parseJsonBody } from '../_lib/parseBody';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -14,8 +15,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const subscription = req.body?.subscription;
-    const result = await runPushTest({ userId: user.id, subscription });
+    const body = parseJsonBody<{ subscription?: { endpoint: string; keys: { p256dh: string; auth: string } } }>(
+      req,
+    );
+    const result = await runPushTest({ userId: user.id, subscription: body.subscription });
     return res.status(result.status).json(result.body);
   } catch (err) {
     console.error('[api/push/test]', err);

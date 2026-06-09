@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createPushApp } from './app.js';
+import { createPushApp } from './app';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = createPushApp();

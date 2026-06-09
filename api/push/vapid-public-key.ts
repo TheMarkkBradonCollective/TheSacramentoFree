@@ -1,7 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { configureVapid, getVapidPublicKey } from '../../server/push';
-
-configureVapid();
+import { getVapidPublicKey } from '../../lib/push-server/vapid';
 
 export default function handler(_req: VercelRequest, res: VercelResponse) {
   const key = getVapidPublicKey();

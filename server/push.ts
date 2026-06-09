@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import { supabaseAdmin } from './auth.js';
+import { supabaseAdmin } from './auth';
 
 export type PushEventType =
   | 'new_item'
