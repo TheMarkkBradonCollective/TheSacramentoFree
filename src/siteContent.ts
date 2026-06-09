@@ -144,10 +144,17 @@ export function appUpdateId(update: Pick<AppUpdate, 'date' | 'title'>): string {
 export const APP_UPDATES: AppUpdate[] = [
   {
     date: '2026-06-09',
+    title: 'Each staff member writes their own message',
+    body: 'Team notes are personal now — every staff member publishes their own welcome message on home and reviews.',
+    detail:
+      'Instead of one shared city manager note, each moderator, administrator, and city manager can write and save their own message from Help & support. Published messages appear in the home carousel and on the reviews page. The director still has a separate director note.',
+  },
+  {
+    date: '2026-06-09',
     title: 'Vote on updates, reviews & team notes',
     body: 'Upvote or downvote changelog entries, neighbor reviews, and staff messages. Update votes go to your director.',
     detail:
-      'Tap an update to read the full story, then weigh in with an up or down vote. Reviews and messages from the director or city manager can be voted on too. Sign in to vote — you cannot vote on your own review.',
+      'Tap an update to read the full story, then weigh in with an up or down vote. Reviews and messages from the director or any staff member can be voted on too. Sign in to vote — you cannot vote on your own review.',
   },
   {
     date: '2026-06-09',
@@ -540,10 +547,10 @@ export const DIRECTOR_MESSAGE = {
   closing: 'Thank you for being part of this community.',
 } as const;
 
-export const CITY_MANAGER_MESSAGE = {
+export const STAFF_MESSAGE_DEFAULT = {
   name: 'Sacramento Buy Nothing',
-  title: 'City Manager',
-  headline: 'A note from your city manager',
+  title: 'Team member',
+  headline: 'A note from our team',
   goal:
     'I help keep our Sacramento circle welcoming, fair, and focused on neighbors helping neighbors — with moderation, support, and community leadership.',
   promises: [

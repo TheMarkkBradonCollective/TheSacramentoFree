@@ -550,12 +550,12 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================================
--- 18b. City manager message (editable by city manager / director)
+-- 18b. Staff messages (one published note per staff member)
 -- =========================================================
-CREATE TABLE IF NOT EXISTS public.city_manager_message (
-  id TEXT PRIMARY KEY DEFAULT 'main',
-  "managerName" TEXT NOT NULL,
-  "managerTitle" TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS public.staff_messages (
+  "userId" TEXT PRIMARY KEY,
+  "staffName" TEXT NOT NULL,
+  "staffTitle" TEXT NOT NULL,
   headline TEXT NOT NULL,
   goal TEXT NOT NULL,
   promises JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -564,25 +564,13 @@ CREATE TABLE IF NOT EXISTS public.city_manager_message (
   "updatedByUserId" TEXT
 );
 
-ALTER TABLE public.city_manager_message ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow read city manager message" ON public.city_manager_message;
-CREATE POLICY "Allow read city manager message" ON public.city_manager_message FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Allow write city manager message" ON public.city_manager_message;
-CREATE POLICY "Allow write city manager message" ON public.city_manager_message FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE public.staff_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read staff messages" ON public.staff_messages;
+CREATE POLICY "Allow read staff messages" ON public.staff_messages FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write staff messages" ON public.staff_messages;
+CREATE POLICY "Allow write staff messages" ON public.staff_messages FOR ALL USING (true) WITH CHECK (true);
 
-INSERT INTO public.city_manager_message (
-  id, "managerName", "managerTitle", headline, goal, promises, closing
-)
-VALUES (
-  'main',
-  'Sacramento Buy Nothing',
-  'City Manager',
-  'A note from your city manager',
-  'I help keep our Sacramento circle welcoming, fair, and focused on neighbors helping neighbors — with moderation, support, and community leadership.',
-  '["I am here when something feels off or unsafe.","Reports and tickets get real attention from staff.","We protect the free, local spirit of this community.","Your voice matters in how we grow together."]'::jsonb,
-  'Reach out anytime through Help & support — we are listening.'
-)
-ON CONFLICT (id) DO NOTHING;
+CREATE INDEX IF NOT EXISTS staff_messages_updated_idx ON public.staff_messages ("updatedAt" DESC);
 
 -- =========================================================
 -- 19. App reviews (0–5 stars, half-star steps, one per user)
@@ -620,7 +608,7 @@ DECLARE
   tbl TEXT;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
-    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'listing_subitems', 'item_claim_requests', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log', 'user_reports', 'support_tickets', 'support_ticket_messages', 'community_events', 'event_rsvps', 'event_comments', 'director_message', 'city_manager_message', 'app_reviews'
+    'items', 'chats', 'messages', 'item_votes', 'item_comments', 'item_claims', 'listing_subitems', 'item_claim_requests', 'users', 'user_blocks', 'message_requests', 'moderation_audit_log', 'user_reports', 'support_tickets', 'support_ticket_messages', 'community_events', 'event_rsvps', 'event_comments', 'director_message', 'staff_messages', 'app_reviews'
   ]
   LOOP
     IF NOT EXISTS (

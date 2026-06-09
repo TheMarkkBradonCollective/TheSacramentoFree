@@ -1,8 +1,9 @@
 import { UserProfile } from '../types';
 import DirectorMessage from './DirectorMessage';
-import CityManagerMessage from './CityManagerMessage';
+import StaffMessage from './StaffMessage';
 import HorizontalSnapRow, { SnapSlide } from './HorizontalSnapRow';
-import { useCityManagerMessage } from '../hooks/useCityManagerMessage';
+import { usePublishedStaffMessages } from '../hooks/usePublishedStaffMessages';
+import { useStaffMessage } from '../hooks/useStaffMessage';
 
 interface LeadershipMessagesCarouselProps {
   userProfile?: UserProfile | null;
@@ -13,10 +14,11 @@ export default function LeadershipMessagesCarousel({
   userProfile,
   onRequireSignIn,
 }: LeadershipMessagesCarouselProps) {
-  const { isPublished, loading } = useCityManagerMessage(userProfile);
-  const showCityManager = !loading && isPublished;
+  const { messages: staffMessages, loading } = usePublishedStaffMessages();
+  const { saveMessage } = useStaffMessage(userProfile);
+  const hasStaffMessages = !loading && staffMessages.length > 0;
 
-  if (!showCityManager) {
+  if (!hasStaffMessages) {
     return (
       <div>
         <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">From our team</p>
@@ -32,9 +34,18 @@ export default function LeadershipMessagesCarousel({
         <SnapSlide>
           <DirectorMessage userProfile={userProfile} compact onRequireSignIn={onRequireSignIn} />
         </SnapSlide>
-        <SnapSlide>
-          <CityManagerMessage userProfile={userProfile} compact onRequireSignIn={onRequireSignIn} />
-        </SnapSlide>
+        {staffMessages.map((message) => (
+          <SnapSlide key={message.userId}>
+            <StaffMessage
+              message={message}
+              userProfile={userProfile}
+              compact
+              canEdit={userProfile?.uid === message.userId}
+              onSave={userProfile?.uid === message.userId ? saveMessage : undefined}
+              onRequireSignIn={onRequireSignIn}
+            />
+          </SnapSlide>
+        ))}
       </HorizontalSnapRow>
     </div>
   );

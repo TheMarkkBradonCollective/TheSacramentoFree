@@ -1,5 +1,5 @@
 import DirectorMessage from '../../DirectorMessage';
-import CityManagerMessage from '../../CityManagerMessage';
+import PublishedStaffMessages from '../../PublishedStaffMessages';
 import CommunityReviews from '../../CommunityReviews';
 import PublicPageShell from '../PublicPageShell';
 
@@ -11,11 +11,13 @@ export default function ReviewsPage({ onRequireSignIn }: ReviewsPageProps) {
   return (
     <PublicPageShell
       title="Reviews"
-      subtitle="What neighbors think of the app — and a note from our director when you scroll down."
+      subtitle="What neighbors think of the app — and notes from our team when you scroll down."
     >
       <CommunityReviews onRequireSignIn={onRequireSignIn} />
-      <DirectorMessage onRequireSignIn={onRequireSignIn} />
-      <CityManagerMessage onRequireSignIn={onRequireSignIn} />
+      <div className="space-y-5 mt-8">
+        <DirectorMessage onRequireSignIn={onRequireSignIn} />
+        <PublishedStaffMessages onRequireSignIn={onRequireSignIn} />
+      </div>
     </PublicPageShell>
   );
 }

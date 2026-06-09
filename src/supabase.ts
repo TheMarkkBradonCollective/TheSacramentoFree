@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, CityManagerMessageContent, AppReview, CommunityContentVote, CommunityContentVoteTarget } from './types';
-import { CITY_MANAGER_MESSAGE, DIRECTOR_MESSAGE } from './siteContent';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, CommunityContentVote, CommunityContentVoteTarget } from './types';
+import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canEditCityManagerMessage, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleRank } from './lib/roles';
+import { normalizeUserRole, type UserRole, canEditOwnStaffMessage, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -2366,74 +2366,110 @@ export async function updateSupabaseDirectorMessage(
   }
 }
 
-export function defaultCityManagerMessageContent(): CityManagerMessageContent {
+export function defaultStaffMessageContent(
+  userId: string,
+  profile?: Pick<UserProfile, 'displayName' | 'role'> | null,
+): StaffMessageContent {
   return {
-    id: 'main',
-    managerName: CITY_MANAGER_MESSAGE.name,
-    managerTitle: CITY_MANAGER_MESSAGE.title,
-    headline: CITY_MANAGER_MESSAGE.headline,
-    goal: CITY_MANAGER_MESSAGE.goal,
-    promises: [...CITY_MANAGER_MESSAGE.promises],
-    closing: CITY_MANAGER_MESSAGE.closing,
+    userId,
+    staffName: profile?.displayName?.trim() || STAFF_MESSAGE_DEFAULT.name,
+    staffTitle: profile?.role ? roleLabel(profile.role) : STAFF_MESSAGE_DEFAULT.title,
+    headline: STAFF_MESSAGE_DEFAULT.headline,
+    goal: STAFF_MESSAGE_DEFAULT.goal,
+    promises: [...STAFF_MESSAGE_DEFAULT.promises],
+    closing: STAFF_MESSAGE_DEFAULT.closing,
     updatedAt: new Date().toISOString(),
     updatedByUserId: null,
   };
 }
 
-function normalizeCityManagerMessageRow(row: Record<string, unknown>): CityManagerMessageContent {
+function normalizeStaffMessageRow(
+  row: Record<string, unknown>,
+  fallback?: StaffMessageContent,
+): StaffMessageContent {
+  const base = fallback ?? defaultStaffMessageContent(String(row.userId || ''));
   const rawPromises = row.promises;
   const promises = Array.isArray(rawPromises)
     ? rawPromises.map(String).filter(Boolean)
-    : defaultCityManagerMessageContent().promises;
+    : base.promises;
 
   return {
-    id: String(row.id || 'main'),
-    managerName: String(row.managerName || CITY_MANAGER_MESSAGE.name),
-    managerTitle: String(row.managerTitle || CITY_MANAGER_MESSAGE.title),
-    headline: String(row.headline || CITY_MANAGER_MESSAGE.headline),
-    goal: String(row.goal || CITY_MANAGER_MESSAGE.goal),
+    userId: String(row.userId || base.userId),
+    staffName: String(row.staffName || base.staffName),
+    staffTitle: String(row.staffTitle || base.staffTitle),
+    headline: String(row.headline || base.headline),
+    goal: String(row.goal || base.goal),
     promises,
-    closing: String(row.closing || CITY_MANAGER_MESSAGE.closing),
+    closing: String(row.closing || base.closing),
     updatedAt: coerceToIsoDate(row.updatedAt),
     updatedByUserId: row.updatedByUserId ? String(row.updatedByUserId) : null,
   };
 }
 
-export async function getSupabaseCityManagerMessage(): Promise<CityManagerMessageContent> {
+export async function getSupabaseStaffMessage(
+  userId: string,
+  profile?: Pick<UserProfile, 'displayName' | 'role'> | null,
+): Promise<StaffMessageContent> {
+  const fallback = defaultStaffMessageContent(userId, profile);
   try {
     const { data, error } = await supabase
-      .from('city_manager_message')
+      .from('staff_messages')
       .select('*')
-      .eq('id', 'main')
+      .eq('userId', userId)
       .maybeSingle();
 
     if (error) {
-      if (error.code === '42P01') return defaultCityManagerMessageContent();
-      handleSupabaseError(error, 'city_manager_message');
-      return defaultCityManagerMessageContent();
+      if (error.code === '42P01') return fallback;
+      handleSupabaseError(error, 'staff_messages');
+      return fallback;
     }
 
-    if (!data) return defaultCityManagerMessageContent();
+    if (!data) return fallback;
     setSupabaseConfigurationState(true);
-    return normalizeCityManagerMessageRow(data as Record<string, unknown>);
+    return normalizeStaffMessageRow(data as Record<string, unknown>, fallback);
   } catch {
-    return defaultCityManagerMessageContent();
+    return fallback;
   }
 }
 
-export async function updateSupabaseCityManagerMessage(
-  content: CityManagerMessageContent,
+export async function getSupabasePublishedStaffMessages(): Promise<StaffMessageContent[]> {
+  try {
+    const { data, error } = await supabase
+      .from('staff_messages')
+      .select('*')
+      .not('updatedByUserId', 'is', null)
+      .order('updatedAt', { ascending: false });
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      handleSupabaseError(error, 'staff_messages');
+      return [];
+    }
+
+    if (!data?.length) return [];
+    setSupabaseConfigurationState(true);
+    return (data as Record<string, unknown>[]).map((row) => normalizeStaffMessageRow(row));
+  } catch {
+    return [];
+  }
+}
+
+export async function updateSupabaseStaffMessage(
+  content: StaffMessageContent,
   actor: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
-  if (!canEditCityManagerMessage(actor.role)) {
-    return { ok: false, errorMessage: 'Only staff can edit this message.' };
+  if (!canEditOwnStaffMessage(actor.role)) {
+    return { ok: false, errorMessage: 'Only staff can publish a team message.' };
+  }
+  if (actor.uid !== content.userId) {
+    return { ok: false, errorMessage: 'You can only edit your own message.' };
   }
 
   try {
     const payload = {
-      id: 'main',
-      managerName: content.managerName.trim(),
-      managerTitle: content.managerTitle.trim(),
+      userId: actor.uid,
+      staffName: content.staffName.trim(),
+      staffTitle: content.staffTitle.trim(),
       headline: content.headline.trim(),
       goal: content.goal.trim(),
       promises: content.promises.map((p) => p.trim()).filter(Boolean),
@@ -2442,11 +2478,11 @@ export async function updateSupabaseCityManagerMessage(
       updatedByUserId: actor.uid,
     };
 
-    const { error } = await supabase.from('city_manager_message').upsert(payload, { onConflict: 'id' });
+    const { error } = await supabase.from('staff_messages').upsert(payload, { onConflict: 'userId' });
 
     if (error) {
-      handleSupabaseError(error, 'city_manager_message');
-      return { ok: false, errorMessage: error.message || 'Could not save city manager message.' };
+      handleSupabaseError(error, 'staff_messages');
+      return { ok: false, errorMessage: error.message || 'Could not save your team message.' };
     }
 
     setSupabaseConfigurationState(true);
@@ -2454,7 +2490,7 @@ export async function updateSupabaseCityManagerMessage(
   } catch (err: unknown) {
     return {
       ok: false,
-      errorMessage: err instanceof Error ? err.message : 'Could not save city manager message.',
+      errorMessage: err instanceof Error ? err.message : 'Could not save your team message.',
     };
   }
 }
@@ -3739,6 +3775,13 @@ async function purgeUserCommunityDataClient(uid: string): Promise<void> {
   await supabase.from('event_rsvps').delete().eq('userId', uid);
   await supabase.from('event_comments').delete().eq('userId', uid);
   await supabase.from('app_reviews').delete().eq('userId', uid);
+  await supabase.from('staff_messages').delete().eq('userId', uid);
+  await supabase.from('community_content_votes').delete().eq('userId', uid);
+  await supabase
+    .from('community_content_votes')
+    .delete()
+    .eq('targetType', 'leader_message')
+    .eq('targetId', uid);
   await supabase
     .from('item_claims')
     .delete()

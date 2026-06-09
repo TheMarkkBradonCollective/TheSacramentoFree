@@ -1,85 +1,79 @@
 import { useState } from 'react';
-import { UserProfile } from '../types';
-import { useCityManagerMessage } from '../hooks/useCityManagerMessage';
+import { StaffMessageContent, UserProfile } from '../types';
 import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityContentVotes';
 import LeaderMessageCard from './LeaderMessageCard';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 
-interface CityManagerMessageProps {
+interface StaffMessageProps {
+  message: StaffMessageContent;
   userProfile?: UserProfile | null;
   compact?: boolean;
+  canEdit?: boolean;
+  onSave?: (next: StaffMessageContent) => Promise<{ ok: boolean; errorMessage?: string }>;
   onRequireSignIn?: () => void;
 }
 
-export default function CityManagerMessage({
+export default function StaffMessage({
+  message,
   userProfile,
   compact = false,
+  canEdit = false,
+  onSave,
   onRequireSignIn,
-}: CityManagerMessageProps) {
-  const { message, loading, saveMessage, canEdit, isPublished } = useCityManagerMessage(userProfile);
+}: StaffMessageProps) {
   const { getVoteState, handleVote } = useCommunityContentVotes(
     'leader_message',
-    ['city_manager'],
+    [message.userId],
     userProfile,
   );
   const [editing, setEditing] = useState(false);
 
-  if (loading) {
-    return (
-      <section className={`sbn-card ${compact ? 'p-4' : 'p-5'} text-sm text-muted`}>
-        Loading city manager message…
-      </section>
-    );
-  }
-
-  if (!isPublished) {
-    return null;
-  }
-
   return (
     <>
       <LeaderMessageCard
-        variant="city_manager"
-        headingId="city_manager_message_heading"
+        variant="staff"
+        headingId={`staff_message_heading_${message.userId}`}
         headline={message.headline}
-        name={message.managerName}
-        title={message.managerTitle}
+        name={message.staffName}
+        title={message.staffTitle}
         goal={message.goal}
         promises={message.promises}
         closing={message.closing}
         compact={compact}
         canEdit={canEdit}
         onEdit={() => setEditing(true)}
-        voteState={getVoteState('city_manager') ?? EMPTY_VOTE}
-        onVote={(dir) => handleVote('city_manager', dir)}
+        voteState={getVoteState(message.userId) ?? EMPTY_VOTE}
+        onVote={(dir) => handleVote(message.userId, dir)}
         onRequireSignIn={onRequireSignIn}
         signedIn={Boolean(userProfile)}
       />
 
-      {editing && (
+      {editing && onSave && (
         <LeaderMessageEditModal
-          editTitle="Edit city manager message"
+          editTitle="Edit your team message"
           values={{
-            name: message.managerName,
-            title: message.managerTitle,
+            name: message.staffName,
+            title: message.staffTitle,
             headline: message.headline,
             goal: message.goal,
             promises: message.promises,
             closing: message.closing,
           }}
           onClose={() => setEditing(false)}
-          onSave={async (next) =>
-            saveMessage({
+          onSave={async (next) => {
+            const result = await onSave({
               ...message,
-              managerName: next.name,
-              managerTitle: next.title,
+              staffName: next.name,
+              staffTitle: next.title,
               headline: next.headline,
               goal: next.goal,
               promises: next.promises,
               closing: next.closing,
               updatedAt: new Date().toISOString(),
-            })
-          }
+            });
+            if (result.ok) setEditing(false);
+            return result;
+          }}
         />
       )}
     </>

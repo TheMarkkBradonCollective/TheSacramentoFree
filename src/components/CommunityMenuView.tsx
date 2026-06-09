@@ -5,7 +5,7 @@ import AccountHelpSection from './AccountHelpSection';
 import StaffModerationPanel from './StaffModerationPanel';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 import { useDirectorMessage } from '../hooks/useDirectorMessage';
-import { useCityManagerMessage } from '../hooks/useCityManagerMessage';
+import { useStaffMessage } from '../hooks/useStaffMessage';
 import { canAccessStaffDirectory } from '../lib/roles';
 
 interface CommunityMenuViewProps {
@@ -24,13 +24,13 @@ export default function CommunityMenuView({
   const { message: directorMessage, saveMessage: saveDirectorMessage, canEdit: canEditDirector } =
     useDirectorMessage(userProfile);
   const {
-    message: cityManagerMessage,
-    saveMessage: saveCityManagerMessage,
-    canEdit: canEditCityManager,
-    isPublished: cityManagerMessagePublished,
-  } = useCityManagerMessage(userProfile);
+    message: staffMessage,
+    saveMessage: saveStaffMessage,
+    canEdit: canEditStaff,
+    isPublished: staffMessagePublished,
+  } = useStaffMessage(userProfile);
   const [editingDirector, setEditingDirector] = useState(false);
-  const [editingCityManager, setEditingCityManager] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(false);
 
   return (
     <div className={fullBleed ? 'pb-6' : 'space-y-6'}>
@@ -53,20 +53,20 @@ export default function CommunityMenuView({
         </div>
       )}
 
-      {canEditCityManager && (
+      {canEditStaff && staffMessage && (
         <div className={fullBleed ? sectionShell : ''}>
           <div className="sbn-card p-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-app">City manager message</p>
+              <p className="text-sm font-semibold text-app">Your team message</p>
               <p className="text-xs text-muted mt-0.5">
-                {cityManagerMessagePublished
+                {staffMessagePublished
                   ? 'Live on the home and reviews pages.'
-                  : 'Not visible yet — any staff member can write and save one to publish it.'}
+                  : 'Not visible yet — write and save yours to publish it.'}
               </p>
             </div>
             <button
               type="button"
-              onClick={() => setEditingCityManager(true)}
+              onClick={() => setEditingStaff(true)}
               className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0"
             >
               <Pencil className="w-3.5 h-3.5" />
@@ -113,23 +113,23 @@ export default function CommunityMenuView({
         />
       )}
 
-      {editingCityManager && (
+      {editingStaff && staffMessage && (
         <LeaderMessageEditModal
-          editTitle="Edit city manager message"
+          editTitle="Edit your team message"
           values={{
-            name: cityManagerMessage.managerName,
-            title: cityManagerMessage.managerTitle,
-            headline: cityManagerMessage.headline,
-            goal: cityManagerMessage.goal,
-            promises: cityManagerMessage.promises,
-            closing: cityManagerMessage.closing,
+            name: staffMessage.staffName,
+            title: staffMessage.staffTitle,
+            headline: staffMessage.headline,
+            goal: staffMessage.goal,
+            promises: staffMessage.promises,
+            closing: staffMessage.closing,
           }}
-          onClose={() => setEditingCityManager(false)}
+          onClose={() => setEditingStaff(false)}
           onSave={async (next) =>
-            saveCityManagerMessage({
-              ...cityManagerMessage,
-              managerName: next.name,
-              managerTitle: next.title,
+            saveStaffMessage({
+              ...staffMessage,
+              staffName: next.name,
+              staffTitle: next.title,
               headline: next.headline,
               goal: next.goal,
               promises: next.promises,

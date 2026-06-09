@@ -250,10 +250,10 @@ export interface DirectorMessageContent {
   updatedByUserId?: string | null;
 }
 
-export interface CityManagerMessageContent {
-  id: string;
-  managerName: string;
-  managerTitle: string;
+export interface StaffMessageContent {
+  userId: string;
+  staffName: string;
+  staffTitle: string;
   headline: string;
   goal: string;
   promises: string[];

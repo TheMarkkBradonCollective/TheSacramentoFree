@@ -2,7 +2,7 @@ import { Heart, Pencil, Shield } from 'lucide-react';
 import { ContentVoteState } from '../types';
 import ContentVoteButtons from './ContentVoteButtons';
 
-export type LeaderMessageVariant = 'director' | 'city_manager';
+export type LeaderMessageVariant = 'director' | 'staff';
 
 const VARIANT_STYLES: Record<
   LeaderMessageVariant,
@@ -14,7 +14,7 @@ const VARIANT_STYLES: Record<
     avatar: 'bg-amber-500/10 border-amber-500/25 text-amber-500',
     icon: 'text-amber-500/60',
   },
-  city_manager: {
+  staff: {
     border: 'border-l-sky-500/70',
     badge: 'text-sky-500/90',
     avatar: 'bg-sky-500/10 border-sky-500/25 text-sky-500',
