@@ -22,6 +22,7 @@ export interface NotificationPreferences {
   accountUpdates: boolean;
   staffSupport: boolean;
   staffReports: boolean;
+  directorAlerts: boolean;
   nearbyRadiusMiles: NearbyRadiusMiles;
   followedCategories: string[];
 }
@@ -41,6 +42,25 @@ export interface UserProfile {
 
 export interface StaffUserRow extends UserProfile {
   accountStatus: AccountStatus;
+}
+
+export interface DirectorActivityItem {
+  id: string;
+  kind: 'join' | 'leave' | 'moderation' | 'report' | 'ticket' | 'listing';
+  title: string;
+  detail: string;
+  at: string;
+}
+
+export interface DirectorSiteOverview {
+  totalNeighbors: number;
+  neighborsJoinedToday: number;
+  activeListings: number;
+  openReports: number;
+  openTickets: number;
+  suspendedCount: number;
+  bannedCount: number;
+  recentActivity: DirectorActivityItem[];
 }
 
 export interface ModerationAuditEntry {

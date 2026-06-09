@@ -45,6 +45,8 @@ interface DesktopViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
+  scrollToDirectorOverview?: boolean;
+  onClearScrollToDirectorOverview?: () => void;
 }
 
 export default function DesktopView({
@@ -78,6 +80,8 @@ export default function DesktopView({
   onOpenGoFundMe,
   initialStaffPanel = null,
   onClearInitialStaffPanel,
+  scrollToDirectorOverview,
+  onClearScrollToDirectorOverview,
 }: DesktopViewProps) {
   return (
     <div id="desktop_device_workspace" className="min-h-screen h-dvh flex flex-col mesh-bg text-app overflow-hidden">
@@ -197,6 +201,8 @@ export default function DesktopView({
                 onViewProfile={onViewProfile}
                 initialStaffPanel={initialStaffPanel}
                 onClearInitialStaffPanel={onClearInitialStaffPanel}
+                scrollToDirectorOverview={scrollToDirectorOverview}
+                onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               />
             </div>
           </div>

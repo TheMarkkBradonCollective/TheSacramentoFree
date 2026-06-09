@@ -157,7 +157,12 @@ export default function NeighborProfileView({
     if (!profile || !selectedRole) return;
     setRoleSaving(true);
     setRoleMsg('');
-    const result = await setUserRole(profile.uid, selectedRole);
+    const result = await setUserRole(profile.uid, selectedRole, {
+      actorUserId: currentUserProfile!.uid,
+      actorName: currentUserProfile!.displayName,
+      targetName: profile.displayName,
+      previousRole: profile.role,
+    });
     setRoleSaving(false);
     if (result.ok) {
       setProfile((prev) => (prev ? { ...prev, role: selectedRole } : prev));

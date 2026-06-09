@@ -8,6 +8,7 @@ export interface PushDeepLinkTarget {
   profile?: boolean;
   notifications?: boolean;
   staffPanel?: 'tickets' | 'reports';
+  directorOverview?: boolean;
 }
 
 export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
@@ -27,6 +28,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (path === 'profile') return { tab: 'profile', profile: true };
   if (path === 'staff/tickets') return { tab: 'menu', staffPanel: 'tickets' };
   if (path === 'staff/reports') return { tab: 'menu', staffPanel: 'reports' };
+  if (path === 'director/overview') return { tab: 'menu', directorOverview: true };
 
   const listingMatch = path.match(/^listing\/([^/]+)/);
   if (listingMatch) return { tab: 'feed', listingId: listingMatch[1] };
@@ -64,4 +66,8 @@ export function pushUrlForStaffTickets(): string {
 
 export function pushUrlForStaffReports(): string {
   return '/staff/reports';
+}
+
+export function pushUrlForDirectorOverview(): string {
+  return '/director/overview';
 }

@@ -179,6 +179,7 @@ export type PushEventType =
   | 'support_reply'
   | 'staff_support'
   | 'staff_report'
+  | 'director_alert'
   | 'saved_item_update'
   | 'listing_status';
 
@@ -338,6 +339,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   accountUpdates: true,
   staffSupport: true,
   staffReports: true,
+  directorAlerts: true,
   nearbyRadiusMiles: 10,
   followedCategories: [],
 };
@@ -361,6 +363,7 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     accountUpdates: row.accountUpdates !== false,
     staffSupport: row.staffSupport !== false,
     staffReports: row.staffReports !== false,
+    directorAlerts: row.directorAlerts !== false,
     nearbyRadiusMiles: (Number(row.nearbyRadiusMiles) || 10) as NearbyRadiusMiles,
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
   };

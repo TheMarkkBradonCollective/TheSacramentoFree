@@ -548,6 +548,13 @@ export async function upsertSupabaseProfile(
 
     const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
 
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('uid')
+      .eq('uid', profile.uid)
+      .maybeSingle();
+    const isNewNeighbor = !existingUser;
+
     const payload = {
       uid: profile.uid,
       displayName: profile.displayName.trim(),
@@ -589,6 +596,19 @@ export async function upsertSupabaseProfile(
 
     if (photoURL) {
       void syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
+    }
+
+    if (isNewNeighbor && !isDirectorUser(profile.uid, profile.email)) {
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushDirectorAlert({
+            title: 'New neighbor joined',
+            body: `${payload.displayName} joined from ${payload.neighborhood}`,
+            tag: `director-join-${profile.uid}`,
+            excludeUserIds: [profile.uid],
+          }),
+        ),
+      );
     }
 
     setSupabaseConfigurationState(true);
@@ -1134,6 +1154,7 @@ export interface CommunityStats {
 export async function setUserRole(
   uid: string,
   role: UserRole,
+  context?: { actorUserId: string; actorName: string; targetName: string; previousRole?: UserRole },
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
     const { error } = await supabase
@@ -1145,6 +1166,20 @@ export async function setUserRole(
       handleSupabaseError(error, 'users');
       return { ok: false, errorMessage: error.message };
     }
+
+    if (context) {
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushDirectorAlert({
+            title: 'Role changed',
+            body: `${context.actorName} set ${context.targetName} to ${roleLabel(role)}`,
+            tag: `director-role-${uid}`,
+            excludeUserIds: [context.actorUserId],
+          }),
+        ),
+      );
+    }
+
     return { ok: true };
   } catch (err: any) {
     return { ok: false, errorMessage: err?.message || 'Could not update role.' };
@@ -3151,6 +3186,7 @@ export async function sendMessageRequest(params: {
         m.pushAfterMessageRequest({
           requestId,
           toUserId,
+          fromUserId: fromUser.uid,
           fromUserName: fromUser.displayName,
           message: message?.trim() || null,
         }),
@@ -3340,6 +3376,128 @@ export async function getStaffUserDirectory(): Promise<StaffUserRow[]> {
   }
 }
 
+export async function getDirectorSiteOverview(): Promise<import('./types').DirectorSiteOverview> {
+  const empty: import('./types').DirectorSiteOverview = {
+    totalNeighbors: 0,
+    neighborsJoinedToday: 0,
+    activeListings: 0,
+    openReports: 0,
+    openTickets: 0,
+    suspendedCount: 0,
+    bannedCount: 0,
+    recentActivity: [],
+  };
+
+  try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const todayIso = startOfToday.toISOString();
+
+    const [
+      usersRes,
+      joinedTodayRes,
+      activeListingsRes,
+      openReportsRes,
+      openTicketsRes,
+      suspendedRes,
+      bannedRes,
+      auditRes,
+      reportsRes,
+      ticketsRes,
+      recentUsersRes,
+    ] = await Promise.all([
+      supabase.from('users').select('uid', { count: 'exact', head: true }),
+      supabase.from('users').select('uid', { count: 'exact', head: true }).gte('createdAt', todayIso),
+      supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+      supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+      supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'suspended'),
+      supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'banned'),
+      supabase
+        .from('moderation_audit_log')
+        .select('*')
+        .order('createdAt', { ascending: false })
+        .limit(12),
+      supabase
+        .from('user_reports')
+        .select('id, reporterName, subject, status, createdAt')
+        .order('createdAt', { ascending: false })
+        .limit(8),
+      supabase
+        .from('support_tickets')
+        .select('id, openerName, subject, status, createdAt')
+        .order('updatedAt', { ascending: false })
+        .limit(8),
+      supabase
+        .from('users')
+        .select('uid, displayName, neighborhood, createdAt')
+        .order('createdAt', { ascending: false })
+        .limit(8),
+    ]);
+
+    const activity: import('./types').DirectorActivityItem[] = [];
+
+    for (const row of recentUsersRes.data ?? []) {
+      const r = row as Record<string, unknown>;
+      activity.push({
+        id: `join-${r.uid}`,
+        kind: 'join',
+        title: `${r.displayName} joined`,
+        detail: String(r.neighborhood || 'Sacramento area'),
+        at: String(r.createdAt),
+      });
+    }
+
+    for (const row of auditRes.data ?? []) {
+      const r = row as Record<string, unknown>;
+      activity.push({
+        id: `audit-${r.id}`,
+        kind: 'moderation',
+        title: `${r.action}: ${r.targetName}`,
+        detail: `${r.actorName}${r.detail ? ` — ${r.detail}` : ''}`,
+        at: String(r.createdAt),
+      });
+    }
+
+    for (const row of reportsRes.data ?? []) {
+      const r = row as Record<string, unknown>;
+      activity.push({
+        id: `report-${r.id}`,
+        kind: 'report',
+        title: `Report: ${r.subject}`,
+        detail: `From ${r.reporterName} · ${r.status}`,
+        at: String(r.createdAt),
+      });
+    }
+
+    for (const row of ticketsRes.data ?? []) {
+      const r = row as Record<string, unknown>;
+      activity.push({
+        id: `ticket-${r.id}`,
+        kind: 'ticket',
+        title: `Support: ${r.subject}`,
+        detail: `${r.openerName} · ${r.status}`,
+        at: String(r.createdAt),
+      });
+    }
+
+    activity.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+
+    return {
+      totalNeighbors: usersRes.count ?? 0,
+      neighborsJoinedToday: joinedTodayRes.count ?? 0,
+      activeListings: activeListingsRes.count ?? 0,
+      openReports: openReportsRes.count ?? 0,
+      openTickets: openTicketsRes.count ?? 0,
+      suspendedCount: suspendedRes.count ?? 0,
+      bannedCount: bannedRes.count ?? 0,
+      recentActivity: activity.slice(0, 20),
+    };
+  } catch {
+    return empty;
+  }
+}
+
 export async function getModerationAuditLog(limit = 100): Promise<ModerationAuditEntry[]> {
   try {
     const { data, error } = await supabase
@@ -3411,11 +3569,19 @@ export async function staffSuspendUser(params: {
 
     firePush(() =>
       import('./lib/pushIntegration').then((m) =>
-        m.pushAccountStatusChange(
-          params.targetUserId,
-          'Account suspended',
-          `Your account is suspended for ${params.durationDays} day(s).`,
-        ),
+        Promise.all([
+          m.pushAccountStatusChange(
+            params.targetUserId,
+            'Account suspended',
+            `Your account is suspended for ${params.durationDays} day(s).`,
+          ),
+          m.pushDirectorAlert({
+            title: 'Neighbor suspended',
+            body: `${params.actor.displayName} suspended ${params.targetName} for ${params.durationDays} day(s)`,
+            tag: `director-suspend-${params.targetUserId}`,
+            excludeUserIds: [params.actor.uid],
+          }),
+        ]),
       ),
     );
 
@@ -3450,7 +3616,19 @@ export async function staffUnsuspendUser(params: {
 
     firePush(() =>
       import('./lib/pushIntegration').then((m) =>
-        m.pushAccountStatusChange(params.targetUserId, 'Account restored', 'Your account suspension has been lifted.'),
+        Promise.all([
+          m.pushAccountStatusChange(
+            params.targetUserId,
+            'Account restored',
+            'Your account suspension has been lifted.',
+          ),
+          m.pushDirectorAlert({
+            title: 'Suspension lifted',
+            body: `${params.actor.displayName} unsuspended ${params.targetName}`,
+            tag: `director-unsuspend-${params.targetUserId}`,
+            excludeUserIds: [params.actor.uid],
+          }),
+        ]),
       ),
     );
 
@@ -3499,11 +3677,19 @@ export async function staffBanUser(params: {
 
     firePush(() =>
       import('./lib/pushIntegration').then((m) =>
-        m.pushAccountStatusChange(
-          params.targetUserId,
-          'Account disabled',
-          'Your account has been disabled by community staff.',
-        ),
+        Promise.all([
+          m.pushAccountStatusChange(
+            params.targetUserId,
+            'Account disabled',
+            'Your account has been disabled by community staff.',
+          ),
+          m.pushDirectorAlert({
+            title: 'Neighbor banned',
+            body: `${params.actor.displayName} banned ${params.targetName}`,
+            tag: `director-ban-${params.targetUserId}`,
+            excludeUserIds: [params.actor.uid],
+          }),
+        ]),
       ),
     );
 
@@ -3538,7 +3724,15 @@ export async function staffUnbanUser(params: {
 
     firePush(() =>
       import('./lib/pushIntegration').then((m) =>
-        m.pushAccountStatusChange(params.targetUserId, 'Account restored', 'Your account has been re-enabled.'),
+        Promise.all([
+          m.pushAccountStatusChange(params.targetUserId, 'Account restored', 'Your account has been re-enabled.'),
+          m.pushDirectorAlert({
+            title: 'Ban lifted',
+            body: `${params.actor.displayName} unbanned ${params.targetName}`,
+            tag: `director-unban-${params.targetUserId}`,
+            excludeUserIds: [params.actor.uid],
+          }),
+        ]),
       ),
     );
 
@@ -4135,6 +4329,16 @@ export async function staffDeleteUserAccount(params: {
         action: 'delete_account',
         detail: 'Account and all community data permanently removed',
       });
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushDirectorAlert({
+            title: 'Account deleted by staff',
+            body: `${params.actor.displayName} removed ${params.targetName}'s account`,
+            tag: `director-delete-${params.targetUserId}`,
+            excludeUserIds: [params.actor.uid],
+          }),
+        ),
+      );
       return { ok: true };
     }
 
@@ -4160,6 +4364,17 @@ export async function staffDeleteUserAccount(params: {
       detail: 'Community data removed (run supabase-sql/account-deletion.sql for full auth removal)',
     });
 
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushDirectorAlert({
+          title: 'Account deleted by staff',
+          body: `${params.actor.displayName} removed ${params.targetName}'s account`,
+          tag: `director-delete-${params.targetUserId}`,
+          excludeUserIds: [params.actor.uid],
+        }),
+      ),
+    );
+
     return {
       ok: true,
       errorMessage:
@@ -4177,9 +4392,34 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     return { ok: false, errorMessage: 'You must be signed in to delete your account.' };
   }
 
+  const { data: leavingProfile } = await supabase
+    .from('users')
+    .select('displayName, neighborhood')
+    .eq('uid', uid)
+    .maybeSingle();
+  const leavingName = String(
+    (leavingProfile as { displayName?: string } | null)?.displayName || 'A neighbor',
+  );
+  const leavingArea = String(
+    (leavingProfile as { neighborhood?: string } | null)?.neighborhood || 'Sacramento area',
+  );
+
+  const notifyDirectorLeave = () =>
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushDirectorAlert({
+          title: 'Neighbor left',
+          body: `${leavingName} deleted their account (${leavingArea})`,
+          tag: `director-leave-${uid}`,
+          excludeUserIds: [uid],
+        }),
+      ),
+    );
+
   try {
     const { error: rpcError } = await supabase.rpc('delete_own_account');
     if (!rpcError) {
+      notifyDirectorLeave();
       return { ok: true };
     }
 
@@ -4199,6 +4439,7 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     }
 
     await supabase.auth.signOut();
+    notifyDirectorLeave();
     return {
       ok: true,
       errorMessage:

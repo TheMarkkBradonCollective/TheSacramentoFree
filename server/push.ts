@@ -24,6 +24,7 @@ export type PushEventType =
   | 'support_reply'
   | 'staff_support'
   | 'staff_report'
+  | 'director_alert'
   | 'saved_item_update'
   | 'listing_status';
 
@@ -55,6 +56,7 @@ export interface NotificationPreferencesRow {
   accountUpdates: boolean;
   staffSupport: boolean;
   staffReports: boolean;
+  directorAlerts: boolean;
   nearbyRadiusMiles: number;
   followedCategories: string[];
 }
@@ -91,6 +93,7 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   support_reply: 'support',
   staff_support: 'staffSupport',
   staff_report: 'staffReports',
+  director_alert: 'directorAlerts',
   saved_item_update: 'savedItems',
 };
 
@@ -124,6 +127,7 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     accountUpdates: row.accountUpdates !== false,
     staffSupport: row.staffSupport !== false,
     staffReports: row.staffReports !== false,
+    directorAlerts: row.directorAlerts !== false,
     nearbyRadiusMiles: Number(row.nearbyRadiusMiles ?? 10),
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
   };
@@ -166,6 +170,7 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         accountUpdates: true,
         staffSupport: true,
         staffReports: true,
+        directorAlerts: true,
         nearbyRadiusMiles: 10,
         followedCategories: [],
       });

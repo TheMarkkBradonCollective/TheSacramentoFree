@@ -46,6 +46,8 @@ interface MobileViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
+  scrollToDirectorOverview?: boolean;
+  onClearScrollToDirectorOverview?: () => void;
 }
 
 const NAV_ITEMS = [
@@ -88,6 +90,8 @@ export default function MobileView({
   onOpenGoFundMe,
   initialStaffPanel = null,
   onClearInitialStaffPanel,
+  scrollToDirectorOverview,
+  onClearScrollToDirectorOverview,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
@@ -292,6 +296,8 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               initialStaffPanel={initialStaffPanel}
               onClearInitialStaffPanel={onClearInitialStaffPanel}
+              scrollToDirectorOverview={scrollToDirectorOverview}
+              onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               fullBleed
             />
             <PageScrollFooter onOpenDetails={onOpenGoFundMe} />

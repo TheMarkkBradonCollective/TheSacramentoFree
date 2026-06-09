@@ -13,16 +13,23 @@ import { useImageAttachment } from '../hooks/useImageAttachment';
 import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight, Megaphone, Star } from 'lucide-react';
 import UpdatesList from './UpdatesList';
 import CommunityReviews from './CommunityReviews';
-import { canManageAppUpdates } from '../lib/roles';
+import { canManageAppUpdates, canViewDirectorOverview } from '../lib/roles';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import DirectorSiteOverview from './DirectorSiteOverview';
 
 interface AccountHelpSectionProps {
   user: UserProfile;
+  scrollToDirectorOverview?: boolean;
+  onClearScrollToDirectorOverview?: () => void;
 }
 
 type Panel = 'report' | 'tickets' | 'newTicket' | 'thread' | 'updates' | 'reviews' | null;
 
-export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
+export default function AccountHelpSection({
+  user,
+  scrollToDirectorOverview,
+  onClearScrollToDirectorOverview,
+}: AccountHelpSectionProps) {
   const [panel, setPanel] = useState<Panel>(null);
   const [reportSubject, setReportSubject] = useState('');
   const [reportBody, setReportBody] = useState('');
@@ -145,9 +152,16 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
   const canSubmitTicket =
     ticketSubject.trim() && (ticketMessage.trim() || ticketImage.file);
   const canManageUpdates = canManageAppUpdates(user.role);
+  const showDirectorOverview = canViewDirectorOverview(user.role);
 
   return (
     <div className="space-y-3 min-w-0 w-full overflow-x-hidden" id="account_help_section">
+      {showDirectorOverview && (
+        <DirectorSiteOverview
+          scrollIntoView={scrollToDirectorOverview}
+          onScrolled={onClearScrollToDirectorOverview}
+        />
+      )}
       <h3 className="font-display font-bold text-sm text-app">Help & safety</h3>
       <div className="grid gap-2 sm:grid-cols-2 min-w-0">
         <button type="button" onClick={() => setPanel('updates')} className="sbn-help-list-item">

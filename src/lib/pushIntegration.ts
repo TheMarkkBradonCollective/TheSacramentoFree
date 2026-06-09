@@ -15,10 +15,20 @@ import {
   notifyPickupScheduled,
   notifyClaimRequestSubmitted,
   notifyRequestFulfilled,
+  notifyDirectorAlert,
   notifyStaffReport,
   notifyStaffSupport,
   notifySupportReply,
 } from './pushEvents';
+
+export async function pushDirectorAlert(params: {
+  title: string;
+  body: string;
+  tag?: string;
+  excludeUserIds?: string[];
+}) {
+  await notifyDirectorAlert(params);
+}
 
 async function getItemById(itemId: string): Promise<ItemPost | null> {
   const { data } = await supabase.from('items').select('*').eq('id', itemId).maybeSingle();
@@ -29,6 +39,12 @@ async function getItemById(itemId: string): Promise<ItemPost | null> {
 export async function pushAfterItemCreated(item: ItemPost) {
   await notifyNewListingPosted(item);
   await notifyListingApproved(item);
+  await pushDirectorAlert({
+    title: item.type === 'looking' ? 'New neighbor request' : 'New listing posted',
+    body: `${item.userDisplayName}: ${item.title} (${item.neighborhood})`,
+    tag: `director-listing-${item.id}`,
+    excludeUserIds: [item.userId],
+  });
 }
 
 export async function pushAfterClaimRequest(params: {
@@ -37,6 +53,12 @@ export async function pushAfterClaimRequest(params: {
   requestId: string;
 }) {
   await notifyClaimRequestSubmitted(params);
+  await pushDirectorAlert({
+    title: 'Claim request',
+    body: `${params.claimerName} requested pickup: ${params.item.title}`,
+    tag: `director-claim-${params.requestId}`,
+    excludeUserIds: [params.item.userId],
+  });
 }
 
 async function getUserDisplayName(userId: string): Promise<string> {
@@ -88,12 +110,19 @@ export async function pushAfterMessageRequest(params: {
   toUserId: string;
   fromUserName: string;
   message?: string | null;
+  fromUserId?: string;
 }) {
   await notifyMessageRequest({
     requestId: params.requestId,
     recipientUserId: params.toUserId,
     senderName: params.fromUserName,
     preview: params.message,
+  });
+  await pushDirectorAlert({
+    title: 'Message request',
+    body: `${params.fromUserName} asked to start a chat`,
+    tag: `director-dmreq-${params.requestId}`,
+    excludeUserIds: params.fromUserId ? [params.fromUserId] : undefined,
   });
 }
 
@@ -210,6 +239,12 @@ export async function pushAfterSupportTicketOpened(params: {
     minStaffRank: params.minStaffRank,
     excludeUserIds: [params.openerUserId],
   });
+  await pushDirectorAlert({
+    title: 'Support ticket opened',
+    body: `${params.openerName}: ${params.subject}`,
+    tag: `director-ticket-${params.ticketId}`,
+    excludeUserIds: [params.openerUserId],
+  });
 }
 
 export async function pushAfterSupportUserMessage(params: {
@@ -228,6 +263,12 @@ export async function pushAfterSupportUserMessage(params: {
     minStaffRank: params.minStaffRank,
     excludeUserIds: [params.openerUserId],
   });
+  await pushDirectorAlert({
+    title: 'Support ticket reply',
+    body: `${params.openerName} replied on: ${params.subject}`,
+    tag: `director-ticket-reply-${params.ticketId}`,
+    excludeUserIds: [params.openerUserId],
+  });
 }
 
 export async function pushAfterUserReport(params: {
@@ -242,6 +283,12 @@ export async function pushAfterUserReport(params: {
     reporterName: params.reporterName,
     subject: params.subject,
     preview: params.preview,
+    excludeUserIds: [params.reporterUserId],
+  });
+  await pushDirectorAlert({
+    title: 'Neighbor report',
+    body: `${params.reporterName}: ${params.subject}`,
+    tag: `director-report-${params.reportId}`,
     excludeUserIds: [params.reporterUserId],
   });
 }

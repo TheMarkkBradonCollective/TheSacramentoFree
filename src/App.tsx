@@ -106,6 +106,7 @@ export default function App() {
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [initialStaffPanel, setInitialStaffPanel] = useState<'tickets' | 'reports' | null>(null);
+  const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
@@ -788,6 +789,9 @@ export default function App() {
       if (target.staffPanel) {
         setInitialStaffPanel(target.staffPanel);
       }
+      if (target.directorOverview) {
+        setScrollToDirectorOverview(true);
+      }
     },
     [items],
   );
@@ -913,6 +917,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  scrollToDirectorOverview={scrollToDirectorOverview}
+                  onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -949,6 +955,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  scrollToDirectorOverview={scrollToDirectorOverview}
+                  onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />
               ) : (
                 <DesktopView
@@ -985,6 +993,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  scrollToDirectorOverview={scrollToDirectorOverview}
+                  onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />
               )}
 

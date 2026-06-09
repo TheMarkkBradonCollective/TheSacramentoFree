@@ -7,7 +7,7 @@ import {
   type UserProfile,
 } from '../types';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { isStaffRole } from '../lib/roles';
+import { isDirectorRole, isStaffRole } from '../lib/roles';
 
 interface NotificationSettingsProps {
   userId: string;
@@ -129,6 +129,17 @@ const STAFF_PREF_SECTION = {
       key: 'staffReports' as const,
       label: 'Neighbor reports',
       description: 'New reports submitted for staff review',
+    },
+  ],
+};
+
+const DIRECTOR_PREF_SECTION = {
+  title: 'Director oversight',
+  items: [
+    {
+      key: 'directorAlerts' as const,
+      label: 'Platform activity',
+      description: 'Joins, leaves, bans, suspensions, reports, tickets, listings, and more',
     },
   ],
 };
@@ -273,6 +284,25 @@ export default function NotificationSettings({
             </h4>
             <div className="rounded-xl border border-app bg-inset/30 px-3">
               {STAFF_PREF_SECTION.items.map((toggle) => (
+                <SwitchRow
+                  key={toggle.key}
+                  label={toggle.label}
+                  description={toggle.description}
+                  checked={Boolean(preferences[toggle.key])}
+                  onChange={(value) => setPref(toggle.key, value)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isDirectorRole(userRole) && (
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
+              {DIRECTOR_PREF_SECTION.title}
+            </h4>
+            <div className="rounded-xl border border-app bg-inset/30 px-3">
+              {DIRECTOR_PREF_SECTION.items.map((toggle) => (
                 <SwitchRow
                   key={toggle.key}
                   label={toggle.label}

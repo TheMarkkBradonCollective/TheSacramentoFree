@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
   "accountUpdates" BOOLEAN NOT NULL DEFAULT true,
   "staffSupport" BOOLEAN NOT NULL DEFAULT true,
   "staffReports" BOOLEAN NOT NULL DEFAULT true,
+  "directorAlerts" BOOLEAN NOT NULL DEFAULT true,
   "nearbyRadiusMiles" INTEGER NOT NULL DEFAULT 10,
   "followedCategories" JSONB NOT NULL DEFAULT '[]'::jsonb,
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),

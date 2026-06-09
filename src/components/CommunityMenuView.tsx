@@ -13,6 +13,8 @@ interface CommunityMenuViewProps {
   onViewProfile: (userId: string) => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
+  scrollToDirectorOverview?: boolean;
+  onClearScrollToDirectorOverview?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
   fullBleed?: boolean;
 }
@@ -22,6 +24,8 @@ export default function CommunityMenuView({
   onViewProfile,
   initialStaffPanel = null,
   onClearInitialStaffPanel,
+  scrollToDirectorOverview,
+  onClearScrollToDirectorOverview,
   fullBleed = false,
 }: CommunityMenuViewProps) {
   const sectionShell = fullBleed ? 'px-4 py-5 border-t border-app/40' : '';
@@ -81,7 +85,11 @@ export default function CommunityMenuView({
       )}
 
       <div className={fullBleed ? sectionShell : ''}>
-        <AccountHelpSection user={userProfile} />
+        <AccountHelpSection
+          user={userProfile}
+          scrollToDirectorOverview={scrollToDirectorOverview}
+          onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+        />
       </div>
 
       {canAccessStaffDirectory(userProfile.role) && (

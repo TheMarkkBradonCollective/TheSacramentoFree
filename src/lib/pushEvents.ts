@@ -6,6 +6,7 @@ import {
   pushUrlForListing,
   pushUrlForMessageRequests,
   pushUrlForRequest,
+  pushUrlForDirectorOverview,
   pushUrlForStaffReports,
   pushUrlForStaffTickets,
 } from './pushDeepLink';
@@ -247,6 +248,22 @@ export async function notifyAccountUpdate(params: {
     url: '/profile',
     recipientUserIds: [params.userId],
     tag: `account-${params.userId}`,
+  });
+}
+
+export async function notifyDirectorAlert(params: {
+  title: string;
+  body: string;
+  tag?: string;
+  excludeUserIds?: string[];
+}) {
+  await sendPushNotification({
+    eventType: 'director_alert',
+    title: params.title,
+    body: params.body.slice(0, 200),
+    url: pushUrlForDirectorOverview(),
+    excludeUserIds: params.excludeUserIds,
+    tag: params.tag || 'director-alert',
   });
 }
 

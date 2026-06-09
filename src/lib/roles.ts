@@ -102,9 +102,19 @@ export function canStaffDeleteAccount(role?: UserProfile['role']): boolean {
   return r === 'city_manager' || r === 'director';
 }
 
+/** Buy Nothing Director — full platform oversight. */
+export function isDirectorRole(role?: UserProfile['role']): boolean {
+  return normalizeUserRole(role) === 'director';
+}
+
+/** Director site overview in Help & safety. */
+export function canViewDirectorOverview(role?: UserProfile['role']): boolean {
+  return isDirectorRole(role);
+}
+
 /** Post, edit, and delete app changelog updates. */
 export function canManageAppUpdates(role?: UserProfile['role']): boolean {
-  return normalizeUserRole(role) === 'director';
+  return isDirectorRole(role);
 }
 
 /** Publish or edit this staff member's own public welcome message (director uses director_message). */

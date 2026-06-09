@@ -46,6 +46,8 @@ interface TabletViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
+  scrollToDirectorOverview?: boolean;
+  onClearScrollToDirectorOverview?: () => void;
 }
 
 const TABS = [
@@ -88,6 +90,8 @@ export default function TabletView({
   onOpenGoFundMe,
   initialStaffPanel = null,
   onClearInitialStaffPanel,
+  scrollToDirectorOverview,
+  onClearScrollToDirectorOverview,
 }: TabletViewProps) {
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen h-dvh mesh-bg text-app overflow-hidden">
@@ -255,6 +259,8 @@ export default function TabletView({
                 onViewProfile={onViewProfile}
                 initialStaffPanel={initialStaffPanel}
                 onClearInitialStaffPanel={onClearInitialStaffPanel}
+                scrollToDirectorOverview={scrollToDirectorOverview}
+                onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               />
             </div>
           </div>

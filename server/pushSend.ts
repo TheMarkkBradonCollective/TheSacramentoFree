@@ -80,6 +80,13 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
       .map((u) => String((u as { uid: string }).uid));
   }
 
+  if (eventType === 'director_alert') {
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role').eq('role', 'director');
+    return (users || [])
+      .map((u) => String((u as { uid: string }).uid))
+      .filter((uid) => uid && uid !== callerId);
+  }
+
   if (eventType === 'staff_support' || eventType === 'staff_report') {
     const minRank =
       eventType === 'staff_report'
