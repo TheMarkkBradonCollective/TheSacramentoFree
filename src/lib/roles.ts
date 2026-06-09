@@ -102,6 +102,11 @@ export function canStaffDeleteAccount(role?: UserProfile['role']): boolean {
   return r === 'city_manager' || r === 'director';
 }
 
+/** Publish or edit the public city manager welcome message. */
+export function canEditCityManagerMessage(role?: UserProfile['role']): boolean {
+  return isStaffRole(role);
+}
+
 /** Numeric rank for ticket visibility (higher = more authority). */
 export const ROLE_RANK: Record<UserRole, number> = {
   user: 0,

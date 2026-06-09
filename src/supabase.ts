@@ -5,7 +5,7 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleRank } from './lib/roles';
+import { normalizeUserRole, type UserRole, canEditCityManagerMessage, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -2425,9 +2425,8 @@ export async function updateSupabaseCityManagerMessage(
   content: CityManagerMessageContent,
   actor: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
-  const role = normalizeUserRole(actor.role);
-  if (role !== 'city_manager' && role !== 'director') {
-    return { ok: false, errorMessage: 'Only the city manager or director can edit this message.' };
+  if (!canEditCityManagerMessage(actor.role)) {
+    return { ok: false, errorMessage: 'Only staff can edit this message.' };
   }
 
   try {

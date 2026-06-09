@@ -61,7 +61,7 @@ export default function CommunityMenuView({
               <p className="text-xs text-muted mt-0.5">
                 {cityManagerMessagePublished
                   ? 'Live on the home and reviews pages.'
-                  : 'Not visible yet — save a message to publish it.'}
+                  : 'Not visible yet — any staff member can write and save one to publish it.'}
               </p>
             </div>
             <button

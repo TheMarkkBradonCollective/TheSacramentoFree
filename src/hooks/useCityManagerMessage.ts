@@ -6,7 +6,7 @@ import {
   updateSupabaseCityManagerMessage,
 } from '../supabase';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
-import { normalizeUserRole } from '../lib/roles';
+import { canEditCityManagerMessage } from '../lib/roles';
 
 export function useCityManagerMessage(userProfile?: UserProfile | null) {
   const [message, setMessage] = useState<CityManagerMessageContent>(defaultCityManagerMessageContent());
@@ -44,8 +44,7 @@ export function useCityManagerMessage(userProfile?: UserProfile | null) {
     return result;
   };
 
-  const role = normalizeUserRole(userProfile?.role);
-  const canEdit = role === 'city_manager' || role === 'director';
+  const canEdit = canEditCityManagerMessage(userProfile?.role);
   const isPublished = Boolean(message.updatedByUserId);
 
   return { message, loading, reload, saveMessage, canEdit, isPublished };
