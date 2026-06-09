@@ -13,9 +13,67 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return output;
 }
 
+async function getSessionUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id || null;
+}
+
 async function getAccessToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token || null;
+}
+
+function mapPushSubscriptionError(error: { code?: string; message?: string }): string {
+  const message = error.message || '';
+  if (error.code === '42P01' || message.includes('push_subscriptions')) {
+    return 'Push tables are missing in Supabase. Run supabase-sql/push-notifications.sql in the SQL editor, then try again.';
+  }
+  if (error.code === '23503') {
+    return 'Your profile is not synced yet. Open Profile, save your settings once, then enable notifications again.';
+  }
+  if (error.code === '42501' || message.toLowerCase().includes('permission denied')) {
+    return 'Database blocked saving your subscription. Run supabase-sql/push-notifications.sql and confirm you are signed in.';
+  }
+  return message || 'Could not save push subscription.';
+}
+
+async function persistPushSubscription(subscription: PushSubscription, userId: string): Promise<void> {
+  const json = subscription.toJSON();
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+    throw new Error('Invalid push subscription from this browser.');
+  }
+
+  const row = {
+    id: crypto.randomUUID(),
+    userId,
+    endpoint: json.endpoint,
+    p256dh: json.keys.p256dh,
+    auth: json.keys.auth,
+    userAgent: navigator.userAgent.slice(0, 512),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+  if (error) {
+    throw new Error(mapPushSubscriptionError(error));
+  }
+
+  const { error: prefError } = await supabase
+    .from('notification_preferences')
+    .upsert({ userId, updatedAt: new Date().toISOString() }, { onConflict: 'userId', ignoreDuplicates: true });
+
+  if (prefError && prefError.code !== '42P01') {
+    console.warn('[push] notification_preferences upsert:', prefError.message);
+  }
+}
+
+async function removePushSubscription(userId: string, endpoint?: string): Promise<void> {
+  let query = supabase.from('push_subscriptions').delete().eq('userId', userId);
+  if (endpoint) query = query.eq('endpoint', endpoint);
+  const { error } = await query;
+  if (error && error.code !== '42P01') {
+    throw new Error(mapPushSubscriptionError(error));
+  }
 }
 
 async function getVapidPublicKey(): Promise<string> {
@@ -50,8 +108,8 @@ export async function registerPushServiceWorker(): Promise<ServiceWorkerRegistra
 }
 
 export async function subscribeToPushNotifications(): Promise<PushSubscription | null> {
-  const token = await getAccessToken();
-  if (!token) throw new Error('Sign in to enable notifications');
+  const userId = await getSessionUserId();
+  if (!userId) throw new Error('Sign in to enable notifications');
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return null;
@@ -69,42 +127,18 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
     });
   }
 
-  const res = await fetch('/api/push/subscribe', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      subscription: subscription.toJSON(),
-      userAgent: navigator.userAgent,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Could not save push subscription');
-  }
-
+  await persistPushSubscription(subscription, userId);
   return subscription;
 }
 
 export async function unsubscribeFromPushNotifications(): Promise<void> {
-  const token = await getAccessToken();
-  if (!token) return;
+  const userId = await getSessionUserId();
+  if (!userId) return;
 
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
 
-  await fetch('/api/push/unsubscribe', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ endpoint: subscription?.endpoint }),
-  });
-
+  await removePushSubscription(userId, subscription?.endpoint);
   if (subscription) await subscription.unsubscribe();
 }
 
@@ -115,26 +149,10 @@ export async function ensurePushSubscription(): Promise<PushSubscription | null>
   const existing = await registration.pushManager.getSubscription();
   if (!existing) return subscribeToPushNotifications();
 
-  const token = await getAccessToken();
-  if (!token) return existing;
+  const userId = await getSessionUserId();
+  if (!userId) return existing;
 
-  const res = await fetch('/api/push/subscribe', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      subscription: existing.toJSON(),
-      userAgent: navigator.userAgent,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Could not save push subscription on the server.');
-  }
-
+  await persistPushSubscription(existing, userId);
   return existing;
 }
 

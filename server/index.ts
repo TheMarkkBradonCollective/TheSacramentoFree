@@ -52,10 +52,25 @@ app.post('/api/push/subscribe', requireAuth, async (req: AuthedRequest, res) => 
     updatedAt: new Date().toISOString(),
   };
 
+  const { data: profile } = await supabaseAdmin.from('users').select('uid').eq('uid', userId).maybeSingle();
+  if (!profile) {
+    res.status(400).json({
+      error:
+        'Your community profile is not in the database yet. Save your profile once, then enable notifications again.',
+    });
+    return;
+  }
+
   const { error } = await supabaseAdmin.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
   if (error) {
-    console.error('[push] subscribe failed:', error.message);
-    res.status(500).json({ error: 'Could not save subscription' });
+    console.error('[push] subscribe failed:', error.code, error.message);
+    if (error.code === '42P01' || error.message?.includes('push_subscriptions')) {
+      res.status(503).json({
+        error: 'Push tables are missing in Supabase. Run supabase-sql/push-notifications.sql in the SQL editor.',
+      });
+      return;
+    }
+    res.status(500).json({ error: error.message || 'Could not save subscription' });
     return;
   }
 
