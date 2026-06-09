@@ -4,6 +4,7 @@ import { ItemPost } from '../../types';
 import { stripListingMetadata } from '../../lib/itemLocation';
 import { extractListingImageUrls } from '../../lib/listingContent';
 import ListingImage from '../ListingImage';
+import HorizontalSnapRow, { SnapSlide } from '../HorizontalSnapRow';
 import { DepthPanel } from './HomeScrollStage';
 import { SITE } from '../../siteContent';
 
@@ -79,14 +80,14 @@ export default function GuestListingPreview({
           </div>
         </DepthPanel>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {previewItems.map((item, index) => {
+        <HorizontalSnapRow label="Live neighborhood listings">
+          {previewItems.map((item) => {
             const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
             const cover = photos[0];
             const preview = stripListingMetadata(item.description);
 
             return (
-              <DepthPanel key={item.id} floatDelay={(index % 4) * 8}>
+              <SnapSlide key={item.id} className="w-[min(100%,19rem)] sm:w-[min(85%,20rem)]">
                 <article className="sbn-card overflow-hidden flex flex-col text-left h-full">
                   <button
                     type="button"
@@ -141,10 +142,10 @@ export default function GuestListingPreview({
                     </div>
                   </div>
                 </article>
-              </DepthPanel>
+              </SnapSlide>
             );
           })}
-        </div>
+        </HorizontalSnapRow>
       )}
     </section>
   );
