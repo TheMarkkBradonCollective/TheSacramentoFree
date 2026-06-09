@@ -25,6 +25,7 @@ interface DesktopViewProps {
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
+  onDeletePost?: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
   onEditItem: (item: ItemPost) => void;
   onLogout: () => void;
@@ -55,6 +56,7 @@ export default function DesktopView({
   onInitiateChat,
   onClaimSubmitted,
   onViewItem,
+  onDeletePost,
   onViewProfile,
   onEditItem,
   onLogout,
@@ -169,6 +171,8 @@ export default function DesktopView({
               <UserProfileView
                 userProfile={userProfile}
                 userPosts={items.filter((item) => item.userId === userProfile.uid)}
+                onViewPost={onViewItem}
+                onDeletePost={onDeletePost}
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
                 onDeleteAccount={onDeleteAccount}

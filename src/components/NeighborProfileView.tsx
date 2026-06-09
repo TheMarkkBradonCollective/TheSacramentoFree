@@ -34,6 +34,7 @@ import RoleBadge from './RoleBadge';
 import { ASSIGNABLE_ROLE_OPTIONS } from '../lib/roles';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { MessageRequest } from '../types';
+import ProfilePostList from './ProfilePostList';
 
 interface NeighborProfileViewProps {
   userId: string;
@@ -42,6 +43,8 @@ interface NeighborProfileViewProps {
   listingHints?: ItemPost[];
   onClose: () => void;
   onOpenChat?: (chatId: string) => void;
+  onViewPost?: (post: ItemPost) => void;
+  onDeletePost?: (post: ItemPost) => void;
   onBlockListChanged?: () => void;
 }
 
@@ -52,6 +55,8 @@ export default function NeighborProfileView({
   listingHints = [],
   onClose,
   onOpenChat,
+  onViewPost,
+  onDeletePost,
   onBlockListChanged,
 }: NeighborProfileViewProps) {
   const hintListing = listingHints.find((item) => item.userId === userId);
@@ -472,20 +477,12 @@ export default function NeighborProfileView({
                 </h3>
                 <span className="text-xs text-muted">{neighborPosts.length}</span>
               </div>
-              {neighborPosts.length === 0 ? (
-                <p className="text-xs text-muted">No posts to show.</p>
-              ) : (
-                <div className="space-y-2">
-                  {neighborPosts.map((post) => (
-                    <div key={post.id} className="rounded-xl border border-app bg-inset p-3">
-                      <p className="text-sm font-semibold text-app">{post.title}</p>
-                      <p className="text-xs text-muted mt-0.5">
-                        {post.category} · {post.status.replace('_', ' ')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <ProfilePostList
+                posts={neighborPosts}
+                emptyMessage="No posts to show."
+                onViewPost={onViewPost}
+                onDeletePost={isSelf ? onDeletePost : undefined}
+              />
             </div>
 
             {isDirector && !isSelf && (
