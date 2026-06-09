@@ -441,6 +441,31 @@ export const APP_UPDATES: AppUpdate[] = [
     title: 'Sacramento Buy Nothing launches',
     body: 'The app goes live — a free place for Sacramento neighbors to give, ask, and connect with no money involved.',
   },
+  {
+    date: '2026-05-20',
+    title: 'Hooked up to a real database',
+    body: 'Posts and accounts save online so neighbors see the same community on every visit.',
+  },
+  {
+    date: '2026-05-20',
+    title: 'Full-screen mobile layout',
+    body: 'Map, feed, chat, and profile each use the whole phone screen — no cramped nested boxes.',
+  },
+  {
+    date: '2026-05-20',
+    title: 'Mobile-first, desktop unchanged',
+    body: 'Reworked the phone experience while keeping the wider desktop layout neighbors already liked.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'The community vision',
+    body: 'Wrote down what Sacramento Buy Nothing is — free gifting, local neighbors, no selling, ever.',
+  },
+  {
+    date: '2026-05-19',
+    title: 'Where it all started',
+    body: 'First session: build a web app so Sacramento neighbors can give freely and ask kindly — May 19, 2026.',
+  },
 ];
 
 export const SUPPORT = {
