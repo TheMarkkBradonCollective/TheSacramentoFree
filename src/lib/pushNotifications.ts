@@ -115,18 +115,41 @@ async function removePushSubscription(userId: string, endpoint?: string): Promis
   }
 }
 
+async function clearStaleBrowserSubscription(): Promise<void> {
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+  } catch {
+    // ignore — browser may not have an active subscription
+  }
+}
+
 async function getVapidPublicKey(): Promise<string> {
+  try {
+    const res = await fetch('/api/push/vapid-public-key');
+    if (res.ok) {
+      const json = (await res.json()) as { publicKey?: string };
+      const serverKey = String(json.publicKey || '').trim();
+      if (serverKey) {
+        const cached = localStorage.getItem(VAPID_CACHE_KEY);
+        if (cached && cached !== serverKey) {
+          localStorage.setItem(VAPID_CACHE_KEY, serverKey);
+          await clearStaleBrowserSubscription();
+        } else {
+          localStorage.setItem(VAPID_CACHE_KEY, serverKey);
+        }
+        return serverKey;
+      }
+    }
+  } catch {
+    // fall through to build-time key
+  }
+
   const envKey = (import.meta as { env?: Record<string, string> }).env?.VITE_VAPID_PUBLIC_KEY;
   if (envKey) return envKey;
 
-  const cached = localStorage.getItem(VAPID_CACHE_KEY);
-  if (cached) return cached;
-
-  const res = await fetch('/api/push/vapid-public-key');
-  if (!res.ok) throw new Error('Push notifications are not configured on this server');
-  const json = await res.json();
-  localStorage.setItem(VAPID_CACHE_KEY, json.publicKey);
-  return json.publicKey;
+  throw new Error('Push notifications are not configured on this server');
 }
 
 export type PushPermissionState = NotificationPermission | 'unsupported';
@@ -157,14 +180,15 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
   if (!registration) return null;
 
   const publicKey = await getVapidPublicKey();
-  let subscription = await registration.pushManager.getSubscription();
-
-  if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
+  const existing = await registration.pushManager.getSubscription();
+  if (existing) {
+    await existing.unsubscribe();
   }
+
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  });
 
   await persistPushSubscription(subscription, userId);
   return subscription;
@@ -242,15 +266,19 @@ export interface SendPushOptions {
   data?: Record<string, string>;
 }
 
-async function showLocalTestNotification(): Promise<void> {
-  const registration = await navigator.serviceWorker.ready;
-  await registration.showNotification('Test notification', {
-    body: 'Sacramento Buy Nothing notifications are working on this device.',
-    icon: '/icon.svg',
-    badge: '/icon.svg',
-    tag: 'sbn-test-local',
-    data: { url: '/' },
-  });
+function formatPushApiError(text: string, status: number): string {
+  if (text.includes('FUNCTION_INVOCATION_FAILED')) {
+    return 'Push server crashed on Vercel (FUNCTION_INVOCATION_FAILED). Redeploy the app, then turn notifications off and on again.';
+  }
+  if (text.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(text) as { error?: string };
+      if (parsed.error) return parsed.error;
+    } catch {
+      // fall through
+    }
+  }
+  return text.slice(0, 220) || `Push API returned ${status}`;
 }
 
 async function readJsonResponse(res: Response): Promise<Record<string, unknown>> {
@@ -259,15 +287,13 @@ async function readJsonResponse(res: Response): Promise<Record<string, unknown>>
   try {
     return JSON.parse(text) as Record<string, unknown>;
   } catch {
-    return { error: text.slice(0, 200) };
+    return { error: formatPushApiError(text, res.status) };
   }
 }
 
 export async function sendTestPushNotification(): Promise<{
   ok: boolean;
   errorMessage?: string;
-  localOnly?: boolean;
-  serverHint?: string;
 }> {
   const token = await getAccessToken();
   if (!token) {
@@ -306,41 +332,24 @@ export async function sendTestPushNotification(): Promise<{
       typeof json.error === 'string' ? json.error : `Push API returned ${res.status}`;
 
     if (!res.ok) {
-      try {
-        await showLocalTestNotification();
-        return { ok: true, localOnly: true, serverHint: serverError };
-      } catch {
-        return { ok: false, errorMessage: serverError };
-      }
+      return { ok: false, errorMessage: serverError };
     }
 
     if (Number(json.sent) === 0) {
-      try {
-        await showLocalTestNotification();
-        return {
-          ok: true,
-          localOnly: true,
-          serverHint: serverError || 'Server push did not deliver. Showing a local test instead.',
-        };
-      } catch {
-        return {
-          ok: false,
-          errorMessage:
-            serverError ||
-            'No push subscription found on this device. Enable notifications first, then try again.',
-        };
-      }
+      return {
+        ok: false,
+        errorMessage:
+          serverError ||
+          'Server push did not deliver. Turn notifications off and on again, then retry.',
+      };
     }
 
     return { ok: true };
   } catch (err) {
-    const networkError = err instanceof Error ? err.message : 'Could not reach the push API.';
-    try {
-      await showLocalTestNotification();
-      return { ok: true, localOnly: true, serverHint: networkError };
-    } catch {
-      return { ok: false, errorMessage: networkError };
-    }
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not reach the push API.',
+    };
   }
 }
 

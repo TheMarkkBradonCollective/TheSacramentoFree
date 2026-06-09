@@ -1,7 +1,16 @@
-type WebPushDefault = typeof import('web-push')['default'];
+import * as webPushImport from 'web-push';
 
-let webpushModule: WebPushDefault | null = null;
-let webpushLoad: Promise<WebPushDefault> | null = null;
+type WebPushModule = {
+  setVapidDetails: (subject: string, publicKey: string, privateKey: string) => void;
+  sendNotification: (
+    subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+    payload: string | Buffer,
+  ) => Promise<unknown>;
+};
+
+const webpushModule = ((webPushImport as { default?: WebPushModule }).default ??
+  webPushImport) as WebPushModule;
+
 let configured = false;
 
 export function getVapidPublicKey(): string {
@@ -20,16 +29,12 @@ export function isVapidConfigured(): boolean {
   return configured;
 }
 
-export async function getWebPushModule(): Promise<WebPushDefault> {
-  if (webpushModule) return webpushModule;
-  if (!webpushLoad) {
-    webpushLoad = import('web-push').then((mod) => {
-      const resolved = mod.default ?? (mod as unknown as WebPushDefault);
-      webpushModule = resolved;
-      return resolved;
-    });
-  }
-  return webpushLoad;
+export function getWebPushModule(): WebPushModule {
+  return webpushModule;
+}
+
+export async function getWebPushModuleAsync(): Promise<WebPushModule> {
+  return webpushModule;
 }
 
 export async function configureVapidAsync(): Promise<boolean> {
@@ -40,11 +45,11 @@ export async function configureVapidAsync(): Promise<boolean> {
   if (!publicKey || !privateKey) return false;
 
   try {
-    const webpush = await getWebPushModule();
-    webpush.setVapidDetails(getVapidSubject(), publicKey, privateKey);
+    webpushModule.setVapidDetails(getVapidSubject(), publicKey, privateKey);
     configured = true;
     return true;
-  } catch {
+  } catch (err) {
+    console.error('[push] configureVapid failed:', err);
     return false;
   }
 }

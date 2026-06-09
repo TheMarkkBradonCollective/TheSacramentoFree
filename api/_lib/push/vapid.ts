@@ -38,7 +38,7 @@ export async function sendWebPush(
   });
 
   try {
-    const webpush = await getWebPushModule();
+    const webpush = getWebPushModule();
     await webpush.sendNotification(
       {
         endpoint: subscription.endpoint,

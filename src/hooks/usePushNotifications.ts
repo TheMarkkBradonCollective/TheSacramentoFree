@@ -103,11 +103,7 @@ export function usePushNotifications(userId?: string) {
     const result = await sendTestPushNotification();
     setIsTesting(false);
     if (result.ok) {
-      setTestMessage(
-        result.localOnly
-          ? `Local test only — server push did not deliver.${result.serverHint ? ` ${result.serverHint}` : ''}`
-          : 'Test notification sent from the server — check your device.',
-      );
+      setTestMessage('Test notification sent from the server — check your device.');
     } else {
       setError(result.errorMessage || 'Could not send test notification.');
     }

@@ -249,7 +249,7 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
   });
 
   try {
-    const webpush = await getWebPushModule();
+    const webpush = getWebPushModule();
     await webpush.sendNotification(pushSubscription, notification);
     return { ok: true as const, removed: false };
   } catch (err: unknown) {

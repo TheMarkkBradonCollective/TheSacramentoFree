@@ -3,8 +3,9 @@
   "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
+      "runtime": "nodejs20.x",
       "maxDuration": 15,
-      "includeFiles": "{api/_lib/**,node_modules/web-push/**,node_modules/@supabase/**}"
+      "includeFiles": "{api/_lib/**,node_modules/web-push/**,node_modules/@supabase/**,node_modules/agent-base/**,node_modules/https-proxy-agent/**,node_modules/jws/**,node_modules/safe-buffer/**}"
     }
   },
   "rewrites": [
