@@ -195,7 +195,8 @@ export const STAFF_MESSAGE_DEFAULT = {
 
 export const IN_APP = {
   brandSubtitle: 'Neighbors helping neighbors',
-  feedTitle: 'Community Gift Feed',
+  feedTabLabel: 'Stuff',
+  feedTitle: 'Community Stuff',
   feedDescription: 'Give away items, request what you need, and connect with Sacramento neighbors — 100% free.',
   mapTitle: 'Sacramento Neighborhood Map',
   mapDescription: 'Explore free gifts and requests across Sacramento. Message neighbors to arrange porch pickup.',

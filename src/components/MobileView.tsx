@@ -47,7 +47,7 @@ interface MobileViewProps {
 
 const NAV_ITEMS = [
   { id: 'map' as const, label: 'Map', icon: Map },
-  { id: 'feed' as const, label: 'Feed', icon: List },
+  { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: List },
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
   { id: 'menu' as const, label: IN_APP.menuTabLabel, icon: LifeBuoy },

@@ -7,7 +7,7 @@ export function formatItemClaimedChatMessage(itemTitle: string, itemLabels?: str
 
   return (
     `✓ Confirmed pickup:\n${itemsLine}\n` +
-    `The public listing shows what is still available — who picked up is never shown on the feed or map.`
+    `The public listing shows what is still available — who picked up is never shown in Stuff or on the map.`
   );
 }
 

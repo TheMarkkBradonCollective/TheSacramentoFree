@@ -16,7 +16,7 @@ interface NavbarProps {
 
 const TABS: { id: AppTab; label: string }[] = [
   { id: 'map', label: 'Map' },
-  { id: 'feed', label: 'Feed' },
+  { id: 'feed', label: IN_APP.feedTabLabel },
   { id: 'events', label: IN_APP.eventsTabLabel },
   { id: 'chats', label: 'Messages' },
   { id: 'menu', label: IN_APP.menuTabLabel },

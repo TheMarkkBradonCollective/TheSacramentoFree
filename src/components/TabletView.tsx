@@ -46,7 +46,7 @@ interface TabletViewProps {
 }
 
 const TABS = [
-  { id: 'feed' as const, label: 'Feed', icon: List },
+  { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: List },
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'chats' as const, label: 'Messages', icon: MessageSquare },
