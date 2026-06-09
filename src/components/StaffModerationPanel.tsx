@@ -349,7 +349,7 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
   );
 
   return (
-    <div className="space-y-3" id="staff_moderation_panel">
+    <div className="space-y-3 min-w-0 w-full overflow-x-hidden" id="staff_moderation_panel">
       <h3 className="font-display font-bold text-sm text-app flex items-center gap-2">
         <Shield className="w-4 h-4 text-accent" />
         Staff tools

@@ -147,9 +147,9 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
   const canManageUpdates = canManageAppUpdates(user.role);
 
   return (
-    <div className="space-y-3" id="account_help_section">
+    <div className="space-y-3 min-w-0 w-full overflow-x-hidden" id="account_help_section">
       <h3 className="font-display font-bold text-sm text-app">Help & safety</h3>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2 min-w-0">
         <button type="button" onClick={() => setPanel('updates')} className="sbn-help-list-item">
           <span className="p-2 rounded-lg bg-accent/10 text-accent shrink-0">
             <Megaphone className="w-4 h-4" />

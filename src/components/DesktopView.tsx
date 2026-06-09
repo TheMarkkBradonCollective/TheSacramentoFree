@@ -83,7 +83,7 @@ export default function DesktopView({
         onLogout={onLogout}
       />
 
-      <main id="desktop_main" className="flex-1 min-h-0 overflow-y-auto max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main id="desktop_main" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
         {activeTab === 'feed' && (
           <div className="space-y-6" id="desktop_feed_view_root">
             <div className="sbn-page-header">
