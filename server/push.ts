@@ -15,7 +15,10 @@ export type PushEventType =
   | 'listing_expiring'
   | 'nearby_item'
   | 'announcement'
-  | 'account_update';
+  | 'account_update'
+  | 'support_reply'
+  | 'saved_item_update'
+  | 'listing_status';
 
 export interface PushPayload {
   title: string;
@@ -30,14 +33,17 @@ export interface NotificationPreferencesRow {
   userId: string;
   enabled: boolean;
   messages: boolean;
+  support: boolean;
   claims: boolean;
   gifts: boolean;
   comments: boolean;
+  listingStatus: boolean;
   nearbyListings: boolean;
   requests: boolean;
   announcements: boolean;
   pickupReminders: boolean;
   newListings: boolean;
+  savedItems: boolean;
   accountUpdates: boolean;
   nearbyRadiusMiles: number;
   followedCategories: string[];
@@ -60,12 +66,15 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   pickup_reminder: 'pickupReminders',
   new_message: 'messages',
   new_comment: 'comments',
-  listing_approved: 'newListings',
-  listing_denied: 'newListings',
-  listing_expiring: 'newListings',
+  listing_approved: 'listingStatus',
+  listing_denied: 'listingStatus',
+  listing_expiring: 'listingStatus',
+  listing_status: 'listingStatus',
   nearby_item: 'nearbyListings',
   announcement: 'announcements',
   account_update: 'accountUpdates',
+  support_reply: 'support',
+  saved_item_update: 'savedItems',
 };
 
 export function configureVapid(): void {
@@ -83,14 +92,17 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     userId: String(row.userId),
     enabled: row.enabled !== false,
     messages: row.messages !== false,
+    support: row.support !== false,
     claims: row.claims !== false,
     gifts: row.gifts !== false,
     comments: row.comments !== false,
+    listingStatus: row.listingStatus !== false,
     nearbyListings: row.nearbyListings !== false,
     requests: row.requests !== false,
     announcements: row.announcements !== false,
     pickupReminders: row.pickupReminders !== false,
     newListings: row.newListings !== false,
+    savedItems: row.savedItems !== false,
     accountUpdates: row.accountUpdates !== false,
     nearbyRadiusMiles: Number(row.nearbyRadiusMiles ?? 10),
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
@@ -119,14 +131,17 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         userId: uid,
         enabled: true,
         messages: true,
+        support: true,
         claims: true,
         gifts: true,
         comments: true,
+        listingStatus: true,
         nearbyListings: true,
         requests: true,
         announcements: true,
         pickupReminders: true,
         newListings: true,
+        savedItems: true,
         accountUpdates: true,
         nearbyRadiusMiles: 10,
         followedCategories: [],

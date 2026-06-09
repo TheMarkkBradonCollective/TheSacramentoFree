@@ -207,6 +207,38 @@ export async function notifyAccountUpdate(params: {
   });
 }
 
+export async function notifySupportReply(params: {
+  ticketId: string;
+  recipientUserId: string;
+  subject: string;
+  preview: string;
+}) {
+  await sendPushNotification({
+    eventType: 'support_reply',
+    title: 'Support reply',
+    body: `${params.subject}: ${params.preview.slice(0, 120)}`,
+    url: '/menu',
+    recipientUserIds: [params.recipientUserId],
+    tag: `support-${params.ticketId}`,
+  });
+}
+
+export async function notifySavedItemUpdate(params: {
+  item: ItemPost;
+  recipientUserId: string;
+  statusLabel: string;
+}) {
+  await sendPushNotification({
+    eventType: 'saved_item_update',
+    title: 'Saved item update',
+    body: `"${params.item.title}" — ${params.statusLabel}`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.recipientUserId],
+    tag: `saved-${params.item.id}`,
+  });
+}
+
 export async function notifyClaimRequestSubmitted(params: {
   item: ItemPost;
   claimerName: string;
