@@ -125,9 +125,18 @@ export const FUTURE_FEATURES = [
 
 export const SUPPORT = {
   gofundmeUrl: 'https://gofund.me/bc824e51b',
-  gofundmeTitle: 'Support the app',
+  gofundmeTitle: 'Help keep the app running',
   gofundmeBlurb:
-    'Sacramento Buy Nothing is 100% free and ad-free. If this app helps your neighborhood, consider chipping in to help cover hosting and development.',
+    'Sacramento Buy Nothing is 100% free and ad-free — no paywalls, no ads, and your data is never sold. Running it still costs real money every month.',
+  gofundmeDetail:
+    'This app is built and maintained with Cursor (AI-assisted development), Supabase (database, auth, and live updates), Vercel (hosting the website), and GoDaddy (domain name). Each of those services adds to the monthly bill so neighbors can keep giving freely.',
+  costItems: [
+  { name: 'Cursor', role: 'Building & improving the app' },
+  { name: 'Supabase', role: 'Database, sign-in, and realtime' },
+  { name: 'Vercel', role: 'Hosting the site online' },
+  { name: 'GoDaddy', role: 'Custom domain name' },
+  ] as const,
+  gofundmeClosing: 'If this community helps you, a small donation on GoFundMe helps cover these costs.',
   gofundmeButton: 'Support on GoFundMe',
 } as const;
 
