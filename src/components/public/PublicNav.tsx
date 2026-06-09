@@ -9,6 +9,15 @@ interface PublicNavProps {
   onNavigate: (route: PublicRoute) => void;
 }
 
+const COMMUNITY_LINKS: { route: PublicRoute; label: string }[] = [
+  { route: 'community', label: 'Community' },
+  { route: 'updates', label: 'Updates' },
+];
+
+function isCommunityRoute(route: PublicRoute): boolean {
+  return route === 'community' || route === 'updates';
+}
+
 export default function PublicNav({ route, onNavigate }: PublicNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -16,6 +25,16 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
     `px-3 py-2 rounded-full text-sm font-medium transition-colors ${
       route === r ? 'bg-accent-soft text-accent' : 'text-muted hover:text-app hover:bg-inset'
     }`;
+
+  const mobileLinkClass = (r: PublicRoute) =>
+    `px-3 py-2 rounded-xl text-sm font-medium transition-colors text-left ${
+      route === r ? 'bg-accent-soft text-accent' : 'text-muted hover:text-app hover:bg-inset'
+    }`;
+
+  const navigateMobile = (r: PublicRoute) => {
+    onNavigate(r);
+    setMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 sbn-glass-nav sbn-safe-top">
@@ -51,27 +70,37 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
 
       {menuOpen && (
         <nav className="md:hidden border-t border-app px-4 py-3 flex flex-col gap-1 bg-surface">
-          {PUBLIC_NAV.map(({ route: r, label }) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => {
-                onNavigate(r);
-                setMenuOpen(false);
-              }}
-              className={linkClass(r)}
-            >
-              {label}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              onNavigate('login');
-              setMenuOpen(false);
-            }}
-            className="sbn-btn sbn-btn-primary w-full mt-2"
-          >
+          {PUBLIC_NAV.map(({ route: r, label }) => {
+            if (r === 'community') {
+              return (
+                <div key="community-group" className="flex flex-col gap-0.5">
+                  <p
+                    className={`px-3 pt-2 pb-1 text-xs font-bold uppercase tracking-wider ${
+                      isCommunityRoute(route) ? 'text-accent' : 'text-subtle'
+                    }`}
+                  >
+                    Community
+                  </p>
+                  {COMMUNITY_LINKS.map(({ route: linkRoute, label: linkLabel }) => (
+                    <button
+                      key={linkRoute}
+                      type="button"
+                      onClick={() => navigateMobile(linkRoute)}
+                      className={`${mobileLinkClass(linkRoute)} pl-5`}
+                    >
+                      {linkLabel}
+                    </button>
+                  ))}
+                </div>
+              );
+            }
+            return (
+              <button key={r} type="button" onClick={() => navigateMobile(r)} className={mobileLinkClass(r)}>
+                {label}
+              </button>
+            );
+          })}
+          <button type="button" onClick={() => navigateMobile('login')} className="sbn-btn sbn-btn-primary w-full mt-2">
             Sign in / Join
           </button>
         </nav>

@@ -123,6 +123,151 @@ export const FUTURE_FEATURES = [
   'Local alerts'
 ] as const;
 
+export type AppUpdate = {
+  date: string;
+  title: string;
+  body: string;
+};
+
+/** Newest first — plain-language changelog for neighbors. */
+export const APP_UPDATES: AppUpdate[] = [
+  {
+    date: '2026-06-09',
+    title: 'Cleaner feed filters',
+    body: 'Filters and sorting now live in one “Filters & sort” panel so the feed stays easy to scroll.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'Smarter quick picks',
+    body: 'Tap multiple quick filters at once — Trending, Trading, Saved, My area, With photos, and Needs pickup.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'More ways to browse the feed',
+    body: 'Filter by giving vs. looking for, category, neighborhood, status, votes, and comments. Sort by newest, oldest, or most active.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'Withdrawn posts stay hidden',
+    body: 'If someone removes a listing, it no longer clutters the community feed.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'Free community events',
+    body: 'Post neighborhood gatherings, RSVP (going / maybe / can’t go), and leave comments. Every event must be 100% free.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'A note from your director',
+    body: 'Markeith White shares why the app exists — free forever, no ads, and your info is never sold.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'Star reviews',
+    body: 'Leave a quick rating for the app. One review per person, updated anytime.',
+  },
+  {
+    date: '2026-06-09',
+    title: 'Support the app (optional)',
+    body: 'A GoFundMe link explains what it costs to run Sacramento Buy Nothing — and why we will never charge you or show ads.',
+  },
+  {
+    date: '2026-06-07',
+    title: 'Save listings & Labor section',
+    body: 'Bookmark posts to check later. New Labor section for community help and skills. Added Old Foothill Farms to the area list.',
+  },
+  {
+    date: '2026-06-07',
+    title: 'Smoother mobile home page',
+    body: 'Fixed layout quirks on phones so browsing before you sign in feels better.',
+  },
+  {
+    date: '2026-06-02',
+    title: 'Preview listings before joining',
+    body: 'Guests can browse real community posts on the home page without signing in first.',
+  },
+  {
+    date: '2026-06-02',
+    title: 'Tap photos to enlarge',
+    body: 'Listing images open in a lightbox so you can see details before you message someone.',
+  },
+  {
+    date: '2026-06-02',
+    title: 'Delete your account',
+    body: 'You can remove your account and data when you no longer want to participate.',
+  },
+  {
+    date: '2026-05-31',
+    title: 'Clearer claim & hold buttons',
+    body: 'Easier to see when something is available, on hold, or already claimed.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Help & support tab',
+    body: 'Report problems, open support tickets, and reach staff from one dedicated place in the app.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Support tickets with photos',
+    body: 'Attach pictures when you report an issue so staff can help faster.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Pick up several items at once',
+    body: 'Claim multiple listings in one trip when a neighbor is giving away more than one thing.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Block & report',
+    body: 'Block someone who makes you uncomfortable and report serious issues to staff.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Staff moderation tools',
+    body: 'Community leaders can review reports, manage accounts, and keep the space safe.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Team directory',
+    body: 'See who helps run the community and what role they play.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Neighbor directory improvements',
+    body: 'View profiles from the directory and see neighbor avatars at a glance.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Message requests',
+    body: 'New chats start as a request so you can accept or decline before talking.',
+  },
+  {
+    date: '2026-05-29',
+    title: '38 Sacramento neighborhoods',
+    body: 'Pick your area from a fuller list that covers more of the region.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Steadier sign-in',
+    body: 'Stay signed in after refreshing, and listings load reliably once you are logged in.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Map & feed fixes',
+    body: 'Listings show correctly on the map and feed, with pickup pins in the right spots.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Role badges',
+    body: 'Director and staff roles show on profiles so you know who is helping run things.',
+  },
+  {
+    date: '2026-05-29',
+    title: 'Community stats on home',
+    body: 'The public home page shows live counts of neighbors, posts, and gifts shared.',
+  },
+];
+
 export const SUPPORT = {
   gofundmeUrl: 'https://gofund.me/bc824e51b',
   gofundmeTitle: 'Help keep the app running',

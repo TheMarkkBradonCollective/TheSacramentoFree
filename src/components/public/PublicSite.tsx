@@ -9,6 +9,7 @@ import HowItWorksPage from './pages/HowItWorksPage';
 import RulesPage from './pages/RulesPage';
 import NeighborhoodsPage from './pages/NeighborhoodsPage';
 import CommunityPage from './pages/CommunityPage';
+import UpdatesPage from './pages/UpdatesPage';
 import AuthPage from './AuthPage';
 import { ItemPost } from '../../types';
 
@@ -59,6 +60,8 @@ export default function PublicSite({
         return <NeighborhoodsPage />;
       case 'community':
         return <CommunityPage />;
+      case 'updates':
+        return <UpdatesPage />;
       case 'login':
         return (
           <AuthPage

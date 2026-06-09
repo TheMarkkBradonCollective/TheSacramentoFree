@@ -5,10 +5,12 @@ import {
   SITE,
   WHY_IT_MATTERS,
 } from '../../../siteContent';
+import { usePublicRoute } from '../../../public/usePublicRoute';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
 
 export default function CommunityPage() {
+  const { navigate } = usePublicRoute();
   return (
     <PublicPageShell title="Community" subtitle={SITE.tagline}>
       <PublicCard>
@@ -36,6 +38,20 @@ export default function CommunityPage() {
           ))}
         </div>
         <p className="mt-4 text-sm text-muted">{COMMUNITY_FIRST.closing}</p>
+      </PublicCard>
+
+      <PublicCard>
+        <h2 className="text-lg font-black text-app">What&apos;s new</h2>
+        <p className="mt-2 text-sm text-muted">
+          See everything we&apos;ve shipped — features, fixes, and improvements — with dates.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('updates')}
+          className="sbn-btn sbn-btn-secondary sbn-btn-sm mt-4"
+        >
+          View updates
+        </button>
       </PublicCard>
 
       <PublicCard>
