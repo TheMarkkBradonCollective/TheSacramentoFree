@@ -249,12 +249,15 @@ export default function UserProfileView({
     : 'bg-surface border border-app rounded-2xl p-6 shadow-md';
 
   return (
-    <div className={fullBleed ? 'font-sans' : 'space-y-6'} id="profile_root_container">
+    <div
+      className={`${fullBleed ? 'font-sans' : 'space-y-6'} w-full max-w-full min-w-0 overflow-x-hidden`}
+      id="profile_root_container"
+    >
       <div
         className={
           fullBleed
-            ? 'flex flex-col font-sans'
-            : 'grid grid-cols-1 md:grid-cols-3 gap-6 font-sans'
+            ? 'flex flex-col font-sans min-w-0 w-full'
+            : 'grid grid-cols-1 md:grid-cols-3 gap-6 font-sans min-w-0 w-full'
         }
         id="profile_views_grid"
       >
@@ -346,16 +349,16 @@ export default function UserProfileView({
 
           <form onSubmit={handleSave} className="space-y-5" id="profile_edit_form">
             {errorMsg && (
-              <div className="p-3 bg-red-950/50 border border-red-900 text-red-400 text-xs font-bold rounded-xl flex items-center space-x-1.5" id="profile_save_error">
-                <AlertCircle className="w-4 h-4" />
-                <span>{errorMsg}</span>
+              <div className="p-3 bg-red-950/50 border border-red-900 text-red-400 text-xs font-bold rounded-xl flex items-start gap-1.5 min-w-0" id="profile_save_error">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span className="min-w-0 break-words">{errorMsg}</span>
               </div>
             )}
 
             {successMsg && (
-              <div className="p-3 bg-green-950/50 border border-green-900 text-green-400 text-xs font-bold rounded-xl flex items-center space-x-1.5" id="profile_save_success">
-                <CheckCircle className="w-4 h-4 text-green-400" />
-                <span>{successMsg}</span>
+              <div className="p-3 bg-green-950/50 border border-green-900 text-green-400 text-xs font-bold rounded-xl flex items-start gap-1.5 min-w-0" id="profile_save_success">
+                <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                <span className="min-w-0 break-words">{successMsg}</span>
               </div>
             )}
 
@@ -434,10 +437,10 @@ export default function UserProfileView({
 
       {/* Modern PWA App Installation Widget */}
       <div
-        className={`${fullBleed ? `${sectionShell} shadow-none` : 'bg-surface border border-app rounded-2xl p-6 shadow-lg'} animate-fade-in`}
+        className={`${fullBleed ? `${sectionShell} shadow-none` : 'bg-surface border border-app rounded-2xl p-6 shadow-lg'} animate-fade-in min-w-0 overflow-hidden`}
         id="pwa_installs_section"
       >
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-app/70 pb-6 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-app/70 pb-6 mb-6 min-w-0">
           <div className="max-w-xl">
             <div className="flex items-center gap-2 mb-2">
               <Smartphone className="w-4 h-4 text-accent" />
@@ -451,9 +454,11 @@ export default function UserProfileView({
 
           <div className="flex-shrink-0">
             {isAppInstalled ? (
-              <div className="flex items-center space-x-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl" id="pwa_installed_badge">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-black text-emerald-400 uppercase tracking-wider font-mono">MOBILE APP LOADED & RUNNING 🟢</span>
+              <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl max-w-full" id="pwa_installed_badge">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-xs font-black text-emerald-400 uppercase tracking-wider font-mono break-words">
+                  App installed on this device
+                </span>
               </div>
             ) : deferredPrompt ? (
               <button
@@ -475,36 +480,36 @@ export default function UserProfileView({
         {/* Dynamic Mobile Guide Tabs */}
         {!isAppInstalled && (
           <div className="space-y-4">
-            <div className="flex border-b border-app">
+            <div className="flex border-b border-app overflow-x-auto max-w-full -mx-1 px-1">
               <button
                 onClick={() => setActiveManualPlatform('ios')}
-                className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+                className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'ios'
                     ? 'bg-accent border-accent text-on-accent'
                     : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >
-                 Apple iPhone (iOS)
+                iPhone
               </button>
               <button
                 onClick={() => setActiveManualPlatform('android')}
-                className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+                className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'android'
                     ? 'bg-accent border-accent text-on-accent'
                     : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >
-                🤖 Android / Samsung
+                Android
               </button>
               <button
                 onClick={() => setActiveManualPlatform('chrome')}
-                className={`py-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+                className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
                   activeManualPlatform === 'chrome'
                     ? 'bg-accent border-accent text-on-accent'
                     : 'border-transparent text-subtle hover:text-muted'
                 }`}
               >
-                🖥️ PC / Mac Desktop
+                Desktop
               </button>
             </div>
 

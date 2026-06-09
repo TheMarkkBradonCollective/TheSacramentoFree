@@ -66,6 +66,9 @@ export default function NotificationSettings({ userId, fullBleed = false }: Noti
     enableNotifications,
     disableNotifications,
     updatePreferences,
+    sendTestNotification,
+    isTesting,
+    testMessage,
   } = usePushNotifications(userId);
 
   const shell = fullBleed
@@ -131,12 +134,28 @@ export default function NotificationSettings({ userId, fullBleed = false }: Noti
           </button>
         )}
         {isSubscribed && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            Subscribed on this device
-          </span>
+          <>
+            <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              Subscribed on this device
+            </span>
+            <button
+              type="button"
+              onClick={() => void sendTestNotification()}
+              disabled={isTesting || isLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-app text-sm font-bold text-app hover:bg-inset disabled:opacity-50"
+            >
+              {isTesting ? 'Sending…' : 'Send test notification'}
+            </button>
+          </>
         )}
       </div>
+
+      {testMessage && (
+        <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 mb-4">
+          {testMessage}
+        </p>
+      )}
 
       <ToggleRow
         label="All notifications"

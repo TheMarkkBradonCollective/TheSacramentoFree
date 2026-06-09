@@ -249,11 +249,11 @@ export default function MobileView({
         </div>
 
         <div
-          className={`h-full w-full min-h-0 overflow-y-auto bg-app ${activeTab === 'profile' ? '' : 'hidden'}`}
+          className={`h-full w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none bg-app ${activeTab === 'profile' ? '' : 'hidden'}`}
           id="mobile_profile_dock"
           aria-hidden={activeTab !== 'profile'}
         >
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden">
             <div className="sbn-page-header px-4 pt-4 pb-2">
               <h2>{IN_APP.profileTitle}</h2>
             </div>
@@ -265,7 +265,7 @@ export default function MobileView({
               onDeleteAccount={onDeleteAccount}
               fullBleed
             />
-            <PageScrollFooter className="-mx-4" onOpenDetails={onOpenGoFundMe} />
+            <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
           </div>
         </div>
 

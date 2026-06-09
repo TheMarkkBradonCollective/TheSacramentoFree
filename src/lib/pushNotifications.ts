@@ -168,6 +168,37 @@ export interface SendPushOptions {
   data?: Record<string, string>;
 }
 
+export async function sendTestPushNotification(): Promise<{ ok: boolean; errorMessage?: string }> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { ok: false, errorMessage: 'Sign in to test notifications.' };
+  }
+
+  try {
+    const res = await fetch('/api/push/test', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, errorMessage: json.error || 'Could not send test notification.' };
+    }
+    if (json.sent === 0) {
+      return {
+        ok: false,
+        errorMessage:
+          'No push subscription found on this device. Enable notifications first, then try again.',
+      };
+    }
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not send test notification.',
+    };
+  }
+}
+
 export async function sendPushNotification(options: SendPushOptions): Promise<void> {
   const token = await getAccessToken();
   if (!token) return;

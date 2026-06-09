@@ -5,6 +5,7 @@ import {
   getPushPermissionState,
   listenForNotificationClicks,
   saveNotificationPreferences,
+  sendTestPushNotification,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   type PushPermissionState,
@@ -17,6 +18,8 @@ export function usePushNotifications(userId?: string) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isTesting, setIsTesting] = useState(false);
+  const [testMessage, setTestMessage] = useState('');
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
 
   const refreshPermission = useCallback(() => {
@@ -89,6 +92,20 @@ export function usePushNotifications(userId?: string) {
     }
   }, []);
 
+  const sendTestNotification = useCallback(async () => {
+    setIsTesting(true);
+    setError('');
+    setTestMessage('');
+    const result = await sendTestPushNotification();
+    setIsTesting(false);
+    if (result.ok) {
+      setTestMessage('Test notification sent — check your device.');
+    } else {
+      setError(result.errorMessage || 'Could not send test notification.');
+    }
+    return result.ok;
+  }, []);
+
   const updatePreferences = useCallback(
     async (next: NotificationPreferences) => {
       if (!userId) return false;
@@ -109,6 +126,9 @@ export function usePushNotifications(userId?: string) {
     enableNotifications,
     disableNotifications,
     updatePreferences,
+    sendTestNotification,
+    isTesting,
+    testMessage,
     refreshPermission,
     reloadPreferences: loadPreferences,
   };

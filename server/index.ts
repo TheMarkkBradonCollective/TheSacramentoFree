@@ -158,6 +158,21 @@ async function resolveRecipients(body: SendBody, callerId: string): Promise<stri
   return [];
 }
 
+app.post('/api/push/test', requireAuth, async (req: AuthedRequest, res) => {
+  const callerId = req.user!.id;
+  const payload: PushPayload = {
+    title: 'Test notification',
+    body: 'Sacramento Buy Nothing push alerts are working on this device.',
+    url: '/',
+    tag: 'sbn-test-push',
+    eventType: 'account_update',
+    data: { test: 'true' },
+  };
+
+  const result = await sendPushToUsers([callerId], payload);
+  res.json({ ok: true, ...result });
+});
+
 app.post('/api/push/send', requireAuth, async (req: AuthedRequest, res) => {
   const callerId = req.user!.id;
   const body = req.body as SendBody;
