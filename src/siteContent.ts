@@ -144,7 +144,7 @@ export const APP_UPDATES: AppUpdate[] = [
   {
     date: '2026-06-09',
     title: 'Smarter quick picks',
-    body: 'Tap multiple quick filters at once — Trending, Trading, Saved, My area, With photos, and Needs pickup.',
+    body: 'Tap multiple quick filters at once — Trending, Saved, My area, With photos, and Needs pickup.',
   },
   {
     date: '2026-06-09',
