@@ -8,16 +8,22 @@ import LeaderMessageEditModal from './LeaderMessageEditModal';
 interface DirectorMessageProps {
   userProfile?: UserProfile | null;
   compact?: boolean;
+  showVotes?: boolean;
   onRequireSignIn?: () => void;
 }
 
 export default function DirectorMessage({
   userProfile,
   compact = false,
+  showVotes = true,
   onRequireSignIn,
 }: DirectorMessageProps) {
   const { message, loading, saveMessage, canEdit } = useDirectorMessage(userProfile);
-  const { getVoteState, handleVote } = useCommunityContentVotes('leader_message', ['director'], userProfile);
+  const { getVoteState, handleVote } = useCommunityContentVotes(
+    'leader_message',
+    showVotes ? ['director'] : [],
+    userProfile,
+  );
   const [editing, setEditing] = useState(false);
 
   return (
@@ -35,8 +41,8 @@ export default function DirectorMessage({
         loading={loading}
         canEdit={canEdit}
         onEdit={() => setEditing(true)}
-        voteState={getVoteState('director') ?? EMPTY_VOTE}
-        onVote={(dir) => handleVote('director', dir)}
+        voteState={showVotes ? getVoteState('director') ?? EMPTY_VOTE : undefined}
+        onVote={showVotes ? (dir) => handleVote('director', dir) : undefined}
         onRequireSignIn={onRequireSignIn}
         signedIn={Boolean(userProfile)}
       />

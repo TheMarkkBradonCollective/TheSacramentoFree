@@ -22,7 +22,7 @@ export default function LeadershipMessagesCarousel({
     return (
       <div>
         <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">From our team</p>
-        <DirectorMessage userProfile={userProfile} compact onRequireSignIn={onRequireSignIn} />
+        <DirectorMessage userProfile={userProfile} compact showVotes={false} onRequireSignIn={onRequireSignIn} />
       </div>
     );
   }
@@ -32,7 +32,7 @@ export default function LeadershipMessagesCarousel({
       <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">From our team</p>
       <HorizontalSnapRow label="Leadership messages">
         <SnapSlide>
-          <DirectorMessage userProfile={userProfile} compact onRequireSignIn={onRequireSignIn} />
+          <DirectorMessage userProfile={userProfile} compact showVotes={false} onRequireSignIn={onRequireSignIn} />
         </SnapSlide>
         {staffMessages.map((message) => (
           <SnapSlide key={message.userId}>
@@ -40,6 +40,7 @@ export default function LeadershipMessagesCarousel({
               message={message}
               userProfile={userProfile}
               compact
+              showVotes={false}
               canEdit={userProfile?.uid === message.userId}
               onSave={userProfile?.uid === message.userId ? saveMessage : undefined}
               onRequireSignIn={onRequireSignIn}

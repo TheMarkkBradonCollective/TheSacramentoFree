@@ -23,6 +23,7 @@ function ReviewCard({
   onRequireSignIn,
   signedIn,
   isOwnReview,
+  showVotes = true,
 }: {
   review: AppReview;
   voteState: ContentVoteState;
@@ -30,6 +31,7 @@ function ReviewCard({
   onRequireSignIn?: () => void;
   signedIn: boolean;
   isOwnReview: boolean;
+  showVotes?: boolean;
 }) {
   return (
     <div className="bg-inset rounded-xl p-3 border border-app h-full">
@@ -57,15 +59,17 @@ function ReviewCard({
               <span>{review.text}</span>
             </p>
           )}
-          <ContentVoteButtons
-            voteState={voteState}
-            onVote={onVote}
-            onRequireSignIn={onRequireSignIn}
-            signedIn={signedIn}
-            disabled={isOwnReview}
-            disabledReason="You can't vote on your own review"
-            compact
-          />
+          {showVotes && (
+            <ContentVoteButtons
+              voteState={voteState}
+              onVote={onVote}
+              onRequireSignIn={onRequireSignIn}
+              signedIn={signedIn}
+              disabled={isOwnReview}
+              disabledReason="You can't vote on your own review"
+              compact
+            />
+          )}
         </div>
       </div>
     </div>
@@ -85,7 +89,11 @@ export default function CommunityReviews({
     blockedUserIds,
   );
   const reviewIds = useMemo(() => reviews.map((r) => r.id), [reviews]);
-  const { getVoteState, handleVote } = useCommunityContentVotes('review', reviewIds, userProfile);
+  const { getVoteState, handleVote } = useCommunityContentVotes(
+    'review',
+    preview ? [] : reviewIds,
+    userProfile,
+  );
   const [rating, setRating] = useState(myReview?.rating ?? 5);
   const [text, setText] = useState(myReview?.text || '');
   const [submitting, setSubmitting] = useState(false);
@@ -117,14 +125,15 @@ export default function CommunityReviews({
   const previewReviews = reviews.slice(0, 12);
   const signedIn = Boolean(userProfile);
 
-  const renderReviewCard = (review: AppReview, showVotes: boolean) => (
+  const renderReviewCard = (review: AppReview, withVotes: boolean) => (
     <ReviewCard
       review={review}
-      voteState={showVotes ? getVoteState(review.id) : EMPTY_VOTE}
+      voteState={withVotes ? getVoteState(review.id) : EMPTY_VOTE}
       onVote={(dir) => handleVote(review.id, dir, { blockSelfId: review.userId })}
       onRequireSignIn={onRequireSignIn}
       signedIn={signedIn}
       isOwnReview={userProfile?.uid === review.userId}
+      showVotes={withVotes}
     />
   );
 

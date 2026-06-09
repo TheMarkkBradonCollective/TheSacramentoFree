@@ -8,6 +8,7 @@ interface StaffMessageProps {
   message: StaffMessageContent;
   userProfile?: UserProfile | null;
   compact?: boolean;
+  showVotes?: boolean;
   canEdit?: boolean;
   onSave?: (next: StaffMessageContent) => Promise<{ ok: boolean; errorMessage?: string }>;
   onRequireSignIn?: () => void;
@@ -17,13 +18,14 @@ export default function StaffMessage({
   message,
   userProfile,
   compact = false,
+  showVotes = true,
   canEdit = false,
   onSave,
   onRequireSignIn,
 }: StaffMessageProps) {
   const { getVoteState, handleVote } = useCommunityContentVotes(
     'leader_message',
-    [message.userId],
+    showVotes ? [message.userId] : [],
     userProfile,
   );
   const [editing, setEditing] = useState(false);
@@ -42,8 +44,8 @@ export default function StaffMessage({
         compact={compact}
         canEdit={canEdit}
         onEdit={() => setEditing(true)}
-        voteState={getVoteState(message.userId) ?? EMPTY_VOTE}
-        onVote={(dir) => handleVote(message.userId, dir)}
+        voteState={showVotes ? getVoteState(message.userId) ?? EMPTY_VOTE : undefined}
+        onVote={showVotes ? (dir) => handleVote(message.userId, dir) : undefined}
         onRequireSignIn={onRequireSignIn}
         signedIn={Boolean(userProfile)}
       />

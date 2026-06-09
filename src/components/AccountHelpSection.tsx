@@ -10,14 +10,16 @@ import FullScreenPanel from './FullScreenPanel';
 import SupportTicketThread from './SupportTicketThread';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
-import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight } from 'lucide-react';
+import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight, Megaphone, Star } from 'lucide-react';
+import UpdatesList from './UpdatesList';
+import CommunityReviews from './CommunityReviews';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface AccountHelpSectionProps {
   user: UserProfile;
 }
 
-type Panel = 'report' | 'tickets' | 'newTicket' | 'thread' | null;
+type Panel = 'report' | 'tickets' | 'newTicket' | 'thread' | 'updates' | 'reviews' | null;
 
 export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
   const [panel, setPanel] = useState<Panel>(null);
@@ -146,6 +148,26 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
     <div className="space-y-3" id="account_help_section">
       <h3 className="font-display font-bold text-sm text-app">Help & safety</h3>
       <div className="grid gap-2 sm:grid-cols-2">
+        <button type="button" onClick={() => setPanel('updates')} className="sbn-help-list-item">
+          <span className="p-2 rounded-lg bg-accent/10 text-accent shrink-0">
+            <Megaphone className="w-4 h-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-app block">App updates</span>
+            <span className="text-[11px] text-muted">See what&apos;s new and vote on changes</span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+        </button>
+        <button type="button" onClick={() => setPanel('reviews')} className="sbn-help-list-item">
+          <span className="p-2 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+            <Star className="w-4 h-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-app block">Community reviews</span>
+            <span className="text-[11px] text-muted">Read all reviews — post or edit yours</span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+        </button>
         <button
           type="button"
           onClick={() => setPanel('report')}
@@ -178,6 +200,28 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
       <p className="text-[10px] text-muted leading-snug">
         Reports are one-way — staff review them but you will not get a reply. For personal help, open a support ticket.
       </p>
+
+      {panel === 'updates' && (
+        <FullScreenPanel
+          wide
+          title="App updates"
+          subtitle="Tap an update to read more — your votes go to the director"
+          onClose={closePanel}
+        >
+          <UpdatesList userProfile={user} />
+        </FullScreenPanel>
+      )}
+
+      {panel === 'reviews' && (
+        <FullScreenPanel
+          wide
+          title="Community reviews"
+          subtitle="Read neighbor feedback and share your own"
+          onClose={closePanel}
+        >
+          <CommunityReviews userProfile={user} />
+        </FullScreenPanel>
+      )}
 
       {panel === 'report' && (
         <FullScreenPanel title="Send a report" subtitle="No follow-up — staff will review" onClose={closePanel}>

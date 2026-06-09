@@ -577,7 +577,7 @@ export const IN_APP = {
   chatsDescription: 'Comment or message to arrange pickup. Keep every exchange free and friendly.',
   profileTitle: 'Your Community Profile',
   menuTitle: 'Help & support',
-  menuDescription: 'Report issues, open support tickets, and get help staying safe in the community.',
+  menuDescription: 'App updates, reviews, reports, and support tickets — all in one place.',
   menuTabLabel: 'Help',
   accountTabLabel: 'Account',
   onboardingTitle: 'Join Sacramento Buy Nothing',
