@@ -101,7 +101,7 @@ export function usePushNotifications(userId?: string) {
     if (result.ok) {
       setTestMessage(
         result.localOnly
-          ? 'Local test notification shown. For background push when the app is closed, set VAPID keys on your host (e.g. Vercel env vars) and redeploy.'
+          ? `Local test notification shown.${result.serverHint ? ` Server: ${result.serverHint}` : ''}`
           : 'Test notification sent — check your device.',
       );
     } else {

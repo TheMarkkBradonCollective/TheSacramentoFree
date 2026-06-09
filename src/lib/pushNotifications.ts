@@ -202,10 +202,21 @@ async function showLocalTestNotification(): Promise<void> {
   });
 }
 
+async function readJsonResponse(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return { error: text.slice(0, 200) };
+  }
+}
+
 export async function sendTestPushNotification(): Promise<{
   ok: boolean;
   errorMessage?: string;
   localOnly?: boolean;
+  serverHint?: string;
 }> {
   const token = await getAccessToken();
   if (!token) {
@@ -225,47 +236,59 @@ export async function sendTestPushNotification(): Promise<{
     };
   }
 
+  const registration = await navigator.serviceWorker.ready;
+  const browserSubscription = await registration.pushManager.getSubscription();
+
   try {
     const res = await fetch('/api/push/test', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subscription: browserSubscription?.toJSON() || null,
+      }),
     });
-    const json = await res.json().catch(() => ({}));
+    const json = await readJsonResponse(res);
+    const serverError =
+      typeof json.error === 'string' ? json.error : `Push API returned ${res.status}`;
+
     if (!res.ok) {
-      if (res.status === 404 || res.status === 502 || res.status === 503) {
-        try {
-          await showLocalTestNotification();
-          return {
-            ok: true,
-            localOnly: true,
-          };
-        } catch {
-          // fall through to server error below
-        }
+      try {
+        await showLocalTestNotification();
+        return { ok: true, localOnly: true, serverHint: serverError };
+      } catch {
+        return { ok: false, errorMessage: serverError };
       }
-      return { ok: false, errorMessage: json.error || 'Could not send test notification.' };
     }
-    if (json.sent === 0) {
-      return {
-        ok: false,
-        errorMessage:
-          json.error ||
-          'No push subscription found on this device. Enable notifications first, then try again.',
-      };
+
+    if (Number(json.sent) === 0) {
+      try {
+        await showLocalTestNotification();
+        return {
+          ok: true,
+          localOnly: true,
+          serverHint: serverError || 'Server push did not deliver. Showing a local test instead.',
+        };
+      } catch {
+        return {
+          ok: false,
+          errorMessage:
+            serverError ||
+            'No push subscription found on this device. Enable notifications first, then try again.',
+        };
+      }
     }
+
     return { ok: true };
-  } catch {
+  } catch (err) {
+    const networkError = err instanceof Error ? err.message : 'Could not reach the push API.';
     try {
       await showLocalTestNotification();
-      return { ok: true, localOnly: true };
-    } catch (err) {
-      return {
-        ok: false,
-        errorMessage:
-          err instanceof Error
-            ? err.message
-            : 'Could not reach the push API. Run npm run dev and set VAPID keys in .env.',
-      };
+      return { ok: true, localOnly: true, serverHint: networkError };
+    } catch {
+      return { ok: false, errorMessage: networkError };
     }
   }
 }
