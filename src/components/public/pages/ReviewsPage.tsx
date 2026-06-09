@@ -11,7 +11,7 @@ export default function ReviewsPage({ onRequireSignIn }: ReviewsPageProps) {
   return (
     <PublicPageShell
       title="Reviews"
-      subtitle="What neighbors think of the app — plus notes from our director and city manager."
+      subtitle="What neighbors think of the app — and a note from our director when you scroll down."
     >
       <CommunityReviews onRequireSignIn={onRequireSignIn} />
       <DirectorMessage />

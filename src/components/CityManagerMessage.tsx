@@ -10,8 +10,20 @@ interface CityManagerMessageProps {
 }
 
 export default function CityManagerMessage({ userProfile, compact = false }: CityManagerMessageProps) {
-  const { message, loading, saveMessage, canEdit } = useCityManagerMessage(userProfile);
+  const { message, loading, saveMessage, canEdit, isPublished } = useCityManagerMessage(userProfile);
   const [editing, setEditing] = useState(false);
+
+  if (loading) {
+    return (
+      <section className={`sbn-card ${compact ? 'p-4' : 'p-5'} text-sm text-muted`}>
+        Loading city manager message…
+      </section>
+    );
+  }
+
+  if (!isPublished) {
+    return null;
+  }
 
   return (
     <>
@@ -25,7 +37,6 @@ export default function CityManagerMessage({ userProfile, compact = false }: Cit
         promises={message.promises}
         closing={message.closing}
         compact={compact}
-        loading={loading}
         canEdit={canEdit}
         onEdit={() => setEditing(true)}
       />

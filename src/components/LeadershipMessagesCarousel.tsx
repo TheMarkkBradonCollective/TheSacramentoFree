@@ -2,12 +2,25 @@ import { UserProfile } from '../types';
 import DirectorMessage from './DirectorMessage';
 import CityManagerMessage from './CityManagerMessage';
 import HorizontalSnapRow, { SnapSlide } from './HorizontalSnapRow';
+import { useCityManagerMessage } from '../hooks/useCityManagerMessage';
 
 interface LeadershipMessagesCarouselProps {
   userProfile?: UserProfile | null;
 }
 
 export default function LeadershipMessagesCarousel({ userProfile }: LeadershipMessagesCarouselProps) {
+  const { isPublished, loading } = useCityManagerMessage(userProfile);
+  const showCityManager = !loading && isPublished;
+
+  if (!showCityManager) {
+    return (
+      <div>
+        <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">From our team</p>
+        <DirectorMessage userProfile={userProfile} compact />
+      </div>
+    );
+  }
+
   return (
     <div>
       <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">From our team</p>

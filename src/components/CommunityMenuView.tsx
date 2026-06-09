@@ -23,8 +23,12 @@ export default function CommunityMenuView({
   const sectionShell = fullBleed ? 'px-4 py-5 border-t border-app/40' : '';
   const { message: directorMessage, saveMessage: saveDirectorMessage, canEdit: canEditDirector } =
     useDirectorMessage(userProfile);
-  const { message: cityManagerMessage, saveMessage: saveCityManagerMessage, canEdit: canEditCityManager } =
-    useCityManagerMessage(userProfile);
+  const {
+    message: cityManagerMessage,
+    saveMessage: saveCityManagerMessage,
+    canEdit: canEditCityManager,
+    isPublished: cityManagerMessagePublished,
+  } = useCityManagerMessage(userProfile);
   const [editingDirector, setEditingDirector] = useState(false);
   const [editingCityManager, setEditingCityManager] = useState(false);
 
@@ -54,7 +58,11 @@ export default function CommunityMenuView({
           <div className="sbn-card p-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-app">City manager message</p>
-              <p className="text-xs text-muted mt-0.5">Shown on the home and reviews pages.</p>
+              <p className="text-xs text-muted mt-0.5">
+                {cityManagerMessagePublished
+                  ? 'Live on the home and reviews pages.'
+                  : 'Not visible yet — save a message to publish it.'}
+              </p>
             </div>
             <button
               type="button"

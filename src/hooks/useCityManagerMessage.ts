@@ -46,6 +46,7 @@ export function useCityManagerMessage(userProfile?: UserProfile | null) {
 
   const role = normalizeUserRole(userProfile?.role);
   const canEdit = role === 'city_manager' || role === 'director';
+  const isPublished = Boolean(message.updatedByUserId);
 
-  return { message, loading, reload, saveMessage, canEdit };
+  return { message, loading, reload, saveMessage, canEdit, isPublished };
 }
