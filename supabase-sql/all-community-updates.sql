@@ -963,6 +963,7 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
   "userId" TEXT PRIMARY KEY REFERENCES public.users(uid) ON DELETE CASCADE,
   enabled BOOLEAN NOT NULL DEFAULT true,
   messages BOOLEAN NOT NULL DEFAULT true,
+  "messageRequests" BOOLEAN NOT NULL DEFAULT true,
   support BOOLEAN NOT NULL DEFAULT true,
   claims BOOLEAN NOT NULL DEFAULT true,
   gifts BOOLEAN NOT NULL DEFAULT true,

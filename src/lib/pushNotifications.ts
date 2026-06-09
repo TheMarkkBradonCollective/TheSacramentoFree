@@ -164,6 +164,8 @@ export type PushEventType =
   | 'pickup_scheduled'
   | 'pickup_reminder'
   | 'new_message'
+  | 'message_request'
+  | 'message_request_accepted'
   | 'new_comment'
   | 'listing_approved'
   | 'listing_denied'
@@ -175,6 +177,8 @@ export type PushEventType =
   | 'announcement'
   | 'account_update'
   | 'support_reply'
+  | 'staff_support'
+  | 'staff_report'
   | 'saved_item_update'
   | 'listing_status';
 
@@ -194,6 +198,7 @@ export interface SendPushOptions {
   itemLat?: number;
   itemLng?: number;
   cities?: string[];
+  minStaffRank?: number;
   data?: Record<string, string>;
 }
 
@@ -318,6 +323,7 @@ export async function sendPushNotification(options: SendPushOptions): Promise<vo
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enabled: true,
   messages: true,
+  messageRequests: true,
   support: true,
   claims: true,
   gifts: true,
@@ -330,6 +336,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   newListings: true,
   savedItems: true,
   accountUpdates: true,
+  staffSupport: true,
+  staffReports: true,
   nearbyRadiusMiles: 10,
   followedCategories: [],
 };
@@ -338,6 +346,7 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
   return {
     enabled: row.enabled !== false,
     messages: row.messages !== false,
+    messageRequests: row.messageRequests !== false,
     support: row.support !== false,
     claims: row.claims !== false,
     gifts: row.gifts !== false,
@@ -350,6 +359,8 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     newListings: row.newListings !== false,
     savedItems: row.savedItems !== false,
     accountUpdates: row.accountUpdates !== false,
+    staffSupport: row.staffSupport !== false,
+    staffReports: row.staffReports !== false,
     nearbyRadiusMiles: (Number(row.nearbyRadiusMiles) || 10) as NearbyRadiusMiles,
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
   };

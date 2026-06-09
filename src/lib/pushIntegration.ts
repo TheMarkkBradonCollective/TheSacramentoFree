@@ -9,10 +9,14 @@ import {
   notifyListingExpiringSoon,
   notifyNewComment,
   notifyNewListingPosted,
+  notifyMessageRequest,
+  notifyMessageRequestAccepted,
   notifyNewMessage,
   notifyPickupScheduled,
   notifyClaimRequestSubmitted,
   notifyRequestFulfilled,
+  notifyStaffReport,
+  notifyStaffSupport,
   notifySupportReply,
 } from './pushEvents';
 
@@ -79,6 +83,32 @@ export async function pushAfterItemCompleted(itemId: string, posterUserId: strin
   await notifyItemGifted({ item, posterUserId, claimerUserId });
 }
 
+export async function pushAfterMessageRequest(params: {
+  requestId: string;
+  toUserId: string;
+  fromUserName: string;
+  message?: string | null;
+}) {
+  await notifyMessageRequest({
+    requestId: params.requestId,
+    recipientUserId: params.toUserId,
+    senderName: params.fromUserName,
+    preview: params.message,
+  });
+}
+
+export async function pushAfterMessageRequestAccepted(params: {
+  chatId: string;
+  requesterUserId: string;
+  accepterName: string;
+}) {
+  await notifyMessageRequestAccepted({
+    chatId: params.chatId,
+    recipientUserId: params.requesterUserId,
+    accepterName: params.accepterName,
+  });
+}
+
 export async function pushAfterMessage(chatId: string, senderId: string, text: string) {
   const { data: chat } = await supabase.from('chats').select('*').eq('id', chatId).maybeSingle();
   if (!chat) return;
@@ -128,12 +158,27 @@ export async function pushAfterComment(comment: {
   });
 }
 
-export async function pushAfterPendingPickup(itemId: string, participantIds: string[]) {
+export async function pushAfterPendingPickup(itemId: string, actorUserId: string) {
   const item = await getItemById(itemId);
   if (!item) return;
+
+  const { data: chats } = await supabase.from('chats').select('participantIds').eq('itemId', itemId);
+  const recipientIds = new Set<string>();
+  for (const chat of chats || []) {
+    for (const uid of (chat as { participantIds?: string[] }).participantIds || []) {
+      if (uid && uid !== actorUserId) recipientIds.add(uid);
+    }
+  }
+
+  if (!recipientIds.size && item.userId !== actorUserId) {
+    recipientIds.add(item.userId);
+  }
+
+  if (!recipientIds.size) return;
+
   await notifyPickupScheduled({
     item,
-    recipientUserIds: participantIds,
+    recipientUserIds: [...recipientIds],
     whenLabel: 'Marked as pending pickup',
   });
 }
@@ -147,6 +192,58 @@ export async function pushDirectorAnnouncement(headline: string) {
 
 export async function pushAccountStatusChange(userId: string, title: string, body: string) {
   await notifyAccountUpdate({ userId, title, body });
+}
+
+export async function pushAfterSupportTicketOpened(params: {
+  ticketId: string;
+  openerUserId: string;
+  openerName: string;
+  subject: string;
+  preview: string;
+  minStaffRank: number;
+}) {
+  await notifyStaffSupport({
+    ticketId: params.ticketId,
+    openerName: params.openerName,
+    subject: params.subject,
+    preview: params.preview,
+    minStaffRank: params.minStaffRank,
+    excludeUserIds: [params.openerUserId],
+  });
+}
+
+export async function pushAfterSupportUserMessage(params: {
+  ticketId: string;
+  openerUserId: string;
+  openerName: string;
+  subject: string;
+  preview: string;
+  minStaffRank: number;
+}) {
+  await notifyStaffSupport({
+    ticketId: params.ticketId,
+    openerName: params.openerName,
+    subject: params.subject,
+    preview: params.preview,
+    minStaffRank: params.minStaffRank,
+    excludeUserIds: [params.openerUserId],
+  });
+}
+
+export async function pushAfterUserReport(params: {
+  reportId: string;
+  reporterUserId: string;
+  reporterName: string;
+  subject: string;
+  preview: string;
+}) {
+  await notifyStaffReport({
+    reportId: params.reportId,
+    reporterName: params.reporterName,
+    subject: params.subject,
+    preview: params.preview,
+    excludeUserIds: [params.reporterUserId],
+  });
 }
 
 export async function pushAfterSupportReply(params: {

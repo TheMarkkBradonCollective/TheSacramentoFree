@@ -425,7 +425,7 @@ export default function ChatSystem({
 
     setIsSending(true);
     setErrorMsg('');
-    const statusOk = await updateSupabaseItemStatus(linkedItem.id, 'pending_pickup');
+    const statusOk = await updateSupabaseItemStatus(linkedItem.id, 'pending_pickup', userProfile.uid);
     setIsSending(false);
     if (statusOk) {
       await sendChatText('Marked this listing as pending pickup.');

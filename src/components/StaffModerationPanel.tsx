@@ -45,6 +45,8 @@ type StaffPanel = 'directory' | 'audit' | 'reports' | 'tickets' | 'ticketThread'
 interface StaffModerationPanelProps {
   viewer: UserProfile;
   onViewProfile: (userId: string) => void;
+  initialPanel?: 'tickets' | 'reports' | null;
+  onClearInitialPanel?: () => void;
 }
 
 function neighborAvatarUrl(user: StaffUserRow): string {
@@ -62,7 +64,12 @@ function statusLabel(user: StaffUserRow): string {
   return 'Active';
 }
 
-export default function StaffModerationPanel({ viewer, onViewProfile }: StaffModerationPanelProps) {
+export default function StaffModerationPanel({
+  viewer,
+  onViewProfile,
+  initialPanel = null,
+  onClearInitialPanel,
+}: StaffModerationPanelProps) {
   const [panel, setPanel] = useState<StaffPanel>(null);
   const [users, setUsers] = useState<StaffUserRow[]>([]);
   const [audit, setAudit] = useState<ModerationAuditEntry[]>([]);
@@ -88,6 +95,16 @@ export default function StaffModerationPanel({ viewer, onViewProfile }: StaffMod
   const canBan = canStaffBan(viewer.role);
   const canEdit = canStaffEditUser(viewer.role);
   const canDeleteAccount = canStaffDeleteAccount(viewer.role);
+
+  useEffect(() => {
+    if (!initialPanel) return;
+    if (initialPanel === 'tickets' && canTickets) {
+      setPanel('tickets');
+    } else if (initialPanel === 'reports' && canReports) {
+      setPanel('reports');
+    }
+    onClearInitialPanel?.();
+  }, [initialPanel, canTickets, canReports, onClearInitialPanel]);
 
   const reloadDirectory = useCallback(async () => {
     setLoading(true);

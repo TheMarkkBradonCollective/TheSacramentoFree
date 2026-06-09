@@ -152,7 +152,7 @@ export default function ItemGrid({
     setUpdatingItemId(itemId);
 
     try {
-      await updateSupabaseItemStatus(itemId, newStatus);
+      await updateSupabaseItemStatus(itemId, newStatus, userProfile.uid);
       onRefresh();
     } catch (err) {
       console.warn('Supabase update status failed:', err);

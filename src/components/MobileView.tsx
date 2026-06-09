@@ -44,6 +44,8 @@ interface MobileViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
+  initialStaffPanel?: 'tickets' | 'reports' | null;
+  onClearInitialStaffPanel?: () => void;
 }
 
 const NAV_ITEMS = [
@@ -84,6 +86,8 @@ export default function MobileView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
+  initialStaffPanel = null,
+  onClearInitialStaffPanel,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
@@ -286,6 +290,8 @@ export default function MobileView({
             <CommunityMenuView
               userProfile={userProfile}
               onViewProfile={onViewProfile}
+              initialStaffPanel={initialStaffPanel}
+              onClearInitialStaffPanel={onClearInitialStaffPanel}
               fullBleed
             />
             <PageScrollFooter onOpenDetails={onOpenGoFundMe} />

@@ -52,3 +52,19 @@ export async function getUserRole(userId: string): Promise<string> {
 export function isStaffRole(role: string): boolean {
   return ['city_moderator', 'city_administrator', 'city_manager', 'director'].includes(role);
 }
+
+const ROLE_RANK: Record<string, number> = {
+  user: 0,
+  city_moderator: 1,
+  city_administrator: 2,
+  city_manager: 3,
+  director: 4,
+  moderator: 2,
+  admin: 3,
+};
+
+export function roleRank(role: string): number {
+  return ROLE_RANK[role] ?? 0;
+}
+
+export const STAFF_ROLES = ['city_moderator', 'city_administrator', 'city_manager', 'director'] as const;
