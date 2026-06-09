@@ -70,6 +70,8 @@ export default function ItemGrid({
 
   // Run modular filters
   const filteredItems = items.filter((item) => {
+    if (item.status === 'withdrawn') return false;
+
     // 1. Text Search
     const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
     const matchesSearch = searchString.includes(searchTerm.toLowerCase());
