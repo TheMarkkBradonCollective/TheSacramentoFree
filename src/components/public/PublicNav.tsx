@@ -50,6 +50,9 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
               {label}
             </button>
           ))}
+          <button type="button" onClick={() => onNavigate('gofundme')} className={linkClass('gofundme')}>
+            GoFundMe
+          </button>
           <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary sbn-btn-sm ml-2">
             Sign in
           </button>
@@ -101,6 +104,13 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={() => navigateMobile('gofundme')}
+            className={mobileLinkClass('gofundme')}
+          >
+            GoFundMe
+          </button>
           <button type="button" onClick={() => navigateMobile('login')} className="sbn-btn sbn-btn-primary w-full mt-2">
             Sign in / Join
           </button>

@@ -7,6 +7,7 @@ export const PUBLIC_ROUTES = {
   community: 'community',
   updates: 'updates',
   reviews: 'reviews',
+  gofundme: 'gofundme',
   login: 'login',
 } as const;
 
@@ -21,6 +22,7 @@ export const PUBLIC_ROUTE_LIST: PublicRoute[] = [
   'community',
   'updates',
   'reviews',
+  'gofundme',
   'login',
 ];
 

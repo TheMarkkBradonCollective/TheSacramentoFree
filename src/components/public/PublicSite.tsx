@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import { SITE } from '../../siteContent';
-import GoFundMeSupport from '../GoFundMeSupport';
+import GoFundMeFooter from '../GoFundMeFooter';
 import { usePublicRoute } from '../../public/usePublicRoute';
 import PublicNav from './PublicNav';
 import HomePage from './pages/HomePage';
@@ -11,6 +10,7 @@ import NeighborhoodsPage from './pages/NeighborhoodsPage';
 import CommunityPage from './pages/CommunityPage';
 import UpdatesPage from './pages/UpdatesPage';
 import ReviewsPage from './pages/ReviewsPage';
+import GoFundMePage from './pages/GoFundMePage';
 import AuthPage from './AuthPage';
 import { ItemPost } from '../../types';
 
@@ -65,6 +65,8 @@ export default function PublicSite({
         return <UpdatesPage />;
       case 'reviews':
         return <ReviewsPage onRequireSignIn={onRequireSignIn} />;
+      case 'gofundme':
+        return <GoFundMePage />;
       case 'login':
         return (
           <AuthPage
@@ -92,14 +94,7 @@ export default function PublicSite({
     <div className="min-h-screen bg-app text-app font-sans flex flex-col">
       <PublicNav route={route} onNavigate={navigate} />
       <main className="flex-1">{renderPage()}</main>
-      <footer className="border-t border-app bg-surface px-4 py-8 text-center space-y-5">
-        <div className="max-w-md mx-auto">
-          <GoFundMeSupport />
-        </div>
-        <p className="text-xs text-subtle">
-          © {new Date().getFullYear()} {SITE.name} · {SITE.tagline}
-        </p>
-      </footer>
+      <GoFundMeFooter />
     </div>
   );
 }

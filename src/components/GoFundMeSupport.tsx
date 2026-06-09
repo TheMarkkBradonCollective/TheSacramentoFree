@@ -1,32 +1,7 @@
 import { ExternalLink, HeartHandshake } from 'lucide-react';
 import { SUPPORT } from '../siteContent';
 
-interface GoFundMeSupportProps {
-  compact?: boolean;
-}
-
-export default function GoFundMeSupport({ compact = false }: GoFundMeSupportProps) {
-  if (compact) {
-    return (
-      <div className="text-center space-y-2.5 py-2">
-        <p className="text-[10px] text-muted leading-relaxed max-w-sm mx-auto">{SUPPORT.gofundmeBlurb}</p>
-        <p className="text-[10px] text-subtle leading-relaxed max-w-sm mx-auto">
-          Monthly costs include Cursor (building the app), Supabase (your data), Vercel (hosting), and GoDaddy
-          (web address).
-        </p>
-        <a
-          href={SUPPORT.gofundmeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-accent hover:underline"
-        >
-          {SUPPORT.gofundmeButton}
-          <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
-    );
-  }
-
+export default function GoFundMeSupport() {
   return (
     <div className="rounded-2xl border border-app bg-inset p-4 sm:p-6 text-center space-y-5">
       <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-accent-soft border border-accent/20 text-accent mx-auto">

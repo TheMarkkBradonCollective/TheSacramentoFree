@@ -133,6 +133,11 @@ export type AppUpdate = {
 export const APP_UPDATES: AppUpdate[] = [
   {
     date: '2026-06-09',
+    title: 'GoFundMe on its own page',
+    body: 'Full cost breakdown moved to a GoFundMe page. Every screen now has a short support link at the bottom.',
+  },
+  {
+    date: '2026-06-09',
     title: 'Reviews page & team messages',
     body: 'Swipe through reviews and notes from the director and city manager on the home page — or open Reviews for the full list.',
   },
@@ -278,6 +283,8 @@ export const SUPPORT = {
   gofundmeTitle: 'Help keep the app running',
   gofundmeBlurb:
     'Sacramento Buy Nothing is 100% free and ad-free — no paywalls, no ads, and your data is never sold. Running it still costs real money every month.',
+  gofundmeCostsSummary:
+    'Monthly costs include Cursor (building the app), Supabase (your data), Vercel (hosting), and GoDaddy (web address).',
   gofundmeDetail:
     'Behind the scenes, four paid services keep Sacramento Buy Nothing online. None of them are free long-term — together they are the monthly bill for a community app that will never charge neighbors or show ads.',
   costItems: [

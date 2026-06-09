@@ -3,7 +3,6 @@ import { Pencil } from 'lucide-react';
 import { UserProfile } from '../types';
 import AccountHelpSection from './AccountHelpSection';
 import StaffModerationPanel from './StaffModerationPanel';
-import CommunityFooter from './CommunityFooter';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 import { useDirectorMessage } from '../hooks/useDirectorMessage';
 import { useCityManagerMessage } from '../hooks/useCityManagerMessage';
@@ -78,10 +77,6 @@ export default function CommunityMenuView({
           <StaffModerationPanel viewer={userProfile} onViewProfile={onViewProfile} />
         </div>
       )}
-
-      <div className={fullBleed ? 'px-4' : ''}>
-        <CommunityFooter compact />
-      </div>
 
       {editingDirector && (
         <LeaderMessageEditModal
