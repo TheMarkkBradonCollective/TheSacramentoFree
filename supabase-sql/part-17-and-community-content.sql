@@ -154,6 +154,30 @@ CREATE POLICY "Allow write staff messages" ON public.staff_messages FOR ALL USIN
 CREATE INDEX IF NOT EXISTS staff_messages_updated_idx ON public.staff_messages ("updatedAt" DESC);
 
 -- ---------------------------------------------------------
+-- 18c. App updates (director changelog)
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.app_updates (
+  id TEXT PRIMARY KEY,
+  date DATE NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  detail TEXT,
+  "directorName" TEXT NOT NULL,
+  "directorTitle" TEXT NOT NULL,
+  "postedByUserId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.app_updates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read app updates" ON public.app_updates;
+CREATE POLICY "Allow read app updates" ON public.app_updates FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write app updates" ON public.app_updates;
+CREATE POLICY "Allow write app updates" ON public.app_updates FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS app_updates_date_idx ON public.app_updates (date DESC, "updatedAt" DESC);
+
+-- ---------------------------------------------------------
 -- 19. App reviews (one per neighbor, 0–5 in half-star steps)
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.app_reviews (
@@ -194,7 +218,7 @@ DECLARE
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'community_events', 'event_rsvps', 'event_comments',
-    'director_message', 'staff_messages', 'app_reviews'
+    'director_message', 'staff_messages', 'app_updates', 'app_reviews'
   ]
   LOOP
     IF NOT EXISTS (

@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, CommunityContentVote, CommunityContentVoteTarget } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, CommunityContentVote, CommunityContentVoteTarget } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canEditOwnStaffMessage, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
+import { normalizeUserRole, type UserRole, canEditOwnStaffMessage, canManageAppUpdates, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -2492,6 +2492,148 @@ export async function updateSupabaseStaffMessage(
       ok: false,
       errorMessage: err instanceof Error ? err.message : 'Could not save your team message.',
     };
+  }
+}
+
+function normalizeAppUpdateRow(row: Record<string, unknown>): AppUpdateRecord {
+  const rawDate = row.date;
+  const date =
+    typeof rawDate === 'string'
+      ? rawDate.slice(0, 10)
+      : rawDate instanceof Date
+        ? rawDate.toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+
+  return {
+    id: String(row.id),
+    date,
+    title: String(row.title || ''),
+    body: String(row.body || ''),
+    detail: row.detail ? String(row.detail) : null,
+    directorName: String(row.directorName || DIRECTOR_MESSAGE.name),
+    directorTitle: String(row.directorTitle || DIRECTOR_MESSAGE.title),
+    postedByUserId: String(row.postedByUserId || ''),
+    createdAt: coerceToIsoDate(row.createdAt),
+    updatedAt: coerceToIsoDate(row.updatedAt),
+  };
+}
+
+export async function getSupabaseAppUpdates(): Promise<AppUpdateRecord[]> {
+  try {
+    const { data, error } = await supabase
+      .from('app_updates')
+      .select('*')
+      .order('date', { ascending: false })
+      .order('updatedAt', { ascending: false });
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      handleSupabaseError(error, 'app_updates');
+      return [];
+    }
+
+    if (!data?.length) return [];
+    setSupabaseConfigurationState(true);
+    return (data as Record<string, unknown>[]).map(normalizeAppUpdateRow);
+  } catch {
+    return [];
+  }
+}
+
+export async function createSupabaseAppUpdate(
+  input: AppUpdateInput,
+  actor: UserProfile,
+): Promise<{ ok: boolean; update?: AppUpdateRecord; errorMessage?: string }> {
+  if (!canManageAppUpdates(actor.role)) {
+    return { ok: false, errorMessage: 'Only the director can post updates.' };
+  }
+
+  try {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const payload = {
+      id,
+      date: input.date,
+      title: input.title.trim(),
+      body: input.body.trim(),
+      detail: input.detail?.trim() || null,
+      directorName: actor.displayName.trim() || DIRECTOR_MESSAGE.name,
+      directorTitle: roleLabel(actor.role),
+      postedByUserId: actor.uid,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const { data, error } = await supabase.from('app_updates').insert(payload).select('*').single();
+
+    if (error) {
+      handleSupabaseError(error, 'app_updates');
+      return { ok: false, errorMessage: error.message || 'Could not post update.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true, update: normalizeAppUpdateRow(data as Record<string, unknown>) };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not post update.' };
+  }
+}
+
+export async function updateSupabaseAppUpdate(
+  id: string,
+  input: AppUpdateInput,
+  actor: UserProfile,
+): Promise<{ ok: boolean; update?: AppUpdateRecord; errorMessage?: string }> {
+  if (!canManageAppUpdates(actor.role)) {
+    return { ok: false, errorMessage: 'Only the director can edit updates.' };
+  }
+
+  try {
+    const payload = {
+      date: input.date,
+      title: input.title.trim(),
+      body: input.body.trim(),
+      detail: input.detail?.trim() || null,
+      directorName: actor.displayName.trim() || DIRECTOR_MESSAGE.name,
+      directorTitle: roleLabel(actor.role),
+      postedByUserId: actor.uid,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase.from('app_updates').update(payload).eq('id', id).select('*').single();
+
+    if (error) {
+      handleSupabaseError(error, 'app_updates');
+      return { ok: false, errorMessage: error.message || 'Could not save update.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true, update: normalizeAppUpdateRow(data as Record<string, unknown>) };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not save update.' };
+  }
+}
+
+export async function deleteSupabaseAppUpdate(
+  id: string,
+  actor: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canManageAppUpdates(actor.role)) {
+    return { ok: false, errorMessage: 'Only the director can delete updates.' };
+  }
+
+  try {
+    await supabase.from('community_content_votes').delete().eq('targetType', 'update').eq('targetId', id);
+    const { error } = await supabase.from('app_updates').delete().eq('id', id);
+
+    if (error) {
+      handleSupabaseError(error, 'app_updates');
+      return { ok: false, errorMessage: error.message || 'Could not delete update.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete update.' };
   }
 }
 

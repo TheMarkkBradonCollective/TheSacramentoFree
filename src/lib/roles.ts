@@ -102,6 +102,11 @@ export function canStaffDeleteAccount(role?: UserProfile['role']): boolean {
   return r === 'city_manager' || r === 'director';
 }
 
+/** Post, edit, and delete app changelog updates. */
+export function canManageAppUpdates(role?: UserProfile['role']): boolean {
+  return normalizeUserRole(role) === 'director';
+}
+
 /** Publish or edit this staff member's own public welcome message (director uses director_message). */
 export function canEditOwnStaffMessage(role?: UserProfile['role']): boolean {
   const r = normalizeUserRole(role);

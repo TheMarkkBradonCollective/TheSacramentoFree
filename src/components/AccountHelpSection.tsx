@@ -13,6 +13,7 @@ import { useImageAttachment } from '../hooks/useImageAttachment';
 import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight, Megaphone, Star } from 'lucide-react';
 import UpdatesList from './UpdatesList';
 import CommunityReviews from './CommunityReviews';
+import { canManageAppUpdates } from '../lib/roles';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 interface AccountHelpSectionProps {
@@ -143,6 +144,7 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
 
   const canSubmitTicket =
     ticketSubject.trim() && (ticketMessage.trim() || ticketImage.file);
+  const canManageUpdates = canManageAppUpdates(user.role);
 
   return (
     <div className="space-y-3" id="account_help_section">
@@ -154,7 +156,11 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
           </span>
           <span className="min-w-0 flex-1">
             <span className="font-semibold text-sm text-app block">App updates</span>
-            <span className="text-[11px] text-muted">See what&apos;s new and vote on changes</span>
+            <span className="text-[11px] text-muted">
+              {canManageUpdates
+                ? 'View, edit, and post updates'
+                : "See what's new and vote on changes"}
+            </span>
           </span>
           <ChevronRight className="w-4 h-4 text-muted shrink-0" />
         </button>
@@ -205,7 +211,11 @@ export default function AccountHelpSection({ user }: AccountHelpSectionProps) {
         <FullScreenPanel
           wide
           title="App updates"
-          subtitle="Tap an update to read more — your votes go to the director"
+          subtitle={
+            canManageUpdates
+              ? 'Post changelog entries for neighbors — votes come back to you as feedback'
+              : 'Tap an update to read more — your votes go to the director'
+          }
           onClose={closePanel}
         >
           <UpdatesList userProfile={user} />

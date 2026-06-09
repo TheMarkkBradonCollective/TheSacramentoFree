@@ -277,6 +277,21 @@ export interface AppReview {
   updatedAt: string;
 }
 
+export interface AppUpdateRecord {
+  id: string;
+  date: string;
+  title: string;
+  body: string;
+  detail?: string | null;
+  directorName: string;
+  directorTitle: string;
+  postedByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AppUpdateInput = Pick<AppUpdateRecord, 'date' | 'title' | 'body' | 'detail'>;
+
 export type CommunityContentVoteTarget = 'update' | 'review' | 'leader_message';
 
 export interface CommunityContentVote {
