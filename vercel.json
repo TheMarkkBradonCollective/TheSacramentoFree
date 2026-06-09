@@ -4,7 +4,7 @@
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 15,
-      "includeFiles": "{api/_lib/**,server/**,node_modules/web-push/**,node_modules/@supabase/**}"
+      "includeFiles": "{api/_lib/**,node_modules/web-push/**,node_modules/@supabase/**}"
     }
   },
   "rewrites": [

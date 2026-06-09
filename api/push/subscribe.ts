@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getUserFromBearer } from '../_lib/push/auth';
 import { getSupabaseAdmin } from '../_lib/push/supabaseAdmin';
@@ -48,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const row = {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       userId: user.id,
       endpoint: subscription.endpoint,
       p256dh: subscription.keys.p256dh,

@@ -23,9 +23,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const body = parseJsonBody<TestBody>(req);
+    const sub = body.subscription;
     const result = await runPushTest({
       userId: user.id,
-      subscription: body.subscription,
+      subscription:
+        sub?.endpoint && sub.keys?.p256dh && sub.keys?.auth
+          ? { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }
+          : null,
     });
     return res.status(result.status).json(result.body);
   } catch (err) {

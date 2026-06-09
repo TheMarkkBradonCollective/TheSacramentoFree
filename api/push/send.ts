@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getUserFromBearer } from '../_lib/push/auth';
-import { runPushSend } from '../_lib/push/runPushSend';
+import { runPushSend, type PushSendBody } from '../_lib/push/runPushSend';
 import { parseJsonBody } from '../_lib/parseBody';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const body = parseJsonBody(req);
-    const result = await runPushSend(user.id, body);
+    const result = await runPushSend(user.id, body as PushSendBody);
     return res.status(result.status).json(result.body);
   } catch (err) {
     console.error('[api/push/send]', err);
