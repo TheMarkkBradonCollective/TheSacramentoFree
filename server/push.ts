@@ -1,5 +1,5 @@
-import webpush from 'web-push';
 import { supabaseAdmin } from './auth';
+import { configureVapidAsync, getVapidPublicKey, getWebPushModule, isVapidConfigured } from '../lib/push-server/webPushLoader';
 
 export type PushEventType =
   | 'new_item'
@@ -68,35 +68,15 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   account_update: 'accountUpdates',
 };
 
-let vapidConfigured = false;
-
-export function configureVapid() {
-  const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || '';
-  const privateKey = process.env.VAPID_PRIVATE_KEY || '';
-  const subject = process.env.VAPID_SUBJECT || process.env.APP_URL || 'mailto:support@sacbuynothing.org';
-
-  if (!publicKey || !privateKey) {
-    console.warn('[push] VAPID keys not configured — push delivery disabled');
-    return false;
-  }
-
-  try {
-    webpush.setVapidDetails(subject, publicKey, privateKey);
-    vapidConfigured = true;
-    return true;
-  } catch (err) {
-    console.warn('[push] Invalid VAPID keys — push delivery disabled:', (err as Error).message);
-    return false;
-  }
+export function configureVapid(): void {
+  void configureVapidAsync().then((ok) => {
+    if (!ok) {
+      console.warn('[push] VAPID keys not configured — push delivery disabled');
+    }
+  });
 }
 
-export function getVapidPublicKey(): string {
-  return process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || '';
-}
-
-export function isVapidConfigured(): boolean {
-  return vapidConfigured;
-}
+export { getVapidPublicKey, isVapidConfigured };
 
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {
   return {
@@ -172,7 +152,7 @@ async function removeInvalidSubscription(endpoint: string) {
 }
 
 export async function sendToSubscription(subscription: PushSubscriptionRow, payload: PushPayload) {
-  if (!vapidConfigured) return { ok: false as const, removed: false };
+  if (!(await configureVapidAsync())) return { ok: false as const, removed: false };
 
   const pushSubscription = {
     endpoint: subscription.endpoint,
@@ -189,6 +169,7 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
   });
 
   try {
+    const webpush = await getWebPushModule();
     await webpush.sendNotification(pushSubscription, notification);
     return { ok: true as const, removed: false };
   } catch (err: unknown) {
@@ -209,7 +190,7 @@ export async function sendPushToUsers(
 ) {
   const exclude = new Set(options?.excludeUserIds || []);
   const targets = [...new Set(userIds)].filter((id) => id && !exclude.has(id));
-  if (!targets.length || !vapidConfigured) {
+  if (!targets.length || !(await configureVapidAsync())) {
     return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0 };
   }
 

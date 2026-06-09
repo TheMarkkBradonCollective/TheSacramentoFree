@@ -1,14 +1,11 @@
 import { getUserRole, isStaffRole, supabaseAdmin } from './auth';
 import {
-  configureVapid,
   getPreferencesForUsers,
   sendPushToUsers,
   withinRadius,
   type PushEventType,
   type PushPayload,
 } from './push';
-
-configureVapid();
 
 export interface PushSendBody {
   eventType: PushEventType;
