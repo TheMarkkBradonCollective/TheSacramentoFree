@@ -1,8 +1,12 @@
 import { supabase } from '../supabase';
 import type { NotificationPreferences, NearbyRadiusMiles } from '../types';
 
+import { PUSH_CELEBRATION_DISMISSED_KEY } from './pushCelebrationPrompt';
+
 const SW_PATH = '/service-worker.js';
 const VAPID_CACHE_KEY = 'sbn_vapid_public_key_v1';
+
+export const NOTIFICATION_SESSION_CLEARED_EVENT = 'sbn-notification-session-cleared';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -256,9 +260,8 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
   return subscription;
 }
 
-export async function unsubscribeFromPushNotifications(): Promise<void> {
-  const userId = await getSessionUserId();
-  if (!userId) return;
+export async function detachPushSubscriptionForUser(userId: string): Promise<void> {
+  if (!userId || !('serviceWorker' in navigator)) return;
 
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
@@ -267,14 +270,49 @@ export async function unsubscribeFromPushNotifications(): Promise<void> {
   if (subscription) await subscription.unsubscribe();
 }
 
-/** Detach this device from push before sign-out so the next account does not inherit alerts. */
-export async function clearPushSessionOnLogout(): Promise<void> {
+export async function unsubscribeFromPushNotifications(): Promise<void> {
+  const userId = await getSessionUserId();
+  if (!userId) return;
+  await detachPushSubscriptionForUser(userId);
+}
+
+function broadcastNotificationSessionCleared(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(NOTIFICATION_SESSION_CLEARED_EVENT));
+}
+
+/**
+ * Wipe all notification session data on logout: device push subscription,
+ * notification-related localStorage, and in-memory UI state (via event).
+ */
+export async function clearNotificationDataOnLogout(userId?: string | null): Promise<void> {
+  const uid = userId || (await getSessionUserId());
+
   try {
-    await unsubscribeFromPushNotifications();
+    if (uid) {
+      await detachPushSubscriptionForUser(uid);
+    } else if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) await subscription.unsubscribe();
+    }
   } catch {
     // ignore — session may already be clearing
   }
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(PUSH_CELEBRATION_DISMISSED_KEY);
+    }
+  } catch {
+    // ignore
+  }
+
+  broadcastNotificationSessionCleared();
 }
+
+/** @deprecated Use clearNotificationDataOnLogout */
+export const clearPushSessionOnLogout = clearNotificationDataOnLogout;
 
 export function preferencesEqual(a: NotificationPreferences, b: NotificationPreferences): boolean {
   const keys = Object.keys(DEFAULT_NOTIFICATION_PREFERENCES) as (keyof NotificationPreferences)[];
@@ -511,6 +549,40 @@ export async function sendPushNotification(options: SendPushOptions): Promise<vo
     });
   }
 }
+
+/** Empty/off state after logout — not persisted; reload from DB on next sign-in. */
+export const CLEARED_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  enabled: false,
+  messages: false,
+  messageRequests: false,
+  support: false,
+  claims: false,
+  gifts: false,
+  comments: false,
+  listingUpvotes: false,
+  listingDownvotes: false,
+  listingStatus: false,
+  nearbyListings: false,
+  requests: false,
+  announcements: false,
+  pickupReminders: false,
+  newListings: false,
+  savedItems: false,
+  accountUpdates: false,
+  staffSupport: false,
+  staffReports: false,
+  directorAlerts: false,
+  directorJoins: false,
+  directorLeaves: false,
+  directorModeration: false,
+  directorReports: false,
+  directorTickets: false,
+  directorListings: false,
+  directorMessageRequests: false,
+  directorClaimRequests: false,
+  nearbyRadiusMiles: 10,
+  followedCategories: [],
+};
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enabled: true,

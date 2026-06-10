@@ -306,7 +306,10 @@ export default function App() {
     ]);
 
   /** Enter the app immediately from auth metadata — DB sync runs in background. */
+  const lastSignedInUserIdRef = useRef<string | null>(null);
+
   const applySession = useCallback((user: any) => {
+    if (user?.id) lastSignedInUserIdRef.current = user.id;
     setSessionUser(user);
     setUserProfile((prev) => {
       if (prev?.uid === user.id) return prev;
@@ -403,7 +406,12 @@ export default function App() {
           }, 100);
         }
       } else if (event === 'SIGNED_OUT') {
+        const signedOutUserId = lastSignedInUserIdRef.current;
+        lastSignedInUserIdRef.current = null;
         profileSyncRef.current = null;
+        void import('./hooks/usePushNotifications').then((m) =>
+          m.clearNotificationDataOnLogout(signedOutUserId),
+        );
         clearSessionCache();
         setSessionUser(null);
         setUserProfile(null);
@@ -637,11 +645,14 @@ export default function App() {
 
   // Sign out
   const handleLogOut = async () => {
+    const signedOutUserId =
+      userProfile?.uid || sessionUser?.id || lastSignedInUserIdRef.current;
     try {
-      const { clearPushSessionOnLogout } = await import('./hooks/usePushNotifications');
-      await clearPushSessionOnLogout();
+      const { clearNotificationDataOnLogout } = await import('./hooks/usePushNotifications');
+      await clearNotificationDataOnLogout(signedOutUserId);
       await supabase.auth.signOut();
     } catch (_) {}
+    lastSignedInUserIdRef.current = null;
     clearSessionCache();
     setSessionUser(null);
     setUserProfile(null);

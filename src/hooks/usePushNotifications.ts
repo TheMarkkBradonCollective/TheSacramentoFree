@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  clearPushSessionOnLogout,
-  DEFAULT_NOTIFICATION_PREFERENCES,
+  CLEARED_NOTIFICATION_PREFERENCES,
+  clearNotificationDataOnLogout,
   ensurePushSubscription,
   getNotificationPreferences,
   getPushPermissionState,
   listenForNotificationClicks,
+  NOTIFICATION_SESSION_CLEARED_EVENT,
   preferencesEqual,
   saveNotificationPreferences,
   sendTestPushNotification,
@@ -16,7 +17,7 @@ import {
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { NotificationPreferences } from '../types';
 
-export { clearPushSessionOnLogout };
+export { clearNotificationDataOnLogout, clearNotificationDataOnLogout as clearPushSessionOnLogout };
 
 export function usePushNotifications(userId?: string) {
   const [permission, setPermission] = useState<PushPermissionState>(() => getPushPermissionState());
@@ -28,8 +29,8 @@ export function usePushNotifications(userId?: string) {
   const [saveMessage, setSaveMessage] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [testMessage, setTestMessage] = useState('');
-  const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
-  const [savedPreferences, setSavedPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
+  const [preferences, setPreferences] = useState<NotificationPreferences>(CLEARED_NOTIFICATION_PREFERENCES);
+  const [savedPreferences, setSavedPreferences] = useState<NotificationPreferences>(CLEARED_NOTIFICATION_PREFERENCES);
   const userIdRef = useRef(userId);
   const hasUnsavedRef = useRef(false);
 
@@ -74,12 +75,14 @@ export function usePushNotifications(userId?: string) {
   }, []);
 
   const resetPreferencesState = useCallback(() => {
-    applyLoadedPreferences(DEFAULT_NOTIFICATION_PREFERENCES);
+    applyLoadedPreferences(CLEARED_NOTIFICATION_PREFERENCES);
     setError('');
     setSaveMessage('');
     setTestMessage('');
     setIsSaving(false);
     setPrefsLoading(false);
+    setIsSubscribed(false);
+    hasUnsavedRef.current = false;
   }, [applyLoadedPreferences]);
 
   const hasUnsavedChanges = useMemo(
@@ -96,14 +99,25 @@ export function usePushNotifications(userId?: string) {
   }, [hasUnsavedChanges]);
 
   useEffect(() => {
+    if (!userId) {
+      resetPreferencesState();
+      return;
+    }
+
     resetPreferencesState();
-    setIsSubscribed(false);
-
-    if (!userId) return;
-
     void loadPreferences({ force: true });
     void checkSubscription();
   }, [userId, loadPreferences, checkSubscription, resetPreferencesState]);
+
+  useEffect(() => {
+    const onSessionCleared = () => {
+      userIdRef.current = undefined;
+      resetPreferencesState();
+    };
+
+    window.addEventListener(NOTIFICATION_SESSION_CLEARED_EVENT, onSessionCleared);
+    return () => window.removeEventListener(NOTIFICATION_SESSION_CLEARED_EVENT, onSessionCleared);
+  }, [resetPreferencesState]);
 
   useEffect(() => {
     if (!userId) return;

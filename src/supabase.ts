@@ -4508,8 +4508,8 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
       return { ok: false, errorMessage: profileError.message };
     }
 
-    const { clearPushSessionOnLogout } = await import('./hooks/usePushNotifications');
-    await clearPushSessionOnLogout();
+    const { clearNotificationDataOnLogout } = await import('./hooks/usePushNotifications');
+    await clearNotificationDataOnLogout(uid);
     await supabase.auth.signOut();
     await notifyDirectorLeave();
     return {
