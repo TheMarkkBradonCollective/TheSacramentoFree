@@ -380,6 +380,41 @@ export async function sendTestPushNotification(): Promise<{
   }
 }
 
+export async function notifySupportTicketPush(params: {
+  ticketId: string;
+  event: 'opened' | 'user_message' | 'staff_reply';
+}): Promise<void> {
+  const token = await getAccessToken();
+  if (!token) {
+    console.warn('[push] support notify skipped: not signed in');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/support/notify', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    });
+    const json = await readJsonResponse(res);
+    if (!res.ok) {
+      console.warn('[push] support notify rejected:', res.status, json);
+      return;
+    }
+
+    const staffSent = Number((json.staff as { sent?: number } | undefined)?.sent ?? json.sent ?? 0);
+    const directorSent = Number((json.director as { sent?: number } | undefined)?.sent ?? 0);
+    if (params.event !== 'staff_reply' && staffSent === 0 && directorSent === 0) {
+      console.warn('[push] support notify reached 0 staff/director devices:', json);
+    }
+  } catch (err) {
+    console.warn('[push] support notify failed:', err);
+  }
+}
+
 export async function sendPushNotification(options: SendPushOptions): Promise<void> {
   const token = await getAccessToken();
   if (!token) {
