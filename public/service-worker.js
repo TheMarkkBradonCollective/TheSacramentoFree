@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sac-buy-nothing-v10';
+const CACHE_NAME = 'sac-buy-nothing-v11';
 
 const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
 
@@ -115,6 +115,40 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const output = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
+  return output;
+}
+
+async function refreshPushSubscription(oldEndpoint) {
+  const vapidRes = await fetch('/api/push/vapid-public-key');
+  if (!vapidRes.ok) throw new Error('VAPID key unavailable');
+  const { publicKey } = await vapidRes.json();
+  if (!publicKey) throw new Error('Missing VAPID public key');
+
+  const subscription = await self.registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  });
+
+  const json = subscription.toJSON();
+  await fetch('/api/push/resubscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      oldEndpoint,
+      subscription: json,
+      userAgent: '',
+    }),
+  });
+
+  return subscription;
+}
+
 function resolveNotificationUrl(rawUrl) {
   if (!rawUrl) return '/';
   try {
@@ -145,8 +179,8 @@ self.addEventListener('push', (event) => {
     'You have a new community update.';
   const options = {
     body,
-    icon: payload.icon || '/Logo.jpeg',
-    badge: payload.badge || '/Logo.jpeg',
+    icon: payload.icon || '/icon.svg',
+    badge: payload.badge || '/icon.svg',
     tag: payload.tag || payload.eventType || 'sbn-notification',
     data: {
       url: resolveNotificationUrl(payload.url || '/'),
@@ -162,12 +196,24 @@ self.addEventListener('push', (event) => {
 });
 
 self.addEventListener('pushsubscriptionchange', (event) => {
+  const oldEndpoint = event.oldSubscription?.endpoint;
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        client.postMessage({ type: 'PUSH_SUBSCRIPTION_CHANGED' });
-      }
-    }),
+    refreshPushSubscription(oldEndpoint)
+      .then(() =>
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+          for (const client of clients) {
+            client.postMessage({ type: 'PUSH_SUBSCRIPTION_CHANGED' });
+          }
+        }),
+      )
+      .catch((err) => {
+        console.warn('[sw] push subscription refresh failed:', err);
+        return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+          for (const client of clients) {
+            client.postMessage({ type: 'PUSH_SUBSCRIPTION_CHANGED' });
+          }
+        });
+      }),
   );
 });
 

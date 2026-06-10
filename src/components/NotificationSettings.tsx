@@ -248,6 +248,10 @@ export default function NotificationSettings({
         Get real-time alerts for listings, messages, support, saved items, and community news — even when the app
         is closed.
       </p>
+      <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
+        <strong className="text-app">iPhone:</strong> add Sacramento Buy Nothing to your Home Screen, then enable
+        notifications here. Safari tabs alone cannot receive alerts while closed.
+      </p>
 
       {permission === 'unsupported' && (
         <p className="text-sm text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-4">

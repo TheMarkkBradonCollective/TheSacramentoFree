@@ -28,14 +28,27 @@ export async function sendWebPush(
     return { ok: false, removed: false };
   }
 
+  const body =
+    String(payload.body || '').trim() || String(payload.title || '').trim() || 'New activity';
   const notification = JSON.stringify({
-    title: payload.title,
-    body: payload.body,
+    title: payload.title || 'Sacramento Buy Nothing',
+    body,
     url: payload.url,
+    icon: '/icon.svg',
+    badge: '/icon.svg',
     tag: payload.tag || payload.eventType || 'sbn-notification',
     eventType: payload.eventType || '',
     data: payload.data || {},
   });
+
+  const urgency =
+    payload.eventType === 'director_alert' ||
+    payload.eventType === 'staff_support' ||
+    payload.eventType === 'staff_report' ||
+    payload.eventType === 'new_message' ||
+    payload.eventType === 'message_request'
+      ? 'high'
+      : 'normal';
 
   try {
     const webpush = await getWebPushModuleAsync();
@@ -45,6 +58,7 @@ export async function sendWebPush(
         keys: subscription.keys,
       },
       notification,
+      { TTL: 60 * 60 * 24, urgency },
     );
     return { ok: true, removed: false };
   } catch (err: unknown) {

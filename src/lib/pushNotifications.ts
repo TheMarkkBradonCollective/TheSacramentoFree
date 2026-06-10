@@ -404,6 +404,7 @@ async function postPushApi(path: string, body: unknown, retries = 2): Promise<Re
     try {
       const res = await fetch(path, {
         method: 'POST',
+        keepalive: true,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
