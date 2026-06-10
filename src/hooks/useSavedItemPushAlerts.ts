@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ItemPost } from '../types';
 import { notifySavedItemUpdate } from '../lib/pushEvents';
+import { getPushPermissionState } from '../lib/pushNotifications';
 
 const SAVED_ITEMS_KEY = 'sbn_saved_items_v1';
 
@@ -40,7 +41,7 @@ export function useSavedItemPushAlerts(
   const prevById = useRef<Map<string, ItemPost['status']>>(new Map());
 
   useEffect(() => {
-    if (!enabled || !userId) return;
+    if (!enabled || !userId || getPushPermissionState() !== 'granted') return;
 
     const savedIds = readSavedIds();
     if (!savedIds.size) return;

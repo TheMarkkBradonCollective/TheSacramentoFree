@@ -5,7 +5,6 @@ import {
   notifyCommunityAnnouncement,
   notifyItemClaimed,
   notifyItemGifted,
-  notifyListingApproved,
   notifyListingExpiringSoon,
   notifyNewComment,
   notifyNewListingPosted,
@@ -16,9 +15,6 @@ import {
   notifyClaimRequestSubmitted,
   notifyRequestFulfilled,
   notifyDirectorAlert,
-  notifyStaffReport,
-  notifyStaffSupport,
-  notifySupportReply,
 } from './pushEvents';
 
 export async function pushDirectorAlert(params: {
@@ -39,7 +35,6 @@ async function getItemById(itemId: string): Promise<ItemPost | null> {
 
 export async function pushAfterItemCreated(item: ItemPost) {
   await notifyNewListingPosted(item);
-  await notifyListingApproved(item);
   await pushDirectorAlert({
     category: 'listing',
     title: item.type === 'looking' ? 'New neighbor request' : 'New listing posted',
@@ -153,7 +148,7 @@ export async function pushAfterMessage(chatId: string, senderId: string, text: s
   const names = (chat as { participantNames?: Record<string, string> }).participantNames || {};
   const senderName = names[senderId] || 'A neighbor';
 
-  if (text.includes('📍 Pickup location') || text.toLowerCase().includes('pickup')) {
+  if (text.startsWith('📍 Pickup location')) {
     const itemId = (chat as { itemId?: string }).itemId;
     if (itemId) {
       const item = await getItemById(itemId);
@@ -163,6 +158,7 @@ export async function pushAfterMessage(chatId: string, senderId: string, text: s
           recipientUserIds: participantIds.filter((id) => id !== senderId),
           whenLabel: 'Check messages for pickup details',
         });
+        return;
       }
     }
   }
@@ -216,102 +212,15 @@ export async function pushAfterPendingPickup(itemId: string, actorUserId: string
   });
 }
 
-export async function pushDirectorAnnouncement(headline: string) {
+export async function pushDirectorAnnouncement(title: string, body: string) {
   await notifyCommunityAnnouncement({
-    title: 'Community announcement',
-    body: headline,
+    title,
+    body,
   });
 }
 
 export async function pushAccountStatusChange(userId: string, title: string, body: string) {
   await notifyAccountUpdate({ userId, title, body });
-}
-
-export async function pushAfterSupportTicketOpened(params: {
-  ticketId: string;
-  openerUserId: string;
-  openerName: string;
-  subject: string;
-  preview: string;
-  minStaffRank: number;
-}) {
-  await notifyStaffSupport({
-    ticketId: params.ticketId,
-    openerName: params.openerName,
-    subject: params.subject,
-    preview: params.preview,
-    minStaffRank: params.minStaffRank,
-    excludeUserIds: [params.openerUserId],
-  });
-  await pushDirectorAlert({
-    category: 'ticket',
-    title: 'Support ticket opened',
-    body: `${params.openerName}: ${params.subject}`,
-    tag: `director-ticket-${params.ticketId}`,
-    excludeUserIds: [params.openerUserId],
-  });
-}
-
-export async function pushAfterSupportUserMessage(params: {
-  ticketId: string;
-  openerUserId: string;
-  openerName: string;
-  subject: string;
-  preview: string;
-  minStaffRank: number;
-}) {
-  await notifyStaffSupport({
-    ticketId: params.ticketId,
-    openerName: params.openerName,
-    subject: params.subject,
-    preview: params.preview,
-    minStaffRank: params.minStaffRank,
-    excludeUserIds: [params.openerUserId],
-  });
-  await pushDirectorAlert({
-    category: 'ticket',
-    title: 'Support ticket reply',
-    body: `${params.openerName} replied on: ${params.subject}`,
-    tag: `director-ticket-reply-${params.ticketId}`,
-    excludeUserIds: [params.openerUserId],
-  });
-}
-
-export async function pushAfterUserReport(params: {
-  reportId: string;
-  reporterUserId: string;
-  reporterName: string;
-  subject: string;
-  preview: string;
-}) {
-  await notifyStaffReport({
-    reportId: params.reportId,
-    reporterName: params.reporterName,
-    subject: params.subject,
-    preview: params.preview,
-    excludeUserIds: [params.reporterUserId],
-  });
-  await pushDirectorAlert({
-    category: 'report',
-    title: 'Neighbor report',
-    body: `${params.reporterName}: ${params.subject}`,
-    tag: `director-report-${params.reportId}`,
-    excludeUserIds: [params.reporterUserId],
-  });
-}
-
-export async function pushAfterSupportReply(params: {
-  ticketId: string;
-  openerUserId: string;
-  subject: string;
-  preview: string;
-}) {
-  await notifySupportReply({
-    ticketId: params.ticketId,
-    recipientUserId: params.openerUserId,
-    subject: params.subject,
-    preview: params.preview,
-  });
 }
 
 const EXPIRY_DAYS = 14;

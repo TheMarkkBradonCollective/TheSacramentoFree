@@ -20,7 +20,7 @@ const supabaseKey =
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-function firePush(task: () => Promise<void>) {
+function firePush(task: () => Promise<unknown>) {
   task().catch((err) => console.warn('[push]', err));
 }
 
@@ -1503,6 +1503,7 @@ async function recordPartialItemClaims(params: {
       params.claimMessage,
       params.actorUserId,
       messageId,
+      { skipPush: true },
     );
 
     if (!msgOk) {
@@ -1837,6 +1838,7 @@ export async function markItemFulfilledFromChat(params: {
       params.message,
       params.ownerUserId,
       messageId,
+      { skipPush: true },
     );
     if (!msgOk) {
       return { ok: false, errorMessage: 'Request marked fulfilled but chat message failed.' };
@@ -1855,7 +1857,13 @@ export async function markItemFulfilledFromChat(params: {
   }
 }
 
-export async function createSupabaseMessage(chatId: string, text: string, senderId: string, messageId: string): Promise<boolean> {
+export async function createSupabaseMessage(
+  chatId: string,
+  text: string,
+  senderId: string,
+  messageId: string,
+  options?: { skipPush?: boolean },
+): Promise<boolean> {
   try {
     const timeIso = new Date().toISOString();
 
@@ -1891,9 +1899,11 @@ export async function createSupabaseMessage(chatId: string, text: string, sender
     }
 
     setSupabaseConfigurationState(true);
-    firePush(() =>
-      import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text)),
-    );
+    if (!options?.skipPush) {
+      firePush(() =>
+        import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text)),
+      );
+    }
     return true;
   } catch (err: any) {
     console.error('Supabase write message failed:', err);
@@ -2407,9 +2417,6 @@ export async function updateSupabaseDirectorMessage(
     }
 
     setSupabaseConfigurationState(true);
-    firePush(() =>
-      import('./lib/pushIntegration').then((m) => m.pushDirectorAnnouncement(content.headline.trim())),
-    );
     return { ok: true };
   } catch (err: unknown) {
     return {
@@ -2625,7 +2632,13 @@ export async function createSupabaseAppUpdate(
     }
 
     setSupabaseConfigurationState(true);
-    return { ok: true, update: normalizeAppUpdateRow(data as Record<string, unknown>) };
+    const update = normalizeAppUpdateRow(data as Record<string, unknown>);
+    firePush(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushDirectorAnnouncement('Community update', `${update.title}: ${update.body}`.slice(0, 180)),
+      ),
+    );
+    return { ok: true, update };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not post update.' };
   }
@@ -3066,15 +3079,7 @@ export async function blockUser(params: {
 
     if (reportSaved) {
       firePush(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushAfterUserReport({
-            reportId,
-            reporterUserId: blocker.uid,
-            reporterName: blocker.displayName,
-            subject: `Block: ${blockedUserName}`,
-            preview: reportBody,
-          }),
-        ),
+        import('./lib/pushNotifications').then((m) => m.notifyReportPush(reportId)),
       );
     }
 
@@ -3933,15 +3938,7 @@ export async function submitUserReport(params: {
     }
 
     firePush(() =>
-      import('./lib/pushIntegration').then((m) =>
-        m.pushAfterUserReport({
-          reportId,
-          reporterUserId: params.reporter.uid,
-          reporterName: params.reporter.displayName,
-          subject,
-          preview: body,
-        }),
-      ),
+      import('./lib/pushNotifications').then((m) => m.notifyReportPush(reportId)),
     );
 
     return { ok: true };

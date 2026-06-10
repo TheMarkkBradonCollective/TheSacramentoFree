@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 type NotifyBody = {
-  ticketId?: string;
-  event?: 'opened' | 'user_message' | 'staff_reply';
+  reportId?: string;
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -12,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { getBearerToken, getUserFromBearer, getServiceRoleKey, parseJsonBody, runSupportNotify } = await import(
+    const { getBearerToken, getUserFromBearer, getServiceRoleKey, parseJsonBody, runReportNotify } = await import(
       '../../push-server.bundle.cjs'
     );
 
@@ -35,18 +34,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const body = parseJsonBody<NotifyBody>(req);
-    const ticketId = body.ticketId?.trim();
-    const event = body.event;
-    if (!ticketId || !event) {
-      return res.status(400).json({ error: 'ticketId and event are required' });
+    const reportId = body.reportId?.trim();
+    if (!reportId) {
+      return res.status(400).json({ error: 'reportId is required' });
     }
 
-    const result = await runSupportNotify(user.id, ticketId, event);
+    const result = await runReportNotify(user.id, reportId);
     return res.status(result.status).json(result.body);
   } catch (err) {
-    console.error('[api/support/notify]', err);
+    console.error('[api/reports/notify]', err);
     return res.status(500).json({
-      error: err instanceof Error ? err.message : 'Support push notification failed.',
+      error: err instanceof Error ? err.message : 'Report push notification failed.',
     });
   }
 }

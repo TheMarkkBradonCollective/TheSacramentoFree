@@ -7,8 +7,6 @@ import {
   pushUrlForMessageRequests,
   pushUrlForRequest,
   pushUrlForDirectorOverview,
-  pushUrlForStaffReports,
-  pushUrlForStaffTickets,
 } from './pushDeepLink';
 
 function itemCoords(item: ItemPost): { lat: number; lng: number } | null {
@@ -24,7 +22,7 @@ export async function notifyNewListingPosted(item: ItemPost) {
 
   await sendPushNotification({
     eventType,
-    title: isRequest ? 'New request nearby' : 'New free item posted',
+    title: isRequest ? 'New neighbor request' : 'New free item posted',
     body: `${item.userDisplayName}: ${item.title}`,
     url: pushUrlForListing(item.id),
     listingId: item.id,
@@ -34,20 +32,6 @@ export async function notifyNewListingPosted(item: ItemPost) {
     itemLng: coords?.lng,
     excludeUserIds: [item.userId],
     tag: `${eventType}-${item.id}`,
-  });
-
-  await sendPushNotification({
-    eventType: isRequest ? 'nearby_request' : 'nearby_item',
-    title: isRequest ? 'Nearby neighbor request' : 'Nearby free item',
-    body: `${item.title} in ${item.neighborhood}`,
-    url: pushUrlForListing(item.id),
-    listingId: item.id,
-    category: item.category,
-    neighborhood: item.neighborhood,
-    itemLat: coords?.lat,
-    itemLng: coords?.lng,
-    excludeUserIds: [item.userId],
-    tag: isRequest ? `nearby-req-${item.id}` : `nearby-${item.id}`,
   });
 }
 
@@ -266,60 +250,6 @@ export async function notifyDirectorAlert(params: {
     excludeUserIds: params.excludeUserIds,
     tag: params.tag || 'director-alert',
     data: { directorCategory: params.category },
-  });
-}
-
-export async function notifyStaffSupport(params: {
-  ticketId: string;
-  openerName: string;
-  subject: string;
-  preview: string;
-  minStaffRank: number;
-  excludeUserIds?: string[];
-}) {
-  await sendPushNotification({
-    eventType: 'staff_support',
-    title: 'New support ticket activity',
-    body: `${params.openerName}: ${params.subject} — ${params.preview.slice(0, 100)}`,
-    url: pushUrlForStaffTickets(),
-    excludeUserIds: params.excludeUserIds,
-    minStaffRank: params.minStaffRank,
-    tag: `staff-ticket-${params.ticketId}`,
-    data: { ticketId: params.ticketId },
-  });
-}
-
-export async function notifyStaffReport(params: {
-  reportId: string;
-  reporterName: string;
-  subject: string;
-  preview: string;
-  excludeUserIds?: string[];
-}) {
-  await sendPushNotification({
-    eventType: 'staff_report',
-    title: 'New neighbor report',
-    body: `${params.reporterName}: ${params.subject} — ${params.preview.slice(0, 100)}`,
-    url: pushUrlForStaffReports(),
-    excludeUserIds: params.excludeUserIds,
-    tag: `staff-report-${params.reportId}`,
-    data: { reportId: params.reportId },
-  });
-}
-
-export async function notifySupportReply(params: {
-  ticketId: string;
-  recipientUserId: string;
-  subject: string;
-  preview: string;
-}) {
-  await sendPushNotification({
-    eventType: 'support_reply',
-    title: 'Support reply',
-    body: `${params.subject}: ${params.preview.slice(0, 120)}`,
-    url: '/menu',
-    recipientUserIds: [params.recipientUserId],
-    tag: `support-${params.ticketId}`,
   });
 }
 

@@ -384,68 +384,70 @@ export async function notifySupportTicketPush(params: {
   ticketId: string;
   event: 'opened' | 'user_message' | 'staff_reply';
 }): Promise<void> {
+  const json = await postPushApi('/api/support/notify', params);
+  const staffSent = Number((json.staff as { sent?: number } | undefined)?.sent ?? json.sent ?? 0);
+  const directorSent = Number((json.director as { sent?: number } | undefined)?.sent ?? 0);
+  if (params.event !== 'staff_reply' && staffSent === 0 && directorSent === 0 && !json.error) {
+    console.warn('[push] support notify reached 0 staff/director devices:', json);
+  }
+}
+
+async function postPushApi(path: string, body: unknown, retries = 2): Promise<Record<string, unknown>> {
   const token = await getAccessToken();
   if (!token) {
-    console.warn('[push] support notify skipped: not signed in');
-    return;
+    console.warn('[push] send skipped: not signed in');
+    return { error: 'not signed in' };
   }
 
-  try {
-    const res = await fetch('/api/support/notify', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(params),
-    });
-    const json = await readJsonResponse(res);
-    if (!res.ok) {
-      console.warn('[push] support notify rejected:', res.status, json);
-      return;
+  let lastJson: Record<string, unknown> = {};
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      lastJson = await readJsonResponse(res);
+      if (res.ok) return lastJson;
+      if (res.status >= 500 && attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+        continue;
+      }
+      console.warn('[push] send rejected:', res.status, lastJson);
+      return lastJson;
+    } catch (err) {
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+        continue;
+      }
+      console.warn('[push] send failed:', err);
+      return { error: err instanceof Error ? err.message : 'send failed' };
     }
+  }
+  return lastJson;
+}
 
-    const staffSent = Number((json.staff as { sent?: number } | undefined)?.sent ?? json.sent ?? 0);
-    const directorSent = Number((json.director as { sent?: number } | undefined)?.sent ?? 0);
-    if (params.event !== 'staff_reply' && staffSent === 0 && directorSent === 0) {
-      console.warn('[push] support notify reached 0 staff/director devices:', json);
-    }
-  } catch (err) {
-    console.warn('[push] support notify failed:', err);
+export async function notifyReportPush(reportId: string): Promise<void> {
+  const json = await postPushApi('/api/reports/notify', { reportId });
+  const staffSent = Number((json.staff as { sent?: number } | undefined)?.sent ?? 0);
+  const directorSent = Number((json.director as { sent?: number } | undefined)?.sent ?? 0);
+  if (staffSent === 0 && directorSent === 0 && !json.error) {
+    console.warn('[push] report notify reached 0 staff/director devices:', json);
   }
 }
 
 export async function sendPushNotification(options: SendPushOptions): Promise<void> {
-  const token = await getAccessToken();
-  if (!token) {
-    console.warn('[push] send skipped: not signed in');
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/push/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(options),
+  const json = await postPushApi('/api/push/send', options);
+  if (Number(json.sent) === 0 && !json.error) {
+    console.warn('[push] send reached 0 devices:', {
+      eventType: options.eventType,
+      recipients: json.recipients,
+      skipped: json.skipped,
+      subscriptionCount: json.subscriptionCount,
     });
-    const json = await readJsonResponse(res);
-    if (!res.ok) {
-      console.warn('[push] send rejected:', res.status, json);
-      return;
-    }
-    if (Number(json.sent) === 0) {
-      console.warn('[push] send reached 0 devices:', {
-        eventType: options.eventType,
-        recipients: json.recipients,
-        skipped: json.skipped,
-        subscriptionCount: json.subscriptionCount,
-      });
-    }
-  } catch (err) {
-    console.warn('[push] send failed:', err);
   }
 }
 
