@@ -353,6 +353,7 @@ export type PushEventType =
   | 'claim_request'
   | 'request_fulfilled'
   | 'announcement'
+  | 'app_update'
   | 'account_update'
   | 'support_reply'
   | 'staff_support'
@@ -554,6 +555,7 @@ export const CLEARED_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   listingStatus: false,
   nearbyListings: false,
   requests: false,
+  appUpdates: false,
   announcements: false,
   pickupReminders: false,
   newListings: false,
@@ -587,6 +589,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   listingStatus: true,
   nearbyListings: true,
   requests: true,
+  appUpdates: true,
   announcements: true,
   pickupReminders: true,
   newListings: true,
@@ -621,6 +624,7 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     listingStatus: row.listingStatus !== false,
     nearbyListings: row.nearbyListings !== false,
     requests: row.requests !== false,
+    appUpdates: row.appUpdates !== false,
     announcements: row.announcements !== false,
     pickupReminders: row.pickupReminders !== false,
     newListings: row.newListings !== false,

@@ -22,6 +22,7 @@ import {
   runSavedItemsStatusNotify,
 } from './neighborNotify';
 import { runAnnouncementNotify } from './announcementNotify';
+import { runAppUpdateNotify } from './appUpdateNotify';
 import { runReportNotify } from './reportNotify';
 import { runSupportNotify, type SupportNotifyEvent } from './supportNotify';
 import { isStaffRole } from './staffRoles';
@@ -352,9 +353,22 @@ export async function runSupabasePushWebhook(
     if (!updateId) {
       return { status: 200, body: { ok: true, skipped: 'missing update id' } };
     }
-    return runAnnouncementNotify(postedByUserId, {
+    return runAppUpdateNotify(postedByUserId, {
       id: updateId,
-      title: String(record.title || 'Community update'),
+      title: String(record.title || 'App update'),
+      body: String(record.body || ''),
+    });
+  }
+
+  if (table === 'help_announcements') {
+    const announcementId = String(record.id || '');
+    const postedByUserId = String(record.postedByUserId || 'system');
+    if (!announcementId) {
+      return { status: 200, body: { ok: true, skipped: 'missing announcement id' } };
+    }
+    return runAnnouncementNotify(postedByUserId, {
+      id: announcementId,
+      title: String(record.title || 'Community announcement'),
       body: String(record.body || ''),
     });
   }

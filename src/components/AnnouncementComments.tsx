@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Flag, MessageSquare, Trash2 } from 'lucide-react';
-import { AppUpdateComment, UserProfile } from '../types';
+import { HelpAnnouncementComment, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
 
 interface AnnouncementCommentsProps {
-  updateId: string;
+  announcementId: string;
   postedByUserId: string;
-  comments: AppUpdateComment[];
+  comments: HelpAnnouncementComment[];
   currentUserId?: string;
   userProfile?: UserProfile | null;
   onAddComment: (text: string) => void;
@@ -18,7 +18,7 @@ interface AnnouncementCommentsProps {
 const PREVIEW_COUNT = 5;
 
 export default function AnnouncementComments({
-  updateId,
+  announcementId,
   postedByUserId,
   comments,
   currentUserId,
@@ -40,10 +40,16 @@ export default function AnnouncementComments({
   const signedIn = Boolean(currentUserId);
 
   return (
-    <section className="mt-4 pt-4 border-t border-app space-y-3" aria-labelledby={`announcement-comments-${updateId}`}>
+    <section
+      className="mt-4 pt-4 border-t border-app space-y-3"
+      aria-labelledby={`announcement-comments-${announcementId}`}
+    >
       <div className="flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-muted" />
-        <h4 id={`announcement-comments-${updateId}`} className="text-xs font-semibold text-muted uppercase tracking-wide">
+        <h4
+          id={`announcement-comments-${announcementId}`}
+          className="text-xs font-semibold text-muted uppercase tracking-wide"
+        >
           Discussion ({comments.length})
         </h4>
       </div>
@@ -126,7 +132,9 @@ export default function AnnouncementComments({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const input = e.currentTarget.elements.namedItem(`announcementComment-${updateId}`) as HTMLInputElement;
+            const input = e.currentTarget.elements.namedItem(
+              `announcementComment-${announcementId}`,
+            ) as HTMLInputElement;
             if (input?.value.trim()) {
               onAddComment(input.value.trim());
               input.value = '';
@@ -136,7 +144,7 @@ export default function AnnouncementComments({
         >
           <input
             type="text"
-            name={`announcementComment-${updateId}`}
+            name={`announcementComment-${announcementId}`}
             placeholder="Add a comment…"
             className="sbn-input flex-1 text-sm py-2"
             required

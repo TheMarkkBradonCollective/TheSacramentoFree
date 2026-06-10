@@ -1,20 +1,16 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, MessageSquare, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { AppUpdateInput, AppUpdateRecord, UserProfile } from '../types';
 import { useAppUpdates } from '../hooks/useAppUpdates';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
-import { useAppUpdateComments } from '../hooks/useAppUpdateComments';
 import ContentVoteButtons from './ContentVoteButtons';
-import AnnouncementComments from './AnnouncementComments';
 import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
 
 interface UpdatesListProps {
   userProfile?: UserProfile | null;
   onRequireSignIn?: () => void;
-  onViewProfile?: (userId: string) => void;
   showVotes?: boolean;
-  showComments?: boolean;
 }
 
 function formatUpdateDate(iso: string): string {
@@ -33,26 +29,14 @@ function todayIsoDate(): string {
 export default function UpdatesList({
   userProfile,
   onRequireSignIn,
-  onViewProfile,
   showVotes = true,
-  showComments = true,
 }: UpdatesListProps) {
-  const { updates, loading, createUpdate, saveUpdate, removeUpdate, canPost, canEdit } =
-    useAppUpdates(userProfile);
-  const updateIds = useMemo(() => updates.map((update) => update.id), [updates]);
-  const voteTargetIds = useMemo(
-    () => (showVotes ? updateIds : []),
-    [showVotes, updateIds],
+  const { updates, loading, createUpdate, saveUpdate, removeUpdate, canManage } = useAppUpdates(userProfile);
+  const updateIds = useMemo(
+    () => (showVotes ? updates.map((update) => update.id) : []),
+    [showVotes, updates],
   );
-  const commentTargetIds = useMemo(
-    () => (showComments ? updateIds : []),
-    [showComments, updateIds],
-  );
-  const { getVoteState, handleVote } = useCommunityContentVotes('update', voteTargetIds, userProfile);
-  const { getCommentsForUpdate, handleAddComment, handleDeleteComment } = useAppUpdateComments(
-    commentTargetIds,
-    userProfile ?? null,
-  );
+  const { getVoteState, handleVote } = useCommunityContentVotes('update', updateIds, userProfile);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingUpdate, setEditingUpdate] = useState<AppUpdateRecord | null>(null);
   const [creating, setCreating] = useState(false);
@@ -66,33 +50,31 @@ export default function UpdatesList({
   });
 
   if (loading) {
-    return <p className="text-sm text-muted">Loading announcements…</p>;
+    return <p className="text-sm text-muted">Loading updates…</p>;
   }
 
   return (
     <div className="space-y-4">
-      {canPost && (
+      {canManage && (
         <button
           type="button"
           onClick={() => setCreating(true)}
           className="sbn-btn sbn-btn-primary sbn-btn-sm inline-flex items-center gap-1.5"
         >
           <Plus className="w-4 h-4" />
-          Post announcement
+          Post update
         </button>
       )}
 
       {updates.length === 0 ? (
         <p className="text-sm text-muted italic">
-          {canPost ? 'No announcements yet — post the first one above.' : 'No announcements posted yet.'}
+          {canManage ? 'No updates yet — post your first one above.' : 'No updates posted yet.'}
         </p>
       ) : (
         <ul className="space-y-3">
           {updates.map((update) => {
             const expanded = expandedId === update.id;
             const fullText = update.detail?.trim() || update.body;
-            const comments = getCommentsForUpdate(update.id);
-            const editable = canEdit(update);
 
             return (
               <li key={update.id}>
@@ -125,37 +107,31 @@ export default function UpdatesList({
                           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                         </span>
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-semibold text-accent">
-                        <span>{expanded ? 'Tap to collapse' : 'Tap to read more'}</span>
-                        {showComments && comments.length > 0 && !expanded && (
-                          <span className="inline-flex items-center gap-1 text-muted">
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
-                          </span>
-                        )}
-                      </div>
+                      <p className="mt-2 text-[11px] font-semibold text-accent">
+                        {expanded ? 'Tap to collapse' : 'Tap to read more'}
+                      </p>
                     </button>
 
-                    {editable && (
+                    {canManage && (
                       <div className="flex flex-col gap-1 shrink-0">
                         <button
                           type="button"
                           onClick={() => setEditingUpdate(update)}
                           className="p-2 rounded-full text-muted hover:text-app hover:bg-inset"
-                          title="Edit announcement"
-                          aria-label="Edit announcement"
+                          title="Edit update"
+                          aria-label="Edit update"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!confirm('Delete this announcement?')) return;
+                            if (!confirm('Delete this update?')) return;
                             await removeUpdate(update.id);
                           }}
                           className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset"
-                          title="Delete announcement"
-                          aria-label="Delete announcement"
+                          title="Delete update"
+                          aria-label="Delete update"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -169,22 +145,8 @@ export default function UpdatesList({
                       onVote={(dir) => handleVote(update.id, dir)}
                       onRequireSignIn={onRequireSignIn}
                       signedIn={signedIn}
-                      feedbackNote="Votes help staff see what resonates with neighbors."
+                      feedbackNote="Votes are shared with your director."
                       compact
-                    />
-                  )}
-
-                  {showComments && expanded && (
-                    <AnnouncementComments
-                      updateId={update.id}
-                      postedByUserId={update.postedByUserId}
-                      comments={comments}
-                      currentUserId={userProfile?.uid}
-                      userProfile={userProfile}
-                      onAddComment={(text) => handleAddComment(update.id, text)}
-                      onDeleteComment={(commentId) => void handleDeleteComment(update.id, commentId)}
-                      onRequireSignIn={onRequireSignIn}
-                      onViewProfile={onViewProfile}
                     />
                   )}
                 </PublicCard>
@@ -196,7 +158,7 @@ export default function UpdatesList({
 
       {creating && (
         <AppUpdateEditModal
-          editTitle="Post announcement"
+          editTitle="Post update"
           values={emptyDraft()}
           onClose={() => setCreating(false)}
           onSave={createUpdate}
@@ -205,7 +167,7 @@ export default function UpdatesList({
 
       {editingUpdate && (
         <AppUpdateEditModal
-          editTitle="Edit announcement"
+          editTitle="Edit update"
           values={{
             date: editingUpdate.date,
             title: editingUpdate.title,

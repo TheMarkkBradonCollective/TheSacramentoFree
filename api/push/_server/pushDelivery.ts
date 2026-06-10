@@ -22,6 +22,7 @@ export type PushEventType =
   | 'claim_request'
   | 'request_fulfilled'
   | 'announcement'
+  | 'app_update'
   | 'account_update'
   | 'support_reply'
   | 'staff_support'
@@ -53,6 +54,7 @@ export interface NotificationPreferencesRow {
   listingStatus: boolean;
   nearbyListings: boolean;
   requests: boolean;
+  appUpdates: boolean;
   announcements: boolean;
   pickupReminders: boolean;
   newListings: boolean;
@@ -114,6 +116,7 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   claim_request: 'requests',
   request_fulfilled: 'requests',
   announcement: 'announcements',
+  app_update: 'appUpdates',
   account_update: 'accountUpdates',
   support_reply: 'support',
   staff_support: 'staffSupport',
@@ -137,6 +140,7 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     listingStatus: row.listingStatus !== false,
     nearbyListings: row.nearbyListings !== false,
     requests: row.requests !== false,
+    appUpdates: row.appUpdates !== false,
     announcements: row.announcements !== false,
     pickupReminders: row.pickupReminders !== false,
     newListings: row.newListings !== false,
@@ -200,6 +204,7 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         listingStatus: true,
         nearbyListings: true,
         requests: true,
+        appUpdates: true,
         announcements: true,
         pickupReminders: true,
         newListings: true,

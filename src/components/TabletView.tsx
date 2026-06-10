@@ -46,6 +46,8 @@ interface TabletViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
+  initialHelpPanel?: 'updates' | 'announcements' | null;
+  onClearInitialHelpPanel?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
 }
@@ -90,6 +92,8 @@ export default function TabletView({
   onOpenGoFundMe,
   initialStaffPanel = null,
   onClearInitialStaffPanel,
+  initialHelpPanel = null,
+  onClearInitialHelpPanel,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
 }: TabletViewProps) {
@@ -259,6 +263,8 @@ export default function TabletView({
                 onViewProfile={onViewProfile}
                 initialStaffPanel={initialStaffPanel}
                 onClearInitialStaffPanel={onClearInitialStaffPanel}
+                initialHelpPanel={initialHelpPanel}
+                onClearInitialHelpPanel={onClearInitialHelpPanel}
                 scrollToDirectorOverview={scrollToDirectorOverview}
                 onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               />

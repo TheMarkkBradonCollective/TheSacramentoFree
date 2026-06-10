@@ -49,6 +49,7 @@ const DEFAULT_NOTIFICATION_PREFS = {
   listingStatus: true,
   nearbyListings: true,
   requests: true,
+  appUpdates: true,
   announcements: true,
   pickupReminders: true,
   newListings: true,

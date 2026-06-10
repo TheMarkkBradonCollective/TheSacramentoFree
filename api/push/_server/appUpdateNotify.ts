@@ -1,6 +1,6 @@
 import { runPushSend } from './runPushSend';
 
-export async function runAnnouncementNotify(
+export async function runAppUpdateNotify(
   callerId: string,
   update: { id: string; title: string; body: string },
 ): Promise<{ status: number; body: Record<string, unknown> }> {
@@ -9,15 +9,15 @@ export async function runAnnouncementNotify(
     return { status: 200, body: { ok: true, skipped: 'missing update id' } };
   }
 
-  const title = String(update.title || 'Community announcement').trim() || 'Community announcement';
+  const title = String(update.title || 'App update').trim() || 'App update';
   const bodyText = String(update.body || '').trim();
   const body = bodyText ? `${title}: ${bodyText}`.slice(0, 180) : title;
 
   return runPushSend(callerId, {
-    eventType: 'announcement',
-    title: 'New announcement',
+    eventType: 'app_update',
+    title: 'App update',
     body,
-    url: '/help/announcements',
-    tag: `announcement-${updateId}`,
+    url: '/updates',
+    tag: `app-update-${updateId}`,
   });
 }

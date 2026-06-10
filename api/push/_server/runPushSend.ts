@@ -42,6 +42,12 @@ async function validateCallerForPush(callerId: string, body: PushSendBody): Prom
     return null;
   }
 
+  if (body.eventType === 'app_update') {
+    const role = await getUserRole(callerId);
+    if (normalizeUserRole(role) !== 'director') return 'Director access required for app updates';
+    return null;
+  }
+
   if (body.eventType === 'new_message' && body.conversationId) {
     const supabaseAdmin = await getSupabaseAdmin();
     const { data } = await supabaseAdmin
@@ -148,9 +154,11 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
       .map((u) => String((u as { uid: string }).uid));
   }
 
-  if (eventType === 'announcement') {
-    const role = await getUserRole(callerId);
-    if (!isStaffRole(role)) return [];
+  if (eventType === 'announcement' || eventType === 'app_update') {
+    if (eventType === 'announcement') {
+      const role = await getUserRole(callerId);
+      if (!isStaffRole(role)) return [];
+    }
 
     const cities = body.cities?.filter(Boolean) || [];
     let query = supabaseAdmin.from('users').select('uid');
@@ -205,6 +213,13 @@ export async function runPushSend(
     const role = await getUserRole(callerId);
     if (!isStaffRole(role)) {
       return { status: 403, body: { error: 'Staff access required for announcements' } };
+    }
+  }
+
+  if (body.eventType === 'app_update') {
+    const role = await getUserRole(callerId);
+    if (normalizeUserRole(role) !== 'director') {
+      return { status: 403, body: { error: 'Director access required for app updates' } };
     }
   }
 

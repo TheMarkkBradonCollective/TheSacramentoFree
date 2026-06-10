@@ -7,6 +7,7 @@ export interface PushDeepLinkTarget {
   requestId?: string;
   profile?: boolean;
   notifications?: boolean;
+  helpPanel?: 'updates' | 'announcements';
   staffPanel?: 'tickets' | 'reports';
   directorOverview?: boolean;
 }
@@ -25,6 +26,8 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   path = path.replace(/^\/+/, '');
 
   if (path === 'notifications') return { tab: 'menu', notifications: true };
+  if (path === 'updates') return { tab: 'menu', helpPanel: 'updates' };
+  if (path === 'help/announcements') return { tab: 'menu', helpPanel: 'announcements' };
   if (path === 'profile') return { tab: 'profile', profile: true };
   if (path === 'staff/tickets') return { tab: 'menu', staffPanel: 'tickets' };
   if (path === 'staff/reports') return { tab: 'menu', staffPanel: 'reports' };

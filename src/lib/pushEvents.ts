@@ -281,6 +281,21 @@ export async function notifyListingStatus(params: {
   });
 }
 
+export async function notifyAppUpdate(params: {
+  title: string;
+  body: string;
+  updateId?: string;
+}) {
+  const updateId = params.updateId?.trim();
+  await sendPushNotification({
+    eventType: 'app_update',
+    title: params.title,
+    body: params.body,
+    url: '/updates',
+    tag: updateId ? `app-update-${updateId}` : `app-update-${Date.now()}`,
+  });
+}
+
 export async function notifyCommunityAnnouncement(params: {
   title: string;
   body: string;
@@ -292,7 +307,7 @@ export async function notifyCommunityAnnouncement(params: {
     eventType: 'announcement',
     title: params.title,
     body: params.body,
-    url: '/notifications',
+    url: '/help/announcements',
     cities: params.cities,
     tag: updateId ? `announcement-${updateId}` : `announcement-${Date.now()}`,
   });

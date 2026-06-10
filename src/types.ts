@@ -17,6 +17,7 @@ export interface NotificationPreferences {
   listingStatus: boolean;
   nearbyListings: boolean;
   requests: boolean;
+  appUpdates: boolean;
   announcements: boolean;
   pickupReminders: boolean;
   newListings: boolean;
@@ -338,9 +339,24 @@ export interface AppUpdateRecord {
 
 export type AppUpdateInput = Pick<AppUpdateRecord, 'date' | 'title' | 'body' | 'detail'>;
 
-export interface AppUpdateComment {
+export interface HelpAnnouncementRecord {
   id: string;
-  updateId: string;
+  date: string;
+  title: string;
+  body: string;
+  detail?: string | null;
+  authorName: string;
+  authorTitle: string;
+  postedByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type HelpAnnouncementInput = Pick<HelpAnnouncementRecord, 'date' | 'title' | 'body' | 'detail'>;
+
+export interface HelpAnnouncementComment {
+  id: string;
+  announcementId: string;
   userId: string;
   userName: string;
   userPhoto?: string;
@@ -349,7 +365,7 @@ export interface AppUpdateComment {
   createdAt: string;
 }
 
-export type CommunityContentVoteTarget = 'update' | 'review' | 'leader_message';
+export type CommunityContentVoteTarget = 'update' | 'review' | 'leader_message' | 'announcement';
 
 export interface CommunityContentVote {
   id: string;

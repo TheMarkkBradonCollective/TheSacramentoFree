@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS public.community_content_votes (
   id TEXT PRIMARY KEY,
-  "targetType" TEXT NOT NULL CHECK ("targetType" IN ('update', 'review', 'leader_message')),
+  "targetType" TEXT NOT NULL CHECK ("targetType" IN ('update', 'review', 'leader_message', 'announcement')),
   "targetId" TEXT NOT NULL,
   "userId" TEXT NOT NULL,
   "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),

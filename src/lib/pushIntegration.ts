@@ -316,11 +316,15 @@ export async function pushAfterPendingPickup(itemId: string, actorUserId: string
   });
 }
 
-export async function pushDirectorAnnouncement(title: string, body: string, updateId?: string) {
+export async function pushAppUpdate(title: string, body: string, updateId?: string) {
+  await notifyAppUpdate({ title, body, updateId });
+}
+
+export async function pushHelpAnnouncement(title: string, body: string, announcementId?: string) {
   await notifyCommunityAnnouncement({
     title,
     body,
-    updateId,
+    updateId: announcementId,
   });
 }
 

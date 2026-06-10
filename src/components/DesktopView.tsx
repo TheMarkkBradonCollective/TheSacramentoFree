@@ -45,6 +45,8 @@ interface DesktopViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
+  initialHelpPanel?: 'updates' | 'announcements' | null;
+  onClearInitialHelpPanel?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
 }
@@ -80,6 +82,8 @@ export default function DesktopView({
   onOpenGoFundMe,
   initialStaffPanel = null,
   onClearInitialStaffPanel,
+  initialHelpPanel = null,
+  onClearInitialHelpPanel,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
 }: DesktopViewProps) {
@@ -201,6 +205,8 @@ export default function DesktopView({
                 onViewProfile={onViewProfile}
                 initialStaffPanel={initialStaffPanel}
                 onClearInitialStaffPanel={onClearInitialStaffPanel}
+                initialHelpPanel={initialHelpPanel}
+                onClearInitialHelpPanel={onClearInitialHelpPanel}
                 scrollToDirectorOverview={scrollToDirectorOverview}
                 onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               />

@@ -111,6 +111,7 @@ export default function App() {
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [initialStaffPanel, setInitialStaffPanel] = useState<'tickets' | 'reports' | null>(null);
+  const [initialHelpPanel, setInitialHelpPanel] = useState<'updates' | 'announcements' | null>(null);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
@@ -809,6 +810,9 @@ export default function App() {
       if (target.staffPanel) {
         setInitialStaffPanel(target.staffPanel);
       }
+      if (target.helpPanel) {
+        setInitialHelpPanel(target.helpPanel);
+      }
       if (target.directorOverview) {
         setScrollToDirectorOverview(true);
       }
@@ -940,6 +944,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  initialHelpPanel={initialHelpPanel}
+                  onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />
@@ -978,6 +984,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  initialHelpPanel={initialHelpPanel}
+                  onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />
@@ -1016,6 +1024,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  initialHelpPanel={initialHelpPanel}
+                  onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />

@@ -10,10 +10,10 @@ interface UpdatesPageProps {
 export default function UpdatesPage({ onRequireSignIn, userProfile }: UpdatesPageProps) {
   return (
     <PublicPageShell
-      title="Announcements"
-      subtitle="News from Sacramento Buy Nothing staff — tap to read more, vote, and join the discussion."
+      title="App updates"
+      subtitle="What’s new in Sacramento Buy Nothing — posted by your director. Tap any update to read more."
     >
-      <UpdatesList userProfile={userProfile} onRequireSignIn={onRequireSignIn} />
+      <UpdatesList userProfile={userProfile} onRequireSignIn={onRequireSignIn} showVotes={false} />
     </PublicPageShell>
   );
 }

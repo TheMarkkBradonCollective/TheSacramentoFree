@@ -10,10 +10,11 @@ import FullScreenPanel from './FullScreenPanel';
 import SupportTicketThread from './SupportTicketThread';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
-import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight, Megaphone, Star } from 'lucide-react';
+import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight, Megaphone, ScrollText, Star } from 'lucide-react';
 import UpdatesList from './UpdatesList';
+import AnnouncementsList from './AnnouncementsList';
 import CommunityReviews from './CommunityReviews';
-import { canPostAnnouncements, canViewDirectorOverview } from '../lib/roles';
+import { canManageAppUpdates, canPostAnnouncements, canViewDirectorOverview } from '../lib/roles';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import DirectorSiteOverview from './DirectorSiteOverview';
 
@@ -21,14 +22,18 @@ interface AccountHelpSectionProps {
   user: UserProfile;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
+  initialHelpPanel?: 'updates' | 'announcements' | null;
+  onClearInitialHelpPanel?: () => void;
 }
 
-type Panel = 'report' | 'tickets' | 'newTicket' | 'thread' | 'updates' | 'reviews' | null;
+type Panel = 'report' | 'tickets' | 'newTicket' | 'thread' | 'updates' | 'announcements' | 'reviews' | null;
 
 export default function AccountHelpSection({
   user,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
+  initialHelpPanel = null,
+  onClearInitialHelpPanel,
 }: AccountHelpSectionProps) {
   const [panel, setPanel] = useState<Panel>(null);
   const [reportSubject, setReportSubject] = useState('');
@@ -151,8 +156,15 @@ export default function AccountHelpSection({
 
   const canSubmitTicket =
     ticketSubject.trim() && (ticketMessage.trim() || ticketImage.file);
+  const canManageUpdates = canManageAppUpdates(user.role);
   const canPostAnnouncementsPanel = canPostAnnouncements(user.role);
   const showDirectorOverview = canViewDirectorOverview(user.role);
+
+  useEffect(() => {
+    if (!initialHelpPanel) return;
+    setPanel(initialHelpPanel);
+    onClearInitialHelpPanel?.();
+  }, [initialHelpPanel, onClearInitialHelpPanel]);
 
   return (
     <div className="space-y-3 min-w-0 w-full overflow-x-hidden" id="account_help_section">
@@ -166,13 +178,27 @@ export default function AccountHelpSection({
       <div className="grid gap-2 sm:grid-cols-2 min-w-0">
         <button type="button" onClick={() => setPanel('updates')} className="sbn-help-list-item">
           <span className="p-2 rounded-lg bg-accent/10 text-accent shrink-0">
+            <ScrollText className="w-4 h-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-app block">App updates</span>
+            <span className="text-[11px] text-muted">
+              {canManageUpdates
+                ? 'Director changelog — post what is new in the app'
+                : "See what's new and vote on changes"}
+            </span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+        </button>
+        <button type="button" onClick={() => setPanel('announcements')} className="sbn-help-list-item">
+          <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
             <Megaphone className="w-4 h-4" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="font-semibold text-sm text-app block">Announcements</span>
             <span className="text-[11px] text-muted">
               {canPostAnnouncementsPanel
-                ? 'Post news for neighbors — votes and comments come back to staff'
+                ? 'Staff news — neighbors can vote and comment'
                 : 'Community news from staff — vote and join the discussion'}
             </span>
           </span>
@@ -224,6 +250,21 @@ export default function AccountHelpSection({
       {panel === 'updates' && (
         <FullScreenPanel
           wide
+          title="App updates"
+          subtitle={
+            canManageUpdates
+              ? 'Post changelog entries for neighbors — votes come back to you as feedback'
+              : 'Tap an update to read more — your votes go to the director'
+          }
+          onClose={closePanel}
+        >
+          <UpdatesList userProfile={user} />
+        </FullScreenPanel>
+      )}
+
+      {panel === 'announcements' && (
+        <FullScreenPanel
+          wide
           title="Announcements"
           subtitle={
             canPostAnnouncementsPanel
@@ -232,7 +273,7 @@ export default function AccountHelpSection({
           }
           onClose={closePanel}
         >
-          <UpdatesList userProfile={user} />
+          <AnnouncementsList userProfile={user} />
         </FullScreenPanel>
       )}
 

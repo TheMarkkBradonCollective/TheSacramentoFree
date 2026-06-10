@@ -79,7 +79,8 @@ const PREF_SECTIONS: {
   {
     title: 'Community',
     items: [
-      { key: 'announcements', label: 'Announcements', description: 'News from community leaders' },
+      { key: 'appUpdates', label: 'App updates', description: 'Director changelog — what is new in the app' },
+      { key: 'announcements', label: 'Announcements', description: 'Staff news in Help & support' },
       { key: 'accountUpdates', label: 'Account updates', description: 'Account notices and important alerts' },
     ],
   },

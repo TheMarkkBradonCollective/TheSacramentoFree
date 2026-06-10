@@ -22,7 +22,8 @@
 -- | push-moderation       | moderation_audit_log    | INSERT         | Directors                        |
 -- | push-reports          | user_reports            | INSERT         | Staff inbox                      |
 -- | push-support          | support_ticket_messages | INSERT         | Support + staff inbox            |
--- | push-announcements    | app_updates             | INSERT         | Community update announcements   |
+-- | push-app-updates      | app_updates             | INSERT         | Director changelog (app updates) |
+-- | push-announcements    | help_announcements      | INSERT         | Staff help announcements         |
 --
 -- items UPDATE covers: status changes, owner listing-status alerts, saved-item
 -- status alerts, pickup-scheduled alerts (pending_pickup), and saved-item alerts
