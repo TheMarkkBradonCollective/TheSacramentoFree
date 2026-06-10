@@ -3479,11 +3479,12 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
 
     for (const row of ticketsRes.data ?? []) {
       const r = row as Record<string, unknown>;
+      const subject = String(r.subject || 'Help request').trim();
       activity.push({
         id: `ticket-${r.id}`,
         kind: 'ticket',
-        title: `Support: ${r.subject}`,
-        detail: `${r.openerName} · ${r.status}`,
+        title: `${r.openerName}: ${subject}`,
+        detail: `Support ticket · ${r.status}`,
         at: String(r.createdAt),
       });
     }

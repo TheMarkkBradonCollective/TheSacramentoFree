@@ -4,6 +4,31 @@ import type { NotificationPreferences, NearbyRadiusMiles } from '../types';
 const SW_PATH = '/service-worker.js';
 const VAPID_CACHE_KEY = 'sbn_vapid_public_key_v1';
 
+function subscriptionKeyMatches(subscription: PushSubscription, publicKey: string): boolean {
+  const existingKey = subscription.options?.applicationServerKey;
+  if (!existingKey) return false;
+  const expected = urlBase64ToUint8Array(publicKey);
+  if (existingKey.byteLength !== expected.byteLength) return false;
+  const existing = new Uint8Array(existingKey);
+  for (let i = 0; i < expected.byteLength; i += 1) {
+    if (existing[i] !== expected[i]) return false;
+  }
+  return true;
+}
+
+export function isIosDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
+export function needsIosHomeScreenForPush(): boolean {
+  if (!isIosDevice()) return false;
+  return !(window.navigator as Navigator & { standalone?: boolean }).standalone;
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -54,6 +79,15 @@ async function savePushSubscriptionDirect(
   const { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
   if (error) {
     throw new Error(mapPushSubscriptionError(error));
+  }
+
+  if (row.userAgent) {
+    await supabase
+      .from('push_subscriptions')
+      .delete()
+      .eq('userId', userId)
+      .eq('userAgent', row.userAgent)
+      .neq('endpoint', json.endpoint);
   }
 
   const { error: prefError } = await supabase
@@ -208,6 +242,11 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
 
   const publicKey = await getVapidPublicKey();
   const existing = await registration.pushManager.getSubscription();
+  if (existing && subscriptionKeyMatches(existing, publicKey)) {
+    await persistPushSubscription(existing, userId);
+    return existing;
+  }
+
   if (existing) {
     await existing.unsubscribe();
   }

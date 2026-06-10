@@ -21,14 +21,15 @@ export async function runReportNotify(
   }
 
   const reporterName = String((report as { reporterName: string }).reporterName || 'A neighbor');
-  const subject = String((report as { subject: string }).subject || 'Neighbor report');
-  const body = String((report as { body: string }).body || '');
-  const preview = body.slice(0, 100);
+  const subject = String((report as { subject: string }).subject || 'Neighbor report').trim();
+  const body = String((report as { body: string }).body || '').trim();
+  const preview = body.slice(0, 140) || 'Open the app to read the full report.';
+  const subjectLine = subject || 'Neighbor report';
 
   const staffResult = await runPushSend(callerId, {
     eventType: 'staff_report',
-    title: 'New neighbor report',
-    body: `${reporterName}: ${subject} — ${preview}`,
+    title: `Report from ${reporterName}`,
+    body: `${subjectLine}: ${preview}`,
     url: '/staff/reports',
     excludeUserIds: [reporterUserId],
     tag: `staff-report-${reportId}`,
@@ -37,8 +38,8 @@ export async function runReportNotify(
 
   const directorResult = await runPushSend(callerId, {
     eventType: 'director_alert',
-    title: 'Neighbor report',
-    body: `${reporterName}: ${subject}`,
+    title: `Neighbor report — ${reporterName}`,
+    body: `${subjectLine}: ${preview}`,
     url: '/director/overview',
     excludeUserIds: [reporterUserId],
     tag: `director-report-${reportId}`,

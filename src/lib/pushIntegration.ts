@@ -116,10 +116,11 @@ export async function pushAfterMessageRequest(params: {
     senderName: params.fromUserName,
     preview: params.message,
   });
+  const preview = params.message?.trim();
   await pushDirectorAlert({
     category: 'message_request',
-    title: 'Message request',
-    body: `${params.fromUserName} asked to start a chat`,
+    title: `Message request — ${params.fromUserName}`,
+    body: preview ? `${params.fromUserName}: ${preview.slice(0, 140)}` : `${params.fromUserName} asked to start a chat`,
     tag: `director-dmreq-${params.requestId}`,
     excludeUserIds: params.fromUserId ? [params.fromUserId] : undefined,
   });

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sac-buy-nothing-v4';
+const CACHE_NAME = 'sac-buy-nothing-v5';
 
 const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
 
@@ -129,20 +129,24 @@ function resolveNotificationUrl(rawUrl) {
 }
 
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
   let payload = {};
-  try {
-    payload = event.data.json();
-  } catch {
-    payload = { title: 'Sacramento Buy Nothing', body: event.data.text() };
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch {
+      payload = { title: 'Sacramento Buy Nothing', body: event.data.text() };
+    }
   }
 
   const title = payload.title || 'Sacramento Buy Nothing';
+  const body =
+    String(payload.body || '').trim() ||
+    String(payload.title || '').trim() ||
+    'You have a new community update.';
   const options = {
-    body: payload.body || '',
-    icon: payload.icon || '/icon.svg',
-    badge: payload.badge || '/icon.svg',
+    body,
+    icon: payload.icon || '/Logo.jpeg',
+    badge: payload.badge || '/Logo.jpeg',
     tag: payload.tag || payload.eventType || 'sbn-notification',
     data: {
       url: resolveNotificationUrl(payload.url || '/'),
