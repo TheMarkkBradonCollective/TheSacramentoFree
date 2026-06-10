@@ -27,6 +27,7 @@ import {
   getSupabaseProfile, 
   upsertSupabaseProfile,
   profileFromAuthUser,
+  ensureDirectorRoleInDb,
   isDirectorUser,
   getSupabaseItems,
   getSupabaseEvents,
@@ -323,6 +324,7 @@ export default function App() {
         if (fromDb) {
           if (isDirectorUser(user.id, user.email)) {
             fromDb.role = 'director';
+            void ensureDirectorRoleInDb(user.id, user.email);
           }
           setUserProfile(fromDb);
           writeCachedProfile(fromDb);

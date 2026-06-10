@@ -381,6 +381,16 @@ export function isDirectorUser(uid: string, email?: string | null): boolean {
   return DIRECTOR_UIDS.has(uid) || (email?.toLowerCase() === DIRECTOR_EMAIL);
 }
 
+/** Keep users.role aligned with isDirectorUser so server push routing matches the app UI. */
+export async function ensureDirectorRoleInDb(uid: string, email?: string | null): Promise<void> {
+  if (!isDirectorUser(uid, email)) return;
+  try {
+    await supabase.from('users').update({ role: 'director' }).eq('uid', uid);
+  } catch (err) {
+    console.warn('Director role sync failed:', err);
+  }
+}
+
 /** Instant profile from Supabase auth — never blocks on the database. */
 export function profileFromAuthUser(user: {
   id: string;

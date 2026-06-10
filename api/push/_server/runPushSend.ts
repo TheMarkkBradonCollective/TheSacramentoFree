@@ -6,7 +6,8 @@ import {
   type PushEventType,
   type PushPayload,
 } from './pushDelivery';
-import { getUserRole, isDirectorRole, isStaffRole, normalizeUserRole, roleRank } from './staffRoles';
+import { DIRECTOR_UIDS, isDirectorAccount } from './directorIdentity';
+import { getUserRole, isStaffRole, normalizeUserRole, roleRank } from './staffRoles';
 
 export interface PushSendBody {
   eventType: PushEventType;
@@ -80,11 +81,18 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
   }
 
   if (eventType === 'director_alert') {
-    const { data: users } = await supabaseAdmin.from('users').select('uid, role');
-    return (users || [])
-      .filter((u) => isDirectorRole((u as { role: string }).role))
-      .map((u) => String((u as { uid: string }).uid))
-      .filter((uid) => uid && uid !== callerId);
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role, email');
+    const ids = new Set<string>();
+    for (const u of users || []) {
+      const uid = String((u as { uid: string }).uid);
+      if (!uid || uid === callerId) continue;
+      const row = u as { role?: string; email?: string };
+      if (isDirectorAccount(uid, row.role, row.email)) ids.add(uid);
+    }
+    for (const uid of DIRECTOR_UIDS) {
+      if (uid && uid !== callerId) ids.add(uid);
+    }
+    return [...ids];
   }
 
   if (eventType === 'staff_support' || eventType === 'staff_report') {
@@ -95,14 +103,15 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
           ? body.minStaffRank
           : 1;
 
-    const { data: users } = await supabaseAdmin.from('users').select('uid, role');
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role, email');
 
     return (users || [])
       .filter((u) => {
         const uid = String((u as { uid: string }).uid);
         if (!uid || uid === callerId) return false;
-        const role = normalizeUserRole((u as { role: string }).role);
-        if (!isStaffRole(role) || isDirectorRole(role)) return false;
+        const row = u as { role?: string; email?: string };
+        const role = normalizeUserRole(row.role);
+        if (!isStaffRole(role) || isDirectorAccount(uid, row.role, row.email)) return false;
         return roleRank(role) >= minRank;
       })
       .map((u) => String((u as { uid: string }).uid));
