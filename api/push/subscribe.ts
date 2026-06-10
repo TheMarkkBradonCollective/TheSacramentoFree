@@ -66,15 +66,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: error.message || 'Could not save subscription' });
     }
 
-    if (row.userAgent) {
-      await supabase
-        .from('push_subscriptions')
-        .delete()
-        .eq('userId', user.id)
-        .eq('userAgent', row.userAgent)
-        .neq('endpoint', subscription.endpoint);
-    }
-
     await supabase.from('notification_preferences').upsert(
       { userId: user.id, updatedAt: new Date().toISOString() },
       { onConflict: 'userId', ignoreDuplicates: true },

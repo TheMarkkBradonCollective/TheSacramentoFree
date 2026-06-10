@@ -194,6 +194,7 @@ export default function NotificationSettings({
     sendTestNotification,
     isTesting,
     testMessage,
+    serverDeliveryReady,
   } = usePushNotifications(userId);
 
   const shell = fullBleed

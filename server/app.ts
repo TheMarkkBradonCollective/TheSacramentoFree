@@ -63,15 +63,6 @@ export function createPushApp() {
       return;
     }
 
-    if (row.userAgent) {
-      await supabaseAdmin
-        .from('push_subscriptions')
-        .delete()
-        .eq('userId', userId)
-        .eq('userAgent', row.userAgent)
-        .neq('endpoint', subscription.endpoint);
-    }
-
     await supabaseAdmin.from('notification_preferences').upsert(
       { userId, updatedAt: new Date().toISOString() },
       { onConflict: 'userId', ignoreDuplicates: true },
