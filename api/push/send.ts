@@ -7,7 +7,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { getUserFromBearer, runPushSend, parseJsonBody } = await import('../../push-server.bundle.mjs');
+    const { getUserFromBearer, runPushSend, parseJsonBody } = await import('../../push-server.bundle.cjs');
 
     const user = await getUserFromBearer(req.headers.authorization);
     if (!user) {
