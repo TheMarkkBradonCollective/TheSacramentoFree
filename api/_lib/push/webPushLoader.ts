@@ -5,4 +5,4 @@ export {
   getVapidSubject,
   getWebPushModuleAsync,
   isVapidConfigured,
-} from '../../../lib/push-server/webPushLoader';
+} from '../../push/_server/webPushLoader';

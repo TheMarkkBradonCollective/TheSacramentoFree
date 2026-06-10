@@ -1,5 +1,5 @@
-import { supabaseAdmin } from './auth';
-import { configureVapidAsync, getVapidPublicKey, getWebPushModuleAsync, isVapidConfigured } from '../api/push/_server/webPushLoader';
+import { getSupabaseAdmin } from './supabaseAdmin';
+import { configureVapidAsync, getWebPushModuleAsync } from './webPushLoader';
 
 export type PushEventType =
   | 'new_item'
@@ -116,16 +116,6 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   saved_item_update: 'savedItems',
 };
 
-export function configureVapid(): void {
-  void configureVapidAsync().then((ok) => {
-    if (!ok) {
-      console.warn('[push] VAPID keys not configured — push delivery disabled');
-    }
-  });
-}
-
-export { getVapidPublicKey, isVapidConfigured };
-
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {
   return {
     userId: String(row.userId),
@@ -180,6 +170,7 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
   const map = new Map<string, NotificationPreferencesRow>();
   if (!userIds.length) return map;
 
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data } = await supabaseAdmin.from('notification_preferences').select('*').in('userId', userIds);
   for (const row of data || []) {
     map.set(String((row as Record<string, unknown>).userId), normalizePrefs(row as Record<string, unknown>));
@@ -226,6 +217,7 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
 
 export async function getSubscriptionsForUsers(userIds: string[]): Promise<PushSubscriptionRow[]> {
   if (!userIds.length) return [];
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data, error } = await supabaseAdmin.from('push_subscriptions').select('*').in('userId', userIds);
   if (error) {
     console.error('[push] subscription query failed:', error.message);
@@ -235,6 +227,7 @@ export async function getSubscriptionsForUsers(userIds: string[]): Promise<PushS
 }
 
 async function removeInvalidSubscription(endpoint: string) {
+  const supabaseAdmin = await getSupabaseAdmin();
   await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint);
 }
 
@@ -319,8 +312,7 @@ export async function sendPushToUsers(
   };
 }
 
-/** Haversine distance in miles between two lat/lng points. */
-export function distanceMiles(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+function distanceMiles(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 3958.8;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
   const dLng = ((b.lng - a.lng) * Math.PI) / 180;
@@ -373,7 +365,7 @@ const NEIGHBORHOOD_COORDS: Record<string, { lat: number; lng: number }> = {
   Woodland: { lat: 38.6785, lng: -121.773 },
 };
 
-export function coordsForNeighborhood(name: string): { lat: number; lng: number } | null {
+function coordsForNeighborhood(name: string): { lat: number; lng: number } | null {
   return NEIGHBORHOOD_COORDS[name] || null;
 }
 

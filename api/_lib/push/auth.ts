@@ -1,1 +1,1 @@
-export { getUserFromBearer } from '../../../lib/push-server/auth';
+export { getUserFromBearer } from '../../push/_server/auth';

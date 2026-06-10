@@ -1,1 +1,1 @@
-export { runPushTest } from '../../../lib/push-server/runPushTest';
+export { runPushTest } from '../../push/_server/runPushTest';
