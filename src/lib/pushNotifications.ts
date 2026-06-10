@@ -37,32 +37,10 @@ function mapPushSubscriptionError(error: { code?: string; message?: string }): s
   return message || 'Could not save push subscription.';
 }
 
-async function persistPushSubscription(subscription: PushSubscription, userId: string): Promise<void> {
-  const json = subscription.toJSON();
-  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
-    throw new Error('Invalid push subscription from this browser.');
-  }
-
-  const token = await getAccessToken();
-  if (token) {
-    const res = await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        subscription: json,
-        userAgent: navigator.userAgent.slice(0, 512),
-      }),
-    });
-    const body = await readJsonResponse(res);
-    if (res.ok) return;
-    throw new Error(
-      typeof body.error === 'string' ? body.error : 'Could not save push subscription on the server.',
-    );
-  }
-
+async function savePushSubscriptionDirect(
+  json: { endpoint: string; keys: { p256dh: string; auth: string } },
+  userId: string,
+): Promise<void> {
   const row = {
     id: crypto.randomUUID(),
     userId,
@@ -87,6 +65,56 @@ async function persistPushSubscription(subscription: PushSubscription, userId: s
   }
 }
 
+async function persistPushSubscription(subscription: PushSubscription, userId: string): Promise<void> {
+  const json = subscription.toJSON();
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+    throw new Error('Invalid push subscription from this browser.');
+  }
+
+  const token = await getAccessToken();
+  if (token) {
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subscription: json,
+        userAgent: navigator.userAgent.slice(0, 512),
+      }),
+    });
+    const body = await readJsonResponse(res);
+    if (res.ok) return;
+
+    const serverError = typeof body.error === 'string' ? body.error : '';
+    if (res.status >= 500 || serverError.includes('SERVICE_ROLE_KEY')) {
+      console.warn('[push] server subscribe unavailable, saving directly:', serverError);
+      await savePushSubscriptionDirect(
+        { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } },
+        userId,
+      );
+      return;
+    }
+
+    throw new Error(serverError || 'Could not save push subscription on the server.');
+  }
+
+  await savePushSubscriptionDirect(
+    { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } },
+    userId,
+  );
+}
+
+async function removePushSubscriptionDirect(userId: string, endpoint?: string): Promise<void> {
+  let query = supabase.from('push_subscriptions').delete().eq('userId', userId);
+  if (endpoint) query = query.eq('endpoint', endpoint);
+  const { error } = await query;
+  if (error && error.code !== '42P01') {
+    throw new Error(mapPushSubscriptionError(error));
+  }
+}
+
 async function removePushSubscription(userId: string, endpoint?: string): Promise<void> {
   const token = await getAccessToken();
   if (token) {
@@ -99,20 +127,19 @@ async function removePushSubscription(userId: string, endpoint?: string): Promis
       body: JSON.stringify({ endpoint }),
     });
     const body = await readJsonResponse(res);
-    if (!res.ok) {
-      throw new Error(
-        typeof body.error === 'string' ? body.error : 'Could not remove push subscription on the server.',
-      );
+    if (res.ok) return;
+
+    const serverError = typeof body.error === 'string' ? body.error : '';
+    if (res.status >= 500 || serverError.includes('SERVICE_ROLE_KEY')) {
+      console.warn('[push] server unsubscribe unavailable, removing directly:', serverError);
+      await removePushSubscriptionDirect(userId, endpoint);
+      return;
     }
-    return;
+
+    throw new Error(serverError || 'Could not remove push subscription on the server.');
   }
 
-  let query = supabase.from('push_subscriptions').delete().eq('userId', userId);
-  if (endpoint) query = query.eq('endpoint', endpoint);
-  const { error } = await query;
-  if (error && error.code !== '42P01') {
-    throw new Error(mapPushSubscriptionError(error));
-  }
+  await removePushSubscriptionDirect(userId, endpoint);
 }
 
 async function clearStaleBrowserSubscription(): Promise<void> {

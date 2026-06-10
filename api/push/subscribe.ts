@@ -14,15 +14,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(503).json({
-      error:
-        'Push subscriptions require SUPABASE_SERVICE_ROLE_KEY on the server. Add it in Vercel environment variables and redeploy.',
-    });
-  }
-
   try {
-    const { getUserFromBearer, getSupabaseAdmin, parseJsonBody } = await import('../../push-server.bundle.cjs');
+    const { getBearerToken, getUserFromBearer, getSupabaseForUser, parseJsonBody } = await import(
+      '../../push-server.bundle.cjs'
+    );
+
+    const token = getBearerToken(req.headers.authorization);
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
     const user = await getUserFromBearer(req.headers.authorization);
     if (!user) {
@@ -35,9 +35,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid push subscription payload' });
     }
 
-    const supabaseAdmin = await getSupabaseAdmin();
+    const supabase = await getSupabaseForUser(token);
 
-    const { data: profile } = await supabaseAdmin.from('users').select('uid').eq('uid', user.id).maybeSingle();
+    const { data: profile } = await supabase.from('users').select('uid').eq('uid', user.id).maybeSingle();
     if (!profile) {
       return res.status(400).json({
         error:
@@ -55,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updatedAt: new Date().toISOString(),
     };
 
-    const { error } = await supabaseAdmin.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+    const { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
     if (error) {
       console.error('[api/push/subscribe]', error.code, error.message);
       if (error.code === '42P01' || error.message?.includes('push_subscriptions')) {
@@ -66,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: error.message || 'Could not save subscription' });
     }
 
-    await supabaseAdmin.from('notification_preferences').upsert(
+    await supabase.from('notification_preferences').upsert(
       { userId: user.id, updatedAt: new Date().toISOString() },
       { onConflict: 'userId', ignoreDuplicates: true },
     );
