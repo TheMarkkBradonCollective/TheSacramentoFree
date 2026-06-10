@@ -1,24 +1,23 @@
 -- =========================================================
--- SERVER-SIDE PUSH WEBHOOK (recommended for director joins,
--- departures, support tickets, and reports)
+-- SERVER-SIDE PUSH WEBHOOKS — all director alert categories
 -- =========================================================
 --
--- Uses SUPABASE_SERVICE_ROLE_KEY you already have in Vercel.
--- Optional: set SUPABASE_PUSH_WEBHOOK_SECRET in Vercel and use
--- that instead of the service role in webhook headers.
+-- Auth: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
+-- (Optional: use SUPABASE_PUSH_WEBHOOK_SECRET in Vercel instead.)
 --
--- In Supabase → Database → Webhooks → Create webhook for EACH row:
+-- URL for every webhook:
+--   https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push
 --
--- | Name              | Table                     | Events | URL |
--- |-------------------|---------------------------|--------|-----|
--- | push-users-join   | users                     | INSERT | https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push |
--- | push-users-leave  | users                     | DELETE | https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push |
--- | push-support      | support_ticket_messages   | INSERT | same URL |
--- | push-reports      | user_reports              | INSERT | same URL |
+-- | Webhook name       | Table                     | Events | Director category   |
+-- |--------------------|---------------------------|--------|---------------------|
+-- | push-users-join    | users                     | INSERT | New neighbors       |
+-- | push-users-leave   | users                     | DELETE | Account departures  |
+-- | push-listings      | items                     | INSERT | New listings        |
+-- | push-dm-requests   | message_requests          | INSERT | Message requests    |
+-- | push-claim-reqs    | item_claim_requests       | INSERT | Claim requests      |
+-- | push-moderation    | moderation_audit_log      | INSERT | Moderation actions  |
+-- | push-reports       | user_reports              | INSERT | Neighbor reports    |
+-- | push-support       | support_ticket_messages   | INSERT | Support tickets     |
 --
--- HTTP header (pick one):
---   Authorization: Bearer <your SUPABASE_SERVICE_ROLE_KEY>
---   OR Authorization: Bearer <SUPABASE_PUSH_WEBHOOK_SECRET>
---
--- Join/departure alerts use directorCategory join/leave so they
--- respect the "New neighbors" and "Account departures" toggles.
+-- Each category respects the matching toggle under Director oversight
+-- in notification settings (directorJoins, directorLeaves, etc.).
