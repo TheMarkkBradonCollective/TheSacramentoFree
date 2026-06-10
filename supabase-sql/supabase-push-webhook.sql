@@ -22,8 +22,13 @@
 -- | push-moderation       | moderation_audit_log    | INSERT         | Directors                        |
 -- | push-reports          | user_reports            | INSERT         | Staff inbox                      |
 -- | push-support          | support_ticket_messages | INSERT         | Support + staff inbox            |
+-- | push-announcements    | app_updates             | INSERT         | Community update announcements   |
 --
 -- items UPDATE covers: status changes, owner listing-status alerts, saved-item
--- status alerts, and saved-item alerts when the owner edits/saves their post.
+-- status alerts, pickup-scheduled alerts (pending_pickup), and saved-item alerts
+-- when the owner edits/saves their post.
+--
+-- moderation_audit_log INSERT covers director moderation alerts and account-update
+-- pushes to suspended/banned neighbors (suspend, unsuspend, ban, unban, set_role).
 --
 -- Daily cron (Vercel): /api/cron/notification-jobs — listing expiry + pickup reminders.

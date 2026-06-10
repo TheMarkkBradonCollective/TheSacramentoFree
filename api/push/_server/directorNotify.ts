@@ -224,18 +224,67 @@ export async function runDirectorModerationNotify(
       title = 'Profile updated by staff';
       body = `${actorName} updated ${targetName}'s profile`;
       break;
+    case 'set_role':
+      title = 'Role changed';
+      body = detail || `${actorName} updated ${targetName}'s role`;
+      break;
     default:
       body = `${actorName}: ${action} on ${targetName}`;
   }
 
-  if (detail) body = `${body} — ${detail}`.slice(0, 200);
+  if (detail && action !== 'set_role') body = `${body} — ${detail}`.slice(0, 200);
 
-  return runDirectorCategoryAlert(actorUserId, {
+  const auditId = audit.id || `${action}-${audit.targetUserId || 'unknown'}`;
+  const directorResult = await runDirectorCategoryAlert(actorUserId, {
     category: 'moderation',
     title,
     body,
     excludeUserIds: [actorUserId],
-    tag: `director-mod-${audit.id || `${action}-${audit.targetUserId || 'unknown'}`}`,
+    tag: `director-mod-${auditId}`,
     data: audit.targetUserId ? { targetUserId: String(audit.targetUserId) } : undefined,
   });
+
+  const targetUserId = String(audit.targetUserId || '');
+  const accountMessages: Record<string, { title: string; body: string }> = {
+    suspend: {
+      title: 'Account suspended',
+      body: detail ? `Your account is suspended. ${detail}` : 'Your account has been suspended.',
+    },
+    unsuspend: {
+      title: 'Account restored',
+      body: 'Your account suspension has been lifted.',
+    },
+    ban: {
+      title: 'Account disabled',
+      body: 'Your account has been disabled by community staff.',
+    },
+    unban: {
+      title: 'Account restored',
+      body: 'Your account has been re-enabled.',
+    },
+  };
+
+  const accountMessage = accountMessages[action];
+  if (!targetUserId || !accountMessage) {
+    return directorResult;
+  }
+
+  const accountResult = await runPushSend(actorUserId, {
+    eventType: 'account_update',
+    title: accountMessage.title,
+    body: accountMessage.body.slice(0, 200),
+    url: '/profile',
+    recipientUserIds: [targetUserId],
+    tag: `account-${targetUserId}-${action}-${auditId}`,
+  });
+
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      director: directorResult.body,
+      account: accountResult.body,
+      sent: Number(directorResult.body.sent || 0) + Number(accountResult.body.sent || 0),
+    },
+  };
 }

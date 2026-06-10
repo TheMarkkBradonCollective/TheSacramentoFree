@@ -8,6 +8,7 @@ export async function runSupportNotify(
   callerId: string,
   ticketId: string,
   event: SupportNotifyEvent,
+  messageId?: string,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const supabaseAdmin = await getSupabaseAdmin();
   const { data: ticket, error: ticketError } = await supabaseAdmin
@@ -44,6 +45,7 @@ export async function runSupportNotify(
     .limit(1);
 
   const preview = String((latestMessages?.[0] as { text?: string } | undefined)?.text || 'New activity');
+  const dedupeKey = messageId || `${ticketId}-${Date.now()}`;
 
   if (event === 'staff_reply') {
     return runPushSend(callerId, {
@@ -52,7 +54,7 @@ export async function runSupportNotify(
       body: `${subject}: ${preview.slice(0, 120)}`,
       url: '/menu',
       recipientUserIds: [openerUserId],
-      tag: `support-${ticketId}`,
+      tag: `support-${dedupeKey}`,
       data: { ticketId },
     });
   }
@@ -64,7 +66,7 @@ export async function runSupportNotify(
     url: '/staff/tickets',
     excludeUserIds: [openerUserId],
     minStaffRank,
-    tag: `staff-ticket-${ticketId}`,
+    tag: `staff-ticket-${dedupeKey}`,
     data: { ticketId },
   });
 
@@ -74,7 +76,7 @@ export async function runSupportNotify(
     body: `${openerName}: ${subject}`,
     url: '/director/overview',
     excludeUserIds: [openerUserId],
-    tag: event === 'opened' ? `director-ticket-${ticketId}` : `director-ticket-reply-${ticketId}`,
+    tag: event === 'opened' ? `director-ticket-${dedupeKey}` : `director-ticket-reply-${dedupeKey}`,
     data: { directorCategory: 'ticket', ticketId },
   });
 

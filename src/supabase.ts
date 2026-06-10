@@ -1250,17 +1250,12 @@ export async function setUserRole(
     }
 
     if (context) {
-      await runPushTask(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushDirectorAlert({
-            category: 'moderation',
-            title: 'Role changed',
-            body: `${context.actorName} set ${context.targetName} to ${roleLabel(role)}`,
-            tag: `director-role-${uid}`,
-            excludeUserIds: [context.actorUserId],
-          }),
-        ),
-      );
+      await writeModerationAudit({
+        actor: { uid: context.actorUserId, displayName: context.actorName } as UserProfile,
+        target: { uid, displayName: context.targetName },
+        action: 'set_role',
+        detail: `${context.actorName} set ${context.targetName} to ${roleLabel(role)}`,
+      });
     }
 
     return { ok: true };

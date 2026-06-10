@@ -231,6 +231,7 @@ export async function runNeighborNewMessageNotify(
       const { data: item } = await supabaseAdmin.from('items').select('id, title').eq('id', itemId).maybeSingle();
       if (item) {
         const itemTitle = String((item as { title?: string }).title || 'your item');
+        const messageId = String(message.id || '');
         return sendNeighborPush(senderId, {
           eventType: 'pickup_scheduled',
           title: 'Pickup scheduled',
@@ -238,12 +239,13 @@ export async function runNeighborNewMessageNotify(
           url: listingUrl(itemId),
           listingId: itemId,
           recipientUserIds: participantIds.filter((id) => id !== senderId),
-          tag: `pickup-${itemId}`,
+          tag: messageId ? `pickup-msg-${messageId}` : `pickup-msg-${itemId}-${Date.now()}`,
         });
       }
     }
   }
 
+  const messageId = String(message.id || '');
   return sendNeighborPush(senderId, {
     eventType: 'new_message',
     title: `Message from ${senderName}`,
@@ -251,7 +253,46 @@ export async function runNeighborNewMessageNotify(
     url: `/messages/${chatId}`,
     conversationId: chatId,
     recipientUserIds: [recipientId],
-    tag: `msg-${chatId}`,
+    tag: messageId ? `msg-${messageId}` : `msg-${chatId}-${Date.now()}`,
+  });
+}
+
+export async function runNeighborPickupScheduledNotify(
+  callerId: string,
+  item: ItemRow,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const itemId = String(item.id || '');
+  const actorUserId = String(callerId || item.userId || '');
+  if (!itemId) {
+    return { status: 200, body: { ok: true, skipped: 'missing item id' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data: chats } = await supabaseAdmin.from('chats').select('participantIds').eq('itemId', itemId);
+  const recipientIds = new Set<string>();
+  for (const chat of chats || []) {
+    for (const uid of (chat as { participantIds?: string[] }).participantIds || []) {
+      if (uid && uid !== actorUserId) recipientIds.add(uid);
+    }
+  }
+
+  const ownerId = String(item.userId || '');
+  if (!recipientIds.size && ownerId && ownerId !== actorUserId) {
+    recipientIds.add(ownerId);
+  }
+  if (!recipientIds.size) {
+    return { status: 200, body: { ok: true, skipped: 'no pickup recipients' } };
+  }
+
+  const itemTitle = String(item.title || 'your item');
+  return sendNeighborPush(actorUserId, {
+    eventType: 'pickup_scheduled',
+    title: 'Pickup scheduled',
+    body: `"${itemTitle}" — Marked as pending pickup`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: [...recipientIds],
+    tag: `pickup-status-${itemId}`,
   });
 }
 

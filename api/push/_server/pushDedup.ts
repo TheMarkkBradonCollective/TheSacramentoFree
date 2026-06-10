@@ -21,13 +21,13 @@ export async function claimPushDispatch(tag?: string): Promise<boolean> {
     if (error) {
       const code = (error as { code?: string }).code;
       if (code === '23505') return false;
-      console.warn('[push] dedup insert failed, blocking send:', error.message);
-      return false;
+      console.warn('[push] dedup insert failed, allowing send:', error.message);
+      return true;
     }
 
     return true;
   } catch (err) {
-    console.warn('[push] dedup check failed, blocking send:', (err as Error).message);
-    return false;
+    console.warn('[push] dedup check failed, allowing send:', (err as Error).message);
+    return true;
   }
 }

@@ -17,9 +17,11 @@ import {
   runNeighborNewCommentNotify,
   runNeighborNewListingNotify,
   runNeighborNewMessageNotify,
+  runNeighborPickupScheduledNotify,
   runSavedItemsListingUpdatedNotify,
   runSavedItemsStatusNotify,
 } from './neighborNotify';
+import { runAnnouncementNotify } from './announcementNotify';
 import { runReportNotify } from './reportNotify';
 import { runSupportNotify, type SupportNotifyEvent } from './supportNotify';
 import { isStaffRole } from './staffRoles';
@@ -95,6 +97,10 @@ async function handleItemStatusUpdate(
 
   if (status === 'completed') {
     results.push(await runItemCompletedNotify(callerId, item));
+  }
+
+  if (status === 'pending_pickup') {
+    results.push(await runNeighborPickupScheduledNotify(callerId, item));
   }
 
   return mergeResults(results);
@@ -336,7 +342,21 @@ export async function runSupabasePushWebhook(
       return { status: 200, body: { ok: true, skipped: 'message not eligible for push' } };
     }
 
-    return runSupportNotify(senderUserId, ticketId, event);
+    const messageId = String(record.id || '');
+    return runSupportNotify(senderUserId, ticketId, event, messageId);
+  }
+
+  if (table === 'app_updates') {
+    const updateId = String(record.id || '');
+    const postedByUserId = String(record.postedByUserId || 'system');
+    if (!updateId) {
+      return { status: 200, body: { ok: true, skipped: 'missing update id' } };
+    }
+    return runAnnouncementNotify(postedByUserId, {
+      id: updateId,
+      title: String(record.title || 'Community update'),
+      body: String(record.body || ''),
+    });
   }
 
   return { status: 200, body: { ok: true, skipped: `table ${table} not handled` } };
