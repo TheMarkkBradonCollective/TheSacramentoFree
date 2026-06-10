@@ -1,0 +1,538 @@
+import { itemCoordsFromDescription } from './itemCoords';
+import { runPushSend, type PushSendBody } from './runPushSend';
+import { getSupabaseAdmin } from './supabaseAdmin';
+
+type ItemRow = {
+  id?: string;
+  userId?: string;
+  userDisplayName?: string;
+  title?: string;
+  neighborhood?: string;
+  type?: string;
+  status?: string;
+  description?: string;
+  category?: string;
+};
+
+function listingUrl(itemId: string): string {
+  return `/listing/${itemId}`;
+}
+
+export function statusLabel(status: string): string {
+  switch (status) {
+    case 'pending_pickup':
+      return 'Pending pickup';
+    case 'on_hold':
+      return 'On hold';
+    case 'completed':
+      return 'Gifted';
+    case 'withdrawn':
+      return 'Withdrawn';
+    case 'active':
+      return 'Active again';
+    default:
+      return 'Updated';
+  }
+}
+
+async function getSavedItemUserIds(itemId: string, excludeUserId?: string): Promise<string[]> {
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data } = await supabaseAdmin.from('saved_items').select('userId').eq('itemId', itemId);
+  return (data || [])
+    .map((row) => String((row as { userId?: string }).userId || ''))
+    .filter((uid) => uid && uid !== excludeUserId);
+}
+
+async function sendNeighborPush(
+  callerId: string,
+  payload: PushSendBody,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  return runPushSend(callerId, payload);
+}
+
+export async function runNeighborNewListingNotify(
+  callerId: string,
+  item: ItemRow,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const itemId = String(item.id || '');
+  const userId = String(item.userId || callerId);
+  if (!itemId) {
+    return { status: 200, body: { ok: true, skipped: 'missing item id' } };
+  }
+
+  const isRequest = item.type === 'looking';
+  const eventType = isRequest ? 'new_request' : 'new_item';
+  const coords = itemCoordsFromDescription(item.description);
+  const displayName = String(item.userDisplayName || 'A neighbor');
+  const title = String(item.title || 'New post');
+
+  return sendNeighborPush(userId, {
+    eventType,
+    title: isRequest ? 'New neighbor request' : 'New free item posted',
+    body: `${displayName}: ${title}`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    category: String(item.category || ''),
+    neighborhood: String(item.neighborhood || ''),
+    itemLat: coords?.lat,
+    itemLng: coords?.lng,
+    excludeUserIds: [userId],
+    tag: `${eventType}-${itemId}`,
+  });
+}
+
+export async function runNeighborClaimRequestNotify(
+  callerId: string,
+  claim: {
+    id?: string;
+    itemId?: string;
+    claimerUserId?: string;
+    claimerName?: string;
+    giverUserId?: string;
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const claimerUserId = String(claim.claimerUserId || callerId);
+  const requestId = String(claim.id || '');
+  const itemId = String(claim.itemId || '');
+  if (!requestId || !itemId) {
+    return { status: 200, body: { ok: true, skipped: 'missing claim request id' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data: item } = await supabaseAdmin
+    .from('items')
+    .select('id, userId, title')
+    .eq('id', itemId)
+    .maybeSingle();
+
+  if (!item) {
+    return { status: 200, body: { ok: true, skipped: 'item not found' } };
+  }
+
+  const giverUserId = String((item as { userId?: string }).userId || claim.giverUserId || '');
+  const itemTitle = String((item as { title?: string }).title || 'your listing');
+  const claimerName = String(claim.claimerName || 'A neighbor');
+
+  return sendNeighborPush(claimerUserId, {
+    eventType: 'claim_request',
+    title: 'New claim request',
+    body: `${claimerName} wants to claim "${itemTitle}"`,
+    url: `/requests/${requestId}`,
+    listingId: itemId,
+    requestId,
+    recipientUserIds: [giverUserId],
+    tag: `claim-req-${requestId}`,
+  });
+}
+
+export async function runNeighborMessageRequestNotify(
+  callerId: string,
+  request: {
+    id?: string;
+    fromUserId?: string;
+    toUserId?: string;
+    fromUserName?: string;
+    message?: string | null;
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const fromUserId = String(request.fromUserId || callerId);
+  const requestId = String(request.id || '');
+  const toUserId = String(request.toUserId || '');
+  if (!requestId || !toUserId) {
+    return { status: 200, body: { ok: true, skipped: 'missing message request fields' } };
+  }
+
+  const senderName = String(request.fromUserName || 'A neighbor');
+  const preview = request.message?.trim();
+  const body = preview
+    ? `${senderName}: ${preview.slice(0, 120)}`
+    : `${senderName} wants to message you`;
+
+  return sendNeighborPush(fromUserId, {
+    eventType: 'message_request',
+    title: 'New message request',
+    body,
+    url: '/messages',
+    recipientUserIds: [toUserId],
+    tag: `dm-req-${requestId}`,
+    data: { requestId },
+  });
+}
+
+export async function runNeighborMessageRequestAcceptedNotify(
+  callerId: string,
+  request: {
+    id?: string;
+    fromUserId?: string;
+    toUserId?: string;
+    fromUserName?: string;
+  },
+  accepterName?: string,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const toUserId = String(request.toUserId || callerId);
+  const requesterUserId = String(request.fromUserId || '');
+  if (!requesterUserId) {
+    return { status: 200, body: { ok: true, skipped: 'missing requester' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const chatId = [toUserId, requesterUserId].sort().join('_');
+  let accepter = accepterName;
+  if (!accepter) {
+    const { data } = await supabaseAdmin.from('users').select('displayName').eq('uid', toUserId).maybeSingle();
+    accepter = String((data as { displayName?: string } | null)?.displayName || 'A neighbor');
+  }
+
+  return sendNeighborPush(toUserId, {
+    eventType: 'message_request_accepted',
+    title: 'Message request accepted',
+    body: `${accepter} accepted your message request`,
+    url: `/messages/${chatId}`,
+    conversationId: chatId,
+    recipientUserIds: [requesterUserId],
+    tag: `dm-accepted-${chatId}`,
+  });
+}
+
+export async function runNeighborNewMessageNotify(
+  callerId: string,
+  message: {
+    id?: string;
+    chatId?: string;
+    senderId?: string;
+    text?: string;
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const senderId = String(message.senderId || callerId);
+  const chatId = String(message.chatId || '');
+  const text = String(message.text || '');
+  if (!chatId || !text) {
+    return { status: 200, body: { ok: true, skipped: 'missing message fields' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data: chat } = await supabaseAdmin.from('chats').select('*').eq('id', chatId).maybeSingle();
+  if (!chat) {
+    return { status: 200, body: { ok: true, skipped: 'chat not found' } };
+  }
+
+  const participantIds = (chat as { participantIds?: string[] }).participantIds || [];
+  const recipientId = participantIds.find((id) => id !== senderId);
+  if (!recipientId) {
+    return { status: 200, body: { ok: true, skipped: 'no recipient' } };
+  }
+
+  const names = (chat as { participantNames?: Record<string, string> }).participantNames || {};
+  const senderName = names[senderId] || 'A neighbor';
+
+  if (text.startsWith('📍 Pickup location')) {
+    const itemId = (chat as { itemId?: string }).itemId;
+    if (itemId) {
+      const { data: item } = await supabaseAdmin.from('items').select('id, title').eq('id', itemId).maybeSingle();
+      if (item) {
+        const itemTitle = String((item as { title?: string }).title || 'your item');
+        return sendNeighborPush(senderId, {
+          eventType: 'pickup_scheduled',
+          title: 'Pickup scheduled',
+          body: `"${itemTitle}" — Check messages for pickup details`,
+          url: listingUrl(itemId),
+          listingId: itemId,
+          recipientUserIds: participantIds.filter((id) => id !== senderId),
+          tag: `pickup-${itemId}`,
+        });
+      }
+    }
+  }
+
+  return sendNeighborPush(senderId, {
+    eventType: 'new_message',
+    title: `Message from ${senderName}`,
+    body: text.slice(0, 140),
+    url: `/messages/${chatId}`,
+    conversationId: chatId,
+    recipientUserIds: [recipientId],
+    tag: `msg-${chatId}`,
+  });
+}
+
+export async function runNeighborNewCommentNotify(
+  callerId: string,
+  comment: {
+    id?: string;
+    itemId?: string;
+    userId?: string;
+    userName?: string;
+    text?: string;
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const commenterId = String(comment.userId || callerId);
+  const itemId = String(comment.itemId || '');
+  if (!itemId) {
+    return { status: 200, body: { ok: true, skipped: 'missing item id' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data: item } = await supabaseAdmin.from('items').select('id, userId, title').eq('id', itemId).maybeSingle();
+  if (!item) {
+    return { status: 200, body: { ok: true, skipped: 'item not found' } };
+  }
+
+  const ownerId = String((item as { userId?: string }).userId || '');
+  if (!ownerId || ownerId === commenterId) {
+    return { status: 200, body: { ok: true, skipped: 'no comment alert needed' } };
+  }
+
+  const commenterName = String(comment.userName || 'A neighbor');
+  const preview = String(comment.text || '').slice(0, 120);
+  const itemTitle = String((item as { title?: string }).title || 'your listing');
+
+  return sendNeighborPush(commenterId, {
+    eventType: 'new_comment',
+    title: 'New comment on your listing',
+    body: `${commenterName}: ${preview}`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: [ownerId],
+    tag: `comment-${itemId}`,
+  });
+}
+
+export async function runNeighborItemClaimedNotify(
+  callerId: string,
+  claim: {
+    itemId?: string;
+    userId?: string;
+    userName?: string;
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const claimerUserId = String(claim.userId || callerId);
+  const itemId = String(claim.itemId || '');
+  if (!itemId) {
+    return { status: 200, body: { ok: true, skipped: 'missing item id' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data: item } = await supabaseAdmin
+    .from('items')
+    .select('id, userId, title')
+    .eq('id', itemId)
+    .maybeSingle();
+  if (!item) {
+    return { status: 200, body: { ok: true, skipped: 'item not found' } };
+  }
+
+  const posterUserId = String((item as { userId?: string }).userId || '');
+  const itemTitle = String((item as { title?: string }).title || 'your item');
+  const claimerName = String(claim.userName || 'A neighbor');
+
+  return sendNeighborPush(claimerUserId, {
+    eventType: 'item_claimed',
+    title: 'Your item was claimed',
+    body: `${claimerName} claimed "${itemTitle}"`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: [posterUserId],
+    tag: `claimed-${itemId}`,
+  });
+}
+
+export async function runListingStatusNotify(
+  callerId: string,
+  item: ItemRow,
+  previousStatus?: string,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const itemId = String(item.id || '');
+  const ownerId = String(item.userId || '');
+  const status = String(item.status || '');
+  if (!itemId || !ownerId || !status) {
+    return { status: 200, body: { ok: true, skipped: 'missing item status fields' } };
+  }
+  if (previousStatus && previousStatus === status) {
+    return { status: 200, body: { ok: true, skipped: 'status unchanged' } };
+  }
+
+  const itemTitle = String(item.title || 'your listing');
+  const label = statusLabel(status);
+
+  return sendNeighborPush(ownerId, {
+    eventType: 'listing_status',
+    title: 'Listing status updated',
+    body: `"${itemTitle}" — ${label}`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: [ownerId],
+    tag: `status-${itemId}-${status}`,
+  });
+}
+
+export async function runSavedItemsStatusNotify(
+  callerId: string,
+  item: ItemRow,
+  previousStatus?: string,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const itemId = String(item.id || '');
+  const ownerId = String(item.userId || '');
+  const status = String(item.status || '');
+  if (!itemId || !status) {
+    return { status: 200, body: { ok: true, skipped: 'missing item fields' } };
+  }
+  if (previousStatus && previousStatus === status) {
+    return { status: 200, body: { ok: true, skipped: 'status unchanged' } };
+  }
+
+  const userIds = await getSavedItemUserIds(itemId, ownerId);
+  if (!userIds.length) {
+    return { status: 200, body: { ok: true, skipped: 'no saved-item subscribers' } };
+  }
+
+  const itemTitle = String(item.title || 'Saved item');
+  const label = statusLabel(status);
+
+  return sendNeighborPush(ownerId || callerId, {
+    eventType: 'saved_item_update',
+    title: 'Saved item update',
+    body: `"${itemTitle}" — ${label}`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: userIds,
+    tag: `saved-${itemId}-${status}`,
+  });
+}
+
+export async function runItemCompletedNotify(
+  callerId: string,
+  item: ItemRow,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const itemId = String(item.id || '');
+  const posterUserId = String(item.userId || '');
+  if (!itemId || !posterUserId) {
+    return { status: 200, body: { ok: true, skipped: 'missing item fields' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data: claim } = await supabaseAdmin
+    .from('item_claims')
+    .select('userId, userName')
+    .eq('itemId', itemId)
+    .order('createdAt', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const claimerUserId = String((claim as { userId?: string } | null)?.userId || '');
+  const itemTitle = String(item.title || 'your listing');
+  const isRequest = item.type === 'looking';
+
+  if (isRequest && claimerUserId) {
+    const { data: owner } = await supabaseAdmin
+      .from('users')
+      .select('displayName')
+      .eq('uid', posterUserId)
+      .maybeSingle();
+    const ownerName = String((owner as { displayName?: string } | null)?.displayName || 'A neighbor');
+
+    return sendNeighborPush(posterUserId, {
+      eventType: 'request_fulfilled',
+      title: 'Request fulfilled',
+      body: `${ownerName} marked "${itemTitle}" as fulfilled`,
+      url: listingUrl(itemId),
+      listingId: itemId,
+      recipientUserIds: [claimerUserId],
+      tag: `fulfilled-${itemId}`,
+    });
+  }
+
+  const recipients = [posterUserId];
+  if (claimerUserId && claimerUserId !== posterUserId) recipients.push(claimerUserId);
+
+  return sendNeighborPush(posterUserId, {
+    eventType: 'item_gifted',
+    title: 'Item gifted successfully',
+    body: `"${itemTitle}" has been marked as gifted`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: recipients,
+    tag: `gifted-${itemId}`,
+  });
+}
+
+export async function runListingExpiryCron(): Promise<{ status: number; body: Record<string, unknown> }> {
+  const supabaseAdmin = await getSupabaseAdmin();
+  const now = Date.now();
+  const warnMs = 12 * 24 * 60 * 60 * 1000;
+  const expireMs = 14 * 24 * 60 * 60 * 1000;
+  const cutoffWarn = new Date(now - warnMs).toISOString();
+  const cutoffExpire = new Date(now - expireMs).toISOString();
+
+  const { data: items } = await supabaseAdmin
+    .from('items')
+    .select('id, userId, title, createdAt, status')
+    .eq('status', 'active')
+    .lte('createdAt', cutoffWarn)
+    .gt('createdAt', cutoffExpire);
+
+  let sent = 0;
+  for (const row of items || []) {
+    const item = row as ItemRow;
+    const itemId = String(item.id || '');
+    const ownerId = String(item.userId || '');
+    if (!itemId || !ownerId) continue;
+
+    const result = await sendNeighborPush('system', {
+      eventType: 'listing_expiring',
+      title: 'Listing expiring soon',
+      body: `"${String(item.title || 'Your listing')}" will expire soon — renew or mark as gifted`,
+      url: listingUrl(itemId),
+      listingId: itemId,
+      recipientUserIds: [ownerId],
+      tag: `expiring-${itemId}`,
+    });
+    if (result.status === 200 && !result.body.skipped && !result.body.deduped) sent += 1;
+  }
+
+  return { status: 200, body: { ok: true, expiringSent: sent, checked: (items || []).length } };
+}
+
+export async function runPickupReminderCron(): Promise<{ status: number; body: Record<string, unknown> }> {
+  const supabaseAdmin = await getSupabaseAdmin();
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: items } = await supabaseAdmin
+    .from('items')
+    .select('id, userId, title, updatedAt, status')
+    .eq('status', 'pending_pickup')
+    .lte('updatedAt', cutoff);
+
+  let sent = 0;
+  for (const row of items || []) {
+    const item = row as ItemRow;
+    const itemId = String(item.id || '');
+    if (!itemId) continue;
+
+    const { data: chats } = await supabaseAdmin.from('chats').select('participantIds').eq('itemId', itemId);
+    const recipientIds = new Set<string>();
+    for (const chat of chats || []) {
+      for (const uid of (chat as { participantIds?: string[] }).participantIds || []) {
+        if (uid) recipientIds.add(uid);
+      }
+    }
+    if (!recipientIds.size) {
+      const ownerId = String(item.userId || '');
+      if (ownerId) recipientIds.add(ownerId);
+    }
+    if (!recipientIds.size) continue;
+
+    const itemTitle = String(item.title || 'your item');
+    const result = await sendNeighborPush('system', {
+      eventType: 'pickup_reminder',
+      title: 'Pickup reminder',
+      body: `Don't forget to pick up "${itemTitle}"`,
+      url: listingUrl(itemId),
+      listingId: itemId,
+      recipientUserIds: [...recipientIds],
+      tag: `pickup-reminder-${itemId}`,
+    });
+    if (result.status === 200 && !result.body.skipped && !result.body.deduped) sent += 1;
+  }
+
+  return { status: 200, body: { ok: true, pickupRemindersSent: sent, checked: (items || []).length } };
+}

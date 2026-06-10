@@ -6,6 +6,18 @@ import {
   runDirectorMessageRequestNotify,
   runDirectorModerationNotify,
 } from './directorNotify';
+import {
+  runItemCompletedNotify,
+  runListingStatusNotify,
+  runNeighborClaimRequestNotify,
+  runNeighborItemClaimedNotify,
+  runNeighborMessageRequestAcceptedNotify,
+  runNeighborMessageRequestNotify,
+  runNeighborNewCommentNotify,
+  runNeighborNewListingNotify,
+  runNeighborNewMessageNotify,
+  runSavedItemsStatusNotify,
+} from './neighborNotify';
 import { runReportNotify } from './reportNotify';
 import { runSupportNotify, type SupportNotifyEvent } from './supportNotify';
 import { isStaffRole } from './staffRoles';
@@ -17,6 +29,53 @@ type WebhookPayload = {
   record?: Record<string, unknown>;
   old_record?: Record<string, unknown>;
 };
+
+function mergeResults(
+  results: Array<{ status: number; body: Record<string, unknown> }>,
+): { status: number; body: Record<string, unknown> } {
+  const sent = results.reduce((sum, r) => sum + Number(r.body.sent || 0), 0);
+  const skipped = results.every((r) => r.body.skipped);
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      skipped: skipped && sent === 0,
+      sent,
+      handlers: results.map((r) => r.body),
+    },
+  };
+}
+
+async function handleItemStatusUpdate(
+  record: Record<string, unknown>,
+  oldRecord: Record<string, unknown>,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const previousStatus = String(oldRecord.status || '');
+  const status = String(record.status || '');
+  if (!status || previousStatus === status) {
+    return { status: 200, body: { ok: true, skipped: 'status unchanged' } };
+  }
+
+  const callerId = String(record.userId || 'system');
+  const item = {
+    id: String(record.id || ''),
+    userId: callerId,
+    title: String(record.title || ''),
+    type: String(record.type || ''),
+    status,
+  };
+
+  const results = [
+    await runListingStatusNotify(callerId, item, previousStatus),
+    await runSavedItemsStatusNotify(callerId, item, previousStatus),
+  ];
+
+  if (status === 'completed') {
+    results.push(await runItemCompletedNotify(callerId, item));
+  }
+
+  return mergeResults(results);
+}
 
 export async function runSupabasePushWebhook(
   body: WebhookPayload,
@@ -42,6 +101,27 @@ export async function runSupabasePushWebhook(
     return { status: 200, body: { ok: true, skipped: 'delete not handled' } };
   }
 
+  if (type === 'UPDATE') {
+    if (table === 'items' && body.record && body.old_record) {
+      return handleItemStatusUpdate(body.record, body.old_record);
+    }
+
+    if (table === 'message_requests' && body.record && body.old_record) {
+      const record = body.record;
+      const oldRecord = body.old_record;
+      if (oldRecord.status === 'pending' && record.status === 'accepted') {
+        return runNeighborMessageRequestAcceptedNotify(String(record.toUserId || 'system'), {
+          id: String(record.id || ''),
+          fromUserId: String(record.fromUserId || ''),
+          toUserId: String(record.toUserId || ''),
+          fromUserName: String(record.fromUserName || ''),
+        });
+      }
+    }
+
+    return { status: 200, body: { ok: true, skipped: `update on ${table} not handled` } };
+  }
+
   if (type !== 'INSERT') {
     return { status: 200, body: { ok: true, skipped: `event ${type} not handled` } };
   }
@@ -61,31 +141,74 @@ export async function runSupabasePushWebhook(
   }
 
   if (table === 'items') {
-    return runDirectorListingNotify(String(record.userId || 'system'), {
+    const item = {
       id: String(record.id || ''),
       userId: String(record.userId || ''),
       userDisplayName: String(record.userDisplayName || 'A neighbor'),
       title: String(record.title || 'New post'),
       neighborhood: String(record.neighborhood || 'Sacramento area'),
       type: String(record.type || 'giving'),
-    });
+      description: String(record.description || ''),
+      category: String(record.category || ''),
+    };
+    return mergeResults([
+      await runDirectorListingNotify(item.userId, item),
+      await runNeighborNewListingNotify(item.userId, item),
+    ]);
   }
 
   if (table === 'message_requests') {
-    return runDirectorMessageRequestNotify(String(record.fromUserId || 'system'), {
+    const request = {
       id: String(record.id || ''),
       fromUserId: String(record.fromUserId || ''),
+      toUserId: String(record.toUserId || ''),
       fromUserName: String(record.fromUserName || 'A neighbor'),
-    });
+      message: record.message == null ? null : String(record.message),
+    };
+    return mergeResults([
+      await runDirectorMessageRequestNotify(request.fromUserId, request),
+      await runNeighborMessageRequestNotify(request.fromUserId, request),
+    ]);
   }
 
   if (table === 'item_claim_requests') {
-    return runDirectorClaimRequestNotify(String(record.claimerUserId || 'system'), {
+    const claim = {
       id: String(record.id || ''),
       itemId: String(record.itemId || ''),
       claimerUserId: String(record.claimerUserId || ''),
       claimerName: String(record.claimerName || 'A neighbor'),
       giverUserId: String(record.giverUserId || ''),
+    };
+    return mergeResults([
+      await runDirectorClaimRequestNotify(claim.claimerUserId, claim),
+      await runNeighborClaimRequestNotify(claim.claimerUserId, claim),
+    ]);
+  }
+
+  if (table === 'item_claims') {
+    return runNeighborItemClaimedNotify(String(record.userId || 'system'), {
+      itemId: String(record.itemId || ''),
+      userId: String(record.userId || ''),
+      userName: String(record.userName || 'A neighbor'),
+    });
+  }
+
+  if (table === 'item_comments') {
+    return runNeighborNewCommentNotify(String(record.userId || 'system'), {
+      id: String(record.id || ''),
+      itemId: String(record.itemId || ''),
+      userId: String(record.userId || ''),
+      userName: String(record.userName || 'A neighbor'),
+      text: String(record.text || ''),
+    });
+  }
+
+  if (table === 'messages') {
+    return runNeighborNewMessageNotify(String(record.senderId || 'system'), {
+      id: String(record.id || ''),
+      chatId: String(record.chatId || ''),
+      senderId: String(record.senderId || ''),
+      text: String(record.text || ''),
     });
   }
 

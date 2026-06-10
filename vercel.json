@@ -18,5 +18,11 @@
   },
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/notification-jobs",
+      "schedule": "0 15 * * *"
+    }
   ]
 }

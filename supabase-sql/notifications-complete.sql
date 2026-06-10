@@ -123,7 +123,22 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
--- 7. Purge stale push subscriptions older than 90 days
+-- 7. Saved items (server-side alerts when bookmarked listings change)
+CREATE TABLE IF NOT EXISTS public.saved_items (
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "itemId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY ("userId", "itemId")
+);
+
+CREATE INDEX IF NOT EXISTS saved_items_item_id_idx ON public.saved_items ("itemId");
+
+ALTER TABLE public.saved_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users manage own saved items" ON public.saved_items;
+CREATE POLICY "Users manage own saved items" ON public.saved_items
+  FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
+
+-- 8. Purge stale push subscriptions older than 90 days
 DELETE FROM public.push_subscriptions
 WHERE "updatedAt" < NOW() - INTERVAL '90 days';
 

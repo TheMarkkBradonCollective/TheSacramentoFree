@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { syncSavedItemBookmark } from '../supabase';
 
 const SAVED_ITEMS_KEY = 'sbn_saved_items_v1';
 
@@ -22,10 +23,9 @@ function writeSavedIds(ids: Set<string>) {
   }
 }
 
-export function useSavedItems() {
+export function useSavedItems(userId?: string) {
   const [savedIds, setSavedIds] = useState<Set<string>>(readSavedIds);
 
-  // Sync across components/tabs via the storage event
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === SAVED_ITEMS_KEY) {
@@ -36,20 +36,26 @@ export function useSavedItems() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const toggleSaved = useCallback((itemId: string) => {
-    setSavedIds((prev: Set<string>) => {
-      const next = new Set<string>(prev);
-      if (next.has(itemId)) {
-        next.delete(itemId);
-      } else {
-        next.add(itemId);
-      }
-      writeSavedIds(next);
-      // Dispatch synthetic storage event so other hook instances on the same page sync up
-      window.dispatchEvent(new StorageEvent('storage', { key: SAVED_ITEMS_KEY }));
-      return next;
-    });
-  }, []);
+  const toggleSaved = useCallback(
+    (itemId: string) => {
+      setSavedIds((prev: Set<string>) => {
+        const next = new Set<string>(prev);
+        const willSave = !next.has(itemId);
+        if (willSave) {
+          next.add(itemId);
+        } else {
+          next.delete(itemId);
+        }
+        writeSavedIds(next);
+        if (userId) {
+          void syncSavedItemBookmark(userId, itemId, willSave);
+        }
+        window.dispatchEvent(new StorageEvent('storage', { key: SAVED_ITEMS_KEY }));
+        return next;
+      });
+    },
+    [userId],
+  );
 
   const isSaved = useCallback((itemId: string) => savedIds.has(itemId), [savedIds]);
 

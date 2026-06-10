@@ -13,6 +13,7 @@ import {
   notifyNewMessage,
   notifyPickupScheduled,
   notifyClaimRequestSubmitted,
+  notifyListingStatus,
   notifyRequestFulfilled,
   notifyDirectorAlert,
 } from './pushEvents';
@@ -185,6 +186,54 @@ export async function pushAfterComment(comment: {
     commenterName: comment.userName,
     preview: comment.text,
   });
+}
+
+function listingStatusLabel(status: string): string {
+  switch (status) {
+    case 'pending_pickup':
+      return 'Pending pickup';
+    case 'on_hold':
+      return 'On hold';
+    case 'completed':
+      return 'Gifted';
+    case 'withdrawn':
+      return 'Withdrawn';
+    case 'active':
+      return 'Active again';
+    default:
+      return 'Updated';
+  }
+}
+
+export async function pushAfterItemStatusChange(
+  itemId: string,
+  newStatus: string,
+  oldStatus?: string,
+) {
+  if (oldStatus && oldStatus === newStatus) return;
+
+  const item = await getItemById(itemId);
+  if (!item) return;
+
+  await notifyListingStatus({
+    item: { ...item, status: newStatus as ItemPost['status'] },
+    statusLabel: listingStatusLabel(newStatus),
+  });
+
+  if (newStatus === 'completed') {
+    const { data: claim } = await supabase
+      .from('item_claims')
+      .select('userId')
+      .eq('itemId', itemId)
+      .order('createdAt', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const claimerUserId = String((claim as { userId?: string } | null)?.userId || '');
+    if (claimerUserId) {
+      await pushAfterItemCompleted(itemId, item.userId, claimerUserId);
+    }
+  }
 }
 
 export async function pushAfterPendingPickup(itemId: string, actorUserId: string) {

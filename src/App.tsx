@@ -36,6 +36,7 @@ import {
   deleteSupabaseItem,
   deleteOwnAccount,
   isAccountRestricted,
+  migrateLocalSavedItemsToDb,
 } from './supabase';
 import { APP_LOGO_SRC, SITE, SUPPORT } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
@@ -808,6 +809,7 @@ export default function App() {
 
   useEffect(() => {
     if (!userProfile) return;
+    void migrateLocalSavedItemsToDb(userProfile.uid);
     const userPosts = items.filter((item) => item.userId === userProfile.uid);
     void import('./lib/pushIntegration').then((m) => m.pushListingExpiryReminders(userProfile.uid, userPosts));
   }, [userProfile, items]);

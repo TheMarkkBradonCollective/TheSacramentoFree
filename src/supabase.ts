@@ -943,6 +943,13 @@ export async function updateSupabaseItemStatus(
   actorUserId?: string,
 ): Promise<boolean> {
   try {
+    const { data: existing } = await supabase
+      .from('items')
+      .select('status')
+      .eq('id', itemId)
+      .maybeSingle();
+    const previousStatus = String((existing as { status?: string } | null)?.status || '');
+
     const { error } = await supabase
       .from('items')
       .update({ status, updatedAt: new Date().toISOString() })
@@ -951,6 +958,14 @@ export async function updateSupabaseItemStatus(
     if (error) {
       handleSupabaseError(error, 'items');
       return false;
+    }
+
+    if (previousStatus !== status) {
+      await runPushTask(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushAfterItemStatusChange(itemId, status, previousStatus),
+        ),
+      );
     }
 
     if (status === 'pending_pickup' && actorUserId) {
@@ -965,6 +980,53 @@ export async function updateSupabaseItemStatus(
     console.error('Supabase status update failed:', err);
     handleSupabaseError(err, 'items');
     return false;
+  }
+}
+
+const SAVED_ITEMS_STORAGE_KEY = 'sbn_saved_items_v1';
+
+export async function syncSavedItemBookmark(
+  userId: string,
+  itemId: string,
+  saved: boolean,
+): Promise<void> {
+  if (!userId || !itemId) return;
+  try {
+    if (saved) {
+      await supabase.from('saved_items').upsert(
+        {
+          userId,
+          itemId,
+          createdAt: new Date().toISOString(),
+        },
+        { onConflict: 'userId,itemId' },
+      );
+    } else {
+      await supabase.from('saved_items').delete().eq('userId', userId).eq('itemId', itemId);
+    }
+  } catch {
+    // saved_items table may not exist yet — local bookmarks still work
+  }
+}
+
+export async function migrateLocalSavedItemsToDb(userId: string): Promise<void> {
+  if (!userId || typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(SAVED_ITEMS_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+    const itemIds = parsed.filter((v): v is string => typeof v === 'string');
+    if (!itemIds.length) return;
+
+    const rows = itemIds.map((itemId) => ({
+      userId,
+      itemId,
+      createdAt: new Date().toISOString(),
+    }));
+    await supabase.from('saved_items').upsert(rows, { onConflict: 'userId,itemId', ignoreDuplicates: true });
+  } catch {
+    // non-fatal
   }
 }
 
@@ -1537,19 +1599,6 @@ async function recordPartialItemClaims(params: {
       ),
     );
 
-    const { data: completedItem } = await supabase
-      .from('items')
-      .select('status')
-      .eq('id', params.itemId)
-      .maybeSingle();
-    if ((completedItem as { status?: string } | null)?.status === 'completed') {
-      await runPushTask(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushAfterItemCompleted(params.itemId, params.giverUserId, params.claimerUserId),
-        ),
-      );
-    }
-
     return { ok: true, confirmedLabels };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not record pickup.' };
@@ -1858,12 +1907,6 @@ export async function markItemFulfilledFromChat(params: {
     if (!msgOk) {
       return { ok: false, errorMessage: 'Request marked fulfilled but chat message failed.' };
     }
-
-    await runPushTask(() =>
-      import('./lib/pushIntegration').then((m) =>
-        m.pushAfterItemCompleted(params.itemId, params.ownerUserId, params.helperUserId),
-      ),
-    );
 
     return { ok: true };
   } catch (err: unknown) {

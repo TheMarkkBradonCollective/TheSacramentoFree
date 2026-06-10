@@ -1,23 +1,27 @@
 -- =========================================================
--- SERVER-SIDE PUSH WEBHOOKS — all director alert categories
+-- SERVER-SIDE PUSH WEBHOOKS — neighbor + director + staff
 -- =========================================================
 --
 -- Auth: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
--- (Optional: use SUPABASE_PUSH_WEBHOOK_SECRET in Vercel instead.)
+-- (Optional: set SUPABASE_PUSH_WEBHOOK_SECRET in Vercel instead.)
 --
 -- URL for every webhook:
 --   https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push
 --
--- | Webhook name       | Table                     | Events | Director category   |
--- |--------------------|---------------------------|--------|---------------------|
--- | push-users-join    | users                     | INSERT | New neighbors       |
--- | push-users-leave   | users                     | DELETE | Account departures  |
--- | push-listings      | items                     | INSERT | New listings        |
--- | push-dm-requests   | message_requests          | INSERT | Message requests    |
--- | push-claim-reqs    | item_claim_requests       | INSERT | Claim requests      |
--- | push-moderation    | moderation_audit_log      | INSERT | Moderation actions  |
--- | push-reports       | user_reports              | INSERT | Neighbor reports    |
--- | push-support       | support_ticket_messages   | INSERT | Support tickets     |
+-- | Webhook name          | Table                   | Events         | Notifications                    |
+-- |-----------------------|-------------------------|----------------|----------------------------------|
+-- | push-users-join       | users                   | INSERT         | Director: new neighbors          |
+-- | push-users-leave      | users                   | DELETE         | Director: account departures     |
+-- | push-listings-insert  | items                   | INSERT         | Discover + director listings     |
+-- | push-listings-update  | items                   | UPDATE         | Listing status + saved items     |
+-- | push-dm-requests      | message_requests        | INSERT, UPDATE | Message requests + director      |
+-- | push-claim-reqs       | item_claim_requests     | INSERT         | Claim requests + director        |
+-- | push-item-claims      | item_claims             | INSERT         | Claims (poster alert)            |
+-- | push-comments         | item_comments           | INSERT         | Comments on your listings        |
+-- | push-messages         | messages                | INSERT         | Direct messages + pickup         |
+-- | push-moderation       | moderation_audit_log    | INSERT         | Director: moderation actions     |
+-- | push-reports          | user_reports            | INSERT         | Staff: neighbor reports          |
+-- | push-support          | support_ticket_messages | INSERT         | Support + staff inbox            |
 --
--- Each category respects the matching toggle under Director oversight
--- in notification settings (directorJoins, directorLeaves, etc.).
+-- Also run supabase-sql/notifications-complete.sql (saved_items, prefs, subscriptions).
+-- Vercel cron /api/cron/notification-jobs handles listing expiry + pickup reminders daily.
