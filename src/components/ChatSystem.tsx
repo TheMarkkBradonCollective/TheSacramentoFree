@@ -583,13 +583,22 @@ export default function ChatSystem({
     }
   };
 
-  const mobileConversationRowBase = fullBleed
-    ? 'item-feed-card rounded-2xl border border-app'
-    : 'border-b border-app';
+  const chatListRowClass = (isSelected: boolean) =>
+    [
+      'w-full text-left p-3 flex items-start gap-3 transition-colors cursor-pointer',
+      'border-b border-app border-l-[3px]',
+      isSelected
+        ? 'bg-accent-soft border-l-accent'
+        : 'border-l-transparent hover:bg-surface-hover',
+    ].join(' ');
 
-  const mobileMessageCardBase = fullBleed
-    ? 'item-feed-card rounded-2xl border border-app'
-    : 'rounded-2xl';
+  const messageBubbleClass = (isUser: boolean) =>
+    [
+      'max-w-[min(85%,20rem)] sm:max-w-[min(75%,24rem)] px-3.5 py-2 text-sm rounded-2xl shadow-sm',
+      isUser
+        ? 'bg-accent text-on-accent rounded-br-md'
+        : 'bg-surface border border-app text-app rounded-bl-md',
+    ].join(' ');
 
   return (
     <div
@@ -631,7 +640,7 @@ export default function ChatSystem({
                 return (
                   <div
                     key={request.id}
-                    className={`p-3 flex flex-col gap-2 ${fullBleed ? 'mx-3 mt-2 item-feed-card rounded-2xl border border-app' : 'border-b border-app'}`}
+                    className="w-full p-3 flex flex-col gap-2 border-b border-app bg-surface/50"
                   >
                     <div className="flex items-start gap-3">
                       <button
@@ -693,13 +702,7 @@ export default function ChatSystem({
                     type="button"
                     id={`chat_row_${chat.id}`}
                     onClick={() => selectChat(chat)}
-                    className={`text-left p-3 flex items-start gap-3 transition-colors cursor-pointer w-full ${
-                      mobileConversationRowBase
-                    } ${
-                      isSelected
-                        ? 'bg-accent-soft border-l-[3px] border-l-accent'
-                        : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
-                    } ${fullBleed ? 'mx-3 mt-2 mb-0 w-auto' : ''}`}
+                    className={chatListRowClass(isSelected)}
                   >
                     <span
                       className={`shrink-0 w-10 h-10 rounded-full border border-app flex items-center justify-center ${
@@ -738,11 +741,7 @@ export default function ChatSystem({
             <button
               type="button"
               onClick={() => openSupport('list')}
-              className={`text-left w-full p-2.5 flex items-center gap-2 rounded-xl transition-colors ${
-                supportView
-                  ? 'bg-accent-soft border-l-[3px] border-l-accent'
-                  : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
-              }`}
+              className={chatListRowClass(!!supportView)}
             >
               <LifeBuoy className="w-4 h-4 text-accent shrink-0" />
               <span className="min-w-0 flex-1">
@@ -788,15 +787,7 @@ export default function ChatSystem({
                   type="button"
                   id={`chat_row_${chat.id}`}
                   onClick={() => selectChat(chat)}
-                  className={`text-left p-3 flex items-start gap-3 transition-colors cursor-pointer ${
-                    mobileConversationRowBase
-                  } ${
-                    isSelected
-                      ? 'bg-accent-soft border-l-[3px] border-l-accent'
-                      : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
-                  } ${
-                    fullBleed ? 'mx-3 mt-2 first:mt-3 mb-0 w-auto' : 'w-full'
-                  }`}
+                  className={chatListRowClass(isSelected)}
                 >
                   <button
                     type="button"
@@ -984,7 +975,7 @@ export default function ChatSystem({
                 </header>
 
                 <div
-                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 space-y-3"
+                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 space-y-2"
                   id="messages_scroller"
                 >
                   {errorMsg && (
@@ -1023,21 +1014,11 @@ export default function ChatSystem({
                               {senderLabel}
                             </button>
                           )}
-                          <div
-                            className={`max-w-[85%] sm:max-w-[75%] px-3.5 py-2.5 text-sm ${mobileMessageCardBase} ${
-                              isUser
-                                ? fullBleed
-                                  ? 'bg-surface text-app border-accent/40'
-                                  : 'bg-accent text-on-accent rounded-br-md'
-                                : fullBleed
-                                  ? 'bg-surface text-app'
-                                  : 'bg-surface border border-app text-app rounded-bl-md'
-                            }`}
-                          >
+                          <div className={messageBubbleClass(isUser)}>
                             <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
                             <span
                               className={`text-[10px] mt-1 block text-right ${
-                                isUser ? (fullBleed ? 'text-subtle' : 'text-white/75') : 'text-subtle'
+                                isUser ? 'text-white/75' : 'text-subtle'
                               }`}
                             >
                               {formatTime(msg.createdAt) || 'Sending…'}

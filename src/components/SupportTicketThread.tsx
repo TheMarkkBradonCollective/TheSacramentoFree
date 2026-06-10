@@ -153,7 +153,7 @@ export default function SupportTicketThread({
 
       {err && <p className="px-4 py-2 text-xs font-semibold text-red-400">{err}</p>}
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
         {loading ? (
           <p className="text-sm text-muted text-center py-6">Loading messages…</p>
         ) : (
@@ -166,9 +166,9 @@ export default function SupportTicketThread({
                 className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm ${
+                  className={`max-w-[min(85%,20rem)] sm:max-w-[min(75%,24rem)] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
                     isMine
-                      ? 'bg-accent text-white rounded-br-md'
+                      ? 'bg-accent text-on-accent rounded-br-md'
                       : 'bg-surface border border-app text-app rounded-bl-md'
                   }`}
                 >
