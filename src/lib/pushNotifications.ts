@@ -4,31 +4,6 @@ import type { NotificationPreferences, NearbyRadiusMiles } from '../types';
 const SW_PATH = '/service-worker.js';
 const VAPID_CACHE_KEY = 'sbn_vapid_public_key_v1';
 
-function subscriptionKeyMatches(subscription: PushSubscription, publicKey: string): boolean {
-  const existingKey = subscription.options?.applicationServerKey;
-  if (!existingKey) return false;
-  const expected = urlBase64ToUint8Array(publicKey);
-  if (existingKey.byteLength !== expected.byteLength) return false;
-  const existing = new Uint8Array(existingKey);
-  for (let i = 0; i < expected.byteLength; i += 1) {
-    if (existing[i] !== expected[i]) return false;
-  }
-  return true;
-}
-
-export function isIosDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
-}
-
-export function needsIosHomeScreenForPush(): boolean {
-  if (!isIosDevice()) return false;
-  return !(window.navigator as Navigator & { standalone?: boolean }).standalone;
-}
-
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -233,17 +208,8 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
 
   const publicKey = await getVapidPublicKey();
   const existing = await registration.pushManager.getSubscription();
-  if (existing && subscriptionKeyMatches(existing, publicKey)) {
-    await persistPushSubscription(existing, userId);
-    return existing;
-  }
-
   if (existing) {
-    try {
-      await existing.unsubscribe();
-    } catch {
-      // continue — browser may already have cleared the subscription
-    }
+    await existing.unsubscribe();
   }
 
   const subscription = await registration.pushManager.subscribe({
@@ -475,18 +441,12 @@ export async function notifyReportPush(reportId: string): Promise<void> {
 
 export async function sendPushNotification(options: SendPushOptions): Promise<void> {
   const json = await postPushApi('/api/push/send', options);
-  if (json.error) {
-    console.warn('[push] send error:', options.eventType, json.error);
-    return;
-  }
-  if (Number(json.sent) === 0) {
+  if (Number(json.sent) === 0 && !json.error) {
     console.warn('[push] send reached 0 devices:', {
       eventType: options.eventType,
       recipients: json.recipients,
       skipped: json.skipped,
       subscriptionCount: json.subscriptionCount,
-      failed: json.failed,
-      removed: json.removed,
     });
   }
 }

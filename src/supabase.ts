@@ -20,20 +20,8 @@ const supabaseKey =
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-function firePush(task: () => Promise<unknown>, retries = 2) {
-  const run = async (attempt: number) => {
-    try {
-      await task();
-    } catch (err) {
-      if (attempt < retries) {
-        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
-        await run(attempt + 1);
-        return;
-      }
-      console.warn('[push]', err);
-    }
-  };
-  void run(0);
+function firePush(task: () => Promise<unknown>) {
+  task().catch((err) => console.warn('[push]', err));
 }
 
 // SQL Setup script to help users prepare their Supabase PostgreSQL database
@@ -953,14 +941,6 @@ export async function updateSupabaseItemStatus(
     if (status === 'pending_pickup' && actorUserId) {
       firePush(() =>
         import('./lib/pushIntegration').then((m) => m.pushAfterPendingPickup(itemId, actorUserId)),
-      );
-    }
-
-    if (actorUserId && (status === 'withdrawn' || status === 'on_hold' || status === 'active')) {
-      firePush(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushAfterListingStatusChange(itemId, status, actorUserId),
-        ),
       );
     }
 

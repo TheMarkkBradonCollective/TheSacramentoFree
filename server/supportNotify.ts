@@ -41,15 +41,13 @@ export async function runSupportNotify(
     .order('createdAt', { ascending: false })
     .limit(1);
 
-  const preview = String((latestMessages?.[0] as { text?: string } | undefined)?.text || '').trim();
-  const messagePreview = preview || 'Open the app to read the message.';
-  const subjectLine = subject.trim() || 'Help request';
+  const preview = String((latestMessages?.[0] as { text?: string } | undefined)?.text || 'New activity');
 
   if (event === 'staff_reply') {
     return runPushSend(callerId, {
       eventType: 'support_reply',
-      title: 'Support team replied',
-      body: `${subjectLine}: ${messagePreview.slice(0, 140)}`,
+      title: 'Support reply',
+      body: `${subject}: ${preview.slice(0, 120)}`,
       url: '/menu',
       recipientUserIds: [openerUserId],
       tag: `support-${ticketId}`,
@@ -57,14 +55,10 @@ export async function runSupportNotify(
     });
   }
 
-  const staffTitle =
-    event === 'opened' ? `Support ticket from ${openerName}` : `${openerName} replied on support`;
-  const staffBody = `${subjectLine}: ${messagePreview.slice(0, 140)}`;
-
   const staffResult = await runPushSend(callerId, {
     eventType: 'staff_support',
-    title: staffTitle,
-    body: staffBody,
+    title: 'New support ticket activity',
+    body: `${openerName}: ${subject} — ${preview.slice(0, 100)}`,
     url: '/staff/tickets',
     excludeUserIds: [openerUserId],
     minStaffRank,
@@ -72,14 +66,10 @@ export async function runSupportNotify(
     data: { ticketId },
   });
 
-  const directorTitle =
-    event === 'opened' ? `New support ticket — ${openerName}` : `Support reply — ${openerName}`;
-  const directorBody = `${subjectLine}: ${messagePreview.slice(0, 140)}`;
-
   const directorResult = await runPushSend(callerId, {
     eventType: 'director_alert',
-    title: directorTitle,
-    body: directorBody,
+    title: event === 'opened' ? 'Support ticket opened' : 'Support ticket reply',
+    body: `${openerName}: ${subject}`,
     url: '/director/overview',
     excludeUserIds: [openerUserId],
     tag: event === 'opened' ? `director-ticket-${ticketId}` : `director-ticket-reply-${ticketId}`,
