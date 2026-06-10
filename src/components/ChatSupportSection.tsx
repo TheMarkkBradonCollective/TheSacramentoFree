@@ -10,6 +10,7 @@ import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
 import { LifeBuoy, MessageSquarePlus, ChevronRight, ChevronLeft } from 'lucide-react';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import PageScrollFooter from './PageScrollFooter';
 
 export type ChatSupportView = 'list' | 'new' | 'thread' | null;
 
@@ -17,6 +18,8 @@ interface ChatSupportSectionProps {
   user: UserProfile;
   view: ChatSupportView;
   onViewChange: (view: ChatSupportView) => void;
+  onBackToChat?: () => void;
+  onOpenGoFundMe?: () => void;
   initialTicketId?: string | null;
   onClearInitialTicketId?: () => void;
   /** Compact rows for the chat sidebar */
@@ -28,6 +31,8 @@ export default function ChatSupportSection({
   user,
   view,
   onViewChange,
+  onBackToChat,
+  onOpenGoFundMe,
   initialTicketId = null,
   onClearInitialTicketId,
   compact = false,
@@ -241,6 +246,7 @@ export default function ChatSupportSection({
               {ticketCreating ? 'Opening…' : 'Open ticket'}
             </button>
           </div>
+          {onOpenGoFundMe && <PageScrollFooter onOpenDetails={onOpenGoFundMe} />}
         </div>
       </div>
     );
@@ -292,9 +298,21 @@ export default function ChatSupportSection({
 
   return (
     <div className={`flex flex-col min-h-0 h-full ${className}`}>
-      <header className="shrink-0 px-4 py-3 border-b border-app bg-surface">
-        <h3 className="font-display font-semibold text-sm text-app">Support tickets</h3>
-        <p className="text-xs text-muted">One-on-one help from staff</p>
+      <header className="shrink-0 px-3 py-3 border-b border-app bg-surface flex items-center gap-2">
+        {onBackToChat && (
+          <button
+            type="button"
+            onClick={onBackToChat}
+            className="p-2 rounded-full text-muted hover:text-app hover:bg-inset shrink-0"
+            aria-label="Back to chat"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display font-semibold text-sm text-app">Support tickets</h3>
+          <p className="text-xs text-muted">One-on-one help from staff</p>
+        </div>
       </header>
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
         <button
@@ -339,6 +357,7 @@ export default function ChatSupportSection({
             ))}
           </ul>
         )}
+        {onOpenGoFundMe && <PageScrollFooter onOpenDetails={onOpenGoFundMe} />}
       </div>
     </div>
   );

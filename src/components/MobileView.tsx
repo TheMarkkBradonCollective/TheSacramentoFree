@@ -248,30 +248,28 @@ export default function MobileView({
         </div>
 
         <div
-          className={`h-full w-full min-h-0 overflow-y-auto flex flex-col ${activeTab === 'chats' ? '' : 'hidden'}`}
+          className={`h-full w-full min-h-0 overflow-hidden ${activeTab === 'chats' ? '' : 'hidden'}`}
           id="mobile_messaging_dock"
           aria-hidden={activeTab !== 'chats'}
         >
-          <div className="flex-1 min-h-[min(70vh,28rem)] flex flex-col overflow-hidden shrink-0">
-            <ChatSystem
-              userProfile={userProfile}
-              initialSelectedChatId={initialSelectedChatId}
-              onClearInitialChat={onClearInitialChat}
-              initialSupportTicketId={initialSupportTicketId}
-              onClearInitialSupportTicket={onClearInitialSupportTicket}
-              initialChatSupportView={initialChatSupportView}
-              onClearInitialChatSupportView={onClearInitialChatSupportView}
-              pendingChatCompose={pendingChatCompose}
-              onClearPendingChatCompose={onClearPendingChatCompose}
-              items={items}
-              blockedUserIds={blockedUserIds}
-              onViewProfile={onViewProfile}
-              onItemsChanged={onRefresh}
-              fullBleed
-              className="h-full min-h-0"
-            />
-          </div>
-          <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
+          <ChatSystem
+            userProfile={userProfile}
+            initialSelectedChatId={initialSelectedChatId}
+            onClearInitialChat={onClearInitialChat}
+            initialSupportTicketId={initialSupportTicketId}
+            onClearInitialSupportTicket={onClearInitialSupportTicket}
+            initialChatSupportView={initialChatSupportView}
+            onClearInitialChatSupportView={onClearInitialChatSupportView}
+            pendingChatCompose={pendingChatCompose}
+            onClearPendingChatCompose={onClearPendingChatCompose}
+            items={items}
+            blockedUserIds={blockedUserIds}
+            onViewProfile={onViewProfile}
+            onItemsChanged={onRefresh}
+            onOpenGoFundMe={onOpenGoFundMe}
+            fullBleed
+            className="h-full min-h-0"
+          />
         </div>
 
         <div

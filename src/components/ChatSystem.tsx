@@ -21,6 +21,7 @@ import {
 } from '../lib/communityChats';
 import { isStaffRole } from '../lib/roles';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
+import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
   MessageSquare,
@@ -63,6 +64,7 @@ interface ChatSystemProps {
   fullBleed?: boolean;
   onViewProfile?: (userId: string) => void;
   onItemsChanged?: () => void;
+  onOpenGoFundMe?: () => void;
 }
 
 export default function ChatSystem({
@@ -81,6 +83,7 @@ export default function ChatSystem({
   fullBleed = false,
   onViewProfile,
   onItemsChanged,
+  onOpenGoFundMe,
 }: ChatSystemProps) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<MessageRequest[]>([]);
@@ -831,6 +834,9 @@ export default function ChatSystem({
               );
             })
           )}
+          {fullBleed && onOpenGoFundMe && !selectedChat && !supportView && (
+            <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
+          )}
         </div>
       </div>
 
@@ -846,6 +852,8 @@ export default function ChatSystem({
             user={userProfile}
             view={supportView}
             onViewChange={openSupport}
+            onBackToChat={() => setSupportView(null)}
+            onOpenGoFundMe={onOpenGoFundMe}
             initialTicketId={initialSupportTicketId}
             onClearInitialTicketId={onClearInitialSupportTicket}
             className="h-full"

@@ -180,9 +180,11 @@ export default function DesktopView({
                 blockedUserIds={blockedUserIds}
                 onViewProfile={onViewProfile}
                 onItemsChanged={onRefresh}
+                onOpenGoFundMe={onOpenGoFundMe}
                 className="h-full min-h-0 border-0 rounded-none"
               />
             </div>
+            <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
           </div>
         )}
 
@@ -245,7 +247,9 @@ export default function DesktopView({
           </div>
         )}
 
-        {activeTab !== 'map' && <PageScrollFooter onOpenDetails={onOpenGoFundMe} />}
+        {activeTab !== 'map' && activeTab !== 'chats' && (
+          <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
+        )}
       </main>
     </div>
   );
