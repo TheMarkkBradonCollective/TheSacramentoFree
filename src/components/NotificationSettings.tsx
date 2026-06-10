@@ -187,11 +187,17 @@ export default function NotificationSettings({
     permission,
     isSubscribed,
     isLoading,
+    isSaving,
+    prefsLoading,
     error,
+    saveMessage,
     preferences,
+    hasUnsavedChanges,
     enableNotifications,
     disableNotifications,
-    updatePreferences,
+    setDraftPreferences,
+    savePreferences,
+    discardPreferenceChanges,
     sendTestNotification,
     isTesting,
     testMessage,
@@ -205,12 +211,12 @@ export default function NotificationSettings({
   const directorMasterDisabled = masterDisabled || !preferences.directorAlerts;
 
   const setPref = (key: keyof NotificationPreferences, value: boolean | number | string[]) => {
-    void updatePreferences({ ...preferences, [key]: value });
+    setDraftPreferences({ ...preferences, [key]: value });
   };
 
   const setDirectorMaster = (value: boolean) => {
     if (!value) {
-      void updatePreferences({
+      setDraftPreferences({
         ...preferences,
         directorAlerts: false,
         directorJoins: false,
@@ -224,7 +230,7 @@ export default function NotificationSettings({
       });
       return;
     }
-    void updatePreferences({
+    setDraftPreferences({
       ...preferences,
       directorAlerts: true,
       directorJoins: true,
@@ -271,6 +277,40 @@ export default function NotificationSettings({
         <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4">
           {error}
         </p>
+      )}
+
+      {saveMessage && (
+        <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 mb-4">
+          {saveMessage}
+        </p>
+      )}
+
+      {prefsLoading && (
+        <p className="text-sm text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
+          Loading your notification settings from the community database…
+        </p>
+      )}
+
+      {hasUnsavedChanges && (
+        <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl border border-accent/30 bg-accent/5">
+          <p className="text-xs text-app flex-1 min-w-[12rem]">You have unsaved notification changes.</p>
+          <button
+            type="button"
+            onClick={() => void savePreferences()}
+            disabled={isSaving || prefsLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-on-accent text-sm font-bold disabled:opacity-50"
+          >
+            {isSaving ? 'Saving…' : 'Save settings'}
+          </button>
+          <button
+            type="button"
+            onClick={discardPreferenceChanges}
+            disabled={isSaving || prefsLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-app text-sm font-bold text-muted hover:bg-inset disabled:opacity-50"
+          >
+            Discard
+          </button>
+        </div>
       )}
 
       <div className="flex flex-wrap gap-2 mb-5">
@@ -328,7 +368,9 @@ export default function NotificationSettings({
         />
       </div>
 
-      <div className={`mt-5 space-y-5 ${masterDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div
+        className={`mt-5 space-y-5 ${masterDisabled || prefsLoading ? 'opacity-50 pointer-events-none' : ''}`}
+      >
         {PREF_SECTIONS.map((section) => (
           <div key={section.title}>
             <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">{section.title}</h4>

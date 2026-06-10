@@ -407,6 +407,7 @@ export default function App() {
         clearSessionCache();
         setSessionUser(null);
         setUserProfile(null);
+        setItems([]);
         setIsAuthLoading(false);
       }
     });
@@ -637,6 +638,8 @@ export default function App() {
   // Sign out
   const handleLogOut = async () => {
     try {
+      const { clearPushSessionOnLogout } = await import('./hooks/usePushNotifications');
+      await clearPushSessionOnLogout();
       await supabase.auth.signOut();
     } catch (_) {}
     clearSessionCache();

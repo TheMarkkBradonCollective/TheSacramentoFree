@@ -1,36 +1,63 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  clearPushSessionOnLogout,
+  DEFAULT_NOTIFICATION_PREFERENCES,
   ensurePushSubscription,
   getNotificationPreferences,
   getPushPermissionState,
   listenForNotificationClicks,
+  preferencesEqual,
   saveNotificationPreferences,
   sendTestPushNotification,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   type PushPermissionState,
 } from '../lib/pushNotifications';
+import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { NotificationPreferences } from '../types';
-import { DEFAULT_NOTIFICATION_PREFERENCES } from '../lib/pushNotifications';
+
+export { clearPushSessionOnLogout };
 
 export function usePushNotifications(userId?: string) {
   const [permission, setPermission] = useState<PushPermissionState>(() => getPushPermissionState());
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [prefsLoading, setPrefsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [saveMessage, setSaveMessage] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [testMessage, setTestMessage] = useState('');
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
+  const [savedPreferences, setSavedPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
+  const userIdRef = useRef(userId);
+  const hasUnsavedRef = useRef(false);
 
   const refreshPermission = useCallback(() => {
     setPermission(getPushPermissionState());
   }, []);
 
-  const loadPreferences = useCallback(async () => {
-    if (!userId) return;
-    const prefs = await getNotificationPreferences(userId);
+  const applyLoadedPreferences = useCallback((prefs: NotificationPreferences) => {
+    setSavedPreferences(prefs);
     setPreferences(prefs);
-  }, [userId]);
+  }, []);
+
+  const loadPreferences = useCallback(async (options?: { force?: boolean }) => {
+    const activeUserId = userIdRef.current;
+    if (!activeUserId) return;
+    if (!options?.force && hasUnsavedRef.current) return;
+
+    setPrefsLoading(true);
+    try {
+      const prefs = await getNotificationPreferences(activeUserId);
+      if (userIdRef.current !== activeUserId) return;
+      applyLoadedPreferences(prefs);
+    } finally {
+      if (userIdRef.current === activeUserId) {
+        setPrefsLoading(false);
+      }
+    }
+  }, [applyLoadedPreferences]);
 
   const checkSubscription = useCallback(async () => {
     if (!('serviceWorker' in navigator)) {
@@ -46,10 +73,53 @@ export function usePushNotifications(userId?: string) {
     }
   }, []);
 
+  const resetPreferencesState = useCallback(() => {
+    applyLoadedPreferences(DEFAULT_NOTIFICATION_PREFERENCES);
+    setError('');
+    setSaveMessage('');
+    setTestMessage('');
+    setIsSaving(false);
+    setPrefsLoading(false);
+  }, [applyLoadedPreferences]);
+
+  const hasUnsavedChanges = useMemo(
+    () => !preferencesEqual(preferences, savedPreferences),
+    [preferences, savedPreferences],
+  );
+
   useEffect(() => {
-    void loadPreferences();
+    userIdRef.current = userId;
+  }, [userId]);
+
+  useEffect(() => {
+    hasUnsavedRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    resetPreferencesState();
+    setIsSubscribed(false);
+
+    if (!userId) return;
+
+    void loadPreferences({ force: true });
     void checkSubscription();
-  }, [loadPreferences, checkSubscription]);
+  }, [userId, loadPreferences, checkSubscription, resetPreferencesState]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    return subscribePostgresChanges(
+      {
+        channelName: `live-notification-prefs-${userId}`,
+        table: 'notification_preferences',
+        event: '*',
+        filter: `userId=eq.${userId}`,
+      },
+      () => {
+        void loadPreferences();
+      },
+    );
+  }, [userId, loadPreferences]);
 
   useEffect(() => {
     if (!userId || permission !== 'granted') return;
@@ -97,13 +167,17 @@ export function usePushNotifications(userId?: string) {
       const sub = await subscribeToPushNotifications();
       setIsSubscribed(!!sub);
       refreshPermission();
-      if (!sub) setError('Notification permission was not granted.');
+      if (!sub) {
+        setError('Notification permission was not granted.');
+      } else {
+        await loadPreferences({ force: true });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not enable notifications');
     } finally {
       setIsLoading(false);
     }
-  }, [refreshPermission]);
+  }, [refreshPermission, loadPreferences]);
 
   const disableNotifications = useCallback(async () => {
     setIsLoading(true);
@@ -132,26 +206,47 @@ export function usePushNotifications(userId?: string) {
     return result.ok;
   }, []);
 
-  const updatePreferences = useCallback(
-    async (next: NotificationPreferences) => {
-      if (!userId) return false;
-      setPreferences(next);
-      const ok = await saveNotificationPreferences(userId, next);
-      if (!ok) setError('Could not save notification preferences');
-      return ok;
-    },
-    [userId],
-  );
+  const setDraftPreferences = useCallback((next: NotificationPreferences) => {
+    setPreferences(next);
+    setSaveMessage('');
+  }, []);
+
+  const savePreferences = useCallback(async () => {
+    if (!userId) return false;
+    setIsSaving(true);
+    setError('');
+    setSaveMessage('');
+    const ok = await saveNotificationPreferences(userId, preferences);
+    setIsSaving(false);
+    if (!ok) {
+      setError('Could not save notification preferences');
+      return false;
+    }
+    setSavedPreferences(preferences);
+    setSaveMessage('Notification settings saved.');
+    return true;
+  }, [userId, preferences]);
+
+  const discardPreferenceChanges = useCallback(() => {
+    setPreferences(savedPreferences);
+    setSaveMessage('');
+  }, [savedPreferences]);
 
   return {
     permission,
     isSubscribed,
     isLoading,
+    isSaving,
+    prefsLoading,
     error,
+    saveMessage,
     preferences,
+    hasUnsavedChanges,
     enableNotifications,
     disableNotifications,
-    updatePreferences,
+    setDraftPreferences,
+    savePreferences,
+    discardPreferenceChanges,
     sendTestNotification,
     isTesting,
     testMessage,

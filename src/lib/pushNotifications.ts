@@ -267,6 +267,29 @@ export async function unsubscribeFromPushNotifications(): Promise<void> {
   if (subscription) await subscription.unsubscribe();
 }
 
+/** Detach this device from push before sign-out so the next account does not inherit alerts. */
+export async function clearPushSessionOnLogout(): Promise<void> {
+  try {
+    await unsubscribeFromPushNotifications();
+  } catch {
+    // ignore — session may already be clearing
+  }
+}
+
+export function preferencesEqual(a: NotificationPreferences, b: NotificationPreferences): boolean {
+  const keys = Object.keys(DEFAULT_NOTIFICATION_PREFERENCES) as (keyof NotificationPreferences)[];
+  for (const key of keys) {
+    const av = a[key];
+    const bv = b[key];
+    if (Array.isArray(av) && Array.isArray(bv)) {
+      if (av.length !== bv.length || av.some((value, index) => value !== bv[index])) return false;
+      continue;
+    }
+    if (av !== bv) return false;
+  }
+  return true;
+}
+
 export async function ensurePushSubscription(): Promise<PushSubscription | null> {
   if (getPushPermissionState() !== 'granted') return null;
 
