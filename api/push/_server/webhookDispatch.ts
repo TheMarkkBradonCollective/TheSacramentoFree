@@ -1,12 +1,14 @@
-import { getSupabaseAdmin } from './supabaseAdmin';
+import { runDirectorJoinNotify, runDirectorLeaveNotify } from './directorNotify';
 import { runReportNotify } from './reportNotify';
 import { runSupportNotify, type SupportNotifyEvent } from './supportNotify';
 import { isStaffRole } from './staffRoles';
+import { getSupabaseAdmin } from './supabaseAdmin';
 
 type WebhookPayload = {
   type?: string;
   table?: string;
   record?: Record<string, unknown>;
+  old_record?: Record<string, unknown>;
 };
 
 export async function runSupabasePushWebhook(
@@ -14,10 +16,41 @@ export async function runSupabasePushWebhook(
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const table = body.table;
   const type = body.type;
-  const record = body.record;
 
-  if (type !== 'INSERT' || !table || !record) {
-    return { status: 200, body: { ok: true, skipped: 'not an insert' } };
+  if (!table || !type) {
+    return { status: 200, body: { ok: true, skipped: 'missing table or event type' } };
+  }
+
+  if (type === 'DELETE') {
+    if (table === 'users' && body.old_record) {
+      const row = body.old_record;
+      return runDirectorLeaveNotify(String(row.uid || 'system'), {
+        uid: String(row.uid || ''),
+        displayName: String(row.displayName || 'A neighbor'),
+        neighborhood: String(row.neighborhood || 'Sacramento area'),
+        email: String(row.email || ''),
+        detail: 'account deleted',
+      });
+    }
+    return { status: 200, body: { ok: true, skipped: 'delete not handled' } };
+  }
+
+  if (type !== 'INSERT') {
+    return { status: 200, body: { ok: true, skipped: `event ${type} not handled` } };
+  }
+
+  const record = body.record;
+  if (!record) {
+    return { status: 200, body: { ok: true, skipped: 'missing record' } };
+  }
+
+  if (table === 'users') {
+    return runDirectorJoinNotify(String(record.uid || 'system'), {
+      uid: String(record.uid || ''),
+      displayName: String(record.displayName || 'A neighbor'),
+      neighborhood: String(record.neighborhood || 'Sacramento area'),
+      email: String(record.email || ''),
+    });
   }
 
   if (table === 'user_reports') {

@@ -332,7 +332,7 @@ export default function App() {
         }
 
       const seed = profileFromAuthUser(user);
-      void upsertSupabaseProfile(seed);
+      await upsertSupabaseProfile(seed);
     } catch (err) {
       console.warn('Background profile sync failed:', err);
     } finally {

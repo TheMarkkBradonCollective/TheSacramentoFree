@@ -142,7 +142,7 @@ const DIRECTOR_CATEGORY_PREFS = [
   {
     key: 'directorLeaves' as const,
     label: 'Account departures',
-    description: 'When a neighbor deletes their own account',
+    description: 'When a neighbor leaves — self-delete or staff removal',
   },
   {
     key: 'directorModeration' as const,
