@@ -172,7 +172,9 @@ CREATE POLICY "Allow write app updates" ON public.app_updates FOR ALL USING (tru
 
 CREATE INDEX IF NOT EXISTS app_updates_date_idx ON public.app_updates (date DESC, "updatedAt" DESC);
 
--- Latest deep-detail entries: also in add-june-9-latest-community-updates.sql (safe to re-run).
+-- Changelog detail text: run supabase-sql/expand-all-community-updates-detail.sql after this
+-- (or add-june-9-latest-community-updates.sql for June 9 only). Regenerate expand file:
+-- node scripts/expand-changelog-details.mjs
 INSERT INTO public.app_updates (
   id, date, title, body, detail, "directorName", "directorTitle", "postedByUserId"
 ) VALUES
