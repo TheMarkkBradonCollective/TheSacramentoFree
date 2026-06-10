@@ -15,9 +15,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { getBearerToken, getUserFromBearer, getSupabaseForUser, parseJsonBody } = await import(
-      '../../push-server.bundle.cjs'
-    );
+    const { getBearerToken, getUserFromBearer, getSupabaseForUser, parseJsonBody, claimPushSubscriptionForUser } =
+      await import('../../push-server.bundle.cjs');
 
     const token = getBearerToken(req.headers.authorization);
     if (!token) {
@@ -45,25 +44,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const row = {
-      id: crypto.randomUUID(),
-      userId: user.id,
+    const claimed = await claimPushSubscriptionForUser(user.id, {
       endpoint: subscription.endpoint,
       p256dh: subscription.keys.p256dh,
       auth: subscription.keys.auth,
-      userAgent: typeof body.userAgent === 'string' ? body.userAgent.slice(0, 512) : null,
-      updatedAt: new Date().toISOString(),
-    };
-
-    const { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
-    if (error) {
-      console.error('[api/push/subscribe]', error.code, error.message);
-      if (error.code === '42P01' || error.message?.includes('push_subscriptions')) {
+      userAgent: typeof body.userAgent === 'string' ? body.userAgent : null,
+    });
+    if (!claimed.ok) {
+      console.error('[api/push/subscribe]', claimed.error);
+      if (claimed.error?.includes('push_subscriptions') || claimed.error?.includes('42P01')) {
         return res.status(503).json({
-          error: 'Push tables are missing in Supabase. Run supabase-sql/push-notifications.sql in the SQL editor.',
+          error: 'Push tables are missing in Supabase. Run supabase-sql/notifications-complete.sql in the SQL editor.',
         });
       }
-      return res.status(500).json({ error: error.message || 'Could not save subscription' });
+      return res.status(500).json({ error: claimed.error || 'Could not save subscription' });
     }
 
     await supabase.from('notification_preferences').upsert(

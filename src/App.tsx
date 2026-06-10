@@ -52,6 +52,7 @@ import {
 } from './lib/sessionCache';
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
+import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 import PushNotificationCelebration from './components/PushNotificationCelebration';
@@ -811,7 +812,9 @@ export default function App() {
     if (!userProfile) return;
     void migrateLocalSavedItemsToDb(userProfile.uid);
     const userPosts = items.filter((item) => item.userId === userProfile.uid);
-    void import('./lib/pushIntegration').then((m) => m.pushListingExpiryReminders(userProfile.uid, userPosts));
+    if (CLIENT_PUSH_DISPATCH_ENABLED) {
+      void import('./lib/pushIntegration').then((m) => m.pushListingExpiryReminders(userProfile.uid, userPosts));
+    }
   }, [userProfile, items]);
 
   useEffect(() => {

@@ -20,7 +20,10 @@ const supabaseKey =
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
+
 async function runPushTask(task: () => Promise<unknown>): Promise<void> {
+  if (!CLIENT_PUSH_DISPATCH_ENABLED) return;
   try {
     await task();
   } catch (err) {

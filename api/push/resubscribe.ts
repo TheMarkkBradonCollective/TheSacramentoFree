@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 type ResubscribeBody = {
-  oldEndpoint?: string;
   subscription?: {
     endpoint?: string;
     keys?: { p256dh?: string; auth?: string };
@@ -16,19 +15,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { getServiceRoleKey, parseJsonBody, runPushResubscribe } = await import(
+    const { getBearerToken, getUserFromBearer, parseJsonBody, runPushResubscribe } = await import(
       '../../push-server.bundle.cjs'
     );
 
-    if (!getServiceRoleKey()) {
-      return res.status(503).json({
-        error: 'Push resubscribe requires SUPABASE_SERVICE_ROLE_KEY on the server.',
-      });
+    const token = getBearerToken(req.headers.authorization);
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const user = await getUserFromBearer(req.headers.authorization);
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const body = parseJsonBody<ResubscribeBody>(req);
     const result = await runPushResubscribe({
-      oldEndpoint: body.oldEndpoint,
+      userId: user.id,
       subscription: body.subscription || {},
       userAgent: body.userAgent,
     });

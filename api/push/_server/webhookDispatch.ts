@@ -343,60 +343,29 @@ export async function runSupabasePushWebhook(
 }
 
 export async function runPushResubscribe(params: {
-  oldEndpoint?: string;
+  userId: string;
   subscription: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
   userAgent?: string;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
+  const userId = String(params.userId || '');
   const endpoint = params.subscription?.endpoint;
   const p256dh = params.subscription?.keys?.p256dh;
   const auth = params.subscription?.keys?.auth;
 
-  if (!endpoint || !p256dh || !auth) {
+  if (!userId || !endpoint || !p256dh || !auth) {
     return { status: 400, body: { error: 'Invalid subscription payload' } };
   }
 
-  const supabaseAdmin = await getSupabaseAdmin();
-  let userId: string | null = null;
-
-  if (params.oldEndpoint) {
-    const { data } = await supabaseAdmin
-      .from('push_subscriptions')
-      .select('userId')
-      .eq('endpoint', params.oldEndpoint)
-      .maybeSingle();
-    userId = (data as { userId?: string } | null)?.userId || null;
-  }
-
-  if (!userId) {
-    const { data } = await supabaseAdmin
-      .from('push_subscriptions')
-      .select('userId')
-      .eq('endpoint', endpoint)
-      .maybeSingle();
-    userId = (data as { userId?: string } | null)?.userId || null;
-  }
-
-  if (!userId) {
-    return { status: 404, body: { error: 'No existing subscription to refresh' } };
-  }
-
-  if (params.oldEndpoint && params.oldEndpoint !== endpoint) {
-    await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', params.oldEndpoint);
-  }
-
-  const row = {
-    id: crypto.randomUUID(),
-    userId,
+  const { claimPushSubscriptionForUser } = await import('./pushSubscribe');
+  const claimed = await claimPushSubscriptionForUser(userId, {
     endpoint,
     p256dh,
     auth,
-    userAgent: params.userAgent?.slice(0, 512) || null,
-    updatedAt: new Date().toISOString(),
-  };
+    userAgent: params.userAgent,
+  });
 
-  const { error } = await supabaseAdmin.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
-  if (error) {
-    return { status: 500, body: { error: error.message || 'Could not save subscription' } };
+  if (!claimed.ok) {
+    return { status: 500, body: { error: claimed.error || 'Could not save subscription' } };
   }
 
   return { status: 200, body: { ok: true, userId } };

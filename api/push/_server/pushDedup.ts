@@ -12,24 +12,22 @@ export async function claimPushDispatch(tag?: string): Promise<boolean> {
 
     await supabaseAdmin.from('push_dispatch_log').delete().lt('createdAt', cutoff);
 
-    const { data: existing } = await supabaseAdmin
-      .from('push_dispatch_log')
-      .select('id')
-      .eq('tag', tag)
-      .gte('createdAt', cutoff)
-      .maybeSingle();
-
-    if (existing) return false;
-
-    await supabaseAdmin.from('push_dispatch_log').insert({
+    const { error } = await supabaseAdmin.from('push_dispatch_log').insert({
       id: crypto.randomUUID(),
       tag,
       createdAt: new Date().toISOString(),
     });
 
+    if (error) {
+      const code = (error as { code?: string }).code;
+      if (code === '23505') return false;
+      console.warn('[push] dedup insert failed, blocking send:', error.message);
+      return false;
+    }
+
     return true;
   } catch (err) {
-    console.warn('[push] dedup check failed, allowing send:', (err as Error).message);
-    return true;
+    console.warn('[push] dedup check failed, blocking send:', (err as Error).message);
+    return false;
   }
 }

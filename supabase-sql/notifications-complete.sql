@@ -106,6 +106,9 @@ CREATE TABLE IF NOT EXISTS public.push_dispatch_log (
 CREATE INDEX IF NOT EXISTS push_dispatch_log_tag_created_idx
   ON public.push_dispatch_log (tag, "createdAt" DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS push_dispatch_log_tag_unique
+  ON public.push_dispatch_log (tag);
+
 -- 4. Backfill preferences for existing users (all toggles ON by default)
 INSERT INTO public.notification_preferences ("userId")
 SELECT u.uid FROM public.users u

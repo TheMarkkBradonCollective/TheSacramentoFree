@@ -142,17 +142,8 @@ async function refreshPushSubscription(oldEndpoint) {
     applicationServerKey: urlBase64ToUint8Array(publicKey),
   });
 
-  const json = subscription.toJSON();
-  await fetch('/api/push/resubscribe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      oldEndpoint,
-      subscription: json,
-      userAgent: '',
-    }),
-  });
-
+  // DB row is refreshed when the signed-in app calls /api/push/subscribe.
+  // Do not resubscribe here without auth — that caused wrong-user delivery.
   return subscription;
 }
 
