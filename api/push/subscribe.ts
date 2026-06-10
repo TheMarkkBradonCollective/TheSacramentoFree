@@ -76,6 +76,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         claims: true,
         gifts: true,
         comments: true,
+        listingUpvotes: true,
+        listingDownvotes: true,
         listingStatus: true,
         nearbyListings: true,
         requests: true,

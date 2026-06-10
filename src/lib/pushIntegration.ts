@@ -7,6 +7,8 @@ import {
   notifyItemGifted,
   notifyListingExpiringSoon,
   notifyNewComment,
+  notifyListingDownvote,
+  notifyListingUpvote,
   notifyNewListingPosted,
   notifyMessageRequest,
   notifyMessageRequestAccepted,
@@ -170,6 +172,23 @@ export async function pushAfterMessage(chatId: string, senderId: string, text: s
     senderName,
     preview: text,
   });
+}
+
+export async function pushAfterItemVote(params: {
+  itemId: string;
+  voterUserId: string;
+  voteType: 'up' | 'down';
+}) {
+  const item = await getItemById(params.itemId);
+  if (!item || item.userId === params.voterUserId) return;
+
+  const voterName = await getUserDisplayName(params.voterUserId);
+
+  if (params.voteType === 'up') {
+    await notifyListingUpvote({ item, voterName, voterUserId: params.voterUserId });
+  } else {
+    await notifyListingDownvote({ item, voterName, voterUserId: params.voterUserId });
+  }
 }
 
 export async function pushAfterComment(comment: {

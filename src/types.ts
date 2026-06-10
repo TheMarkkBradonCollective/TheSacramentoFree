@@ -12,6 +12,8 @@ export interface NotificationPreferences {
   claims: boolean;
   gifts: boolean;
   comments: boolean;
+  listingUpvotes: boolean;
+  listingDownvotes: boolean;
   listingStatus: boolean;
   nearbyListings: boolean;
   requests: boolean;

@@ -2023,6 +2023,12 @@ export async function setSupabaseItemVote(itemId: string, userId: string, voteTy
       return false;
     }
 
+    await runPushTask(() =>
+      import('./lib/pushIntegration').then((m) =>
+        m.pushAfterItemVote({ itemId, voterUserId: userId, voteType }),
+      ),
+    );
+
     setSupabaseConfigurationState(true);
     return true;
   } catch (err: any) {

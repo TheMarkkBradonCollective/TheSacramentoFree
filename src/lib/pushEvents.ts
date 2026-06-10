@@ -138,6 +138,38 @@ export async function notifyNewComment(params: {
   });
 }
 
+export async function notifyListingUpvote(params: {
+  item: ItemPost;
+  voterName: string;
+  voterUserId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'listing_upvote',
+    title: 'New upvote on your listing',
+    body: `${params.voterName} upvoted "${params.item.title}"`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.item.userId],
+    tag: `vote-up-${params.item.id}-${params.voterUserId}`,
+  });
+}
+
+export async function notifyListingDownvote(params: {
+  item: ItemPost;
+  voterName: string;
+  voterUserId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'listing_downvote',
+    title: 'Downvote on your listing',
+    body: `${params.voterName} downvoted "${params.item.title}"`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.item.userId],
+    tag: `vote-down-${params.item.id}-${params.voterUserId}`,
+  });
+}
+
 export async function notifyPickupScheduled(params: {
   item: ItemPost;
   recipientUserIds: string[];

@@ -49,6 +49,8 @@ const PREF_SECTIONS: {
       { key: 'claims', label: 'Claims', description: 'When someone claims your item' },
       { key: 'gifts', label: 'Gifts', description: 'When an item is marked gifted' },
       { key: 'comments', label: 'Comments', description: 'New comments on your listings' },
+      { key: 'listingUpvotes', label: 'Upvotes', description: 'When a neighbor upvotes your listing' },
+      { key: 'listingDownvotes', label: 'Downvotes', description: 'When a neighbor downvotes your listing' },
       {
         key: 'listingStatus',
         label: 'Listing status',
