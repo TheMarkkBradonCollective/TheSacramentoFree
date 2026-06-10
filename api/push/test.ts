@@ -1,7 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserFromBearer } from './_server/auth';
-import { runPushTest } from './_server/runPushTest';
-import { parseJsonBody } from './_server/parseBody';
 
 type TestBody = {
   subscription?: {
@@ -17,6 +14,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const { getUserFromBearer, runPushTest, parseJsonBody } = await import('../../push-server.bundle.mjs');
+
     const user = await getUserFromBearer(req.headers.authorization);
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });
