@@ -8,7 +8,7 @@
     "dev:client": "vite --port=3000 --host=0.0.0.0",
     "dev:server": "tsx server/index.ts",
     "dev:full": "concurrently -k \"vite --port=3000 --host=0.0.0.0\" \"tsx server/index.ts\"",
-    "build": "vite build",
+    "build": "node scripts/build-push-bundle.mjs && vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",

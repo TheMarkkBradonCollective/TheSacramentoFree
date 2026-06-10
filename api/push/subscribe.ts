@@ -1,7 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserFromBearer } from './_server/auth';
-import { getSupabaseAdmin } from './_server/supabaseAdmin';
-import { parseJsonBody } from './_server/parseBody';
 
 type SubscribeBody = {
   subscription?: {
@@ -25,6 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const { getUserFromBearer, getSupabaseAdmin, parseJsonBody } = await import('../../push-server.bundle.mjs');
+
     const user = await getUserFromBearer(req.headers.authorization);
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });

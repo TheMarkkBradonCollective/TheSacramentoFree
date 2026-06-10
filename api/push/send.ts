@@ -1,7 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserFromBearer } from './_server/auth';
-import { runPushSend, type PushSendBody } from './_server/runPushSend';
-import { parseJsonBody } from './_server/parseBody';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -10,13 +7,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const { getUserFromBearer, runPushSend, parseJsonBody } = await import('../../push-server.bundle.mjs');
+
     const user = await getUserFromBearer(req.headers.authorization);
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     const body = parseJsonBody(req);
-    const result = await runPushSend(user.id, body as PushSendBody);
+    const result = await runPushSend(user.id, body);
     return res.status(result.status).json(result.body);
   } catch (err) {
     console.error('[api/push/send]', err);
