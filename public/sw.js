@@ -121,3 +121,82 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+function resolveNotificationUrl(rawUrl) {
+  if (!rawUrl) return '/';
+  try {
+    const parsed = new URL(rawUrl, self.location.origin);
+    if (parsed.origin === self.location.origin) {
+      return parsed.pathname + parsed.search + parsed.hash;
+    }
+    return rawUrl;
+  } catch {
+    return rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
+  }
+}
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch {
+      payload = { title: 'Sacramento Buy Nothing', body: event.data.text() };
+    }
+  }
+
+  const title = payload.title || 'Sacramento Buy Nothing';
+  const body =
+    String(payload.body || '').trim() ||
+    String(payload.title || '').trim() ||
+    'You have a new community update.';
+  const options = {
+    body,
+    icon: payload.icon || '/Logo.jpeg',
+    badge: payload.badge || '/Logo.jpeg',
+    tag: payload.tag || payload.eventType || 'sbn-notification',
+    data: {
+      url: resolveNotificationUrl(payload.url || '/'),
+      eventType: payload.eventType || '',
+      ...(payload.data || {}),
+    },
+    requireInteraction: false,
+    renotify: true,
+    silent: false,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        client.postMessage({ type: 'PUSH_SUBSCRIPTION_CHANGED' });
+      }
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = resolveNotificationUrl(
+    event.notification.data?.url || event.notification.data?.destination || '/',
+  );
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.postMessage({ type: 'NOTIFICATION_CLICK', url: targetUrl });
+          return client.focus();
+        }
+      }
+
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    }),
+  );
+});
