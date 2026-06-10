@@ -1,5 +1,3 @@
-import * as webPushImport from 'web-push';
-
 type WebPushModule = {
   setVapidDetails: (subject: string, publicKey: string, privateKey: string) => void;
   sendNotification: (
@@ -8,10 +6,21 @@ type WebPushModule = {
   ) => Promise<unknown>;
 };
 
-const webpushModule = ((webPushImport as { default?: WebPushModule }).default ??
-  webPushImport) as WebPushModule;
-
+let webpushModule: WebPushModule | null = null;
+let webpushLoad: Promise<WebPushModule> | null = null;
 let configured = false;
+
+async function loadWebPushModule(): Promise<WebPushModule> {
+  if (webpushModule) return webpushModule;
+  if (!webpushLoad) {
+    webpushLoad = import('web-push').then((webPushImport) => {
+      webpushModule = ((webPushImport as { default?: WebPushModule }).default ??
+        webPushImport) as WebPushModule;
+      return webpushModule;
+    });
+  }
+  return webpushLoad;
+}
 
 export function getVapidPublicKey(): string {
   return process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || '';
@@ -29,12 +38,8 @@ export function isVapidConfigured(): boolean {
   return configured;
 }
 
-export function getWebPushModule(): WebPushModule {
-  return webpushModule;
-}
-
 export async function getWebPushModuleAsync(): Promise<WebPushModule> {
-  return webpushModule;
+  return loadWebPushModule();
 }
 
 export async function configureVapidAsync(): Promise<boolean> {
@@ -45,7 +50,8 @@ export async function configureVapidAsync(): Promise<boolean> {
   if (!publicKey || !privateKey) return false;
 
   try {
-    webpushModule.setVapidDetails(getVapidSubject(), publicKey, privateKey);
+    const webpush = await loadWebPushModule();
+    webpush.setVapidDetails(getVapidSubject(), publicKey, privateKey);
     configured = true;
     return true;
   } catch (err) {

@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from './supabaseAdmin';
-import { configureVapidAsync, getWebPushModule } from './webPushLoader';
+import { configureVapidAsync, getWebPushModuleAsync } from './webPushLoader';
 
 export type PushEventType =
   | 'new_item'
@@ -249,7 +249,7 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
   });
 
   try {
-    const webpush = getWebPushModule();
+    const webpush = await getWebPushModuleAsync();
     await webpush.sendNotification(pushSubscription, notification);
     return { ok: true as const, removed: false };
   } catch (err: unknown) {

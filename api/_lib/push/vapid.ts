@@ -1,4 +1,4 @@
-import { configureVapidAsync, getWebPushModule, isVapidConfigured } from './webPushLoader';
+import { configureVapidAsync, getWebPushModuleAsync, isVapidConfigured } from './webPushLoader';
 
 export { getVapidPublicKey } from './webPushLoader';
 
@@ -38,7 +38,7 @@ export async function sendWebPush(
   });
 
   try {
-    const webpush = getWebPushModule();
+    const webpush = await getWebPushModuleAsync();
     await webpush.sendNotification(
       {
         endpoint: subscription.endpoint,
