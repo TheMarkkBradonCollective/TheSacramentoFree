@@ -1,5 +1,5 @@
-export const PUSH_ICON_PATH = '/icon-192.png';
-export const PUSH_BADGE_PATH = '/icon-192.png';
+export const PUSH_ICON_PATH = '/Logo.jpeg';
+export const PUSH_BADGE_PATH = '/Logo.jpeg';
 
 export interface NotificationPayloadInput {
   title: string;

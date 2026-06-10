@@ -238,8 +238,8 @@ async function removeInvalidSubscription(endpoint: string) {
   await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint);
 }
 
-const PUSH_ICON_PATH = '/icon-192.png';
-const PUSH_BADGE_PATH = '/icon-192.png';
+const PUSH_ICON_PATH = '/Logo.jpeg';
+const PUSH_BADGE_PATH = '/Logo.jpeg';
 
 const HIGH_URGENCY_EVENTS = new Set<PushEventType>([
   'director_alert',

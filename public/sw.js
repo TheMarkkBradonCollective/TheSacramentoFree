@@ -2,8 +2,8 @@
 // This file remains for browsers that cached an older registration.
 const CACHE_NAME = 'sac-buy-nothing-v3';
 
-const NOTIFICATION_ICON = '/icon-192.png';
-const OFFLINE_URLS = ['/index.html', '/icon.svg', '/icon-192.png', '/icon-512.png', '/manifest.json'];
+const NOTIFICATION_ICON = '/Logo.jpeg';
+const OFFLINE_URLS = ['/index.html', '/Logo.jpeg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

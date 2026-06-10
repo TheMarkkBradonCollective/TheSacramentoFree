@@ -31,7 +31,7 @@ export async function runPushTest(params: {
 
   const payload = {
     title: 'Sacramento Buy Nothing',
-    body: 'Push alerts are working on this device. You will see the community heart-and-leaf icon.',
+    body: 'Push alerts are working on this device.',
     url: '/',
     tag: 'sbn-test-push',
     eventType: 'account_update',
