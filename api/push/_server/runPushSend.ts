@@ -6,7 +6,7 @@ import {
   type PushEventType,
   type PushPayload,
 } from './pushDelivery';
-import { getUserRole, isStaffRole, roleRank, STAFF_ROLES } from './staffRoles';
+import { getUserRole, isDirectorRole, isStaffRole, normalizeUserRole, roleRank } from './staffRoles';
 
 export interface PushSendBody {
   eventType: PushEventType;
@@ -83,8 +83,9 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
   }
 
   if (eventType === 'director_alert') {
-    const { data: users } = await supabaseAdmin.from('users').select('uid, role').eq('role', 'director');
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role');
     return (users || [])
+      .filter((u) => isDirectorRole((u as { role: string }).role))
       .map((u) => String((u as { uid: string }).uid))
       .filter((uid) => uid && uid !== callerId);
   }
@@ -97,13 +98,15 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
           ? body.minStaffRank
           : 1;
 
-    const { data: users } = await supabaseAdmin.from('users').select('uid, role').in('role', [...STAFF_ROLES]);
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role');
 
     return (users || [])
       .filter((u) => {
         const uid = String((u as { uid: string }).uid);
         if (!uid || uid === callerId) return false;
-        return roleRank(String((u as { role: string }).role)) >= minRank;
+        const role = normalizeUserRole((u as { role: string }).role);
+        if (!isStaffRole(role)) return false;
+        return roleRank(role) >= minRank;
       })
       .map((u) => String((u as { uid: string }).uid));
   }

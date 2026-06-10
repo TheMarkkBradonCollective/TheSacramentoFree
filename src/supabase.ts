@@ -4041,17 +4041,9 @@ export async function createSupportTicket(params: {
 
     if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
 
-    const preview = message || (imageUrl ? 'Sent a photo' : 'Opened a help ticket');
     firePush(() =>
-      import('./lib/pushIntegration').then((m) =>
-        m.pushAfterSupportTicketOpened({
-          ticketId,
-          openerUserId: params.opener.uid,
-          openerName: params.opener.displayName,
-          subject,
-          preview,
-          minStaffRank,
-        }),
+      import('./lib/pushNotifications').then((m) =>
+        m.notifySupportTicketPush({ ticketId, event: 'opened' }),
       ),
     );
 
@@ -4166,30 +4158,16 @@ export async function addSupportTicketMessage(params: {
       .update({ updatedAt: now })
       .eq('id', params.ticketId);
 
-    const preview = text || (imageUrl ? 'Sent a photo' : 'New reply');
-
     if (params.sender.uid !== ticket.openerUserId) {
       firePush(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushAfterSupportReply({
-            ticketId: params.ticketId,
-            openerUserId: ticket.openerUserId,
-            subject: ticket.subject,
-            preview,
-          }),
+        import('./lib/pushNotifications').then((m) =>
+          m.notifySupportTicketPush({ ticketId: params.ticketId, event: 'staff_reply' }),
         ),
       );
     } else {
       firePush(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushAfterSupportUserMessage({
-            ticketId: params.ticketId,
-            openerUserId: ticket.openerUserId,
-            openerName: params.sender.displayName,
-            subject: ticket.subject,
-            preview,
-            minStaffRank: ticket.minStaffRank,
-          }),
+        import('./lib/pushNotifications').then((m) =>
+          m.notifySupportTicketPush({ ticketId: params.ticketId, event: 'user_message' }),
         ),
       );
     }
