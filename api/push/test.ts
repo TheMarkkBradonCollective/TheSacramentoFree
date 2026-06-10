@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserFromBearer } from '../_lib/push/auth';
-import { runPushTest } from '../_lib/push/runPushTest';
-import { parseJsonBody } from '../_lib/parseBody';
+import { getUserFromBearer } from '../../lib/push-server/auth';
+import { runPushTest } from '../../lib/push-server/runPushTest';
+import { parseJsonBody } from '../../lib/push-server/parseBody';
 
 type TestBody = {
   subscription?: {

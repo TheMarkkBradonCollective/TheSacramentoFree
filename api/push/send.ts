@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserFromBearer } from '../_lib/push/auth';
-import { runPushSend, type PushSendBody } from '../_lib/push/runPushSend';
-import { parseJsonBody } from '../_lib/parseBody';
+import { getUserFromBearer } from '../../lib/push-server/auth';
+import { runPushSend, type PushSendBody } from '../../lib/push-server/runPushSend';
+import { parseJsonBody } from '../../lib/push-server/parseBody';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
