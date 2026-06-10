@@ -609,17 +609,18 @@ export async function upsertSupabaseProfile(
     }
 
     if (isNewNeighbor && !isDirectorUser(profile.uid, profile.email)) {
-      firePush(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushDirectorAlert({
-            category: 'join',
-            title: `New neighbor — ${payload.displayName}`,
-            body: `${payload.neighborhood} · joined Sacramento Buy Nothing`,
-            tag: `director-join-${profile.uid}`,
-            excludeUserIds: [profile.uid],
-          }),
-        ),
-      );
+      try {
+        const m = await import('./lib/pushIntegration');
+        await m.pushDirectorAlert({
+          category: 'join',
+          title: `New neighbor — ${payload.displayName}`,
+          body: `${payload.neighborhood} · joined Sacramento Buy Nothing`,
+          tag: `director-join-${profile.uid}`,
+          excludeUserIds: [profile.uid],
+        });
+      } catch (err) {
+        console.warn('[push] director join alert failed:', err);
+      }
     }
 
     setSupabaseConfigurationState(true);
@@ -4285,6 +4286,26 @@ async function purgeUserCommunityDataClient(uid: string): Promise<void> {
     .or(`actorUserId.eq.${uid},targetUserId.eq.${uid}`);
 }
 
+async function notifyDirectorDepartureAlert(params: {
+  targetUserId: string;
+  targetName: string;
+  detail: string;
+  excludeUserIds?: string[];
+}): Promise<void> {
+  try {
+    const m = await import('./lib/pushIntegration');
+    await m.pushDirectorAlert({
+      category: 'leave',
+      title: `Neighbor left — ${params.targetName}`,
+      body: params.detail,
+      tag: `director-leave-${params.targetUserId}`,
+      excludeUserIds: params.excludeUserIds,
+    });
+  } catch (err) {
+    console.warn('[push] director departure alert failed:', err);
+  }
+}
+
 /**
  * Permanently removes the signed-in user's account (profile + auth).
  * Requires `delete_own_account()` in Supabase — run supabase-sql/account-deletion.sql.
@@ -4311,6 +4332,15 @@ export async function staffDeleteUserAccount(params: {
   }
 
   try {
+    const { data: targetProfile } = await supabase
+      .from('users')
+      .select('neighborhood')
+      .eq('uid', params.targetUserId)
+      .maybeSingle();
+    const targetArea = String(
+      (targetProfile as { neighborhood?: string } | null)?.neighborhood || 'Sacramento area',
+    );
+
     const { error: rpcError } = await supabase.rpc('staff_delete_user_account', {
       target_uid: params.targetUserId,
     });
@@ -4322,17 +4352,12 @@ export async function staffDeleteUserAccount(params: {
         action: 'delete_account',
         detail: 'Account and all community data permanently removed',
       });
-      firePush(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushDirectorAlert({
-            category: 'moderation',
-            title: 'Account deleted by staff',
-            body: `${params.actor.displayName} removed ${params.targetName}'s account`,
-            tag: `director-delete-${params.targetUserId}`,
-            excludeUserIds: [params.actor.uid],
-          }),
-        ),
-      );
+      await notifyDirectorDepartureAlert({
+        targetUserId: params.targetUserId,
+        targetName: params.targetName,
+        detail: `${targetArea} · removed by ${params.actor.displayName}`,
+        excludeUserIds: [params.actor.uid],
+      });
       return { ok: true };
     }
 
@@ -4358,17 +4383,12 @@ export async function staffDeleteUserAccount(params: {
       detail: 'Community data removed (run supabase-sql/account-deletion.sql for full auth removal)',
     });
 
-    firePush(() =>
-      import('./lib/pushIntegration').then((m) =>
-        m.pushDirectorAlert({
-          category: 'moderation',
-          title: 'Account deleted by staff',
-          body: `${params.actor.displayName} removed ${params.targetName}'s account`,
-          tag: `director-delete-${params.targetUserId}`,
-          excludeUserIds: [params.actor.uid],
-        }),
-      ),
-    );
+    await notifyDirectorDepartureAlert({
+      targetUserId: params.targetUserId,
+      targetName: params.targetName,
+      detail: `${targetArea} · removed by ${params.actor.displayName}`,
+      excludeUserIds: [params.actor.uid],
+    });
 
     return {
       ok: true,
@@ -4399,23 +4419,25 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     (leavingProfile as { neighborhood?: string } | null)?.neighborhood || 'Sacramento area',
   );
 
-  const notifyDirectorLeave = () =>
-    firePush(() =>
-      import('./lib/pushIntegration').then((m) =>
-        m.pushDirectorAlert({
-          category: 'leave',
-          title: `Neighbor left — ${leavingName}`,
-          body: `${leavingArea} · account deleted`,
-          tag: `director-leave-${uid}`,
-          excludeUserIds: [uid],
-        }),
-      ),
-    );
+  const notifyDirectorLeave = async () => {
+    try {
+      const m = await import('./lib/pushIntegration');
+      await m.pushDirectorAlert({
+        category: 'leave',
+        title: `Neighbor left — ${leavingName}`,
+        body: `${leavingArea} · account deleted`,
+        tag: `director-leave-${uid}`,
+        excludeUserIds: [uid],
+      });
+    } catch (err) {
+      console.warn('[push] director leave alert failed:', err);
+    }
+  };
 
   try {
     const { error: rpcError } = await supabase.rpc('delete_own_account');
     if (!rpcError) {
-      notifyDirectorLeave();
+      await notifyDirectorLeave();
       return { ok: true };
     }
 
@@ -4435,7 +4457,7 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     }
 
     await supabase.auth.signOut();
-    notifyDirectorLeave();
+    await notifyDirectorLeave();
     return {
       ok: true,
       errorMessage:
