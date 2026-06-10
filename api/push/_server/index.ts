@@ -5,4 +5,5 @@ export { runSupportNotify } from './supportNotify';
 export { runReportNotify } from './reportNotify';
 export { runPushTest } from './runPushTest';
 export { runPushSend, type PushSendBody } from './runPushSend';
+export { runSupabasePushWebhook, runPushResubscribe } from './webhookDispatch';
 export { parseJsonBody } from './parseBody';

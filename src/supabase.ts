@@ -3088,9 +3088,12 @@ export async function blockUser(params: {
     }
 
     if (reportSaved) {
-      firePush(() =>
-        import('./lib/pushNotifications').then((m) => m.notifyReportPush(reportId)),
-      );
+      try {
+        const m = await import('./lib/pushNotifications');
+        await m.notifyReportPush(reportId);
+      } catch (err) {
+        console.warn('[push]', err);
+      }
     }
 
     return { ok: true };
@@ -3948,9 +3951,12 @@ export async function submitUserReport(params: {
       return { ok: false, errorMessage: error.message };
     }
 
-    firePush(() =>
-      import('./lib/pushNotifications').then((m) => m.notifyReportPush(reportId)),
-    );
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifyReportPush(reportId);
+    } catch (err) {
+      console.warn('[push]', err);
+    }
 
     return { ok: true };
   } catch (err: unknown) {
@@ -4049,11 +4055,12 @@ export async function createSupportTicket(params: {
 
     if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
 
-    firePush(() =>
-      import('./lib/pushNotifications').then((m) =>
-        m.notifySupportTicketPush({ ticketId, event: 'opened' }),
-      ),
-    );
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened' });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
 
     return { ok: true, ticketId };
   } catch (err: unknown) {
@@ -4166,18 +4173,12 @@ export async function addSupportTicketMessage(params: {
       .update({ updatedAt: now })
       .eq('id', params.ticketId);
 
-    if (params.sender.uid !== ticket.openerUserId) {
-      firePush(() =>
-        import('./lib/pushNotifications').then((m) =>
-          m.notifySupportTicketPush({ ticketId: params.ticketId, event: 'staff_reply' }),
-        ),
-      );
-    } else {
-      firePush(() =>
-        import('./lib/pushNotifications').then((m) =>
-          m.notifySupportTicketPush({ ticketId: params.ticketId, event: 'user_message' }),
-        ),
-      );
+    try {
+      const m = await import('./lib/pushNotifications');
+      const event = params.sender.uid !== ticket.openerUserId ? 'staff_reply' : 'user_message';
+      await m.notifySupportTicketPush({ ticketId: params.ticketId, event });
+    } catch (err) {
+      console.warn('[push]', err);
     }
 
     return { ok: true };

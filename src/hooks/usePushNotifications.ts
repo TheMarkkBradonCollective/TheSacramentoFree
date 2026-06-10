@@ -61,6 +61,28 @@ export function usePushNotifications(userId?: string) {
   }, [userId, permission, checkSubscription]);
 
   useEffect(() => {
+    if (!userId || permission !== 'granted') return;
+
+    const refreshSubscription = () => {
+      if (document.visibilityState !== 'visible') return;
+      void ensurePushSubscription()
+        .then(() => checkSubscription())
+        .catch(() => {});
+    };
+
+    refreshSubscription();
+    const interval = window.setInterval(refreshSubscription, 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', refreshSubscription);
+    window.addEventListener('focus', refreshSubscription);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshSubscription);
+      window.removeEventListener('focus', refreshSubscription);
+    };
+  }, [userId, permission, checkSubscription]);
+
+  useEffect(() => {
     const onVisibility = () => {
       if (document.visibilityState === 'visible') refreshPermission();
     };

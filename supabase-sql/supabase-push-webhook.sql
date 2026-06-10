@@ -1,0 +1,26 @@
+-- =========================================================
+-- SERVER-SIDE PUSH WEBHOOK (optional but recommended)
+-- Ensures staff/director alerts fire even if the sender's
+-- browser closes before the client push call finishes.
+-- =========================================================
+--
+-- 1. In Vercel → Environment Variables, add:
+--    SUPABASE_PUSH_WEBHOOK_SECRET = (long random string)
+--
+-- 2. In Supabase → Database → Webhooks → Create webhook:
+--    Name: push-support-messages
+--    Table: support_ticket_messages
+--    Events: INSERT
+--    URL: https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push
+--    HTTP Headers:
+--      Authorization: Bearer <same SUPABASE_PUSH_WEBHOOK_SECRET>
+--
+-- 3. Create a second webhook:
+--    Name: push-user-reports
+--    Table: user_reports
+--    Events: INSERT
+--    URL: https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push
+--    HTTP Headers:
+--      Authorization: Bearer <same SUPABASE_PUSH_WEBHOOK_SECRET>
+--
+-- Duplicate notifications are avoided because push tags are stable per ticket/report.
