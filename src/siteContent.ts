@@ -1,5 +1,10 @@
-/** Local brand logo (public/Logo.jpeg) — do not hotlink external CDNs. */
-export const APP_LOGO_SRC = '/Logo.jpeg';
+/** Brand mark — heart + oak leaf (public/icon.svg). */
+export const APP_LOGO_SRC = '/icon.svg';
+/** PNG icons for PWA install and push notifications (generated from icon.svg). */
+export const APP_ICON_192_SRC = '/icon-192.png';
+export const APP_ICON_512_SRC = '/icon-512.png';
+export const PUSH_ICON_SRC = '/icon-192.png';
+export const PUSH_BADGE_SRC = '/icon-192.png';
 
 export const SITE = {
   name: 'Sacramento Buy Nothing',

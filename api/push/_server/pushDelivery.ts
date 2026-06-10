@@ -1,4 +1,9 @@
 import { getSupabaseAdmin } from './supabaseAdmin';
+import {
+  buildNotificationJson,
+  shouldRemoveSubscription,
+  webPushOptionsFor,
+} from './notificationPayload';
 import { configureVapidAsync, getWebPushModuleAsync } from './webPushLoader';
 
 export type PushEventType =
@@ -231,50 +236,6 @@ async function removeInvalidSubscription(endpoint: string) {
   await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint);
 }
 
-const HIGH_URGENCY_EVENTS = new Set<PushEventType>([
-  'director_alert',
-  'staff_support',
-  'staff_report',
-  'support_reply',
-  'new_message',
-  'message_request',
-  'message_request_accepted',
-  'item_claimed',
-  'claim_request',
-  'account_update',
-]);
-
-function webPushOptionsFor(eventType: PushEventType): { TTL: number; urgency: 'high' | 'normal' } {
-  return {
-    TTL: 60 * 60 * 24,
-    urgency: HIGH_URGENCY_EVENTS.has(eventType) ? 'high' : 'normal',
-  };
-}
-
-function buildNotificationPayload(payload: PushPayload): string {
-  const body = String(payload.body || '').trim() || String(payload.title || '').trim() || 'New activity';
-  return JSON.stringify({
-    title: payload.title || 'Sacramento Buy Nothing',
-    body,
-    url: payload.url,
-    icon: '/Logo.jpeg',
-    badge: '/Logo.jpeg',
-    tag: payload.tag || payload.eventType,
-    eventType: payload.eventType,
-    data: payload.data || {},
-  });
-}
-
-function shouldRemoveSubscription(err: unknown): boolean {
-  const status = (err as { statusCode?: number }).statusCode;
-  if (status === 404 || status === 410) return true;
-  if (status === 401 || status === 403) {
-    const message = String((err as { body?: string }).body || (err as Error).message || '').toLowerCase();
-    return message.includes('vapid') || message.includes('credentials') || message.includes('unauthorized');
-  }
-  return false;
-}
-
 export async function sendToSubscription(subscription: PushSubscriptionRow, payload: PushPayload) {
   if (!(await configureVapidAsync())) return { ok: false as const, removed: false };
 
@@ -283,7 +244,7 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
     keys: { p256dh: subscription.p256dh, auth: subscription.auth },
   };
 
-  const notification = buildNotificationPayload(payload);
+  const notification = buildNotificationJson(payload);
 
   try {
     const webpush = await getWebPushModuleAsync();

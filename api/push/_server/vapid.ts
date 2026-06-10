@@ -1,3 +1,8 @@
+import {
+  buildNotificationJson,
+  shouldRemoveSubscription,
+  webPushOptionsFor,
+} from './notificationPayload';
 import { configureVapidAsync, getWebPushModuleAsync, isVapidConfigured } from './webPushLoader';
 
 export { getVapidPublicKey } from './webPushLoader';
@@ -28,13 +33,13 @@ export async function sendWebPush(
     return { ok: false, removed: false };
   }
 
-  const notification = JSON.stringify({
+  const notification = buildNotificationJson({
     title: payload.title,
     body: payload.body,
     url: payload.url,
-    tag: payload.tag || payload.eventType || 'sbn-notification',
-    eventType: payload.eventType || '',
-    data: payload.data || {},
+    tag: payload.tag,
+    eventType: payload.eventType || 'account_update',
+    data: payload.data,
   });
 
   try {
@@ -45,11 +50,11 @@ export async function sendWebPush(
         keys: subscription.keys,
       },
       notification,
+      webPushOptionsFor(payload.eventType || 'account_update'),
     );
     return { ok: true, removed: false };
   } catch (err: unknown) {
-    const status = (err as { statusCode?: number }).statusCode;
-    return { ok: false, removed: status === 404 || status === 410 };
+    return { ok: false, removed: shouldRemoveSubscription(err) };
   }
 }
 

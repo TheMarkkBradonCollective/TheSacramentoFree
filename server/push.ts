@@ -238,6 +238,9 @@ async function removeInvalidSubscription(endpoint: string) {
   await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint);
 }
 
+const PUSH_ICON_PATH = '/icon-192.png';
+const PUSH_BADGE_PATH = '/icon-192.png';
+
 const HIGH_URGENCY_EVENTS = new Set<PushEventType>([
   'director_alert',
   'staff_support',
@@ -249,6 +252,8 @@ const HIGH_URGENCY_EVENTS = new Set<PushEventType>([
   'item_claimed',
   'claim_request',
   'account_update',
+  'pickup_scheduled',
+  'pickup_reminder',
 ]);
 
 function webPushOptionsFor(eventType: PushEventType): { TTL: number; urgency: 'high' | 'normal' } {
@@ -259,13 +264,14 @@ function webPushOptionsFor(eventType: PushEventType): { TTL: number; urgency: 'h
 }
 
 function buildNotificationPayload(payload: PushPayload): string {
-  const body = String(payload.body || '').trim() || String(payload.title || '').trim() || 'New activity';
+  const body =
+    String(payload.body || '').trim() || String(payload.title || '').trim() || 'New community activity';
   return JSON.stringify({
     title: payload.title || 'Sacramento Buy Nothing',
     body,
     url: payload.url,
-    icon: '/Logo.jpeg',
-    badge: '/Logo.jpeg',
+    icon: PUSH_ICON_PATH,
+    badge: PUSH_BADGE_PATH,
     tag: payload.tag || payload.eventType,
     eventType: payload.eventType,
     data: payload.data || {},
