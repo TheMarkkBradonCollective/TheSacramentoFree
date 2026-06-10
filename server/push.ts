@@ -238,58 +238,6 @@ async function removeInvalidSubscription(endpoint: string) {
   await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint);
 }
 
-const PUSH_ICON_PATH = '/Logo.jpeg';
-const PUSH_BADGE_PATH = '/Logo.jpeg';
-
-const HIGH_URGENCY_EVENTS = new Set<PushEventType>([
-  'director_alert',
-  'staff_support',
-  'staff_report',
-  'support_reply',
-  'new_message',
-  'message_request',
-  'message_request_accepted',
-  'item_claimed',
-  'claim_request',
-  'account_update',
-  'pickup_scheduled',
-  'pickup_reminder',
-]);
-
-function webPushOptionsFor(eventType: PushEventType): { TTL: number; urgency: 'high' | 'normal' } {
-  return {
-    TTL: 60 * 60 * 24,
-    urgency: HIGH_URGENCY_EVENTS.has(eventType) ? 'high' : 'normal',
-  };
-}
-
-function buildNotificationPayload(payload: PushPayload): string {
-  const body =
-    String(payload.body || '').trim() || String(payload.title || '').trim() || 'New community activity';
-  return JSON.stringify({
-    title: payload.title || 'Sacramento Buy Nothing',
-    body,
-    url: payload.url,
-    icon: PUSH_ICON_PATH,
-    badge: PUSH_BADGE_PATH,
-    tag: payload.tag || payload.eventType,
-    eventType: payload.eventType,
-    data: payload.data || {},
-  });
-}
-
-function shouldRemoveSubscription(err: unknown): boolean {
-  const status = (err as { statusCode?: number }).statusCode;
-  if (status === 404 || status === 410) return true;
-  const message = String((err as { body?: string }).body || (err as Error).message || '').toLowerCase();
-  return (
-    message.includes('expired') ||
-    message.includes('unsubscribed') ||
-    message.includes('notregistered') ||
-    message.includes('invalid registration')
-  );
-}
-
 export async function sendToSubscription(subscription: PushSubscriptionRow, payload: PushPayload) {
   if (!(await configureVapidAsync())) return { ok: false as const, removed: false };
 
@@ -298,24 +246,26 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
     keys: { p256dh: subscription.p256dh, auth: subscription.auth },
   };
 
-  const notification = buildNotificationPayload(payload);
+  const notification = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    url: payload.url,
+    tag: payload.tag || payload.eventType,
+    eventType: payload.eventType,
+    data: payload.data || {},
+  });
 
   try {
     const webpush = await getWebPushModuleAsync();
-    const options = webPushOptionsFor(payload.eventType);
-    try {
-      await webpush.sendNotification(pushSubscription, notification, options);
-    } catch {
-      await webpush.sendNotification(pushSubscription, notification);
-    }
+    await webpush.sendNotification(pushSubscription, notification);
     return { ok: true as const, removed: false };
   } catch (err: unknown) {
-    if (shouldRemoveSubscription(err)) {
+    const status = (err as { statusCode?: number }).statusCode;
+    if (status === 404 || status === 410) {
       await removeInvalidSubscription(subscription.endpoint);
       return { ok: false as const, removed: true };
     }
-    const status = (err as { statusCode?: number }).statusCode;
-    console.error('[push] send failed:', status, (err as Error).message);
+    console.error('[push] send failed:', (err as Error).message);
     return { ok: false as const, removed: false };
   }
 }

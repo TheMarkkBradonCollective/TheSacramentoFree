@@ -1,9 +1,4 @@
 import { getSupabaseAdmin } from './supabaseAdmin';
-import {
-  buildNotificationJson,
-  shouldRemoveSubscription,
-  webPushOptionsFor,
-} from './notificationPayload';
 import { configureVapidAsync, getWebPushModuleAsync } from './webPushLoader';
 
 export type PushEventType =
@@ -244,25 +239,26 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
     keys: { p256dh: subscription.p256dh, auth: subscription.auth },
   };
 
-  const notification = buildNotificationJson(payload);
+  const notification = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    url: payload.url,
+    tag: payload.tag || payload.eventType,
+    eventType: payload.eventType,
+    data: payload.data || {},
+  });
 
   try {
     const webpush = await getWebPushModuleAsync();
-    const options = webPushOptionsFor(payload.eventType);
-    try {
-      await webpush.sendNotification(pushSubscription, notification, options);
-    } catch (firstErr: unknown) {
-      // Some push gateways reject urgency/TTL — retry plain delivery.
-      await webpush.sendNotification(pushSubscription, notification);
-    }
+    await webpush.sendNotification(pushSubscription, notification);
     return { ok: true as const, removed: false };
   } catch (err: unknown) {
-    if (shouldRemoveSubscription(err)) {
+    const status = (err as { statusCode?: number }).statusCode;
+    if (status === 404 || status === 410) {
       await removeInvalidSubscription(subscription.endpoint);
       return { ok: false as const, removed: true };
     }
-    const status = (err as { statusCode?: number }).statusCode;
-    console.error('[push] send failed:', status, (err as Error).message);
+    console.error('[push] send failed:', (err as Error).message);
     return { ok: false as const, removed: false };
   }
 }

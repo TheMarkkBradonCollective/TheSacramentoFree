@@ -1,7 +1,6 @@
-const CACHE_NAME = 'sac-buy-nothing-v8';
+const CACHE_NAME = 'sac-buy-nothing-v9';
 
-const NOTIFICATION_ICON = '/Logo.jpeg';
-const OFFLINE_URLS = ['/index.html', '/Logo.jpeg', '/manifest.json'];
+const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -116,14 +115,6 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-function notificationAsset(path) {
-  try {
-    return new URL(path, self.location.origin).href;
-  } catch {
-    return path;
-  }
-}
-
 function resolveNotificationUrl(rawUrl) {
   if (!rawUrl) return '/';
   try {
@@ -138,45 +129,31 @@ function resolveNotificationUrl(rawUrl) {
 }
 
 self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
   let payload = {};
-  if (event.data) {
-    try {
-      payload = event.data.json();
-    } catch {
-      payload = { title: 'Sacramento Buy Nothing', body: event.data.text() };
-    }
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: 'Sacramento Buy Nothing', body: event.data.text() };
   }
 
   const title = payload.title || 'Sacramento Buy Nothing';
-  const body =
-    String(payload.body || '').trim() ||
-    String(payload.title || '').trim() ||
-    'You have a new community update.';
-  const data = {
-    url: resolveNotificationUrl(payload.url || '/'),
-    eventType: payload.eventType || '',
-    ...(payload.data || {}),
+  const options = {
+    body: payload.body || '',
+    icon: payload.icon || '/Logo.jpeg',
+    badge: payload.badge || '/Logo.jpeg',
+    tag: payload.tag || payload.eventType || 'sbn-notification',
+    data: {
+      url: resolveNotificationUrl(payload.url || '/'),
+      eventType: payload.eventType || '',
+      ...(payload.data || {}),
+    },
+    requireInteraction: false,
+    renotify: true,
   };
-  const tag = payload.tag || payload.eventType || 'sbn-notification';
 
-  async function show() {
-    const withIcon = {
-      body,
-      icon: notificationAsset(payload.icon || NOTIFICATION_ICON),
-      badge: notificationAsset(payload.badge || NOTIFICATION_ICON),
-      tag,
-      data,
-      requireInteraction: false,
-      renotify: true,
-    };
-    try {
-      await self.registration.showNotification(title, withIcon);
-    } catch {
-      await self.registration.showNotification(title, { body, tag, data, renotify: true });
-    }
-  }
-
-  event.waitUntil(show());
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {

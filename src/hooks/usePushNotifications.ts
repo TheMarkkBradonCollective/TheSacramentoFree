@@ -21,7 +21,6 @@ export function usePushNotifications(userId?: string) {
   const [isTesting, setIsTesting] = useState(false);
   const [testMessage, setTestMessage] = useState('');
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
-  const [serverDeliveryReady, setServerDeliveryReady] = useState<boolean | null>(null);
 
   const refreshPermission = useCallback(() => {
     setPermission(getPushPermissionState());
@@ -51,13 +50,6 @@ export function usePushNotifications(userId?: string) {
     void loadPreferences();
     void checkSubscription();
   }, [loadPreferences, checkSubscription]);
-
-  useEffect(() => {
-    void fetch('/api/push/ping')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setServerDeliveryReady(Boolean(json?.deliveryReady)))
-      .catch(() => setServerDeliveryReady(null));
-  }, []);
 
   useEffect(() => {
     if (!userId || permission !== 'granted') return;

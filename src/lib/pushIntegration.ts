@@ -6,7 +6,6 @@ import {
   notifyItemClaimed,
   notifyItemGifted,
   notifyListingExpiringSoon,
-  notifyListingStatusChange,
   notifyNewComment,
   notifyNewListingPosted,
   notifyMessageRequest,
@@ -17,7 +16,6 @@ import {
   notifyRequestFulfilled,
   notifyDirectorAlert,
 } from './pushEvents';
-import { clip } from './pushCopy';
 
 export async function pushDirectorAlert(params: {
   category: DirectorAlertCategory;
@@ -40,7 +38,7 @@ export async function pushAfterItemCreated(item: ItemPost) {
   await pushDirectorAlert({
     category: 'listing',
     title: item.type === 'looking' ? 'New neighbor request' : 'New listing posted',
-    body: clip(`${item.userDisplayName}: ${item.title} · ${item.neighborhood}`),
+    body: `${item.userDisplayName}: ${item.title} (${item.neighborhood})`,
     tag: `director-listing-${item.id}`,
     excludeUserIds: [item.userId],
   });
@@ -54,8 +52,8 @@ export async function pushAfterClaimRequest(params: {
   await notifyClaimRequestSubmitted(params);
   await pushDirectorAlert({
     category: 'claim_request',
-    title: 'New claim request',
-    body: clip(`${params.claimerName} requested "${params.item.title}"`),
+    title: 'Claim request',
+    body: `${params.claimerName} requested pickup: ${params.item.title}`,
     tag: `director-claim-${params.requestId}`,
     excludeUserIds: [params.item.userId],
   });
@@ -118,11 +116,10 @@ export async function pushAfterMessageRequest(params: {
     senderName: params.fromUserName,
     preview: params.message,
   });
-  const preview = params.message?.trim();
   await pushDirectorAlert({
     category: 'message_request',
-    title: `Message request — ${params.fromUserName}`,
-    body: preview ? `${params.fromUserName}: ${preview.slice(0, 140)}` : `${params.fromUserName} asked to start a chat`,
+    title: 'Message request',
+    body: `${params.fromUserName} asked to start a chat`,
     tag: `director-dmreq-${params.requestId}`,
     excludeUserIds: params.fromUserId ? [params.fromUserId] : undefined,
   });
@@ -217,26 +214,9 @@ export async function pushAfterPendingPickup(itemId: string, actorUserId: string
 
 export async function pushDirectorAnnouncement(title: string, body: string) {
   await notifyCommunityAnnouncement({
-    title: title.trim() || 'Community update',
-    body: body.trim() || 'Open the app for the latest news.',
+    title,
+    body,
   });
-}
-
-export async function pushAfterListingStatusChange(itemId: string, status: string, ownerUserId: string) {
-  const item = await getItemById(itemId);
-  if (!item || item.userId !== ownerUserId) return;
-
-  const labels: Record<string, string> = {
-    withdrawn: 'Withdrawn from the feed',
-    on_hold: 'On hold',
-    active: 'Active again',
-    completed: 'Marked as gifted',
-    pending_pickup: 'Pending pickup',
-  };
-  const statusLabel = labels[status];
-  if (!statusLabel) return;
-
-  await notifyListingStatusChange({ item, statusLabel });
 }
 
 export async function pushAccountStatusChange(userId: string, title: string, body: string) {

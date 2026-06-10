@@ -1,6 +1,5 @@
 export { getBearerToken, getUserFromBearer } from './auth';
 export { getSupabaseAdmin, getSupabaseForUser, getServiceRoleKey } from './supabaseAdmin';
-export { getVapidPublicKey } from './webPushLoader';
 export { isStaffRole } from './staffRoles';
 export { runSupportNotify } from './supportNotify';
 export { runReportNotify } from './reportNotify';

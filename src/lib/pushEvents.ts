@@ -1,6 +1,5 @@
 import { convertPercentToLatLng, extractGPSCoordinates } from '../types';
 import type { DirectorAlertCategory, ItemPost } from '../types';
-import { clip, directorAlert, listingAlert, neighborMessage } from './pushCopy';
 import { sendPushNotification } from './pushNotifications';
 import {
   pushUrlForConversation,
@@ -20,16 +19,11 @@ export async function notifyNewListingPosted(item: ItemPost) {
   const isRequest = item.type === 'looking';
   const eventType = isRequest ? 'new_request' : 'new_item';
   const coords = itemCoords(item);
-  const copy = listingAlert(
-    isRequest ? 'New neighbor request' : 'New free item',
-    item.userDisplayName,
-    `${item.title} · ${item.neighborhood}`,
-  );
 
   await sendPushNotification({
     eventType,
-    title: copy.title,
-    body: copy.body,
+    title: isRequest ? 'New neighbor request' : 'New free item posted',
+    body: `${item.userDisplayName}: ${item.title}`,
     url: pushUrlForListing(item.id),
     listingId: item.id,
     category: item.category,
@@ -49,7 +43,7 @@ export async function notifyItemClaimed(params: {
   await sendPushNotification({
     eventType: 'item_claimed',
     title: 'Your item was claimed',
-    body: clip(`${params.claimerName} wants "${params.item.title}" — coordinate pickup in chat`),
+    body: `${params.claimerName} claimed "${params.item.title}"`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.posterUserId],
@@ -64,8 +58,8 @@ export async function notifyItemGifted(params: {
 }) {
   await sendPushNotification({
     eventType: 'item_gifted',
-    title: 'Item marked gifted',
-    body: clip(`"${params.item.title}" was gifted in the community`),
+    title: 'Item gifted successfully',
+    body: `"${params.item.title}" has been marked as gifted`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.posterUserId, params.claimerUserId],
@@ -79,16 +73,15 @@ export async function notifyMessageRequest(params: {
   senderName: string;
   preview?: string | null;
 }) {
-  const copy = neighborMessage(
-    params.senderName,
-    params.preview || '',
-    `${params.senderName} wants to start a chat with you`,
-  );
+  const preview = params.preview?.trim();
+  const body = preview
+    ? `${params.senderName}: ${preview.slice(0, 120)}`
+    : `${params.senderName} wants to message you`;
 
   await sendPushNotification({
     eventType: 'message_request',
-    title: 'Message request',
-    body: clip(`${copy.title}: ${copy.body}`),
+    title: 'New message request',
+    body,
     url: pushUrlForMessageRequests(),
     recipientUserIds: [params.recipientUserId],
     tag: `dm-req-${params.requestId}`,
@@ -103,8 +96,8 @@ export async function notifyMessageRequestAccepted(params: {
 }) {
   await sendPushNotification({
     eventType: 'message_request_accepted',
-    title: 'Chat request accepted',
-    body: clip(`${params.accepterName} accepted your message request — you can chat now`),
+    title: 'Message request accepted',
+    body: `${params.accepterName} accepted your message request`,
     url: pushUrlForConversation(params.chatId),
     conversationId: params.chatId,
     recipientUserIds: [params.recipientUserId],
@@ -118,12 +111,10 @@ export async function notifyNewMessage(params: {
   senderName: string;
   preview: string;
 }) {
-  const copy = neighborMessage(params.senderName, params.preview, 'Sent you a new message');
-
   await sendPushNotification({
     eventType: 'new_message',
-    title: copy.title,
-    body: copy.body,
+    title: `Message from ${params.senderName}`,
+    body: params.preview.slice(0, 140),
     url: pushUrlForConversation(params.chatId),
     conversationId: params.chatId,
     recipientUserIds: [params.recipientUserId],
@@ -138,8 +129,8 @@ export async function notifyNewComment(params: {
 }) {
   await sendPushNotification({
     eventType: 'new_comment',
-    title: `Comment on "${clip(params.item.title, 40)}"`,
-    body: clip(`${params.commenterName}: ${params.preview}`),
+    title: 'New comment on your listing',
+    body: `${params.commenterName}: ${params.preview.slice(0, 120)}`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
@@ -155,7 +146,7 @@ export async function notifyPickupScheduled(params: {
   await sendPushNotification({
     eventType: 'pickup_scheduled',
     title: 'Pickup scheduled',
-    body: clip(`"${params.item.title}" — ${params.whenLabel}`),
+    body: `"${params.item.title}" — ${params.whenLabel}`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: params.recipientUserIds,
@@ -170,7 +161,7 @@ export async function notifyPickupReminder(params: {
   await sendPushNotification({
     eventType: 'pickup_reminder',
     title: 'Pickup reminder',
-    body: clip(`Don't forget to pick up "${params.item.title}" — check messages for details`),
+    body: `Don't forget to pick up "${params.item.title}"`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: params.recipientUserIds,
@@ -181,8 +172,8 @@ export async function notifyPickupReminder(params: {
 export async function notifyListingApproved(item: ItemPost) {
   await sendPushNotification({
     eventType: 'listing_approved',
-    title: 'Listing is live',
-    body: clip(`"${item.title}" is now visible to neighbors`),
+    title: 'Listing approved',
+    body: `"${item.title}" is now live in the community`,
     url: pushUrlForListing(item.id),
     listingId: item.id,
     recipientUserIds: [item.userId],
@@ -193,8 +184,8 @@ export async function notifyListingApproved(item: ItemPost) {
 export async function notifyListingDenied(item: ItemPost, reason?: string) {
   await sendPushNotification({
     eventType: 'listing_denied',
-    title: 'Listing needs changes',
-    body: clip(reason || `"${item.title}" was not approved yet — check your messages for details`),
+    title: 'Listing not approved',
+    body: reason || `"${item.title}" needs changes before it can go live`,
     url: pushUrlForListing(item.id),
     listingId: item.id,
     recipientUserIds: [item.userId],
@@ -202,26 +193,11 @@ export async function notifyListingDenied(item: ItemPost, reason?: string) {
   });
 }
 
-export async function notifyListingStatusChange(params: {
-  item: ItemPost;
-  statusLabel: string;
-}) {
-  await sendPushNotification({
-    eventType: 'listing_status',
-    title: 'Your listing was updated',
-    body: clip(`"${params.item.title}" — ${params.statusLabel}`),
-    url: pushUrlForListing(params.item.id),
-    listingId: params.item.id,
-    recipientUserIds: [params.item.userId],
-    tag: `status-${params.item.id}`,
-  });
-}
-
 export async function notifyListingExpiringSoon(item: ItemPost) {
   await sendPushNotification({
     eventType: 'listing_expiring',
     title: 'Listing expiring soon',
-    body: clip(`"${item.title}" will expire soon — renew it or mark as gifted`),
+    body: `"${item.title}" will expire soon — renew or mark as gifted`,
     url: pushUrlForListing(item.id),
     listingId: item.id,
     recipientUserIds: [item.userId],
@@ -236,8 +212,8 @@ export async function notifyCommunityAnnouncement(params: {
 }) {
   await sendPushNotification({
     eventType: 'announcement',
-    title: clip(params.title, 80),
-    body: clip(params.body, 180),
+    title: params.title,
+    body: params.body,
     url: '/notifications',
     cities: params.cities,
     tag: 'community-announcement',
@@ -251,8 +227,8 @@ export async function notifyAccountUpdate(params: {
 }) {
   await sendPushNotification({
     eventType: 'account_update',
-    title: clip(params.title, 80),
-    body: clip(params.body, 180),
+    title: params.title,
+    body: params.body,
     url: '/profile',
     recipientUserIds: [params.userId],
     tag: `account-${params.userId}`,
@@ -266,11 +242,10 @@ export async function notifyDirectorAlert(params: {
   tag?: string;
   excludeUserIds?: string[];
 }) {
-  const copy = directorAlert(params.title, params.body);
   await sendPushNotification({
     eventType: 'director_alert',
-    title: copy.title,
-    body: copy.body,
+    title: params.title,
+    body: params.body.slice(0, 200),
     url: pushUrlForDirectorOverview(),
     excludeUserIds: params.excludeUserIds,
     tag: params.tag || 'director-alert',
@@ -285,8 +260,8 @@ export async function notifySavedItemUpdate(params: {
 }) {
   await sendPushNotification({
     eventType: 'saved_item_update',
-    title: 'Saved listing updated',
-    body: clip(`"${params.item.title}" — ${params.statusLabel}`),
+    title: 'Saved item update',
+    body: `"${params.item.title}" — ${params.statusLabel}`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.recipientUserId],
@@ -302,7 +277,7 @@ export async function notifyClaimRequestSubmitted(params: {
   await sendPushNotification({
     eventType: 'claim_request',
     title: 'New claim request',
-    body: clip(`${params.claimerName} wants to claim "${params.item.title}"`),
+    body: `${params.claimerName} wants to claim "${params.item.title}"`,
     url: pushUrlForRequest(params.requestId),
     listingId: params.item.id,
     requestId: params.requestId,
@@ -318,8 +293,8 @@ export async function notifyRequestFulfilled(params: {
 }) {
   await sendPushNotification({
     eventType: 'request_fulfilled',
-    title: 'Your request was fulfilled',
-    body: clip(`${params.ownerName} marked "${params.item.title}" as fulfilled`),
+    title: 'Request fulfilled',
+    body: `${params.ownerName} marked "${params.item.title}" as fulfilled`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.helperUserId],

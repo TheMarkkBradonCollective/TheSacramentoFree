@@ -7,7 +7,6 @@ import {
   type UserProfile,
 } from '../types';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { needsIosHomeScreenForPush } from '../lib/pushNotifications';
 import { isDirectorRole, isStaffRole } from '../lib/roles';
 
 interface NotificationSettingsProps {
@@ -194,7 +193,6 @@ export default function NotificationSettings({
     sendTestNotification,
     isTesting,
     testMessage,
-    serverDeliveryReady,
   } = usePushNotifications(userId);
 
   const shell = fullBleed
@@ -250,13 +248,6 @@ export default function NotificationSettings({
         Get real-time alerts for listings, messages, support, saved items, and community news — even when the app
         is closed.
       </p>
-
-      {needsIosHomeScreenForPush() && (
-        <p className="text-sm text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-4">
-          On iPhone and iPad, add this app to your Home Screen first (Share → Add to Home Screen), then open it
-          from the icon and enable notifications here. Safari tabs alone cannot receive pushes reliably.
-        </p>
-      )}
 
       {permission === 'unsupported' && (
         <p className="text-sm text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-4">

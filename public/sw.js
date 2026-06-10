@@ -2,8 +2,7 @@
 // This file remains for browsers that cached an older registration.
 const CACHE_NAME = 'sac-buy-nothing-v3';
 
-const NOTIFICATION_ICON = '/Logo.jpeg';
-const OFFLINE_URLS = ['/index.html', '/Logo.jpeg', '/manifest.json'];
+const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -120,91 +119,5 @@ self.addEventListener('fetch', (event) => {
         return response;
       });
     })
-  );
-});
-
-function notificationAsset(path) {
-  try {
-    return new URL(path, self.location.origin).href;
-  } catch {
-    return path;
-  }
-}
-
-function resolveNotificationUrl(rawUrl) {
-  if (!rawUrl) return '/';
-  try {
-    const parsed = new URL(rawUrl, self.location.origin);
-    if (parsed.origin === self.location.origin) {
-      return parsed.pathname + parsed.search + parsed.hash;
-    }
-    return rawUrl;
-  } catch {
-    return rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
-  }
-}
-
-self.addEventListener('push', (event) => {
-  let payload = {};
-  if (event.data) {
-    try {
-      payload = event.data.json();
-    } catch {
-      payload = { title: 'Sacramento Buy Nothing', body: event.data.text() };
-    }
-  }
-
-  const title = payload.title || 'Sacramento Buy Nothing';
-  const body =
-    String(payload.body || '').trim() ||
-    String(payload.title || '').trim() ||
-    'You have a new community update.';
-  const data = {
-    url: resolveNotificationUrl(payload.url || '/'),
-    eventType: payload.eventType || '',
-    ...(payload.data || {}),
-  };
-  const tag = payload.tag || payload.eventType || 'sbn-notification';
-
-  async function show() {
-    const withIcon = {
-      body,
-      icon: notificationAsset(payload.icon || NOTIFICATION_ICON),
-      badge: notificationAsset(payload.badge || NOTIFICATION_ICON),
-      tag,
-      data,
-      requireInteraction: false,
-      renotify: true,
-    };
-    try {
-      await self.registration.showNotification(title, withIcon);
-    } catch {
-      await self.registration.showNotification(title, { body, tag, data, renotify: true });
-    }
-  }
-
-  event.waitUntil(show());
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-
-  const targetUrl = resolveNotificationUrl(
-    event.notification.data?.url || event.notification.data?.destination || '/',
-  );
-
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          client.postMessage({ type: 'NOTIFICATION_CLICK', url: targetUrl });
-          return client.focus();
-        }
-      }
-
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl);
-      }
-    }),
   );
 });
