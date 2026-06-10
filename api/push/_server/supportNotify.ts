@@ -52,7 +52,7 @@ export async function runSupportNotify(
       eventType: 'support_reply',
       title: 'Support reply',
       body: `${subject}: ${preview.slice(0, 120)}`,
-      url: '/menu',
+      url: `/support/${ticketId}`,
       recipientUserIds: [openerUserId],
       tag: `support-${dedupeKey}`,
       data: { ticketId },

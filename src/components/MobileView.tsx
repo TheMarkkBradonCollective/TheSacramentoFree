@@ -48,6 +48,10 @@ interface MobileViewProps {
   onClearInitialStaffPanel?: () => void;
   initialHelpPanel?: 'updates' | 'announcements' | null;
   onClearInitialHelpPanel?: () => void;
+  initialSupportTicketId?: string | null;
+  onClearInitialSupportTicket?: () => void;
+  initialChatSupportView?: 'list' | 'new' | null;
+  onClearInitialChatSupportView?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
 }
@@ -94,6 +98,10 @@ export default function MobileView({
   onClearInitialStaffPanel,
   initialHelpPanel = null,
   onClearInitialHelpPanel,
+  initialSupportTicketId = null,
+  onClearInitialSupportTicket,
+  initialChatSupportView = null,
+  onClearInitialChatSupportView,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
 }: MobileViewProps) {
@@ -249,6 +257,10 @@ export default function MobileView({
               userProfile={userProfile}
               initialSelectedChatId={initialSelectedChatId}
               onClearInitialChat={onClearInitialChat}
+              initialSupportTicketId={initialSupportTicketId}
+              onClearInitialSupportTicket={onClearInitialSupportTicket}
+              initialChatSupportView={initialChatSupportView}
+              onClearInitialChatSupportView={onClearInitialChatSupportView}
               pendingChatCompose={pendingChatCompose}
               onClearPendingChatCompose={onClearPendingChatCompose}
               items={items}

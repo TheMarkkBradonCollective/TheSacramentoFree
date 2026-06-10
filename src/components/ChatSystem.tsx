@@ -10,7 +10,17 @@ import {
   acceptMessageRequest,
   declineMessageRequest,
   updateSupabaseItemStatus,
+  getUserDisplayInfoByIds,
 } from '../supabase';
+import {
+  isCommunityChat,
+  isGlobalCommunityChat,
+  isStaffCommunityChat,
+  communityChatTitle,
+  communityChatSubtitle,
+} from '../lib/communityChats';
+import { isStaffRole } from '../lib/roles';
+import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
   MessageSquare,
@@ -23,6 +33,10 @@ import {
   Navigation,
   CheckCircle,
   UserPlus,
+  Globe,
+  Shield,
+  LifeBuoy,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
@@ -36,6 +50,10 @@ interface ChatSystemProps {
   userProfile: UserProfile;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialSupportTicketId?: string | null;
+  onClearInitialSupportTicket?: () => void;
+  initialChatSupportView?: 'list' | 'new' | null;
+  onClearInitialChatSupportView?: () => void;
   pendingChatCompose?: PendingChatCompose | null;
   onClearPendingChatCompose?: () => void;
   items: ItemPost[];
@@ -51,6 +69,10 @@ export default function ChatSystem({
   userProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialSupportTicketId = null,
+  onClearInitialSupportTicket,
+  initialChatSupportView = null,
+  onClearInitialChatSupportView,
   pendingChatCompose = null,
   onClearPendingChatCompose,
   items,
@@ -64,13 +86,23 @@ export default function ChatSystem({
   const [incomingRequests, setIncomingRequests] = useState<MessageRequest[]>([]);
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [supportView, setSupportView] = useState<ChatSupportView>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [senderNames, setSenderNames] = useState<Record<string, { displayName: string; photoURL?: string }>>({});
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isChatsLoading, setIsChatsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const userIsStaff = isStaffRole(userProfile.role);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!initialChatSupportView) return;
+    setSupportView(initialChatSupportView);
+    setSelectedChat(null);
+    onClearInitialChatSupportView?.();
+  }, [initialChatSupportView, onClearInitialChatSupportView]);
 
   const formatTime = (value: unknown) => {
     if (!value) return '';
@@ -107,7 +139,7 @@ export default function ChatSystem({
     const loadChats = async () => {
       try {
         const [loadedChats, requests] = await Promise.all([
-          getSupabaseChats(userProfile.uid),
+          getSupabaseChats(userProfile.uid, { userRole: userProfile.role }),
           getIncomingMessageRequests(userProfile.uid),
         ]);
         if (!active) return;
@@ -129,6 +161,7 @@ export default function ChatSystem({
           const target = visibleChats.find((c) => c.id === initialSelectedChatId);
           if (target) {
             setSelectedChat((prev) => prev ?? target);
+            setSupportView(null);
           }
         } else if (pendingChatCompose) {
           const existing = visibleChats.find((c) => c.id === pendingChatCompose.chatId);
@@ -189,7 +222,7 @@ export default function ChatSystem({
       unsubMessagesForInbox();
       unsubRequests();
     };
-  }, [userProfile.uid, initialSelectedChatId, pendingChatCompose, blockedUserIds, onClearPendingChatCompose, userProfile.displayName, userProfile.photoURL]);
+  }, [userProfile.uid, userProfile.role, initialSelectedChatId, pendingChatCompose, blockedUserIds, onClearPendingChatCompose, userProfile.displayName, userProfile.photoURL]);
 
   useEffect(() => {
     if (!pendingChatCompose || initialSelectedChatId) return;
@@ -223,7 +256,7 @@ export default function ChatSystem({
     const chatId = selectedChat.id;
 
     const refreshChatMeta = debounceRealtime(() => {
-      void getSupabaseChats(userProfile.uid).then((loadedChats) => {
+      void getSupabaseChats(userProfile.uid, { userRole: userProfile.role }).then((loadedChats) => {
         if (!active) return;
         loadedChats.sort((a, b) => {
           const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
@@ -243,6 +276,13 @@ export default function ChatSystem({
         const loadedMessages = await getSupabaseMessages(chatId);
         if (!active) return;
         setMessages(loadedMessages);
+        if (isCommunityChat(chatId)) {
+          const ids = loadedMessages.map((m) => m.senderId);
+          const info = await getUserDisplayInfoByIds(ids);
+          if (active) setSenderNames(info);
+        } else {
+          setSenderNames({});
+        }
       } catch (err) {
         console.warn('Failed to load messages from Supabase:', err);
       }
@@ -266,6 +306,11 @@ export default function ChatSystem({
           if (prev.some((m) => m.id === row.id)) return prev;
           return [...prev, row];
         });
+        if (isCommunityChat(chatId) && row.senderId) {
+          void getUserDisplayInfoByIds([row.senderId]).then((info) => {
+            if (active) setSenderNames((prev) => ({ ...prev, ...info }));
+          });
+        }
         refreshChatMeta();
       },
     );
@@ -274,10 +319,11 @@ export default function ChatSystem({
       active = false;
       unsubMessages();
     };
-  }, [selectedChat?.id, userProfile.uid]);
+  }, [selectedChat?.id, userProfile.uid, userProfile.role]);
 
   const ensureChatExists = async (firstMessageText: string): Promise<boolean> => {
     if (!selectedChat) return false;
+    if (isCommunityChat(selectedChat.id)) return true;
 
     const inList = chats.some((c) => c.id === selectedChat.id);
     if (inList && !pendingChatCompose) return true;
@@ -325,6 +371,10 @@ export default function ChatSystem({
 
   const sendChatText = async (text: string) => {
     if (!selectedChat || !text.trim() || isSending) return false;
+    if (isStaffCommunityChat(selectedChat.id) && !userIsStaff) {
+      setErrorMsg('Staff chat is for team members only.');
+      return false;
+    }
 
     setIsSending(true);
     setErrorMsg('');
@@ -458,7 +508,24 @@ export default function ChatSystem({
     return { otherId, otherName, otherPhoto };
   };
 
+  const selectChat = (chat: Chat) => {
+    setSelectedChat(chat);
+    setSupportView(null);
+    onClearInitialChat();
+  };
+
+  const openSupport = (view: ChatSupportView) => {
+    setSupportView(view);
+    setSelectedChat(null);
+    onClearInitialChat();
+    onClearPendingChatCompose?.();
+  };
+
+  const communityChats = chats.filter((c) => isCommunityChat(c.id));
+  const directChats = chats.filter((c) => !isCommunityChat(c.id));
+
   const getFormattedChatTitle = (chat: Chat) => {
+    if (isCommunityChat(chat.id)) return communityChatTitle(chat.id);
     if (!chat.itemId || !chat.itemTitle) {
       return getRecipientInfo(chat).otherName;
     }
@@ -483,7 +550,7 @@ export default function ChatSystem({
         setErrorMsg(result.errorMessage || 'Could not accept request.');
         return;
       }
-      const loadedChats = await getSupabaseChats(userProfile.uid);
+      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
       const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
       visible.sort((a, b) => {
         const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
@@ -539,11 +606,11 @@ export default function ChatSystem({
         className={`flex flex-col min-h-0 shrink-0 border-r border-app w-full md:w-72 lg:w-80 ${
           fullBleed ? 'bg-app' : 'bg-surface'
         } ${
-          selectedChat ? 'hidden md:flex' : 'flex'
+          selectedChat || supportView ? 'hidden md:flex' : 'flex'
         }`}
       >
         <div className="shrink-0 px-4 py-3 border-b border-app flex items-center justify-between gap-2">
-          <h3 className="font-display font-semibold text-sm text-app">Messages</h3>
+          <h3 className="font-display font-semibold text-sm text-app">Chat</h3>
           <span className="sbn-badge text-[10px]">
             {chats.length + incomingRequests.length}
           </span>
@@ -612,18 +679,107 @@ export default function ChatSystem({
             </div>
           )}
 
+          {communityChats.length > 0 && (
+            <div className="border-b border-app">
+              <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide">
+                Community
+              </div>
+              {communityChats.map((chat) => {
+                const isSelected = selectedChat?.id === chat.id && !supportView;
+                const isGlobal = isGlobalCommunityChat(chat.id);
+                return (
+                  <button
+                    key={chat.id}
+                    type="button"
+                    id={`chat_row_${chat.id}`}
+                    onClick={() => selectChat(chat)}
+                    className={`text-left p-3 flex items-start gap-3 transition-colors cursor-pointer w-full ${
+                      mobileConversationRowBase
+                    } ${
+                      isSelected
+                        ? 'bg-accent-soft border-l-[3px] border-l-accent'
+                        : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
+                    } ${fullBleed ? 'mx-3 mt-2 mb-0 w-auto' : ''}`}
+                  >
+                    <span
+                      className={`shrink-0 w-10 h-10 rounded-full border border-app flex items-center justify-center ${
+                        isGlobal ? 'bg-emerald-500/10 text-emerald-500' : 'bg-violet-500/10 text-violet-500'
+                      }`}
+                    >
+                      {isGlobal ? <Globe className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-app truncate">
+                          {communityChatTitle(chat.id)}
+                        </p>
+                        {chat.lastMessageAt && (
+                          <span className="text-[10px] text-subtle shrink-0">
+                            {formatTime(chat.lastMessageAt)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted mt-0.5">{communityChatSubtitle(chat.id)}</p>
+                      <p className="text-xs text-muted mt-1 line-clamp-2">
+                        {chat.lastMessageText || 'Say hello'}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="border-b border-app px-3 py-3 space-y-2">
+            <div className="px-1 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
+              <LifeBuoy className="w-3.5 h-3.5" />
+              Support
+            </div>
+            <button
+              type="button"
+              onClick={() => openSupport('list')}
+              className={`text-left w-full p-2.5 flex items-center gap-2 rounded-xl transition-colors ${
+                supportView
+                  ? 'bg-accent-soft border-l-[3px] border-l-accent'
+                  : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
+              }`}
+            >
+              <LifeBuoy className="w-4 h-4 text-accent shrink-0" />
+              <span className="min-w-0 flex-1">
+                <p className="font-semibold text-xs text-app">My support tickets</p>
+                <p className="text-[10px] text-muted">Personal help from staff</p>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openSupport('new')}
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm w-full inline-flex items-center justify-center gap-2"
+            >
+              <MessageSquarePlus className="w-3.5 h-3.5" />
+              New support ticket
+            </button>
+          </div>
+
+          {directChats.length > 0 && (
+            <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide">
+              Direct messages
+            </div>
+          )}
+
           {isChatsLoading ? (
             <div className="p-6 text-center text-sm text-muted">Loading conversations…</div>
-          ) : chats.length === 0 && incomingRequests.length === 0 ? (
-            <div className="p-8 text-center">
-              <MessageSquare className="w-10 h-10 text-muted mx-auto mb-3" />
-              <p className="font-semibold text-app text-sm">No messages yet</p>
-              <p className="text-xs text-muted mt-1.5 leading-relaxed">{IN_APP.chatsDescription}</p>
+          ) : directChats.length === 0 && incomingRequests.length === 0 ? (
+            <div className="p-6 text-center">
+              <MessageSquare className="w-8 h-8 text-muted mx-auto mb-2" />
+              <p className="font-semibold text-app text-sm">No direct messages yet</p>
+              <p className="text-xs text-muted mt-1.5 leading-relaxed">
+                Message a neighbor from a listing to coordinate pickup.
+              </p>
             </div>
           ) : (
-            chats.map((chat) => {
+            directChats.map((chat) => {
               const { otherId, otherName, otherPhoto } = getRecipientInfo(chat);
-              const isSelected = selectedChat?.id === chat.id;
+              const isSelected = selectedChat?.id === chat.id && !supportView;
               const displayTitle = getFormattedChatTitle(chat);
 
               return (
@@ -631,10 +787,7 @@ export default function ChatSystem({
                   key={chat.id}
                   type="button"
                   id={`chat_row_${chat.id}`}
-                  onClick={() => {
-                    setSelectedChat(chat);
-                    onClearInitialChat();
-                  }}
+                  onClick={() => selectChat(chat)}
                   className={`text-left p-3 flex items-start gap-3 transition-colors cursor-pointer ${
                     mobileConversationRowBase
                   } ${
@@ -694,16 +847,30 @@ export default function ChatSystem({
       <div
         id="conversations_body_viewport"
         className={`flex-1 flex flex-col min-h-0 min-w-0 bg-app ${
-          !selectedChat ? 'hidden md:flex' : 'flex'
+          !selectedChat && !supportView ? 'hidden md:flex' : 'flex'
         }`}
       >
-        {selectedChat ? (
+        {supportView ? (
+          <ChatSupportSection
+            user={userProfile}
+            view={supportView}
+            onViewChange={openSupport}
+            initialTicketId={initialSupportTicketId}
+            onClearInitialTicketId={onClearInitialSupportTicket}
+            className="h-full"
+          />
+        ) : selectedChat ? (
           (() => {
-            const linkedItem = items.find((i) => i.id === selectedChat.itemId);
+            const isCommunity = isCommunityChat(selectedChat.id);
+            const linkedItem = isCommunity ? undefined : items.find((i) => i.id === selectedChat.itemId);
             const isChatDisabled =
-              linkedItem && (linkedItem.status === 'completed' || linkedItem.status === 'withdrawn');
+              !isCommunity &&
+              linkedItem &&
+              (linkedItem.status === 'completed' || linkedItem.status === 'withdrawn');
             const displayTitleHeader = getFormattedChatTitle(selectedChat);
-            const { otherName, otherPhoto } = getRecipientInfo(selectedChat);
+            const { otherName, otherPhoto } = isCommunity
+              ? { otherName: communityChatTitle(selectedChat.id), otherPhoto: '' }
+              : getRecipientInfo(selectedChat);
             const isListingOwner = linkedItem?.userId === userProfile.uid;
             const showSendLocationBtn = !!linkedItem && !isChatDisabled && isListingOwner;
             const showMarkPendingPickupBtn =
@@ -742,6 +909,7 @@ export default function ChatSystem({
                     id="mobile_chat_back_btn"
                     onClick={() => {
                       setSelectedChat(null);
+                      setSupportView(null);
                       onClearInitialChat();
                       onClearPendingChatCompose?.();
                     }}
@@ -751,39 +919,66 @@ export default function ChatSystem({
                     <ChevronLeft className="w-5 h-5" />
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => onViewProfile?.(getRecipientInfo(selectedChat).otherId)}
-                    className="shrink-0 rounded-full cursor-pointer hover:opacity-90"
-                    title="View neighbor profile"
-                  >
-                    <img
-                      src={otherPhoto}
-                      referrerPolicy="no-referrer"
-                      alt=""
-                      className="w-10 h-10 rounded-full border border-app object-cover"
-                    />
-                  </button>
-
-                  <div className="min-w-0 flex-1">
+                  {isCommunity ? (
+                    <span
+                      className={`shrink-0 w-10 h-10 rounded-full border border-app flex items-center justify-center ${
+                        isGlobalCommunityChat(selectedChat.id)
+                          ? 'bg-emerald-500/10 text-emerald-500'
+                          : 'bg-violet-500/10 text-violet-500'
+                      }`}
+                    >
+                      {isGlobalCommunityChat(selectedChat.id) ? (
+                        <Globe className="w-5 h-5" />
+                      ) : (
+                        <Shield className="w-5 h-5" />
+                      )}
+                    </span>
+                  ) : (
                     <button
                       type="button"
                       onClick={() => onViewProfile?.(getRecipientInfo(selectedChat).otherId)}
-                      className="font-display font-semibold text-sm text-app truncate text-left hover:text-accent cursor-pointer w-full"
-                      title={displayTitleHeader}
+                      className="shrink-0 rounded-full cursor-pointer hover:opacity-90"
+                      title="View neighbor profile"
                     >
-                      {otherName}
+                      <img
+                        src={otherPhoto}
+                        referrerPolicy="no-referrer"
+                        alt=""
+                        className="w-10 h-10 rounded-full border border-app object-cover"
+                      />
                     </button>
-                    {selectedChat.itemTitle ? (
-                      <p className="text-xs text-accent truncate flex items-center gap-1 mt-0.5">
-                        <Gift className="w-3.5 h-3.5 shrink-0" />
-                        <span>{selectedChat.itemTitle}</span>
-                      </p>
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    {isCommunity ? (
+                      <>
+                        <p className="font-display font-semibold text-sm text-app truncate">
+                          {displayTitleHeader}
+                        </p>
+                        <p className="text-xs text-muted mt-0.5">{communityChatSubtitle(selectedChat.id)}</p>
+                      </>
                     ) : (
-                      <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 shrink-0" />
-                        <span>Sacramento neighbor</span>
-                      </p>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onViewProfile?.(getRecipientInfo(selectedChat).otherId)}
+                          className="font-display font-semibold text-sm text-app truncate text-left hover:text-accent cursor-pointer w-full"
+                          title={displayTitleHeader}
+                        >
+                          {otherName}
+                        </button>
+                        {selectedChat.itemTitle ? (
+                          <p className="text-xs text-accent truncate flex items-center gap-1 mt-0.5">
+                            <Gift className="w-3.5 h-3.5 shrink-0" />
+                            <span>{selectedChat.itemTitle}</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 shrink-0" />
+                            <span>Sacramento neighbor</span>
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 </header>
@@ -810,13 +1005,24 @@ export default function ChatSystem({
                   ) : (
                     messages.map((msg) => {
                       const isUser = msg.senderId === userProfile.uid;
+                      const senderInfo = senderNames[msg.senderId];
+                      const senderLabel = senderInfo?.displayName || 'Neighbor';
 
                       return (
                         <div
                           key={msg.id}
-                          className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                          className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                           id={`message_item_${msg.id}`}
                         >
+                          {isCommunity && !isUser && (
+                            <button
+                              type="button"
+                              onClick={() => onViewProfile?.(msg.senderId)}
+                              className="text-[10px] font-semibold text-muted mb-0.5 px-1 hover:text-accent"
+                            >
+                              {senderLabel}
+                            </button>
+                          )}
                           <div
                             className={`max-w-[85%] sm:max-w-[75%] px-3.5 py-2.5 text-sm ${mobileMessageCardBase} ${
                               isUser
@@ -849,7 +1055,7 @@ export default function ChatSystem({
                   className="shrink-0 p-3 sm:p-4 bg-surface border-t border-app flex flex-col gap-2 safe-area-pb"
                   id="input_tray"
                 >
-                  {showSendLocationBtn && (
+                  {!isCommunity && showSendLocationBtn && (
                     <button
                       type="button"
                       onClick={handleSendPickupLocation}
@@ -861,7 +1067,7 @@ export default function ChatSystem({
                       Send pickup location / address
                     </button>
                   )}
-                  {showMarkPendingPickupBtn && (
+                  {!isCommunity && showMarkPendingPickupBtn && (
                     <button
                       type="button"
                       onClick={handleMarkPendingPickup}
@@ -873,7 +1079,7 @@ export default function ChatSystem({
                       Mark pending pickup
                     </button>
                   )}
-                  {showRequestHoldBtn && (
+                  {!isCommunity && showRequestHoldBtn && (
                     <button
                       type="button"
                       onClick={handleRequestHold}
@@ -884,7 +1090,7 @@ export default function ChatSystem({
                       Request hold
                     </button>
                   )}
-                  {showMarkClaimedBtn && claimerUserId && (
+                  {!isCommunity && showMarkClaimedBtn && claimerUserId && (
                     <ChatClaimActions
                       chatId={selectedChat.id}
                       linkedItem={linkedItem}
@@ -897,7 +1103,7 @@ export default function ChatSystem({
                       }}
                     />
                   )}
-                  {showMarkFulfilledBtn && (
+                  {!isCommunity && showMarkFulfilledBtn && (
                     <button
                       type="button"
                       onClick={handleMarkFulfilled}
@@ -925,17 +1131,31 @@ export default function ChatSystem({
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       placeholder={
-                        isChatDisabled ? 'This chat is read-only' : 'Type a message…'
+                        isStaffCommunityChat(selectedChat.id) && !userIsStaff
+                          ? 'Staff only'
+                          : isChatDisabled
+                            ? 'This chat is read-only'
+                            : isCommunity
+                              ? 'Message everyone…'
+                              : 'Type a message…'
                       }
                       maxLength={2000}
                       required
-                      disabled={!!isChatDisabled}
+                      disabled={
+                        !!isChatDisabled ||
+                        (isStaffCommunityChat(selectedChat.id) && !userIsStaff)
+                      }
                       className="sbn-input flex-1 min-w-0 text-sm py-2.5 disabled:opacity-60"
                     />
                     <button
                       type="submit"
                       id="message_send_btn"
-                      disabled={!inputText.trim() || isSending || !!isChatDisabled}
+                      disabled={
+                        !inputText.trim() ||
+                        isSending ||
+                        !!isChatDisabled ||
+                        (isStaffCommunityChat(selectedChat.id) && !userIsStaff)
+                      }
                       className="sbn-btn sbn-btn-primary shrink-0 px-4 py-2.5 disabled:opacity-40"
                       aria-label="Send message"
                     >

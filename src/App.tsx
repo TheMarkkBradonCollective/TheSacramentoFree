@@ -112,6 +112,8 @@ export default function App() {
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [initialStaffPanel, setInitialStaffPanel] = useState<'tickets' | 'reports' | null>(null);
   const [initialHelpPanel, setInitialHelpPanel] = useState<'updates' | 'announcements' | null>(null);
+  const [initialSupportTicketId, setInitialSupportTicketId] = useState<string | null>(null);
+  const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
@@ -816,6 +818,14 @@ export default function App() {
       if (target.directorOverview) {
         setScrollToDirectorOverview(true);
       }
+      if (target.supportTicketId) {
+        setInitialSupportTicketId(target.supportTicketId);
+        setActiveTab('chats');
+      }
+      if (target.chatSupportView) {
+        setInitialChatSupportView(target.chatSupportView);
+        setActiveTab('chats');
+      }
     },
     [items],
   );
@@ -946,6 +956,10 @@ export default function App() {
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
                   initialHelpPanel={initialHelpPanel}
                   onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
+                  initialSupportTicketId={initialSupportTicketId}
+                  onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
+                  initialChatSupportView={initialChatSupportView}
+                  onClearInitialChatSupportView={() => setInitialChatSupportView(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />
@@ -986,6 +1000,10 @@ export default function App() {
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
                   initialHelpPanel={initialHelpPanel}
                   onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
+                  initialSupportTicketId={initialSupportTicketId}
+                  onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
+                  initialChatSupportView={initialChatSupportView}
+                  onClearInitialChatSupportView={() => setInitialChatSupportView(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />
@@ -1026,6 +1044,10 @@ export default function App() {
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
                   initialHelpPanel={initialHelpPanel}
                   onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
+                  initialSupportTicketId={initialSupportTicketId}
+                  onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
+                  initialChatSupportView={initialChatSupportView}
+                  onClearInitialChatSupportView={() => setInitialChatSupportView(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                 />

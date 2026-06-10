@@ -5,7 +5,7 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canEditAnnouncement, canEditOwnStaffMessage, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
+import { normalizeUserRole, type UserRole, canEditAnnouncement, canEditOwnStaffMessage, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -21,6 +21,14 @@ const supabaseKey =
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
+import {
+  GLOBAL_COMMUNITY_CHAT_ID,
+  STAFF_COMMUNITY_CHAT_ID,
+  buildGlobalCommunityChatRow,
+  buildStaffCommunityChatRow,
+  isCommunityChat,
+  sortChatsForInbox,
+} from './lib/communityChats';
 
 async function runPushTask(task: () => Promise<unknown>): Promise<void> {
   if (!CLIENT_PUSH_DISPATCH_ENABLED) return;
@@ -1095,7 +1103,72 @@ export async function deleteSupabaseItem(itemId: string): Promise<boolean> {
 /**
  * --- CHATS ---
  */
-export async function getSupabaseChats(userId: string): Promise<Chat[]> {
+export async function ensureCommunityChatsExist(): Promise<void> {
+  const rows = [
+    {
+      id: GLOBAL_COMMUNITY_CHAT_ID,
+      participantIds: [],
+      participantNames: {},
+      participantPhotos: {},
+      lastMessageText: 'Welcome to the community chat — say hello!',
+      lastMessageAt: new Date().toISOString(),
+      itemId: '',
+      itemTitle: '',
+    },
+    {
+      id: STAFF_COMMUNITY_CHAT_ID,
+      participantIds: [],
+      participantNames: {},
+      participantPhotos: {},
+      lastMessageText: 'Staff lounge — team coordination.',
+      lastMessageAt: new Date().toISOString(),
+      itemId: '',
+      itemTitle: '',
+    },
+  ];
+  for (const row of rows) {
+    const { data: existing } = await supabase.from('chats').select('id').eq('id', row.id).maybeSingle();
+    if (!existing) {
+      await supabase.from('chats').insert(row);
+    }
+  }
+}
+
+async function fetchCommunityChatRows(includeStaffChat: boolean): Promise<Chat[]> {
+  const ids = includeStaffChat
+    ? [GLOBAL_COMMUNITY_CHAT_ID, STAFF_COMMUNITY_CHAT_ID]
+    : [GLOBAL_COMMUNITY_CHAT_ID];
+  const { data, error } = await supabase.from('chats').select('*').in('id', ids);
+  if (error || !data?.length) {
+    await ensureCommunityChatsExist();
+    const fallback = includeStaffChat
+      ? [buildGlobalCommunityChatRow(), buildStaffCommunityChatRow()]
+      : [buildGlobalCommunityChatRow()];
+    const byId = new Map((data as Chat[] | null)?.map((c) => [c.id, c]) ?? []);
+    return fallback.map((row) => byId.get(row.id) ?? row);
+  }
+  const byId = new Map((data as Chat[]).map((c) => [c.id, c]));
+  const rows: Chat[] = [];
+  if (byId.has(GLOBAL_COMMUNITY_CHAT_ID)) {
+    rows.push(byId.get(GLOBAL_COMMUNITY_CHAT_ID)!);
+  } else {
+    rows.push(buildGlobalCommunityChatRow());
+  }
+  if (includeStaffChat) {
+    if (byId.has(STAFF_COMMUNITY_CHAT_ID)) {
+      rows.push(byId.get(STAFF_COMMUNITY_CHAT_ID)!);
+    } else {
+      rows.push(buildStaffCommunityChatRow());
+    }
+  }
+  return rows;
+}
+
+export async function getSupabaseChats(
+  userId: string,
+  options?: { userRole?: UserProfile['role'] },
+): Promise<Chat[]> {
+  const includeStaffChat = isStaffRole(options?.userRole);
   try {
     // Filter server-side using JSONB containment so we only fetch this user's chats.
     const { data, error } = await supabase
@@ -1104,27 +1177,53 @@ export async function getSupabaseChats(userId: string): Promise<Chat[]> {
       .contains('participantIds', JSON.stringify([userId]))
       .order('lastMessageAt', { ascending: false });
 
+    let directChats: Chat[] = [];
     if (error) {
       // Fall back to client-side filtering if the JSONB operator isn't supported on this schema.
       const { data: allData, error: allError } = await supabase.from('chats').select('*');
       if (allError) {
         handleSupabaseError(allError, 'chats');
-        return [];
+        directChats = [];
+      } else {
+        setSupabaseConfigurationState(true);
+        directChats = (allData || []).filter((c: Chat) => {
+          if (isCommunityChat(c.id)) return false;
+          const ids = Array.isArray(c.participantIds) ? c.participantIds : [];
+          return ids.includes(userId);
+        }) as Chat[];
       }
+    } else {
       setSupabaseConfigurationState(true);
-      const chats = (allData || []) as Chat[];
-      return chats.filter((c: any) => {
-        const ids = Array.isArray(c.participantIds) ? c.participantIds : [];
-        return ids.includes(userId);
-      });
+      directChats = ((data || []) as Chat[]).filter((c) => !isCommunityChat(c.id));
     }
 
-    setSupabaseConfigurationState(true);
-    return (data || []) as Chat[];
+    const community = await fetchCommunityChatRows(includeStaffChat);
+    return sortChatsForInbox([...community, ...directChats], includeStaffChat);
   } catch (err: any) {
     console.warn('Supabase chats fetch failed:', err);
     handleSupabaseError(err, 'chats');
     return [];
+  }
+}
+
+export async function getUserDisplayInfoByIds(
+  userIds: string[],
+): Promise<Record<string, { displayName: string; photoURL?: string }>> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid, displayName, photoURL')
+      .in('uid', unique);
+    if (error || !data) return {};
+    const map: Record<string, { displayName: string; photoURL?: string }> = {};
+    for (const row of data as { uid: string; displayName: string; photoURL?: string }[]) {
+      map[row.uid] = { displayName: row.displayName, photoURL: row.photoURL };
+    }
+    return map;
+  } catch {
+    return {};
   }
 }
 
@@ -1956,7 +2055,7 @@ export async function createSupabaseMessage(
     }
 
     setSupabaseConfigurationState(true);
-    if (!options?.skipPush) {
+    if (!options?.skipPush && !isCommunityChat(chatId)) {
       await runPushTask(() =>
         import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text, messageId)),
       );
@@ -3612,6 +3711,7 @@ export async function declineMessageRequest(
 
 export function filterChatsByBlocked(chats: Chat[], userId: string, hiddenIds: Set<string>): Chat[] {
   return chats.filter((chat) => {
+    if (isCommunityChat(chat.id)) return true;
     const otherId = chat.participantIds.find((id) => id !== userId);
     return !otherId || !hiddenIds.has(otherId);
   });

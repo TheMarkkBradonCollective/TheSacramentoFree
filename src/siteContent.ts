@@ -192,7 +192,7 @@ export const STAFF_MESSAGE_DEFAULT = {
     'We protect the free, local spirit of this community.',
     'Your voice matters in how we grow together.',
   ],
-  closing: 'Reach out anytime through Help & support — we are listening.',
+  closing: 'Reach out anytime through Chat → Support — we are listening.',
 } as const;
 
 export const IN_APP = {
@@ -207,12 +207,13 @@ export const IN_APP = {
     'Post and discover free neighborhood gatherings — potlucks, swaps, meetups, and more. No tickets or fees allowed.',
   eventsTabLabel: 'Events',
   postEventButton: 'Post Event',
-  chatsTitle: 'Neighbor Messages',
-  chatsDescription: 'Comment or message to arrange pickup. Keep every exchange free and friendly.',
+  chatsTitle: 'Chat',
+  chatsDescription:
+    'Community chat, support tickets, and direct messages — coordinate pickups and get help from staff.',
   profileTitle: 'Your Community Profile',
-  menuTitle: 'Help & support',
-  menuDescription: 'App updates, announcements, reviews, reports, and support tickets — all in one place.',
-  menuTabLabel: 'Help',
+  menuTitle: 'Community hub',
+  menuDescription: 'App updates, announcements, reviews, and safety reports.',
+  menuTabLabel: 'Community',
   accountTabLabel: 'Account',
   onboardingTitle: 'Join Sacramento Buy Nothing',
   onboardingBody:

@@ -10,6 +10,8 @@ export interface PushDeepLinkTarget {
   helpPanel?: 'updates' | 'announcements';
   staffPanel?: 'tickets' | 'reports';
   directorOverview?: boolean;
+  supportTicketId?: string;
+  chatSupportView?: 'list' | 'new';
 }
 
 export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
@@ -37,6 +39,20 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (listingMatch) return { tab: 'feed', listingId: listingMatch[1] };
 
   if (path === 'messages') return { tab: 'chats' };
+  if (path === 'support' || path === 'support/tickets') return { tab: 'chats', chatSupportView: 'list' };
+  if (path === 'support/new') return { tab: 'chats', chatSupportView: 'new' };
+
+  const supportTicketMatch = path.match(/^support\/([^/]+)/);
+  if (supportTicketMatch && supportTicketMatch[1] !== 'new' && supportTicketMatch[1] !== 'tickets') {
+    return { tab: 'chats', supportTicketId: supportTicketMatch[1] };
+  }
+
+  if (path === 'messages/community-global') {
+    return { tab: 'chats', conversationId: 'community-global' };
+  }
+  if (path === 'messages/community-staff') {
+    return { tab: 'chats', conversationId: 'community-staff' };
+  }
 
   const messageMatch = path.match(/^messages\/([^/]+)/);
   if (messageMatch) return { tab: 'chats', conversationId: messageMatch[1] };
@@ -65,6 +81,14 @@ export function pushUrlForRequest(requestId: string): string {
 
 export function pushUrlForStaffTickets(): string {
   return '/staff/tickets';
+}
+
+export function pushUrlForSupportTickets(): string {
+  return '/support';
+}
+
+export function pushUrlForSupportTicket(ticketId: string): string {
+  return `/support/${ticketId}`;
 }
 
 export function pushUrlForStaffReports(): string {
