@@ -19,7 +19,13 @@ import type { NotificationPreferences } from '../types';
 
 export { clearNotificationDataOnLogout, clearNotificationDataOnLogout as clearPushSessionOnLogout };
 
-export function usePushNotifications(userId?: string) {
+type UsePushNotificationsOptions = {
+  /** Load preference toggles and subscribe to DB changes. Off for lightweight subscribe-only UI. */
+  syncPreferences?: boolean;
+};
+
+export function usePushNotifications(userId?: string, options?: UsePushNotificationsOptions) {
+  const syncPreferences = options?.syncPreferences !== false;
   const [permission, setPermission] = useState<PushPermissionState>(() => getPushPermissionState());
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +39,11 @@ export function usePushNotifications(userId?: string) {
   const [savedPreferences, setSavedPreferences] = useState<NotificationPreferences>(CLEARED_NOTIFICATION_PREFERENCES);
   const userIdRef = useRef(userId);
   const hasUnsavedRef = useRef(false);
+  const realtimeChannelIdRef = useRef(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `prefs-${Math.random().toString(36).slice(2)}`,
+  );
 
   const refreshPermission = useCallback(() => {
     setPermission(getPushPermissionState());
@@ -104,9 +115,11 @@ export function usePushNotifications(userId?: string) {
       return;
     }
 
-    void loadPreferences({ force: true });
+    if (syncPreferences) {
+      void loadPreferences({ force: true });
+    }
     void checkSubscription();
-  }, [userId, loadPreferences, checkSubscription, resetPreferencesState]);
+  }, [userId, syncPreferences, loadPreferences, checkSubscription, resetPreferencesState]);
 
   useEffect(() => {
     const onSessionCleared = () => {
@@ -118,11 +131,11 @@ export function usePushNotifications(userId?: string) {
   }, [resetPreferencesState]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !syncPreferences) return;
 
     return subscribePostgresChanges(
       {
-        channelName: `live-notification-prefs-${userId}`,
+        channelName: `live-notification-prefs-${userId}-${realtimeChannelIdRef.current}`,
         table: 'notification_preferences',
         event: '*',
         filter: `userId=eq.${userId}`,
@@ -131,7 +144,7 @@ export function usePushNotifications(userId?: string) {
         void loadPreferences();
       },
     );
-  }, [userId, loadPreferences]);
+  }, [userId, syncPreferences, loadPreferences]);
 
   useEffect(() => {
     if (!userId || permission !== 'granted') return;

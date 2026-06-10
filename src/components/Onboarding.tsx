@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../types';
 import { upsertSupabaseProfile } from '../supabase';
-import { MapPin, User } from 'lucide-react';
+import { Heart, MapPin, User } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { IN_APP, SITE } from '../siteContent';
 import { UserProfile } from '../types';

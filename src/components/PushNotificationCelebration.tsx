@@ -90,7 +90,9 @@ export default function PushNotificationCelebration({
   userId,
   onGoToProfile,
 }: PushNotificationCelebrationProps) {
-  const { permission, isSubscribed, isLoading, enableNotifications } = usePushNotifications(userId);
+  const { permission, isSubscribed, isLoading, enableNotifications } = usePushNotifications(userId, {
+    syncPreferences: false,
+  });
   const [open, setOpen] = useState(false);
   const [enabling, setEnabling] = useState(false);
   const confetti = useMemo(() => buildConfetti(56), [open]);
