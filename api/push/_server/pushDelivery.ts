@@ -12,6 +12,8 @@ export type PushEventType =
   | 'message_request'
   | 'message_request_accepted'
   | 'new_comment'
+  | 'listing_upvote'
+  | 'listing_downvote'
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
@@ -46,6 +48,8 @@ export interface NotificationPreferencesRow {
   claims: boolean;
   gifts: boolean;
   comments: boolean;
+  listingUpvotes: boolean;
+  listingDownvotes: boolean;
   listingStatus: boolean;
   nearbyListings: boolean;
   requests: boolean;
@@ -99,6 +103,8 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   message_request: 'messageRequests',
   message_request_accepted: 'messageRequests',
   new_comment: 'comments',
+  listing_upvote: 'listingUpvotes',
+  listing_downvote: 'listingDownvotes',
   listing_approved: 'listingStatus',
   listing_denied: 'listingStatus',
   listing_expiring: 'listingStatus',
@@ -126,6 +132,8 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     claims: row.claims !== false,
     gifts: row.gifts !== false,
     comments: row.comments !== false,
+    listingUpvotes: row.listingUpvotes !== false,
+    listingDownvotes: row.listingDownvotes !== false,
     listingStatus: row.listingStatus !== false,
     nearbyListings: row.nearbyListings !== false,
     requests: row.requests !== false,
@@ -187,6 +195,8 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         claims: true,
         gifts: true,
         comments: true,
+        listingUpvotes: true,
+        listingDownvotes: true,
         listingStatus: true,
         nearbyListings: true,
         requests: true,

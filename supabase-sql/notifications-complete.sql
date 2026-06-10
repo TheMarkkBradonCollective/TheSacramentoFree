@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
   claims BOOLEAN NOT NULL DEFAULT true,
   gifts BOOLEAN NOT NULL DEFAULT true,
   comments BOOLEAN NOT NULL DEFAULT true,
+  "listingUpvotes" BOOLEAN NOT NULL DEFAULT true,
+  "listingDownvotes" BOOLEAN NOT NULL DEFAULT true,
   "listingStatus" BOOLEAN NOT NULL DEFAULT true,
   "nearbyListings" BOOLEAN NOT NULL DEFAULT true,
   requests BOOLEAN NOT NULL DEFAULT true,
@@ -64,6 +66,8 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
 ALTER TABLE public.notification_preferences
   ADD COLUMN IF NOT EXISTS support BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "messageRequests" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "listingUpvotes" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "listingDownvotes" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "listingStatus" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "savedItems" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "accountUpdates" BOOLEAN NOT NULL DEFAULT true,

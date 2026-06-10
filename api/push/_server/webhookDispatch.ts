@@ -13,6 +13,7 @@ import {
   runNeighborItemClaimedNotify,
   runNeighborMessageRequestAcceptedNotify,
   runNeighborMessageRequestNotify,
+  runNeighborItemVoteNotify,
   runNeighborNewCommentNotify,
   runNeighborNewListingNotify,
   runNeighborNewMessageNotify,
@@ -106,6 +107,23 @@ export async function runSupabasePushWebhook(
       return handleItemStatusUpdate(body.record, body.old_record);
     }
 
+    if (table === 'item_votes' && body.record) {
+      const record = body.record;
+      const oldRecord = body.old_record;
+      const voteType = String(record.voteType || '');
+      if (voteType !== 'up' && voteType !== 'down') {
+        return { status: 200, body: { ok: true, skipped: 'invalid vote type' } };
+      }
+      if (oldRecord && oldRecord.voteType === record.voteType) {
+        return { status: 200, body: { ok: true, skipped: 'vote unchanged' } };
+      }
+      return runNeighborItemVoteNotify(String(record.userId || 'system'), {
+        itemId: String(record.itemId || ''),
+        userId: String(record.userId || ''),
+        voteType: voteType as 'up' | 'down',
+      });
+    }
+
     if (table === 'message_requests' && body.record && body.old_record) {
       const record = body.record;
       const oldRecord = body.old_record;
@@ -190,6 +208,18 @@ export async function runSupabasePushWebhook(
       itemId: String(record.itemId || ''),
       userId: String(record.userId || ''),
       userName: String(record.userName || 'A neighbor'),
+    });
+  }
+
+  if (table === 'item_votes') {
+    const voteType = String(record.voteType || '');
+    if (voteType !== 'up' && voteType !== 'down') {
+      return { status: 200, body: { ok: true, skipped: 'invalid vote type' } };
+    }
+    return runNeighborItemVoteNotify(String(record.userId || 'system'), {
+      itemId: String(record.itemId || ''),
+      userId: String(record.userId || ''),
+      voteType: voteType as 'up' | 'down',
     });
   }
 

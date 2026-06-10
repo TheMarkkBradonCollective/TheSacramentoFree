@@ -66,6 +66,8 @@ async function savePushSubscriptionDirect(
       claims: true,
       gifts: true,
       comments: true,
+      listingUpvotes: true,
+      listingDownvotes: true,
       listingStatus: true,
       nearbyListings: true,
       requests: true,
@@ -290,6 +292,8 @@ export type PushEventType =
   | 'message_request'
   | 'message_request_accepted'
   | 'new_comment'
+  | 'listing_upvote'
+  | 'listing_downvote'
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
@@ -493,6 +497,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   claims: true,
   gifts: true,
   comments: true,
+  listingUpvotes: true,
+  listingDownvotes: true,
   listingStatus: true,
   nearbyListings: true,
   requests: true,
@@ -525,6 +531,8 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     claims: row.claims !== false,
     gifts: row.gifts !== false,
     comments: row.comments !== false,
+    listingUpvotes: row.listingUpvotes !== false,
+    listingDownvotes: row.listingDownvotes !== false,
     listingStatus: row.listingStatus !== false,
     nearbyListings: row.nearbyListings !== false,
     requests: row.requests !== false,

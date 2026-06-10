@@ -18,6 +18,7 @@
 -- | push-claim-reqs       | item_claim_requests     | INSERT         | Claim requests + director        |
 -- | push-item-claims      | item_claims             | INSERT         | Claims (poster alert)            |
 -- | push-comments         | item_comments           | INSERT         | Comments on your listings        |
+-- | push-votes            | item_votes              | INSERT, UPDATE | Upvotes and downvotes on listings|
 -- | push-messages         | messages                | INSERT         | Direct messages + pickup         |
 -- | push-moderation       | moderation_audit_log    | INSERT         | Director: moderation actions     |
 -- | push-reports          | user_reports            | INSERT         | Staff: neighbor reports          |

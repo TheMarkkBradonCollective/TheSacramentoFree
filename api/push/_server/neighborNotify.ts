@@ -255,6 +255,56 @@ export async function runNeighborNewMessageNotify(
   });
 }
 
+export async function runNeighborItemVoteNotify(
+  callerId: string,
+  vote: {
+    itemId?: string;
+    userId?: string;
+    voteType?: 'up' | 'down';
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const voterUserId = String(vote.userId || callerId);
+  const itemId = String(vote.itemId || '');
+  const voteType = vote.voteType;
+  if (!itemId || (voteType !== 'up' && voteType !== 'down')) {
+    return { status: 200, body: { ok: true, skipped: 'missing vote fields' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data: item } = await supabaseAdmin
+    .from('items')
+    .select('id, userId, title')
+    .eq('id', itemId)
+    .maybeSingle();
+  if (!item) {
+    return { status: 200, body: { ok: true, skipped: 'item not found' } };
+  }
+
+  const ownerId = String((item as { userId?: string }).userId || '');
+  if (!ownerId || ownerId === voterUserId) {
+    return { status: 200, body: { ok: true, skipped: 'no vote alert needed' } };
+  }
+
+  const { data: voter } = await supabaseAdmin
+    .from('users')
+    .select('displayName')
+    .eq('uid', voterUserId)
+    .maybeSingle();
+  const voterName = String((voter as { displayName?: string } | null)?.displayName || 'A neighbor');
+  const itemTitle = String((item as { title?: string }).title || 'your listing');
+  const isUp = voteType === 'up';
+
+  return sendNeighborPush(voterUserId, {
+    eventType: isUp ? 'listing_upvote' : 'listing_downvote',
+    title: isUp ? 'New upvote on your listing' : 'Downvote on your listing',
+    body: `${voterName} ${isUp ? 'upvoted' : 'downvoted'} "${itemTitle}"`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: [ownerId],
+    tag: `vote-${voteType}-${itemId}-${voterUserId}`,
+  });
+}
+
 export async function runNeighborNewCommentNotify(
   callerId: string,
   comment: {
