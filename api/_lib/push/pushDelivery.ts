@@ -1,1 +1,1 @@
-export * from '../../../lib/push-server/pushDelivery';
+export * from '../../push/_server/pushDelivery';

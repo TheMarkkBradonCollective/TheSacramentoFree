@@ -1,1 +1,1 @@
-export * from '../../../lib/push-server/staffRoles';
+export * from '../../push/_server/staffRoles';

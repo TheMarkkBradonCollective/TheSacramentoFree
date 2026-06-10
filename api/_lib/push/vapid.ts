@@ -5,4 +5,4 @@ export {
   getVapidPublicKey,
   type PushNotificationPayload,
   type PushSubscriptionKeys,
-} from '../../../lib/push-server/vapid';
+} from '../../push/_server/vapid';

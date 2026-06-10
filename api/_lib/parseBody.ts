@@ -1,1 +1,1 @@
-export { parseJsonBody } from '../../lib/push-server/parseBody';
+export { parseJsonBody } from '../push/_server/parseBody';

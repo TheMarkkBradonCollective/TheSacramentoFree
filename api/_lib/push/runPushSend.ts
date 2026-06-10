@@ -1,1 +1,1 @@
-export { runPushSend, type PushSendBody } from '../../../lib/push-server/runPushSend';
+export { runPushSend, type PushSendBody } from '../../push/_server/runPushSend';
