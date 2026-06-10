@@ -124,8 +124,8 @@ export default function AnnouncementsList({
                             Posted by {announcement.authorName} · {announcement.authorTitle}
                           </p>
                           <p
-                            className={`mt-2 text-sm text-muted font-semibold leading-relaxed ${
-                              expanded ? '' : 'line-clamp-2'
+                            className={`mt-2 text-sm text-muted leading-relaxed ${
+                              expanded ? 'whitespace-pre-wrap font-normal' : 'font-semibold line-clamp-2'
                             }`}
                           >
                             {expanded ? fullText : announcement.body}

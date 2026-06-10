@@ -172,9 +172,60 @@ CREATE POLICY "Allow write app updates" ON public.app_updates FOR ALL USING (tru
 
 CREATE INDEX IF NOT EXISTS app_updates_date_idx ON public.app_updates (date DESC, "updatedAt" DESC);
 
+-- Latest deep-detail entries: also in add-june-9-latest-community-updates.sql (safe to re-run).
 INSERT INTO public.app_updates (
   id, date, title, body, detail, "directorName", "directorTitle", "postedByUserId"
 ) VALUES
+(
+  '2026-06-09_real-notifications-not-just-test',
+  '2026-06-09',
+  'Real alerts work again — not just test push',
+  'Messages, listings, comments, and other alerts deliver again. Only the test button had been working for many neighbors.',
+  'See add-june-9-latest-community-updates.sql for the full technical story (pushConfig.ts, pushSubscribe.ts, pushDedup, preference fix). After deploy: turn notifications off and on once per device.',
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+(
+  '2026-06-09_stable-after-sign-in',
+  '2026-06-09',
+  'App stays open after you sign in',
+  'Fixed white screens and “Something went wrong” crashes right after login when opening notification settings.',
+  'See add-june-9-latest-community-updates.sql — unique Supabase realtime channel per usePushNotifications hook, AppErrorBoundary, logout race guards.',
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+(
+  '2026-06-09_staff-announcements-in-help',
+  '2026-06-09',
+  'Staff announcements in Help',
+  'Help now has a separate Announcements board: staff post news, neighbors vote and comment on each post.',
+  'See add-june-9-latest-community-updates.sql — help_announcements, help_announcement_comments, AnnouncementsList.tsx, useHelpAnnouncementComments.ts. Run help-announcements.sql + help-announcement-comments.sql in Supabase.',
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+(
+  '2026-06-09_app-updates-vs-announcements-notifications',
+  '2026-06-09',
+  'App updates and announcements are separate in notifications',
+  'Notification settings now have distinct toggles: App updates (director changelog) vs Announcements (staff Help posts).',
+  'See add-june-9-latest-community-updates.sql — appUpdates vs announcements prefs, appUpdateNotify vs announcementNotify, webhooks on app_updates vs help_announcements.',
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+(
+  '2026-06-09_logout-clears-device-push',
+  '2026-06-09',
+  'Logout clears notification data on this device',
+  'Signing out removes this phone’s push subscription and in-memory notification UI so the next account does not inherit your alerts.',
+  'See add-june-9-latest-community-updates.sql — clearNotificationDataOnLogout in pushNotifications.ts, detachPushSubscriptionForUser, NOTIFICATION_SESSION_CLEARED_EVENT.',
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
 (
   '2026-06-09_notification-settings-save-button',
   '2026-06-09',

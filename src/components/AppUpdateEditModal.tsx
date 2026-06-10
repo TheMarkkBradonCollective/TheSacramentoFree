@@ -85,6 +85,7 @@ export default function AppUpdateEditModal({
 
           <label className="block space-y-1">
             <span className="text-xs font-semibold text-muted uppercase">Summary</span>
+            <p className="text-[10px] text-muted">Short preview — one or two sentences neighbors see before expanding.</p>
             <textarea
               className="sbn-input w-full min-h-[5rem] text-sm"
               value={form.body}
@@ -95,12 +96,15 @@ export default function AppUpdateEditModal({
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-semibold text-muted uppercase">Full story (optional)</span>
+            <span className="text-xs font-semibold text-muted uppercase">Full story</span>
+            <p className="text-[10px] text-muted">
+              Write much more here than the summary — setup steps, what changed, file paths, and how it works under the hood.
+            </p>
             <textarea
-              className="sbn-input w-full min-h-[8rem] text-sm"
+              className="sbn-input w-full min-h-[16rem] text-sm font-mono leading-relaxed"
               value={form.detail}
               onChange={(e) => setForm((prev) => ({ ...prev, detail: e.target.value }))}
-              placeholder="Extra detail shown when someone expands the announcement"
+              placeholder="Deep dive: neighbor impact, root cause, files changed (e.g. src/…, api/…), SQL to run, webhooks, and what to do after deploy."
             />
           </label>
 
