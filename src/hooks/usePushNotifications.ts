@@ -104,14 +104,12 @@ export function usePushNotifications(userId?: string) {
       return;
     }
 
-    resetPreferencesState();
     void loadPreferences({ force: true });
     void checkSubscription();
   }, [userId, loadPreferences, checkSubscription, resetPreferencesState]);
 
   useEffect(() => {
     const onSessionCleared = () => {
-      userIdRef.current = undefined;
       resetPreferencesState();
     };
 

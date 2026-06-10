@@ -1,9 +1,8 @@
 import { supabase } from '../supabase';
 import type { NotificationPreferences, NearbyRadiusMiles } from '../types';
 
-import { PUSH_CELEBRATION_DISMISSED_KEY } from './pushCelebrationPrompt';
-
 const SW_PATH = '/service-worker.js';
+const PUSH_CELEBRATION_DISMISSED_KEY = 'sbn_push_celebration_prompt_dismissed_v1';
 const VAPID_CACHE_KEY = 'sbn_vapid_public_key_v1';
 
 export const NOTIFICATION_SESSION_CLEARED_EVENT = 'sbn-notification-session-cleared';

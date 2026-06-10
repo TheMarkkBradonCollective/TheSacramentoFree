@@ -54,7 +54,7 @@ import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
-import { usePushDeepLinkNavigation } from './hooks/usePushNotifications';
+import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 import PushNotificationCelebration from './components/PushNotificationCelebration';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
@@ -94,6 +94,8 @@ export default function App() {
   const profileSyncRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
   const loadItemsRef = useRef<(isBackground?: boolean, attempt?: number) => Promise<void>>(async () => {});
+  const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
+  const logoutCleanupDoneRef = useRef(false);
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     if (typeof window === 'undefined') return 'map';
     return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
@@ -128,6 +130,7 @@ export default function App() {
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [isEventsLoading, setIsEventsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [guestDetailItem, setGuestDetailItem] = useState<ItemPost | null>(null);
 
   // Open existing chat thread (e.g. after claim)
   const [initialSelectedChatId, setInitialSelectedChatId] = useState<string | null>(null);
@@ -306,8 +309,6 @@ export default function App() {
     ]);
 
   /** Enter the app immediately from auth metadata — DB sync runs in background. */
-  const lastSignedInUserIdRef = useRef<string | null>(null);
-
   const applySession = useCallback((user: any) => {
     if (user?.id) lastSignedInUserIdRef.current = user.id;
     setSessionUser(user);
@@ -368,10 +369,11 @@ export default function App() {
           console.warn('Error checking supabase session:', error);
         }
 
-        if (session?.user) {
-          applySession(session.user);
-          void syncProfileFromDb(session.user);
-        } else if (!readCachedProfile()) {
+      if (session?.user) {
+        logoutCleanupDoneRef.current = false;
+        applySession(session.user);
+        void syncProfileFromDb(session.user);
+      } else if (!readCachedProfile()) {
           // Only clear when there is no cached session hint — avoids wiping UI on slow refresh.
           setSessionUser(null);
           setUserProfile(null);
@@ -393,6 +395,7 @@ export default function App() {
       if (cancelled) return;
 
       if (session?.user) {
+        logoutCleanupDoneRef.current = false;
         applySession(session.user);
         // Defer DB sync — never await inside this callback (Supabase auth deadlock).
         setTimeout(() => {
@@ -409,9 +412,10 @@ export default function App() {
         const signedOutUserId = lastSignedInUserIdRef.current;
         lastSignedInUserIdRef.current = null;
         profileSyncRef.current = null;
-        void import('./hooks/usePushNotifications').then((m) =>
-          m.clearNotificationDataOnLogout(signedOutUserId),
-        );
+        if (!logoutCleanupDoneRef.current) {
+          logoutCleanupDoneRef.current = true;
+          void clearNotificationDataOnLogout(signedOutUserId);
+        }
         clearSessionCache();
         setSessionUser(null);
         setUserProfile(null);
@@ -472,8 +476,6 @@ export default function App() {
   }, [loadItems]);
 
   const sessionReady = !!sessionUser && !!userProfile;
-
-  const [guestDetailItem, setGuestDetailItem] = useState<ItemPost | null>(null);
 
   // Load public listing preview for guests
   useEffect(() => {
@@ -648,7 +650,7 @@ export default function App() {
     const signedOutUserId =
       userProfile?.uid || sessionUser?.id || lastSignedInUserIdRef.current;
     try {
-      const { clearNotificationDataOnLogout } = await import('./hooks/usePushNotifications');
+      logoutCleanupDoneRef.current = true;
       await clearNotificationDataOnLogout(signedOutUserId);
       await supabase.auth.signOut();
     } catch (_) {}
