@@ -1,5 +1,6 @@
 -- =========================================================
 -- JUNE 9, 2026 — LATEST COMMUNITY UPDATES (deep-detail changelog)
+-- For ALL 87 changelog rows, prefer: expand-all-community-updates-detail.sql
 -- Run once in Supabase SQL Editor.
 -- Safe to re-run: ON CONFLICT DO UPDATE refreshes body + detail.
 --
