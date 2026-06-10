@@ -236,6 +236,9 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clientList) {
         if ('focus' in client) {
           client.postMessage({ type: 'NOTIFICATION_CLICK', url: targetUrl });
+          if ('navigate' in client && typeof client.navigate === 'function') {
+            return client.navigate(targetUrl).then(() => client.focus());
+          }
           return client.focus();
         }
       }

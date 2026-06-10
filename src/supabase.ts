@@ -20,10 +20,6 @@ const supabaseKey =
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-function firePush(task: () => Promise<unknown>) {
-  task().catch((err) => console.warn('[push]', err));
-}
-
 async function runPushTask(task: () => Promise<unknown>): Promise<void> {
   try {
     await task();
@@ -958,7 +954,7 @@ export async function updateSupabaseItemStatus(
     }
 
     if (status === 'pending_pickup' && actorUserId) {
-      firePush(() =>
+      await runPushTask(() =>
         import('./lib/pushIntegration').then((m) => m.pushAfterPendingPickup(itemId, actorUserId)),
       );
     }
@@ -1529,7 +1525,7 @@ async function recordPartialItemClaims(params: {
       return { ok: false, errorMessage: 'Pickup recorded but chat message failed to send.' };
     }
 
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         m.pushAfterClaimConfirmed({
           itemId: params.itemId,
@@ -1547,7 +1543,7 @@ async function recordPartialItemClaims(params: {
       .eq('id', params.itemId)
       .maybeSingle();
     if ((completedItem as { status?: string } | null)?.status === 'completed') {
-      firePush(() =>
+      await runPushTask(() =>
         import('./lib/pushIntegration').then((m) =>
           m.pushAfterItemCompleted(params.itemId, params.giverUserId, params.claimerUserId),
         ),
@@ -1863,7 +1859,7 @@ export async function markItemFulfilledFromChat(params: {
       return { ok: false, errorMessage: 'Request marked fulfilled but chat message failed.' };
     }
 
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         m.pushAfterItemCompleted(params.itemId, params.ownerUserId, params.helperUserId),
       ),
@@ -1919,7 +1915,7 @@ export async function createSupabaseMessage(
 
     setSupabaseConfigurationState(true);
     if (!options?.skipPush) {
-      firePush(() =>
+      await runPushTask(() =>
         import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text)),
       );
     }
@@ -2033,7 +2029,7 @@ export async function createSupabaseItemComment(comment: ItemComment): Promise<b
     }
 
     setSupabaseConfigurationState(true);
-    firePush(() => import('./lib/pushIntegration').then((m) => m.pushAfterComment(comment)));
+    await runPushTask(() => import('./lib/pushIntegration').then((m) => m.pushAfterComment(comment)));
     return true;
   } catch (err: any) {
     handleSupabaseError(err, 'item_comments');
@@ -2652,7 +2648,7 @@ export async function createSupabaseAppUpdate(
 
     setSupabaseConfigurationState(true);
     const update = normalizeAppUpdateRow(data as Record<string, unknown>);
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         m.pushDirectorAnnouncement('Community update', `${update.title}: ${update.body}`.slice(0, 180)),
       ),
@@ -3287,7 +3283,7 @@ export async function acceptMessageRequest(
       return { ok: false, errorMessage: updateError.message };
     }
 
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         m.pushAfterMessageRequestAccepted({
           chatId,

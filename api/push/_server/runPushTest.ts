@@ -1,23 +1,12 @@
-import { sendWebPush, type PushSubscriptionKeys } from './vapid';
+import { sendToSubscription } from './pushDelivery';
 import { configureVapidAsync } from './webPushLoader';
-
-async function getSavedSubscriptions(userId: string): Promise<PushSubscriptionKeys[]> {
-  const { getSupabaseAdmin } = await import('./supabaseAdmin');
-  const supabaseAdmin = await getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin.from('push_subscriptions').select('*').eq('userId', userId);
-  if (error || !data?.length) return [];
-  return data.map((row) => ({
-    endpoint: String((row as { endpoint: string }).endpoint),
-    keys: {
-      p256dh: String((row as { p256dh: string }).p256dh),
-      auth: String((row as { auth: string }).auth),
-    },
-  }));
-}
 
 export async function runPushTest(params: {
   userId: string;
-  subscription?: PushSubscriptionKeys | null;
+  subscription?: {
+    endpoint?: string;
+    keys?: { p256dh?: string; auth?: string };
+  } | null;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
   if (!(await configureVapidAsync())) {
     return {
@@ -33,40 +22,53 @@ export async function runPushTest(params: {
     title: 'Test notification',
     body: 'Sacramento Buy Nothing push alerts are working on this device.',
     url: '/',
-    tag: 'sbn-test-push',
-    eventType: 'account_update',
+    tag: `sbn-test-push-${Date.now()}`,
+    eventType: 'account_update' as const,
     data: { test: 'true' },
   };
 
   const inline = params.subscription;
-  const subscriptions: PushSubscriptionKeys[] =
-    inline?.endpoint && inline.keys?.p256dh && inline.keys?.auth
-      ? [inline]
-      : await getSavedSubscriptions(params.userId);
+  let subscriptions: Array<{ id: string; userId: string; endpoint: string; p256dh: string; auth: string }> = [];
 
-  if (!subscriptions.length) {
-    return {
-      status: 400,
-      body: {
-        error: 'No push subscription found. Tap Enable notifications on this device, then try again.',
-        subscriptionCount: 0,
+  if (inline?.endpoint && inline.keys?.p256dh && inline.keys?.auth) {
+    subscriptions = [
+      {
+        id: 'inline',
+        userId: params.userId,
+        endpoint: inline.endpoint,
+        p256dh: inline.keys.p256dh,
+        auth: inline.keys.auth,
       },
-    };
+    ];
+  } else {
+    const { getSupabaseAdmin } = await import('./supabaseAdmin');
+    const supabaseAdmin = await getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+      .from('push_subscriptions')
+      .select('*')
+      .eq('userId', params.userId);
+    if (error || !data?.length) {
+      return {
+        status: 400,
+        body: {
+          error: 'No push subscription found. Tap Enable notifications on this device, then try again.',
+          subscriptionCount: 0,
+        },
+      };
+    }
+    subscriptions = data as typeof subscriptions;
   }
 
   let sent = 0;
   let failed = 0;
+  let removed = 0;
 
   for (const sub of subscriptions) {
-    const result = await sendWebPush(sub, payload);
+    const result = await sendToSubscription(sub, payload);
     if (result.ok) sent += 1;
     else {
       failed += 1;
-      if (result.removed) {
-        const { getSupabaseAdmin } = await import('./supabaseAdmin');
-        const supabaseAdmin = await getSupabaseAdmin();
-        await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
-      }
+      if (result.removed) removed += 1;
     }
   }
 
@@ -78,6 +80,7 @@ export async function runPushTest(params: {
           'Push delivery failed. Turn notifications off and on again so the subscription matches your VAPID keys.',
         sent,
         failed,
+        removed,
         subscriptionCount: subscriptions.length,
       },
     };
@@ -85,6 +88,6 @@ export async function runPushTest(params: {
 
   return {
     status: 200,
-    body: { ok: true, sent, failed, subscriptionCount: subscriptions.length },
+    body: { ok: true, sent, failed, removed, subscriptionCount: subscriptions.length },
   };
 }

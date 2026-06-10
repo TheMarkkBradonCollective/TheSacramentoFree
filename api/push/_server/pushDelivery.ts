@@ -303,12 +303,21 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
 export async function sendPushToUsers(
   userIds: string[],
   payload: PushPayload,
-  options?: { excludeUserIds?: string[]; skipPreferenceCheck?: boolean },
+  options?: { excludeUserIds?: string[]; skipPreferenceCheck?: boolean; skipDedup?: boolean },
 ) {
   const exclude = new Set(options?.excludeUserIds || []);
   const targets = [...new Set(userIds)].filter((id) => id && !exclude.has(id));
   if (!targets.length || !(await configureVapidAsync())) {
     return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0 };
+  }
+
+  if (!options?.skipDedup) {
+    const { claimPushDispatch } = await import('./pushDedup');
+    const tag = payload.tag || payload.eventType;
+    const allowed = await claimPushDispatch(tag);
+    if (!allowed) {
+      return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0, deduped: true };
+    }
   }
 
   let allowed = targets;
