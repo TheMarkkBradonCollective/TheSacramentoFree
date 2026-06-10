@@ -24,6 +24,14 @@ function firePush(task: () => Promise<unknown>) {
   task().catch((err) => console.warn('[push]', err));
 }
 
+async function runPushTask(task: () => Promise<unknown>): Promise<void> {
+  try {
+    await task();
+  } catch (err) {
+    console.warn('[push]', err);
+  }
+}
+
 // SQL Setup script to help users prepare their Supabase PostgreSQL database
 export const SQL_SETUP_SCRIPT = `-- =========================================================
 -- SACRAMENTO BUY_NOTHING SUPABASE SCHEMAS
@@ -872,7 +880,7 @@ export async function createSupabaseItem(
     }
 
     setSupabaseConfigurationState(true);
-    firePush(() => import('./lib/pushIntegration').then((m) => m.pushAfterItemCreated(item)));
+    await runPushTask(() => import('./lib/pushIntegration').then((m) => m.pushAfterItemCreated(item)));
     return { ok: true };
   } catch (err: any) {
     console.error('createSupabaseItem exception:', err);
@@ -1180,7 +1188,7 @@ export async function setUserRole(
     }
 
     if (context) {
-      firePush(() =>
+      await runPushTask(() =>
         import('./lib/pushIntegration').then((m) =>
           m.pushDirectorAlert({
             category: 'moderation',
@@ -1642,7 +1650,7 @@ export async function submitSelfClaimRequest(params: {
     return { ok: false, errorMessage: 'Claim request saved but message failed to send.' };
   }
 
-  firePush(() =>
+  await runPushTask(() =>
     import('./lib/pushIntegration').then((m) =>
       m.pushAfterClaimRequest({
         item: params.item,
@@ -3202,7 +3210,7 @@ export async function sendMessageRequest(params: {
       return { ok: false, errorMessage: error.message };
     }
 
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         m.pushAfterMessageRequest({
           requestId,
@@ -3589,7 +3597,7 @@ export async function staffSuspendUser(params: {
       detail: `${params.durationDays} day(s) until ${until.toLocaleString()}${params.note ? ` — ${params.note}` : ''}`,
     });
 
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         Promise.all([
           m.pushAccountStatusChange(
@@ -3637,7 +3645,7 @@ export async function staffUnsuspendUser(params: {
       action: 'unsuspend',
     });
 
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         Promise.all([
           m.pushAccountStatusChange(
@@ -3699,7 +3707,7 @@ export async function staffBanUser(params: {
       detail: params.note?.trim() || 'Platform ban',
     });
 
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         Promise.all([
           m.pushAccountStatusChange(
@@ -3747,7 +3755,7 @@ export async function staffUnbanUser(params: {
       action: 'unban',
     });
 
-    firePush(() =>
+    await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
         Promise.all([
           m.pushAccountStatusChange(params.targetUserId, 'Account restored', 'Your account has been re-enabled.'),

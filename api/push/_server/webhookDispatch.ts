@@ -1,4 +1,11 @@
-import { runDirectorJoinNotify, runDirectorLeaveNotify } from './directorNotify';
+import {
+  runDirectorClaimRequestNotify,
+  runDirectorJoinNotify,
+  runDirectorLeaveNotify,
+  runDirectorListingNotify,
+  runDirectorMessageRequestNotify,
+  runDirectorModerationNotify,
+} from './directorNotify';
 import { runReportNotify } from './reportNotify';
 import { runSupportNotify, type SupportNotifyEvent } from './supportNotify';
 import { isStaffRole } from './staffRoles';
@@ -50,6 +57,47 @@ export async function runSupabasePushWebhook(
       displayName: String(record.displayName || 'A neighbor'),
       neighborhood: String(record.neighborhood || 'Sacramento area'),
       email: String(record.email || ''),
+    });
+  }
+
+  if (table === 'items') {
+    return runDirectorListingNotify(String(record.userId || 'system'), {
+      id: String(record.id || ''),
+      userId: String(record.userId || ''),
+      userDisplayName: String(record.userDisplayName || 'A neighbor'),
+      title: String(record.title || 'New post'),
+      neighborhood: String(record.neighborhood || 'Sacramento area'),
+      type: String(record.type || 'giving'),
+    });
+  }
+
+  if (table === 'message_requests') {
+    return runDirectorMessageRequestNotify(String(record.fromUserId || 'system'), {
+      id: String(record.id || ''),
+      fromUserId: String(record.fromUserId || ''),
+      fromUserName: String(record.fromUserName || 'A neighbor'),
+    });
+  }
+
+  if (table === 'item_claim_requests') {
+    return runDirectorClaimRequestNotify(String(record.claimerUserId || 'system'), {
+      id: String(record.id || ''),
+      itemId: String(record.itemId || ''),
+      claimerUserId: String(record.claimerUserId || ''),
+      claimerName: String(record.claimerName || 'A neighbor'),
+      giverUserId: String(record.giverUserId || ''),
+    });
+  }
+
+  if (table === 'moderation_audit_log') {
+    return runDirectorModerationNotify(String(record.actorUserId || 'system'), {
+      id: String(record.id || ''),
+      actorUserId: String(record.actorUserId || ''),
+      actorName: String(record.actorName || 'Staff'),
+      targetUserId: String(record.targetUserId || ''),
+      targetName: String(record.targetName || 'a neighbor'),
+      action: String(record.action || ''),
+      detail: record.detail == null ? null : String(record.detail),
     });
   }
 
