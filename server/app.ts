@@ -63,10 +63,8 @@ export function createPushApp() {
       return;
     }
 
-    await supabaseAdmin.from('notification_preferences').upsert(
-      { userId, updatedAt: new Date().toISOString() },
-      { onConflict: 'userId', ignoreDuplicates: true },
-    );
+    const { ensureNotificationPreferencesOnSubscribe } = await import('../api/push/_server/pushSubscribe');
+    await ensureNotificationPreferencesOnSubscribe(userId);
 
     res.json({ ok: true });
   });

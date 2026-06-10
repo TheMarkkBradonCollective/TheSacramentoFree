@@ -59,46 +59,37 @@ async function savePushSubscriptionDirect(
     throw new Error(mapPushSubscriptionError(error));
   }
 
-  const { error: prefError } = await supabase.from('notification_preferences').upsert(
-    {
-      userId,
-      enabled: true,
-      messages: true,
-      messageRequests: true,
-      support: true,
-      claims: true,
-      gifts: true,
-      comments: true,
-      listingUpvotes: true,
-      listingDownvotes: true,
-      listingStatus: true,
-      nearbyListings: true,
-      requests: true,
-      announcements: true,
-      pickupReminders: true,
-      newListings: true,
-      savedItems: true,
-      accountUpdates: true,
-      staffSupport: true,
-      staffReports: true,
-      directorAlerts: true,
-      directorJoins: true,
-      directorLeaves: true,
-      directorModeration: true,
-      directorReports: true,
-      directorTickets: true,
-      directorListings: true,
-      directorMessageRequests: true,
-      directorClaimRequests: true,
-      nearbyRadiusMiles: 10,
-      followedCategories: [],
-      updatedAt: new Date().toISOString(),
-    },
-    { onConflict: 'userId', ignoreDuplicates: true },
-  );
+  await ensureNotificationPreferencesOnSubscribe(userId);
+}
 
-  if (prefError && prefError.code !== '42P01') {
-    console.warn('[push] notification_preferences upsert:', prefError.message);
+async function ensureNotificationPreferencesOnSubscribe(userId: string): Promise<void> {
+  const updatedAt = new Date().toISOString();
+  const { data: existing, error: readError } = await supabase
+    .from('notification_preferences')
+    .select('userId')
+    .eq('userId', userId)
+    .maybeSingle();
+
+  if (readError?.code === '42P01') return;
+
+  if (existing) {
+    const { error } = await supabase
+      .from('notification_preferences')
+      .update({ enabled: true, updatedAt })
+      .eq('userId', userId);
+    if (error && error.code !== '42P01') {
+      console.warn('[push] notification_preferences update:', error.message);
+    }
+    return;
+  }
+
+  const { error } = await supabase.from('notification_preferences').insert({
+    userId,
+    ...DEFAULT_NOTIFICATION_PREFERENCES,
+    updatedAt,
+  });
+  if (error && error.code !== '42P01') {
+    console.warn('[push] notification_preferences insert:', error.message);
   }
 }
 

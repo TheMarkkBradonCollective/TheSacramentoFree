@@ -1958,7 +1958,7 @@ export async function createSupabaseMessage(
     setSupabaseConfigurationState(true);
     if (!options?.skipPush) {
       await runPushTask(() =>
-        import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text)),
+        import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text, messageId)),
       );
     }
     return true;

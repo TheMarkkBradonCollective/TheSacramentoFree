@@ -141,7 +141,12 @@ export async function pushAfterMessageRequestAccepted(params: {
   });
 }
 
-export async function pushAfterMessage(chatId: string, senderId: string, text: string) {
+export async function pushAfterMessage(
+  chatId: string,
+  senderId: string,
+  text: string,
+  messageId?: string,
+) {
   const { data: chat } = await supabase.from('chats').select('*').eq('id', chatId).maybeSingle();
   if (!chat) return;
 
@@ -161,6 +166,7 @@ export async function pushAfterMessage(chatId: string, senderId: string, text: s
           item,
           recipientUserIds: participantIds.filter((id) => id !== senderId),
           whenLabel: 'Check messages for pickup details',
+          messageId,
         });
         return;
       }
@@ -172,6 +178,7 @@ export async function pushAfterMessage(chatId: string, senderId: string, text: s
     recipientUserId: recipientId,
     senderName,
     preview: text,
+    messageId,
   });
 }
 

@@ -110,7 +110,9 @@ export async function notifyNewMessage(params: {
   recipientUserId: string;
   senderName: string;
   preview: string;
+  messageId?: string;
 }) {
+  const messageId = params.messageId?.trim();
   await sendPushNotification({
     eventType: 'new_message',
     title: `Message from ${params.senderName}`,
@@ -118,7 +120,7 @@ export async function notifyNewMessage(params: {
     url: pushUrlForConversation(params.chatId),
     conversationId: params.chatId,
     recipientUserIds: [params.recipientUserId],
-    tag: `msg-${params.chatId}`,
+    tag: messageId ? `msg-${messageId}` : `msg-${params.chatId}-${Date.now()}`,
   });
 }
 
@@ -198,15 +200,18 @@ export async function notifyPickupScheduled(params: {
   item: ItemPost;
   recipientUserIds: string[];
   whenLabel: string;
+  messageId?: string;
 }) {
+  const messageId = params.messageId?.trim();
+  const itemId = params.item.id;
   await sendPushNotification({
     eventType: 'pickup_scheduled',
     title: 'Pickup scheduled',
     body: `"${params.item.title}" — ${params.whenLabel}`,
-    url: pushUrlForListing(params.item.id),
-    listingId: params.item.id,
+    url: pushUrlForListing(itemId),
+    listingId: itemId,
     recipientUserIds: params.recipientUserIds,
-    tag: `pickup-${params.item.id}`,
+    tag: messageId ? `pickup-msg-${messageId}` : `pickup-status-${itemId}`,
   });
 }
 
@@ -280,14 +285,16 @@ export async function notifyCommunityAnnouncement(params: {
   title: string;
   body: string;
   cities?: string[];
+  updateId?: string;
 }) {
+  const updateId = params.updateId?.trim();
   await sendPushNotification({
     eventType: 'announcement',
     title: params.title,
     body: params.body,
     url: '/notifications',
     cities: params.cities,
-    tag: 'community-announcement',
+    tag: updateId ? `announcement-${updateId}` : `announcement-${Date.now()}`,
   });
 }
 

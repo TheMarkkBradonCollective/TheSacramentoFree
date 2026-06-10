@@ -15,8 +15,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { getBearerToken, getUserFromBearer, getSupabaseForUser, parseJsonBody, claimPushSubscriptionForUser } =
-      await import('../../push-server.bundle.cjs');
+    const {
+      getBearerToken,
+      getUserFromBearer,
+      getSupabaseForUser,
+      parseJsonBody,
+      claimPushSubscriptionForUser,
+      ensureNotificationPreferencesOnSubscribe,
+    } = await import('../../push-server.bundle.cjs');
 
     const token = getBearerToken(req.headers.authorization);
     if (!token) {
@@ -60,43 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: claimed.error || 'Could not save subscription' });
     }
 
-    await supabase.from('notification_preferences').upsert(
-      {
-        userId: user.id,
-        enabled: true,
-        messages: true,
-        messageRequests: true,
-        support: true,
-        claims: true,
-        gifts: true,
-        comments: true,
-        listingUpvotes: true,
-        listingDownvotes: true,
-        listingStatus: true,
-        nearbyListings: true,
-        requests: true,
-        announcements: true,
-        pickupReminders: true,
-        newListings: true,
-        savedItems: true,
-        accountUpdates: true,
-        staffSupport: true,
-        staffReports: true,
-        directorAlerts: true,
-        directorJoins: true,
-        directorLeaves: true,
-        directorModeration: true,
-        directorReports: true,
-        directorTickets: true,
-        directorListings: true,
-        directorMessageRequests: true,
-        directorClaimRequests: true,
-        nearbyRadiusMiles: 10,
-        followedCategories: [],
-        updatedAt: new Date().toISOString(),
-      },
-      { onConflict: 'userId', ignoreDuplicates: true },
-    );
+    await ensureNotificationPreferencesOnSubscribe(user.id);
 
     return res.status(200).json({ ok: true });
   } catch (err) {

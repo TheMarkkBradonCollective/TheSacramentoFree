@@ -15,7 +15,7 @@ export {
   runDirectorModerationNotify,
 } from './directorNotify';
 export { runSupabasePushWebhook, runPushResubscribe } from './webhookDispatch';
-export { claimPushSubscriptionForUser } from './pushSubscribe';
+export { claimPushSubscriptionForUser, ensureNotificationPreferencesOnSubscribe } from './pushSubscribe';
 export {
   runListingExpiryCron,
   runPickupReminderCron,
