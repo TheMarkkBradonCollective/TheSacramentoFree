@@ -5,6 +5,8 @@ import { requireAuth, supabaseAdmin, type AuthedRequest } from './auth';
 import { configureVapid, getVapidPublicKey } from './push';
 import { runPushTest } from './pushTest';
 import { runPushSend, type PushSendBody } from './pushSend';
+import { runSupportNotify } from './supportNotify';
+import { runReportNotify } from './reportNotify';
 
 export function createPushApp() {
   const app = express();
@@ -95,6 +97,27 @@ export function createPushApp() {
 
   app.post('/api/push/send', requireAuth, async (req: AuthedRequest, res) => {
     const result = await runPushSend(req.user!.id, req.body as PushSendBody);
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/support/notify', requireAuth, async (req: AuthedRequest, res) => {
+    const ticketId = String(req.body?.ticketId || '').trim();
+    const event = req.body?.event;
+    if (!ticketId || !event) {
+      res.status(400).json({ error: 'ticketId and event are required' });
+      return;
+    }
+    const result = await runSupportNotify(req.user!.id, ticketId, event);
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/reports/notify', requireAuth, async (req: AuthedRequest, res) => {
+    const reportId = String(req.body?.reportId || '').trim();
+    if (!reportId) {
+      res.status(400).json({ error: 'reportId is required' });
+      return;
+    }
+    const result = await runReportNotify(req.user!.id, reportId);
     res.status(result.status).json(result.body);
   });
 

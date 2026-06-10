@@ -49,10 +49,6 @@ export async function getUserRole(userId: string): Promise<string> {
   return (data as { role?: string } | null)?.role || 'user';
 }
 
-export function isStaffRole(role: string): boolean {
-  return ['city_moderator', 'city_administrator', 'city_manager', 'director'].includes(role);
-}
-
 const ROLE_RANK: Record<string, number> = {
   user: 0,
   city_moderator: 1,
@@ -63,8 +59,25 @@ const ROLE_RANK: Record<string, number> = {
   admin: 3,
 };
 
-export function roleRank(role: string): number {
-  return ROLE_RANK[role] ?? 0;
+export const STAFF_ROLES = ['city_moderator', 'city_administrator', 'city_manager', 'director'] as const;
+
+export function normalizeUserRole(role: unknown): string {
+  if (typeof role !== 'string' || !role.trim()) return 'user';
+  const key = role.trim();
+  if (key in ROLE_RANK) return key;
+  const legacy: Record<string, string> = { moderator: 'city_administrator', admin: 'city_manager' };
+  return legacy[key] ?? 'user';
 }
 
-export const STAFF_ROLES = ['city_moderator', 'city_administrator', 'city_manager', 'director'] as const;
+export function isStaffRole(role: unknown): boolean {
+  const normalized = normalizeUserRole(role);
+  return (STAFF_ROLES as readonly string[]).includes(normalized);
+}
+
+export function isDirectorRole(role: unknown): boolean {
+  return normalizeUserRole(role) === 'director';
+}
+
+export function roleRank(role: unknown): number {
+  return ROLE_RANK[normalizeUserRole(role)] ?? 0;
+}

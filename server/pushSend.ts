@@ -1,4 +1,4 @@
-import { getUserRole, isStaffRole, roleRank, STAFF_ROLES, supabaseAdmin } from './auth';
+import { getUserRole, isDirectorRole, isStaffRole, normalizeUserRole, roleRank, supabaseAdmin } from './auth';
 import {
   getPreferencesForUsers,
   sendPushToUsers,
@@ -47,6 +47,9 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
         ? { lat: body.itemLat, lng: body.itemLng }
         : null;
 
+    const isRequest = eventType === 'new_request' || eventType === 'nearby_request';
+    const nearbyOnly = eventType === 'nearby_item' || eventType === 'nearby_request';
+
     const prefsMap = await getPreferencesForUsers((users || []).map((u) => String((u as { uid: string }).uid)));
 
     return (users || [])
@@ -54,35 +57,31 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
         const uid = String((u as { uid: string }).uid);
         if (uid === callerId) return false;
         const prefs = prefsMap.get(uid);
-        if (!prefs) return false;
+        if (!prefs?.enabled) return false;
 
-        const prefKey =
-          eventType === 'new_request' || eventType === 'nearby_request'
-            ? 'requests'
-            : eventType === 'nearby_item'
-              ? 'nearbyListings'
-              : 'newListings';
-        if (!prefs.enabled || !prefs[prefKey]) return false;
+        const viewerNeighborhood = String((u as { neighborhood: string }).neighborhood);
+        const sameCity = viewerNeighborhood === listingNeighborhood;
+        const followsCategory = Boolean(category && prefs.followedCategories.includes(category));
+        const inRadius =
+          itemLatLng &&
+          withinRadius(viewerNeighborhood, listingNeighborhood, itemLatLng, prefs.nearbyRadiusMiles);
 
-        if (eventType === 'nearby_item' || eventType === 'nearby_request') {
-          return withinRadius(
-            String((u as { neighborhood: string }).neighborhood),
-            listingNeighborhood,
-            itemLatLng,
-            prefs.nearbyRadiusMiles,
-          );
+        if (nearbyOnly) {
+          if (!prefs[isRequest ? 'requests' : 'nearbyListings']) return false;
+          return Boolean(inRadius && !sameCity);
         }
 
-        const sameCity = String((u as { neighborhood: string }).neighborhood) === listingNeighborhood;
-        const followsCategory = category && prefs.followedCategories.includes(category);
-        return sameCity || followsCategory;
+        if (prefs[isRequest ? 'requests' : 'newListings'] && (sameCity || followsCategory)) return true;
+        if (prefs[isRequest ? 'requests' : 'nearbyListings'] && inRadius) return true;
+        return false;
       })
       .map((u) => String((u as { uid: string }).uid));
   }
 
   if (eventType === 'director_alert') {
-    const { data: users } = await supabaseAdmin.from('users').select('uid, role').eq('role', 'director');
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role');
     return (users || [])
+      .filter((u) => isDirectorRole((u as { role: string }).role))
       .map((u) => String((u as { uid: string }).uid))
       .filter((uid) => uid && uid !== callerId);
   }
@@ -95,13 +94,15 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
           ? body.minStaffRank
           : 1;
 
-    const { data: users } = await supabaseAdmin.from('users').select('uid, role').in('role', [...STAFF_ROLES]);
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role');
 
     return (users || [])
       .filter((u) => {
         const uid = String((u as { uid: string }).uid);
         if (!uid || uid === callerId) return false;
-        return roleRank(String((u as { role: string }).role)) >= minRank;
+        const role = normalizeUserRole((u as { role: string }).role);
+        if (!isStaffRole(role) || isDirectorRole(role)) return false;
+        return roleRank(role) >= minRank;
       })
       .map((u) => String((u as { uid: string }).uid));
   }
