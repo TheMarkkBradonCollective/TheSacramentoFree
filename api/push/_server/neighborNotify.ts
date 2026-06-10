@@ -305,6 +305,39 @@ export async function runNeighborItemVoteNotify(
   });
 }
 
+export async function runSavedItemsActivityNotify(
+  callerId: string,
+  params: {
+    itemId: string;
+    ownerId?: string;
+    title: string;
+    body: string;
+    tag: string;
+    excludeUserIds?: string[];
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const itemId = String(params.itemId || '');
+  if (!itemId) {
+    return { status: 200, body: { ok: true, skipped: 'missing item id' } };
+  }
+
+  const exclude = new Set(params.excludeUserIds || []);
+  const userIds = (await getSavedItemUserIds(itemId, params.ownerId)).filter((uid) => !exclude.has(uid));
+  if (!userIds.length) {
+    return { status: 200, body: { ok: true, skipped: 'no saved-item subscribers' } };
+  }
+
+  return sendNeighborPush(callerId, {
+    eventType: 'saved_item_update',
+    title: params.title,
+    body: params.body.slice(0, 200),
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: userIds,
+    tag: params.tag,
+  });
+}
+
 export async function runNeighborNewCommentNotify(
   callerId: string,
   comment: {
@@ -317,6 +350,7 @@ export async function runNeighborNewCommentNotify(
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const commenterId = String(comment.userId || callerId);
   const itemId = String(comment.itemId || '');
+  const commentId = String(comment.id || `comment_${Date.now()}`);
   if (!itemId) {
     return { status: 200, body: { ok: true, skipped: 'missing item id' } };
   }
@@ -328,22 +362,70 @@ export async function runNeighborNewCommentNotify(
   }
 
   const ownerId = String((item as { userId?: string }).userId || '');
-  if (!ownerId || ownerId === commenterId) {
-    return { status: 200, body: { ok: true, skipped: 'no comment alert needed' } };
+  const commenterName = String(comment.userName || 'A neighbor');
+  const preview = String(comment.text || '').trim().slice(0, 120);
+  if (!preview) {
+    return { status: 200, body: { ok: true, skipped: 'empty comment' } };
   }
 
-  const commenterName = String(comment.userName || 'A neighbor');
-  const preview = String(comment.text || '').slice(0, 120);
   const itemTitle = String((item as { title?: string }).title || 'your listing');
+  const results: Array<{ status: number; body: Record<string, unknown> }> = [];
 
-  return sendNeighborPush(commenterId, {
-    eventType: 'new_comment',
-    title: 'New comment on your listing',
-    body: `${commenterName}: ${preview}`,
-    url: listingUrl(itemId),
-    listingId: itemId,
-    recipientUserIds: [ownerId],
-    tag: `comment-${itemId}`,
+  if (ownerId && ownerId !== commenterId) {
+    results.push(
+      await sendNeighborPush(commenterId, {
+        eventType: 'new_comment',
+        title: 'New comment on your listing',
+        body: `${commenterName}: ${preview}`,
+        url: listingUrl(itemId),
+        listingId: itemId,
+        recipientUserIds: [ownerId],
+        tag: `comment-${commentId}`,
+      }),
+    );
+  }
+
+  results.push(
+    await runSavedItemsActivityNotify(commenterId, {
+      itemId,
+      ownerId,
+      title: 'New comment on saved item',
+      body: `${commenterName} on "${itemTitle}": ${preview}`,
+      tag: `saved-comment-${commentId}`,
+      excludeUserIds: [ownerId, commenterId],
+    }),
+  );
+
+  const sent = results.reduce((sum, r) => sum + Number(r.body.sent || 0), 0);
+  const skipped = results.every((r) => r.body.skipped);
+  return { status: 200, body: { ok: true, skipped: skipped && sent === 0, sent, handlers: results.map((r) => r.body) } };
+}
+
+export async function runSavedItemsListingUpdatedNotify(
+  callerId: string,
+  item: {
+    id?: string;
+    userId?: string;
+    title?: string;
+    updatedAt?: string;
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const itemId = String(item.id || '');
+  const ownerId = String(item.userId || callerId);
+  if (!itemId) {
+    return { status: 200, body: { ok: true, skipped: 'missing item id' } };
+  }
+
+  const itemTitle = String(item.title || 'Saved item');
+  const updatedAt = String(item.updatedAt || Date.now());
+
+  return runSavedItemsActivityNotify(ownerId, {
+    itemId,
+    ownerId,
+    title: 'Saved listing updated',
+    body: `"${itemTitle}" was edited by the owner`,
+    tag: `saved-edit-${itemId}-${updatedAt}`,
+    excludeUserIds: [ownerId],
   });
 }
 

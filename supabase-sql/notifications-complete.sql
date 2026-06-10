@@ -2,6 +2,14 @@
 -- NOTIFICATIONS — COMPLETE SETUP (run once in Supabase SQL)
 -- Sacramento Buy Nothing
 -- Safe to re-run: uses IF NOT EXISTS / ADD COLUMN IF NOT EXISTS
+--
+-- After this script, configure ALL webhooks in
+-- supabase-sql/supabase-push-webhook.sql (13 webhooks).
+--
+-- Toggle guide:
+--   Comments        → owner when someone comments on your listing
+--   Saved items     → bookmarkers when listing edited, commented, claimed, or status changes
+--   Upvotes/Downvotes → owner when neighbors vote on your listing
 -- =========================================================
 
 -- 1. Push subscriptions (one row per browser/device endpoint)

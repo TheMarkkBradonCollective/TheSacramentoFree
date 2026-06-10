@@ -72,7 +72,7 @@ const PREF_SECTIONS: {
       {
         key: 'savedItems',
         label: 'Saved items',
-        description: 'When a bookmarked listing is claimed or changes status',
+        description: 'When a bookmarked listing is edited, commented on, claimed, or changes status',
       },
     ],
   },
