@@ -1,7 +1,30 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabaseEnv } from './auth';
 
 let client: SupabaseClient | null = null;
 let clientLoad: Promise<SupabaseClient> | null = null;
+
+export function getServiceRoleKey(): string {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE ||
+    ''
+  );
+}
+
+export async function getSupabaseForUser(accessToken: string): Promise<SupabaseClient> {
+  const { createClient } = await import('@supabase/supabase-js');
+  const { url, apiKey } = getSupabaseEnv();
+  if (!url || !apiKey) {
+    throw new Error('Supabase is not configured on the server.');
+  }
+
+  return createClient(url, apiKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 async function loadSupabaseAdmin(): Promise<SupabaseClient> {
   if (client) return client;
@@ -13,27 +36,13 @@ async function loadSupabaseAdmin(): Promise<SupabaseClient> {
       ]);
       const ws = (wsImport as { default?: typeof import('ws') }).default ?? wsImport;
 
-      const supabaseUrl =
-        process.env.NEXT_PUBLIC_SUPABASE_URL ||
-        process.env.VITE_SUPABASE_URL ||
-        process.env.SUPABASE_URL ||
-        '';
-      const supabaseAnonKey =
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-        process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-        process.env.SUPABASE_ANON_KEY ||
-        process.env.SUPABASE_KEY ||
-        '';
-      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+      const { url, apiKey } = getSupabaseEnv();
+      const serviceRoleKey = getServiceRoleKey();
 
-      client = createClient(
-        supabaseUrl || 'https://placeholder.supabase.co',
-        serviceRoleKey || supabaseAnonKey || 'placeholder',
-        {
-          auth: { persistSession: false, autoRefreshToken: false },
-          realtime: { transport: ws as unknown as typeof WebSocket },
-        },
-      );
+      client = createClient(url || 'https://placeholder.supabase.co', serviceRoleKey || apiKey || 'placeholder', {
+        auth: { persistSession: false, autoRefreshToken: false },
+        realtime: { transport: ws as unknown as typeof WebSocket },
+      });
       return client;
     })();
   }

@@ -1,4 +1,4 @@
-function getSupabaseEnv(): { url: string; apiKey: string } {
+export function getSupabaseEnv(): { url: string; apiKey: string } {
   const url =
     process.env.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -13,11 +13,16 @@ function getSupabaseEnv(): { url: string; apiKey: string } {
   return { url, apiKey };
 }
 
+export function getBearerToken(authHeader?: string | string[]): string | null {
+  const raw = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+  const token = raw?.startsWith('Bearer ') ? raw.slice(7).trim() : '';
+  return token || null;
+}
+
 export async function getUserFromBearer(
   authHeader?: string | string[],
 ): Promise<{ id: string; email?: string } | null> {
-  const raw = Array.isArray(authHeader) ? authHeader[0] : authHeader;
-  const token = raw?.startsWith('Bearer ') ? raw.slice(7).trim() : '';
+  const token = getBearerToken(authHeader);
   if (!token) return null;
 
   const { url, apiKey } = getSupabaseEnv();

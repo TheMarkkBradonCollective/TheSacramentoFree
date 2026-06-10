@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from './supabaseAdmin';
+import { getServiceRoleKey, getSupabaseAdmin } from './supabaseAdmin';
 import {
   getPreferencesForUsers,
   sendPushToUsers,
@@ -126,7 +126,7 @@ export async function runPushSend(
   callerId: string,
   body: PushSendBody,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!getServiceRoleKey()) {
     return {
       status: 503,
       body: {

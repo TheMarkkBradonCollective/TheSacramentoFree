@@ -7,7 +7,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { getUserFromBearer, getSupabaseAdmin, parseJsonBody } = await import('../../push-server.bundle.cjs');
+    const { getBearerToken, getUserFromBearer, getSupabaseForUser, parseJsonBody } = await import(
+      '../../push-server.bundle.cjs'
+    );
+
+    const token = getBearerToken(req.headers.authorization);
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
     const user = await getUserFromBearer(req.headers.authorization);
     if (!user) {
@@ -15,9 +22,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const body = parseJsonBody<{ endpoint?: string }>(req);
-    const supabaseAdmin = await getSupabaseAdmin();
+    const supabase = await getSupabaseForUser(token);
 
-    let query = supabaseAdmin.from('push_subscriptions').delete().eq('userId', user.id);
+    let query = supabase.from('push_subscriptions').delete().eq('userId', user.id);
     if (body.endpoint) query = query.eq('endpoint', body.endpoint);
 
     const { error } = await query;
