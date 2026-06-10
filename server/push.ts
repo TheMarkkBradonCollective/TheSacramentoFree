@@ -281,11 +281,13 @@ function buildNotificationPayload(payload: PushPayload): string {
 function shouldRemoveSubscription(err: unknown): boolean {
   const status = (err as { statusCode?: number }).statusCode;
   if (status === 404 || status === 410) return true;
-  if (status === 401 || status === 403) {
-    const message = String((err as { body?: string }).body || (err as Error).message || '').toLowerCase();
-    return message.includes('vapid') || message.includes('credentials') || message.includes('unauthorized');
-  }
-  return false;
+  const message = String((err as { body?: string }).body || (err as Error).message || '').toLowerCase();
+  return (
+    message.includes('expired') ||
+    message.includes('unsubscribed') ||
+    message.includes('notregistered') ||
+    message.includes('invalid registration')
+  );
 }
 
 export async function sendToSubscription(subscription: PushSubscriptionRow, payload: PushPayload) {
@@ -300,7 +302,12 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
 
   try {
     const webpush = await getWebPushModuleAsync();
-    await webpush.sendNotification(pushSubscription, notification, webPushOptionsFor(payload.eventType));
+    const options = webPushOptionsFor(payload.eventType);
+    try {
+      await webpush.sendNotification(pushSubscription, notification, options);
+    } catch {
+      await webpush.sendNotification(pushSubscription, notification);
+    }
     return { ok: true as const, removed: false };
   } catch (err: unknown) {
     if (shouldRemoveSubscription(err)) {

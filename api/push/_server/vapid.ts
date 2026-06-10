@@ -44,14 +44,19 @@ export async function sendWebPush(
 
   try {
     const webpush = await getWebPushModuleAsync();
-    await webpush.sendNotification(
-      {
-        endpoint: subscription.endpoint,
-        keys: subscription.keys,
-      },
-      notification,
-      webPushOptionsFor(payload.eventType || 'account_update'),
-    );
+    const options = webPushOptionsFor(payload.eventType || 'account_update');
+    try {
+      await webpush.sendNotification(
+        { endpoint: subscription.endpoint, keys: subscription.keys },
+        notification,
+        options,
+      );
+    } catch {
+      await webpush.sendNotification(
+        { endpoint: subscription.endpoint, keys: subscription.keys },
+        notification,
+      );
+    }
     return { ok: true, removed: false };
   } catch (err: unknown) {
     return { ok: false, removed: shouldRemoveSubscription(err) };

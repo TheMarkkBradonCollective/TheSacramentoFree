@@ -248,7 +248,13 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
 
   try {
     const webpush = await getWebPushModuleAsync();
-    await webpush.sendNotification(pushSubscription, notification, webPushOptionsFor(payload.eventType));
+    const options = webPushOptionsFor(payload.eventType);
+    try {
+      await webpush.sendNotification(pushSubscription, notification, options);
+    } catch (firstErr: unknown) {
+      // Some push gateways reject urgency/TTL — retry plain delivery.
+      await webpush.sendNotification(pushSubscription, notification);
+    }
     return { ok: true as const, removed: false };
   } catch (err: unknown) {
     if (shouldRemoveSubscription(err)) {

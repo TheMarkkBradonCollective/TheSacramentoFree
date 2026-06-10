@@ -81,15 +81,6 @@ async function savePushSubscriptionDirect(
     throw new Error(mapPushSubscriptionError(error));
   }
 
-  if (row.userAgent) {
-    await supabase
-      .from('push_subscriptions')
-      .delete()
-      .eq('userId', userId)
-      .eq('userAgent', row.userAgent)
-      .neq('endpoint', json.endpoint);
-  }
-
   const { error: prefError } = await supabase
     .from('notification_preferences')
     .upsert({ userId, updatedAt: new Date().toISOString() }, { onConflict: 'userId', ignoreDuplicates: true });
@@ -248,7 +239,11 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
   }
 
   if (existing) {
-    await existing.unsubscribe();
+    try {
+      await existing.unsubscribe();
+    } catch {
+      // continue — browser may already have cleared the subscription
+    }
   }
 
   const subscription = await registration.pushManager.subscribe({
@@ -480,12 +475,18 @@ export async function notifyReportPush(reportId: string): Promise<void> {
 
 export async function sendPushNotification(options: SendPushOptions): Promise<void> {
   const json = await postPushApi('/api/push/send', options);
-  if (Number(json.sent) === 0 && !json.error) {
+  if (json.error) {
+    console.warn('[push] send error:', options.eventType, json.error);
+    return;
+  }
+  if (Number(json.sent) === 0) {
     console.warn('[push] send reached 0 devices:', {
       eventType: options.eventType,
       recipients: json.recipients,
       skipped: json.skipped,
       subscriptionCount: json.subscriptionCount,
+      failed: json.failed,
+      removed: json.removed,
     });
   }
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sac-buy-nothing-v6';
+const CACHE_NAME = 'sac-buy-nothing-v7';
 
 const NOTIFICATION_ICON = '/icon-192.png';
 const OFFLINE_URLS = ['/index.html', '/icon.svg', '/icon-192.png', '/icon-512.png', '/manifest.json'];
@@ -152,21 +152,31 @@ self.addEventListener('push', (event) => {
     String(payload.body || '').trim() ||
     String(payload.title || '').trim() ||
     'You have a new community update.';
-  const options = {
-    body,
-    icon: notificationAsset(payload.icon || NOTIFICATION_ICON),
-    badge: notificationAsset(payload.badge || NOTIFICATION_ICON),
-    tag: payload.tag || payload.eventType || 'sbn-notification',
-    data: {
-      url: resolveNotificationUrl(payload.url || '/'),
-      eventType: payload.eventType || '',
-      ...(payload.data || {}),
-    },
-    requireInteraction: false,
-    renotify: true,
+  const data = {
+    url: resolveNotificationUrl(payload.url || '/'),
+    eventType: payload.eventType || '',
+    ...(payload.data || {}),
   };
+  const tag = payload.tag || payload.eventType || 'sbn-notification';
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  async function show() {
+    const withIcon = {
+      body,
+      icon: notificationAsset(payload.icon || NOTIFICATION_ICON),
+      badge: notificationAsset(payload.badge || NOTIFICATION_ICON),
+      tag,
+      data,
+      requireInteraction: false,
+      renotify: true,
+    };
+    try {
+      await self.registration.showNotification(title, withIcon);
+    } catch {
+      await self.registration.showNotification(title, { body, tag, data, renotify: true });
+    }
+  }
+
+  event.waitUntil(show());
 });
 
 self.addEventListener('notificationclick', (event) => {

@@ -47,12 +47,16 @@ export function buildNotificationJson(payload: NotificationPayloadInput): string
   });
 }
 
+/** Only remove subscriptions that are definitively expired — never on generic 403. */
 export function shouldRemoveSubscription(err: unknown): boolean {
   const status = (err as { statusCode?: number }).statusCode;
   if (status === 404 || status === 410) return true;
-  if (status === 401 || status === 403) {
-    const message = String((err as { body?: string }).body || (err as Error).message || '').toLowerCase();
-    return message.includes('vapid') || message.includes('credentials') || message.includes('unauthorized');
-  }
-  return false;
+
+  const message = String((err as { body?: string }).body || (err as Error).message || '').toLowerCase();
+  return (
+    message.includes('expired') ||
+    message.includes('unsubscribed') ||
+    message.includes('notregistered') ||
+    message.includes('invalid registration')
+  );
 }
