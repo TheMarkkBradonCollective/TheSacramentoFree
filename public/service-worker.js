@@ -1,6 +1,7 @@
-const CACHE_NAME = 'sac-buy-nothing-v5';
+const CACHE_NAME = 'sac-buy-nothing-v6';
 
-const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
+const NOTIFICATION_ICON = '/icon-192.png';
+const OFFLINE_URLS = ['/index.html', '/icon.svg', '/icon-192.png', '/icon-512.png', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -115,6 +116,14 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+function notificationAsset(path) {
+  try {
+    return new URL(path, self.location.origin).href;
+  } catch {
+    return path;
+  }
+}
+
 function resolveNotificationUrl(rawUrl) {
   if (!rawUrl) return '/';
   try {
@@ -145,8 +154,8 @@ self.addEventListener('push', (event) => {
     'You have a new community update.';
   const options = {
     body,
-    icon: payload.icon || '/Logo.jpeg',
-    badge: payload.badge || '/Logo.jpeg',
+    icon: notificationAsset(payload.icon || NOTIFICATION_ICON),
+    badge: notificationAsset(payload.badge || NOTIFICATION_ICON),
     tag: payload.tag || payload.eventType || 'sbn-notification',
     data: {
       url: resolveNotificationUrl(payload.url || '/'),
