@@ -132,7 +132,7 @@ export default function ItemGrid({
 
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
 
-  const { savedIds, toggleSaved, isSaved } = useSavedItems();
+  const { savedIds, toggleSaved, isSaved } = useSavedItems(userProfile.uid);
 
   const {
     getVotesForPost,

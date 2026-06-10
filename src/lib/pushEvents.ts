@@ -205,6 +205,21 @@ export async function notifyListingExpiringSoon(item: ItemPost) {
   });
 }
 
+export async function notifyListingStatus(params: {
+  item: ItemPost;
+  statusLabel: string;
+}) {
+  await sendPushNotification({
+    eventType: 'listing_status',
+    title: 'Listing status updated',
+    body: `"${params.item.title}" — ${params.statusLabel}`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.item.userId],
+    tag: `status-${params.item.id}-${params.item.status}`,
+  });
+}
+
 export async function notifyCommunityAnnouncement(params: {
   title: string;
   body: string;

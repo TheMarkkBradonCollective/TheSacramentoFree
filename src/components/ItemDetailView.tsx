@@ -69,7 +69,7 @@ export default function ItemDetailView({
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
 
-  const { isSaved, toggleSaved } = useSavedItems();
+  const { isSaved, toggleSaved } = useSavedItems(currentUserId);
 
   useEffect(() => {
     void getListingSubitems(item.id).then(setSubitems);
