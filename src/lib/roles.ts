@@ -112,9 +112,22 @@ export function canViewDirectorOverview(role?: UserProfile['role']): boolean {
   return isDirectorRole(role);
 }
 
-/** Post, edit, and delete app changelog updates. */
+/** Post, edit, and delete app changelog updates (director — legacy alias). */
 export function canManageAppUpdates(role?: UserProfile['role']): boolean {
   return isDirectorRole(role);
+}
+
+/** Post announcements in Help & support. */
+export function canPostAnnouncements(role?: UserProfile['role']): boolean {
+  return isStaffRole(role);
+}
+
+/** Edit or delete an announcement — author or director. */
+export function canEditAnnouncement(
+  actor: Pick<UserProfile, 'uid' | 'role'>,
+  postedByUserId: string,
+): boolean {
+  return isDirectorRole(actor.role) || actor.uid === postedByUserId;
 }
 
 /** Publish or edit this staff member's own public welcome message (director uses director_message). */

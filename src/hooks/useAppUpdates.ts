@@ -7,7 +7,7 @@ import {
   updateSupabaseAppUpdate,
 } from '../supabase';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
-import { canManageAppUpdates } from '../lib/roles';
+import { canEditAnnouncement, canPostAnnouncements } from '../lib/roles';
 
 export function useAppUpdates(userProfile?: UserProfile | null) {
   const [updates, setUpdates] = useState<AppUpdateRecord[]>([]);
@@ -33,7 +33,7 @@ export function useAppUpdates(userProfile?: UserProfile | null) {
   }, [reload]);
 
   const createUpdate = async (input: AppUpdateInput) => {
-    if (!userProfile) return { ok: false, errorMessage: 'Sign in as director to post.' };
+    if (!userProfile) return { ok: false, errorMessage: 'Sign in as staff to post.' };
     const result = await createSupabaseAppUpdate(input, userProfile);
     if (result.ok && result.update) {
       setUpdates((prev) => [result.update!, ...prev]);
@@ -42,7 +42,7 @@ export function useAppUpdates(userProfile?: UserProfile | null) {
   };
 
   const saveUpdate = async (id: string, input: AppUpdateInput) => {
-    if (!userProfile) return { ok: false, errorMessage: 'Sign in as director to edit.' };
+    if (!userProfile) return { ok: false, errorMessage: 'Sign in to edit.' };
     const result = await updateSupabaseAppUpdate(id, input, userProfile);
     if (result.ok && result.update) {
       setUpdates((prev) => prev.map((row) => (row.id === id ? result.update! : row)));
@@ -51,7 +51,7 @@ export function useAppUpdates(userProfile?: UserProfile | null) {
   };
 
   const removeUpdate = async (id: string) => {
-    if (!userProfile) return { ok: false, errorMessage: 'Sign in as director to delete.' };
+    if (!userProfile) return { ok: false, errorMessage: 'Sign in to delete.' };
     const result = await deleteSupabaseAppUpdate(id, userProfile);
     if (result.ok) {
       setUpdates((prev) => prev.filter((row) => row.id !== id));
@@ -59,7 +59,10 @@ export function useAppUpdates(userProfile?: UserProfile | null) {
     return result;
   };
 
-  const canManage = canManageAppUpdates(userProfile?.role);
+  const canPost = canPostAnnouncements(userProfile?.role);
 
-  return { updates, loading, reload, createUpdate, saveUpdate, removeUpdate, canManage };
+  const canEdit = (update: AppUpdateRecord) =>
+    Boolean(userProfile && canEditAnnouncement(userProfile, update.postedByUserId));
+
+  return { updates, loading, reload, createUpdate, saveUpdate, removeUpdate, canPost, canEdit };
 }

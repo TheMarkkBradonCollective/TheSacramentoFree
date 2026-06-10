@@ -100,7 +100,7 @@ export default function AppUpdateEditModal({
               className="sbn-input w-full min-h-[8rem] text-sm"
               value={form.detail}
               onChange={(e) => setForm((prev) => ({ ...prev, detail: e.target.value }))}
-              placeholder="Extra detail shown when someone expands the update"
+              placeholder="Extra detail shown when someone expands the announcement"
             />
           </label>
 
@@ -109,7 +109,7 @@ export default function AppUpdateEditModal({
               Cancel
             </button>
             <button type="submit" disabled={saving} className="sbn-btn sbn-btn-primary flex-1">
-              {saving ? 'Saving…' : 'Save update'}
+              {saving ? 'Saving…' : 'Save announcement'}
             </button>
           </div>
         </form>

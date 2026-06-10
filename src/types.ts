@@ -338,6 +338,17 @@ export interface AppUpdateRecord {
 
 export type AppUpdateInput = Pick<AppUpdateRecord, 'date' | 'title' | 'body' | 'detail'>;
 
+export interface AppUpdateComment {
+  id: string;
+  updateId: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  userNeighborhood: string;
+  text: string;
+  createdAt: string;
+}
+
 export type CommunityContentVoteTarget = 'update' | 'review' | 'leader_message';
 
 export interface CommunityContentVote {

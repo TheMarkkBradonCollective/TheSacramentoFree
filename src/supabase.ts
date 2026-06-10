@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, CommunityContentVote, CommunityContentVoteTarget } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateComment, AppUpdateInput, AppUpdateRecord, CommunityContentVote, CommunityContentVoteTarget } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canEditOwnStaffMessage, canManageAppUpdates, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
+import { normalizeUserRole, type UserRole, canEditAnnouncement, canEditOwnStaffMessage, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -2667,8 +2667,8 @@ export async function createSupabaseAppUpdate(
   input: AppUpdateInput,
   actor: UserProfile,
 ): Promise<{ ok: boolean; update?: AppUpdateRecord; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor.role)) {
-    return { ok: false, errorMessage: 'Only the director can post updates.' };
+  if (!canPostAnnouncements(actor.role)) {
+    return { ok: false, errorMessage: 'Only staff can post announcements.' };
   }
 
   try {
@@ -2698,7 +2698,11 @@ export async function createSupabaseAppUpdate(
     const update = normalizeAppUpdateRow(data as Record<string, unknown>);
     await runPushTask(() =>
       import('./lib/pushIntegration').then((m) =>
-        m.pushDirectorAnnouncement('Community update', `${update.title}: ${update.body}`.slice(0, 180)),
+        m.pushDirectorAnnouncement(
+          update.title,
+          `${update.body}`.slice(0, 180),
+          update.id,
+        ),
       ),
     );
     return { ok: true, update };
@@ -2712,11 +2716,22 @@ export async function updateSupabaseAppUpdate(
   input: AppUpdateInput,
   actor: UserProfile,
 ): Promise<{ ok: boolean; update?: AppUpdateRecord; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor.role)) {
-    return { ok: false, errorMessage: 'Only the director can edit updates.' };
-  }
-
   try {
+    const { data: existing, error: readError } = await supabase
+      .from('app_updates')
+      .select('postedByUserId')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (readError || !existing) {
+      return { ok: false, errorMessage: 'Announcement not found.' };
+    }
+
+    const postedByUserId = String((existing as { postedByUserId?: string }).postedByUserId || '');
+    if (!canEditAnnouncement(actor, postedByUserId)) {
+      return { ok: false, errorMessage: 'You can only edit your own announcements.' };
+    }
+
     const payload = {
       date: input.date,
       title: input.title.trim(),
@@ -2742,16 +2757,99 @@ export async function updateSupabaseAppUpdate(
   }
 }
 
+export async function getSupabaseAppUpdateComments(updateIds: string[]): Promise<AppUpdateComment[]> {
+  if (updateIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from('app_update_comments')
+      .select('*')
+      .in('updateId', updateIds)
+      .order('createdAt', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      handleSupabaseError(error, 'app_update_comments');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []) as AppUpdateComment[];
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'app_update_comments');
+    return [];
+  }
+}
+
+export async function createSupabaseAppUpdateComment(comment: AppUpdateComment): Promise<boolean> {
+  try {
+    const payload = {
+      ...comment,
+      createdAt: comment.createdAt ? new Date(comment.createdAt).toISOString() : new Date().toISOString(),
+    };
+    const { error } = await supabase.from('app_update_comments').insert(payload);
+
+    if (error) {
+      handleSupabaseError(error, 'app_update_comments');
+      return false;
+    }
+
+    setSupabaseConfigurationState(true);
+    return true;
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'app_update_comments');
+    return false;
+  }
+}
+
+export async function deleteSupabaseAppUpdateComment(
+  commentId: string,
+  userId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error, count } = await supabase
+      .from('app_update_comments')
+      .delete({ count: 'exact' })
+      .eq('id', commentId)
+      .eq('userId', userId);
+
+    if (error) {
+      handleSupabaseError(error, 'app_update_comments');
+      return { ok: false, errorMessage: error.message };
+    }
+
+    if (!count) {
+      return { ok: false, errorMessage: 'Comment not found or already removed.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete comment.' };
+  }
+}
+
 export async function deleteSupabaseAppUpdate(
   id: string,
   actor: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor.role)) {
-    return { ok: false, errorMessage: 'Only the director can delete updates.' };
-  }
-
   try {
+    const { data: existing, error: readError } = await supabase
+      .from('app_updates')
+      .select('postedByUserId')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (readError || !existing) {
+      return { ok: false, errorMessage: 'Announcement not found.' };
+    }
+
+    const postedByUserId = String((existing as { postedByUserId?: string }).postedByUserId || '');
+    if (!canEditAnnouncement(actor, postedByUserId)) {
+      return { ok: false, errorMessage: 'You can only delete your own announcements.' };
+    }
+
     await supabase.from('community_content_votes').delete().eq('targetType', 'update').eq('targetId', id);
+    await supabase.from('app_update_comments').delete().eq('updateId', id);
     const { error } = await supabase.from('app_updates').delete().eq('id', id);
 
     if (error) {

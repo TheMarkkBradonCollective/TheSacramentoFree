@@ -13,7 +13,7 @@ import { useImageAttachment } from '../hooks/useImageAttachment';
 import { Flag, LifeBuoy, MessageSquarePlus, ChevronRight, Megaphone, Star } from 'lucide-react';
 import UpdatesList from './UpdatesList';
 import CommunityReviews from './CommunityReviews';
-import { canManageAppUpdates, canViewDirectorOverview } from '../lib/roles';
+import { canPostAnnouncements, canViewDirectorOverview } from '../lib/roles';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import DirectorSiteOverview from './DirectorSiteOverview';
 
@@ -151,7 +151,7 @@ export default function AccountHelpSection({
 
   const canSubmitTicket =
     ticketSubject.trim() && (ticketMessage.trim() || ticketImage.file);
-  const canManageUpdates = canManageAppUpdates(user.role);
+  const canPostAnnouncementsPanel = canPostAnnouncements(user.role);
   const showDirectorOverview = canViewDirectorOverview(user.role);
 
   return (
@@ -169,11 +169,11 @@ export default function AccountHelpSection({
             <Megaphone className="w-4 h-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="font-semibold text-sm text-app block">App updates</span>
+            <span className="font-semibold text-sm text-app block">Announcements</span>
             <span className="text-[11px] text-muted">
-              {canManageUpdates
-                ? 'View, edit, and post updates'
-                : "See what's new and vote on changes"}
+              {canPostAnnouncementsPanel
+                ? 'Post news for neighbors — votes and comments come back to staff'
+                : 'Community news from staff — vote and join the discussion'}
             </span>
           </span>
           <ChevronRight className="w-4 h-4 text-muted shrink-0" />
@@ -224,11 +224,11 @@ export default function AccountHelpSection({
       {panel === 'updates' && (
         <FullScreenPanel
           wide
-          title="App updates"
+          title="Announcements"
           subtitle={
-            canManageUpdates
-              ? 'Post changelog entries for neighbors — votes come back to you as feedback'
-              : 'Tap an update to read more — your votes go to the director'
+            canPostAnnouncementsPanel
+              ? 'Share news with the community — neighbors can vote and comment'
+              : 'Tap an announcement to read more, vote, and join the discussion'
           }
           onClose={closePanel}
         >
