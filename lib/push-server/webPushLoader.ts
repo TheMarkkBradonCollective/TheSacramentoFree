@@ -3,6 +3,6 @@ export {
   getVapidPrivateKey,
   getVapidPublicKey,
   getVapidSubject,
-  getWebPushModule,
+  getWebPushModuleAsync,
   isVapidConfigured,
 } from '../../api/_lib/push/webPushLoader';

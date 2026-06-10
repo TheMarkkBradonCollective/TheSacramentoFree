@@ -1,5 +1,5 @@
 import { supabaseAdmin } from './auth';
-import { configureVapidAsync, getVapidPublicKey, getWebPushModule, isVapidConfigured } from '../api/_lib/push/webPushLoader';
+import { configureVapidAsync, getVapidPublicKey, getWebPushModuleAsync, isVapidConfigured } from '../api/_lib/push/webPushLoader';
 
 export type PushEventType =
   | 'new_item'
@@ -256,7 +256,7 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
   });
 
   try {
-    const webpush = await getWebPushModule();
+    const webpush = await getWebPushModuleAsync();
     await webpush.sendNotification(pushSubscription, notification);
     return { ok: true as const, removed: false };
   } catch (err: unknown) {

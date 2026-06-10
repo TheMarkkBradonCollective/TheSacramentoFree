@@ -4,7 +4,7 @@
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 15,
-      "includeFiles": "{api/_lib/**,node_modules/web-push/**,node_modules/@supabase/**,node_modules/agent-base/**,node_modules/https-proxy-agent/**,node_modules/jws/**,node_modules/safe-buffer/**}"
+      "includeFiles": "node_modules/{web-push,ws,@supabase,agent-base,https-proxy-agent,jws,safe-buffer}/**"
     }
   },
   "rewrites": [
