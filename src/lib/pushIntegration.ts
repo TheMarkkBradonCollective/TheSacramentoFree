@@ -17,6 +17,7 @@ import {
   notifyClaimRequestSubmitted,
   notifyListingStatus,
   notifyRequestFulfilled,
+  notifySavedListingActivity,
   notifyDirectorAlert,
 } from './pushEvents';
 
@@ -192,18 +193,46 @@ export async function pushAfterItemVote(params: {
 }
 
 export async function pushAfterComment(comment: {
+  id?: string;
   itemId: string;
   userId: string;
   userName: string;
   text: string;
 }) {
   const item = await getItemById(comment.itemId);
-  if (!item || item.userId === comment.userId) return;
+  if (!item) return;
 
-  await notifyNewComment({
+  const preview = comment.text.trim();
+  if (!preview) return;
+
+  const commenterName = comment.userName || 'A neighbor';
+  const commentId = comment.id || `comment_${Date.now()}`;
+
+  if (item.userId !== comment.userId) {
+    await notifyNewComment({
+      item,
+      commenterName,
+      preview,
+      commentId,
+    });
+  }
+
+  await notifySavedListingActivity({
     item,
-    commenterName: comment.userName,
-    preview: comment.text,
+    title: 'New comment on saved item',
+    body: `${commenterName} on "${item.title}": ${preview.slice(0, 120)}`,
+    tag: `saved-comment-${commentId}`,
+    excludeUserIds: [item.userId, comment.userId],
+  });
+}
+
+export async function pushAfterItemUpdated(item: ItemPost) {
+  await notifySavedListingActivity({
+    item,
+    title: 'Saved listing updated',
+    body: `"${item.title}" was edited by the owner`,
+    tag: `saved-edit-${item.id}-${item.updatedAt || Date.now()}`,
+    excludeUserIds: [item.userId],
   });
 }
 

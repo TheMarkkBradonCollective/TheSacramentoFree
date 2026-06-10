@@ -1,28 +1,29 @@
 -- =========================================================
--- SERVER-SIDE PUSH WEBHOOKS — neighbor + director + staff
+-- SERVER-SIDE PUSH WEBHOOKS — complete neighbor + staff list
 -- =========================================================
 --
+-- Run supabase-sql/notifications-complete.sql FIRST.
+--
 -- Auth: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
--- (Optional: set SUPABASE_PUSH_WEBHOOK_SECRET in Vercel instead.)
+-- URL (all webhooks): https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push
 --
--- URL for every webhook:
---   https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push
---
--- | Webhook name          | Table                   | Events         | Notifications                    |
+-- | Webhook name          | Table                   | Events         | Who gets notified                |
 -- |-----------------------|-------------------------|----------------|----------------------------------|
--- | push-users-join       | users                   | INSERT         | Director: new neighbors          |
--- | push-users-leave      | users                   | DELETE         | Director: account departures     |
--- | push-listings-insert  | items                   | INSERT         | Discover + director listings     |
--- | push-listings-update  | items                   | UPDATE         | Listing status + saved items     |
--- | push-dm-requests      | message_requests        | INSERT, UPDATE | Message requests + director      |
--- | push-claim-reqs       | item_claim_requests     | INSERT         | Claim requests + director        |
--- | push-item-claims      | item_claims             | INSERT         | Claims (poster alert)            |
--- | push-comments         | item_comments           | INSERT         | Comments on your listings        |
--- | push-votes            | item_votes              | INSERT, UPDATE | Upvotes and downvotes on listings|
--- | push-messages         | messages                | INSERT         | Direct messages + pickup         |
--- | push-moderation       | moderation_audit_log    | INSERT         | Director: moderation actions     |
--- | push-reports          | user_reports            | INSERT         | Staff: neighbor reports          |
+-- | push-users-join       | users                   | INSERT         | Directors: new neighbors         |
+-- | push-users-leave      | users                   | DELETE         | Directors: departures            |
+-- | push-listings-insert  | items                   | INSERT         | Discover + directors             |
+-- | push-listings-update  | items                   | UPDATE         | Owner status, saved-item alerts  |
+-- | push-dm-requests      | message_requests        | INSERT, UPDATE | DM requests + directors          |
+-- | push-claim-reqs       | item_claim_requests     | INSERT         | Giver + directors                |
+-- | push-item-claims      | item_claims             | INSERT         | Listing owner (claim)            |
+-- | push-comments         | item_comments           | INSERT         | Owner + saved-item bookmarkers   |
+-- | push-votes            | item_votes              | INSERT, UPDATE | Listing owner (up/down)          |
+-- | push-messages         | messages                | INSERT         | Chat participant                 |
+-- | push-moderation       | moderation_audit_log    | INSERT         | Directors                        |
+-- | push-reports          | user_reports            | INSERT         | Staff inbox                      |
 -- | push-support          | support_ticket_messages | INSERT         | Support + staff inbox            |
 --
--- Also run supabase-sql/notifications-complete.sql (saved_items, prefs, subscriptions).
--- Vercel cron /api/cron/notification-jobs handles listing expiry + pickup reminders daily.
+-- items UPDATE covers: status changes, owner listing-status alerts, saved-item
+-- status alerts, and saved-item alerts when the owner edits/saves their post.
+--
+-- Daily cron (Vercel): /api/cron/notification-jobs — listing expiry + pickup reminders.

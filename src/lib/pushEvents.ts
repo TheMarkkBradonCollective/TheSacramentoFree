@@ -126,7 +126,12 @@ export async function notifyNewComment(params: {
   item: ItemPost;
   commenterName: string;
   preview: string;
+  commentId?: string;
 }) {
+  const tag = params.commentId
+    ? `comment-${params.commentId}`
+    : `comment-${params.item.id}-${Date.now()}`;
+
   await sendPushNotification({
     eventType: 'new_comment',
     title: 'New comment on your listing',
@@ -134,7 +139,26 @@ export async function notifyNewComment(params: {
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
-    tag: `comment-${params.item.id}`,
+    tag,
+  });
+}
+
+/** Notify neighbors who bookmarked this listing (comments, edits, status). */
+export async function notifySavedListingActivity(params: {
+  item: ItemPost;
+  title: string;
+  body: string;
+  tag: string;
+  excludeUserIds?: string[];
+}) {
+  await sendPushNotification({
+    eventType: 'saved_item_update',
+    title: params.title,
+    body: params.body.slice(0, 200),
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    excludeUserIds: params.excludeUserIds,
+    tag: params.tag,
   });
 }
 
@@ -312,7 +336,7 @@ export async function notifySavedItemUpdate(params: {
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.recipientUserId],
-    tag: `saved-${params.item.id}`,
+    tag: `saved-status-${params.item.id}-${params.item.status}`,
   });
 }
 

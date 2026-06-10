@@ -929,6 +929,7 @@ export async function updateSupabaseItem(
     }
 
     setSupabaseConfigurationState(true);
+    await runPushTask(() => import('./lib/pushIntegration').then((m) => m.pushAfterItemUpdated(item)));
     return { ok: true };
   } catch (err: any) {
     console.error('updateSupabaseItem exception:', err);

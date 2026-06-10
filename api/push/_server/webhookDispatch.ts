@@ -17,6 +17,7 @@ import {
   runNeighborNewCommentNotify,
   runNeighborNewListingNotify,
   runNeighborNewMessageNotify,
+  runSavedItemsListingUpdatedNotify,
   runSavedItemsStatusNotify,
 } from './neighborNotify';
 import { runReportNotify } from './reportNotify';
@@ -45,6 +46,27 @@ function mergeResults(
       handlers: results.map((r) => r.body),
     },
   };
+}
+
+const LISTING_CONTENT_FIELDS = ['title', 'description', 'category', 'neighborhood', 'imageUrl', 'type'] as const;
+
+function listingContentChanged(
+  record: Record<string, unknown>,
+  oldRecord: Record<string, unknown>,
+): boolean {
+  return LISTING_CONTENT_FIELDS.some((key) => String(record[key] ?? '') !== String(oldRecord[key] ?? ''));
+}
+
+async function handleItemContentUpdate(
+  record: Record<string, unknown>,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const callerId = String(record.userId || 'system');
+  return runSavedItemsListingUpdatedNotify(callerId, {
+    id: String(record.id || ''),
+    userId: callerId,
+    title: String(record.title || ''),
+    updatedAt: String(record.updatedAt || new Date().toISOString()),
+  });
 }
 
 async function handleItemStatusUpdate(
@@ -104,7 +126,16 @@ export async function runSupabasePushWebhook(
 
   if (type === 'UPDATE') {
     if (table === 'items' && body.record && body.old_record) {
-      return handleItemStatusUpdate(body.record, body.old_record);
+      const record = body.record;
+      const oldRecord = body.old_record;
+      const statusChanged = String(record.status || '') !== String(oldRecord.status || '');
+      if (statusChanged) {
+        return handleItemStatusUpdate(record, oldRecord);
+      }
+      if (listingContentChanged(record, oldRecord)) {
+        return handleItemContentUpdate(record);
+      }
+      return { status: 200, body: { ok: true, skipped: 'item update not notifiable' } };
     }
 
     if (table === 'item_votes' && body.record) {

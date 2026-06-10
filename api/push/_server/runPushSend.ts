@@ -159,6 +159,20 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
     return (data || []).map((u) => String((u as { uid: string }).uid));
   }
 
+  if (eventType === 'saved_item_update' && body.listingId) {
+    const listingId = String(body.listingId);
+    const { data: item } = await supabaseAdmin
+      .from('items')
+      .select('userId')
+      .eq('id', listingId)
+      .maybeSingle();
+    const ownerId = String((item as { userId?: string } | null)?.userId || '');
+    const { data: rows } = await supabaseAdmin.from('saved_items').select('userId').eq('itemId', listingId);
+    return (rows || [])
+      .map((row) => String((row as { userId?: string }).userId || ''))
+      .filter((uid) => uid && uid !== ownerId);
+  }
+
   return [];
 }
 
