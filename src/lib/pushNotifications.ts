@@ -56,9 +56,41 @@ async function savePushSubscriptionDirect(
     throw new Error(mapPushSubscriptionError(error));
   }
 
-  const { error: prefError } = await supabase
-    .from('notification_preferences')
-    .upsert({ userId, updatedAt: new Date().toISOString() }, { onConflict: 'userId', ignoreDuplicates: true });
+  const { error: prefError } = await supabase.from('notification_preferences').upsert(
+    {
+      userId,
+      enabled: true,
+      messages: true,
+      messageRequests: true,
+      support: true,
+      claims: true,
+      gifts: true,
+      comments: true,
+      listingStatus: true,
+      nearbyListings: true,
+      requests: true,
+      announcements: true,
+      pickupReminders: true,
+      newListings: true,
+      savedItems: true,
+      accountUpdates: true,
+      staffSupport: true,
+      staffReports: true,
+      directorAlerts: true,
+      directorJoins: true,
+      directorLeaves: true,
+      directorModeration: true,
+      directorReports: true,
+      directorTickets: true,
+      directorListings: true,
+      directorMessageRequests: true,
+      directorClaimRequests: true,
+      nearbyRadiusMiles: 10,
+      followedCategories: [],
+      updatedAt: new Date().toISOString(),
+    },
+    { onConflict: 'userId', ignoreDuplicates: true },
+  );
 
   if (prefError && prefError.code !== '42P01') {
     console.warn('[push] notification_preferences upsert:', prefError.message);
@@ -209,7 +241,8 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
   const publicKey = await getVapidPublicKey();
   const existing = await registration.pushManager.getSubscription();
   if (existing) {
-    await existing.unsubscribe();
+    await persistPushSubscription(existing, userId);
+    return existing;
   }
 
   const subscription = await registration.pushManager.subscribe({

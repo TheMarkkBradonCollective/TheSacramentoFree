@@ -219,9 +219,7 @@ export async function runDirectorModerationNotify(
       body = `${actorName} unbanned ${targetName}`;
       break;
     case 'delete_account':
-      title = 'Account deleted by staff';
-      body = `${actorName} removed ${targetName}'s account`;
-      break;
+      return { status: 200, body: { ok: true, skipped: 'departure alert handles account deletion' } };
     case 'edit_profile':
       title = 'Profile updated by staff';
       body = `${actorName} updated ${targetName}'s profile`;

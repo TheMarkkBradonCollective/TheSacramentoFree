@@ -29,6 +29,37 @@ export interface PushSendBody {
   minStaffRank?: number;
 }
 
+async function validateCallerForPush(callerId: string, body: PushSendBody): Promise<string | null> {
+  if (body.eventType === 'support_reply') {
+    const role = await getUserRole(callerId);
+    if (!isStaffRole(role)) return 'Staff access required for support replies';
+    return null;
+  }
+
+  if (body.eventType === 'announcement') {
+    const role = await getUserRole(callerId);
+    if (!isStaffRole(role)) return 'Staff access required for announcements';
+    return null;
+  }
+
+  if (body.eventType === 'new_message' && body.conversationId) {
+    const supabaseAdmin = await getSupabaseAdmin();
+    const { data } = await supabaseAdmin
+      .from('chats')
+      .select('participantIds')
+      .eq('id', body.conversationId)
+      .maybeSingle();
+    const participants = (data as { participantIds?: string[] } | null)?.participantIds || [];
+    if (!participants.includes(callerId)) return 'Not a participant in this conversation';
+    const explicit = body.recipientUserIds?.filter(Boolean) || [];
+    if (explicit.length && !explicit.every((id) => participants.includes(id))) {
+      return 'Invalid message recipient';
+    }
+  }
+
+  return null;
+}
+
 async function resolveRecipients(body: PushSendBody, callerId: string): Promise<string[]> {
   const explicit = body.recipientUserIds?.filter(Boolean) || [];
   if (explicit.length) return explicit;
@@ -149,6 +180,11 @@ export async function runPushSend(
 
   if (!body?.eventType || !body?.title || !body?.body || !body?.url) {
     return { status: 400, body: { error: 'eventType, title, body, and url are required' } };
+  }
+
+  const authError = await validateCallerForPush(callerId, body);
+  if (authError) {
+    return { status: 403, body: { error: authError } };
   }
 
   if (body.eventType === 'announcement') {

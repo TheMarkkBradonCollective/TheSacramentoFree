@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sac-buy-nothing-v11';
+const CACHE_NAME = 'sac-buy-nothing-v12';
 
 const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
 
@@ -229,6 +229,9 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clientList) {
         if ('focus' in client) {
           client.postMessage({ type: 'NOTIFICATION_CLICK', url: targetUrl });
+          if ('navigate' in client && typeof client.navigate === 'function') {
+            return client.navigate(targetUrl).then(() => client.focus());
+          }
           return client.focus();
         }
       }
