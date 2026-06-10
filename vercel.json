@@ -3,8 +3,7 @@
   "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
-      "maxDuration": 15,
-      "includeFiles": "node_modules/{web-push,ws,@supabase,agent-base,https-proxy-agent,jws,safe-buffer}/**"
+      "maxDuration": 15
     }
   },
   "rewrites": [
