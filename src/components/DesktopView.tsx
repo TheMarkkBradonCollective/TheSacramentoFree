@@ -45,7 +45,7 @@ interface DesktopViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
-  initialHelpPanel?: 'updates' | 'announcements' | null;
+  initialHelpPanel?: 'announcements' | null;
   onClearInitialHelpPanel?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;

@@ -11,6 +11,7 @@ import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
+import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
 import { AppTab } from '../lib/appTabs';
@@ -47,7 +48,7 @@ interface MobileViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
-  initialHelpPanel?: 'updates' | 'announcements' | null;
+  initialHelpPanel?: 'announcements' | null;
   onClearInitialHelpPanel?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;
@@ -123,6 +124,7 @@ export default function MobileView({
           showTitle
         />
         <div className="flex items-center gap-1 shrink-0">
+          <NotificationsHubButton />
           <ThemeToggle />
           <button
             type="button"

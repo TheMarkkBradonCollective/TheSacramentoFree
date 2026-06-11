@@ -24,7 +24,6 @@ import {
   ChevronDown,
   Camera,
 } from 'lucide-react';
-import NotificationSettings from './NotificationSettings';
 import ProfilePostList from './ProfilePostList';
 import { IN_APP } from '../siteContent';
 
@@ -437,8 +436,6 @@ export default function UserProfileView({
           </form>
         </div>
       </div>
-
-      <NotificationSettings userId={userProfile.uid} userRole={userProfile.role} fullBleed={fullBleed} />
 
       {/* Modern PWA App Installation Widget */}
       <div

@@ -4,22 +4,21 @@ import { submitUserReport } from '../supabase';
 import FullScreenPanel from './FullScreenPanel';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
-import { Flag, ChevronRight, Megaphone, ScrollText, Star } from 'lucide-react';
-import UpdatesList from './UpdatesList';
+import { Flag, ChevronRight, Megaphone, Star } from 'lucide-react';
 import AnnouncementsList from './AnnouncementsList';
 import CommunityReviews from './CommunityReviews';
-import { canManageAppUpdates, canPostAnnouncements, canViewDirectorOverview } from '../lib/roles';
+import { canPostAnnouncements, canViewDirectorOverview } from '../lib/roles';
 import DirectorSiteOverview from './DirectorSiteOverview';
 
 interface AccountHelpSectionProps {
   user: UserProfile;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
-  initialHelpPanel?: 'updates' | 'announcements' | null;
+  initialHelpPanel?: 'announcements' | null;
   onClearInitialHelpPanel?: () => void;
 }
 
-type Panel = 'report' | 'updates' | 'announcements' | 'reviews' | null;
+type Panel = 'report' | 'announcements' | 'reviews' | null;
 
 export default function AccountHelpSection({
   user,
@@ -63,7 +62,6 @@ export default function AccountHelpSection({
     reportProof.clear();
   };
 
-  const canManageUpdates = canManageAppUpdates(user.role);
   const canPostAnnouncementsPanel = canPostAnnouncements(user.role);
   const showDirectorOverview = canViewDirectorOverview(user.role);
 
@@ -83,20 +81,6 @@ export default function AccountHelpSection({
       )}
       <h3 className="font-display font-bold text-sm text-app">News & safety</h3>
       <div className="grid gap-2 sm:grid-cols-2 min-w-0">
-        <button type="button" onClick={() => setPanel('updates')} className="sbn-help-list-item">
-          <span className="p-2 rounded-lg bg-accent/10 text-accent shrink-0">
-            <ScrollText className="w-4 h-4" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="font-semibold text-sm text-app block">App updates</span>
-            <span className="text-[11px] text-muted">
-              {canManageUpdates
-                ? 'Director changelog — post what is new in the app'
-                : "See what's new and vote on changes"}
-            </span>
-          </span>
-          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-        </button>
         <button type="button" onClick={() => setPanel('announcements')} className="sbn-help-list-item">
           <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
             <Megaphone className="w-4 h-4" />
@@ -139,21 +123,6 @@ export default function AccountHelpSection({
       <p className="text-[10px] text-muted leading-snug">
         Reports are one-way — staff review them but you will not get a reply. For personal help, open Chat → Support.
       </p>
-
-      {panel === 'updates' && (
-        <FullScreenPanel
-          wide
-          title="App updates"
-          subtitle={
-            canManageUpdates
-              ? 'Post changelog entries for neighbors — votes come back to you as feedback'
-              : 'Tap an update to read more — your votes go to the director'
-          }
-          onClose={closePanel}
-        >
-          <UpdatesList userProfile={user} />
-        </FullScreenPanel>
-      )}
 
       {panel === 'announcements' && (
         <FullScreenPanel

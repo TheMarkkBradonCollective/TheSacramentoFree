@@ -3,6 +3,7 @@ import { LogOut, Plus, MapPin } from 'lucide-react';
 import { UserProfile } from '../types';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
+import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
 import { AppTab } from '../lib/appTabs';
 
@@ -60,6 +61,7 @@ export default function Navbar({
           )}
 
           <div className="flex items-center gap-2" id="navbar_actions_container">
+            {userProfile ? <NotificationsHubButton /> : null}
             <ThemeToggle />
             {userProfile && (
               <>

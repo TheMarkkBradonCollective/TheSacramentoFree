@@ -12,6 +12,7 @@ import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import BrandLogo from './BrandLogo';
 import { IN_APP } from '../siteContent';
 import ThemeToggle from './ThemeToggle';
+import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import CommunityStatsBar from './CommunityStatsBar';
 import { AppTab } from '../lib/appTabs';
 import PageScrollFooter from './PageScrollFooter';
@@ -47,7 +48,7 @@ interface TabletViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
-  initialHelpPanel?: 'updates' | 'announcements' | null;
+  initialHelpPanel?: 'announcements' | null;
   onClearInitialHelpPanel?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;
@@ -130,6 +131,7 @@ export default function TabletView({
         </nav>
 
         <div className="flex items-center gap-2" id="tablet_actions">
+          <NotificationsHubButton />
           <ThemeToggle />
           <button type="button" id="tablet_header_post" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm">
             <Plus className="w-4 h-4" />

@@ -57,6 +57,7 @@ import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 import PushNotificationCelebration from './components/PushNotificationCelebration';
 import { useConfirm } from './contexts/ConfirmContext';
+import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -112,7 +113,7 @@ export default function App() {
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [initialStaffPanel, setInitialStaffPanel] = useState<'tickets' | 'reports' | null>(null);
-  const [initialHelpPanel, setInitialHelpPanel] = useState<'updates' | 'announcements' | null>(null);
+  const [initialHelpPanel, setInitialHelpPanel] = useState<'announcements' | null>(null);
   const [initialSupportTicketId, setInitialSupportTicketId] = useState<string | null>(null);
   const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
@@ -823,6 +824,11 @@ export default function App() {
       if (target.staffPanel) {
         setInitialStaffPanel(target.staffPanel);
       }
+      if (target.notificationsTab) {
+        openNotificationsHub(target.notificationsTab);
+      } else if (target.notifications) {
+        openNotificationsHub('notifications');
+      }
       if (target.helpPanel) {
         setInitialHelpPanel(target.helpPanel);
       }
@@ -929,7 +935,7 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <>
+            <NotificationsHubProvider userProfile={userProfile}>
                {deviceType === 'mobile' ? (
                 <MobileView
                   items={visibleItems}
@@ -1205,7 +1211,7 @@ export default function App() {
                   }}
                 />
               )}
-            </>
+            </NotificationsHubProvider>
           )}
         </>
       )}
@@ -1213,7 +1219,7 @@ export default function App() {
       {userProfile && !accountRestriction.restricted && (
         <PushNotificationCelebration
           userId={userProfile.uid}
-          onGoToProfile={() => setActiveTab('profile')}
+          onGoToProfile={() => openNotificationsHub('notifications')}
         />
       )}
 

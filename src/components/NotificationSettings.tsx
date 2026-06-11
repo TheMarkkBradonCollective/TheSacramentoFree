@@ -15,6 +15,8 @@ interface NotificationSettingsProps {
   userId: string;
   userRole?: UserProfile['role'];
   fullBleed?: boolean;
+  /** Inside the navbar bell panel — no outer card chrome. */
+  embedded?: boolean;
 }
 
 const RADIUS_OPTIONS: { value: NearbyRadiusMiles; label: string }[] = [
@@ -195,6 +197,7 @@ export default function NotificationSettings({
   userId,
   userRole,
   fullBleed = false,
+  embedded = false,
 }: NotificationSettingsProps) {
   const {
     permission,
@@ -220,9 +223,11 @@ export default function NotificationSettings({
 
   const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
 
-  const shell = fullBleed
-    ? 'border-b border-app px-4 py-6 bg-surface'
-    : 'bg-surface border border-app rounded-2xl p-6 shadow-md';
+  const shell = embedded
+    ? ''
+    : fullBleed
+      ? 'border-b border-app px-4 py-6 bg-surface'
+      : 'bg-surface border border-app rounded-2xl p-6 shadow-md';
 
   const masterDisabled = !preferences.enabled || permission === 'denied' || permission === 'unsupported';
   const directorMasterDisabled = masterDisabled || !preferences.directorAlerts;
@@ -265,11 +270,13 @@ export default function NotificationSettings({
 
   return (
     <section className={shell} id="notification_settings">
-      <div className="flex items-center gap-2 mb-1">
-        <Bell className="w-5 h-5 text-accent" />
-        <h3 className="text-lg font-bold text-app">Push notifications</h3>
-      </div>
-      <p className="text-xs text-muted mb-4">
+      {!embedded ? (
+        <div className="flex items-center gap-2 mb-1">
+          <Bell className="w-5 h-5 text-accent" />
+          <h3 className="text-lg font-bold text-app">Push notifications</h3>
+        </div>
+      ) : null}
+      <p className={`text-xs text-muted ${embedded ? 'mb-4' : 'mb-4'}`}>
         Get real-time alerts for listings, messages, support, saved items, and community news — even when the app
         is closed.
       </p>

@@ -13,7 +13,7 @@ interface CommunityMenuViewProps {
   onViewProfile: (userId: string) => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
-  initialHelpPanel?: 'updates' | 'announcements' | null;
+  initialHelpPanel?: 'announcements' | null;
   onClearInitialHelpPanel?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
