@@ -15,54 +15,46 @@ INSERT INTO public.app_updates (
 (
   '2026-06-11_navbar-bell-community-hub',
   '2026-06-11',
-  'New bell hub — your home for news, updates, and alerts',
-  'Tap the bell next to the theme button (top right). Announcements, changelog, push setup, and your-post notifications all live here now — not buried in Account or Community hub.',
-  $detail$WHAT CHANGED
+  'New bell hub — four tabs, each with its own job',
+  'Tap the bell (top right, next to theme). News, changelog, push setup, and your-post alerts each have their own tab with matching titles and descriptions.',
+  $detail$WHERE TO FIND IT
+Any screen → top right → bell icon (next to light/dark theme).
 
-We moved the community’s notification center to one place: the bell icon in the top navigation bar, right next to the light/dark theme toggle.
+Each tab has its own header title, subtitle, and intro so neighbors always know what they are looking at.
 
-Before: announcements, app updates, and push settings were scattered across Community hub and Account.
-Now: one bell opens a full-screen panel with four tabs.
+TAB 1 — ANNOUNCEMENTS (mobile tab: News)
+Title: Announcements
+Subtitle: Staff community news — vote and comment
+What it is: Posts from directors and staff. Vote and comment. Staff publish here — posting triggers push for neighbors who enabled Alerts → Announcements.
 
-THE FOUR TABS
+TAB 2 — UPDATES (mobile tab: Updates)
+Title: App updates
+Subtitle: Director changelog — what shipped and why
+What it is: Technical release notes. Tap any entry to expand the full story.
 
-1. Announcements — staff community news. Vote and comment on posts. Directors and staff publish here; posting triggers a push to neighbors who enabled Announcements under Alerts.
+TAB 3 — ALERTS (mobile tab: Alerts)
+Title: Push alerts
+Subtitle: Turn push on, then choose messages, chat, discover, and community
+What it is: Enable or turn off push on this device, master All alerts switch, messages, community chat, support, discover (new/nearby listings, requests, saved items), app-update and announcement push toggles, nearby radius, follow categories, staff/director moderation toggles.
 
-2. Updates — director changelog (what shipped, technical detail when you expand an entry).
+TAB 4 — NOTIFICATIONS (mobile tab: Notify)
+Title: Notifications
+Subtitle: Your posts — comments, votes, claims, gifts, and status
+What it is: Only activity on listings YOU posted and your profile — comments, upvotes, downvotes, claims, gifts, listing status, pickup reminders, account updates. Not DMs or neighborhood discover.
 
-3. Alerts — everything except your own listings:
-   • Enable or turn off push on this device
-   • Master “All alerts” switch
-   • Messages, message requests, community chat, support tickets
-   • Discover: new listings, nearby items, requests, saved items
-   • Community: app updates + announcements toggles
-   • Nearby radius and follow categories
-   • Staff / director moderation toggles (role-based)
-
-4. Notifications — only activity on YOUR posts and profile:
-   • Comments, upvotes, downvotes on your listings
-   • Claims, gifts, listing status changes
-   • Pickup reminders and account updates
-
-WHY ALERTS VS NOTIFICATIONS
-Alerts = general push (messages, chat, new items near you). Notifications = neighbors interacting with stuff you posted. Tune them separately.
-
-WHERE TO FIND IT
-Any screen → top right → bell icon (id: notifications_hub_btn).
+WHY TWO PUSH TABS?
+Alerts = general push. Notifications = neighbors interacting with your posts. Tune separately. Turn push on once under Alerts — it covers every tab.
 
 DEEP LINKS
-• /help/announcements → Announcements tab
-• /updates → Updates tab
-• /notifications → Alerts tab (device setup)
-• /notifications/listings → Notifications tab (your posts)
+• /help/announcements → Announcements
+• /updates → Updates
+• /notifications → Alerts
+• /notifications/listings → Notifications
 
 AFTER THIS DEPLOY
-Open bell → Alerts → Turn off alerts → Enable alerts once per device. Then review Notifications tab and tap Save settings if you changed toggles.
+Bell → Alerts → Turn off alerts → Enable alerts once per device. Bell → Notifications → review toggles → Save settings.
 
-iPhone: open from Home Screen (Add to Home Screen), not a Safari tab.
-
-CODE
-src/contexts/NotificationsHubContext.tsx, src/components/NotificationSettings.tsx, src/lib/pushDeepLink.ts, src/App.tsx$detail$,
+iPhone: Home Screen app (Add to Home Screen), not a Safari tab.$detail$,
   'Markeith White',
   'Buy Nothing Director',
   'director'
