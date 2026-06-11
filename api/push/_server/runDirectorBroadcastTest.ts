@@ -3,8 +3,12 @@ import { sendToSubscription } from './pushDelivery';
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { configureVapidAsync } from './webPushLoader';
 
+const DEFAULT_BROADCAST_TITLE = 'The Website/App!';
+const DEFAULT_BROADCAST_BODY = 'This is a test notification!';
+
 export async function runDirectorBroadcastTest(
   callerId: string,
+  message?: { title?: string; body?: string },
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   if (!(await configureVapidAsync())) {
     return {
@@ -40,9 +44,12 @@ export async function runDirectorBroadcastTest(
     };
   }
 
+  const title = String(message?.title || '').trim() || DEFAULT_BROADCAST_TITLE;
+  const body = String(message?.body || '').trim() || DEFAULT_BROADCAST_BODY;
+
   const payload = {
-    title: 'Welcome to SacramentoBuyNothing!',
-    body: 'Push notifications are working.',
+    title: title.slice(0, 120),
+    body: body.slice(0, 240),
     url: '/',
     tag: `sbn-director-broadcast-${Date.now()}`,
     eventType: 'account_update' as const,

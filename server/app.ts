@@ -99,7 +99,10 @@ export function createPushApp() {
       return;
     }
     const { runDirectorBroadcastTest } = await import('../api/push/_server/runDirectorBroadcastTest');
-    const result = await runDirectorBroadcastTest(req.user!.id);
+    const result = await runDirectorBroadcastTest(req.user!.id, {
+      title: req.body?.title,
+      body: req.body?.body,
+    });
     res.status(result.status).json(result.body);
   });
 
