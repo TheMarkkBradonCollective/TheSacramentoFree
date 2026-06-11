@@ -8,6 +8,8 @@ import AnnouncementsList from '../components/AnnouncementsList';
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'alerts' | 'listings';
 
+const HUB_TAB_ORDER: NotificationsHubTab[] = ['announcements', 'updates', 'listings', 'alerts'];
+
 const HUB_TAB_META: Record<
   NotificationsHubTab,
   { label: string; mobileLabel: string; title: string; subtitle: string; intro: string }
@@ -26,13 +28,6 @@ const HUB_TAB_META: Record<
     subtitle: 'Director changelog — what shipped and why',
     intro: 'Technical release notes for the app. Expand any entry for the full story.',
   },
-  alerts: {
-    label: 'Alerts',
-    mobileLabel: 'Alerts',
-    title: 'Push alerts',
-    subtitle: 'Turn push on, then choose messages, chat, discover, and community',
-    intro: 'Device setup and general push categories. Enable alerts here once — it applies to every tab.',
-  },
   listings: {
     label: 'Notifications',
     mobileLabel: 'Notify',
@@ -40,9 +35,16 @@ const HUB_TAB_META: Record<
     subtitle: 'Your posts — comments, votes, claims, gifts, and status',
     intro: 'Only activity on listings you posted and your profile — not messages or neighborhood discover.',
   },
+  alerts: {
+    label: 'Alerts',
+    mobileLabel: 'Alerts',
+    title: 'Push alerts',
+    subtitle: 'Turn push on, then choose messages, chat, discover, and community',
+    intro: 'Device setup and general push categories. Enable alerts here once — it applies to every tab.',
+  },
 };
 
-const HUB_TABS = (Object.keys(HUB_TAB_META) as NotificationsHubTab[]).map((id) => ({
+const HUB_TABS = HUB_TAB_ORDER.map((id) => ({
   id,
   ...HUB_TAB_META[id],
 }));
@@ -77,8 +79,8 @@ export function NotificationsHubButton({ className = '' }: { className?: string 
       type="button"
       onClick={() => openHub('announcements')}
       className={`inline-flex items-center gap-1.5 p-2 rounded-xl border border-app bg-surface text-app hover:bg-surface-hover transition-colors cursor-pointer ${className}`}
-      title="Announcements, updates, alerts, and notifications"
-      aria-label="Announcements, updates, alerts, and notifications"
+      title="Announcements, updates, notifications, and alerts"
+      aria-label="Announcements, updates, notifications, and alerts"
       id="notifications_hub_btn"
     >
       <Bell className="w-4 h-4 text-accent" />
@@ -146,20 +148,20 @@ export function NotificationsHubProvider({
               <AnnouncementsList userProfile={userProfile} showVotes showComments />
             ) : null}
             {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes /> : null}
-            {tab === 'alerts' ? (
-              <NotificationSettings
-                userId={userProfile.uid}
-                userRole={userProfile.role}
-                embedded
-                scope="alerts"
-              />
-            ) : null}
             {tab === 'listings' ? (
               <NotificationSettings
                 userId={userProfile.uid}
                 userRole={userProfile.role}
                 embedded
                 scope="listings"
+              />
+            ) : null}
+            {tab === 'alerts' ? (
+              <NotificationSettings
+                userId={userProfile.uid}
+                userRole={userProfile.role}
+                embedded
+                scope="alerts"
               />
             ) : null}
           </div>

@@ -32,27 +32,27 @@ Title: App updates
 Subtitle: Director changelog — what shipped and why
 What it is: Technical release notes. Tap any entry to expand the full story.
 
-TAB 3 — ALERTS (mobile tab: Alerts)
-Title: Push alerts
-Subtitle: Turn push on, then choose messages, chat, discover, and community
-What it is: Enable or turn off push on this device, master All alerts switch, messages, community chat, support, discover (new/nearby listings, requests, saved items), app-update and announcement push toggles, nearby radius, follow categories, staff/director moderation toggles.
-
-TAB 4 — NOTIFICATIONS (mobile tab: Notify)
+TAB 3 — NOTIFICATIONS (mobile tab: Notify)
 Title: Notifications
 Subtitle: Your posts — comments, votes, claims, gifts, and status
 What it is: Only activity on listings YOU posted and your profile — comments, upvotes, downvotes, claims, gifts, listing status, pickup reminders, account updates. Not DMs or neighborhood discover.
 
+TAB 4 — ALERTS (mobile tab: Alerts) — last tab
+Title: Push alerts
+Subtitle: Turn push on, then choose messages, chat, discover, and community
+What it is: Enable or turn off push on this device, master All alerts switch, messages, community chat, support, discover (new/nearby listings, requests, saved items), app-update and announcement push toggles, nearby radius, follow categories, staff/director moderation toggles.
+
 WHY TWO PUSH TABS?
-Alerts = general push. Notifications = neighbors interacting with your posts. Tune separately. Turn push on once under Alerts — it covers every tab.
+Notifications = neighbors interacting with your posts. Alerts = general push. Tune separately. Turn push on once under Alerts (last tab) — it covers every tab.
 
 DEEP LINKS
 • /help/announcements → Announcements
 • /updates → Updates
-• /notifications → Alerts
 • /notifications/listings → Notifications
+• /notifications → Alerts
 
 AFTER THIS DEPLOY
-Bell → Alerts → Turn off alerts → Enable alerts once per device. Bell → Notifications → review toggles → Save settings.
+Bell → Alerts (last tab) → Turn off alerts → Enable alerts once per device. Bell → Notifications (third tab) → review toggles → Save settings.
 
 iPhone: Home Screen app (Add to Home Screen), not a Safari tab.$detail$,
   'Markeith White',

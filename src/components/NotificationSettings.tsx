@@ -362,8 +362,8 @@ export default function NotificationSettings({
 
       {showListingsScope && !showAlertsScope && masterDisabled && !prefsLoading ? (
         <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
-          Open the <strong className="text-app">Alerts</strong> tab first to turn push on, then return here to choose
-          what you want about your posts.
+          Open the <strong className="text-app">Alerts</strong> tab (last tab) to turn push on, then return here to
+          choose what you want about your posts.
         </p>
       ) : null}
 
