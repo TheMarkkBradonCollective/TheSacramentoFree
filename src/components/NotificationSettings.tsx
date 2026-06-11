@@ -59,7 +59,7 @@ const PREF_SECTIONS: {
       {
         key: 'listingStatus',
         label: 'Listing status',
-        description: 'Approved, denied, expiring, and other status changes',
+        description: 'Expiring soon, gifted, withdrawn, and other status changes',
       },
       { key: 'pickupReminders', label: 'Pickup reminders', description: 'Scheduled pickups and nudges' },
     ],

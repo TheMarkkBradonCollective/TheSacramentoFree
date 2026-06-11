@@ -105,7 +105,8 @@ export function createPushApp() {
       res.status(400).json({ error: 'ticketId and event are required' });
       return;
     }
-    const result = await runSupportNotify(req.user!.id, ticketId, event);
+    const messageId = String(req.body?.messageId || '').trim() || undefined;
+    const result = await runSupportNotify(req.user!.id, ticketId, event, messageId);
     res.status(result.status).json(result.body);
   });
 

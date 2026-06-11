@@ -479,11 +479,11 @@ export async function runNeighborItemClaimedNotify(
   callerId: string,
   claim: {
     itemId?: string;
-    userId?: string;
-    userName?: string;
+    claimerUserId?: string;
+    claimerName?: string;
   },
 ): Promise<{ status: number; body: Record<string, unknown> }> {
-  const claimerUserId = String(claim.userId || callerId);
+  const claimerUserId = String(claim.claimerUserId || callerId);
   const itemId = String(claim.itemId || '');
   if (!itemId) {
     return { status: 200, body: { ok: true, skipped: 'missing item id' } };
@@ -501,7 +501,17 @@ export async function runNeighborItemClaimedNotify(
 
   const posterUserId = String((item as { userId?: string }).userId || '');
   const itemTitle = String((item as { title?: string }).title || 'your item');
-  const claimerName = String(claim.userName || 'A neighbor');
+
+  let claimerName = String(claim.claimerName || '').trim();
+  if (!claimerName && claimerUserId) {
+    const { data: claimer } = await supabaseAdmin
+      .from('users')
+      .select('displayName')
+      .eq('uid', claimerUserId)
+      .maybeSingle();
+    claimerName = String((claimer as { displayName?: string } | null)?.displayName || 'A neighbor');
+  }
+  if (!claimerName) claimerName = 'A neighbor';
 
   return sendNeighborPush(claimerUserId, {
     eventType: 'item_claimed',
@@ -590,13 +600,13 @@ export async function runItemCompletedNotify(
   const supabaseAdmin = await getSupabaseAdmin();
   const { data: claim } = await supabaseAdmin
     .from('item_claims')
-    .select('userId, userName')
+    .select('claimerUserId')
     .eq('itemId', itemId)
     .order('createdAt', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const claimerUserId = String((claim as { userId?: string } | null)?.userId || '');
+  const claimerUserId = String((claim as { claimerUserId?: string } | null)?.claimerUserId || '');
   const itemTitle = String(item.title || 'your listing');
   const isRequest = item.type === 'looking';
 

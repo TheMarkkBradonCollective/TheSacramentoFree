@@ -4265,14 +4265,15 @@ function normalizeTicketMessage(row: Record<string, unknown>): SupportTicketMess
 }
 
 async function insertSupportTicketMessageRow(params: {
+  id?: string;
   ticketId: string;
   senderUserId: string;
   senderName: string;
   text: string;
   imageUrl?: string | null;
   createdAt: string;
-}): Promise<{ ok: boolean; errorMessage?: string }> {
-  const id = `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}): Promise<{ ok: boolean; messageId?: string; errorMessage?: string }> {
+  const id = params.id || `tmsg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const displayText = params.text.trim() || (params.imageUrl ? '📷 Photo' : '');
 
   const payload: Record<string, unknown> = {
@@ -4294,7 +4295,7 @@ async function insertSupportTicketMessageRow(params: {
   }
 
   if (error) return { ok: false, errorMessage: error.message };
-  return { ok: true };
+  return { ok: true, messageId: id };
 }
 
 export async function submitUserReport(params: {
@@ -4447,7 +4448,11 @@ export async function createSupportTicket(params: {
 
     try {
       const m = await import('./lib/pushNotifications');
-      await m.notifySupportTicketPush({ ticketId, event: 'opened' });
+      await m.notifySupportTicketPush({
+        ticketId,
+        event: 'opened',
+        messageId: msgResult.messageId,
+      });
     } catch (err) {
       console.warn('[push]', err);
     }
@@ -4548,6 +4553,7 @@ export async function addSupportTicketMessage(params: {
 
   try {
     const msgResult = await insertSupportTicketMessageRow({
+      id: messageId,
       ticketId: params.ticketId,
       senderUserId: params.sender.uid,
       senderName: params.sender.displayName,
@@ -4566,7 +4572,11 @@ export async function addSupportTicketMessage(params: {
     try {
       const m = await import('./lib/pushNotifications');
       const event = params.sender.uid !== ticket.openerUserId ? 'staff_reply' : 'user_message';
-      await m.notifySupportTicketPush({ ticketId: params.ticketId, event });
+      await m.notifySupportTicketPush({
+        ticketId: params.ticketId,
+        event,
+        messageId: msgResult.messageId,
+      });
     } catch (err) {
       console.warn('[push]', err);
     }

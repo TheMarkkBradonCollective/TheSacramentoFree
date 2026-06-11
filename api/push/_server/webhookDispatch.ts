@@ -242,10 +242,10 @@ export async function runSupabasePushWebhook(
   }
 
   if (table === 'item_claims') {
-    return runNeighborItemClaimedNotify(String(record.userId || 'system'), {
+    const claimerUserId = String(record.claimerUserId || '');
+    return runNeighborItemClaimedNotify(claimerUserId || 'system', {
       itemId: String(record.itemId || ''),
-      userId: String(record.userId || ''),
-      userName: String(record.userName || 'A neighbor'),
+      claimerUserId,
     });
   }
 

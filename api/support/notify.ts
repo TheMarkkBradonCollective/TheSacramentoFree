@@ -3,6 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 type NotifyBody = {
   ticketId?: string;
   event?: 'opened' | 'user_message' | 'staff_reply';
+  messageId?: string;
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -41,7 +42,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'ticketId and event are required' });
     }
 
-    const result = await runSupportNotify(user.id, ticketId, event);
+    const messageId = body.messageId?.trim() || undefined;
+    const result = await runSupportNotify(user.id, ticketId, event, messageId);
     return res.status(result.status).json(result.body);
   } catch (err) {
     console.error('[api/support/notify]', err);

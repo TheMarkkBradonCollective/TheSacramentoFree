@@ -4,7 +4,7 @@
 -- Safe to re-run: uses IF NOT EXISTS / ADD COLUMN IF NOT EXISTS
 --
 -- After this script, configure ALL webhooks in
--- supabase-sql/supabase-push-webhook.sql (13 webhooks).
+-- supabase-sql/supabase-push-webhook.sql (15 webhooks).
 --
 -- Toggle guide:
 --   Comments        → owner when someone comments on your listing

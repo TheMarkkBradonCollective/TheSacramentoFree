@@ -390,7 +390,7 @@ export async function notifySavedItemUpdate(params: {
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.recipientUserId],
-    tag: `saved-status-${params.item.id}-${params.item.status}`,
+    tag: `saved-${params.item.id}-${params.item.status}`,
   });
 }
 

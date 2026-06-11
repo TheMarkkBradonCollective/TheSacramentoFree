@@ -502,6 +502,7 @@ export async function sendTestPushNotification(): Promise<{
 export async function notifySupportTicketPush(params: {
   ticketId: string;
   event: 'opened' | 'user_message' | 'staff_reply';
+  messageId?: string;
 }): Promise<void> {
   const json = await postPushApi('/api/support/notify', params);
   const staffSent = Number((json.staff as { sent?: number } | undefined)?.sent ?? json.sent ?? 0);

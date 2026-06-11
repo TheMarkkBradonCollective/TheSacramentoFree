@@ -302,13 +302,13 @@ export async function pushAfterItemStatusChange(
   if (newStatus === 'completed') {
     const { data: claim } = await supabase
       .from('item_claims')
-      .select('userId')
+      .select('claimerUserId')
       .eq('itemId', itemId)
       .order('createdAt', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    const claimerUserId = String((claim as { userId?: string } | null)?.userId || '');
+    const claimerUserId = String((claim as { claimerUserId?: string } | null)?.claimerUserId || '');
     if (claimerUserId) {
       await pushAfterItemCompleted(itemId, item.userId, claimerUserId);
     }
