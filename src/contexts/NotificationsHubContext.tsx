@@ -33,8 +33,8 @@ const HUB_TAB_META: Record<
     label: 'Notifications',
     mobileLabel: 'Notify',
     title: 'Notifications',
-    subtitle: 'Activity on your posts — comments, votes, claims, and status',
-    intro: 'What you receive when neighbors interact with your listings. Adjust push toggles for these under Alerts (last tab).',
+    subtitle: 'Every alert you receive — messages, listings, comments, claims, and more',
+    intro: 'Your inbox mirrors push alerts: if you would get an alert for it, it appears here. Choose what sends push under Alerts (last tab).',
   },
   alerts: {
     label: 'Alerts',

@@ -1,10 +1,16 @@
 import {
   ArrowDown,
   ArrowUp,
+  Bell,
   Gift,
+  Heart,
+  MapPin,
+  Megaphone,
   MessageSquare,
   Package,
+  Sparkles,
   UserPlus,
+  Users,
 } from 'lucide-react';
 import type { UserNotificationItem, UserNotificationKind } from '../types';
 import { useUserNotifications } from '../hooks/useUserNotifications';
@@ -25,6 +31,25 @@ function kindIcon(kind: UserNotificationKind) {
   switch (kind) {
     case 'comment':
       return MessageSquare;
+    case 'message':
+    case 'message_request':
+      return MessageSquare;
+    case 'community_chat':
+    case 'staff_chat':
+      return Users;
+    case 'support':
+    case 'staff_support':
+      return Bell;
+    case 'announcement':
+    case 'app_update':
+      return Megaphone;
+    case 'new_listing':
+    case 'nearby_listing':
+    case 'new_request':
+    case 'nearby_request':
+      return MapPin;
+    case 'saved_item':
+      return Heart;
     case 'upvote':
       return ArrowUp;
     case 'downvote':
@@ -34,6 +59,9 @@ function kindIcon(kind: UserNotificationKind) {
       return Gift;
     case 'claim_request':
       return UserPlus;
+    case 'account_update':
+    case 'director_alert':
+      return Sparkles;
     default:
       return Package;
   }
@@ -47,7 +75,15 @@ function kindColor(kind: UserNotificationKind): string {
       return 'text-amber-400 bg-amber-500/10';
     case 'claim':
     case 'claim_request':
+    case 'gift':
       return 'text-accent bg-accent/10';
+    case 'message':
+    case 'message_request':
+    case 'community_chat':
+      return 'text-sky-400 bg-sky-500/10';
+    case 'announcement':
+    case 'app_update':
+      return 'text-violet-400 bg-violet-500/10';
     default:
       return 'text-muted bg-inset';
   }
@@ -67,7 +103,7 @@ export default function UserNotificationsList({ userId }: UserNotificationsListP
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted italic">
-        Nothing yet — when neighbors comment, vote, or claim your listings, new entries are logged here automatically.
+        Nothing yet — every alert you receive (messages, listings, comments, claims, and more) is logged here.
       </p>
     );
   }

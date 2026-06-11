@@ -75,16 +75,7 @@ export interface DirectorActivityItem {
   at: string;
 }
 
-export type UserNotificationKind =
-  | 'comment'
-  | 'upvote'
-  | 'downvote'
-  | 'claim'
-  | 'gift'
-  | 'claim_request'
-  | 'listing_status'
-  | 'pickup_reminder'
-  | 'account_update';
+export type UserNotificationKind = string;
 
 export interface UserNotificationItem {
   id: string;

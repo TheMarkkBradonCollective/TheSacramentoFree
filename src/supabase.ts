@@ -3008,7 +3008,7 @@ export async function getSupabaseUserNotifications(userId: string): Promise<User
       .select('*')
       .eq('userId', userId)
       .order('createdAt', { ascending: false })
-      .limit(60);
+      .limit(100);
 
     if (error) {
       if (error.code === '42P01') return [];

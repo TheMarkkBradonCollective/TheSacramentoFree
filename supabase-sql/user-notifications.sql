@@ -4,9 +4,9 @@
 -- Safe to re-run
 -- =========================================================
 --
--- Stores what neighbors see under bell → Notifications (comments,
--- votes, claims, listing status, etc.). Push toggles stay under Alerts.
--- Rows are written by the server when activity is dispatched.
+-- Stores what neighbors see under bell → Notifications — every alert
+-- they receive (messages, discover, comments, claims, chat, etc.).
+-- Push toggles stay under Alerts. Rows are written by the server on dispatch.
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS public.user_notifications (
@@ -62,18 +62,18 @@ INSERT INTO public.app_updates (
 ) VALUES (
   '2026-06-11_user-notifications-inbox-table',
   '2026-06-11',
-  'Notifications inbox is now logged in the database',
-  'Bell → Notifications reads from user_notifications. Run supabase-sql/user-notifications.sql once, then new activity on your posts is stored automatically.',
+  'Notifications inbox logs every alert you receive',
+  'Bell → Notifications mirrors push alerts — messages, nearby listings, comments, claims, chat, announcements, and more. Run user-notifications.sql once.',
   $detail$TABLE: user_notifications
-• One row per neighbor per activity (comment, vote, claim, gift, status, etc.)
+• One row per neighbor per alert (any event type they are eligible to receive)
 • Written by the server when push is dispatched (service role)
-• Neighbors read their own rows under bell → Notifications
-• Push toggles for these events remain under Alerts (last tab)
+• If you would see a push alert, you also see it under bell → Notifications
+• Toggle what sends push under Alerts (last tab)
 
 SQL TO RUN ONCE
 supabase-sql/user-notifications.sql
 
-After deploy, trigger a test comment or claim on your listing to see the first inbox row.$detail$,
+After deploy, trigger any alert (message, comment, nearby listing) to see inbox rows.$detail$,
   'Markeith White',
   'Buy Nothing Director',
   'director'

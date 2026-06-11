@@ -1,20 +1,7 @@
 import { getSupabaseAdmin } from './supabaseAdmin';
 import type { PushEventType, PushPayload } from './pushDelivery';
 
-const INBOX_EVENT_TYPES = new Set<PushEventType>([
-  'new_comment',
-  'listing_upvote',
-  'listing_downvote',
-  'item_claimed',
-  'item_gifted',
-  'claim_request',
-  'listing_status',
-  'pickup_scheduled',
-  'pickup_reminder',
-  'account_update',
-  'request_fulfilled',
-]);
-
+/** Map push event types to inbox kind labels (stored in user_notifications.kind). */
 function inboxKind(eventType: PushEventType): string {
   switch (eventType) {
     case 'new_comment':
@@ -30,16 +17,49 @@ function inboxKind(eventType: PushEventType): string {
     case 'claim_request':
       return 'claim_request';
     case 'listing_status':
+    case 'listing_expiring':
+    case 'listing_approved':
+    case 'listing_denied':
+    case 'request_fulfilled':
       return 'listing_status';
     case 'pickup_scheduled':
     case 'pickup_reminder':
       return 'pickup_reminder';
+    case 'new_message':
+      return 'message';
+    case 'message_request':
+    case 'message_request_accepted':
+      return 'message_request';
+    case 'community_chat':
+      return 'community_chat';
+    case 'staff_chat':
+      return 'staff_chat';
+    case 'support_reply':
+      return 'support';
+    case 'new_item':
+      return 'new_listing';
+    case 'nearby_item':
+      return 'nearby_listing';
+    case 'new_request':
+      return 'new_request';
+    case 'nearby_request':
+      return 'nearby_request';
+    case 'saved_item_update':
+      return 'saved_item';
+    case 'announcement':
+      return 'announcement';
+    case 'app_update':
+      return 'app_update';
     case 'account_update':
       return 'account_update';
-    case 'request_fulfilled':
-      return 'listing_status';
+    case 'staff_support':
+      return 'staff_support';
+    case 'staff_report':
+      return 'staff_report';
+    case 'director_alert':
+      return 'director_alert';
     default:
-      return 'listing_status';
+      return eventType;
   }
 }
 
@@ -62,8 +82,9 @@ async function enrichItemTitle(payload: PushPayload): Promise<string> {
   }
 }
 
+/** Log every alert a user is eligible to receive into bell → Notifications. */
 export async function logUserNotifications(userIds: string[], payload: PushPayload): Promise<void> {
-  if (!INBOX_EVENT_TYPES.has(payload.eventType) || !userIds.length) return;
+  if (!userIds.length) return;
 
   try {
     const supabaseAdmin = await getSupabaseAdmin();
@@ -71,7 +92,7 @@ export async function logUserNotifications(userIds: string[], payload: PushPaylo
     const itemTitle = (await enrichItemTitle(payload)) || '';
     const actorName = payload.data?.actorName || '';
     const actorUserId = payload.data?.actorUserId || '';
-    const tag = payload.tag || `${payload.eventType}-${listingId || 'general'}`;
+    const tag = payload.tag || `${payload.eventType}-${listingId || payload.data?.conversationId || 'general'}`;
 
     const rows = userIds.map((userId) => ({
       id: notificationId(userId, tag),
