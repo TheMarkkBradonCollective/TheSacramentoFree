@@ -21,9 +21,9 @@ INSERT INTO public.app_updates (
   'Tap the bell (top right, next to theme). News, changelog, your notification inbox, then push alert settings last.',
   $detail$TAB ORDER (left to right)
 
-1. ANNOUNCEMENTS — staff news
-2. UPDATES — director changelog (searchable)
-3. NOTIFICATIONS — your inbox
+1. NOTIFY — your inbox (alerts you receive)
+2. NEWS — staff announcements
+3. UPDATES — director changelog (searchable)
 4. ALERTS (last) — all push toggles
 
 REFRESH PUSH

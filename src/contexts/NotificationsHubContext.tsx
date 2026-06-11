@@ -9,14 +9,21 @@ import UserNotificationsList from '../components/UserNotificationsList';
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts';
 
-const HUB_TAB_ORDER: NotificationsHubTab[] = ['announcements', 'updates', 'notifications', 'alerts'];
+const HUB_TAB_ORDER: NotificationsHubTab[] = ['notifications', 'announcements', 'updates', 'alerts'];
 
 const HUB_TAB_META: Record<
   NotificationsHubTab,
   { label: string; mobileLabel: string; title: string; subtitle: string; intro: string }
 > = {
+  notifications: {
+    label: 'Notify',
+    mobileLabel: 'Notify',
+    title: 'Notifications',
+    subtitle: 'Every alert you receive — messages, listings, comments, claims, and more',
+    intro: 'Your inbox mirrors push alerts: if you would get an alert for it, it appears here. Choose what sends push under Alerts (last tab).',
+  },
   announcements: {
-    label: 'Announcements',
+    label: 'News',
     mobileLabel: 'News',
     title: 'Announcements',
     subtitle: 'Staff community news — vote and comment',
@@ -28,13 +35,6 @@ const HUB_TAB_META: Record<
     title: 'App updates',
     subtitle: 'Director changelog — what shipped and why',
     intro: 'Technical release notes for the app. Expand any entry for the full story.',
-  },
-  notifications: {
-    label: 'Notifications',
-    mobileLabel: 'Notify',
-    title: 'Notifications',
-    subtitle: 'Every alert you receive — messages, listings, comments, claims, and more',
-    intro: 'Your inbox mirrors push alerts: if you would get an alert for it, it appears here. Choose what sends push under Alerts (last tab).',
   },
   alerts: {
     label: 'Alerts',
@@ -64,7 +64,7 @@ function resolveHubTab(tab: NotificationsHubTab | 'notifications' | 'listings'):
 }
 
 /** Open the navbar bell panel from outside React (e.g. push deep links in App.tsx). */
-export function openNotificationsHub(tab: NotificationsHubTab | 'listings' = 'announcements') {
+export function openNotificationsHub(tab: NotificationsHubTab | 'listings' = 'notifications') {
   openNotificationsHubGlobal?.(resolveHubTab(tab));
 }
 
@@ -82,10 +82,10 @@ export function NotificationsHubButton({ className = '' }: { className?: string 
   return (
     <button
       type="button"
-      onClick={() => openHub('announcements')}
+      onClick={() => openHub('notifications')}
       className={`inline-flex items-center gap-1.5 p-2 rounded-xl border border-app bg-surface text-app hover:bg-surface-hover transition-colors cursor-pointer ${className}`}
-      title="Announcements, updates, notifications, and alerts"
-      aria-label="Announcements, updates, notifications, and alerts"
+      title="Notify, news, updates, and alerts"
+      aria-label="Notify, news, updates, and alerts"
       id="notifications_hub_btn"
     >
       <Bell className="w-4 h-4 text-accent" />
@@ -101,9 +101,9 @@ export function NotificationsHubProvider({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<NotificationsHubTab>('announcements');
+  const [tab, setTab] = useState<NotificationsHubTab>('notifications');
 
-  const openHub = useCallback((initialTab: NotificationsHubTab = 'announcements') => {
+  const openHub = useCallback((initialTab: NotificationsHubTab = 'notifications') => {
     setTab(resolveHubTab(initialTab));
     setOpen(true);
   }, []);
