@@ -16,6 +16,7 @@ import { LifeBuoy, MessageSquarePlus, ChevronLeft } from 'lucide-react';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import PageScrollFooter from './PageScrollFooter';
 import ChatSectionEmptyState from './ChatSectionEmptyState';
+import ChatSidebarRow from './ChatSidebarRow';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 
 export type ChatSupportView = 'list' | 'new' | 'thread' | null;
@@ -375,19 +376,19 @@ export default function ChatSupportSection({
       </header>
       <div className="flex-1 min-h-0 overflow-y-auto">
         {!isStaffInbox ? (
-          <div className="p-3 border-b border-app">
-            <button
-              type="button"
-              onClick={() => {
-                setErr('');
-                onViewChange('new');
-              }}
-              className="sbn-btn sbn-btn-primary w-full inline-flex items-center justify-center gap-2"
-            >
-              <MessageSquarePlus className="w-4 h-4" />
-              New conversation
-            </button>
-          </div>
+          <ChatSidebarRow
+            id="chat_support_row_new"
+            icon={LifeBuoy}
+            iconClassName="bg-sky-500/10 text-sky-400"
+            title="Open new support chat"
+            subtitle="Two-way chat with staff"
+            preview="Ask for help — staff will reply in this thread."
+            selected={view === 'new'}
+            onClick={() => {
+              setErr('');
+              onViewChange('new');
+            }}
+          />
         ) : (
           <div className="px-4 py-2 border-b border-app flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] text-muted">Reply to neighbors from here — like a direct message.</p>
@@ -412,7 +413,7 @@ export default function ChatSupportSection({
             description={
               isStaffInbox
                 ? 'When neighbors open tickets, they will appear here.'
-                : 'Tap New conversation above to chat with staff.'
+                : 'Open new support chat above to talk with staff.'
             }
           />
         ) : (

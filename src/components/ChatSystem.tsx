@@ -32,7 +32,7 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatSectionEmptyState from './ChatSectionEmptyState';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
-import { chatSidebarRowClass } from './ChatSidebarRow';
+import ChatSidebarRow, { chatSidebarRowClass } from './ChatSidebarRow';
 import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
@@ -49,8 +49,8 @@ import {
   Globe,
   Shield,
   LifeBuoy,
-  MessageSquarePlus,
   Trash2,
+  UserPlus,
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
@@ -80,6 +80,7 @@ interface ChatSystemProps {
   onViewProfile?: (userId: string) => void;
   onItemsChanged?: () => void;
   onOpenGoFundMe?: () => void;
+  onStartDirectMessage?: () => void;
 }
 
 export default function ChatSystem({
@@ -101,6 +102,7 @@ export default function ChatSystem({
   onViewProfile,
   onItemsChanged,
   onOpenGoFundMe,
+  onStartDirectMessage,
 }: ChatSystemProps) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<MessageRequest[]>([]);
@@ -926,16 +928,16 @@ export default function ChatSystem({
               {isStaffSupportInbox ? 'Support inbox' : 'Support'}
             </div>
             {!isStaffSupportInbox ? (
-              <div className="px-3 pb-2">
-                <button
-                  type="button"
-                  onClick={() => openSupport('new')}
-                  className="sbn-btn sbn-btn-secondary sbn-btn-sm w-full inline-flex items-center justify-center gap-2"
-                >
-                  <MessageSquarePlus className="w-3.5 h-3.5" />
-                  New conversation
-                </button>
-              </div>
+              <ChatSidebarRow
+                id="chat_row_new_support"
+                icon={LifeBuoy}
+                iconClassName="bg-sky-500/10 text-sky-400"
+                title="Open new support chat"
+                subtitle="Two-way chat with staff"
+                preview="Ask for help — staff will reply in this thread."
+                selected={supportView === 'new'}
+                onClick={() => openSupport('new')}
+              />
             ) : null}
             {supportTicketsLoading ? (
               <p className="text-xs text-muted text-center px-4 py-6">Loading…</p>
@@ -946,7 +948,7 @@ export default function ChatSystem({
                 description={
                   isStaffSupportInbox
                     ? 'When neighbors open tickets, they will appear here.'
-                    : 'Start a new conversation to chat with staff.'
+                    : 'Open new support chat above to talk with staff.'
                 }
               />
             ) : (
@@ -984,13 +986,23 @@ export default function ChatSystem({
               Direct messages
             </div>
 
+            <ChatSidebarRow
+              id="chat_row_start_dm"
+              icon={UserPlus}
+              iconClassName="bg-accent-soft text-accent"
+              title="Start conversation"
+              subtitle="Message a neighbor"
+              preview="Browse Stuff and tap Message on a listing, or message from a neighbor profile."
+              onClick={() => onStartDirectMessage?.()}
+            />
+
           {isChatsLoading ? (
             <p className="text-xs text-muted text-center px-4 py-6">Loading conversations…</p>
           ) : directChats.length === 0 && incomingRequests.length === 0 ? (
             <ChatSectionEmptyState
               icon={MessageSquare}
               title="No direct messages yet"
-              description="Message a neighbor from a listing to coordinate pickup."
+              description="Start conversation above, or message a neighbor from a listing."
             />
           ) : (
             <>

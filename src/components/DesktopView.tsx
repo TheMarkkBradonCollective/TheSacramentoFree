@@ -178,6 +178,7 @@ export default function DesktopView({
                 onViewProfile={onViewProfile}
                 onItemsChanged={onRefresh}
                 onOpenGoFundMe={onOpenGoFundMe}
+                onStartDirectMessage={() => setActiveTab('feed')}
                 className="h-full min-h-0 border-0 rounded-none"
               />
             </div>
