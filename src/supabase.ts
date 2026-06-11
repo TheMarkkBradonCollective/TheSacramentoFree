@@ -2055,11 +2055,18 @@ export async function createSupabaseMessage(
     }
 
     setSupabaseConfigurationState(true);
-    // Community/staff channels: webhook broadcast only (avoids client dedup races and timeouts).
-    if (!options?.skipPush && !isCommunityChat(chatId)) {
-      await runPushTask(() =>
-        import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text, messageId)),
-      );
+    if (!options?.skipPush) {
+      if (isCommunityChat(chatId)) {
+        await runPushTask(() =>
+          import('./lib/pushIntegration').then((m) =>
+            m.pushAfterCommunityMessage(chatId, senderId, text, messageId),
+          ),
+        );
+      } else {
+        await runPushTask(() =>
+          import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text, messageId)),
+        );
+      }
     }
     return true;
   } catch (err: any) {
