@@ -32,6 +32,7 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatSectionEmptyState from './ChatSectionEmptyState';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
+import { chatSidebarRowClass } from './ChatSidebarRow';
 import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
@@ -772,15 +773,6 @@ export default function ChatSystem({
     }
   };
 
-  const chatListRowClass = (isSelected: boolean) =>
-    [
-      'w-full text-left p-3 flex items-start gap-3 transition-colors cursor-pointer',
-      'border-b border-app border-l-[3px]',
-      isSelected
-        ? 'bg-accent-soft border-l-accent'
-        : 'border-l-transparent hover:bg-surface-hover',
-    ].join(' ');
-
   const messageBubbleClass = (isUser: boolean) =>
     [
       'max-w-[min(85%,20rem)] sm:max-w-[min(75%,24rem)] px-3.5 py-2 text-sm rounded-2xl shadow-sm',
@@ -891,7 +883,7 @@ export default function ChatSystem({
                     type="button"
                     id={`chat_row_${chat.id}`}
                     onClick={() => selectChat(chat)}
-                    className={chatListRowClass(isSelected)}
+                    className={chatSidebarRowClass(isSelected)}
                   >
                     <span
                       className={`shrink-0 w-10 h-10 rounded-full border border-app flex items-center justify-center ${
@@ -1013,7 +1005,7 @@ export default function ChatSystem({
                   type="button"
                   id={`chat_row_${chat.id}`}
                   onClick={() => selectChat(chat)}
-                  className={chatListRowClass(isSelected)}
+                  className={chatSidebarRowClass(isSelected)}
                 >
                   <button
                     type="button"
