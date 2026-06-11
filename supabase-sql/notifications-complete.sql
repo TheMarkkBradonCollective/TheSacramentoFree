@@ -3,8 +3,8 @@
 -- Sacramento Buy Nothing
 -- Safe to re-run: uses IF NOT EXISTS / ADD COLUMN IF NOT EXISTS
 --
--- After this script, configure ALL webhooks in
--- supabase-sql/supabase-push-webhook.sql (15 webhooks).
+-- After this script, run supabase-sql/install-push-webhooks.sql
+-- (or configure webhooks manually — see supabase-sql/supabase-push-webhook.sql).
 --
 -- Toggle guide:
 --   Comments        → owner when someone comments on your listing

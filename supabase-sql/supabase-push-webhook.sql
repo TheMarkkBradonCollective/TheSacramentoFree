@@ -4,8 +4,13 @@
 --
 -- Run supabase-sql/notifications-complete.sql FIRST.
 --
+-- EASIEST: run supabase-sql/install-push-webhooks.sql in the SQL Editor
+-- (replace YOUR_SERVICE_ROLE_KEY, then Run). That creates all triggers at once.
+--
+-- OR add each hook manually in Dashboard → Database → Webhooks.
+--
 -- Auth: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
--- URL (all webhooks): https://sacramento-buy-nothing.vercel.app/api/webhooks/supabase-push
+-- URL (all webhooks): https://sacramentobuynothing.com/api/webhooks/supabase-push
 --
 -- | Webhook name          | Table                   | Events         | Who gets notified                |
 -- |-----------------------|-------------------------|----------------|----------------------------------|
