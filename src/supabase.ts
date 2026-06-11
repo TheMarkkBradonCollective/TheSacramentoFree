@@ -575,10 +575,18 @@ export async function upsertSupabaseProfile(
 
     const { data: existingUser } = await supabase
       .from('users')
-      .select('uid')
+      .select('uid, createdAt')
       .eq('uid', profile.uid)
       .maybeSingle();
     const isNewNeighbor = !existingUser;
+    const createdAtMs = existingUser
+      ? Date.parse(String((existingUser as { createdAt?: string }).createdAt || ''))
+      : NaN;
+    // Auth trigger may insert users before first profile save — still alert directors then.
+    const isRecentSignupProfile =
+      Boolean(existingUser) &&
+      Number.isFinite(createdAtMs) &&
+      Date.now() - createdAtMs < 24 * 60 * 60 * 1000;
 
     const payload = {
       uid: profile.uid,
@@ -623,19 +631,18 @@ export async function upsertSupabaseProfile(
       void syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
     }
 
-    if (isNewNeighbor && !isDirectorUser(profile.uid, profile.email)) {
-      try {
-        const m = await import('./lib/pushIntegration');
-        await m.pushDirectorAlert({
-          category: 'join',
-          title: `New neighbor — ${payload.displayName}`,
-          body: `${payload.neighborhood} · joined Sacramento Buy Nothing`,
-          tag: `director-join-${profile.uid}`,
-          excludeUserIds: [profile.uid],
-        });
-      } catch (err) {
-        console.warn('[push] director join alert failed:', err);
-      }
+    if ((isNewNeighbor || isRecentSignupProfile) && !isDirectorUser(profile.uid, profile.email)) {
+      await runPushTask(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushDirectorAlert({
+            category: 'join',
+            title: `New neighbor — ${payload.displayName}`,
+            body: `${payload.neighborhood} · joined Sacramento Buy Nothing`,
+            tag: `director-join-${profile.uid}`,
+            excludeUserIds: [profile.uid],
+          }),
+        ),
+      );
     }
 
     setSupabaseConfigurationState(true);
@@ -4841,9 +4848,11 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
   };
 
   try {
+    // Push while auth is still valid — delete_own_account removes auth.users immediately after.
+    await notifyDirectorLeave();
+
     const { error: rpcError } = await supabase.rpc('delete_own_account');
     if (!rpcError) {
-      await notifyDirectorLeave();
       return { ok: true };
     }
 
@@ -4865,7 +4874,6 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     const { clearNotificationDataOnLogout } = await import('./hooks/usePushNotifications');
     await clearNotificationDataOnLogout(uid);
     await supabase.auth.signOut();
-    await notifyDirectorLeave();
     return {
       ok: true,
       errorMessage:
