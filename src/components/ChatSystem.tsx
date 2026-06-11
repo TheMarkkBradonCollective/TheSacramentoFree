@@ -102,7 +102,9 @@ export default function ChatSystem({
   const [supportPreviews, setSupportPreviews] = useState<Record<string, SupportTicketLastMessage>>({});
   const [supportTicketsLoading, setSupportTicketsLoading] = useState(false);
   const [supportOpenTicketId, setSupportOpenTicketId] = useState<string | null>(null);
+  const [showAllDirectMessages, setShowAllDirectMessages] = useState(false);
   const isStaffSupportInbox = canViewStaffTicketInbox(userProfile.role);
+  const CHAT_SIDEBAR_PREVIEW = 3;
   const [messages, setMessages] = useState<Message[]>([]);
   const [senderNames, setSenderNames] = useState<Record<string, { displayName: string; photoURL?: string }>>({});
   const [inputText, setInputText] = useState('');
@@ -659,6 +661,12 @@ export default function ChatSystem({
 
   const communityChats = chats.filter((c) => isCommunityChat(c.id));
   const directChats = chats.filter((c) => !isCommunityChat(c.id));
+  const previewSupportTickets = supportTickets.slice(0, CHAT_SIDEBAR_PREVIEW);
+  const hasMoreSupportTickets = supportTickets.length > CHAT_SIDEBAR_PREVIEW;
+  const visibleDirectChats = showAllDirectMessages
+    ? directChats
+    : directChats.slice(0, CHAT_SIDEBAR_PREVIEW);
+  const hasMoreDirectChats = directChats.length > CHAT_SIDEBAR_PREVIEW && !showAllDirectMessages;
 
   const getFormattedChatTitle = (chat: Chat) => {
     if (isCommunityChat(chat.id)) return communityChatTitle(chat.id);
@@ -893,19 +901,31 @@ export default function ChatSystem({
                 {isStaffSupportInbox ? 'Inbox is clear.' : 'No conversations yet.'}
               </p>
             ) : (
-              <ul>
-                {supportTickets.map((ticket) => (
-                  <li key={ticket.id}>
-                    <SupportTicketRow
-                      ticket={ticket}
-                      preview={supportPreviews[ticket.id]}
-                      selected={!!supportView && supportOpenTicketId === ticket.id}
-                      showOpener={isStaffSupportInbox}
-                      onClick={() => openSupportTicket(ticket.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul>
+                  {previewSupportTickets.map((ticket) => (
+                    <li key={ticket.id}>
+                      <SupportTicketRow
+                        ticket={ticket}
+                        preview={supportPreviews[ticket.id]}
+                        selected={!!supportView && supportOpenTicketId === ticket.id}
+                        showOpener={isStaffSupportInbox}
+                        onClick={() => openSupportTicket(ticket.id)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                {hasMoreSupportTickets ? (
+                  <button
+                    type="button"
+                    onClick={() => openSupport('list')}
+                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-accent hover:bg-inset text-left border-t border-app/60"
+                  >
+                    View all {supportTickets.length}{' '}
+                    {isStaffSupportInbox ? 'support conversations' : 'support tickets'}
+                  </button>
+                ) : null}
+              </>
             )}
           </div>
 
@@ -926,7 +946,8 @@ export default function ChatSystem({
               </p>
             </div>
           ) : (
-            directChats.map((chat) => {
+            <>
+            {visibleDirectChats.map((chat) => {
               const { otherId, otherName, otherPhoto } = getRecipientInfo(chat);
               const isSelected = selectedChat?.id === chat.id && !supportView;
               const displayTitle = getFormattedChatTitle(chat);
@@ -979,7 +1000,25 @@ export default function ChatSystem({
                   </div>
                 </button>
               );
-            })
+            })}
+            {hasMoreDirectChats ? (
+              <button
+                type="button"
+                onClick={() => setShowAllDirectMessages(true)}
+                className="w-full px-4 py-2.5 text-[11px] font-semibold text-accent hover:bg-inset text-left border-t border-app/60"
+              >
+                View all {directChats.length} direct messages
+              </button>
+            ) : showAllDirectMessages && directChats.length > CHAT_SIDEBAR_PREVIEW ? (
+              <button
+                type="button"
+                onClick={() => setShowAllDirectMessages(false)}
+                className="w-full px-4 py-2.5 text-[11px] font-semibold text-muted hover:bg-inset text-left border-t border-app/60"
+              >
+                Show fewer
+              </button>
+            ) : null}
+            </>
           )}
           {fullBleed && onOpenGoFundMe && !selectedChat && !supportView && (
             <PageScrollFooter onOpenDetails={onOpenGoFundMe} />

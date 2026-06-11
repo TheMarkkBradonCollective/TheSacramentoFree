@@ -52,6 +52,8 @@ export default function ChatSupportSection({
   const [ticketPreviews, setTicketPreviews] = useState<Record<string, SupportTicketLastMessage>>({});
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
+  const [showAllTickets, setShowAllTickets] = useState(false);
+  const SIDEBAR_PREVIEW = 3;
   const [err, setErr] = useState('');
 
   const loadTicketPreviews = useCallback(async (rows: SupportTicket[]) => {
@@ -201,19 +203,30 @@ export default function ChatSupportSection({
             {isStaffInbox ? 'Inbox is clear.' : 'No conversations yet.'}
           </p>
         ) : (
-          <ul>
-            {tickets.map((ticket) => (
-              <li key={ticket.id}>
-                <SupportTicketRow
-                  ticket={ticket}
-                  preview={ticketPreviews[ticket.id]}
-                  selected={view === 'thread' && activeTicket?.id === ticket.id}
-                  showOpener={isStaffInbox}
-                  onClick={() => void openThread(ticket)}
-                />
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul>
+              {(showAllTickets ? tickets : tickets.slice(0, SIDEBAR_PREVIEW)).map((ticket) => (
+                <li key={ticket.id}>
+                  <SupportTicketRow
+                    ticket={ticket}
+                    preview={ticketPreviews[ticket.id]}
+                    selected={view === 'thread' && activeTicket?.id === ticket.id}
+                    showOpener={isStaffInbox}
+                    onClick={() => void openThread(ticket)}
+                  />
+                </li>
+              ))}
+            </ul>
+            {tickets.length > SIDEBAR_PREVIEW && !showAllTickets ? (
+              <button
+                type="button"
+                onClick={() => setShowAllTickets(true)}
+                className="w-full px-3 py-2 text-[11px] font-semibold text-accent hover:bg-inset text-left"
+              >
+                View all {tickets.length} {isStaffInbox ? 'conversations' : 'tickets'}
+              </button>
+            ) : null}
+          </>
         )}
       </div>
     );
