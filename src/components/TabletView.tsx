@@ -1,4 +1,5 @@
 import React from 'react';
+import { useScrollInputOnFocus } from '../hooks/useKeyboardInset';
 import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
@@ -105,6 +106,8 @@ export default function TabletView({
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
 }: TabletViewProps) {
+  useScrollInputOnFocus();
+
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen h-dvh mesh-bg text-app overflow-hidden">
       <header id="tablet_navbar" className="sticky top-0 z-40 sbn-glass-nav">

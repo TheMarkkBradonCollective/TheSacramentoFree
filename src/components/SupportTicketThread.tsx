@@ -207,7 +207,7 @@ export default function SupportTicketThread({
       </div>
 
       {isOpen && (
-        <div className="shrink-0 p-4 border-t border-app bg-surface space-y-2 sbn-safe-bottom">
+        <div className="shrink-0 p-4 border-t border-app bg-surface space-y-2 sbn-input-tray">
           <textarea
             className="sbn-input text-sm min-h-[4rem] resize-none"
             placeholder="Write a reply…"

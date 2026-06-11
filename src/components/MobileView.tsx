@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useKeyboardInset, useScrollInputOnFocus } from '../hooks/useKeyboardInset';
 import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
@@ -108,6 +109,9 @@ export default function MobileView({
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
+
+  useKeyboardInset();
+  useScrollInputOnFocus();
 
   return (
     <div id="mobile_device_workspace" className="sbn-mobile-shell flex flex-col bg-app text-app">

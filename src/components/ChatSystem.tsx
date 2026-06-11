@@ -1041,7 +1041,7 @@ export default function ChatSystem({
 
                 <form
                   onSubmit={handleSendMessage}
-                  className="shrink-0 p-3 sm:p-4 bg-surface border-t border-app flex flex-col gap-2 safe-area-pb"
+                  className="shrink-0 p-3 sm:p-4 bg-surface border-t border-app flex flex-col gap-2 sbn-input-tray"
                   id="input_tray"
                 >
                   {!isCommunity && showSendLocationBtn && (
@@ -1119,6 +1119,7 @@ export default function ChatSystem({
                       id="message_input_box"
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
+                      onFocus={scrollToBottom}
                       placeholder={
                         isStaffCommunityChat(selectedChat.id) && !userIsStaff
                           ? 'Staff only'
