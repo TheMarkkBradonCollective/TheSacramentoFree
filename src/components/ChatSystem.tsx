@@ -29,6 +29,7 @@ import SupportTicketRow from './SupportTicketRow';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
+import ChatSectionEmptyState from './ChatSectionEmptyState';
 import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
@@ -933,11 +934,17 @@ export default function ChatSystem({
               </div>
             ) : null}
             {supportTicketsLoading ? (
-              <p className="text-xs text-muted px-4 py-3">Loading…</p>
+              <p className="text-xs text-muted text-center px-4 py-6">Loading…</p>
             ) : supportTickets.length === 0 ? (
-              <p className="text-xs text-muted px-4 py-3">
-                {isStaffSupportInbox ? 'Inbox is clear.' : 'No conversations yet.'}
-              </p>
+              <ChatSectionEmptyState
+                icon={LifeBuoy}
+                title={isStaffSupportInbox ? 'Inbox is clear' : 'No conversations yet'}
+                description={
+                  isStaffSupportInbox
+                    ? 'When neighbors open tickets, they will appear here.'
+                    : 'Start a new conversation to chat with staff.'
+                }
+              />
             ) : (
               <>
                 <ul>
@@ -967,22 +974,20 @@ export default function ChatSystem({
             )}
           </div>
 
-          {directChats.length > 0 && (
-            <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide">
+          <div className="border-b border-app">
+            <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
+              <MessageSquare className="w-3.5 h-3.5" />
               Direct messages
             </div>
-          )}
 
           {isChatsLoading ? (
-            <div className="p-6 text-center text-sm text-muted">Loading conversations…</div>
+            <p className="text-xs text-muted text-center px-4 py-6">Loading conversations…</p>
           ) : directChats.length === 0 && incomingRequests.length === 0 ? (
-            <div className="p-6 text-center">
-              <MessageSquare className="w-8 h-8 text-muted mx-auto mb-2" />
-              <p className="font-semibold text-app text-sm">No direct messages yet</p>
-              <p className="text-xs text-muted mt-1.5 leading-relaxed">
-                Message a neighbor from a listing to coordinate pickup.
-              </p>
-            </div>
+            <ChatSectionEmptyState
+              icon={MessageSquare}
+              title="No direct messages yet"
+              description="Message a neighbor from a listing to coordinate pickup."
+            />
           ) : (
             <>
             {visibleDirectChats.map((chat) => {
@@ -1058,6 +1063,7 @@ export default function ChatSystem({
             ) : null}
             </>
           )}
+          </div>
           {fullBleed && onOpenGoFundMe && !selectedChat && !supportView && (
             <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
           )}

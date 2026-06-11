@@ -15,6 +15,7 @@ import { useImageAttachment } from '../hooks/useImageAttachment';
 import { LifeBuoy, MessageSquarePlus, ChevronLeft } from 'lucide-react';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import PageScrollFooter from './PageScrollFooter';
+import ChatSectionEmptyState from './ChatSectionEmptyState';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 
 export type ChatSupportView = 'list' | 'new' | 'thread' | null;
@@ -197,11 +198,17 @@ export default function ChatSupportSection({
           </button>
         ) : null}
         {ticketsLoading ? (
-          <p className="text-xs text-muted px-1 py-2">Loading…</p>
+          <p className="text-xs text-muted text-center px-4 py-6">Loading…</p>
         ) : tickets.length === 0 ? (
-          <p className="text-xs text-muted px-1 py-2">
-            {isStaffInbox ? 'Inbox is clear.' : 'No conversations yet.'}
-          </p>
+          <ChatSectionEmptyState
+            icon={LifeBuoy}
+            title={isStaffInbox ? 'Inbox is clear' : 'No conversations yet'}
+            description={
+              isStaffInbox
+                ? 'When neighbors open tickets, they will appear here.'
+                : 'Start a new conversation to chat with staff.'
+            }
+          />
         ) : (
           <>
             <ul>
@@ -397,17 +404,17 @@ export default function ChatSupportSection({
           </div>
         )}
         {ticketsLoading ? (
-          <p className="text-sm text-muted text-center py-8">Loading conversations…</p>
+          <p className="text-xs text-muted text-center px-4 py-6">Loading conversations…</p>
         ) : tickets.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <LifeBuoy className="w-10 h-10 text-muted mx-auto mb-2" />
-            <p className="text-sm text-muted">
-              {isStaffInbox ? 'No support conversations in your inbox.' : 'No conversations yet.'}
-            </p>
-            {!isStaffInbox ? (
-              <p className="text-xs text-muted mt-1">Tap New conversation to chat with staff.</p>
-            ) : null}
-          </div>
+          <ChatSectionEmptyState
+            icon={LifeBuoy}
+            title={isStaffInbox ? 'Inbox is clear' : 'No conversations yet'}
+            description={
+              isStaffInbox
+                ? 'When neighbors open tickets, they will appear here.'
+                : 'Tap New conversation above to chat with staff.'
+            }
+          />
         ) : (
           <ul>
             {tickets.map((ticket) => (
