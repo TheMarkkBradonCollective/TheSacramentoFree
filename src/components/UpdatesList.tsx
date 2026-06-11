@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { AppUpdateInput, AppUpdateRecord, UserProfile } from '../types';
 import { useAppUpdates } from '../hooks/useAppUpdates';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
@@ -41,8 +41,30 @@ export default function UpdatesList({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingUpdate, setEditingUpdate] = useState<AppUpdateRecord | null>(null);
   const [creating, setCreating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { confirm } = useConfirm();
   const signedIn = Boolean(userProfile);
+
+  const filteredUpdates = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return updates;
+
+    return updates.filter((update) => {
+      const haystack = [
+        update.title,
+        update.body,
+        update.detail || '',
+        update.directorName,
+        update.directorTitle,
+        update.date,
+        formatUpdateDate(update.date),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(q);
+    });
+  }, [updates, searchQuery]);
 
   const emptyDraft = (): AppUpdateInput => ({
     date: todayIsoDate(),
@@ -57,24 +79,41 @@ export default function UpdatesList({
 
   return (
     <div className="space-y-4">
-      {canManage && (
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="sbn-btn sbn-btn-primary sbn-btn-sm inline-flex items-center gap-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          Post update
-        </button>
-      )}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        {canManage ? (
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="sbn-btn sbn-btn-primary sbn-btn-sm inline-flex items-center gap-1.5 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Post update
+          </button>
+        ) : null}
+        {updates.length > 0 ? (
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search updates…"
+              aria-label="Search updates"
+              className="sbn-input pl-9 text-sm w-full"
+            />
+          </div>
+        ) : null}
+      </div>
 
       {updates.length === 0 ? (
         <p className="text-sm text-muted italic">
           {canManage ? 'No updates yet — post your first one above.' : 'No updates posted yet.'}
         </p>
+      ) : filteredUpdates.length === 0 ? (
+        <p className="text-sm text-muted italic">No updates match &ldquo;{searchQuery.trim()}&rdquo;.</p>
       ) : (
         <ul className="space-y-3">
-          {updates.map((update) => {
+          {filteredUpdates.map((update) => {
             const expanded = expandedId === update.id;
             const fullText = update.detail?.trim() || update.body;
 
