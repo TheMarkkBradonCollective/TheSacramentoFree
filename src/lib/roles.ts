@@ -174,13 +174,34 @@ export function canViewStaffTicketInbox(role?: UserProfile['role']): boolean {
   return isStaffRole(role);
 }
 
-/** Participant may delete a 1:1 direct chat (not community channels). */
+/** Listing post chat is read-only once gifted or withdrawn (same as chat UI). */
+export function isListingPostChatReadOnly(status?: string): boolean {
+  return status === 'completed' || status === 'withdrawn';
+}
+
+/**
+ * Participant may delete a 1:1 direct chat (not community channels).
+ * Profile DMs: either neighbor. Post (listing) chats: both users, but the poster
+ * only after the listing is archived read-only (gifted/withdrawn).
+ */
 export function canDeleteDirectChat(
   viewer: Pick<UserProfile, 'uid'>,
-  chat: { id: string; participantIds: string[] },
+  chat: { id: string; participantIds: string[]; itemId?: string },
+  listing?: { userId: string; status: string } | null,
 ): boolean {
   if (isCommunityChat(chat.id)) return false;
-  return Array.isArray(chat.participantIds) && chat.participantIds.includes(viewer.uid);
+  if (!Array.isArray(chat.participantIds) || !chat.participantIds.includes(viewer.uid)) {
+    return false;
+  }
+
+  const itemId = String(chat.itemId || '').trim();
+  if (!itemId) return true;
+
+  if (!listing || listing.userId !== viewer.uid) {
+    return true;
+  }
+
+  return isListingPostChatReadOnly(listing.status);
 }
 
 /** Closed tickets may be deleted by the opener or staff with access. */
