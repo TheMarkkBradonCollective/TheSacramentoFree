@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, ClipboardList, Flag, Star } from 'lucide-react';
+import { ClipboardList, Flag, Star } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { canViewStaffReports } from '../lib/roles';
+import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import CommunityReviews from './CommunityReviews';
 import SendUserReportPanel from './SendUserReportPanel';
 import StaffUserReportsPanel from './StaffUserReportsPanel';
 import FullScreenPanel from './FullScreenPanel';
+import ChatSidebarRow from './ChatSidebarRow';
 
 export type ChatFeedbackPanel = 'reviews' | 'report' | 'staffReports' | null;
 
@@ -22,6 +24,9 @@ export default function ChatFeedbackSection({
 }: ChatFeedbackSectionProps) {
   const [panel, setPanel] = useState<ChatFeedbackPanel>(null);
   const canStaffReports = canViewStaffReports(userProfile.role);
+  const { reports } = useStaffUserReports(canStaffReports);
+
+  const newReportCount = reports.filter((report) => report.status === 'new').length;
 
   useEffect(() => {
     if (!initialPanel) return;
@@ -37,40 +42,49 @@ export default function ChatFeedbackSection({
         <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide">
           Reviews & reports
         </div>
-        <div className="px-3 pb-2 space-y-1.5">
-          <button type="button" onClick={() => setPanel('reviews')} className="sbn-help-list-item w-full">
-            <span className="p-2 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
-              <Star className="w-4 h-4" />
-            </span>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="font-semibold text-sm text-app block">Community reviews</span>
-              <span className="text-[11px] text-muted">Read all reviews — post or edit yours</span>
-            </span>
-            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-          </button>
-          <button type="button" onClick={() => setPanel('report')} className="sbn-help-list-item w-full">
-            <span className="p-2 rounded-lg bg-red-500/10 text-red-400 shrink-0">
-              <Flag className="w-4 h-4" />
-            </span>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="font-semibold text-sm text-app block">Send a report</span>
-              <span className="text-[11px] text-muted">One-way — staff review only</span>
-            </span>
-            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-          </button>
-          {canStaffReports ? (
-            <button type="button" onClick={() => setPanel('staffReports')} className="sbn-help-list-item w-full">
-              <span className="p-2 rounded-lg bg-violet-500/10 text-violet-400 shrink-0">
-                <ClipboardList className="w-4 h-4" />
-              </span>
-              <span className="min-w-0 flex-1 text-left">
-                <span className="font-semibold text-sm text-app block">User reports</span>
-                <span className="text-[11px] text-muted">Neighbor safety submissions</span>
-              </span>
-              <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-            </button>
-          ) : null}
-        </div>
+        <ChatSidebarRow
+          id="chat_row_reviews"
+          icon={Star}
+          iconClassName="bg-amber-500/10 text-amber-500"
+          title="Community reviews"
+          subtitle="Read neighbor feedback — post or edit yours"
+          preview="Share your experience and see what neighbors think about the app."
+          selected={panel === 'reviews'}
+          onClick={() => setPanel('reviews')}
+        />
+        <ChatSidebarRow
+          id="chat_row_send_report"
+          icon={Flag}
+          iconClassName="bg-red-500/10 text-red-400"
+          title="Send a report"
+          subtitle="One-way — staff review only"
+          preview="Report a safety issue. Staff will review; you will not get a reply here."
+          selected={panel === 'report'}
+          onClick={() => setPanel('report')}
+        />
+        {canStaffReports ? (
+          <ChatSidebarRow
+            id="chat_row_user_reports"
+            icon={ClipboardList}
+            iconClassName="bg-violet-500/10 text-violet-400"
+            title="User reports"
+            subtitle="Neighbor safety submissions"
+            preview={
+              newReportCount > 0
+                ? `${newReportCount} new report${newReportCount === 1 ? '' : 's'} waiting for review`
+                : 'Review one-way reports from neighbors.'
+            }
+            selected={panel === 'staffReports'}
+            onClick={() => setPanel('staffReports')}
+            trailing={
+              newReportCount > 0 ? (
+                <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 shrink-0">
+                  {newReportCount} new
+                </span>
+              ) : undefined
+            }
+          />
+        ) : null}
       </div>
 
       {panel === 'reviews' ? (
