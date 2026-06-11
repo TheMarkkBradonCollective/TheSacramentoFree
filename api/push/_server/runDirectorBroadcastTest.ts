@@ -3,7 +3,7 @@ import { sendToSubscription } from './pushDelivery';
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { configureVapidAsync } from './webPushLoader';
 
-const DEFAULT_BROADCAST_TITLE = 'The Website/App!';
+const DEFAULT_BROADCAST_TITLE = 'SacramentoBuyNothing';
 const DEFAULT_BROADCAST_BODY = 'This is a test notification!';
 
 export async function runDirectorBroadcastTest(

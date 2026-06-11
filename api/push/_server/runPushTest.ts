@@ -19,7 +19,7 @@ export async function runPushTest(params: {
   }
 
   const payload = {
-    title: 'The Website/App!',
+    title: 'SacramentoBuyNothing',
     body: 'This is a test notification!',
     url: '/',
     tag: `sbn-test-push-${Date.now()}`,

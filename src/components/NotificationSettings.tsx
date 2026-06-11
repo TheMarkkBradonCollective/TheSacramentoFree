@@ -381,7 +381,7 @@ export default function NotificationSettings({
       {isDirectorRole(userRole) && isSubscribed && (
         <p className="text-[11px] text-muted mb-4 -mt-2">
           <strong className="text-app">Director:</strong> &quot;Test all users&quot; lets you type the title and message
-          (defaults: The Website/App! / This is a test notification!) before sending to every subscribed device.
+          (defaults: SacramentoBuyNothing / This is a test notification!) before sending to every subscribed device.
         </p>
       )}
 

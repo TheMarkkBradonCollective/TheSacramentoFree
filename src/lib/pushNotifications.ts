@@ -499,7 +499,7 @@ export async function sendTestPushNotification(): Promise<{
   }
 }
 
-const DIRECTOR_BROADCAST_DEFAULT_TITLE = 'The Website/App!';
+const DIRECTOR_BROADCAST_DEFAULT_TITLE = 'SacramentoBuyNothing';
 const DIRECTOR_BROADCAST_DEFAULT_BODY = 'This is a test notification!';
 
 function promptDirectorBroadcastMessage(): { title: string; body: string } | null {
