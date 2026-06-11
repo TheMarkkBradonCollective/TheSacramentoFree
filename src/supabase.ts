@@ -5,7 +5,7 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -4780,7 +4780,7 @@ export async function deleteSupabaseDirectChat(
   try {
     const { data: chat, error: fetchError } = await supabase
       .from('chats')
-      .select('id, participantIds')
+      .select('id, participantIds, itemId')
       .eq('id', chatId)
       .maybeSingle();
 
@@ -4791,8 +4791,33 @@ export async function deleteSupabaseDirectChat(
       return { ok: false, errorMessage: 'Conversation not found.' };
     }
 
-    const row = chat as { id: string; participantIds: string[] };
-    if (!canDeleteDirectChat(actor, row)) {
+    const row = chat as { id: string; participantIds: string[]; itemId?: string };
+    const itemId = String(row.itemId || '').trim();
+
+    let listing: { userId: string; status: string } | null = null;
+    if (itemId) {
+      const { data: item } = await supabase
+        .from('items')
+        .select('userId, status')
+        .eq('id', itemId)
+        .maybeSingle();
+      if (item) {
+        listing = {
+          userId: String((item as { userId?: string }).userId || ''),
+          status: String((item as { status?: string }).status || ''),
+        };
+      }
+    }
+
+    if (!canDeleteDirectChat(actor, row, listing)) {
+      const isPoster = listing?.userId === actor.uid;
+      if (itemId && isPoster && listing && !isListingPostChatReadOnly(listing.status)) {
+        return {
+          ok: false,
+          errorMessage:
+            'Gift or withdraw your listing first — you can delete this post chat once it is read-only.',
+        };
+      }
       return { ok: false, errorMessage: 'You cannot delete this conversation.' };
     }
 
@@ -4805,7 +4830,7 @@ export async function deleteSupabaseDirectChat(
 
     const participants = (row.participantIds || []).filter(Boolean);
     const otherId = participants.find((id) => id !== actor.uid);
-    if (otherId) {
+    if (otherId && !itemId) {
       await resetMessageRequestsBetween(actor.uid, otherId);
     }
 

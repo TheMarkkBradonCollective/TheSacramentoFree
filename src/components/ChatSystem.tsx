@@ -410,13 +410,18 @@ export default function ChatSystem({
     return true;
   };
 
-  const handleDeleteChat = async () => {
+  const handleDeleteChat = async (linkedItem?: ItemPost) => {
     if (!selectedChat || deletingChat || isCommunityChat(selectedChat.id)) return;
-    if (!canDeleteDirectChat(userProfile, selectedChat)) return;
+    const listingContext = linkedItem
+      ? { userId: linkedItem.userId, status: linkedItem.status }
+      : null;
+    if (!canDeleteDirectChat(userProfile, selectedChat, listingContext)) return;
 
+    const isPostChat = Boolean(selectedChat.itemId?.trim());
     const confirmed = await confirm({
-      message:
-        'Delete this conversation for both neighbors? Profile DMs will require a new message request to chat again.',
+      message: isPostChat
+        ? 'Delete this post chat for both neighbors? The listing thread will be removed from Messages.'
+        : 'Delete this conversation for both neighbors? You will need to send a new message request to chat again.',
       confirmLabel: 'Delete conversation',
       variant: 'danger',
     });
@@ -1203,10 +1208,10 @@ export default function ChatSystem({
                     )}
                   </div>
 
-                  {!isCommunity && canDeleteDirectChat(userProfile, selectedChat) ? (
+                  {!isCommunity && canDeleteDirectChat(userProfile, selectedChat, linkedItem ?? null) ? (
                     <button
                       type="button"
-                      onClick={() => void handleDeleteChat()}
+                      onClick={() => void handleDeleteChat(linkedItem)}
                       disabled={deletingChat}
                       className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset shrink-0 disabled:opacity-50"
                       title="Delete conversation"
