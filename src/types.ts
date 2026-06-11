@@ -75,6 +75,25 @@ export interface DirectorActivityItem {
   at: string;
 }
 
+export type UserNotificationKind =
+  | 'comment'
+  | 'upvote'
+  | 'downvote'
+  | 'claim'
+  | 'claim_request'
+  | 'listing_status';
+
+export interface UserNotificationItem {
+  id: string;
+  kind: UserNotificationKind;
+  title: string;
+  body: string;
+  at: string;
+  itemId?: string;
+  itemTitle?: string;
+  actorName?: string;
+}
+
 export interface DirectorSiteOverview {
   totalNeighbors: number;
   neighborsJoinedToday: number;

@@ -829,7 +829,7 @@ export default function App() {
       if (target.notificationsTab) {
         openNotificationsHub(target.notificationsTab);
       } else if (target.notifications) {
-        openNotificationsHub('alerts');
+        openNotificationsHub('notifications');
       }
       if (target.directorOverview) {
         setScrollToDirectorOverview(true);

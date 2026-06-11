@@ -7,7 +7,7 @@ export interface PushDeepLinkTarget {
   requestId?: string;
   profile?: boolean;
   notifications?: boolean;
-  notificationsTab?: 'announcements' | 'updates' | 'alerts' | 'listings';
+  notificationsTab?: 'announcements' | 'updates' | 'notifications' | 'alerts' | 'listings';
   staffPanel?: 'tickets' | 'reports';
   /** @deprecated tickets — opens Messages → Support inbox */
   directorOverview?: boolean;
@@ -28,8 +28,8 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
 
   path = path.replace(/^\/+/, '');
 
-  if (path === 'notifications' || path === 'notifications/alerts') return { notificationsTab: 'alerts' };
-  if (path === 'notifications/listings') return { notificationsTab: 'listings' };
+  if (path === 'notifications' || path === 'notifications/listings') return { notificationsTab: 'notifications' };
+  if (path === 'notifications/alerts' || path === 'alerts') return { notificationsTab: 'alerts' };
   if (path === 'updates') return { notificationsTab: 'updates' };
   if (path === 'help/announcements') return { notificationsTab: 'announcements' };
   if (path === 'profile') return { tab: 'profile', profile: true };

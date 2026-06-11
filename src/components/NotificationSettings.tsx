@@ -19,7 +19,7 @@ interface NotificationSettingsProps {
   fullBleed?: boolean;
   /** Inside the navbar bell panel — no outer card chrome. */
   embedded?: boolean;
-  /** Bell hub: alerts = messages & discover; listings = your posts & profile activity */
+  /** Bell hub: alerts = all push toggles; listings = legacy your-post toggles only */
   scope?: NotificationSettingsScope;
 }
 
@@ -297,8 +297,8 @@ export default function NotificationSettings({
           {(scope === 'all' || !embedded) && (
             <p className="text-xs text-muted mb-4">
               {scope === 'all'
-                ? 'Get real-time alerts for messages, support, discover, and community news — even when the app is closed.'
-                : 'Messages, support, discover, and community push. Turn push on here once — it covers every bell tab.'}
+                ? 'Get real-time alerts for messages, support, discover, community news, and your listings — even when the app is closed.'
+                : 'All push toggles live here — messages, discover, community, and alerts for your own posts.'}
             </p>
           )}
           <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
@@ -359,13 +359,6 @@ export default function NotificationSettings({
           </button>
         </div>
       )}
-
-      {showListingsScope && !showAlertsScope && masterDisabled && !prefsLoading ? (
-        <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
-          Open the <strong className="text-app">Alerts</strong> tab (last tab) to turn push on, then return here to
-          choose what you want about your posts.
-        </p>
-      ) : null}
 
       {(showAlertsScope || showListingsScope) && (
         <>
@@ -452,8 +445,8 @@ export default function NotificationSettings({
             </div>
           ) : null}
 
-          {showListingsScope ? (
-            <div className={`${showAlertsScope ? 'mt-5' : ''} space-y-5 ${masterDisabled || prefsLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+          {showListingsScope && !showAlertsScope ? (
+            <div className={`space-y-5 ${masterDisabled || prefsLoading ? 'opacity-50 pointer-events-none' : ''}`}>
               <div>
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
                   {LISTING_PREF_SECTION.title}
@@ -495,6 +488,23 @@ export default function NotificationSettings({
                   </div>
                 </div>
               ))}
+
+              <div>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
+                  {LISTING_PREF_SECTION.title}
+                </h4>
+                <div className="rounded-xl border border-app bg-inset/30 px-3">
+                  {LISTING_PREF_SECTION.items.map((toggle) => (
+                    <SwitchRow
+                      key={toggle.key}
+                      label={toggle.label}
+                      description={toggle.description}
+                      checked={Boolean(preferences[toggle.key])}
+                      onChange={(value) => setPref(toggle.key, value)}
+                    />
+                  ))}
+                </div>
+              </div>
 
               {isStaffRole(userRole) && (
                 <div>

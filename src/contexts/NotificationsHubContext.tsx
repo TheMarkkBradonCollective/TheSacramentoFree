@@ -5,10 +5,11 @@ import FullScreenPanel from '../components/FullScreenPanel';
 import NotificationSettings from '../components/NotificationSettings';
 import UpdatesList from '../components/UpdatesList';
 import AnnouncementsList from '../components/AnnouncementsList';
+import UserNotificationsList from '../components/UserNotificationsList';
 
-export type NotificationsHubTab = 'announcements' | 'updates' | 'alerts' | 'listings';
+export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts';
 
-const HUB_TAB_ORDER: NotificationsHubTab[] = ['announcements', 'updates', 'listings', 'alerts'];
+const HUB_TAB_ORDER: NotificationsHubTab[] = ['announcements', 'updates', 'notifications', 'alerts'];
 
 const HUB_TAB_META: Record<
   NotificationsHubTab,
@@ -19,7 +20,7 @@ const HUB_TAB_META: Record<
     mobileLabel: 'News',
     title: 'Announcements',
     subtitle: 'Staff community news — vote and comment',
-    intro: 'Posts from directors and staff. Turn on Alerts → Announcements if you want a push when something new is posted.',
+    intro: 'Posts from directors and staff. Turn on push for new announcements under Alerts → Announcements.',
   },
   updates: {
     label: 'Updates',
@@ -28,19 +29,19 @@ const HUB_TAB_META: Record<
     subtitle: 'Director changelog — what shipped and why',
     intro: 'Technical release notes for the app. Expand any entry for the full story.',
   },
-  listings: {
+  notifications: {
     label: 'Notifications',
     mobileLabel: 'Notify',
     title: 'Notifications',
-    subtitle: 'Your posts — comments, votes, claims, gifts, and status',
-    intro: 'Only activity on listings you posted and your profile — not messages or neighborhood discover.',
+    subtitle: 'Activity on your posts — comments, votes, claims, and status',
+    intro: 'What you receive when neighbors interact with your listings. Adjust push toggles for these under Alerts (last tab).',
   },
   alerts: {
     label: 'Alerts',
     mobileLabel: 'Alerts',
     title: 'Push alerts',
-    subtitle: 'Turn push on, then choose messages, chat, discover, and community',
-    intro: 'Device setup and general push categories. Enable alerts here once — it applies to every tab.',
+    subtitle: 'Turn push on and choose what sends you an alert',
+    intro: 'Device setup and all push toggles — messages, discover, community, and your-post alerts.',
   },
 };
 
@@ -57,10 +58,14 @@ const NotificationsHubContext = createContext<NotificationsHubContextValue | nul
 
 let openNotificationsHubGlobal: ((tab?: NotificationsHubTab) => void) | null = null;
 
+function resolveHubTab(tab: NotificationsHubTab | 'notifications' | 'listings'): NotificationsHubTab {
+  if (tab === 'listings') return 'notifications';
+  return tab;
+}
+
 /** Open the navbar bell panel from outside React (e.g. push deep links in App.tsx). */
-export function openNotificationsHub(tab: NotificationsHubTab | 'notifications' = 'announcements') {
-  const resolvedTab: NotificationsHubTab = tab === 'notifications' ? 'alerts' : tab;
-  openNotificationsHubGlobal?.(resolvedTab);
+export function openNotificationsHub(tab: NotificationsHubTab | 'listings' = 'announcements') {
+  openNotificationsHubGlobal?.(resolveHubTab(tab));
 }
 
 export function useNotificationsHub(): NotificationsHubContextValue {
@@ -99,7 +104,7 @@ export function NotificationsHubProvider({
   const [tab, setTab] = useState<NotificationsHubTab>('announcements');
 
   const openHub = useCallback((initialTab: NotificationsHubTab = 'announcements') => {
-    setTab(initialTab);
+    setTab(resolveHubTab(initialTab));
     setOpen(true);
   }, []);
 
@@ -148,14 +153,7 @@ export function NotificationsHubProvider({
               <AnnouncementsList userProfile={userProfile} showVotes showComments />
             ) : null}
             {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes /> : null}
-            {tab === 'listings' ? (
-              <NotificationSettings
-                userId={userProfile.uid}
-                userRole={userProfile.role}
-                embedded
-                scope="listings"
-              />
-            ) : null}
+            {tab === 'notifications' ? <UserNotificationsList userId={userProfile.uid} /> : null}
             {tab === 'alerts' ? (
               <NotificationSettings
                 userId={userProfile.uid}
