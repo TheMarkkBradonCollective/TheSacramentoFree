@@ -218,7 +218,7 @@ export default function PushNotificationCelebration({
 
                 {permission === 'denied' && (
                   <p className="mt-3 text-[11px] text-muted">
-                    Notifications are blocked in your browser settings. Open Profile → Notifications to learn more.
+                    Notifications are blocked in your browser settings. Open the bell → Alerts tab to try again.
                   </p>
                 )}
               </div>

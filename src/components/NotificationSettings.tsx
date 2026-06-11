@@ -76,8 +76,8 @@ const PREF_SECTIONS: {
   {
     title: 'Community',
     items: [
-      { key: 'appUpdates', label: 'App updates', description: 'Director changelog — what is new in the app' },
-      { key: 'announcements', label: 'Announcements', description: 'Staff news in Community hub' },
+      { key: 'appUpdates', label: 'App updates', description: 'Push when new changelog entries ship (bell → Updates)' },
+      { key: 'announcements', label: 'Announcements', description: 'Push when staff post news (bell → Announcements)' },
     ],
   },
 ];
@@ -276,7 +276,7 @@ export default function NotificationSettings({
   const showAlertsScope = scope === 'all' || scope === 'alerts';
   const showListingsScope = scope === 'all' || scope === 'listings';
   const scopeTitle =
-    scope === 'listings' ? 'Listing notifications' : scope === 'alerts' ? 'Push alerts' : 'Push notifications';
+    scope === 'listings' ? 'Notifications' : scope === 'alerts' ? 'Push alerts' : 'Push notifications';
 
   return (
     <section className={shell} id="notification_settings">
@@ -286,7 +286,7 @@ export default function NotificationSettings({
           <h3 className="text-lg font-bold text-app">{scopeTitle}</h3>
         </div>
       ) : null}
-      {showListingsScope && !showAlertsScope ? (
+      {showListingsScope && !showAlertsScope && !embedded ? (
         <p className="text-xs text-muted mb-4">
           Choose what you hear about when neighbors interact with <strong className="text-app">your posts</strong>{' '}
           — comments, votes, claims, and profile updates.
@@ -294,11 +294,13 @@ export default function NotificationSettings({
       ) : null}
       {showAlertsScope ? (
         <>
-          <p className={`text-xs text-muted ${embedded ? 'mb-4' : 'mb-4'}`}>
-            {scope === 'all'
-              ? 'Get real-time alerts for messages, support, discover, and community news — even when the app is closed.'
-              : 'Messages, support, discover, and community push alerts. Turn push on once here for all tabs.'}
-          </p>
+          {(scope === 'all' || !embedded) && (
+            <p className="text-xs text-muted mb-4">
+              {scope === 'all'
+                ? 'Get real-time alerts for messages, support, discover, and community news — even when the app is closed.'
+                : 'Messages, support, discover, and community push. Turn push on here once — it covers every bell tab.'}
+            </p>
+          )}
           <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
             <strong className="text-app">iPhone:</strong> add Sacramento Buy Nothing to your Home Screen, then enable
             alerts here. Safari tabs alone cannot receive push while closed.
@@ -360,8 +362,8 @@ export default function NotificationSettings({
 
       {showListingsScope && !showAlertsScope && masterDisabled && !prefsLoading ? (
         <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
-          Enable push in the <strong className="text-app">Alerts</strong> tab first, then choose what you want to hear
-          about your posts here.
+          Open the <strong className="text-app">Alerts</strong> tab first to turn push on, then return here to choose
+          what you want about your posts.
         </p>
       ) : null}
 

@@ -8,12 +8,44 @@ import AnnouncementsList from '../components/AnnouncementsList';
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'alerts' | 'listings';
 
-const HUB_TABS: { id: NotificationsHubTab; label: string }[] = [
-  { id: 'announcements', label: 'Announcements' },
-  { id: 'updates', label: 'Updates' },
-  { id: 'alerts', label: 'Alerts' },
-  { id: 'listings', label: 'Notifications' },
-];
+const HUB_TAB_META: Record<
+  NotificationsHubTab,
+  { label: string; mobileLabel: string; title: string; subtitle: string; intro: string }
+> = {
+  announcements: {
+    label: 'Announcements',
+    mobileLabel: 'News',
+    title: 'Announcements',
+    subtitle: 'Staff community news — vote and comment',
+    intro: 'Posts from directors and staff. Turn on Alerts → Announcements if you want a push when something new is posted.',
+  },
+  updates: {
+    label: 'Updates',
+    mobileLabel: 'Updates',
+    title: 'App updates',
+    subtitle: 'Director changelog — what shipped and why',
+    intro: 'Technical release notes for the app. Expand any entry for the full story.',
+  },
+  alerts: {
+    label: 'Alerts',
+    mobileLabel: 'Alerts',
+    title: 'Push alerts',
+    subtitle: 'Turn push on, then choose messages, chat, discover, and community',
+    intro: 'Device setup and general push categories. Enable alerts here once — it applies to every tab.',
+  },
+  listings: {
+    label: 'Notifications',
+    mobileLabel: 'Notify',
+    title: 'Notifications',
+    subtitle: 'Your posts — comments, votes, claims, gifts, and status',
+    intro: 'Only activity on listings you posted and your profile — not messages or neighborhood discover.',
+  },
+};
+
+const HUB_TABS = (Object.keys(HUB_TAB_META) as NotificationsHubTab[]).map((id) => ({
+  id,
+  ...HUB_TAB_META[id],
+}));
 
 type NotificationsHubContextValue = {
   openHub: (tab?: NotificationsHubTab) => void;
@@ -84,27 +116,31 @@ export function NotificationsHubProvider({
       {open && userProfile ? (
         <FullScreenPanel
           wide
-          title="Community alerts"
-          subtitle="Announcements, app updates, push alerts, and listing notifications"
+          title={HUB_TAB_META[tab].title}
+          subtitle={HUB_TAB_META[tab].subtitle}
           onClose={() => setOpen(false)}
         >
           <div className="space-y-5">
-            <div className="flex gap-1 p-1 rounded-xl bg-inset border border-app w-full overflow-x-auto">
+            <div className="flex gap-1 p-1 rounded-xl bg-inset border border-app w-full">
               {HUB_TABS.map((hubTab) => (
                 <button
                   key={hubTab.id}
                   type="button"
                   onClick={() => setTab(hubTab.id)}
-                  className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                  aria-label={hubTab.label}
+                  className={`flex-1 min-w-0 px-1.5 sm:px-3 py-2 rounded-lg text-[10px] sm:text-sm font-bold transition-colors leading-tight text-center ${
                     tab === hubTab.id
                       ? 'bg-accent text-on-accent shadow-sm'
                       : 'text-muted hover:text-app hover:bg-surface'
                   }`}
                 >
-                  {hubTab.label}
+                  <span className="sm:hidden">{hubTab.mobileLabel}</span>
+                  <span className="hidden sm:inline">{hubTab.label}</span>
                 </button>
               ))}
             </div>
+
+            <p className="text-xs text-muted -mt-2">{HUB_TAB_META[tab].intro}</p>
 
             {tab === 'announcements' ? (
               <AnnouncementsList userProfile={userProfile} showVotes showComments />
