@@ -4,7 +4,7 @@ import { AppReview, ContentVoteState, UserProfile } from '../types';
 import { useAppReviews } from '../hooks/useAppReviews';
 import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityContentVotes';
 import StarRating from './StarRating';
-import ContentVoteButtons from './ContentVoteButtons';
+import ContentVoteButtons, { OWN_CONTENT_VOTE_DISABLED_REASON } from './ContentVoteButtons';
 import HorizontalSnapRow, { SnapSlide } from './HorizontalSnapRow';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -68,7 +68,7 @@ function ReviewCard({
               onRequireSignIn={onRequireSignIn}
               signedIn={signedIn}
               disabled={isOwnReview}
-              disabledReason="You can't vote on your own review"
+              disabledReason={OWN_CONTENT_VOTE_DISABLED_REASON}
               compact
             />
           )}

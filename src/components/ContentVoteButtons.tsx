@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ContentVoteState } from '../types';
 
+export const OWN_CONTENT_VOTE_DISABLED_REASON = "You can't vote on your own content";
+
 interface ContentVoteButtonsProps {
   voteState: ContentVoteState;
   disabled?: boolean;
