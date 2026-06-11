@@ -201,6 +201,20 @@ iPhone: open from Home Screen, not Safari.$detail$,
   'Markeith White',
   'Buy Nothing Director',
   'director'
+),
+(
+  '2026-06-11_community-reviews-layout',
+  '2026-06-11',
+  'Community reviews — yours vs neighbors',
+  'Chat → Community reviews: post or edit your review up top, then scroll neighbors below.',
+  $detail$YOUR REVIEW (top)
+Post once, edit anytime, or remove.
+
+FROM NEIGHBORS (below)
+Everyone else's reviews — yours is not duplicated in the list.$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
 )
 
 ON CONFLICT (id) DO UPDATE SET
