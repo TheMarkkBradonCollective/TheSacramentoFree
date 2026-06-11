@@ -62,7 +62,7 @@ iPhone: open from Home Screen (Add to Home Screen), not a Safari tab.$detail$,
   $detail$NOTIFICATIONS TAB (inbox)
 Shows rows from your personal notification log — comments, upvotes, downvotes, claims, claim requests, listing status, messages, discover, community chat, support, and other alert types you are eligible for.
 
-Requires supabase-sql/user-notifications.sql on the database (director runs once).
+Requires user_notifications table on the database (run user-notifications.sql once).
 
 ALERTS TAB (last)
 Every push preference in one place — device enable, master switch, messages, chat, support, discover, community, your-post alerts, nearby radius, categories, staff/director toggles.
@@ -79,7 +79,7 @@ New pushes also write to your Notifications inbox when we send them.$detail$,
   'We fixed webhooks, duplicate alerts, missing preference columns, and several delivery bugs. Turn alerts off and back on under bell → Alerts after updating.',
   $detail$WHAT WE FIXED
 • Item claims, support tickets, saved-listing status — column and dedup tag mismatches
-• All Supabase push webhooks (supabase-sql/install-push-webhooks.sql)
+• All Supabase push webhooks (install-push-webhooks.sql)
 • Community chat — reliable dispatch after send
 • Logout clears this device subscription on shared phones
 • Every eligible push now logs to Notifications inbox
@@ -88,9 +88,9 @@ NEIGHBOR ACTION
 Bell → Alerts (last tab) → Turn off → Enable → Send test alert → Save settings if toggles changed.
 
 DIRECTOR OPS IF STILL BROKEN
-1. supabase-sql/notifications-complete.sql
-2. supabase-sql/install-push-webhooks.sql
-3. supabase-sql/user-notifications.sql
+1. notifications-complete.sql
+2. install-push-webhooks.sql
+3. user-notifications.sql
 4. Vercel env: VAPID keys, SUPABASE_SERVICE_ROLE_KEY, CRON_SECRET$detail$,
   'Markeith White',
   'Buy Nothing Director',
@@ -129,6 +129,22 @@ Keeps the chat panel tidy on phones while still one tap away from everything.$de
   'director'
 ),
 (
+  '2026-06-11_chat-empty-states',
+  '2026-06-11',
+  'Chat empty states match across Support and DMs',
+  'When Support or Direct messages are empty, both sections use the same layout in the sidebar and full inbox view.',
+  $detail$WHAT CHANGED
+• Support and Direct messages always show their section headers
+• Empty Support inbox and empty DMs use the same icon + title + description style
+• Sidebar preview and full Support inbox panel look consistent when there is nothing yet
+
+STAFF INBOX
+"Inbox is clear" with the same card style as neighbor Support — not a tiny one-line hint.$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+(
   '2026-06-11_delete-dm-and-post-chats',
   '2026-06-11',
   'Delete conversations from Messages',
@@ -144,6 +160,23 @@ Both neighbors can delete, with one rule for the poster:
 If you posted the item and it is still active, gift or withdraw it first, then you can delete the post chat.
 
 Community channels cannot be deleted.$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+(
+  '2026-06-11_welcome-message-staff-tools',
+  '2026-06-11',
+  'Welcome message editors moved to Staff tools',
+  'Director and staff welcome notes are edited from Community → Staff tools, not the top of the menu.',
+  $detail$WHERE TO EDIT
+
+Community menu → Staff tools (staff only):
+
+• Director — Public welcome message (home + reviews note)
+• Staff — Your team message (your personal note on home + reviews)
+
+The messages still appear on the home carousel and reviews page — only the edit location moved.$detail$,
   'Markeith White',
   'Buy Nothing Director',
   'director'
@@ -175,11 +208,10 @@ Community channels cannot be deleted.$detail$,
   'Staff announcements must be posted from bell → Announcements (not SQL) so the webhook fires and neighbors get a push.',
   $detail$HOW TO NOTIFY EVERYONE ABOUT THIS RELEASE
 
-1. Deploy the latest app (main)
-2. Run supabase-sql/user-notifications.sql (once, if not done)
-3. Run this SQL file for Updates tab entries
+1. Deploy the latest app
+2. Run user-notifications.sql (once, if not done)
+3. Run this SQL for Updates tab entries
 4. Bell → Announcements → Post announcement about refreshing push under Alerts
-   — or run supabase-sql/post-push-refresh-announcement.sql
 
 Requires push-announcements webhook on help_announcements INSERT (install-push-webhooks.sql).$detail$,
   'Markeith White',
