@@ -1,4 +1,5 @@
-import type { UserProfile } from '../types';
+import type { Message, UserProfile } from '../types';
+import { isGlobalCommunityChat } from './communityChats';
 
 export type UserRole = NonNullable<UserProfile['role']>;
 
@@ -171,4 +172,15 @@ export function canViewStaffReports(role?: UserProfile['role']): boolean {
 
 export function canViewStaffTicketInbox(role?: UserProfile['role']): boolean {
   return isStaffRole(role);
+}
+
+/** Delete own chat messages everywhere; director + city manager may delete any in community chat. */
+export function canDeleteChatMessage(
+  viewer: Pick<UserProfile, 'uid' | 'role'>,
+  message: Pick<Message, 'senderId'>,
+  chatId: string,
+): boolean {
+  if (viewer.uid === message.senderId) return true;
+  if (!isGlobalCommunityChat(chatId)) return false;
+  return canStaffDeleteAccount(viewer.role);
 }

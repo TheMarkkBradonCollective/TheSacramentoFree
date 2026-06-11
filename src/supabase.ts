@@ -5,7 +5,7 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canEditAnnouncement, canEditOwnStaffMessage, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canEditAnnouncement, canEditOwnStaffMessage, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -27,6 +27,8 @@ import {
   buildGlobalCommunityChatRow,
   buildStaffCommunityChatRow,
   isCommunityChat,
+  isGlobalCommunityChat,
+  isStaffCommunityChat,
   sortChatsForInbox,
 } from './lib/communityChats';
 
@@ -2080,6 +2082,97 @@ export async function createSupabaseMessage(
     console.error('Supabase write message failed:', err);
     handleSupabaseError(err, 'messages');
     return false;
+  }
+}
+
+export async function deleteSupabaseMessage(
+  messageId: string,
+  chatId: string,
+  actor: Pick<UserProfile, 'uid' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data: msg, error: fetchError } = await supabase
+      .from('messages')
+      .select('id, senderId, chatId')
+      .eq('id', messageId)
+      .maybeSingle();
+
+    if (fetchError) {
+      handleSupabaseError(fetchError, 'messages');
+      return { ok: false, errorMessage: fetchError.message };
+    }
+    if (!msg) {
+      return { ok: false, errorMessage: 'Message not found or already removed.' };
+    }
+    if (msg.chatId !== chatId) {
+      return { ok: false, errorMessage: 'Message not in this chat.' };
+    }
+    if (!canDeleteChatMessage(actor, msg, chatId)) {
+      return { ok: false, errorMessage: 'You cannot delete this message.' };
+    }
+
+    const { error: deleteError, count } = await supabase
+      .from('messages')
+      .delete({ count: 'exact' })
+      .eq('id', messageId);
+
+    if (deleteError) {
+      handleSupabaseError(deleteError, 'messages');
+      return { ok: false, errorMessage: deleteError.message };
+    }
+    if (count === 0) {
+      return { ok: false, errorMessage: 'Message not found or already removed.' };
+    }
+
+    const { data: latestMsgs, error: latestError } = await supabase
+      .from('messages')
+      .select('text, senderId, createdAt')
+      .eq('chatId', chatId)
+      .order('createdAt', { ascending: false })
+      .limit(1);
+
+    if (latestError) {
+      handleSupabaseError(latestError, 'messages');
+    } else if (latestMsgs?.length) {
+      const latest = latestMsgs[0];
+      const { error: chatUpdateError } = await supabase
+        .from('chats')
+        .update({
+          lastMessageText: latest.text,
+          lastMessageSenderId: latest.senderId,
+          lastMessageAt: latest.createdAt,
+        })
+        .eq('id', chatId);
+
+      if (chatUpdateError) {
+        handleSupabaseError(chatUpdateError, 'chats');
+      }
+    } else {
+      let lastMessageText = '';
+      if (isGlobalCommunityChat(chatId)) {
+        lastMessageText = 'Welcome to the community chat — say hello!';
+      } else if (isStaffCommunityChat(chatId)) {
+        lastMessageText = 'Staff lounge — team coordination.';
+      }
+
+      const { error: chatClearError } = await supabase
+        .from('chats')
+        .update({
+          lastMessageText,
+          lastMessageSenderId: '',
+          lastMessageAt: new Date().toISOString(),
+        })
+        .eq('id', chatId);
+
+      if (chatClearError) {
+        handleSupabaseError(chatClearError, 'chats');
+      }
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete message.' };
   }
 }
 

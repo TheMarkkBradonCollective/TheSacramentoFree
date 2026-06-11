@@ -4,6 +4,7 @@ import {
   getSupabaseChats,
   getSupabaseMessages,
   createSupabaseMessage,
+  deleteSupabaseMessage,
   getOrCreateSupabaseChat,
   filterChatsByBlocked,
   getIncomingMessageRequests,
@@ -19,7 +20,7 @@ import {
   communityChatTitle,
   communityChatSubtitle,
 } from '../lib/communityChats';
-import { isStaffRole } from '../lib/roles';
+import { canDeleteChatMessage, isStaffRole } from '../lib/roles';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
@@ -38,6 +39,7 @@ import {
   Shield,
   LifeBuoy,
   MessageSquarePlus,
+  Trash2,
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
@@ -96,6 +98,7 @@ export default function ChatSystem({
   const [isSending, setIsSending] = useState(false);
   const [isChatsLoading, setIsChatsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const userIsStaff = isStaffRole(userProfile.role);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -297,12 +300,24 @@ export default function ChatSystem({
       {
         channelName: `live-messages-${chatId}`,
         table: 'messages',
-        event: 'INSERT',
+        event: '*',
         filter: `chatId=eq.${chatId}`,
       },
       (payload) => {
+        if (!active) return;
+
+        if (payload.eventType === 'DELETE') {
+          const removed = payload.old as Message | null;
+          if (!removed?.id) return;
+          setMessages((prev) => prev.filter((m) => m.id !== removed.id));
+          refreshChatMeta();
+          return;
+        }
+
+        if (payload.eventType !== 'INSERT') return;
+
         const row = payload.new as Message | null;
-        if (!row?.id || !active) return;
+        if (!row?.id) return;
         // Own sends are added optimistically in sendChatText — skip to avoid duplicates.
         if (row.senderId === userProfile.uid) return;
         setMessages((prev) => {
@@ -370,6 +385,39 @@ export default function ChatSystem({
     const created = visible.find((chat) => chat.id === c.chatId);
     if (created) setSelectedChat(created);
     return true;
+  };
+
+  const handleDeleteMessage = async (message: Message) => {
+    if (!selectedChat || deletingMessageId) return;
+    if (!canDeleteChatMessage(userProfile, message, selectedChat.id)) return;
+
+    const isOwn = message.senderId === userProfile.uid;
+    const prompt = isOwn
+      ? 'Remove your message?'
+      : 'Remove this message from community chat?';
+    if (!confirm(prompt)) return;
+
+    setDeletingMessageId(message.id);
+    setErrorMsg('');
+
+    const previousMessages = messages;
+    setMessages((prev) => prev.filter((m) => m.id !== message.id));
+
+    const result = await deleteSupabaseMessage(message.id, selectedChat.id, userProfile);
+    if (!result.ok) {
+      setMessages(previousMessages);
+      setErrorMsg(result.errorMessage || 'Could not delete message.');
+    } else {
+      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+      const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
+      setChats(visible);
+      setSelectedChat((prev) => {
+        if (!prev) return prev;
+        return visible.find((c) => c.id === prev.id) ?? prev;
+      });
+    }
+
+    setDeletingMessageId(null);
   };
 
   const sendChatText = async (text: string) => {
@@ -1006,6 +1054,8 @@ export default function ChatSystem({
                       const isUser = msg.senderId === userProfile.uid;
                       const senderInfo = senderNames[msg.senderId];
                       const senderLabel = senderInfo?.displayName || 'Neighbor';
+                      const canDelete = canDeleteChatMessage(userProfile, msg, selectedChat.id);
+                      const isDeleting = deletingMessageId === msg.id;
 
                       return (
                         <div
@@ -1024,13 +1074,33 @@ export default function ChatSystem({
                           )}
                           <div className={messageBubbleClass(isUser)}>
                             <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
-                            <span
-                              className={`text-[10px] mt-1 block text-right ${
-                                isUser ? 'text-white/75' : 'text-subtle'
+                            <div
+                              className={`flex items-center gap-1 mt-1 ${
+                                isUser ? 'justify-end' : 'justify-between'
                               }`}
                             >
-                              {formatTime(msg.createdAt) || 'Sending…'}
-                            </span>
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleDeleteMessage(msg)}
+                                  disabled={isDeleting}
+                                  className={`p-1 rounded-full shrink-0 disabled:opacity-50 ${
+                                    isUser
+                                      ? 'text-white/75 hover:text-white hover:bg-white/15'
+                                      : 'text-subtle hover:text-red-400 hover:bg-red-500/10'
+                                  }`}
+                                  title={isUser ? 'Remove your message' : 'Remove message'}
+                                  aria-label={isUser ? 'Remove your message' : 'Remove message'}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                              <span
+                                className={`text-[10px] ${isUser ? 'text-white/75' : 'text-subtle'}`}
+                              >
+                                {formatTime(msg.createdAt) || 'Sending…'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
