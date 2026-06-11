@@ -112,7 +112,7 @@ export default function App() {
   const [detailEventUpdating, setDetailEventUpdating] = useState(false);
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
-  const [initialStaffPanel, setInitialStaffPanel] = useState<'tickets' | 'reports' | null>(null);
+  const [initialStaffPanel, setInitialStaffPanel] = useState<'reports' | null>(null);
   const [initialSupportTicketId, setInitialSupportTicketId] = useState<string | null>(null);
   const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
@@ -820,8 +820,11 @@ export default function App() {
       if (target.requestId) {
         setActiveTab('chats');
       }
-      if (target.staffPanel) {
-        setInitialStaffPanel(target.staffPanel);
+      if (target.staffPanel === 'reports') {
+        setInitialStaffPanel('reports');
+      } else if (target.staffPanel === 'tickets') {
+        setActiveTab('chats');
+        setInitialChatSupportView('list');
       }
       if (target.notificationsTab) {
         openNotificationsHub(target.notificationsTab);

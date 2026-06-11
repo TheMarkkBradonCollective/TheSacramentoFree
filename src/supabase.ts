@@ -4617,6 +4617,37 @@ export async function getSupportTicketMessages(ticketId: string): Promise<Suppor
   }
 }
 
+export async function getSupportTicketLastMessages(
+  ticketIds: string[],
+): Promise<Record<string, Pick<SupportTicketMessage, 'text' | 'createdAt' | 'senderUserId' | 'imageUrl'>>> {
+  if (ticketIds.length === 0) return {};
+  try {
+    const { data, error } = await supabase
+      .from('support_ticket_messages')
+      .select('ticketId, text, createdAt, senderUserId, imageUrl')
+      .in('ticketId', ticketIds)
+      .order('createdAt', { ascending: false });
+
+    if (error || !data?.length) return {};
+
+    const latest: Record<string, Pick<SupportTicketMessage, 'text' | 'createdAt' | 'senderUserId' | 'imageUrl'>> =
+      {};
+    for (const row of data) {
+      const ticketId = String(row.ticketId ?? '');
+      if (!ticketId || latest[ticketId]) continue;
+      latest[ticketId] = {
+        text: String(row.text ?? ''),
+        createdAt: String(row.createdAt ?? ''),
+        senderUserId: String(row.senderUserId ?? ''),
+        imageUrl: typeof row.imageUrl === 'string' ? row.imageUrl : null,
+      };
+    }
+    return latest;
+  } catch {
+    return {};
+  }
+}
+
 export async function getSupportTicketById(ticketId: string): Promise<SupportTicket | null> {
   try {
     const { data, error } = await supabase

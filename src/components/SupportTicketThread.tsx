@@ -18,6 +18,8 @@ interface SupportTicketThreadProps {
   viewer: UserProfile;
   onClosed?: () => void;
   onUpdated?: () => void;
+  /** Hide ticket meta bar when the parent header already shows context */
+  showTicketMeta?: boolean;
 }
 
 export default function SupportTicketThread({
@@ -25,6 +27,7 @@ export default function SupportTicketThread({
   viewer,
   onClosed,
   onUpdated,
+  showTicketMeta = true,
 }: SupportTicketThreadProps) {
   const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +140,7 @@ export default function SupportTicketThread({
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {showTicketMeta ? (
       <div className="shrink-0 px-4 py-3 border-b border-app bg-inset/30 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -156,6 +160,7 @@ export default function SupportTicketThread({
           {new Date(ticket.createdAt).toLocaleString()}
         </p>
       </div>
+      ) : null}
 
       {err && <p className="px-4 py-2 text-xs font-semibold text-red-400">{err}</p>}
 

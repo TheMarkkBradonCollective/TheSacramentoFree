@@ -3,14 +3,19 @@ import { UserProfile, SupportTicket } from '../types';
 import {
   createSupportTicket,
   getSupportTicketsForUser,
+  getSupportTicketsForStaff,
   getSupportTicketById,
+  getSupportTicketLastMessages,
 } from '../supabase';
+import { canViewStaffTicketInbox } from '../lib/roles';
 import SupportTicketThread from './SupportTicketThread';
+import SupportTicketRow from './SupportTicketRow';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
-import { LifeBuoy, MessageSquarePlus, ChevronRight, ChevronLeft } from 'lucide-react';
+import { LifeBuoy, MessageSquarePlus, ChevronLeft } from 'lucide-react';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import PageScrollFooter from './PageScrollFooter';
+import type { SupportTicketLastMessage } from '../lib/supportChat';
 
 export type ChatSupportView = 'list' | 'new' | 'thread' | null;
 
@@ -38,21 +43,36 @@ export default function ChatSupportSection({
   compact = false,
   className = '',
 }: ChatSupportSectionProps) {
+  const isStaffInbox = canViewStaffTicketInbox(user.role);
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
   const [ticketCreating, setTicketCreating] = useState(false);
   const ticketImage = useImageAttachment();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [ticketPreviews, setTicketPreviews] = useState<Record<string, SupportTicketLastMessage>>({});
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
   const [err, setErr] = useState('');
 
+  const loadTicketPreviews = useCallback(async (rows: SupportTicket[]) => {
+    if (rows.length === 0) {
+      setTicketPreviews({});
+      return;
+    }
+    const previews = await getSupportTicketLastMessages(rows.map((ticket) => ticket.id));
+    setTicketPreviews(previews);
+  }, []);
+
   const reloadTickets = useCallback(async () => {
     setTicketsLoading(true);
-    const rows = await getSupportTicketsForUser(user.uid);
+    const rows =
+      isStaffInbox && view !== 'new'
+        ? await getSupportTicketsForStaff(user)
+        : await getSupportTicketsForUser(user.uid);
     setTickets(rows);
+    await loadTicketPreviews(rows);
     setTicketsLoading(false);
-  }, [user.uid]);
+  }, [user, isStaffInbox, view, loadTicketPreviews]);
 
   useEffect(() => {
     void reloadTickets();
@@ -79,28 +99,43 @@ export default function ChatSupportSection({
       }
     }, 100);
 
-    const unsubs = [
-      subscribePostgresChanges(
-        {
-          channelName: `live-chat-support-tickets-${user.uid}`,
-          table: 'support_tickets',
-          event: '*',
-          filter: `openerUserId=eq.${user.uid}`,
-        },
-        refresh,
-      ),
-      subscribePostgresChanges(
-        {
-          channelName: `live-chat-support-msgs-${user.uid}`,
-          table: 'support_ticket_messages',
-          event: 'INSERT',
-        },
-        refresh,
-      ),
-    ];
+    const unsubs = isStaffInbox
+      ? [
+          subscribePostgresChanges(
+            { channelName: `live-chat-staff-tickets-${user.uid}`, table: 'support_tickets', event: '*' },
+            refresh,
+          ),
+          subscribePostgresChanges(
+            {
+              channelName: `live-chat-staff-ticket-msgs-${user.uid}`,
+              table: 'support_ticket_messages',
+              event: 'INSERT',
+            },
+            refresh,
+          ),
+        ]
+      : [
+          subscribePostgresChanges(
+            {
+              channelName: `live-chat-support-tickets-${user.uid}`,
+              table: 'support_tickets',
+              event: '*',
+              filter: `openerUserId=eq.${user.uid}`,
+            },
+            refresh,
+          ),
+          subscribePostgresChanges(
+            {
+              channelName: `live-chat-support-msgs-${user.uid}`,
+              table: 'support_ticket_messages',
+              event: 'INSERT',
+            },
+            refresh,
+          ),
+        ];
 
     return () => unsubs.forEach((u) => u());
-  }, [user.uid, activeTicket?.id, reloadTickets]);
+  }, [user.uid, activeTicket?.id, reloadTickets, isStaffInbox]);
 
   const openThread = async (ticket: SupportTicket) => {
     const fresh = await getSupportTicketById(ticket.id);
@@ -138,53 +173,46 @@ export default function ChatSupportSection({
   const canSubmitTicket =
     ticketSubject.trim() && (ticketMessage.trim() || ticketImage.file);
 
+  const listTitle = isStaffInbox ? 'Support inbox' : 'Chat with support';
+  const listSubtitle = isStaffInbox
+    ? 'Neighbors waiting for a reply'
+    : 'Private help from our team';
+
   if (compact) {
     return (
       <div className={className}>
-        <button
-          type="button"
-          onClick={() => {
-            setErr('');
-            onViewChange('new');
-          }}
-          className="sbn-btn sbn-btn-secondary sbn-btn-sm w-full inline-flex items-center justify-center gap-2 mb-2"
-        >
-          <MessageSquarePlus className="w-3.5 h-3.5" />
-          New support ticket
-        </button>
+        {!isStaffInbox ? (
+          <button
+            type="button"
+            onClick={() => {
+              setErr('');
+              onViewChange('new');
+            }}
+            className="sbn-btn sbn-btn-secondary sbn-btn-sm w-full inline-flex items-center justify-center gap-2 mb-2"
+          >
+            <MessageSquarePlus className="w-3.5 h-3.5" />
+            New conversation
+          </button>
+        ) : null}
         {ticketsLoading ? (
-          <p className="text-xs text-muted px-1 py-2">Loading tickets…</p>
+          <p className="text-xs text-muted px-1 py-2">Loading…</p>
         ) : tickets.length === 0 ? (
-          <p className="text-xs text-muted px-1 py-2">No support tickets yet.</p>
+          <p className="text-xs text-muted px-1 py-2">
+            {isStaffInbox ? 'Inbox is clear.' : 'No conversations yet.'}
+          </p>
         ) : (
-          <ul className="space-y-1">
-            {tickets.map((ticket) => {
-              const isActive = view === 'thread' && activeTicket?.id === ticket.id;
-              return (
-                <li key={ticket.id}>
-                  <button
-                    type="button"
-                    onClick={() => void openThread(ticket)}
-                    className={`text-left w-full p-2.5 flex items-start gap-2 rounded-xl transition-colors ${
-                      isActive
-                        ? 'bg-accent-soft border-l-[3px] border-l-accent'
-                        : 'hover:bg-surface-hover border-l-[3px] border-l-transparent'
-                    }`}
-                  >
-                    <LifeBuoy className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                    <span className="min-w-0 flex-1">
-                      <p className="font-semibold text-xs text-app truncate">{ticket.subject}</p>
-                      <p className="text-[10px] text-muted">
-                        {ticket.status === 'open' ? 'Open' : 'Closed'}
-                        {' · '}
-                        {new Date(ticket.updatedAt).toLocaleDateString()}
-                      </p>
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-muted shrink-0" />
-                  </button>
-                </li>
-              );
-            })}
+          <ul>
+            {tickets.map((ticket) => (
+              <li key={ticket.id}>
+                <SupportTicketRow
+                  ticket={ticket}
+                  preview={ticketPreviews[ticket.id]}
+                  selected={view === 'thread' && activeTicket?.id === ticket.id}
+                  showOpener={isStaffInbox}
+                  onClick={() => void openThread(ticket)}
+                />
+              </li>
+            ))}
           </ul>
         )}
       </div>
@@ -199,20 +227,20 @@ export default function ChatSupportSection({
             type="button"
             onClick={() => onViewChange('list')}
             className="p-2 rounded-full text-muted hover:text-app hover:bg-inset shrink-0"
-            aria-label="Back to tickets"
+            aria-label="Back"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0">
-            <h3 className="font-display font-semibold text-sm text-app">Open support ticket</h3>
-            <p className="text-xs text-muted">Staff will reply here</p>
+            <h3 className="font-display font-semibold text-sm text-app">Ask for help</h3>
+            <p className="text-xs text-muted">Start a private chat with staff</p>
           </div>
         </header>
         <div className="flex-1 min-h-0 overflow-y-auto p-4">
           <div className="sbn-help-card space-y-4 max-w-lg mx-auto">
             {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
             <label className="block space-y-1">
-              <span className="text-[10px] font-bold uppercase text-muted">Subject</span>
+              <span className="text-[10px] font-bold uppercase text-muted">Topic</span>
               <input
                 className="sbn-input text-sm"
                 value={ticketSubject}
@@ -226,12 +254,12 @@ export default function ChatSupportSection({
                 className="sbn-input text-sm min-h-[8rem]"
                 value={ticketMessage}
                 onChange={(e) => setTicketMessage(e.target.value)}
-                placeholder="Describe your question or issue in detail."
+                placeholder="Tell us what is going on — we will reply here in chat."
               />
             </label>
             <ImageAttachmentPicker
               label="Attach a photo (optional)"
-              hint="You can send a photo instead of or along with your message."
+              hint="You can send a photo with your message."
               file={ticketImage.file}
               previewUrl={ticketImage.previewUrl}
               onChange={ticketImage.setFile}
@@ -243,7 +271,7 @@ export default function ChatSupportSection({
               onClick={() => void handleCreateTicket()}
               className="sbn-btn sbn-btn-primary w-full"
             >
-              {ticketCreating ? 'Opening…' : 'Open ticket'}
+              {ticketCreating ? 'Starting…' : 'Start conversation'}
             </button>
           </div>
           {onOpenGoFundMe && <PageScrollFooter onOpenDetails={onOpenGoFundMe} />}
@@ -253,6 +281,13 @@ export default function ChatSupportSection({
   }
 
   if (view === 'thread' && activeTicket) {
+    const threadTitle = isStaffInbox ? activeTicket.openerName : activeTicket.subject;
+    const threadSubtitle = isStaffInbox
+      ? activeTicket.subject
+      : activeTicket.status === 'open'
+        ? 'Chat with support'
+        : 'Closed';
+
     return (
       <div className={`flex flex-col min-h-0 h-full ${className}`}>
         <header className="shrink-0 px-3 py-3 border-b border-app bg-surface flex items-center gap-2">
@@ -264,21 +299,20 @@ export default function ChatSupportSection({
               void reloadTickets();
             }}
             className="p-2 rounded-full text-muted hover:text-app hover:bg-inset shrink-0"
-            aria-label="Back to tickets"
+            aria-label="Back"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <h3 className="font-display font-semibold text-sm text-app truncate">{activeTicket.subject}</h3>
-            <p className="text-xs text-muted">
-              {activeTicket.status === 'open' ? 'Support conversation' : 'Closed'}
-            </p>
+            <h3 className="font-display font-semibold text-sm text-app truncate">{threadTitle}</h3>
+            <p className="text-xs text-muted truncate">{threadSubtitle}</p>
           </div>
         </header>
         <div className="flex-1 min-h-0 flex flex-col">
           <SupportTicketThread
             ticket={activeTicket}
             viewer={user}
+            showTicketMeta={false}
             onClosed={() => {
               void getSupportTicketById(activeTicket.id).then((t) => {
                 if (t) setActiveTicket(t);
@@ -310,49 +344,62 @@ export default function ChatSupportSection({
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="font-display font-semibold text-sm text-app">Support tickets</h3>
-          <p className="text-xs text-muted">One-on-one help from staff</p>
+          <h3 className="font-display font-semibold text-sm text-app">{listTitle}</h3>
+          <p className="text-xs text-muted">{listSubtitle}</p>
         </div>
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-        <button
-          type="button"
-          onClick={() => {
-            setErr('');
-            onViewChange('new');
-          }}
-          className="sbn-btn sbn-btn-primary w-full inline-flex items-center justify-center gap-2"
-        >
-          <MessageSquarePlus className="w-4 h-4" />
-          Open new ticket
-        </button>
-        {ticketsLoading ? (
-          <p className="text-sm text-muted text-center py-6">Loading tickets…</p>
-        ) : tickets.length === 0 ? (
-          <div className="text-center py-8">
-            <LifeBuoy className="w-10 h-10 text-muted mx-auto mb-2" />
-            <p className="text-sm text-muted">No tickets yet.</p>
-            <p className="text-xs text-muted mt-1">Open a ticket if you need personal help from staff.</p>
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {!isStaffInbox ? (
+          <div className="p-3 border-b border-app">
+            <button
+              type="button"
+              onClick={() => {
+                setErr('');
+                onViewChange('new');
+              }}
+              className="sbn-btn sbn-btn-primary w-full inline-flex items-center justify-center gap-2"
+            >
+              <MessageSquarePlus className="w-4 h-4" />
+              New conversation
+            </button>
           </div>
         ) : (
-          <ul className="space-y-2">
+          <div className="px-4 py-2 border-b border-app flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] text-muted">Reply to neighbors from here — like a direct message.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setErr('');
+                onViewChange('new');
+              }}
+              className="text-[11px] font-semibold text-accent hover:underline"
+            >
+              Need help yourself?
+            </button>
+          </div>
+        )}
+        {ticketsLoading ? (
+          <p className="text-sm text-muted text-center py-8">Loading conversations…</p>
+        ) : tickets.length === 0 ? (
+          <div className="text-center py-12 px-4">
+            <LifeBuoy className="w-10 h-10 text-muted mx-auto mb-2" />
+            <p className="text-sm text-muted">
+              {isStaffInbox ? 'No support conversations in your inbox.' : 'No conversations yet.'}
+            </p>
+            {!isStaffInbox ? (
+              <p className="text-xs text-muted mt-1">Tap New conversation to chat with staff.</p>
+            ) : null}
+          </div>
+        ) : (
+          <ul>
             {tickets.map((ticket) => (
               <li key={ticket.id}>
-                <button
-                  type="button"
+                <SupportTicketRow
+                  ticket={ticket}
+                  preview={ticketPreviews[ticket.id]}
+                  showOpener={isStaffInbox}
                   onClick={() => void openThread(ticket)}
-                  className="sbn-help-list-item w-full"
-                >
-                  <span className="min-w-0 flex-1 text-left">
-                    <p className="font-semibold text-sm text-app truncate">{ticket.subject}</p>
-                    <p className="text-[11px] text-muted">
-                      {ticket.status === 'open' ? 'Open' : 'Closed'}
-                      {' · '}
-                      {new Date(ticket.updatedAt).toLocaleDateString()}
-                    </p>
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-                </button>
+                />
               </li>
             ))}
           </ul>

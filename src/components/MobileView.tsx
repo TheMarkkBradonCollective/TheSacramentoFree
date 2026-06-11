@@ -46,7 +46,7 @@ interface MobileViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
-  initialStaffPanel?: 'tickets' | 'reports' | null;
+  initialStaffPanel?: 'reports' | null;
   onClearInitialStaffPanel?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;

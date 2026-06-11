@@ -9,6 +9,7 @@ export interface PushDeepLinkTarget {
   notifications?: boolean;
   notificationsTab?: 'announcements' | 'updates' | 'notifications';
   staffPanel?: 'tickets' | 'reports';
+  /** @deprecated tickets — opens Messages → Support inbox */
   directorOverview?: boolean;
   supportTicketId?: string;
   chatSupportView?: 'list' | 'new';
@@ -31,7 +32,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (path === 'updates') return { notificationsTab: 'updates' };
   if (path === 'help/announcements') return { notificationsTab: 'announcements' };
   if (path === 'profile') return { tab: 'profile', profile: true };
-  if (path === 'staff/tickets') return { tab: 'menu', staffPanel: 'tickets' };
+  if (path === 'staff/tickets') return { tab: 'chats', chatSupportView: 'list' };
   if (path === 'staff/reports') return { tab: 'menu', staffPanel: 'reports' };
   if (path === 'director/overview') return { tab: 'menu', directorOverview: true };
 

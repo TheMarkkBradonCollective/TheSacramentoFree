@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Chat, Message, UserProfile, ItemPost, MessageRequest, PendingChatCompose } from '../types';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Chat, Message, UserProfile, ItemPost, MessageRequest, PendingChatCompose, SupportTicket } from '../types';
 import {
   getSupabaseChats,
   getSupabaseMessages,
@@ -12,6 +12,9 @@ import {
   declineMessageRequest,
   updateSupabaseItemStatus,
   getUserDisplayInfoByIds,
+  getSupportTicketsForUser,
+  getSupportTicketsForStaff,
+  getSupportTicketLastMessages,
 } from '../supabase';
 import {
   isCommunityChat,
@@ -20,7 +23,9 @@ import {
   communityChatTitle,
   communityChatSubtitle,
 } from '../lib/communityChats';
-import { canDeleteChatMessage, isStaffRole } from '../lib/roles';
+import { canDeleteChatMessage, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
+import SupportTicketRow from './SupportTicketRow';
+import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import PageScrollFooter from './PageScrollFooter';
@@ -93,6 +98,11 @@ export default function ChatSystem({
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [supportView, setSupportView] = useState<ChatSupportView>(null);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [supportPreviews, setSupportPreviews] = useState<Record<string, SupportTicketLastMessage>>({});
+  const [supportTicketsLoading, setSupportTicketsLoading] = useState(false);
+  const [supportOpenTicketId, setSupportOpenTicketId] = useState<string | null>(null);
+  const isStaffSupportInbox = canViewStaffTicketInbox(userProfile.role);
   const [messages, setMessages] = useState<Message[]>([]);
   const [senderNames, setSenderNames] = useState<Record<string, { displayName: string; photoURL?: string }>>({});
   const [inputText, setInputText] = useState('');
@@ -111,6 +121,13 @@ export default function ChatSystem({
     setSelectedChat(null);
     onClearInitialChatSupportView?.();
   }, [initialChatSupportView, onClearInitialChatSupportView]);
+
+  useEffect(() => {
+    if (!initialSupportTicketId) return;
+    setSupportOpenTicketId(initialSupportTicketId);
+    setSupportView('thread');
+    setSelectedChat(null);
+  }, [initialSupportTicketId]);
 
   const formatTime = (value: unknown) => {
     if (!value) return '';
@@ -567,11 +584,77 @@ export default function ChatSystem({
     onClearInitialChat();
   };
 
+  const reloadSupportTickets = useCallback(async () => {
+    setSupportTicketsLoading(true);
+    const rows = isStaffSupportInbox
+      ? await getSupportTicketsForStaff(userProfile)
+      : await getSupportTicketsForUser(userProfile.uid);
+    setSupportTickets(rows);
+    const previews = await getSupportTicketLastMessages(rows.map((ticket) => ticket.id));
+    setSupportPreviews(previews);
+    setSupportTicketsLoading(false);
+  }, [isStaffSupportInbox, userProfile]);
+
+  useEffect(() => {
+    void reloadSupportTickets();
+  }, [reloadSupportTickets]);
+
+  useEffect(() => {
+    const refresh = debounceRealtime(() => {
+      void reloadSupportTickets();
+    }, 150);
+
+    const unsubs = isStaffSupportInbox
+      ? [
+          subscribePostgresChanges(
+            { channelName: `chat-sidebar-staff-tickets-${userProfile.uid}`, table: 'support_tickets', event: '*' },
+            refresh,
+          ),
+          subscribePostgresChanges(
+            {
+              channelName: `chat-sidebar-staff-ticket-msgs-${userProfile.uid}`,
+              table: 'support_ticket_messages',
+              event: 'INSERT',
+            },
+            refresh,
+          ),
+        ]
+      : [
+          subscribePostgresChanges(
+            {
+              channelName: `chat-sidebar-support-tickets-${userProfile.uid}`,
+              table: 'support_tickets',
+              event: '*',
+              filter: `openerUserId=eq.${userProfile.uid}`,
+            },
+            refresh,
+          ),
+          subscribePostgresChanges(
+            {
+              channelName: `chat-sidebar-support-msgs-${userProfile.uid}`,
+              table: 'support_ticket_messages',
+              event: 'INSERT',
+            },
+            refresh,
+          ),
+        ];
+
+    return () => unsubs.forEach((u) => u());
+  }, [userProfile.uid, isStaffSupportInbox, reloadSupportTickets]);
+
   const openSupport = (view: ChatSupportView) => {
     setSupportView(view);
     setSelectedChat(null);
     onClearInitialChat();
     onClearPendingChatCompose?.();
+    if (!view) {
+      setSupportOpenTicketId(null);
+    }
+  };
+
+  const openSupportTicket = (ticketId: string) => {
+    setSupportOpenTicketId(ticketId);
+    openSupport('thread');
   };
 
   const communityChats = chats.filter((c) => isCommunityChat(c.id));
@@ -786,30 +869,44 @@ export default function ChatSystem({
             </div>
           )}
 
-          <div className="border-b border-app px-3 py-3 space-y-2">
-            <div className="px-1 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
+          <div className="border-b border-app">
+            <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
               <LifeBuoy className="w-3.5 h-3.5" />
-              Support
+              {isStaffSupportInbox ? 'Support inbox' : 'Support'}
             </div>
-            <button
-              type="button"
-              onClick={() => openSupport('list')}
-              className={chatListRowClass(!!supportView)}
-            >
-              <LifeBuoy className="w-4 h-4 text-accent shrink-0" />
-              <span className="min-w-0 flex-1">
-                <p className="font-semibold text-xs text-app">My support tickets</p>
-                <p className="text-[10px] text-muted">Personal help from staff</p>
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => openSupport('new')}
-              className="sbn-btn sbn-btn-secondary sbn-btn-sm w-full inline-flex items-center justify-center gap-2"
-            >
-              <MessageSquarePlus className="w-3.5 h-3.5" />
-              New support ticket
-            </button>
+            {!isStaffSupportInbox ? (
+              <div className="px-3 pb-2">
+                <button
+                  type="button"
+                  onClick={() => openSupport('new')}
+                  className="sbn-btn sbn-btn-secondary sbn-btn-sm w-full inline-flex items-center justify-center gap-2"
+                >
+                  <MessageSquarePlus className="w-3.5 h-3.5" />
+                  New conversation
+                </button>
+              </div>
+            ) : null}
+            {supportTicketsLoading ? (
+              <p className="text-xs text-muted px-4 py-3">Loading…</p>
+            ) : supportTickets.length === 0 ? (
+              <p className="text-xs text-muted px-4 py-3">
+                {isStaffSupportInbox ? 'Inbox is clear.' : 'No conversations yet.'}
+              </p>
+            ) : (
+              <ul>
+                {supportTickets.map((ticket) => (
+                  <li key={ticket.id}>
+                    <SupportTicketRow
+                      ticket={ticket}
+                      preview={supportPreviews[ticket.id]}
+                      selected={!!supportView && supportOpenTicketId === ticket.id}
+                      showOpener={isStaffSupportInbox}
+                      onClick={() => openSupportTicket(ticket.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {directChats.length > 0 && (
@@ -904,8 +1001,11 @@ export default function ChatSystem({
             onViewChange={openSupport}
             onBackToChat={() => setSupportView(null)}
             onOpenGoFundMe={onOpenGoFundMe}
-            initialTicketId={initialSupportTicketId}
-            onClearInitialTicketId={onClearInitialSupportTicket}
+            initialTicketId={supportOpenTicketId ?? initialSupportTicketId}
+            onClearInitialTicketId={() => {
+              setSupportOpenTicketId(null);
+              onClearInitialSupportTicket?.();
+            }}
             className="h-full"
           />
         ) : selectedChat ? (

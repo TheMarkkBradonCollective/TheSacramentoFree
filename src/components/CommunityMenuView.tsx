@@ -11,7 +11,7 @@ import { canAccessStaffDirectory } from '../lib/roles';
 interface CommunityMenuViewProps {
   userProfile: UserProfile;
   onViewProfile: (userId: string) => void;
-  initialStaffPanel?: 'tickets' | 'reports' | null;
+  initialStaffPanel?: 'reports' | null;
   onClearInitialStaffPanel?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;

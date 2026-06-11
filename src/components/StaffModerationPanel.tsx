@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { UserProfile, StaffUserRow, ModerationAuditEntry, UserReport, SupportTicket, SACRAMENTO_NEIGHBORHOODS } from '../types';
+import { UserProfile, StaffUserRow, ModerationAuditEntry, UserReport, SACRAMENTO_NEIGHBORHOODS } from '../types';
 import {
   getStaffUserDirectory,
   getModerationAuditLog,
@@ -11,8 +11,6 @@ import {
   staffDeleteUserAccount,
   getStaffUserReports,
   markUserReportReviewed,
-  getSupportTicketsForStaff,
-  getSupportTicketById,
 } from '../supabase';
 import {
   canAccessStaffDirectory,
@@ -22,17 +20,15 @@ import {
   canStaffSuspend,
   canViewAuditLog,
   canViewStaffReports,
-  canViewStaffTicketInbox,
   ASSIGNABLE_ROLE_OPTIONS,
 } from '../lib/roles';
 import RoleBadge from './RoleBadge';
 import { useConfirm } from '../contexts/ConfirmContext';
 import FullScreenPanel from './FullScreenPanel';
-import SupportTicketThread from './SupportTicketThread';
 import ListingImage from './ListingImage';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { avatarImageUrl } from '../lib/imageUrl';
-import { ClipboardList, ChevronRight, Flag, LifeBuoy, Search, Shield, Users } from 'lucide-react';
+import { ClipboardList, ChevronRight, Flag, Search, Shield, Users } from 'lucide-react';
 
 const SUSPEND_DURATIONS = [
   { label: '1 day', days: 1 },
@@ -41,12 +37,12 @@ const SUSPEND_DURATIONS = [
   { label: '30 days', days: 30 },
 ];
 
-type StaffPanel = 'directory' | 'audit' | 'reports' | 'tickets' | 'ticketThread' | null;
+type StaffPanel = 'directory' | 'audit' | 'reports' | null;
 
 interface StaffModerationPanelProps {
   viewer: UserProfile;
   onViewProfile: (userId: string) => void;
-  initialPanel?: 'tickets' | 'reports' | null;
+  initialPanel?: 'reports' | null;
   onClearInitialPanel?: () => void;
 }
 
@@ -75,8 +71,6 @@ export default function StaffModerationPanel({
   const [users, setUsers] = useState<StaffUserRow[]>([]);
   const [audit, setAudit] = useState<ModerationAuditEntry[]>([]);
   const [reports, setReports] = useState<UserReport[]>([]);
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -92,7 +86,6 @@ export default function StaffModerationPanel({
   const canDirectory = canAccessStaffDirectory(viewer.role);
   const canAudit = canViewAuditLog(viewer.role);
   const canReports = canViewStaffReports(viewer.role);
-  const canTickets = canViewStaffTicketInbox(viewer.role);
   const canSuspend = canStaffSuspend(viewer.role);
   const canBan = canStaffBan(viewer.role);
   const canEdit = canStaffEditUser(viewer.role);
@@ -100,13 +93,11 @@ export default function StaffModerationPanel({
 
   useEffect(() => {
     if (!initialPanel) return;
-    if (initialPanel === 'tickets' && canTickets) {
-      setPanel('tickets');
-    } else if (initialPanel === 'reports' && canReports) {
+    if (initialPanel === 'reports' && canReports) {
       setPanel('reports');
     }
     onClearInitialPanel?.();
-  }, [initialPanel, canTickets, canReports, onClearInitialPanel]);
+  }, [initialPanel, canReports, onClearInitialPanel]);
 
   const reloadDirectory = useCallback(async () => {
     setLoading(true);
@@ -129,19 +120,11 @@ export default function StaffModerationPanel({
     setLoading(false);
   }, []);
 
-  const reloadTickets = useCallback(async () => {
-    setLoading(true);
-    const rows = await getSupportTicketsForStaff(viewer);
-    setTickets(rows);
-    setLoading(false);
-  }, [viewer]);
-
   useEffect(() => {
     if (panel === 'directory') void reloadDirectory();
     if (panel === 'audit') void reloadAudit();
     if (panel === 'reports') void reloadReports();
-    if (panel === 'tickets') void reloadTickets();
-  }, [panel, reloadDirectory, reloadAudit, reloadReports, reloadTickets]);
+  }, [panel, reloadDirectory, reloadAudit, reloadReports]);
 
   useEffect(() => {
     if (!panel) return;
@@ -150,7 +133,6 @@ export default function StaffModerationPanel({
       if (panel === 'directory') void reloadDirectory();
       else if (panel === 'audit') void reloadAudit();
       else if (panel === 'reports') void reloadReports();
-      else if (panel === 'tickets' || panel === 'ticketThread') void reloadTickets();
     }, 100);
 
     const unsubs: (() => void)[] = [];
@@ -173,23 +155,8 @@ export default function StaffModerationPanel({
         subscribePostgresChanges({ channelName: 'staff-live-reports', table: 'user_reports', event: '*' }, refresh),
       );
     }
-    if (panel === 'tickets' || panel === 'ticketThread') {
-      unsubs.push(
-        subscribePostgresChanges(
-          { channelName: 'staff-live-tickets', table: 'support_tickets', event: '*' },
-          refresh,
-        ),
-      );
-      unsubs.push(
-        subscribePostgresChanges(
-          { channelName: 'staff-live-ticket-msgs', table: 'support_ticket_messages', event: 'INSERT' },
-          refresh,
-        ),
-      );
-    }
-
     return () => unsubs.forEach((u) => u());
-  }, [panel, reloadDirectory, reloadAudit, reloadReports, reloadTickets]);
+  }, [panel, reloadDirectory, reloadAudit, reloadReports]);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -202,15 +169,8 @@ export default function StaffModerationPanel({
     );
   }, [users, search]);
 
-  const openTicketThread = async (ticket: SupportTicket) => {
-    const fresh = await getSupportTicketById(ticket.id);
-    setActiveTicket(fresh ?? ticket);
-    setPanel('ticketThread');
-  };
-
   const closePanel = () => {
     setPanel(null);
-    setActiveTicket(null);
     setSearch('');
     setMsg('');
     setErr('');
@@ -378,7 +338,7 @@ export default function StaffModerationPanel({
 
   if (!canDirectory) return null;
 
-  const statusBanner = (msg || err) && panel && panel !== 'ticketThread' && !editUser && (
+  const statusBanner = (msg || err) && panel && !editUser && (
     <div className="sbn-help-card mb-3 py-2">
       {msg && <p className="text-xs font-semibold text-emerald-500">{msg}</p>}
       {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
@@ -434,22 +394,6 @@ export default function StaffModerationPanel({
             <span className="min-w-0 flex-1">
               <span className="font-semibold text-sm text-app block">User reports</span>
               <span className="text-[11px] text-muted">One-way submissions from neighbors</span>
-            </span>
-            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-          </button>
-        )}
-        {canTickets && (
-          <button
-            type="button"
-            onClick={() => setPanel('tickets')}
-            className="sbn-help-list-item"
-          >
-            <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
-              <LifeBuoy className="w-4 h-4" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="font-semibold text-sm text-app block">Support inbox</span>
-              <span className="text-[11px] text-muted">Reply to neighbor support tickets</span>
             </span>
             <ChevronRight className="w-4 h-4 text-muted shrink-0" />
           </button>
@@ -666,82 +610,6 @@ export default function StaffModerationPanel({
         </FullScreenPanel>
       )}
 
-      {panel === 'tickets' && (
-        <FullScreenPanel wide title="Support inbox" subtitle="Tickets you can access based on your role" onClose={closePanel}>
-          {loading ? (
-              <p className="text-sm text-muted sbn-help-empty">Loading tickets…</p>
-            ) : tickets.length === 0 ? (
-              <div className="sbn-help-empty">
-                <p className="text-sm text-muted">No tickets in your inbox.</p>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {tickets.map((ticket) => (
-                  <li key={ticket.id}>
-                    <button
-                      type="button"
-                      onClick={() => void openTicketThread(ticket)}
-                      className="sbn-help-list-item flex-col !items-stretch"
-                    >
-                      <div className="flex flex-wrap justify-between gap-1">
-                        <span className="font-semibold text-sm text-app">{ticket.subject}</span>
-                        <span
-                          className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                            ticket.status === 'open'
-                              ? 'bg-emerald-500/10 text-emerald-500'
-                              : 'bg-muted/20 text-muted'
-                          }`}
-                        >
-                          {ticket.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted mt-1">
-                        {ticket.openerName}
-                        {ticket.openerRole && ticket.openerRole !== 'user' && (
-                          <> · <RoleBadge role={ticket.openerRole} /></>
-                        )}
-                      </p>
-                      <p className="text-[10px] text-muted mt-0.5">
-                        Updated {new Date(ticket.updatedAt).toLocaleString()}
-                      </p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-        </FullScreenPanel>
-      )}
-
-      {panel === 'ticketThread' && activeTicket && (
-        <FullScreenPanel
-          wide
-          title={activeTicket.subject}
-          subtitle={`${activeTicket.openerName} · ${activeTicket.status}`}
-          fillBody
-          onClose={() => {
-            setActiveTicket(null);
-            setPanel('tickets');
-            void reloadTickets();
-          }}
-        >
-          <SupportTicketThread
-            ticket={activeTicket}
-            viewer={viewer}
-            onClosed={() => {
-              void getSupportTicketById(activeTicket.id).then((t) => {
-                if (t) setActiveTicket(t);
-                void reloadTickets();
-              });
-            }}
-            onUpdated={() => {
-              void getSupportTicketById(activeTicket.id).then((t) => {
-                if (t) setActiveTicket(t);
-              });
-            }}
-          />
-        </FullScreenPanel>
-      )}
-
       {editUser && (
         <FullScreenPanel
           nested
@@ -812,7 +680,6 @@ export default function StaffModerationPanel({
         {canEdit && ' · edit'}
         {canAudit && ' · audit log'}
         {canReports && ' · reports'}
-        {canTickets && ' · support inbox'}
         {!canBan && canSuspend && ' (moderators: view + suspend only)'}
       </p>
     </div>
