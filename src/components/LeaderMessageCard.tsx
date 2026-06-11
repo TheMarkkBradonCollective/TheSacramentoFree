@@ -46,6 +46,8 @@ export interface LeaderMessageCardProps {
   onVote?: (direction: 'up' | 'down') => void;
   onRequireSignIn?: () => void;
   signedIn?: boolean;
+  votesDisabled?: boolean;
+  votesDisabledReason?: string;
 }
 
 export default function LeaderMessageCard({
@@ -65,6 +67,8 @@ export default function LeaderMessageCard({
   onVote,
   onRequireSignIn,
   signedIn = false,
+  votesDisabled = false,
+  votesDisabledReason,
 }: LeaderMessageCardProps) {
   const styles = VARIANT_STYLES[variant];
 
@@ -132,6 +136,8 @@ export default function LeaderMessageCard({
           onVote={onVote}
           onRequireSignIn={onRequireSignIn}
           signedIn={signedIn}
+          disabled={votesDisabled}
+          disabledReason={votesDisabledReason}
           compact
         />
       )}

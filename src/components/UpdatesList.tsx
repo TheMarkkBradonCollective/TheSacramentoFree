@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2 } from 'lucide-rea
 import { AppUpdateInput, AppUpdateRecord, UserProfile } from '../types';
 import { useAppUpdates } from '../hooks/useAppUpdates';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
-import ContentVoteButtons from './ContentVoteButtons';
+import ContentVoteButtons, { OWN_CONTENT_VOTE_DISABLED_REASON } from './ContentVoteButtons';
 import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -116,6 +116,7 @@ export default function UpdatesList({
           {filteredUpdates.map((update) => {
             const expanded = expandedId === update.id;
             const fullText = update.detail?.trim() || update.body;
+            const isOwnUpdate = signedIn && update.postedByUserId === userProfile?.uid;
 
             return (
               <li key={update.id}>
@@ -188,9 +189,11 @@ export default function UpdatesList({
                   {showVotes && (
                     <ContentVoteButtons
                       voteState={getVoteState(update.id)}
-                      onVote={(dir) => handleVote(update.id, dir)}
+                      onVote={(dir) => handleVote(update.id, dir, { blockSelfId: update.postedByUserId })}
                       onRequireSignIn={onRequireSignIn}
                       signedIn={signedIn}
+                      disabled={isOwnUpdate}
+                      disabledReason={OWN_CONTENT_VOTE_DISABLED_REASON}
                       feedbackNote="Votes are shared with your director."
                       compact
                     />

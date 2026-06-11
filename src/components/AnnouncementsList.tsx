@@ -4,7 +4,7 @@ import { HelpAnnouncementInput, HelpAnnouncementRecord, UserProfile } from '../t
 import { useHelpAnnouncements } from '../hooks/useHelpAnnouncements';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
 import { useHelpAnnouncementComments } from '../hooks/useHelpAnnouncementComments';
-import ContentVoteButtons from './ContentVoteButtons';
+import ContentVoteButtons, { OWN_CONTENT_VOTE_DISABLED_REASON } from './ContentVoteButtons';
 import AnnouncementComments from './AnnouncementComments';
 import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
@@ -102,6 +102,7 @@ export default function AnnouncementsList({
             const fullText = announcement.detail?.trim() || announcement.body;
             const comments = getCommentsForAnnouncement(announcement.id);
             const editable = canEdit(announcement);
+            const isOwnAnnouncement = signedIn && announcement.postedByUserId === userProfile?.uid;
 
             return (
               <li key={announcement.id}>
@@ -183,9 +184,13 @@ export default function AnnouncementsList({
                   {showVotes && (
                     <ContentVoteButtons
                       voteState={getVoteState(announcement.id)}
-                      onVote={(dir) => handleVote(announcement.id, dir)}
+                      onVote={(dir) =>
+                        handleVote(announcement.id, dir, { blockSelfId: announcement.postedByUserId })
+                      }
                       onRequireSignIn={onRequireSignIn}
                       signedIn={signedIn}
+                      disabled={isOwnAnnouncement}
+                      disabledReason={OWN_CONTENT_VOTE_DISABLED_REASON}
                       feedbackNote="Votes help staff see what resonates with neighbors."
                       compact
                     />

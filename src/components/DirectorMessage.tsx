@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { UserProfile } from '../types';
 import { useDirectorMessage } from '../hooks/useDirectorMessage';
 import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityContentVotes';
+import { OWN_CONTENT_VOTE_DISABLED_REASON } from './ContentVoteButtons';
 import LeaderMessageCard from './LeaderMessageCard';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 
@@ -25,6 +26,7 @@ export default function DirectorMessage({
     userProfile,
   );
   const [editing, setEditing] = useState(false);
+  const isOwnDirectorMessage = userProfile?.role === 'director';
 
   return (
     <>
@@ -42,9 +44,15 @@ export default function DirectorMessage({
         canEdit={canEdit}
         onEdit={() => setEditing(true)}
         voteState={showVotes ? getVoteState('director') ?? EMPTY_VOTE : undefined}
-        onVote={showVotes ? (dir) => handleVote('director', dir) : undefined}
+        onVote={
+          showVotes
+            ? (dir) => handleVote('director', dir, { blockSelfId: isOwnDirectorMessage ? userProfile?.uid : undefined })
+            : undefined
+        }
         onRequireSignIn={onRequireSignIn}
         signedIn={Boolean(userProfile)}
+        votesDisabled={isOwnDirectorMessage}
+        votesDisabledReason={OWN_CONTENT_VOTE_DISABLED_REASON}
       />
 
       {editing && (

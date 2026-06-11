@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StaffMessageContent, UserProfile } from '../types';
 import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityContentVotes';
+import { OWN_CONTENT_VOTE_DISABLED_REASON } from './ContentVoteButtons';
 import LeaderMessageCard from './LeaderMessageCard';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 
@@ -29,6 +30,7 @@ export default function StaffMessage({
     userProfile,
   );
   const [editing, setEditing] = useState(false);
+  const isOwnStaffMessage = userProfile?.uid === message.userId;
 
   return (
     <>
@@ -45,9 +47,15 @@ export default function StaffMessage({
         canEdit={canEdit}
         onEdit={() => setEditing(true)}
         voteState={showVotes ? getVoteState(message.userId) ?? EMPTY_VOTE : undefined}
-        onVote={showVotes ? (dir) => handleVote(message.userId, dir) : undefined}
+        onVote={
+          showVotes
+            ? (dir) => handleVote(message.userId, dir, { blockSelfId: message.userId })
+            : undefined
+        }
         onRequireSignIn={onRequireSignIn}
         signedIn={Boolean(userProfile)}
+        votesDisabled={isOwnStaffMessage}
+        votesDisabledReason={OWN_CONTENT_VOTE_DISABLED_REASON}
       />
 
       {editing && onSave && (
