@@ -801,13 +801,6 @@ export default function ChatSystem({
           selectedChat || supportView ? 'hidden md:flex' : 'flex'
         }`}
       >
-        <div className="shrink-0 px-4 py-3 border-b border-app flex items-center justify-between gap-2">
-          <h3 className="font-display font-semibold text-sm text-app">Chat</h3>
-          <span className="sbn-badge text-[10px]">
-            {chats.length + incomingRequests.length}
-          </span>
-        </div>
-
         <div className="flex-1 min-h-0 overflow-y-auto" id="chat_rooms_scrollable">
           {incomingRequests.length > 0 && (
             <div className="border-b border-app">
