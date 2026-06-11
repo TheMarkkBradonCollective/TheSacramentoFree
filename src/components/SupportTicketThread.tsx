@@ -3,9 +3,10 @@ import { UserProfile, SupportTicket, SupportTicketMessage } from '../types';
 import {
   addSupportTicketMessage,
   closeSupportTicket,
+  deleteSupportTicket,
   getSupportTicketMessages,
 } from '../supabase';
-import { canViewerAccessTicket } from '../lib/roles';
+import { canDeleteSupportTicket, canViewerAccessTicket } from '../lib/roles';
 import RoleBadge from './RoleBadge';
 import ListingImage from './ListingImage';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
@@ -17,6 +18,7 @@ interface SupportTicketThreadProps {
   ticket: SupportTicket;
   viewer: UserProfile;
   onClosed?: () => void;
+  onDeleted?: () => void;
   onUpdated?: () => void;
   /** Hide ticket meta bar when the parent header already shows context */
   showTicketMeta?: boolean;
@@ -26,6 +28,7 @@ export default function SupportTicketThread({
   ticket,
   viewer,
   onClosed,
+  onDeleted,
   onUpdated,
   showTicketMeta = true,
 }: SupportTicketThreadProps) {
@@ -35,6 +38,7 @@ export default function SupportTicketThread({
   const replyImage = useImageAttachment();
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [err, setErr] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const { confirm } = useConfirm();
@@ -132,6 +136,24 @@ export default function SupportTicketThread({
     }
   };
 
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      message: 'Delete this closed ticket permanently? The conversation cannot be restored.',
+      confirmLabel: 'Delete ticket',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    setDeleting(true);
+    setErr('');
+    const result = await deleteSupportTicket({ ticketId: ticket.id, user: viewer });
+    setDeleting(false);
+    if (result.ok) {
+      onDeleted?.();
+    } else {
+      setErr(result.errorMessage || 'Could not delete ticket.');
+    }
+  };
+
   if (!canAccess) {
     return (
       <p className="p-4 text-sm text-muted text-center sbn-help-empty">You do not have access to this ticket.</p>
@@ -217,7 +239,7 @@ export default function SupportTicketThread({
         <div ref={bottomRef} />
       </div>
 
-      {isOpen && (
+      {isOpen ? (
         <div className="shrink-0 p-4 border-t border-app bg-surface space-y-2 sbn-input-tray">
           <textarea
             className="sbn-input text-sm min-h-[4rem] resize-none"
@@ -237,7 +259,7 @@ export default function SupportTicketThread({
             <button
               type="button"
               onClick={() => void handleClose()}
-              disabled={closing || sending}
+              disabled={closing || sending || deleting}
               className="sbn-btn sbn-btn-secondary flex-1 text-sm"
             >
               {closing ? 'Closing…' : 'Close ticket'}
@@ -245,14 +267,25 @@ export default function SupportTicketThread({
             <button
               type="button"
               onClick={() => void handleSend()}
-              disabled={sending || (!reply.trim() && !replyImage.file)}
+              disabled={sending || deleting || (!reply.trim() && !replyImage.file)}
               className="sbn-btn sbn-btn-primary flex-1 text-sm"
             >
               {sending ? 'Sending…' : 'Send'}
             </button>
           </div>
         </div>
-      )}
+      ) : canDeleteSupportTicket(viewer, ticket) ? (
+        <div className="shrink-0 p-4 border-t border-app bg-surface">
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+            className="sbn-btn sbn-btn-secondary w-full text-sm text-red-400 border-red-500/30 hover:bg-red-500/10"
+          >
+            {deleting ? 'Deleting…' : 'Delete closed ticket'}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -332,6 +332,11 @@ export default function ChatSupportSection({
                 void reloadTickets();
               });
             }}
+            onDeleted={() => {
+              setActiveTicket(null);
+              onViewChange('list');
+              void reloadTickets();
+            }}
             onUpdated={() => {
               void getSupportTicketById(activeTicket.id).then((t) => {
                 if (t) setActiveTicket(t);

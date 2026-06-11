@@ -5,6 +5,7 @@ import {
   getSupabaseMessages,
   createSupabaseMessage,
   deleteSupabaseMessage,
+  deleteSupabaseDirectChat,
   getOrCreateSupabaseChat,
   filterChatsByBlocked,
   getIncomingMessageRequests,
@@ -23,7 +24,7 @@ import {
   communityChatTitle,
   communityChatSubtitle,
 } from '../lib/communityChats';
-import { canDeleteChatMessage, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
+import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
 import SupportTicketRow from './SupportTicketRow';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -112,6 +113,7 @@ export default function ChatSystem({
   const [isChatsLoading, setIsChatsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [deletingChat, setDeletingChat] = useState(false);
   const userIsStaff = isStaffRole(userProfile.role);
   const { confirm } = useConfirm();
 
@@ -406,6 +408,37 @@ export default function ChatSystem({
     const created = visible.find((chat) => chat.id === c.chatId);
     if (created) setSelectedChat(created);
     return true;
+  };
+
+  const handleDeleteChat = async () => {
+    if (!selectedChat || deletingChat || isCommunityChat(selectedChat.id)) return;
+    if (!canDeleteDirectChat(userProfile, selectedChat)) return;
+
+    const confirmed = await confirm({
+      message:
+        'Delete this conversation for both neighbors? Profile DMs will require a new message request to chat again.',
+      confirmLabel: 'Delete conversation',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    setDeletingChat(true);
+    setErrorMsg('');
+    const chatId = selectedChat.id;
+    const result = await deleteSupabaseDirectChat(chatId, userProfile);
+    setDeletingChat(false);
+
+    if (!result.ok) {
+      setErrorMsg(result.errorMessage || 'Could not delete conversation.');
+      return;
+    }
+
+    setSelectedChat(null);
+    setMessages([]);
+    onClearPendingChatCompose?.();
+    const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+    const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
+    setChats(visible);
   };
 
   const handleDeleteMessage = async (message: Message) => {
@@ -1169,6 +1202,19 @@ export default function ChatSystem({
                       </>
                     )}
                   </div>
+
+                  {!isCommunity && canDeleteDirectChat(userProfile, selectedChat) ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteChat()}
+                      disabled={deletingChat}
+                      className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset shrink-0 disabled:opacity-50"
+                      title="Delete conversation"
+                      aria-label="Delete conversation"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  ) : null}
                 </header>
 
                 <div

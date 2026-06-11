@@ -1,5 +1,5 @@
 import type { Message, UserProfile } from '../types';
-import { isGlobalCommunityChat } from './communityChats';
+import { isCommunityChat, isGlobalCommunityChat } from './communityChats';
 
 export type UserRole = NonNullable<UserProfile['role']>;
 
@@ -172,6 +172,24 @@ export function canViewStaffReports(role?: UserProfile['role']): boolean {
 
 export function canViewStaffTicketInbox(role?: UserProfile['role']): boolean {
   return isStaffRole(role);
+}
+
+/** Participant may delete a 1:1 direct chat (not community channels). */
+export function canDeleteDirectChat(
+  viewer: Pick<UserProfile, 'uid'>,
+  chat: { id: string; participantIds: string[] },
+): boolean {
+  if (isCommunityChat(chat.id)) return false;
+  return Array.isArray(chat.participantIds) && chat.participantIds.includes(viewer.uid);
+}
+
+/** Closed tickets may be deleted by the opener or staff with access. */
+export function canDeleteSupportTicket(
+  viewer: Pick<UserProfile, 'uid' | 'role'>,
+  ticket: { openerUserId: string; minStaffRank: number; status: string },
+): boolean {
+  if (ticket.status !== 'closed') return false;
+  return canViewerAccessTicket(viewer, ticket);
 }
 
 /** Delete own chat messages everywhere; director + city manager may delete any in community chat. */

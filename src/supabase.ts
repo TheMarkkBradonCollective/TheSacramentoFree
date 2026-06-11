@@ -5,7 +5,7 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canEditAnnouncement, canEditOwnStaffMessage, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -4757,6 +4757,87 @@ export async function addSupportTicketMessage(params: {
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send message.' };
+  }
+}
+
+async function resetMessageRequestsBetween(userA: string, userB: string): Promise<void> {
+  try {
+    await supabase
+      .from('message_requests')
+      .delete()
+      .or(
+        `and(fromUserId.eq.${userA},toUserId.eq.${userB}),and(fromUserId.eq.${userB},toUserId.eq.${userA})`,
+      );
+  } catch {
+    // message_requests table may be missing on older installs
+  }
+}
+
+export async function deleteSupabaseDirectChat(
+  chatId: string,
+  actor: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data: chat, error: fetchError } = await supabase
+      .from('chats')
+      .select('id, participantIds')
+      .eq('id', chatId)
+      .maybeSingle();
+
+    if (fetchError) {
+      return { ok: false, errorMessage: fetchError.message };
+    }
+    if (!chat) {
+      return { ok: false, errorMessage: 'Conversation not found.' };
+    }
+
+    const row = chat as { id: string; participantIds: string[] };
+    if (!canDeleteDirectChat(actor, row)) {
+      return { ok: false, errorMessage: 'You cannot delete this conversation.' };
+    }
+
+    await supabase.from('messages').delete().eq('chatId', chatId);
+    const { error: deleteError } = await supabase.from('chats').delete().eq('id', chatId);
+
+    if (deleteError) {
+      return { ok: false, errorMessage: deleteError.message };
+    }
+
+    const participants = (row.participantIds || []).filter(Boolean);
+    const otherId = participants.find((id) => id !== actor.uid);
+    if (otherId) {
+      await resetMessageRequestsBetween(actor.uid, otherId);
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete conversation.' };
+  }
+}
+
+export async function deleteSupportTicket(params: {
+  ticketId: string;
+  user: UserProfile;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const ticket = await getSupportTicketById(params.ticketId);
+  if (!ticket) return { ok: false, errorMessage: 'Ticket not found.' };
+  if (!canDeleteSupportTicket(params.user, ticket)) {
+    return {
+      ok: false,
+      errorMessage:
+        ticket.status !== 'closed'
+          ? 'Close this ticket before deleting it.'
+          : 'You cannot delete this ticket.',
+    };
+  }
+
+  try {
+    await supabase.from('support_ticket_messages').delete().eq('ticketId', params.ticketId);
+    const { error } = await supabase.from('support_tickets').delete().eq('id', params.ticketId);
+    if (error) return { ok: false, errorMessage: error.message };
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete ticket.' };
   }
 }
 
