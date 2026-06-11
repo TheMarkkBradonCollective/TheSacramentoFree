@@ -58,12 +58,12 @@ Every eligible push also logs to your Notifications inbox.$detail$,
   '2026-06-11_chat-reviews-reports',
   '2026-06-11',
   'Reviews and reports moved into Chat',
-  'Community reviews, Send a report, and (staff) User reports are in Chat above Support and DMs.',
-  $detail$CHAT SIDEBAR ORDER
-• Group chats (All neighbors, Staff lounge)
-• Reviews & reports
-• Support
+  'Community reviews, Send a report, and (staff) User reports live in Chat — last in the sidebar.',
+  $detail$CHAT SIDEBAR ORDER (top to bottom)
 • Direct messages
+• Group chats (All neighbors, Staff lounge)
+• Support
+• Reviews & reports
 
 REVIEWS & REPORTS
 • Community reviews — read and post yours
@@ -212,6 +212,38 @@ Post once, edit anytime, or remove.
 
 FROM NEIGHBORS (below)
 Everyone else's reviews — yours is not duplicated in the list.$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+(
+  '2026-06-11_block-self-votes',
+  '2026-06-11',
+  'You cannot vote on your own content',
+  'Upvotes and downvotes are disabled on listings, reviews, updates, news, and leader messages you posted.',
+  $detail$Applies everywhere neighbors can vote:
+• Your listings
+• Your review
+• Your announcements or changelog entries
+• Director and staff messages you authored$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+(
+  '2026-06-11_chat-sidebar-actions',
+  '2026-06-11',
+  'Chat sidebar — new support & start DM rows',
+  'Open new support chat and Start conversation rows match Send a report. Sidebar order: DMs → Groups → Support → Reviews.',
+  $detail$QUICK ACTIONS (same row style as Send a report)
+• Start conversation — opens Stuff to message from a listing
+• Open new support chat — private thread with staff
+
+SIDEBAR ORDER
+1. Direct messages
+2. Group chats
+3. Support
+4. Reviews & reports$detail$,
   'Markeith White',
   'Buy Nothing Director',
   'director'
