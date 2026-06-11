@@ -96,7 +96,10 @@ DROP POLICY IF EXISTS "Users manage own notification preferences" ON public.noti
 CREATE POLICY "Users manage own notification preferences" ON public.notification_preferences
   FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
 
--- 3. Push dedup log (prevents duplicate alerts from client + webhook)
+-- 3. User notifications inbox (bell → Notifications tab — run user-notifications.sql for full DDL)
+--    Rows are inserted by the server when listing activity is dispatched.
+
+-- 4. Push dedup log (prevents duplicate alerts from client + webhook)
 CREATE TABLE IF NOT EXISTS public.push_dispatch_log (
   id TEXT PRIMARY KEY,
   tag TEXT NOT NULL,

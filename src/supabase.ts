@@ -2988,146 +2988,36 @@ function normalizeHelpAnnouncementRow(row: Record<string, unknown>): HelpAnnounc
   };
 }
 
-function listingStatusNotificationLabel(status: string): string | null {
-  switch (status) {
-    case 'completed':
-      return 'Listing marked gifted';
-    case 'pending_pickup':
-      return 'Pickup scheduled';
-    case 'on_hold':
-      return 'Listing on hold';
-    case 'withdrawn':
-      return 'Listing withdrawn';
-    default:
-      return null;
-  }
+function normalizeUserNotificationRow(row: Record<string, unknown>): UserNotificationItem {
+  return {
+    id: String(row.id || ''),
+    kind: String(row.kind || 'listing_status') as UserNotificationItem['kind'],
+    title: String(row.title || 'Notification'),
+    body: String(row.body || ''),
+    at: coerceToIsoDate(row.createdAt),
+    itemId: row.itemId ? String(row.itemId) : undefined,
+    itemTitle: row.itemTitle ? String(row.itemTitle) : undefined,
+    actorName: row.actorName ? String(row.actorName) : undefined,
+  };
 }
 
 export async function getSupabaseUserNotifications(userId: string): Promise<UserNotificationItem[]> {
   try {
-    const { data: items, error: itemsError } = await supabase
-      .from('items')
-      .select('id, title, status, createdAt, updatedAt')
-      .eq('userId', userId);
+    const { data, error } = await supabase
+      .from('user_notifications')
+      .select('*')
+      .eq('userId', userId)
+      .order('createdAt', { ascending: false })
+      .limit(60);
 
-    if (itemsError) {
-      if (itemsError.code === '42P01') return [];
+    if (error) {
+      if (error.code === '42P01') return [];
       return [];
     }
 
-    const owned = (items ?? []) as Array<{
-      id: string;
-      title: string;
-      status: string;
-      createdAt: string;
-      updatedAt: string;
-    }>;
-
-    if (!owned.length) return [];
-
-    const itemIds = owned.map((row) => row.id);
-    const itemById = Object.fromEntries(owned.map((row) => [row.id, row]));
-    const notifications: UserNotificationItem[] = [];
-
-    const [commentsRes, votesRes, claimsRes, claimReqRes] = await Promise.all([
-      supabase
-        .from('item_comments')
-        .select('*')
-        .in('itemId', itemIds)
-        .order('createdAt', { ascending: false })
-        .limit(50),
-      supabase.from('item_votes').select('*').in('itemId', itemIds).limit(50),
-      supabase
-        .from('item_claims')
-        .select('*')
-        .eq('giverUserId', userId)
-        .order('createdAt', { ascending: false })
-        .limit(50),
-      supabase
-        .from('item_claim_requests')
-        .select('*')
-        .eq('giverUserId', userId)
-        .order('createdAt', { ascending: false })
-        .limit(50),
-    ]);
-
-    for (const row of (commentsRes.data ?? []) as ItemComment[]) {
-      if (row.userId === userId) continue;
-      notifications.push({
-        id: `comment-${row.id}`,
-        kind: 'comment',
-        title: 'New comment on your listing',
-        body: row.text,
-        at: coerceToIsoDate(row.createdAt),
-        itemId: row.itemId,
-        itemTitle: itemById[row.itemId]?.title,
-        actorName: row.userName,
-      });
-    }
-
-    for (const row of (votesRes.data ?? []) as ItemVote[]) {
-      if (row.userId === userId) continue;
-      notifications.push({
-        id: `vote-${row.itemId}-${row.userId}-${row.voteType}`,
-        kind: row.voteType === 'up' ? 'upvote' : 'downvote',
-        title: row.voteType === 'up' ? 'Upvote on your listing' : 'Downvote on your listing',
-        body: itemById[row.itemId]?.title ?? 'Your listing',
-        at: new Date().toISOString(),
-        itemId: row.itemId,
-        itemTitle: itemById[row.itemId]?.title,
-      });
-    }
-
-    for (const row of (claimsRes.data ?? []) as Array<{
-      id: string;
-      itemId: string;
-      claimerUserId: string;
-      createdAt: string;
-    }>) {
-      notifications.push({
-        id: `claim-${row.id}`,
-        kind: 'claim',
-        title: 'Someone claimed your item',
-        body: itemById[row.itemId]?.title ?? 'Your listing',
-        at: coerceToIsoDate(row.createdAt),
-        itemId: row.itemId,
-        itemTitle: itemById[row.itemId]?.title,
-      });
-    }
-
-    for (const row of (claimReqRes.data ?? []) as ItemClaimRequest[]) {
-      if (row.status === 'rejected') continue;
-      notifications.push({
-        id: `claim-req-${row.id}`,
-        kind: 'claim_request',
-        title: row.status === 'pending' ? 'New claim request' : 'Claim request confirmed',
-        body: itemById[row.itemId]?.title ?? 'Your listing',
-        at: coerceToIsoDate(row.createdAt),
-        itemId: row.itemId,
-        itemTitle: itemById[row.itemId]?.title,
-        actorName: row.claimerName,
-      });
-    }
-
-    for (const row of owned) {
-      const label = listingStatusNotificationLabel(row.status);
-      if (!label) continue;
-      const updated = coerceToIsoDate(row.updatedAt);
-      const created = coerceToIsoDate(row.createdAt);
-      if (updated === created) continue;
-      notifications.push({
-        id: `status-${row.id}-${row.status}`,
-        kind: 'listing_status',
-        title: label,
-        body: row.title,
-        at: updated,
-        itemId: row.id,
-        itemTitle: row.title,
-      });
-    }
-
-    notifications.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-    return notifications.slice(0, 60);
+    if (!data?.length) return [];
+    setSupabaseConfigurationState(true);
+    return (data as Record<string, unknown>[]).map(normalizeUserNotificationRow);
   } catch {
     return [];
   }

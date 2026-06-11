@@ -80,8 +80,11 @@ export type UserNotificationKind =
   | 'upvote'
   | 'downvote'
   | 'claim'
+  | 'gift'
   | 'claim_request'
-  | 'listing_status';
+  | 'listing_status'
+  | 'pickup_reminder'
+  | 'account_update';
 
 export interface UserNotificationItem {
   id: string;

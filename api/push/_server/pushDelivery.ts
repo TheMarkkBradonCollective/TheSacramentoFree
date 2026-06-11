@@ -361,6 +361,9 @@ export async function sendPushToUsers(
     });
   }
 
+  const { logUserNotifications } = await import('./userNotificationLog');
+  await logUserNotifications(allowed, payload);
+
   const subscriptions = await getSubscriptionsForUsers(allowed);
   let sent = 0;
   let failed = 0;

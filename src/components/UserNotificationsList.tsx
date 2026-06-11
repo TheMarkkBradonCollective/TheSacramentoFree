@@ -30,6 +30,7 @@ function kindIcon(kind: UserNotificationKind) {
     case 'downvote':
       return ArrowDown;
     case 'claim':
+    case 'gift':
       return Gift;
     case 'claim_request':
       return UserPlus;
@@ -66,7 +67,7 @@ export default function UserNotificationsList({ userId }: UserNotificationsListP
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted italic">
-        Nothing yet — when neighbors comment, vote, or claim your listings, it shows up here.
+        Nothing yet — when neighbors comment, vote, or claim your listings, new entries are logged here automatically.
       </p>
     );
   }
