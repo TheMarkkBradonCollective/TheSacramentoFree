@@ -210,7 +210,9 @@ export default function NotificationSettings({
     savePreferences,
     discardPreferenceChanges,
     sendTestNotification,
+    sendBroadcastTestNotification,
     isTesting,
+    isBroadcastTesting,
     testMessage,
   } = usePushNotifications(userId);
 
@@ -355,14 +357,31 @@ export default function NotificationSettings({
             <button
               type="button"
               onClick={() => void sendTestNotification()}
-              disabled={isTesting || isLoading}
+              disabled={isTesting || isBroadcastTesting || isLoading}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-app text-sm font-bold text-app hover:bg-inset disabled:opacity-50"
             >
               {isTesting ? 'Sending…' : 'Send test notification'}
             </button>
+            {isDirectorRole(userRole) && (
+              <button
+                type="button"
+                onClick={() => void sendBroadcastTestNotification()}
+                disabled={isTesting || isBroadcastTesting || isLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/40 bg-amber-500/10 text-sm font-bold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+              >
+                {isBroadcastTesting ? 'Broadcasting…' : 'Test all users'}
+              </button>
+            )}
           </>
         )}
       </div>
+
+      {isDirectorRole(userRole) && isSubscribed && (
+        <p className="text-[11px] text-muted mb-4 -mt-2">
+          <strong className="text-app">Director:</strong> &quot;Test all users&quot; sends a push to every subscribed
+          device in the community. You will be asked to confirm first.
+        </p>
+      )}
 
       {testMessage && (
         <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 mb-4">

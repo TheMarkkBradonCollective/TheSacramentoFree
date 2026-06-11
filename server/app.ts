@@ -93,6 +93,16 @@ export function createPushApp() {
     res.status(result.status).json(result.body);
   });
 
+  app.post('/api/push/test-broadcast', requireAuth, async (req: AuthedRequest, res) => {
+    if (!req.body?.confirm) {
+      res.status(400).json({ error: 'confirm: true is required for broadcast test' });
+      return;
+    }
+    const { runDirectorBroadcastTest } = await import('../api/push/_server/runDirectorBroadcastTest');
+    const result = await runDirectorBroadcastTest(req.user!.id);
+    res.status(result.status).json(result.body);
+  });
+
   app.post('/api/push/send', requireAuth, async (req: AuthedRequest, res) => {
     const result = await runPushSend(req.user!.id, req.body as PushSendBody);
     res.status(result.status).json(result.body);

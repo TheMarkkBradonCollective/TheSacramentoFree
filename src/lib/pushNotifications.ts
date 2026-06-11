@@ -499,6 +499,62 @@ export async function sendTestPushNotification(): Promise<{
   }
 }
 
+export async function sendDirectorBroadcastTest(): Promise<{
+  ok: boolean;
+  cancelled?: boolean;
+  errorMessage?: string;
+  sent?: number;
+  userCount?: number;
+}> {
+  const confirmed = window.confirm(
+    'Send a test notification to EVERY neighbor with push enabled?\n\nThis alerts all subscribed devices across the community — not just yours.',
+  );
+  if (!confirmed) {
+    return { ok: false, cancelled: true };
+  }
+
+  const token = await getAccessToken();
+  if (!token) {
+    return { ok: false, errorMessage: 'Sign in as director to run a broadcast test.' };
+  }
+
+  try {
+    const res = await fetch('/api/push/test-broadcast', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ confirm: true }),
+    });
+    const json = await readJsonResponse(res);
+    const serverError =
+      typeof json.error === 'string' ? json.error : `Push API returned ${res.status}`;
+
+    if (!res.ok) {
+      return { ok: false, errorMessage: serverError };
+    }
+
+    const sent = Number(json.sent ?? 0);
+    const userCount = Number(json.userCount ?? 0);
+    if (sent === 0) {
+      return {
+        ok: false,
+        errorMessage: serverError || 'Broadcast reached zero devices.',
+        sent,
+        userCount,
+      };
+    }
+
+    return { ok: true, sent, userCount };
+  } catch (err) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not reach the push API.',
+    };
+  }
+}
+
 export async function notifySupportTicketPush(params: {
   ticketId: string;
   event: 'opened' | 'user_message' | 'staff_reply';

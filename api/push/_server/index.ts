@@ -4,6 +4,7 @@ export { isStaffRole } from './staffRoles';
 export { runSupportNotify } from './supportNotify';
 export { runReportNotify } from './reportNotify';
 export { runPushTest } from './runPushTest';
+export { runDirectorBroadcastTest } from './runDirectorBroadcastTest';
 export { runPushSend, type PushSendBody } from './runPushSend';
 export {
   runDirectorCategoryAlert,

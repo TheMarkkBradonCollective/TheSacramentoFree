@@ -9,6 +9,7 @@ import {
   NOTIFICATION_SESSION_CLEARED_EVENT,
   preferencesEqual,
   saveNotificationPreferences,
+  sendDirectorBroadcastTest,
   sendTestPushNotification,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
@@ -34,6 +35,7 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
   const [error, setError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
   const [isTesting, setIsTesting] = useState(false);
+  const [isBroadcastTesting, setIsBroadcastTesting] = useState(false);
   const [testMessage, setTestMessage] = useState('');
   const [preferences, setPreferences] = useState<NotificationPreferences>(CLEARED_NOTIFICATION_PREFERENCES);
   const [savedPreferences, setSavedPreferences] = useState<NotificationPreferences>(CLEARED_NOTIFICATION_PREFERENCES);
@@ -231,6 +233,25 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     return result.ok;
   }, []);
 
+  const sendBroadcastTestNotification = useCallback(async () => {
+    setIsBroadcastTesting(true);
+    setError('');
+    setTestMessage('');
+    const result = await sendDirectorBroadcastTest();
+    setIsBroadcastTesting(false);
+    if (result.cancelled) return false;
+    if (result.ok) {
+      const devices = result.sent ?? 0;
+      const neighbors = result.userCount ?? 0;
+      setTestMessage(
+        `Broadcast test sent to ${devices} device${devices === 1 ? '' : 's'} across ${neighbors} neighbor${neighbors === 1 ? '' : 's'}.`,
+      );
+    } else {
+      setError(result.errorMessage || 'Could not send broadcast test.');
+    }
+    return result.ok;
+  }, []);
+
   const setDraftPreferences = useCallback((next: NotificationPreferences) => {
     setPreferences(next);
     setSaveMessage('');
@@ -273,7 +294,9 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     savePreferences,
     discardPreferenceChanges,
     sendTestNotification,
+    sendBroadcastTestNotification,
     isTesting,
+    isBroadcastTesting,
     testMessage,
     refreshPermission,
     reloadPreferences: loadPreferences,
