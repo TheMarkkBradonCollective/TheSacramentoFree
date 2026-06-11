@@ -184,7 +184,8 @@ export function userAllowsEvent(prefs: NotificationPreferencesRow, eventType: Pu
   if (!prefs.enabled) return false;
   const key = EVENT_PREF_MAP[eventType];
   if (key === 'enabled') return prefs.enabled;
-  return Boolean(prefs[key]);
+  if (!key) return true;
+  return prefs[key] !== false;
 }
 
 export function userAllowsDirectorAlert(prefs: NotificationPreferencesRow, category?: string): boolean {
@@ -350,7 +351,7 @@ export async function sendPushToUsers(
     const prefsMap = await getPreferencesForUsers(targets);
     allowed = targets.filter((uid) => {
       const prefs = prefsMap.get(uid);
-      if (!prefs) return false;
+      if (!prefs) return true;
       if (payload.eventType === 'director_alert') {
         return userAllowsDirectorAlert(prefs, payload.data?.directorCategory);
       }

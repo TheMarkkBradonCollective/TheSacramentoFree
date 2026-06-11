@@ -31,3 +31,15 @@ export async function claimPushDispatch(tag?: string): Promise<boolean> {
     return true;
   }
 }
+
+/** Undo a dedup claim when delivery reached zero devices so webhooks can retry. */
+export async function releasePushDispatch(tag?: string): Promise<void> {
+  if (!tag) return;
+
+  try {
+    const supabaseAdmin = await getSupabaseAdmin();
+    await supabaseAdmin.from('push_dispatch_log').delete().eq('tag', tag);
+  } catch (err) {
+    console.warn('[push] dedup release failed:', (err as Error).message);
+  }
+}

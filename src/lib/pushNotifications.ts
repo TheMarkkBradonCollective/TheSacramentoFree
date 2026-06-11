@@ -5,6 +5,27 @@ const SW_PATH = '/service-worker.js';
 const PUSH_CELEBRATION_DISMISSED_KEY = 'sbn_push_celebration_prompt_dismissed_v1';
 const VAPID_CACHE_KEY = 'sbn_vapid_public_key_v1';
 
+const OPTIONAL_PREF_COLUMNS = ['communityChat', 'staffChat'] as const;
+
+function isMissingPrefColumnError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const message = (error.message || '').toLowerCase();
+  return (
+    error.code === 'PGRST204' ||
+    message.includes('communitychat') ||
+    message.includes('staffchat') ||
+    message.includes('schema cache')
+  );
+}
+
+function prefsWithoutOptionalColumns(prefs: NotificationPreferences): NotificationPreferences {
+  const next = { ...prefs };
+  for (const key of OPTIONAL_PREF_COLUMNS) {
+    delete (next as Record<string, unknown>)[key];
+  }
+  return next;
+}
+
 export const NOTIFICATION_SESSION_CLEARED_EVENT = 'sbn-notification-session-cleared';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -83,11 +104,18 @@ async function ensureNotificationPreferencesOnSubscribe(userId: string): Promise
     return;
   }
 
-  const { error } = await supabase.from('notification_preferences').insert({
+  let { error } = await supabase.from('notification_preferences').insert({
     userId,
     ...DEFAULT_NOTIFICATION_PREFERENCES,
     updatedAt,
   });
+  if (error && isMissingPrefColumnError(error)) {
+    ({ error } = await supabase.from('notification_preferences').insert({
+      userId,
+      ...prefsWithoutOptionalColumns(DEFAULT_NOTIFICATION_PREFERENCES),
+      updatedAt,
+    }));
+  }
   if (error && error.code !== '42P01') {
     console.warn('[push] notification_preferences insert:', error.message);
   }
@@ -548,6 +576,8 @@ export const CLEARED_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enabled: false,
   messages: false,
   messageRequests: false,
+  communityChat: false,
+  staffChat: false,
   support: false,
   claims: false,
   gifts: false,
@@ -673,7 +703,13 @@ export async function saveNotificationPreferences(
     updatedAt: new Date().toISOString(),
   };
 
-  const { error } = await supabase.from('notification_preferences').upsert(payload, { onConflict: 'userId' });
+  let { error } = await supabase.from('notification_preferences').upsert(payload, { onConflict: 'userId' });
+  if (error && isMissingPrefColumnError(error)) {
+    ({ error } = await supabase.from('notification_preferences').upsert(
+      { userId, ...prefsWithoutOptionalColumns(prefs), updatedAt: payload.updatedAt },
+      { onConflict: 'userId' },
+    ));
+  }
   return !error;
 }
 

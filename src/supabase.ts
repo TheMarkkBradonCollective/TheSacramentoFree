@@ -2055,13 +2055,10 @@ export async function createSupabaseMessage(
     }
 
     setSupabaseConfigurationState(true);
-    if (!options?.skipPush) {
+    // Community/staff channels: webhook broadcast only (avoids client dedup races and timeouts).
+    if (!options?.skipPush && !isCommunityChat(chatId)) {
       await runPushTask(() =>
-        import('./lib/pushIntegration').then((m) =>
-          isCommunityChat(chatId)
-            ? m.pushAfterCommunityMessage(chatId, senderId, text, messageId)
-            : m.pushAfterMessage(chatId, senderId, text, messageId),
-        ),
+        import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text, messageId)),
       );
     }
     return true;

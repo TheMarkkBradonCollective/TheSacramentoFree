@@ -93,9 +93,17 @@ export async function ensureNotificationPreferencesOnSubscribe(userId: string): 
     return;
   }
 
-  await supabaseAdmin.from('notification_preferences').insert({
+  const { communityChat, staffChat, ...legacyPrefs } = DEFAULT_NOTIFICATION_PREFS;
+  const { error } = await supabaseAdmin.from('notification_preferences').insert({
     userId,
     ...DEFAULT_NOTIFICATION_PREFS,
     updatedAt,
   });
+  if (error && /communityChat|staffChat|schema cache/i.test(error.message || '')) {
+    await supabaseAdmin.from('notification_preferences').insert({
+      userId,
+      ...legacyPrefs,
+      updatedAt,
+    });
+  }
 }

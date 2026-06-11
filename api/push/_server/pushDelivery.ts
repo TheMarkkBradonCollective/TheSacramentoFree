@@ -174,7 +174,8 @@ export function userAllowsEvent(prefs: NotificationPreferencesRow, eventType: Pu
   if (!prefs.enabled) return false;
   const key = EVENT_PREF_MAP[eventType];
   if (key === 'enabled') return prefs.enabled;
-  return Boolean(prefs[key]);
+  if (!key) return true;
+  return prefs[key] !== false;
 }
 
 export function userAllowsDirectorAlert(prefs: NotificationPreferencesRow, category?: string): boolean {
@@ -338,10 +339,10 @@ export async function sendPushToUsers(
     return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0 };
   }
 
-  if (!options?.skipDedup) {
+  const dedupTag = !options?.skipDedup ? payload.tag || payload.eventType : undefined;
+  if (dedupTag) {
     const { claimPushDispatch } = await import('./pushDedup');
-    const tag = payload.tag || payload.eventType;
-    const allowed = await claimPushDispatch(tag);
+    const allowed = await claimPushDispatch(dedupTag);
     if (!allowed) {
       return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0, deduped: true };
     }
@@ -352,7 +353,7 @@ export async function sendPushToUsers(
     const prefsMap = await getPreferencesForUsers(targets);
     allowed = targets.filter((uid) => {
       const prefs = prefsMap.get(uid);
-      if (!prefs) return false;
+      if (!prefs) return true;
       if (payload.eventType === 'director_alert') {
         return userAllowsDirectorAlert(prefs, payload.data?.directorCategory);
       }
@@ -375,6 +376,11 @@ export async function sendPushToUsers(
       }
     }),
   );
+
+  if (dedupTag && sent === 0) {
+    const { releasePushDispatch } = await import('./pushDedup');
+    await releasePushDispatch(dedupTag);
+  }
 
   return {
     sent,
