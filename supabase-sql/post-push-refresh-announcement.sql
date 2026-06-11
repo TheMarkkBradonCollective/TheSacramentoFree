@@ -18,7 +18,7 @@ INSERT INTO public.help_announcements (
   '2026-06-11',
   'Refresh your push notifications',
   'We upgraded push alerts across the app. Please turn notifications off and back on once so your phone picks up the new setup.',
-  'Open the bell icon in the top right (next to the theme button) → Notifications tab (third tab) → Turn off notifications, then enable them again.
+  'Open the bell icon in the top right (next to the theme button) → Alerts tab (third tab) → Turn off alerts, then enable them again.
 
 iPhone neighbors: use Sacramento Buy Nothing from your Home Screen (Add to Home Screen), not a Safari tab — background alerts need the installed app.
 

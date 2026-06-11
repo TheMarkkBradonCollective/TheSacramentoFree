@@ -829,7 +829,7 @@ export default function App() {
       if (target.notificationsTab) {
         openNotificationsHub(target.notificationsTab);
       } else if (target.notifications) {
-        openNotificationsHub('notifications');
+        openNotificationsHub('alerts');
       }
       if (target.directorOverview) {
         setScrollToDirectorOverview(true);
@@ -1212,7 +1212,7 @@ export default function App() {
       {userProfile && !accountRestriction.restricted && (
         <PushNotificationCelebration
           userId={userProfile.uid}
-          onGoToProfile={() => openNotificationsHub('notifications')}
+          onGoToProfile={() => openNotificationsHub('alerts')}
         />
       )}
 

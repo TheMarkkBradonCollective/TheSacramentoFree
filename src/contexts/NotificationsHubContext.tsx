@@ -6,12 +6,13 @@ import NotificationSettings from '../components/NotificationSettings';
 import UpdatesList from '../components/UpdatesList';
 import AnnouncementsList from '../components/AnnouncementsList';
 
-export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications';
+export type NotificationsHubTab = 'announcements' | 'updates' | 'alerts' | 'listings';
 
 const HUB_TABS: { id: NotificationsHubTab; label: string }[] = [
   { id: 'announcements', label: 'Announcements' },
   { id: 'updates', label: 'Updates' },
-  { id: 'notifications', label: 'Notifications' },
+  { id: 'alerts', label: 'Alerts' },
+  { id: 'listings', label: 'Notifications' },
 ];
 
 type NotificationsHubContextValue = {
@@ -23,8 +24,9 @@ const NotificationsHubContext = createContext<NotificationsHubContextValue | nul
 let openNotificationsHubGlobal: ((tab?: NotificationsHubTab) => void) | null = null;
 
 /** Open the navbar bell panel from outside React (e.g. push deep links in App.tsx). */
-export function openNotificationsHub(tab: NotificationsHubTab = 'announcements') {
-  openNotificationsHubGlobal?.(tab);
+export function openNotificationsHub(tab: NotificationsHubTab | 'notifications' = 'announcements') {
+  const resolvedTab: NotificationsHubTab = tab === 'notifications' ? 'alerts' : tab;
+  openNotificationsHubGlobal?.(resolvedTab);
 }
 
 export function useNotificationsHub(): NotificationsHubContextValue {
@@ -43,8 +45,8 @@ export function NotificationsHubButton({ className = '' }: { className?: string 
       type="button"
       onClick={() => openHub('announcements')}
       className={`inline-flex items-center gap-1.5 p-2 rounded-xl border border-app bg-surface text-app hover:bg-surface-hover transition-colors cursor-pointer ${className}`}
-      title="Announcements, updates, and notifications"
-      aria-label="Announcements, updates, and notifications"
+      title="Announcements, updates, alerts, and notifications"
+      aria-label="Announcements, updates, alerts, and notifications"
       id="notifications_hub_btn"
     >
       <Bell className="w-4 h-4 text-accent" />
@@ -83,7 +85,7 @@ export function NotificationsHubProvider({
         <FullScreenPanel
           wide
           title="Community alerts"
-          subtitle="Announcements, app updates, and push notification settings"
+          subtitle="Announcements, app updates, push alerts, and listing notifications"
           onClose={() => setOpen(false)}
         >
           <div className="space-y-5">
@@ -108,11 +110,20 @@ export function NotificationsHubProvider({
               <AnnouncementsList userProfile={userProfile} showVotes showComments />
             ) : null}
             {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes /> : null}
-            {tab === 'notifications' ? (
+            {tab === 'alerts' ? (
               <NotificationSettings
                 userId={userProfile.uid}
                 userRole={userProfile.role}
                 embedded
+                scope="alerts"
+              />
+            ) : null}
+            {tab === 'listings' ? (
+              <NotificationSettings
+                userId={userProfile.uid}
+                userRole={userProfile.role}
+                embedded
+                scope="listings"
               />
             ) : null}
           </div>
