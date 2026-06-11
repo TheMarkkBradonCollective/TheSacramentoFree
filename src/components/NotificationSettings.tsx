@@ -338,22 +338,24 @@ export default function NotificationSettings({
             {isLoading ? 'Enabling…' : 'Enable notifications'}
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={() => void disableNotifications()}
-            disabled={isLoading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-app text-sm font-bold text-muted hover:bg-inset disabled:opacity-50"
-          >
-            <BellOff className="w-4 h-4" />
-            {isLoading ? 'Turning off…' : 'Turn off notifications'}
-          </button>
-        )}
-        {isSubscribed && (
           <>
             <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               Subscribed on this device
             </span>
+            <button
+              type="button"
+              onClick={() => void disableNotifications()}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-app text-sm font-bold text-muted hover:bg-inset disabled:opacity-50"
+            >
+              <BellOff className="w-4 h-4" />
+              {isLoading ? 'Turning off…' : 'Turn off notifications'}
+            </button>
+          </>
+        )}
+        {isSubscribed && (
+          <>
             <button
               type="button"
               onClick={() => void sendTestNotification()}
