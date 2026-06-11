@@ -36,7 +36,7 @@ export default function Navbar({
         <div className="flex justify-between h-16 items-center gap-4">
           <button
             type="button"
-            onClick={() => setActiveTab('feed')}
+            onClick={() => setActiveTab('map')}
             className="shrink-0"
             id="brand_logo_container"
           >
