@@ -5,7 +5,6 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import CommunityMenuView from './CommunityMenuView';
 import Navbar from './Navbar';
 import CommunityStatsBar from './CommunityStatsBar';
 import EventsView from './EventsView';
@@ -200,20 +199,6 @@ export default function DesktopView({
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
                 onDeleteAccount={onDeleteAccount}
-              />
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'menu' && (
-          <div className="space-y-4" id="desktop_menu_view_root">
-            <div className="sbn-page-header">
-              <h2>{IN_APP.menuTitle}</h2>
-              <p>{IN_APP.menuDescription}</p>
-            </div>
-            <div className="sbn-card p-6 md:p-8">
-              <CommunityMenuView
-                userProfile={userProfile}
                 onViewProfile={onViewProfile}
                 scrollToDirectorOverview={scrollToDirectorOverview}
                 onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}

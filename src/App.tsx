@@ -839,6 +839,7 @@ export default function App() {
       }
       if (target.directorOverview) {
         setScrollToDirectorOverview(true);
+        setActiveTab('profile');
       }
       if (target.supportTicketId) {
         setInitialSupportTicketId(target.supportTicketId);
