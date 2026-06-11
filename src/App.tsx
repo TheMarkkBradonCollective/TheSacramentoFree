@@ -78,6 +78,16 @@ function withTabInHistoryState(tab: AppTab) {
   return { [TAB_HISTORY_KEY]: tab };
 }
 
+function persistActiveTab(tab: AppTab) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(TAB_STORAGE_KEY, tab);
+  try {
+    window.history.replaceState(withTabInHistoryState(tab), '', window.location.href);
+  } catch (err) {
+    console.warn('History replaceState unavailable, tab persistence fallback active:', err);
+  }
+}
+
 function readInitialAuthState() {
   const cachedProfile = readCachedProfile();
   return {
@@ -98,6 +108,7 @@ export default function App() {
   const loadItemsRef = useRef<(isBackground?: boolean, attempt?: number) => Promise<void>>(async () => {});
   const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
   const logoutCleanupDoneRef = useRef(false);
+  const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     if (typeof window === 'undefined') return 'map';
     return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
@@ -122,6 +133,11 @@ export default function App() {
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const { confirm, alert } = useConfirm();
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
+
+  const goHomeTab = useCallback(() => {
+    setActiveTab('map');
+    persistActiveTab('map');
+  }, []);
   const visibleItems = useMemo(
     () => items.filter((item) => !blockedUserIds.has(item.userId)),
     [items, blockedUserIds],
@@ -248,6 +264,13 @@ export default function App() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(TAB_STORAGE_KEY, activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (sessionUser && !hadSessionOnMountRef.current) {
+      goHomeTab();
+    }
+    hadSessionOnMountRef.current = !!sessionUser;
+  }, [sessionUser, goHomeTab]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -410,6 +433,9 @@ export default function App() {
             void syncProfileFromDb(session.user);
           }
         }, 0);
+        if (event === 'SIGNED_IN') {
+          goHomeTab();
+        }
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
           setTimeout(() => {
             if (!cancelled) void loadItemsRef.current(true);
@@ -436,7 +462,7 @@ export default function App() {
       clearTimeout(bootFailsafe);
       subscription.unsubscribe();
     };
-  }, [applySession, syncProfileFromDb]);
+  }, [applySession, syncProfileFromDb, goHomeTab]);
 
   const loadItems = useCallback(
     async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
@@ -575,6 +601,7 @@ export default function App() {
 
       if (data.user) {
         applySession(data.user);
+        goHomeTab();
         void syncProfileFromDb(data.user);
         return true;
       }
@@ -639,6 +666,7 @@ export default function App() {
 
         applySession(data.user);
         setUserProfile(newProfile);
+        goHomeTab();
         return true;
       }
       setIsAuthLoading(false);
@@ -666,12 +694,13 @@ export default function App() {
     setSessionUser(null);
     setUserProfile(null);
     setItems([]);
-    setActiveTab('map');
+    goHomeTab();
   };
 
   // Onboarding Complete Handler
   const handleOnboardingComplete = (newProfile: UserProfile) => {
     setUserProfile(newProfile);
+    goHomeTab();
   };
 
   useEffect(() => {
