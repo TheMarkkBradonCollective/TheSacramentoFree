@@ -1,3 +1,4 @@
+import { isCommunityChatId, runCommunityChatMessageNotify } from './communityChatNotify';
 import { itemCoordsFromDescription } from './itemCoords';
 import { runPushSend, type PushSendBody } from './runPushSend';
 import { getSupabaseAdmin } from './supabaseAdmin';
@@ -208,6 +209,10 @@ export async function runNeighborNewMessageNotify(
   const text = String(message.text || '');
   if (!chatId || !text) {
     return { status: 200, body: { ok: true, skipped: 'missing message fields' } };
+  }
+
+  if (isCommunityChatId(chatId)) {
+    return runCommunityChatMessageNotify(senderId, message);
   }
 
   const supabaseAdmin = await getSupabaseAdmin();

@@ -340,6 +340,8 @@ export type PushEventType =
   | 'pickup_scheduled'
   | 'pickup_reminder'
   | 'new_message'
+  | 'community_chat'
+  | 'staff_chat'
   | 'message_request'
   | 'message_request_accepted'
   | 'new_comment'
@@ -580,6 +582,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enabled: true,
   messages: true,
   messageRequests: true,
+  communityChat: true,
+  staffChat: true,
   support: true,
   claims: true,
   gifts: true,
@@ -615,6 +619,8 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     enabled: row.enabled !== false,
     messages: row.messages !== false,
     messageRequests: row.messageRequests !== false,
+    communityChat: row.communityChat !== false,
+    staffChat: row.staffChat !== false,
     support: row.support !== false,
     claims: row.claims !== false,
     gifts: row.gifts !== false,

@@ -6,7 +6,7 @@ import {
   getSupabaseAppUpdates,
   updateSupabaseAppUpdate,
 } from '../supabase';
-import { subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { canManageAppUpdates } from '../lib/roles';
 
 export function useAppUpdates(userProfile?: UserProfile | null) {
@@ -15,7 +15,13 @@ export function useAppUpdates(userProfile?: UserProfile | null) {
 
   const reload = useCallback(async () => {
     const data = await getSupabaseAppUpdates();
-    setUpdates(data);
+    const seen = new Set<string>();
+    const unique = data.filter((row) => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    });
+    setUpdates(unique);
     setLoading(false);
   }, []);
 
@@ -24,19 +30,21 @@ export function useAppUpdates(userProfile?: UserProfile | null) {
   }, [reload]);
 
   useEffect(() => {
+    const refresh = debounceRealtime(() => {
+      void reload();
+    }, 150);
+
     return subscribePostgresChanges<AppUpdateRecord>(
       { channelName: 'live-app-updates', table: 'app_updates', event: '*' },
-      () => {
-        void reload();
-      },
+      refresh,
     );
   }, [reload]);
 
   const createUpdate = async (input: AppUpdateInput) => {
     if (!userProfile) return { ok: false, errorMessage: 'Sign in as director to post.' };
     const result = await createSupabaseAppUpdate(input, userProfile);
-    if (result.ok && result.update) {
-      setUpdates((prev) => [result.update!, ...prev]);
+    if (result.ok) {
+      await reload();
     }
     return result;
   };

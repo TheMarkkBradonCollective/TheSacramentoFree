@@ -6,7 +6,7 @@ import {
   getSupabaseHelpAnnouncements,
   updateSupabaseHelpAnnouncement,
 } from '../supabase';
-import { subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { canEditAnnouncement, canPostAnnouncements } from '../lib/roles';
 
 export function useHelpAnnouncements(userProfile?: UserProfile | null) {
@@ -15,7 +15,13 @@ export function useHelpAnnouncements(userProfile?: UserProfile | null) {
 
   const reload = useCallback(async () => {
     const data = await getSupabaseHelpAnnouncements();
-    setAnnouncements(data);
+    const seen = new Set<string>();
+    const unique = data.filter((row) => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    });
+    setAnnouncements(unique);
     setLoading(false);
   }, []);
 
@@ -24,19 +30,21 @@ export function useHelpAnnouncements(userProfile?: UserProfile | null) {
   }, [reload]);
 
   useEffect(() => {
+    const refresh = debounceRealtime(() => {
+      void reload();
+    }, 150);
+
     return subscribePostgresChanges<HelpAnnouncementRecord>(
       { channelName: 'live-help-announcements', table: 'help_announcements', event: '*' },
-      () => {
-        void reload();
-      },
+      refresh,
     );
   }, [reload]);
 
   const createAnnouncement = async (input: HelpAnnouncementInput) => {
     if (!userProfile) return { ok: false, errorMessage: 'Sign in as staff to post.' };
     const result = await createSupabaseHelpAnnouncement(input, userProfile);
-    if (result.ok && result.announcement) {
-      setAnnouncements((prev) => [result.announcement!, ...prev]);
+    if (result.ok) {
+      await reload();
     }
     return result;
   };

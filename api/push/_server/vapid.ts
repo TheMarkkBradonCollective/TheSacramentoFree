@@ -46,6 +46,8 @@ export async function sendWebPush(
     payload.eventType === 'staff_support' ||
     payload.eventType === 'staff_report' ||
     payload.eventType === 'new_message' ||
+    payload.eventType === 'community_chat' ||
+    payload.eventType === 'staff_chat' ||
     payload.eventType === 'message_request'
       ? 'high'
       : 'normal';

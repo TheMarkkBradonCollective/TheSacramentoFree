@@ -40,6 +40,8 @@ const DEFAULT_NOTIFICATION_PREFS = {
   enabled: true,
   messages: true,
   messageRequests: true,
+  communityChat: true,
+  staffChat: true,
   support: true,
   claims: true,
   gifts: true,

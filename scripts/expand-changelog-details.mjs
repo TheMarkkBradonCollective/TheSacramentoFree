@@ -7,16 +7,22 @@ import path from 'path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const ALL_SQL = fs.readFileSync(path.join(ROOT, 'supabase-sql/all-community-updates.sql'), 'utf8');
-const JUNE9_SQL = fs.readFileSync(path.join(ROOT, 'supabase-sql/add-june-9-latest-community-updates.sql'), 'utf8');
+const DETAIL_SQL_FILES = [
+  'supabase-sql/add-june-9-latest-community-updates.sql',
+  'supabase-sql/add-june-10-latest-updates.sql',
+];
 
-/** Parse $detail$ blocks from add-june-9 file */
-function parseJune9Details() {
+/** Parse $detail$ blocks from supplemental update SQL files */
+function parseSupplementDetails() {
   const map = new Map();
   const re =
     /\(\s*'([^']+)',\s*'[^']+',\s*'[^']+',\s*'[^']*',\s*\$detail\$([\s\S]*?)\$detail\$/g;
-  let m;
-  while ((m = re.exec(JUNE9_SQL))) {
-    map.set(m[1], m[2].trim());
+  for (const rel of DETAIL_SQL_FILES) {
+    const sql = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    let m;
+    while ((m = re.exec(sql))) {
+      map.set(m[1], m[2].trim());
+    }
   }
   return map;
 }
@@ -722,7 +728,7 @@ This entry documents shipped work on ${date}. Tap to expand anytime for the full
 
 // ─── Generate SQL ─────────────────────────────────────────────────────────
 
-const june9 = parseJune9Details();
+const supplementDetails = parseSupplementDetails();
 const entries = parseAllEntries();
 
 const lines = [
@@ -740,7 +746,7 @@ const lines = [
 
 const valueRows = entries.map((entry, i) => {
   const detail =
-    june9.get(entry.id) ??
+    supplementDetails.get(entry.id) ??
     DETAILS[entry.id] ??
     detailForEntry(entry);
   const detailSql = `$detail$${detail}$detail$`;
@@ -772,9 +778,9 @@ lines.push(
 const outPath = path.join(ROOT, 'supabase-sql/expand-all-community-updates-detail.sql');
 fs.writeFileSync(outPath, lines.join('\n'));
 
-const missing = entries.filter((e) => !june9.has(e.id) && !DETAILS[e.id]);
+const missing = entries.filter((e) => !supplementDetails.has(e.id) && !DETAILS[e.id]);
 console.log(`Wrote ${entries.length} entries to ${outPath}`);
-console.log(`June 9 file overrides: ${june9.size}`);
+console.log(`Supplement file overrides: ${supplementDetails.size}`);
 console.log(`Hand-authored overrides: ${Object.keys(DETAILS).length}`);
 if (missing.length) {
   console.log(`Fallback template used for ${missing.length} entries (still structured).`);

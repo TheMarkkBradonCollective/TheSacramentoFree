@@ -48,6 +48,12 @@ async function validateCallerForPush(callerId: string, body: PushSendBody): Prom
     return null;
   }
 
+  if (body.eventType === 'staff_chat') {
+    const role = await getUserRole(callerId);
+    if (!isStaffRole(role)) return 'Staff access required for staff chat';
+    return null;
+  }
+
   if (body.eventType === 'new_message' && body.conversationId) {
     const supabaseAdmin = await getSupabaseAdmin();
     const { data } = await supabaseAdmin
@@ -140,6 +146,27 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
           ? body.minStaffRank
           : 1;
 
+    const { data: users } = await supabaseAdmin.from('users').select('uid, role, email');
+
+    return (users || [])
+      .filter((u) => {
+        const uid = String((u as { uid: string }).uid);
+        if (!uid || uid === callerId) return false;
+        const row = u as { role?: string; email?: string };
+        const role = normalizeUserRole(row.role);
+        if (!isStaffRole(role) || isDirectorAccount(uid, row.role, row.email)) return false;
+        return roleRank(role) >= minRank;
+      })
+      .map((u) => String((u as { uid: string }).uid));
+  }
+
+  if (eventType === 'community_chat') {
+    const { data } = await supabaseAdmin.from('users').select('uid');
+    return (data || []).map((u) => String((u as { uid: string }).uid));
+  }
+
+  if (eventType === 'staff_chat') {
+    const minRank = typeof body.minStaffRank === 'number' ? body.minStaffRank : 1;
     const { data: users } = await supabaseAdmin.from('users').select('uid, role, email');
 
     return (users || [])

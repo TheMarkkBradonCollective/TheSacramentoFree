@@ -8,6 +8,8 @@ export interface NotificationPreferences {
   enabled: boolean;
   messages: boolean;
   messageRequests: boolean;
+  communityChat: boolean;
+  staffChat: boolean;
   support: boolean;
   claims: boolean;
   gifts: boolean;

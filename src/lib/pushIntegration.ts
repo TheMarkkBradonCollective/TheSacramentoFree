@@ -13,7 +13,10 @@ import {
   notifyMessageRequest,
   notifyMessageRequestAccepted,
   notifyNewMessage,
+  notifyCommunityChatMessage,
+  notifyStaffChatMessage,
   notifyPickupScheduled,
+  notifyAppUpdate,
   notifyClaimRequestSubmitted,
   notifyListingStatus,
   notifyRequestFulfilled,
@@ -139,6 +142,27 @@ export async function pushAfterMessageRequestAccepted(params: {
     recipientUserId: params.requesterUserId,
     accepterName: params.accepterName,
   });
+}
+
+export async function pushAfterCommunityMessage(
+  chatId: string,
+  senderId: string,
+  text: string,
+  messageId?: string,
+) {
+  const preview = text.trim();
+  if (!preview) return;
+
+  const senderName = await getUserDisplayName(senderId);
+
+  if (chatId === 'community-staff') {
+    await notifyStaffChatMessage({ senderName, preview, messageId });
+    return;
+  }
+
+  if (chatId === 'community-global') {
+    await notifyCommunityChatMessage({ senderName, preview, messageId });
+  }
 }
 
 export async function pushAfterMessage(

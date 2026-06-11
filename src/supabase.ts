@@ -2055,9 +2055,13 @@ export async function createSupabaseMessage(
     }
 
     setSupabaseConfigurationState(true);
-    if (!options?.skipPush && !isCommunityChat(chatId)) {
+    if (!options?.skipPush) {
       await runPushTask(() =>
-        import('./lib/pushIntegration').then((m) => m.pushAfterMessage(chatId, senderId, text, messageId)),
+        import('./lib/pushIntegration').then((m) =>
+          isCommunityChat(chatId)
+            ? m.pushAfterCommunityMessage(chatId, senderId, text, messageId)
+            : m.pushAfterMessage(chatId, senderId, text, messageId),
+        ),
       );
     }
     return true;

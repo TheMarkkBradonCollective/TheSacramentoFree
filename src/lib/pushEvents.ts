@@ -105,6 +105,38 @@ export async function notifyMessageRequestAccepted(params: {
   });
 }
 
+export async function notifyCommunityChatMessage(params: {
+  senderName: string;
+  preview: string;
+  messageId?: string;
+}) {
+  const messageId = params.messageId?.trim();
+  await sendPushNotification({
+    eventType: 'community_chat',
+    title: `Community chat — ${params.senderName}`,
+    body: params.preview.slice(0, 140),
+    url: pushUrlForConversation('community-global'),
+    conversationId: 'community-global',
+    tag: messageId ? `community-msg-${messageId}` : `community-msg-${Date.now()}`,
+  });
+}
+
+export async function notifyStaffChatMessage(params: {
+  senderName: string;
+  preview: string;
+  messageId?: string;
+}) {
+  const messageId = params.messageId?.trim();
+  await sendPushNotification({
+    eventType: 'staff_chat',
+    title: `Staff chat — ${params.senderName}`,
+    body: params.preview.slice(0, 140),
+    url: pushUrlForConversation('community-staff'),
+    conversationId: 'community-staff',
+    tag: messageId ? `staff-msg-${messageId}` : `staff-msg-${Date.now()}`,
+  });
+}
+
 export async function notifyNewMessage(params: {
   chatId: string;
   recipientUserId: string;

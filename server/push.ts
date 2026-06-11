@@ -9,6 +9,8 @@ export type PushEventType =
   | 'pickup_scheduled'
   | 'pickup_reminder'
   | 'new_message'
+  | 'community_chat'
+  | 'staff_chat'
   | 'message_request'
   | 'message_request_accepted'
   | 'new_comment'
@@ -45,6 +47,8 @@ export interface NotificationPreferencesRow {
   enabled: boolean;
   messages: boolean;
   messageRequests: boolean;
+  communityChat: boolean;
+  staffChat: boolean;
   support: boolean;
   claims: boolean;
   gifts: boolean;
@@ -102,6 +106,8 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   pickup_scheduled: 'pickupReminders',
   pickup_reminder: 'pickupReminders',
   new_message: 'messages',
+  community_chat: 'communityChat',
+  staff_chat: 'staffChat',
   message_request: 'messageRequests',
   message_request_accepted: 'messageRequests',
   new_comment: 'comments',
@@ -141,6 +147,8 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     enabled: row.enabled !== false,
     messages: row.messages !== false,
     messageRequests: row.messageRequests !== false,
+    communityChat: row.communityChat !== false,
+    staffChat: row.staffChat !== false,
     support: row.support !== false,
     claims: row.claims !== false,
     gifts: row.gifts !== false,
@@ -204,6 +212,8 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         enabled: true,
         messages: true,
         messageRequests: true,
+        communityChat: true,
+        staffChat: true,
         support: true,
         claims: true,
         gifts: true,
@@ -259,6 +269,8 @@ const HIGH_URGENCY_EVENTS = new Set<PushEventType>([
   'staff_report',
   'support_reply',
   'new_message',
+  'community_chat',
+  'staff_chat',
   'message_request',
   'message_request_accepted',
   'item_claimed',

@@ -40,6 +40,11 @@ const PREF_SECTIONS: {
         label: 'Message requests',
         description: 'When a neighbor asks to chat or accepts your request',
       },
+      {
+        key: 'communityChat',
+        label: 'Community chat',
+        description: 'New messages in the all-neighbors channel',
+      },
       { key: 'support', label: 'Support tickets', description: 'Staff replies on your help tickets' },
     ],
   },
@@ -132,6 +137,11 @@ const STAFF_PREF_SECTION = {
       key: 'staffReports' as const,
       label: 'Neighbor reports',
       description: 'New reports submitted for staff review',
+    },
+    {
+      key: 'staffChat' as const,
+      label: 'Staff chat',
+      description: 'New messages in the staff-only lounge',
     },
   ],
 };
