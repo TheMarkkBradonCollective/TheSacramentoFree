@@ -112,7 +112,9 @@ export default function App() {
   const [detailEventUpdating, setDetailEventUpdating] = useState(false);
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
-  const [initialStaffPanel, setInitialStaffPanel] = useState<'reports' | null>(null);
+  const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
+    'reviews' | 'report' | 'staffReports' | null
+  >(null);
   const [initialSupportTicketId, setInitialSupportTicketId] = useState<string | null>(null);
   const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
@@ -820,8 +822,12 @@ export default function App() {
       if (target.requestId) {
         setActiveTab('chats');
       }
-      if (target.staffPanel === 'reports') {
-        setInitialStaffPanel('reports');
+      if (target.chatFeedbackPanel) {
+        setInitialChatFeedbackPanel(target.chatFeedbackPanel);
+        setActiveTab('chats');
+      } else if (target.staffPanel === 'reports') {
+        setInitialChatFeedbackPanel('staffReports');
+        setActiveTab('chats');
       } else if (target.staffPanel === 'tickets') {
         setActiveTab('chats');
         setInitialChatSupportView('list');
@@ -968,8 +974,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
-                  initialStaffPanel={initialStaffPanel}
-                  onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  initialChatFeedbackPanel={initialChatFeedbackPanel}
+                  onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
                   onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
                   initialChatSupportView={initialChatSupportView}
@@ -1010,8 +1016,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
-                  initialStaffPanel={initialStaffPanel}
-                  onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  initialChatFeedbackPanel={initialChatFeedbackPanel}
+                  onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
                   onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
                   initialChatSupportView={initialChatSupportView}
@@ -1052,8 +1058,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
-                  initialStaffPanel={initialStaffPanel}
-                  onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
+                  initialChatFeedbackPanel={initialChatFeedbackPanel}
+                  onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
                   onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
                   initialChatSupportView={initialChatSupportView}

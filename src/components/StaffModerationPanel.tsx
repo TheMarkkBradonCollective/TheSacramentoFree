@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { UserProfile, StaffUserRow, ModerationAuditEntry, UserReport, SACRAMENTO_NEIGHBORHOODS } from '../types';
+import { UserProfile, StaffUserRow, ModerationAuditEntry, SACRAMENTO_NEIGHBORHOODS } from '../types';
 import {
   getStaffUserDirectory,
   getModerationAuditLog,
@@ -9,8 +9,6 @@ import {
   staffUnbanUser,
   staffUpdateUserProfile,
   staffDeleteUserAccount,
-  getStaffUserReports,
-  markUserReportReviewed,
 } from '../supabase';
 import {
   canAccessStaffDirectory,
@@ -21,7 +19,6 @@ import {
   canStaffSuspend,
   canViewAuditLog,
   canViewDirectorOverview,
-  canViewStaffReports,
   ASSIGNABLE_ROLE_OPTIONS,
 } from '../lib/roles';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
@@ -33,7 +30,7 @@ import FullScreenPanel from './FullScreenPanel';
 import ListingImage from './ListingImage';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { avatarImageUrl } from '../lib/imageUrl';
-import { ClipboardList, ChevronRight, Flag, Megaphone, MessageSquareQuote, Search, Shield, Users } from 'lucide-react';
+import { ClipboardList, ChevronRight, Megaphone, MessageSquareQuote, Search, Shield, Users } from 'lucide-react';
 
 const SUSPEND_DURATIONS = [
   { label: '1 day', days: 1 },
@@ -42,13 +39,11 @@ const SUSPEND_DURATIONS = [
   { label: '30 days', days: 30 },
 ];
 
-type StaffPanel = 'directory' | 'audit' | 'reports' | null;
+type StaffPanel = 'directory' | 'audit' | null;
 
 interface StaffModerationPanelProps {
   viewer: UserProfile;
   onViewProfile: (userId: string) => void;
-  initialPanel?: 'reports' | null;
-  onClearInitialPanel?: () => void;
 }
 
 function neighborAvatarUrl(user: StaffUserRow): string {
@@ -69,13 +64,10 @@ function statusLabel(user: StaffUserRow): string {
 export default function StaffModerationPanel({
   viewer,
   onViewProfile,
-  initialPanel = null,
-  onClearInitialPanel,
 }: StaffModerationPanelProps) {
   const [panel, setPanel] = useState<StaffPanel>(null);
   const [users, setUsers] = useState<StaffUserRow[]>([]);
   const [audit, setAudit] = useState<ModerationAuditEntry[]>([]);
-  const [reports, setReports] = useState<UserReport[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -100,19 +92,10 @@ export default function StaffModerationPanel({
     isPublished: staffMessagePublished,
   } = useStaffMessage(viewer);
   const canAudit = canViewAuditLog(viewer.role);
-  const canReports = canViewStaffReports(viewer.role);
   const canSuspend = canStaffSuspend(viewer.role);
   const canBan = canStaffBan(viewer.role);
   const canEdit = canStaffEditUser(viewer.role);
   const canDeleteAccount = canStaffDeleteAccount(viewer.role);
-
-  useEffect(() => {
-    if (!initialPanel) return;
-    if (initialPanel === 'reports' && canReports) {
-      setPanel('reports');
-    }
-    onClearInitialPanel?.();
-  }, [initialPanel, canReports, onClearInitialPanel]);
 
   const reloadDirectory = useCallback(async () => {
     setLoading(true);
@@ -128,18 +111,10 @@ export default function StaffModerationPanel({
     setLoading(false);
   }, []);
 
-  const reloadReports = useCallback(async () => {
-    setLoading(true);
-    const rows = await getStaffUserReports(150);
-    setReports(rows);
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
     if (panel === 'directory') void reloadDirectory();
     if (panel === 'audit') void reloadAudit();
-    if (panel === 'reports') void reloadReports();
-  }, [panel, reloadDirectory, reloadAudit, reloadReports]);
+  }, [panel, reloadDirectory, reloadAudit]);
 
   useEffect(() => {
     if (!panel) return;
@@ -147,7 +122,6 @@ export default function StaffModerationPanel({
     const refresh = debounceRealtime(() => {
       if (panel === 'directory') void reloadDirectory();
       else if (panel === 'audit') void reloadAudit();
-      else if (panel === 'reports') void reloadReports();
     }, 100);
 
     const unsubs: (() => void)[] = [];
@@ -165,13 +139,8 @@ export default function StaffModerationPanel({
         ),
       );
     }
-    if (panel === 'reports') {
-      unsubs.push(
-        subscribePostgresChanges({ channelName: 'staff-live-reports', table: 'user_reports', event: '*' }, refresh),
-      );
-    }
     return () => unsubs.forEach((u) => u());
-  }, [panel, reloadDirectory, reloadAudit, reloadReports]);
+  }, [panel, reloadDirectory, reloadAudit]);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -342,15 +311,6 @@ export default function StaffModerationPanel({
     }
   };
 
-  const handleMarkReportReviewed = async (reportId: string) => {
-    const result = await markUserReportReviewed(reportId);
-    if (result.ok) {
-      await reloadReports();
-    } else {
-      setErr(result.errorMessage || 'Could not update report.');
-    }
-  };
-
   if (!canDirectory) return null;
 
   const statusBanner = (msg || err) && panel && !editUser && (
@@ -393,22 +353,6 @@ export default function StaffModerationPanel({
             <span className="min-w-0 flex-1">
               <span className="font-semibold text-sm text-app block">Audit log</span>
               <span className="text-[11px] text-muted">Moderation action history</span>
-            </span>
-            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-          </button>
-        )}
-        {canReports && (
-          <button
-            type="button"
-            onClick={() => setPanel('reports')}
-            className="sbn-help-list-item"
-          >
-            <span className="p-2 rounded-lg bg-red-500/10 text-red-400 shrink-0">
-              <Flag className="w-4 h-4" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="font-semibold text-sm text-app block">User reports</span>
-              <span className="text-[11px] text-muted">One-way submissions from neighbors</span>
             </span>
             <ChevronRight className="w-4 h-4 text-muted shrink-0" />
           </button>
@@ -586,81 +530,6 @@ export default function StaffModerationPanel({
         </FullScreenPanel>
       )}
 
-      {panel === 'reports' && (
-        <FullScreenPanel wide title="User reports" subtitle="One-way submissions from neighbors" onClose={closePanel}>
-          {statusBanner}
-          {loading ? (
-              <p className="text-sm text-muted sbn-help-empty">Loading reports…</p>
-            ) : reports.length === 0 ? (
-              <div className="sbn-help-empty">
-                <p className="text-sm text-muted">No reports yet.</p>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {reports.map((report) => (
-                  <li key={report.id} className="sbn-help-card text-sm space-y-2">
-                    <div className="flex flex-wrap justify-between gap-1">
-                      <span className="font-semibold text-app">{report.subject}</span>
-                      <div className="flex flex-wrap gap-1">
-                        {report.source === 'block' && (
-                          <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
-                            Block report
-                          </span>
-                        )}
-                        <span
-                          className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                            report.status === 'new'
-                              ? 'bg-amber-500/15 text-amber-500'
-                              : 'bg-muted/20 text-muted'
-                          }`}
-                        >
-                          {report.status}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted">
-                      From {report.reporterName} · {new Date(report.createdAt).toLocaleString()}
-                    </p>
-                    {report.reportedUserName && (
-                      <p className="text-xs text-muted">
-                        About: <span className="text-app font-medium">{report.reportedUserName}</span>
-                      </p>
-                    )}
-                    <p className="text-xs text-subtle leading-snug whitespace-pre-wrap">{report.body}</p>
-                    {report.proofImageUrl && (
-                      <a
-                        href={report.proofImageUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block rounded-xl border border-app overflow-hidden bg-inset max-w-xs"
-                      >
-                        <ListingImage
-                          src={report.proofImageUrl}
-                          alt="Report proof"
-                          width={480}
-                          className="w-full max-h-48 object-contain"
-                        />
-                        <span className="text-[10px] text-accent font-semibold px-2 py-1 block">
-                          View screenshot proof
-                        </span>
-                      </a>
-                    )}
-                    {report.status === 'new' && (
-                      <button
-                        type="button"
-                        onClick={() => void handleMarkReportReviewed(report.id)}
-                        className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-                      >
-                        Mark reviewed
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-        </FullScreenPanel>
-      )}
-
       {editUser && (
         <FullScreenPanel
           nested
@@ -784,7 +653,6 @@ export default function StaffModerationPanel({
         {canBan && ' · ban'}
         {canEdit && ' · edit'}
         {canAudit && ' · audit log'}
-        {canReports && ' · reports'}
         {!canBan && canSuspend && ' (moderators: view + suspend only)'}
       </p>
     </div>

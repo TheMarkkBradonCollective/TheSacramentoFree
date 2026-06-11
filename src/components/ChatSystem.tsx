@@ -23,6 +23,7 @@ import {
   isStaffCommunityChat,
   communityChatTitle,
   communityChatSubtitle,
+  GROUP_CHATS_SECTION_LABEL,
 } from '../lib/communityChats';
 import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
 import SupportTicketRow from './SupportTicketRow';
@@ -30,6 +31,7 @@ import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatSectionEmptyState from './ChatSectionEmptyState';
+import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
 import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import {
@@ -65,6 +67,8 @@ interface ChatSystemProps {
   onClearInitialSupportTicket?: () => void;
   initialChatSupportView?: 'list' | 'new' | null;
   onClearInitialChatSupportView?: () => void;
+  initialChatFeedbackPanel?: ChatFeedbackPanel;
+  onClearInitialChatFeedbackPanel?: () => void;
   pendingChatCompose?: PendingChatCompose | null;
   onClearPendingChatCompose?: () => void;
   items: ItemPost[];
@@ -85,6 +89,8 @@ export default function ChatSystem({
   onClearInitialSupportTicket,
   initialChatSupportView = null,
   onClearInitialChatSupportView,
+  initialChatFeedbackPanel = null,
+  onClearInitialChatFeedbackPanel,
   pendingChatCompose = null,
   onClearPendingChatCompose,
   items,
@@ -874,7 +880,7 @@ export default function ChatSystem({
           {communityChats.length > 0 && (
             <div className="border-b border-app">
               <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide">
-                Community
+                {GROUP_CHATS_SECTION_LABEL}
               </div>
               {communityChats.map((chat) => {
                 const isSelected = selectedChat?.id === chat.id && !supportView;
@@ -915,6 +921,12 @@ export default function ChatSystem({
               })}
             </div>
           )}
+
+          <ChatFeedbackSection
+            userProfile={userProfile}
+            initialPanel={initialChatFeedbackPanel}
+            onClearInitialPanel={onClearInitialChatFeedbackPanel}
+          />
 
           <div className="border-b border-app">
             <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">

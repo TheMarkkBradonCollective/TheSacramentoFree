@@ -209,11 +209,11 @@ export const IN_APP = {
   postEventButton: 'Post Event',
   chatsTitle: 'Chat',
   chatsDescription:
-    'Community chat, support tickets, and direct messages — coordinate pickups and get help from staff.',
+    'Group chats, reviews, support, and direct messages — coordinate pickups and get help from staff.',
   profileTitle: 'Your Community Profile',
-  menuTitle: 'Community hub',
-  menuDescription: 'App updates, announcements, reviews, and safety reports.',
-  menuTabLabel: 'Community',
+  menuTitle: 'Neighbor hub',
+  menuDescription: 'App updates, announcements, and staff tools.',
+  menuTabLabel: 'Hub',
   accountTabLabel: 'Account',
   onboardingTitle: 'Join Sacramento Buy Nothing',
   onboardingBody:
