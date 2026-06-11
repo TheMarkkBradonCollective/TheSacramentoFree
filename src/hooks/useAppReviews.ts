@@ -41,6 +41,14 @@ export function useAppReviews(userProfile?: UserProfile | null, blockedUserIds: 
     [visibleReviews, userProfile],
   );
 
+  const otherReviews = useMemo(
+    () =>
+      userProfile
+        ? visibleReviews.filter((review) => review.userId !== userProfile.uid)
+        : visibleReviews,
+    [visibleReviews, userProfile],
+  );
+
   const averageRating = useMemo(() => {
     if (visibleReviews.length === 0) return 0;
     const sum = visibleReviews.reduce((acc, r) => acc + r.rating, 0);
@@ -87,6 +95,7 @@ export function useAppReviews(userProfile?: UserProfile | null, blockedUserIds: 
 
   return {
     reviews: visibleReviews,
+    otherReviews,
     loading,
     averageRating,
     myReview,
