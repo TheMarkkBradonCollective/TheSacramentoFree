@@ -19,16 +19,19 @@ export function isCommunityChat(chatId: string): boolean {
 }
 
 export function communityChatTitle(chatId: string): string {
-  if (isGlobalCommunityChat(chatId)) return 'Community chat';
-  if (isStaffCommunityChat(chatId)) return 'Staff chat';
+  if (isGlobalCommunityChat(chatId)) return 'All neighbors';
+  if (isStaffCommunityChat(chatId)) return 'Staff lounge';
   return 'Chat';
 }
 
 export function communityChatSubtitle(chatId: string): string {
-  if (isGlobalCommunityChat(chatId)) return 'All neighbors — say hello and share local tips';
+  if (isGlobalCommunityChat(chatId)) return 'Public group — say hello and share local tips';
   if (isStaffCommunityChat(chatId)) return 'Staff only — team coordination';
   return '';
 }
+
+/** Sidebar section label for pinned group channels (not DMs). */
+export const GROUP_CHATS_SECTION_LABEL = 'Group chats';
 
 export function buildGlobalCommunityChatRow(lastMessageAt = ''): Chat {
   return {

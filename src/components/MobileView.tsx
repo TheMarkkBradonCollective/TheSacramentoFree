@@ -46,8 +46,8 @@ interface MobileViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
-  initialStaffPanel?: 'reports' | null;
-  onClearInitialStaffPanel?: () => void;
+  initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
+  onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;
   initialChatSupportView?: 'list' | 'new' | null;
@@ -94,8 +94,8 @@ export default function MobileView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
-  initialStaffPanel = null,
-  onClearInitialStaffPanel,
+  initialChatFeedbackPanel = null,
+  onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
   onClearInitialSupportTicket,
   initialChatSupportView = null,
@@ -262,6 +262,8 @@ export default function MobileView({
             onClearInitialSupportTicket={onClearInitialSupportTicket}
             initialChatSupportView={initialChatSupportView}
             onClearInitialChatSupportView={onClearInitialChatSupportView}
+            initialChatFeedbackPanel={initialChatFeedbackPanel}
+            onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel}
             pendingChatCompose={pendingChatCompose}
             onClearPendingChatCompose={onClearPendingChatCompose}
             items={items}
@@ -310,8 +312,6 @@ export default function MobileView({
             <CommunityMenuView
               userProfile={userProfile}
               onViewProfile={onViewProfile}
-              initialStaffPanel={initialStaffPanel}
-              onClearInitialStaffPanel={onClearInitialStaffPanel}
               scrollToDirectorOverview={scrollToDirectorOverview}
               onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               fullBleed

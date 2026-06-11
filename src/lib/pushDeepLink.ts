@@ -9,6 +9,7 @@ export interface PushDeepLinkTarget {
   notifications?: boolean;
   notificationsTab?: 'announcements' | 'updates' | 'notifications' | 'alerts' | 'listings';
   staffPanel?: 'tickets' | 'reports';
+  chatFeedbackPanel?: 'reviews' | 'report' | 'staffReports';
   /** @deprecated tickets — opens Messages → Support inbox */
   directorOverview?: boolean;
   supportTicketId?: string;
@@ -34,7 +35,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (path === 'help/announcements') return { notificationsTab: 'announcements' };
   if (path === 'profile') return { tab: 'profile', profile: true };
   if (path === 'staff/tickets') return { tab: 'chats', chatSupportView: 'list' };
-  if (path === 'staff/reports') return { tab: 'menu', staffPanel: 'reports' };
+  if (path === 'staff/reports') return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
   if (path === 'director/overview') return { tab: 'menu', directorOverview: true };
 
   const listingMatch = path.match(/^listing\/([^/]+)/);
