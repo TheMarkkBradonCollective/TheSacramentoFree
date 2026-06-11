@@ -36,7 +36,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (path === 'profile') return { tab: 'profile', profile: true };
   if (path === 'staff/tickets') return { tab: 'chats', chatSupportView: 'list' };
   if (path === 'staff/reports') return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
-  if (path === 'director/overview') return { tab: 'menu', directorOverview: true };
+  if (path === 'director/overview') return { tab: 'profile', directorOverview: true };
 
   const listingMatch = path.match(/^listing\/([^/]+)/);
   if (listingMatch) return { tab: 'feed', listingId: listingMatch[1] };

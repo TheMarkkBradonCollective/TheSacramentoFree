@@ -5,8 +5,7 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import CommunityMenuView from './CommunityMenuView';
-import { Map, List, MessageSquare, User, Plus, LogOut, LifeBuoy, CalendarDays } from 'lucide-react';
+import { Map, List, MessageSquare, User, Plus, LogOut, CalendarDays } from 'lucide-react';
 import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
@@ -61,7 +60,6 @@ const NAV_ITEMS = [
   { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: List },
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
-  { id: 'menu' as const, label: IN_APP.menuTabLabel, icon: LifeBuoy },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ];
 
@@ -293,24 +291,6 @@ export default function MobileView({
               onUpdateProfile={onUpdateProfile}
               onProfilePhotoSaved={onRefresh}
               onDeleteAccount={onDeleteAccount}
-              fullBleed
-            />
-            <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
-          </div>
-        </div>
-
-        <div
-          className={`h-full w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none bg-app ${activeTab === 'menu' ? '' : 'hidden'}`}
-          id="mobile_menu_dock"
-          aria-hidden={activeTab !== 'menu'}
-        >
-          <div className="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden">
-            <div className="sbn-page-header px-4 pt-4 pb-2">
-              <h2>{IN_APP.menuTitle}</h2>
-              <p className="text-sm text-muted mt-1">{IN_APP.menuDescription}</p>
-            </div>
-            <CommunityMenuView
-              userProfile={userProfile}
               onViewProfile={onViewProfile}
               scrollToDirectorOverview={scrollToDirectorOverview}
               onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
@@ -322,7 +302,7 @@ export default function MobileView({
       </main>
 
       <footer id="mobile_sticky_footer_nav" className="sbn-mobile-nav">
-        <div className="grid grid-cols-6 h-[4.25rem] px-0.5">
+        <div className="grid grid-cols-5 h-[4.25rem] px-0.5">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}

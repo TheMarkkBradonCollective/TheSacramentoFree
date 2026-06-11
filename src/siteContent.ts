@@ -211,9 +211,6 @@ export const IN_APP = {
   chatsDescription:
     'Group chats, reviews, support, and direct messages — coordinate pickups and get help from staff.',
   profileTitle: 'Your Community Profile',
-  menuTitle: 'Neighbor hub',
-  menuDescription: 'App updates, announcements, and staff tools.',
-  menuTabLabel: 'Hub',
   accountTabLabel: 'Account',
   onboardingTitle: 'Join Sacramento Buy Nothing',
   onboardingBody:

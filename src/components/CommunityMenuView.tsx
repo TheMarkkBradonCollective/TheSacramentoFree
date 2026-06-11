@@ -12,6 +12,7 @@ interface CommunityMenuViewProps {
   fullBleed?: boolean;
 }
 
+/** Director overview and staff tools — shown on the Account tab. */
 export default function CommunityMenuView({
   userProfile,
   onViewProfile,
@@ -19,33 +20,32 @@ export default function CommunityMenuView({
   onClearScrollToDirectorOverview,
   fullBleed = false,
 }: CommunityMenuViewProps) {
-  const sectionShell = fullBleed ? 'px-4 py-5 border-t border-app/40' : '';
   const isStaff = canAccessStaffDirectory(userProfile.role);
   const isDirector = canViewDirectorOverview(userProfile.role);
 
+  if (!isStaff && !isDirector) {
+    return null;
+  }
+
+  const sectionShell = fullBleed ? 'px-4 py-5 border-t border-app/40' : '';
+
   return (
-    <div className={`${fullBleed ? 'pb-6' : 'space-y-6'} min-w-0 w-full overflow-x-hidden`}>
-      {!isStaff && !isDirector ? (
+    <div className={`${fullBleed ? 'pb-2' : 'space-y-6'} min-w-0 w-full overflow-x-hidden`}>
+      {isDirector ? (
         <div className={fullBleed ? sectionShell : ''}>
-          <p className="text-sm text-muted leading-relaxed">
-            Reviews and safety reports are in <span className="font-semibold text-app">Chat</span>. News and
-            announcements are in the <span className="font-semibold text-app">bell</span> (top right).
-          </p>
+          <AccountHelpSection
+            user={userProfile}
+            scrollToDirectorOverview={scrollToDirectorOverview}
+            onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+          />
         </div>
       ) : null}
-      <div className={fullBleed ? sectionShell : ''}>
-        <AccountHelpSection
-          user={userProfile}
-          scrollToDirectorOverview={scrollToDirectorOverview}
-          onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
-        />
-      </div>
 
-      {isStaff && (
+      {isStaff ? (
         <div className={fullBleed ? `${sectionShell} border-t-0` : ''}>
           <StaffModerationPanel viewer={userProfile} onViewProfile={onViewProfile} />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

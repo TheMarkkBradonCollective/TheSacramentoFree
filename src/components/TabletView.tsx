@@ -5,8 +5,7 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import CommunityMenuView from './CommunityMenuView';
-import { List, MessageSquare, User, Plus, LogOut, Map, LifeBuoy, CalendarDays } from 'lucide-react';
+import { List, MessageSquare, User, Plus, LogOut, Map, CalendarDays } from 'lucide-react';
 import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import BrandLogo from './BrandLogo';
@@ -61,7 +60,6 @@ const TABS = [
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'chats' as const, label: 'Messages', icon: MessageSquare },
-  { id: 'menu' as const, label: IN_APP.menuTabLabel, icon: LifeBuoy },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ];
 
@@ -263,20 +261,6 @@ export default function TabletView({
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
                 onDeleteAccount={onDeleteAccount}
-              />
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'menu' && (
-          <div className="space-y-4" id="tablet_menu_pane">
-            <div className="sbn-page-header">
-              <h2>{IN_APP.menuTitle}</h2>
-              <p>{IN_APP.menuDescription}</p>
-            </div>
-            <div className="sbn-card p-6">
-              <CommunityMenuView
-                userProfile={userProfile}
                 onViewProfile={onViewProfile}
                 scrollToDirectorOverview={scrollToDirectorOverview}
                 onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}

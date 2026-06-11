@@ -20,7 +20,6 @@ const TABS: { id: AppTab; label: string }[] = [
   { id: 'feed', label: IN_APP.feedTabLabel },
   { id: 'events', label: IN_APP.eventsTabLabel },
   { id: 'chats', label: 'Messages' },
-  { id: 'menu', label: IN_APP.menuTabLabel },
   { id: 'profile', label: IN_APP.accountTabLabel },
 ];
 

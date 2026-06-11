@@ -25,6 +25,7 @@ import {
   Camera,
 } from 'lucide-react';
 import ProfilePostList from './ProfilePostList';
+import CommunityMenuView from './CommunityMenuView';
 import { IN_APP } from '../siteContent';
 
 interface UserProfileViewProps {
@@ -36,6 +37,9 @@ interface UserProfileViewProps {
   /** Refresh feed/listings after avatar is saved */
   onProfilePhotoSaved?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
+  onViewProfile?: (userId: string) => void;
+  scrollToDirectorOverview?: boolean;
+  onClearScrollToDirectorOverview?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
   fullBleed?: boolean;
 }
@@ -54,6 +58,9 @@ export default function UserProfileView({
   onUpdateProfile,
   onProfilePhotoSaved,
   onDeleteAccount,
+  onViewProfile,
+  scrollToDirectorOverview,
+  onClearScrollToDirectorOverview,
   fullBleed = false,
 }: UserProfileViewProps) {
   const [displayName, setDisplayName] = useState(userProfile.displayName);
@@ -577,6 +584,16 @@ export default function UserProfileView({
           </div>
         </div>
       </div>
+
+      {onViewProfile ? (
+        <CommunityMenuView
+          userProfile={userProfile}
+          onViewProfile={onViewProfile}
+          scrollToDirectorOverview={scrollToDirectorOverview}
+          onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+          fullBleed={fullBleed}
+        />
+      ) : null}
 
       {onDeleteAccount && (
         <div
