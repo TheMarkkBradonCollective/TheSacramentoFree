@@ -48,8 +48,6 @@ interface MobileViewProps {
   onOpenGoFundMe?: () => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
-  initialHelpPanel?: 'announcements' | null;
-  onClearInitialHelpPanel?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;
   initialChatSupportView?: 'list' | 'new' | null;
@@ -98,8 +96,6 @@ export default function MobileView({
   onOpenGoFundMe,
   initialStaffPanel = null,
   onClearInitialStaffPanel,
-  initialHelpPanel = null,
-  onClearInitialHelpPanel,
   initialSupportTicketId = null,
   onClearInitialSupportTicket,
   initialChatSupportView = null,
@@ -316,8 +312,6 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               initialStaffPanel={initialStaffPanel}
               onClearInitialStaffPanel={onClearInitialStaffPanel}
-              initialHelpPanel={initialHelpPanel}
-              onClearInitialHelpPanel={onClearInitialHelpPanel}
               scrollToDirectorOverview={scrollToDirectorOverview}
               onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               fullBleed

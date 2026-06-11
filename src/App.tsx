@@ -113,7 +113,6 @@ export default function App() {
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [initialStaffPanel, setInitialStaffPanel] = useState<'tickets' | 'reports' | null>(null);
-  const [initialHelpPanel, setInitialHelpPanel] = useState<'announcements' | null>(null);
   const [initialSupportTicketId, setInitialSupportTicketId] = useState<string | null>(null);
   const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
@@ -829,9 +828,6 @@ export default function App() {
       } else if (target.notifications) {
         openNotificationsHub('notifications');
       }
-      if (target.helpPanel) {
-        setInitialHelpPanel(target.helpPanel);
-      }
       if (target.directorOverview) {
         setScrollToDirectorOverview(true);
       }
@@ -971,8 +967,6 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
-                  initialHelpPanel={initialHelpPanel}
-                  onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
                   onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
                   initialChatSupportView={initialChatSupportView}
@@ -1015,8 +1009,6 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
-                  initialHelpPanel={initialHelpPanel}
-                  onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
                   onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
                   initialChatSupportView={initialChatSupportView}
@@ -1059,8 +1051,6 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   initialStaffPanel={initialStaffPanel}
                   onClearInitialStaffPanel={() => setInitialStaffPanel(null)}
-                  initialHelpPanel={initialHelpPanel}
-                  onClearInitialHelpPanel={() => setInitialHelpPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
                   onClearInitialSupportTicket={() => setInitialSupportTicketId(null)}
                   initialChatSupportView={initialChatSupportView}

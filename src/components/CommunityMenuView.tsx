@@ -13,8 +13,6 @@ interface CommunityMenuViewProps {
   onViewProfile: (userId: string) => void;
   initialStaffPanel?: 'tickets' | 'reports' | null;
   onClearInitialStaffPanel?: () => void;
-  initialHelpPanel?: 'announcements' | null;
-  onClearInitialHelpPanel?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
@@ -26,8 +24,6 @@ export default function CommunityMenuView({
   onViewProfile,
   initialStaffPanel = null,
   onClearInitialStaffPanel,
-  initialHelpPanel = null,
-  onClearInitialHelpPanel,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
   fullBleed = false,
@@ -93,8 +89,6 @@ export default function CommunityMenuView({
           user={userProfile}
           scrollToDirectorOverview={scrollToDirectorOverview}
           onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
-          initialHelpPanel={initialHelpPanel}
-          onClearInitialHelpPanel={onClearInitialHelpPanel}
         />
       </div>
 

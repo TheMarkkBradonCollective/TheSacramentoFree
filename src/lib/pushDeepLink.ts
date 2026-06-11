@@ -7,8 +7,7 @@ export interface PushDeepLinkTarget {
   requestId?: string;
   profile?: boolean;
   notifications?: boolean;
-  notificationsTab?: 'notifications' | 'updates';
-  helpPanel?: 'announcements';
+  notificationsTab?: 'announcements' | 'updates' | 'notifications';
   staffPanel?: 'tickets' | 'reports';
   directorOverview?: boolean;
   supportTicketId?: string;
@@ -30,7 +29,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
 
   if (path === 'notifications') return { notificationsTab: 'notifications' };
   if (path === 'updates') return { notificationsTab: 'updates' };
-  if (path === 'help/announcements') return { tab: 'menu', helpPanel: 'announcements' };
+  if (path === 'help/announcements') return { notificationsTab: 'announcements' };
   if (path === 'profile') return { tab: 'profile', profile: true };
   if (path === 'staff/tickets') return { tab: 'menu', staffPanel: 'tickets' };
   if (path === 'staff/reports') return { tab: 'menu', staffPanel: 'reports' };
