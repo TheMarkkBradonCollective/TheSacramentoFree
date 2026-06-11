@@ -8,6 +8,7 @@ import {
   setSupabaseEventRsvp,
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 export interface EventRsvpState {
   userRsvp: EventRsvpStatus | null;
@@ -25,6 +26,7 @@ export function useEventsEngagement(
   const [eventComments, setEventComments] = useState<Record<string, EventComment[]>>({});
 
   const uid = userProfile?.uid ?? '';
+  const { confirm } = useConfirm();
   const eventIdSetRef = useRef(new Set<string>());
 
   const getRsvpsForEvent = useCallback(
@@ -222,7 +224,12 @@ export function useEventsEngagement(
 
   const handleDeleteComment = async (eventId: string, commentId: string) => {
     if (!uid) return;
-    if (!confirm('Remove your comment?')) return;
+    const confirmed = await confirm({
+      message: 'Remove your comment?',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     const current = getCommentsForEvent(eventId);
     const next = current.filter((c) => c.id !== commentId);

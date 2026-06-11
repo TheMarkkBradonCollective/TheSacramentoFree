@@ -21,6 +21,7 @@ import {
   communityChatSubtitle,
 } from '../lib/communityChats';
 import { canDeleteChatMessage, isStaffRole } from '../lib/roles';
+import { useConfirm } from '../contexts/ConfirmContext';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
@@ -100,6 +101,7 @@ export default function ChatSystem({
   const [errorMsg, setErrorMsg] = useState('');
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const userIsStaff = isStaffRole(userProfile.role);
+  const { confirm } = useConfirm();
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -392,10 +394,12 @@ export default function ChatSystem({
     if (!canDeleteChatMessage(userProfile, message, selectedChat.id)) return;
 
     const isOwn = message.senderId === userProfile.uid;
-    const prompt = isOwn
-      ? 'Remove your message?'
-      : 'Remove this message from community chat?';
-    if (!confirm(prompt)) return;
+    const confirmed = await confirm({
+      message: isOwn ? 'Remove your message?' : 'Remove this message from community chat?',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     setDeletingMessageId(message.id);
     setErrorMsg('');
@@ -491,13 +495,11 @@ export default function ChatSystem({
     const helperName =
       selectedChat.participantNames[helperUserId] || getRecipientInfo(selectedChat).otherName;
 
-    if (
-      !confirm(
-        `Mark this request as fulfilled with help from ${helperName}? They get credit for giving an item, and you get +1 Items claimed.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      message: `Mark this request as fulfilled with help from ${helperName}? They get credit for giving an item, and you get +1 Items claimed.`,
+      confirmLabel: 'Mark fulfilled',
+    });
+    if (!confirmed) return;
 
     setIsSending(true);
     setErrorMsg('');

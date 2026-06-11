@@ -6,6 +6,7 @@ import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityConte
 import StarRating from './StarRating';
 import ContentVoteButtons from './ContentVoteButtons';
 import HorizontalSnapRow, { SnapSlide } from './HorizontalSnapRow';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface CommunityReviewsProps {
   userProfile?: UserProfile | null;
@@ -101,6 +102,7 @@ export default function CommunityReviews({
   const [text, setText] = useState(myReview?.text || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const { confirm } = useConfirm();
 
   useEffect(() => {
     if (myReview) {
@@ -223,7 +225,12 @@ export default function CommunityReviews({
                     type="button"
                     className="sbn-btn sbn-btn-secondary sbn-btn-sm text-red-400"
                     onClick={async () => {
-                      if (!confirm('Remove your review?')) return;
+                      const confirmed = await confirm({
+                        message: 'Remove your review?',
+                        confirmLabel: 'Remove',
+                        variant: 'danger',
+                      });
+                      if (!confirmed) return;
                       await removeMyReview();
                       setText('');
                       setRating(5);

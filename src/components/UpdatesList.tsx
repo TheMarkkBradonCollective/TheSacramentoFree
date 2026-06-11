@@ -6,6 +6,7 @@ import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
 import ContentVoteButtons from './ContentVoteButtons';
 import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface UpdatesListProps {
   userProfile?: UserProfile | null;
@@ -40,6 +41,7 @@ export default function UpdatesList({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingUpdate, setEditingUpdate] = useState<AppUpdateRecord | null>(null);
   const [creating, setCreating] = useState(false);
+  const { confirm } = useConfirm();
   const signedIn = Boolean(userProfile);
 
   const emptyDraft = (): AppUpdateInput => ({
@@ -126,7 +128,12 @@ export default function UpdatesList({
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!confirm('Delete this update?')) return;
+                            const confirmed = await confirm({
+                              message: 'Delete this update?',
+                              confirmLabel: 'Delete',
+                              variant: 'danger',
+                            });
+                            if (!confirmed) return;
                             await removeUpdate(update.id);
                           }}
                           className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset"

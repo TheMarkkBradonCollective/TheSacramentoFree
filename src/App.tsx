@@ -56,6 +56,7 @@ import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 import PushNotificationCelebration from './components/PushNotificationCelebration';
+import { useConfirm } from './contexts/ConfirmContext';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -117,6 +118,7 @@ export default function App() {
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
+  const { confirm, alert } = useConfirm();
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
   const visibleItems = useMemo(
     () => items.filter((item) => !blockedUserIds.has(item.userId)),
@@ -707,7 +709,12 @@ export default function App() {
     async (post: ItemPost) => {
       if (!userProfile || post.userId !== userProfile.uid || post.status !== 'withdrawn') return;
 
-      const confirmed = confirm(`Permanently delete "${post.title}"? This cannot be undone.`);
+      const confirmed = await confirm({
+        title: 'Delete listing',
+        message: `Permanently delete "${post.title}"? This cannot be undone.`,
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      });
       if (!confirmed) return;
 
       setDetailUpdating(true);
@@ -726,7 +733,7 @@ export default function App() {
         setDetailUpdating(false);
       }
     },
-    [userProfile, detailItem?.id, loadItems],
+    [userProfile, detailItem?.id, loadItems, confirm],
   );
 
   const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
@@ -750,9 +757,13 @@ export default function App() {
 
   const handleDeleteAccount = async () => {
     if (!userProfile) return;
-    const confirmed = confirm(
-      'Permanently delete your account? All your listings, comments, messages, and profile data will be removed. This cannot be undone.',
-    );
+    const confirmed = await confirm({
+      title: 'Delete account',
+      message:
+        'Permanently delete your account? All your listings, comments, messages, and profile data will be removed. This cannot be undone.',
+      confirmLabel: 'Delete account',
+      variant: 'danger',
+    });
     if (!confirmed) return;
 
     const result = await deleteOwnAccount();
@@ -1139,12 +1150,22 @@ export default function App() {
                     setDetailEvent(null);
                   }}
                   onCancel={async () => {
-                    if (!confirm('Cancel this event? Neighbors will see it as cancelled.')) return;
+                    const confirmed = await confirm({
+                      message: 'Cancel this event? Neighbors will see it as cancelled.',
+                      confirmLabel: 'Cancel event',
+                      variant: 'danger',
+                    });
+                    if (!confirmed) return;
                     setDetailEventUpdating(true);
                     const result = await cancelSupabaseEvent(detailEvent.id, userProfile.uid);
                     setDetailEventUpdating(false);
                     if (result.ok) void loadEvents(true);
-                    else alert(result.errorMessage || 'Could not cancel event.');
+                    else {
+                      await alert({
+                        title: 'Could not cancel event',
+                        message: result.errorMessage || 'Could not cancel event.',
+                      });
+                    }
                   }}
                   onViewProfile={handleViewProfile}
                   updating={detailEventUpdating}

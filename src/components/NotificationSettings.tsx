@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Bell, BellOff, MapPin } from 'lucide-react';
+import DirectorBroadcastTestModal from './DirectorBroadcastTestModal';
 import {
   ITEM_CATEGORIES,
   ISO_CATEGORIES,
@@ -210,11 +212,13 @@ export default function NotificationSettings({
     savePreferences,
     discardPreferenceChanges,
     sendTestNotification,
-    sendBroadcastTestNotification,
+    runBroadcastTest,
     isTesting,
     isBroadcastTesting,
     testMessage,
   } = usePushNotifications(userId);
+
+  const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
 
   const shell = fullBleed
     ? 'border-b border-app px-4 py-6 bg-surface'
@@ -367,7 +371,7 @@ export default function NotificationSettings({
             {isDirectorRole(userRole) && (
               <button
                 type="button"
-                onClick={() => void sendBroadcastTestNotification()}
+                onClick={() => setBroadcastModalOpen(true)}
                 disabled={isTesting || isBroadcastTesting || isLoading}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/40 bg-amber-500/10 text-sm font-bold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
               >
@@ -378,11 +382,16 @@ export default function NotificationSettings({
         )}
       </div>
 
-      {isDirectorRole(userRole) && isSubscribed && (
-        <p className="text-[11px] text-muted mb-4 -mt-2">
-          <strong className="text-app">Director:</strong> &quot;Test all users&quot; lets you type the title and message
-          (defaults: SacramentoBuyNothing / This is a test notification!) before sending to every subscribed device.
-        </p>
+      {broadcastModalOpen && (
+        <DirectorBroadcastTestModal
+          sending={isBroadcastTesting}
+          onClose={() => setBroadcastModalOpen(false)}
+          onSend={(payload) => {
+            void runBroadcastTest(payload).then((ok) => {
+              if (ok) setBroadcastModalOpen(false);
+            });
+          }}
+        />
       )}
 
       {testMessage && (

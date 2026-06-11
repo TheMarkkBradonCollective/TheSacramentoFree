@@ -499,41 +499,18 @@ export async function sendTestPushNotification(): Promise<{
   }
 }
 
-const DIRECTOR_BROADCAST_DEFAULT_TITLE = 'SacramentoBuyNothing';
-const DIRECTOR_BROADCAST_DEFAULT_BODY = 'This is a test notification!';
+export const DIRECTOR_BROADCAST_DEFAULT_TITLE = 'SacramentoBuyNothing';
+export const DIRECTOR_BROADCAST_DEFAULT_BODY = 'This is a test notification!';
 
-function promptDirectorBroadcastMessage(): { title: string; body: string } | null {
-  const titleRaw = window.prompt('Notification title:', DIRECTOR_BROADCAST_DEFAULT_TITLE);
-  if (titleRaw === null) return null;
-
-  const bodyRaw = window.prompt('Notification message:', DIRECTOR_BROADCAST_DEFAULT_BODY);
-  if (bodyRaw === null) return null;
-
-  return {
-    title: titleRaw.trim() || DIRECTOR_BROADCAST_DEFAULT_TITLE,
-    body: bodyRaw.trim() || DIRECTOR_BROADCAST_DEFAULT_BODY,
-  };
-}
-
-export async function sendDirectorBroadcastTest(): Promise<{
+export async function sendDirectorBroadcastTest(params: {
+  title: string;
+  body: string;
+}): Promise<{
   ok: boolean;
-  cancelled?: boolean;
   errorMessage?: string;
   sent?: number;
   userCount?: number;
 }> {
-  const confirmed = window.confirm(
-    'Send a test notification to EVERY neighbor with push enabled?\n\nThis alerts all subscribed devices across the community — not just yours.',
-  );
-  if (!confirmed) {
-    return { ok: false, cancelled: true };
-  }
-
-  const message = promptDirectorBroadcastMessage();
-  if (!message) {
-    return { ok: false, cancelled: true };
-  }
-
   const token = await getAccessToken();
   if (!token) {
     return { ok: false, errorMessage: 'Sign in as director to run a broadcast test.' };
@@ -546,7 +523,7 @@ export async function sendDirectorBroadcastTest(): Promise<{
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ confirm: true, title: message.title, body: message.body }),
+      body: JSON.stringify({ confirm: true, title: params.title, body: params.body }),
     });
     const json = await readJsonResponse(res);
     const serverError =

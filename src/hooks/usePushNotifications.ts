@@ -233,13 +233,12 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     return result.ok;
   }, []);
 
-  const sendBroadcastTestNotification = useCallback(async () => {
+  const runBroadcastTest = useCallback(async (params: { title: string; body: string }) => {
     setIsBroadcastTesting(true);
     setError('');
     setTestMessage('');
-    const result = await sendDirectorBroadcastTest();
+    const result = await sendDirectorBroadcastTest(params);
     setIsBroadcastTesting(false);
-    if (result.cancelled) return false;
     if (result.ok) {
       const devices = result.sent ?? 0;
       const neighbors = result.userCount ?? 0;
@@ -294,7 +293,7 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     savePreferences,
     discardPreferenceChanges,
     sendTestNotification,
-    sendBroadcastTestNotification,
+    runBroadcastTest,
     isTesting,
     isBroadcastTesting,
     testMessage,

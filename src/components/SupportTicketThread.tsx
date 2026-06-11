@@ -11,6 +11,7 @@ import ListingImage from './ListingImage';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface SupportTicketThreadProps {
   ticket: SupportTicket;
@@ -33,6 +34,7 @@ export default function SupportTicketThread({
   const [closing, setClosing] = useState(false);
   const [err, setErr] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { confirm } = useConfirm();
 
   const canAccess = canViewerAccessTicket(viewer, ticket);
   const isOpen = ticket.status === 'open';
@@ -111,7 +113,11 @@ export default function SupportTicketThread({
   };
 
   const handleClose = async () => {
-    if (!confirm('Close this ticket? You can open a new one later if you still need help.')) return;
+    const confirmed = await confirm({
+      message: 'Close this ticket? You can open a new one later if you still need help.',
+      confirmLabel: 'Close ticket',
+    });
+    if (!confirmed) return;
     setClosing(true);
     setErr('');
     const result = await closeSupportTicket({ ticketId: ticket.id, user: viewer });

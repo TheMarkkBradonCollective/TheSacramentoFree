@@ -8,6 +8,7 @@ import ContentVoteButtons from './ContentVoteButtons';
 import AnnouncementComments from './AnnouncementComments';
 import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface AnnouncementsListProps {
   userProfile?: UserProfile | null;
@@ -63,6 +64,7 @@ export default function AnnouncementsList({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState<HelpAnnouncementRecord | null>(null);
   const [creating, setCreating] = useState(false);
+  const { confirm } = useConfirm();
   const signedIn = Boolean(userProfile);
 
   const emptyDraft = (): HelpAnnouncementInput => ({
@@ -160,7 +162,12 @@ export default function AnnouncementsList({
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!confirm('Delete this announcement?')) return;
+                            const confirmed = await confirm({
+                              message: 'Delete this announcement?',
+                              confirmLabel: 'Delete',
+                              variant: 'danger',
+                            });
+                            if (!confirmed) return;
                             await removeAnnouncement(announcement.id);
                           }}
                           className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset"

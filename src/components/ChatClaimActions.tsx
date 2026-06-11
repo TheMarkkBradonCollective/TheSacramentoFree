@@ -10,6 +10,7 @@ import {
 import SubItemPicker from './SubItemPicker';
 import { CheckCircle } from 'lucide-react';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface ChatClaimActionsProps {
   chatId: string;
@@ -34,6 +35,7 @@ export default function ChatClaimActions({
   const [showManualPicker, setShowManualPicker] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const { confirm } = useConfirm();
 
   const reload = useCallback(async () => {
     const [subs, reqs] = await Promise.all([
@@ -88,7 +90,11 @@ export default function ChatClaimActions({
   }
 
   const handleConfirmRequest = async (request: ItemClaimRequest) => {
-    if (!confirm(`Confirm pickup for ${request.claimerName}?`)) return;
+    const confirmed = await confirm({
+      message: `Confirm pickup for ${request.claimerName}?`,
+      confirmLabel: 'Confirm pickup',
+    });
+    if (!confirmed) return;
     setBusy(true);
     setErr('');
     const result = await confirmClaimRequest({
@@ -106,7 +112,12 @@ export default function ChatClaimActions({
   };
 
   const handleRejectRequest = async (request: ItemClaimRequest) => {
-    if (!confirm(`Decline pickup request from ${request.claimerName}?`)) return;
+    const confirmed = await confirm({
+      message: `Decline pickup request from ${request.claimerName}?`,
+      confirmLabel: 'Decline',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     setBusy(true);
     setErr('');
     const result = await rejectClaimRequest({
@@ -128,15 +139,13 @@ export default function ChatClaimActions({
         ? subitems.filter((s) => manualSelected.includes(s.id)).map((s) => s.label).join(', ')
         : linkedItem.title;
 
-    if (
-      !confirm(
-        isMulti
-          ? `Confirm this neighbor picked up: ${labels}?`
-          : 'Mark this item as claimed by the neighbor in this chat?',
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      message: isMulti
+        ? `Confirm this neighbor picked up: ${labels}?`
+        : 'Mark this item as claimed by the neighbor in this chat?',
+      confirmLabel: 'Confirm pickup',
+    });
+    if (!confirmed) return;
 
     setBusy(true);
     setErr('');

@@ -26,6 +26,7 @@ import {
   ASSIGNABLE_ROLE_OPTIONS,
 } from '../lib/roles';
 import RoleBadge from './RoleBadge';
+import { useConfirm } from '../contexts/ConfirmContext';
 import FullScreenPanel from './FullScreenPanel';
 import SupportTicketThread from './SupportTicketThread';
 import ListingImage from './ListingImage';
@@ -86,6 +87,7 @@ export default function StaffModerationPanel({
   const [editBio, setEditBio] = useState('');
   const [editRole, setEditRole] = useState<UserProfile['role']>('user');
   const [editSaving, setEditSaving] = useState(false);
+  const { confirm } = useConfirm();
 
   const canDirectory = canAccessStaffDirectory(viewer.role);
   const canAudit = canViewAuditLog(viewer.role);
@@ -235,9 +237,13 @@ export default function StaffModerationPanel({
 
     if (action.startsWith('suspend_')) {
       const days = Number(action.replace('suspend_', ''));
-      if (!confirm(`Suspend ${user.displayName} for ${days} day(s)? Their account will be disabled until then.`)) {
-        return;
-      }
+      const confirmed = await confirm({
+        title: 'Suspend neighbor',
+        message: `Suspend ${user.displayName} for ${days} day(s)? Their account will be disabled until then.`,
+        confirmLabel: 'Suspend',
+        variant: 'danger',
+      });
+      if (!confirmed) return;
       const result = await staffSuspendUser({
         actor: viewer,
         targetUserId: user.uid,
@@ -254,7 +260,11 @@ export default function StaffModerationPanel({
     }
 
     if (action === 'unsuspend') {
-      if (!confirm(`Unsuspend ${user.displayName}?`)) return;
+      const confirmed = await confirm({
+        message: `Unsuspend ${user.displayName}?`,
+        confirmLabel: 'Unsuspend',
+      });
+      if (!confirmed) return;
       const result = await staffUnsuspendUser({
         actor: viewer,
         targetUserId: user.uid,
@@ -270,7 +280,13 @@ export default function StaffModerationPanel({
     }
 
     if (action === 'ban') {
-      if (!confirm(`Ban ${user.displayName}? This disables their account until you unban them.`)) return;
+      const confirmed = await confirm({
+        title: 'Ban neighbor',
+        message: `Ban ${user.displayName}? This disables their account until you unban them.`,
+        confirmLabel: 'Ban',
+        variant: 'danger',
+      });
+      if (!confirmed) return;
       const result = await staffBanUser({
         actor: viewer,
         targetUserId: user.uid,
@@ -286,7 +302,11 @@ export default function StaffModerationPanel({
     }
 
     if (action === 'unban') {
-      if (!confirm(`Unban ${user.displayName} and restore their account?`)) return;
+      const confirmed = await confirm({
+        message: `Unban ${user.displayName} and restore their account?`,
+        confirmLabel: 'Unban',
+      });
+      if (!confirmed) return;
       const result = await staffUnbanUser({
         actor: viewer,
         targetUserId: user.uid,
@@ -302,13 +322,13 @@ export default function StaffModerationPanel({
     }
 
     if (action === 'delete_account') {
-      if (
-        !confirm(
-          `Permanently delete ${user.displayName}'s account? All their listings, comments, messages, and profile data will be removed. This cannot be undone.`,
-        )
-      ) {
-        return;
-      }
+      const confirmed = await confirm({
+        title: 'Delete account',
+        message: `Permanently delete ${user.displayName}'s account? All their listings, comments, messages, and profile data will be removed. This cannot be undone.`,
+        confirmLabel: 'Delete account',
+        variant: 'danger',
+      });
+      if (!confirmed) return;
       const result = await staffDeleteUserAccount({
         actor: viewer,
         targetUserId: user.uid,

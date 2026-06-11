@@ -6,6 +6,7 @@ import {
   getSupabaseHelpAnnouncementComments,
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 export function useHelpAnnouncementComments(
   announcementIds: string[],
@@ -16,6 +17,7 @@ export function useHelpAnnouncementComments(
     {},
   );
   const uid = userProfile?.uid ?? '';
+  const { confirm } = useConfirm();
   const announcementIdSetRef = useRef(new Set<string>());
 
   const getCommentsForAnnouncement = useCallback(
@@ -114,7 +116,12 @@ export function useHelpAnnouncementComments(
 
   const handleDeleteComment = async (announcementId: string, commentId: string) => {
     if (!uid) return;
-    if (!confirm('Remove your comment?')) return;
+    const confirmed = await confirm({
+      message: 'Remove your comment?',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     const current = getCommentsForAnnouncement(announcementId);
     const next = current.filter((comment) => comment.id !== commentId);
