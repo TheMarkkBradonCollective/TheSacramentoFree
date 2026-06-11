@@ -14,21 +14,26 @@ import {
 } from '../supabase';
 import {
   canAccessStaffDirectory,
+  canEditOwnStaffMessage,
   canStaffBan,
   canStaffEditUser,
   canStaffDeleteAccount,
   canStaffSuspend,
   canViewAuditLog,
+  canViewDirectorOverview,
   canViewStaffReports,
   ASSIGNABLE_ROLE_OPTIONS,
 } from '../lib/roles';
+import LeaderMessageEditModal from './LeaderMessageEditModal';
+import { useDirectorMessage } from '../hooks/useDirectorMessage';
+import { useStaffMessage } from '../hooks/useStaffMessage';
 import RoleBadge from './RoleBadge';
 import { useConfirm } from '../contexts/ConfirmContext';
 import FullScreenPanel from './FullScreenPanel';
 import ListingImage from './ListingImage';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { avatarImageUrl } from '../lib/imageUrl';
-import { ClipboardList, ChevronRight, Flag, Search, Shield, Users } from 'lucide-react';
+import { ClipboardList, ChevronRight, Flag, Megaphone, MessageSquareQuote, Search, Shield, Users } from 'lucide-react';
 
 const SUSPEND_DURATIONS = [
   { label: '1 day', days: 1 },
@@ -81,9 +86,19 @@ export default function StaffModerationPanel({
   const [editBio, setEditBio] = useState('');
   const [editRole, setEditRole] = useState<UserProfile['role']>('user');
   const [editSaving, setEditSaving] = useState(false);
+  const [editingDirectorMessage, setEditingDirectorMessage] = useState(false);
+  const [editingStaffMessage, setEditingStaffMessage] = useState(false);
   const { confirm } = useConfirm();
 
   const canDirectory = canAccessStaffDirectory(viewer.role);
+  const canEditDirectorMessage = canViewDirectorOverview(viewer.role);
+  const canEditStaffMessage = canEditOwnStaffMessage(viewer.role);
+  const { message: directorMessage, saveMessage: saveDirectorMessage } = useDirectorMessage(viewer);
+  const {
+    message: staffMessage,
+    saveMessage: saveStaffMessage,
+    isPublished: staffMessagePublished,
+  } = useStaffMessage(viewer);
   const canAudit = canViewAuditLog(viewer.role);
   const canReports = canViewStaffReports(viewer.role);
   const canSuspend = canStaffSuspend(viewer.role);
@@ -398,6 +413,42 @@ export default function StaffModerationPanel({
             <ChevronRight className="w-4 h-4 text-muted shrink-0" />
           </button>
         )}
+        {canEditDirectorMessage && (
+          <button
+            type="button"
+            onClick={() => setEditingDirectorMessage(true)}
+            className="sbn-help-list-item"
+          >
+            <span className="p-2 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+              <Megaphone className="w-4 h-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="font-semibold text-sm text-app block">Public welcome message</span>
+              <span className="text-[11px] text-muted">Director note on the home and reviews pages</span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+          </button>
+        )}
+        {canEditStaffMessage && staffMessage && (
+          <button
+            type="button"
+            onClick={() => setEditingStaffMessage(true)}
+            className="sbn-help-list-item"
+          >
+            <span className="p-2 rounded-lg bg-sky-500/10 text-sky-500 shrink-0">
+              <MessageSquareQuote className="w-4 h-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="font-semibold text-sm text-app block">Your team message</span>
+              <span className="text-[11px] text-muted">
+                {staffMessagePublished
+                  ? 'Live on the home and reviews pages'
+                  : 'Not published yet — tap to write yours'}
+              </span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+          </button>
+        )}
       </div>
 
       {panel === 'directory' && (
@@ -672,6 +723,60 @@ export default function StaffModerationPanel({
             </button>
           </div>
         </FullScreenPanel>
+      )}
+
+      {editingDirectorMessage && (
+        <LeaderMessageEditModal
+          editTitle="Edit director message"
+          values={{
+            name: directorMessage.directorName,
+            title: directorMessage.directorTitle,
+            headline: directorMessage.headline,
+            goal: directorMessage.goal,
+            promises: directorMessage.promises,
+            closing: directorMessage.closing,
+          }}
+          onClose={() => setEditingDirectorMessage(false)}
+          onSave={async (next) =>
+            saveDirectorMessage({
+              ...directorMessage,
+              directorName: next.name,
+              directorTitle: next.title,
+              headline: next.headline,
+              goal: next.goal,
+              promises: next.promises,
+              closing: next.closing,
+              updatedAt: new Date().toISOString(),
+            })
+          }
+        />
+      )}
+
+      {editingStaffMessage && staffMessage && (
+        <LeaderMessageEditModal
+          editTitle="Edit your team message"
+          values={{
+            name: staffMessage.staffName,
+            title: staffMessage.staffTitle,
+            headline: staffMessage.headline,
+            goal: staffMessage.goal,
+            promises: staffMessage.promises,
+            closing: staffMessage.closing,
+          }}
+          onClose={() => setEditingStaffMessage(false)}
+          onSave={async (next) =>
+            saveStaffMessage({
+              ...staffMessage,
+              staffName: next.name,
+              staffTitle: next.title,
+              headline: next.headline,
+              goal: next.goal,
+              promises: next.promises,
+              closing: next.closing,
+              updatedAt: new Date().toISOString(),
+            })
+          }
+        />
       )}
 
       <p className="text-[10px] text-muted leading-snug">
