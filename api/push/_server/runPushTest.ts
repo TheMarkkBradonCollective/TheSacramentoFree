@@ -19,8 +19,8 @@ export async function runPushTest(params: {
   }
 
   const payload = {
-    title: 'Test notification',
-    body: 'Sacramento Buy Nothing push alerts are working on this device.',
+    title: 'Welcome to SacramentoBuyNothing!',
+    body: 'Push notifications are working on this device.',
     url: '/',
     tag: `sbn-test-push-${Date.now()}`,
     eventType: 'account_update' as const,

@@ -41,8 +41,8 @@ export async function runDirectorBroadcastTest(
   }
 
   const payload = {
-    title: 'Community test notification',
-    body: 'Sacramento Buy Nothing — director broadcast test. Push alerts are working.',
+    title: 'Welcome to SacramentoBuyNothing!',
+    body: 'Push notifications are working.',
     url: '/',
     tag: `sbn-director-broadcast-${Date.now()}`,
     eventType: 'account_update' as const,
