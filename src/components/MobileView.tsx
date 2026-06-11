@@ -273,6 +273,7 @@ export default function MobileView({
             onViewProfile={onViewProfile}
             onItemsChanged={onRefresh}
             onOpenGoFundMe={onOpenGoFundMe}
+            onStartDirectMessage={() => setActiveTab('feed')}
             fullBleed
             className="h-full min-h-0"
           />
