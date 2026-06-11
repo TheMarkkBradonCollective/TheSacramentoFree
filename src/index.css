@@ -175,7 +175,11 @@ option {
 }
 
 .sbn-safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--sbn-keyboard-inset));
+}
+
+.sbn-input-tray {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
 }
 
 .sbn-btn {
@@ -649,6 +653,7 @@ button {
   --sbn-mobile-header-body-h: 3.5rem;
   --sbn-mobile-header-h: calc(var(--sbn-mobile-header-body-h) + env(safe-area-inset-top, 0px));
   --sbn-mobile-nav-h: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+  --sbn-keyboard-inset: 0px;
 }
 
 .sbn-mobile-shell {
@@ -689,6 +694,18 @@ button {
   right: 0;
   overflow: hidden;
   overflow-x: clip;
+  transition: bottom 0.12s ease-out;
+}
+
+/* Shrink the app above the virtual keyboard; hide bottom nav while typing */
+html.sbn-keyboard-open .sbn-mobile-main {
+  bottom: var(--sbn-keyboard-inset);
+}
+
+html.sbn-keyboard-open .sbn-mobile-nav {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(100%);
 }
 
 /* Mobile bottom nav */
@@ -745,7 +762,11 @@ button {
 }
 
 .safe-area-pb {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px), var(--sbn-keyboard-inset));
+}
+
+html.sbn-keyboard-open .sbn-fixed-bottom {
+  bottom: var(--sbn-keyboard-inset);
 }
 
 .no-scrollbar {
