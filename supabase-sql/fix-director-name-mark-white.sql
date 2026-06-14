@@ -1,5 +1,5 @@
 -- =========================================================
--- Fix director display name: Mark White (not Markeith)
+-- Fix director display name: Markk White (not Markeith or Mark)
 -- Run once in Supabase SQL Editor.
 -- Profile: 204b071f-100c-401d-b76d-40c594e1f132
 -- =========================================================
@@ -10,7 +10,7 @@ DECLARE
 BEGIN
   -- Profile
   UPDATE public.users
-  SET "displayName" = 'Mark White'
+  SET "displayName" = 'Markk White'
   WHERE uid = director_uid;
 
   -- Director welcome note — sync name from whoever holds the director role
@@ -22,10 +22,10 @@ BEGIN
 
   -- Staff message row if you have one
   UPDATE public.staff_messages
-  SET "staffName" = 'Mark White'
+  SET "staffName" = 'Markk White'
   WHERE "userId" = director_uid;
 
-  -- Changelog posts — Mark's uid so votes tie to the right account
+  -- Changelog posts — Markk's uid so votes tie to the right account
   UPDATE public.app_updates au
   SET
     "directorName" = u."displayName",
@@ -36,60 +36,60 @@ BEGIN
 
   -- Listings, comments, reviews
   UPDATE public.items
-  SET "userDisplayName" = 'Mark White'
+  SET "userDisplayName" = 'Markk White'
   WHERE "userId" = director_uid;
 
   UPDATE public.item_comments
-  SET "userName" = 'Mark White'
+  SET "userName" = 'Markk White'
   WHERE "userId" = director_uid;
 
   UPDATE public.app_reviews
-  SET "userName" = 'Mark White'
+  SET "userName" = 'Markk White'
   WHERE "userId" = director_uid;
 
   -- Events
   UPDATE public.community_events
-  SET "userDisplayName" = 'Mark White'
+  SET "userDisplayName" = 'Markk White'
   WHERE "userId" = director_uid;
 
   UPDATE public.event_comments
-  SET "userName" = 'Mark White'
+  SET "userName" = 'Markk White'
   WHERE "userId" = director_uid;
 
   -- Messaging
   UPDATE public.message_requests
-  SET "fromUserName" = 'Mark White'
+  SET "fromUserName" = 'Markk White'
   WHERE "fromUserId" = director_uid;
 
   UPDATE public.support_tickets
-  SET "openerName" = 'Mark White'
+  SET "openerName" = 'Markk White'
   WHERE "openerUserId" = director_uid;
 
   UPDATE public.support_ticket_messages
-  SET "senderName" = 'Mark White'
+  SET "senderName" = 'Markk White'
   WHERE "senderUserId" = director_uid;
 
   UPDATE public.user_reports
-  SET "reporterName" = 'Mark White'
+  SET "reporterName" = 'Markk White'
   WHERE "reporterUserId" = director_uid;
 
   -- Chat participant name map
   UPDATE public.chats
-  SET "participantNames" = "participantNames" || jsonb_build_object(director_uid, 'Mark White')
+  SET "participantNames" = "participantNames" || jsonb_build_object(director_uid, 'Markk White')
   WHERE "participantIds" @> to_jsonb(ARRAY[director_uid]);
 
   -- Staff announcements if you authored any
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'help_announcements') THEN
     EXECUTE format(
       'UPDATE public.help_announcements SET "authorName" = %L WHERE "postedByUserId" = %L',
-      'Mark White', director_uid
+      'Markk White', director_uid
     );
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'help_announcement_comments') THEN
     EXECUTE format(
       'UPDATE public.help_announcement_comments SET "userName" = %L WHERE "userId" = %L',
-      'Mark White', director_uid
+      'Markk White', director_uid
     );
   END IF;
 END $$;

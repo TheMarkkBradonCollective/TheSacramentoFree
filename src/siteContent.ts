@@ -173,7 +173,7 @@ export const SUPPORT = {
 
 export const DIRECTOR_MESSAGE = {
   /** Fallback until the director profile loads from the database. */
-  name: 'Director',
+  name: 'Markk White',
   title: 'Buy Nothing Director',
   headline: 'A note from your director',
   goal:
