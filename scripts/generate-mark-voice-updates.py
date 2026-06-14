@@ -27,7 +27,7 @@ ENTRY_RE = re.compile(
     r"\s*'((?:[^']|'')*)',\s*\n"
     r"\s*'((?:[^']|'')*)',\s*\n"
     r"\s*(?:NULL|'(?P<detail_quote>(?:[^']|'')*)'|\$detail\$(?P<detail_dollar>.*?)\$detail\$)\s*,\s*\n"
-    r"\s*'Mark White'",
+    r"\s*'Markeith White'",
     re.DOTALL,
 )
 
