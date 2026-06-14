@@ -1,10 +1,10 @@
-import { HelpAnnouncementComment, UserProfile } from '../types';
+import { AppUpdateComment, UserProfile } from '../types';
 import DiscussionComments from './DiscussionComments';
 
-interface AnnouncementCommentsProps {
-  announcementId: string;
+interface AppUpdateCommentsProps {
+  updateId: string;
   postedByUserId: string;
-  comments: HelpAnnouncementComment[];
+  comments: AppUpdateComment[];
   currentUserId?: string;
   userProfile?: UserProfile | null;
   onAddComment: (text: string) => void;
@@ -13,11 +13,11 @@ interface AnnouncementCommentsProps {
   onViewProfile?: (userId: string) => void;
 }
 
-export default function AnnouncementComments(props: AnnouncementCommentsProps) {
+export default function AppUpdateComments(props: AppUpdateCommentsProps) {
   return (
     <DiscussionComments
-      entityId={props.announcementId}
-      scope="announcement"
+      entityId={props.updateId}
+      scope="update"
       postedByUserId={props.postedByUserId}
       comments={props.comments}
       currentUserId={props.currentUserId}

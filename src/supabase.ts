@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
@@ -3026,6 +3026,7 @@ export async function deleteSupabaseAppUpdate(
 
   try {
     await supabase.from('community_content_votes').delete().eq('targetType', 'update').eq('targetId', id);
+    await supabase.from('app_update_comments').delete().eq('updateId', id);
     const { error } = await supabase.from('app_updates').delete().eq('id', id);
 
     if (error) {
@@ -3037,6 +3038,74 @@ export async function deleteSupabaseAppUpdate(
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete update.' };
+  }
+}
+
+export async function getSupabaseAppUpdateComments(updateIds: string[]): Promise<AppUpdateComment[]> {
+  if (!updateIds.length) return [];
+  try {
+    const { data, error } = await supabase
+      .from('app_update_comments')
+      .select('*')
+      .in('updateId', updateIds)
+      .order('createdAt', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      handleSupabaseError(error, 'app_update_comments');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []) as AppUpdateComment[];
+  } catch (err) {
+    handleSupabaseError(err, 'app_update_comments');
+    return [];
+  }
+}
+
+export async function createSupabaseAppUpdateComment(comment: AppUpdateComment): Promise<boolean> {
+  try {
+    const payload = {
+      ...comment,
+      userPhoto: sanitizePhotoUrlForDb(comment.userPhoto) ?? null,
+    };
+    const { error } = await supabase.from('app_update_comments').insert(payload);
+
+    if (error) {
+      handleSupabaseError(error, 'app_update_comments');
+      return false;
+    }
+
+    setSupabaseConfigurationState(true);
+    return true;
+  } catch (err) {
+    handleSupabaseError(err, 'app_update_comments');
+    return false;
+  }
+}
+
+export async function deleteSupabaseAppUpdateComment(
+  commentId: string,
+  userId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error, count } = await supabase
+      .from('app_update_comments')
+      .delete({ count: 'exact' })
+      .eq('id', commentId)
+      .eq('userId', userId);
+
+    if (error) {
+      handleSupabaseError(error, 'app_update_comments');
+      return { ok: false, errorMessage: error.message };
+    }
+    if (count === 0) {
+      return { ok: false, errorMessage: 'Comment not found or already removed.' };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete comment.' };
   }
 }
 
@@ -4973,6 +5042,7 @@ async function purgeUserCommunityDataClient(uid: string): Promise<void> {
 
   await supabase.from('item_votes').delete().eq('userId', uid);
   await supabase.from('item_comments').delete().eq('userId', uid);
+  await supabase.from('app_update_comments').delete().eq('userId', uid);
 
   const { data: userEvents } = await supabase.from('community_events').select('id').eq('userId', uid);
   for (const row of userEvents ?? []) {

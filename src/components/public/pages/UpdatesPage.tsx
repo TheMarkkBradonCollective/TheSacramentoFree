@@ -13,7 +13,12 @@ export default function UpdatesPage({ onRequireSignIn, userProfile }: UpdatesPag
       title="App updates"
       subtitle="What’s new in Sacramento Buy Nothing — posted by your director. Tap any update to read more."
     >
-      <UpdatesList userProfile={userProfile} onRequireSignIn={onRequireSignIn} showVotes={false} />
+      <UpdatesList
+        userProfile={userProfile}
+        onRequireSignIn={onRequireSignIn}
+        showVotes={false}
+        showComments
+      />
     </PublicPageShell>
   );
 }
