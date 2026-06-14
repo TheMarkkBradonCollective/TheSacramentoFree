@@ -1,5 +1,5 @@
 -- =========================================================
--- REWRITE ALL APP UPDATES — Mark's voice (individual entries)
+-- REWRITE ALL APP UPDATES — Markk's voice (individual entries)
 -- Paste into Supabase Dashboard → SQL → New query → Run
 --
 -- body  = short summary (collapsed)
