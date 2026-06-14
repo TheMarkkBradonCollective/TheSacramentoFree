@@ -29,3 +29,10 @@ export function formatItemFulfilledChatMessage(itemTitle: string, helperDisplayN
     `Received from ${helperDisplayName}. This request is now closed.`
   );
 }
+
+export function formatTradeCompletedChatMessage(itemTitle: string, partnerName: string): string {
+  return (
+    `✓ Trade completed for "${itemTitle}".\n` +
+    `Swapped with ${partnerName}. This trade listing is now closed.`
+  );
+}

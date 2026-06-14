@@ -1,5 +1,5 @@
 export type PostStatus = 'active' | 'pending_pickup' | 'on_hold' | 'completed' | 'withdrawn';
-export type PostType = 'giveaway' | 'looking';
+export type PostType = 'giveaway' | 'looking' | 'trade';
 export type AccountStatus = 'active' | 'suspended' | 'banned';
 
 export type NearbyRadiusMiles = 0 | 5 | 10 | 25 | 50;

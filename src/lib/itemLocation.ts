@@ -31,11 +31,17 @@ export function stripListingMetadata(description: string): string {
   return getListingDetailsText(description);
 }
 
+export function parseTradeSeeking(description: string): string | null {
+  const match = description.match(/\[TRADE_SEEKING:\s*(.+?)\]/i);
+  return match ? match[1].trim() : null;
+}
+
 export function buildListingDescription(params: {
   type: PostType;
   details: string;
   pickupNotes?: string;
   collectionMethod?: string;
+  tradeSeeking?: string;
   customCoords: { x: number; y: number } | null;
   locationIsPublic: boolean;
   pickupAddress?: string;
@@ -44,6 +50,10 @@ export function buildListingDescription(params: {
 
   if (params.type === 'looking' && params.collectionMethod) {
     parts.push(`[TRANSPORT: ${params.collectionMethod}]`, '');
+  }
+
+  if (params.type === 'trade' && params.tradeSeeking?.trim()) {
+    parts.push(`[TRADE_SEEKING: ${params.tradeSeeking.trim()}]`, '');
   }
 
   parts.push(`[DETAILS]\n${params.details.trim()}\n[/DETAILS]`);
@@ -93,6 +103,7 @@ export function formatPickupLocationMessage(item: ItemPost): string {
 export function parseItemForEditForm(item: ItemPost) {
   const full = item.description || '';
   let collectionMethod = 'Willing to pick up (I have transport)';
+  let tradeSeeking = '';
   let customCoords: { x: number; y: number } | null = null;
   let pickupAddress: string | null = null;
   const locationIsPublic = !isLocationPrivate(full);
@@ -101,6 +112,13 @@ export function parseItemForEditForm(item: ItemPost) {
   const pickupNotes = parsePickupNotes(full);
 
   let working = full;
+  if (item.type === 'trade') {
+    const tradeMatch = working.match(/^\[TRADE_SEEKING:\s*(.+?)\]\s*\n\n/s);
+    if (tradeMatch) {
+      tradeSeeking = tradeMatch[1].trim();
+      working = working.slice(tradeMatch[0].length);
+    }
+  }
   if (item.type === 'looking') {
     const transportMatch = working.match(/^\[TRANSPORT:\s*(.+?)\]\s*\n\n/s);
     if (transportMatch) {
@@ -138,6 +156,7 @@ export function parseItemForEditForm(item: ItemPost) {
     details: details.trim(),
     pickupNotes,
     collectionMethod,
+    tradeSeeking,
     customCoords,
     pickupAddress: pickupAddress || '',
     locationIsPublic,

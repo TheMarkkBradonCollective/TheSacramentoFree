@@ -1,6 +1,7 @@
 import { ArrowLeft, MapPin, MessageSquare } from 'lucide-react';
 import { ItemPost } from '../../types';
-import { canViewerSeeExactLocation } from '../../lib/itemLocation';
+import { canViewerSeeExactLocation, parseTradeSeeking } from '../../lib/itemLocation';
+import { getPostTypeBadgeClass, getPostTypeLabel } from '../../lib/postType';
 import { extractListingImageUrls, getListingDetailsText } from '../../lib/listingContent';
 import ListingPhotoGallery from '../ListingPhotoGallery';
 
@@ -14,6 +15,7 @@ export default function GuestItemDetailView({ item, onClose, onRequireSignIn }: 
   const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
   const detailsText = getListingDetailsText(item.description);
   const showExact = canViewerSeeExactLocation(item, undefined);
+  const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
 
   return (
     <div
@@ -39,13 +41,20 @@ export default function GuestItemDetailView({ item, onClose, onRequireSignIn }: 
 
         <div className="p-5 sm:p-6 space-y-5">
           <div className="flex flex-wrap gap-2">
-            <span className={`sbn-badge ${item.type === 'giveaway' ? 'sbn-badge-give' : 'sbn-badge-ask'}`}>
-              {item.type === 'giveaway' ? 'Giving' : 'Looking for'}
+            <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)}`}>
+              {getPostTypeLabel(item.type)}
             </span>
             <span className="sbn-badge">{item.category}</span>
           </div>
 
           <h2 className="font-display text-2xl font-bold text-app">{item.title}</h2>
+
+          {tradeSeeking && (
+            <p className="text-sm text-app leading-relaxed">
+              <span className="font-semibold text-purple-400">Seeking in trade: </span>
+              {tradeSeeking}
+            </p>
+          )}
 
           {detailsText && <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap">{detailsText}</p>}
 

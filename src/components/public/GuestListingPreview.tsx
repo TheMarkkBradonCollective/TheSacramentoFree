@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { AlertCircle, Eye, MapPin, Search } from 'lucide-react';
 import { ItemPost } from '../../types';
 import { stripListingMetadata } from '../../lib/itemLocation';
+import { getPostTypeBadgeClass, getPostTypeLabel } from '../../lib/postType';
 import { extractListingImageUrls } from '../../lib/listingContent';
 import ListingImage from '../ListingImage';
 import HorizontalSnapRow, { SnapSlide } from '../HorizontalSnapRow';
@@ -102,11 +103,9 @@ export default function GuestListingPreview({
                       </div>
                     )}
                     <span
-                      className={`absolute top-2 left-2 sbn-badge text-[10px] ${
-                        item.type === 'giveaway' ? 'sbn-badge-give' : 'sbn-badge-ask'
-                      }`}
+                      className={`absolute top-2 left-2 sbn-badge text-[10px] ${getPostTypeBadgeClass(item.type)}`}
                     >
-                      {item.type === 'giveaway' ? 'Giving' : 'Looking for'}
+                      {getPostTypeLabel(item.type)}
                     </span>
                   </button>
 

@@ -54,7 +54,7 @@ export const HOW_IT_WORKS = [
     step: 1,
     title: 'Create a Post',
     body: "Post an item you want to give away or something you're looking for.",
-    examples: ['OFFER: Couch in Midtown', 'ISO: Looking for baby clothes', 'CURB ALERT: Free desk outside']
+    examples: ['OFFER: Couch in Midtown', 'ISO: Looking for baby clothes', 'TRADE: Books for board games', 'CURB ALERT: Free desk outside']
   },
   {
     step: 2,
@@ -75,7 +75,13 @@ export const HOW_IT_WORKS = [
 ] as const;
 
 export const RULES = {
-  allowed: ['Free items', 'Community help', 'Requests for needed items', 'Rehoming usable goods'],
+  allowed: [
+    'Free items',
+    'Community help',
+    'Requests for needed items',
+    'Rehoming usable goods',
+    'Free item-for-item trades (no money)',
+  ],
   notAllowed: [
     'Selling',
     'Auctions',
@@ -199,7 +205,7 @@ export const IN_APP = {
   brandSubtitle: 'Neighbors helping neighbors',
   feedTabLabel: 'Stuff',
   feedTitle: 'Community Stuff',
-  feedDescription: 'Give away items, request what you need, and connect with Sacramento neighbors — 100% free.',
+  feedDescription: 'Give away items, request what you need, trade with neighbors, and connect across Sacramento — 100% free.',
   mapTitle: 'Sacramento Neighborhood Map',
   mapDescription: 'Explore free gifts and requests across Sacramento. Message neighbors to arrange porch pickup.',
   eventsTitle: 'Free Community Events',

@@ -54,7 +54,7 @@ import {
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
-import { formatItemFulfilledChatMessage } from '../lib/claims';
+import { formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import {
   markItemFulfilledFromChat,
 } from '../supabase';
@@ -585,6 +585,39 @@ export default function ChatSystem({
       setMessages(loadedMessages);
     } else {
       setErrorMsg(result.errorMessage || 'Could not mark as fulfilled.');
+    }
+  };
+
+  const handleMarkTraded = async () => {
+    if (!selectedChat) return;
+    const linkedItem = items.find((i) => i.id === selectedChat.itemId);
+    if (!linkedItem || linkedItem.userId !== userProfile.uid || linkedItem.type !== 'trade') return;
+
+    const partnerUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
+    if (!partnerUserId) {
+      setErrorMsg('Could not identify your trade partner in this chat.');
+      return;
+    }
+
+    const partnerName =
+      selectedChat.participantNames[partnerUserId] || getRecipientInfo(selectedChat).otherName;
+
+    const confirmed = await confirm({
+      message: `Mark this trade as completed with ${partnerName}?`,
+      confirmLabel: 'Mark traded',
+    });
+    if (!confirmed) return;
+
+    setIsSending(true);
+    setErrorMsg('');
+    const statusOk = await updateSupabaseItemStatus(linkedItem.id, 'completed', userProfile.uid);
+    setIsSending(false);
+
+    if (statusOk) {
+      await sendChatText(formatTradeCompletedChatMessage(linkedItem.title, partnerName));
+      onItemsChanged?.();
+    } else {
+      setErrorMsg('Could not mark trade as completed.');
     }
   };
 
@@ -1123,6 +1156,13 @@ export default function ChatSystem({
             const showRequestHoldBtn =
               !!linkedItem && !isChatDisabled && !isListingOwner && linkedItem.status === 'active';
 
+            const showMarkTradedBtn =
+              !!linkedItem &&
+              !isChatDisabled &&
+              isListingOwner &&
+              linkedItem.type === 'trade' &&
+              linkedItem.status === 'active';
+
             const showMarkClaimedBtn =
               !!linkedItem &&
               !isChatDisabled &&
@@ -1368,6 +1408,18 @@ export default function ChatSystem({
                         void getSupabaseMessages(selectedChat.id).then(setMessages);
                       }}
                     />
+                  )}
+                  {!isCommunity && showMarkTradedBtn && (
+                    <button
+                      type="button"
+                      onClick={handleMarkTraded}
+                      disabled={isSending}
+                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
+                      id="chat_mark_traded_btn"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Mark trade completed
+                    </button>
                   )}
                   {!isCommunity && showMarkFulfilledBtn && (
                     <button

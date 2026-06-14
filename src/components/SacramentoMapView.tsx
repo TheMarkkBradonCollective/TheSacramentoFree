@@ -18,12 +18,12 @@ import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight,
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import { motion, AnimatePresence } from 'motion/react';
-import L from 'leaflet';
+import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, getPostTypeMapDetailLabel, getPostTypeMapLabel, type ListingTypeFilter } from '../lib/postType';
 
 interface SacramentoMapViewProps {
   items: ItemPost[];
   userProfile: UserProfile;
-  selectedType?: 'all' | 'giveaway' | 'looking';
+  selectedType?: ListingTypeFilter;
   selectedCategory?: string;
   selectedNeighborhood?: string;
   searchTerm?: string;
@@ -175,7 +175,7 @@ export default function SacramentoMapView({
 
   // Local overrides in case filters are not controlled by a parent grid
   const [localSearch, setLocalSearch] = useState('');
-  const [localType, setLocalType] = useState<'all' | 'giveaway' | 'looking'>('all');
+  const [localType, setLocalType] = useState<ListingTypeFilter>('all');
   const [localCategory, setLocalCategory] = useState('All Categories');
   const [localNeighborhood, setLocalNeighborhood] = useState('All Neighborhoods');
 
@@ -595,7 +595,7 @@ export default function SacramentoMapView({
           <div class="relative flex items-center justify-center cursor-pointer">
             <span style="border-color: ${color}" class="absolute inline-flex h-6 w-6 rounded-full border opacity-50 block animate-pulse"></span>
             <div style="background-color: ${color}" class="h-3.5 w-3.5 rounded-full border-2 shadow-md ${
-              item.type === 'giveaway' ? 'border-zinc-950' : 'border-white'
+              item.type === 'giveaway' ? 'border-zinc-950' : item.type === 'trade' ? 'border-purple-400' : 'border-white'
             } ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
               <div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>
             </div>
@@ -905,9 +905,13 @@ export default function SacramentoMapView({
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider ${
-                          selectedPost.type === 'giveaway' ? 'bg-accent text-on-accent' : 'bg-inset border border-app text-muted'
+                          selectedPost.type === 'giveaway'
+                            ? 'bg-accent text-on-accent'
+                            : selectedPost.type === 'trade'
+                              ? 'bg-purple-500 text-white'
+                              : 'bg-inset border border-app text-muted'
                         }`}>
-                          {selectedPost.type === 'giveaway' ? '🎁 GIFT' : '🔍 ASK'}
+                          {getPostTypeMapLabel(selectedPost.type)}
                         </span>
                         <span className="text-[8px] font-bold font-mono uppercase tracking-wider" style={{ color: getCategoryColor(selectedPost.category) }}>
                           {selectedPost.category}
@@ -963,7 +967,7 @@ export default function SacramentoMapView({
                           )
                         ) : (
                           <>
-                            {onClaimSubmitted && (
+                            {onClaimSubmitted && selectedPost.type === 'giveaway' && (
                               <ClaimAtPickupButton
                                 item={selectedPost}
                                 user={userProfile}
@@ -1058,6 +1062,14 @@ export default function SacramentoMapView({
                 Asks
               </button>
               <button
+                onClick={() => { setLocalType('trade'); setLocalCategory('All Categories'); }}
+                className={`px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg ${
+                  localType === 'trade' ? 'bg-accent text-on-accent shadow-xs' : 'text-muted hover:text-app'
+                }`}
+              >
+                Trade
+              </button>
+              <button
                 type="button"
                 onClick={() => setShowColorGuide(true)}
                 className="px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg text-muted hover:text-app border-l border-app ml-0.5 pl-2.5"
@@ -1092,9 +1104,9 @@ export default function SacramentoMapView({
                       ))}
                     </optgroup>
                   </>
-                ) : localType === 'giveaway' ? (
+                ) : localType === 'giveaway' || localType === 'trade' ? (
                   ITEM_CATEGORIES.map((c) => (
-                    <option key={`map_giv_only_${c}`} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
+                    <option key={`map_${localType}_only_${c}`} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
                   ))
                 ) : (
                   ISO_CATEGORIES.map((c) => (
@@ -1397,9 +1409,13 @@ export default function SacramentoMapView({
                 <div>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider ${
-                      selectedPost.type === 'giveaway' ? 'bg-accent text-on-accent font-mono' : 'bg-inset border border-app text-muted font-mono'
+                      selectedPost.type === 'giveaway'
+                        ? 'bg-accent text-on-accent font-mono'
+                        : selectedPost.type === 'trade'
+                          ? 'bg-purple-500 text-white font-mono'
+                          : 'bg-inset border border-app text-muted font-mono'
                     }`}>
-                      {selectedPost.type === 'giveaway' ? '🎁 GIFT OFFER' : '🔍 ASK'}
+                      {getPostTypeMapDetailLabel(selectedPost.type)}
                     </span>
                     <span className="text-[8.5px] font-black font-mono uppercase tracking-wider" style={{ color: getCategoryColor(selectedPost.category) }}>
                       {selectedPost.category}
@@ -1457,7 +1473,7 @@ export default function SacramentoMapView({
                       )
                     ) : (
                       <>
-                        {onClaimSubmitted && (
+                        {onClaimSubmitted && selectedPost.type === 'giveaway' && (
                           <ClaimAtPickupButton
                             item={selectedPost}
                             user={userProfile}

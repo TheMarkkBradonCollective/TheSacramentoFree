@@ -8,7 +8,14 @@ import {
   hasStoredGps,
   isLocationPrivate,
   parsePickupAddress,
+  parseTradeSeeking,
 } from '../lib/itemLocation';
+import {
+  getOwnerCompletedActionLabel,
+  getPostTypeBadgeClass,
+  getPostTypeCompletedLabel,
+  getPostTypeLabel,
+} from '../lib/postType';
 import {
   extractListingImageUrls,
   getListingDetailsText,
@@ -70,6 +77,7 @@ export default function ItemDetailView({
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
 
   const { isSaved, toggleSaved } = useSavedItems(currentUserId);
+  const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
 
   useEffect(() => {
     void getListingSubitems(item.id).then(setSubitems);
@@ -164,13 +172,13 @@ export default function ItemDetailView({
 
         <div className="p-5 sm:p-6 space-y-5">
           <div className="flex flex-wrap gap-2">
-            <span className={`sbn-badge ${item.type === 'giveaway' ? 'sbn-badge-give' : 'sbn-badge-ask'}`}>
-              {item.type === 'giveaway' ? 'Giving' : 'Looking for'}
+            <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)}`}>
+              {getPostTypeLabel(item.type)}
             </span>
             <span className="sbn-badge">{item.category}</span>
             {item.status === 'completed' && (
               <span className="sbn-badge sbn-badge-done">
-                {item.type === 'giveaway' ? 'Claimed' : 'Fulfilled'}
+                {getPostTypeCompletedLabel(item.type)}
               </span>
             )}
             {partialClaimed && (
@@ -184,6 +192,13 @@ export default function ItemDetailView({
           </div>
 
           <h2 className="font-display text-2xl sm:text-3xl font-bold text-app leading-tight">{item.title}</h2>
+
+          {tradeSeeking && (
+            <section className="sbn-card p-4 space-y-2 border border-purple-500/25 bg-purple-500/5">
+              <h3 className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Seeking in trade</h3>
+              <p className="text-app text-sm sm:text-base leading-relaxed">{tradeSeeking}</p>
+            </section>
+          )}
 
           <div className="flex flex-wrap gap-4 text-sm text-muted">
             <span className="inline-flex items-center gap-1.5">
@@ -328,10 +343,14 @@ export default function ItemDetailView({
                     onClick={() => onUpdateStatus('completed')}
                     className="sbn-btn sbn-btn-secondary col-span-2"
                   >
-                    Mark claimed
+                    {getOwnerCompletedActionLabel(item.type)}
                   </button>
                   <p className="col-span-2 text-[11px] text-muted text-center leading-snug">
-                    Confirm neighbor pickups from Messages, or when they self-claim at the pin.
+                    {item.type === 'trade'
+                      ? 'Confirm the swap in Messages once you and your neighbor have traded.'
+                      : item.type === 'looking'
+                        ? 'Mark fulfilled once a neighbor has helped with your request.'
+                        : 'Confirm neighbor pickups from Messages, or when they self-claim at the pin.'}
                   </p>
                 </div>
               ) : item.status === 'pending_pickup' ? (
@@ -420,7 +439,7 @@ export default function ItemDetailView({
                   </button>
                 )}
               </div>
-              {item.status === 'active' && userProfile && onClaimSubmitted && (
+              {item.status === 'active' && userProfile && onClaimSubmitted && item.type === 'giveaway' && (
                 <ClaimAtPickupButton
                   item={item}
                   user={userProfile}

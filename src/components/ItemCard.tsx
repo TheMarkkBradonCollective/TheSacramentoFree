@@ -1,6 +1,7 @@
 import { Bookmark, Calendar, Eye, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
 import { ItemComment, ItemPost, UserProfile } from '../types';
-import { stripListingMetadata } from '../lib/itemLocation';
+import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
+import { getPostTypeBadgeClass, getPostTypeLabel, getPostTypeCompletedLabel } from '../lib/postType';
 import { extractListingImageUrls } from '../lib/listingContent';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
@@ -64,16 +65,16 @@ export default function ItemCard({
   const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
   const coverPhoto = photos[0];
 
+  const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
+
   const statusBadges = (
     <>
-      {item.type === 'giveaway' ? (
-        <span className="sbn-badge sbn-badge-give text-[10px] sm:text-xs py-0.5">Giving</span>
-      ) : (
-        <span className="sbn-badge sbn-badge-ask text-[10px] sm:text-xs py-0.5">Looking for</span>
-      )}
+      <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[10px] sm:text-xs py-0.5`}>
+        {getPostTypeLabel(item.type)}
+      </span>
       {item.status === 'completed' && (
         <span className="sbn-badge sbn-badge-done text-[10px] sm:text-xs py-0.5">
-          {item.type === 'giveaway' ? 'Claimed' : 'Fulfilled'}
+          {getPostTypeCompletedLabel(item.type)}
         </span>
       )}
       {item.status === 'withdrawn' && (
@@ -125,7 +126,7 @@ export default function ItemCard({
             onClick={() => onUpdateStatus('completed')}
             className="sbn-btn sbn-btn-sm sbn-btn-secondary hidden sm:inline-flex"
           >
-            Mark claimed
+            Mark {item.type === 'trade' ? 'traded' : item.type === 'looking' ? 'fulfilled' : 'claimed'}
           </button>
         </>
       ) : item.status === 'pending_pickup' ? (
@@ -236,6 +237,12 @@ export default function ItemCard({
           <Tag className="w-3 h-3 text-accent shrink-0" />
           <span className="truncate">{item.category}</span>
         </p>
+
+        {tradeSeeking && (
+          <p className="text-[10px] sm:text-xs text-purple-400 mt-0.5 sm:mt-1 line-clamp-1">
+            Seeking: {tradeSeeking}
+          </p>
+        )}
 
         <p className="hidden sm:block text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
 

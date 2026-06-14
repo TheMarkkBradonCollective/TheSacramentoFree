@@ -42,9 +42,15 @@ async function getItemById(itemId: string): Promise<ItemPost | null> {
 
 export async function pushAfterItemCreated(item: ItemPost) {
   await notifyNewListingPosted(item);
+  const listingLabel =
+    item.type === 'looking'
+      ? 'New neighbor request'
+      : item.type === 'trade'
+        ? 'New trade offer'
+        : 'New listing posted';
   await pushDirectorAlert({
     category: 'listing',
-    title: item.type === 'looking' ? 'New neighbor request' : 'New listing posted',
+    title: listingLabel,
     body: `${item.userDisplayName}: ${item.title} (${item.neighborhood})`,
     tag: `director-listing-${item.id}`,
     excludeUserIds: [item.userId],
@@ -103,6 +109,14 @@ export async function pushAfterItemCompleted(itemId: string, posterUserId: strin
       item,
       helperUserId: claimerUserId,
       ownerName,
+    });
+    return;
+  }
+
+  if (item.type === 'trade') {
+    await notifyListingStatus({
+      item,
+      statusLabel: 'marked as traded',
     });
     return;
   }

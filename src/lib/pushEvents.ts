@@ -17,12 +17,17 @@ function itemCoords(item: ItemPost): { lat: number; lng: number } | null {
 
 export async function notifyNewListingPosted(item: ItemPost) {
   const isRequest = item.type === 'looking';
+  const isTrade = item.type === 'trade';
   const eventType = isRequest ? 'new_request' : 'new_item';
   const coords = itemCoords(item);
 
   await sendPushNotification({
     eventType,
-    title: isRequest ? 'New neighbor request' : 'New free item posted',
+    title: isRequest
+      ? 'New neighbor request'
+      : isTrade
+        ? 'New trade offer'
+        : 'New free item posted',
     body: `${item.userDisplayName}: ${item.title}`,
     url: pushUrlForListing(item.id),
     listingId: item.id,

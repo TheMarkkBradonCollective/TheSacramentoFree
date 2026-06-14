@@ -11,9 +11,10 @@ import {
   extractListingImageUrls,
   MAX_LISTING_PHOTOS,
 } from '../lib/listingContent';
-import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil, Plus } from 'lucide-react';
+import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil, Plus, ArrowLeftRight } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
+import { getPostTypeModalTitle } from '../lib/postType';
 
 interface PostItemModalProps {
   userProfile: UserProfile;
@@ -31,6 +32,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
   const [category, setCategory] = useState(ITEM_CATEGORIES[0]);
   const [isoCategory, setIsoCategory] = useState(ISO_CATEGORIES[0]);
   const [collectionMethod, setCollectionMethod] = useState(ISO_DELIVERY_PREFS[0]);
+  const [tradeSeeking, setTradeSeeking] = useState('');
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -60,6 +62,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     setType(editItem.type);
     setNeighborhood(editItem.neighborhood);
     setCollectionMethod(parsed.collectionMethod);
+    setTradeSeeking(parsed.tradeSeeking);
     setCustomCoords(parsed.customCoords);
     setLocationIsPublic(parsed.locationIsPublic);
     setPickupAddress(parsed.pickupAddress);
@@ -72,6 +75,12 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     if (editItem.type === 'looking') {
       setIsoCategory(
         ISO_CATEGORIES.includes(editItem.category) ? editItem.category : ISO_CATEGORIES[0],
+      );
+      setMultipleItems(false);
+      setSubItemLabels(['']);
+    } else if (editItem.type === 'trade') {
+      setCategory(
+        ITEM_CATEGORIES.includes(editItem.category) ? editItem.category : ITEM_CATEGORIES[0],
       );
       setMultipleItems(false);
       setSubItemLabels(['']);
@@ -186,6 +195,11 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       return;
     }
 
+    if (type === 'trade' && !tradeSeeking.trim()) {
+      setErrorMsg('Please describe what you want in trade.');
+      return;
+    }
+
     if (type === 'giveaway' && multipleItems) {
       const labels = subItemLabels.map((l) => l.trim()).filter(Boolean);
       if (labels.length < 2) {
@@ -215,7 +229,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
 
     const finalCategory = type === 'looking' ? isoCategory : category;
 
-    if (type === 'giveaway' && categoryRequiresGps(finalCategory) && !customCoords) {
+    if ((type === 'giveaway' || type === 'trade') && categoryRequiresGps(finalCategory) && !customCoords) {
       setIsSubmitting(false);
       setErrorMsg('Curb Alert and Porch Pickup require a pinned pickup spot. Use GPS or tap the map.');
       return;
@@ -226,6 +240,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       details: details.trim(),
       pickupNotes: pickupNotes.trim() || undefined,
       collectionMethod,
+      tradeSeeking: type === 'trade' ? tradeSeeking.trim() : undefined,
       customCoords,
       locationIsPublic: categoryRequiresGps(finalCategory) ? true : locationIsPublic,
       pickupAddress: pickupAddress.trim() || undefined,
@@ -301,16 +316,14 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 <Pencil className="w-4 h-4" />
               ) : type === 'looking' ? (
                 <Search className="w-4 h-4" />
+              ) : type === 'trade' ? (
+                <ArrowLeftRight className="w-4 h-4" />
               ) : (
                 <Gift className="w-4 h-4" />
               )}
             </div>
             <h3 className="text-base font-bold text-app font-display">
-              {isEditing
-                ? 'Edit listing'
-                : type === 'looking'
-                  ? 'Request something'
-                  : 'Give something away'}
+              {getPostTypeModalTitle(type, isEditing)}
             </h3>
           </div>
           <button
@@ -330,21 +343,21 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             </div>
           )}
 
-          {/* Type Toggle (Giveaway vs Looking for) */}
+          {/* Type Toggle (Giveaway vs Looking vs Trade) */}
           <div className="space-y-1.5">
             <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">What kind of post is this?</span>
-            <div className="grid grid-cols-2 gap-3.5" id="listing_type_grid">
+            <div className="grid grid-cols-3 gap-2" id="listing_type_grid">
               <button
                 type="button"
                 id="type_giveaway_btn"
                 onClick={() => setType('giveaway')}
-                className={`py-3 px-4 rounded-xl text-xs font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-2 cursor-pointer ${
+                className={`py-3 px-2 rounded-xl text-[10px] font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-1.5 cursor-pointer ${
                   type === 'giveaway'
                     ? 'bg-[#FF4500] border-[#FF4500] text-white shadow-xs'
                     : 'bg-inset border-app text-muted hover:bg-surface-hover'
                 }`}
               >
-                <Gift className="w-4 h-4" />
+                <Gift className="w-3.5 h-3.5" />
                 <span>Giving Away</span>
               </button>
 
@@ -352,34 +365,81 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 type="button"
                 id="type_looking_btn"
                 onClick={() => setType('looking')}
-                className={`py-3 px-4 rounded-xl text-xs font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-2 cursor-pointer ${
+                className={`py-3 px-2 rounded-xl text-[10px] font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-1.5 cursor-pointer ${
                   type === 'looking'
                     ? 'bg-[#FF4500] border-[#FF4500] text-white shadow-xs'
                     : 'bg-inset border-app text-muted hover:bg-surface-hover'
                 }`}
               >
-                <Search className="w-4 h-4" />
-                <span>Looking For (ISO)</span>
+                <Search className="w-3.5 h-3.5" />
+                <span>Looking For</span>
+              </button>
+
+              <button
+                type="button"
+                id="type_trade_btn"
+                onClick={() => setType('trade')}
+                className={`py-3 px-2 rounded-xl text-[10px] font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-1.5 cursor-pointer ${
+                  type === 'trade'
+                    ? 'bg-[#FF4500] border-[#FF4500] text-white shadow-xs'
+                    : 'bg-inset border-app text-muted hover:bg-surface-hover'
+                }`}
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5" />
+                <span>Trade</span>
               </button>
             </div>
+            {type === 'trade' && (
+              <p className="text-[10px] text-muted leading-snug">
+                Free item-for-item swaps only — no money, selling, or cash on the side.
+              </p>
+            )}
           </div>
 
           {/* Item Title */}
           <div className="space-y-1.5">
             <label htmlFor="post_title" className="text-[10px] font-bold text-muted uppercase tracking-wider block">
-              {type === 'looking' ? 'What are you looking for? (ISO Request)' : 'What are you sharing?'}
+              {type === 'looking'
+                ? 'What are you looking for? (ISO Request)'
+                : type === 'trade'
+                  ? 'What are you offering to trade?'
+                  : 'What are you sharing?'}
             </label>
             <input
               type="text"
               id="post_title"
               required
-              placeholder={type === 'looking' ? "e.g., Lawn mower to borrow, Baby blankets, Canned food..." : "e.g., Solid Walnut Dresser, Garden soil..."}
+              placeholder={
+                type === 'looking'
+                  ? 'e.g., Lawn mower to borrow, Baby blankets, Canned food...'
+                  : type === 'trade'
+                    ? 'e.g., Stack of sci-fi paperbacks, Kids bike (24"), Plant cuttings...'
+                    : 'e.g., Solid Walnut Dresser, Garden soil...'
+              }
               value={title}
               maxLength={100}
               onChange={(e) => setTitle(e.target.value)}
               className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-app font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
             />
           </div>
+
+          {type === 'trade' && (
+            <div className="space-y-1.5">
+              <label htmlFor="post_trade_seeking" className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                What do you want in trade?
+              </label>
+              <input
+                type="text"
+                id="post_trade_seeking"
+                required
+                placeholder="e.g., Board games, Kitchen gadgets, Yarn & craft supplies..."
+                value={tradeSeeking}
+                maxLength={120}
+                onChange={(e) => setTradeSeeking(e.target.value)}
+                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-app font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+              />
+            </div>
+          )}
 
           {type === 'giveaway' && (
             <div className="space-y-2 border border-app rounded-xl p-3.5 bg-inset/30">
@@ -441,7 +501,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             </div>
           )}
 
-          {type === 'giveaway' ? (
+          {type === 'giveaway' || type === 'trade' ? (
             /* Category selection */
             <div className="space-y-1.5" id="post_category_section">
               <label htmlFor="post_category" className="text-[10px] font-black text-muted uppercase tracking-widest block font-bold">Sector Category</label>
@@ -561,13 +621,13 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
               </p>
             )}
 
-            {type === 'giveaway' && categoryRequiresGps(activeCategory) && (
+            {type !== 'looking' && categoryRequiresGps(activeCategory) && (
               <p className="text-xs text-accent font-medium">
                 {activeCategory} listings must include a map pin so neighbors can find the curb or porch.
               </p>
             )}
 
-            {type === 'giveaway' && customCoords && !categoryRequiresGps(activeCategory) && (
+            {type !== 'looking' && customCoords && !categoryRequiresGps(activeCategory) && (
               <label className="flex items-start gap-2.5 text-xs text-app cursor-pointer">
                 <input
                   type="checkbox"

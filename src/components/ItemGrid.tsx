@@ -20,6 +20,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
+import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
@@ -120,7 +121,7 @@ export default function ItemGrid({
   onRefresh,
 }: ItemGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<'all' | 'giveaway' | 'looking'>('all');
+  const [selectedType, setSelectedType] = useState<ListingTypeFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
@@ -286,7 +287,7 @@ export default function ItemGrid({
         <div className="space-y-2">
           <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
           <div className="flex flex-wrap gap-2" id="feed_type_filter">
-            {(['all', 'giveaway', 'looking'] as const).map((type) => (
+            {LISTING_TYPE_FILTERS.map((type) => (
               <button
                 key={type}
                 type="button"
@@ -297,7 +298,7 @@ export default function ItemGrid({
                 }}
                 className={`sbn-chip ${selectedType === type ? 'sbn-chip-active' : ''}`}
               >
-                {type === 'all' ? 'All' : type === 'giveaway' ? 'Giving' : 'Looking for'}
+                {getPostTypeFilterLabel(type)}
               </button>
             ))}
           </div>
@@ -376,10 +377,17 @@ export default function ItemGrid({
                           </option>
                         ))}
                       </optgroup>
+                      <optgroup label="Trade & Barter">
+                        {ITEM_CATEGORIES.map((c) => (
+                          <option key={`all_trade_${c}`} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </optgroup>
                     </>
-                  ) : selectedType === 'giveaway' ? (
+                  ) : selectedType === 'giveaway' || selectedType === 'trade' ? (
                     ITEM_CATEGORIES.map((c) => (
-                      <option key={`giveaway_only_${c}`} value={c}>
+                      <option key={`${selectedType}_only_${c}`} value={c}>
                         {c}
                       </option>
                     ))

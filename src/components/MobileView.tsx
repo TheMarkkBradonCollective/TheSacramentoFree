@@ -9,6 +9,7 @@ import { Map, List, MessageSquare, User, Plus, LogOut, CalendarDays } from 'luci
 import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
+import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
 import ThemeToggle from './ThemeToggle';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
@@ -106,7 +107,7 @@ export default function MobileView({
   onClearScrollToDirectorOverview,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
-  const [selectedMobileType, setSelectedMobileType] = useState<'all' | 'giveaway' | 'looking'>('all');
+  const [selectedMobileType, setSelectedMobileType] = useState<ListingTypeFilter>('all');
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
 
   useKeyboardInset();
@@ -162,14 +163,14 @@ export default function MobileView({
           />
           <div className="absolute top-3 left-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
             <div className="flex gap-2 overflow-x-auto flex-1 min-w-0 pb-1">
-              {(['all', 'giveaway', 'looking'] as const).map((t) => (
+              {LISTING_TYPE_FILTERS.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setSelectedMobileType(t)}
                   className={`sbn-chip shrink-0 ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
                 >
-                  {t === 'all' ? 'All' : t === 'giveaway' ? 'Giving' : 'Looking'}
+                  {getPostTypeFilterLabel(t)}
                 </button>
               ))}
             </div>
