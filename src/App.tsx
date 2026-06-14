@@ -38,9 +38,10 @@ import {
   isAccountRestricted,
   migrateLocalSavedItemsToDb,
 } from './supabase';
-import { APP_LOGO_SRC, SITE, SUPPORT } from './siteContent';
+import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
+import AwardsComingSoon from './components/AwardsComingSoon';
 import { AppTab, parseAppTab } from './lib/appTabs';
 import {
   readCachedProfile,
@@ -116,6 +117,7 @@ export default function App() {
   const [showPostModal, setShowPostModal] = useState(false);
   const [showPostEventModal, setShowPostEventModal] = useState(false);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
+  const [showAwardsPanel, setShowAwardsPanel] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
@@ -1004,6 +1006,7 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  onOpenAwards={() => setShowAwardsPanel(true)}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1046,6 +1049,7 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  onOpenAwards={() => setShowAwardsPanel(true)}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1088,6 +1092,7 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  onOpenAwards={() => setShowAwardsPanel(true)}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1106,6 +1111,16 @@ export default function App() {
                   onClose={() => setShowGoFundMeDetail(false)}
                 >
                   <GoFundMeSupport />
+                </FullScreenPanel>
+              )}
+
+              {showAwardsPanel && (
+                <FullScreenPanel
+                  title={AWARDS.panelTitle}
+                  subtitle={AWARDS.panelSubtitle}
+                  onClose={() => setShowAwardsPanel(false)}
+                >
+                  <AwardsComingSoon />
                 </FullScreenPanel>
               )}
 

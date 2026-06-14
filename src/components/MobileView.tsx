@@ -10,7 +10,7 @@ import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
-import ThemeToggle from './ThemeToggle';
+import AwardsButton from './AwardsButton';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
@@ -46,6 +46,7 @@ interface MobileViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
+  onOpenAwards?: () => void;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -97,6 +98,7 @@ export default function MobileView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
+  onOpenAwards,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -124,7 +126,7 @@ export default function MobileView({
         />
         <div className="flex items-center gap-1 shrink-0">
           <NotificationsHubButton />
-          <ThemeToggle />
+          {onOpenAwards ? <AwardsButton onClick={onOpenAwards} /> : null}
           <button
             type="button"
             onClick={onLogout}

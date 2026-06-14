@@ -10,7 +10,7 @@ import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import BrandLogo from './BrandLogo';
 import { IN_APP } from '../siteContent';
-import ThemeToggle from './ThemeToggle';
+import AwardsButton from './AwardsButton';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import CommunityStatsBar from './CommunityStatsBar';
 import { AppTab } from '../lib/appTabs';
@@ -45,6 +45,7 @@ interface TabletViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
+  onOpenAwards?: () => void;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -92,6 +93,7 @@ export default function TabletView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
+  onOpenAwards,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -126,7 +128,7 @@ export default function TabletView({
 
         <div className="flex items-center gap-2" id="tablet_actions">
           <NotificationsHubButton />
-          <ThemeToggle />
+          {onOpenAwards ? <AwardsButton onClick={onOpenAwards} /> : null}
           <button type="button" id="tablet_header_post" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm">
             <Plus className="w-4 h-4" />
             <span className="hidden md:inline">{IN_APP.postButton}</span>

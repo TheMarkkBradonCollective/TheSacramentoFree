@@ -224,3 +224,18 @@ export const IN_APP = {
   postButton: 'Create a Post',
   shareOrRequest: 'Share or Request'
 } as const;
+
+export const AWARDS = {
+  panelTitle: 'Neighbor Awards',
+  panelSubtitle: 'Badges and streaks for generous neighbors — coming soon',
+  comingSoonTitle: 'Awards are on the way',
+  comingSoonBody:
+    'I am building a way to celebrate neighbors who give, help, trade fairly, and keep the community strong — with no money involved.',
+  comingSoonBullets: [
+    'Donation and giving streak badges',
+    'Milestones for items shared and requests fulfilled',
+    'Recognition for kind, reliable neighbors',
+  ],
+  comingSoonNote:
+    'This is not a donation page and will never charge neighbors. Awards are about community spirit, not payments.',
+} as const;

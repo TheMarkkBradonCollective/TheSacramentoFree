@@ -42,6 +42,7 @@ interface DesktopViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
+  onOpenAwards?: () => void;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -81,6 +82,7 @@ export default function DesktopView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
+  onOpenAwards,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -98,6 +100,7 @@ export default function DesktopView({
         setActiveTab={setActiveTab}
         onOpenNewPost={onOpenNewPost}
         onLogout={onLogout}
+        onOpenAwards={onOpenAwards ?? (() => {})}
       />
 
       <main id="desktop_main" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">

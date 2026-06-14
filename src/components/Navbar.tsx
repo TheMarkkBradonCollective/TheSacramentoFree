@@ -2,7 +2,7 @@ import React from 'react';
 import { LogOut, Plus, MapPin } from 'lucide-react';
 import { UserProfile } from '../types';
 import { IN_APP } from '../siteContent';
-import ThemeToggle from './ThemeToggle';
+import AwardsButton from './AwardsButton';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
 import { AppTab } from '../lib/appTabs';
@@ -13,6 +13,7 @@ interface NavbarProps {
   setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
   onLogout: () => void;
+  onOpenAwards: () => void;
 }
 
 const TABS: { id: AppTab; label: string }[] = [
@@ -29,6 +30,7 @@ export default function Navbar({
   setActiveTab,
   onOpenNewPost,
   onLogout,
+  onOpenAwards,
 }: NavbarProps) {
   return (
     <header id="main_navbar" className="sticky top-0 z-40 sbn-glass-nav">
@@ -61,7 +63,7 @@ export default function Navbar({
 
           <div className="flex items-center gap-2" id="navbar_actions_container">
             {userProfile ? <NotificationsHubButton /> : null}
-            <ThemeToggle />
+            {userProfile ? <AwardsButton onClick={onOpenAwards} /> : null}
             {userProfile && (
               <>
                 <div

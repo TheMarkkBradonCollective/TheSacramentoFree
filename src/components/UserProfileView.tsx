@@ -25,7 +25,7 @@ import {
   Camera,
 } from 'lucide-react';
 import ProfilePostList from './ProfilePostList';
-import CommunityMenuView from './CommunityMenuView';
+import ThemeSettings from './ThemeSettings';
 import { IN_APP } from '../siteContent';
 
 interface UserProfileViewProps {
@@ -441,6 +441,8 @@ export default function UserProfileView({
               <span>{isSaving ? 'Saving Changes...' : 'Save Profile Changes'}</span>
             </button>
           </form>
+
+          <ThemeSettings />
         </div>
       </div>
 
