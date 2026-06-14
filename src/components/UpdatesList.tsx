@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, MessageSquare, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { AppUpdateInput, AppUpdateRecord, UserProfile } from '../types';
 import { useAppUpdates } from '../hooks/useAppUpdates';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
+import { useAppUpdateComments } from '../hooks/useAppUpdateComments';
 import ContentVoteButtons, { OWN_CONTENT_VOTE_DISABLED_REASON } from './ContentVoteButtons';
+import AppUpdateComments from './AppUpdateComments';
 import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -11,7 +13,9 @@ import { useConfirm } from '../contexts/ConfirmContext';
 interface UpdatesListProps {
   userProfile?: UserProfile | null;
   onRequireSignIn?: () => void;
+  onViewProfile?: (userId: string) => void;
   showVotes?: boolean;
+  showComments?: boolean;
 }
 
 function formatUpdateDate(iso: string): string {
@@ -30,14 +34,25 @@ function todayIsoDate(): string {
 export default function UpdatesList({
   userProfile,
   onRequireSignIn,
+  onViewProfile,
   showVotes = true,
+  showComments = true,
 }: UpdatesListProps) {
   const { updates, loading, createUpdate, saveUpdate, removeUpdate, canManage } = useAppUpdates(userProfile);
-  const updateIds = useMemo(
-    () => (showVotes ? updates.map((update) => update.id) : []),
-    [showVotes, updates],
+  const updateIds = useMemo(() => updates.map((update) => update.id), [updates]);
+  const voteTargetIds = useMemo(
+    () => (showVotes ? updateIds : []),
+    [showVotes, updateIds],
   );
-  const { getVoteState, handleVote } = useCommunityContentVotes('update', updateIds, userProfile);
+  const commentTargetIds = useMemo(
+    () => (showComments ? updateIds : []),
+    [showComments, updateIds],
+  );
+  const { getVoteState, handleVote } = useCommunityContentVotes('update', voteTargetIds, userProfile);
+  const { getCommentsForUpdate, handleAddComment, handleDeleteComment } = useAppUpdateComments(
+    commentTargetIds,
+    userProfile ?? null,
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingUpdate, setEditingUpdate] = useState<AppUpdateRecord | null>(null);
   const [creating, setCreating] = useState(false);
@@ -116,6 +131,7 @@ export default function UpdatesList({
           {filteredUpdates.map((update) => {
             const expanded = expandedId === update.id;
             const fullText = update.detail?.trim() || update.body;
+            const comments = getCommentsForUpdate(update.id);
             const isOwnUpdate = signedIn && update.postedByUserId === userProfile?.uid;
 
             return (
@@ -149,9 +165,15 @@ export default function UpdatesList({
                           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                         </span>
                       </div>
-                      <p className="mt-2 text-[11px] font-semibold text-accent">
-                        {expanded ? 'Tap to collapse' : 'Tap to read more'}
-                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-semibold text-accent">
+                        <span>{expanded ? 'Tap to collapse' : 'Tap to read more'}</span>
+                        {showComments && comments.length > 0 && !expanded && (
+                          <span className="inline-flex items-center gap-1 text-muted">
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+                          </span>
+                        )}
+                      </div>
                     </button>
 
                     {canManage && (
@@ -196,6 +218,20 @@ export default function UpdatesList({
                       disabledReason={OWN_CONTENT_VOTE_DISABLED_REASON}
                       feedbackNote="Votes are shared with your director."
                       compact
+                    />
+                  )}
+
+                  {showComments && expanded && (
+                    <AppUpdateComments
+                      updateId={update.id}
+                      postedByUserId={update.postedByUserId}
+                      comments={comments}
+                      currentUserId={userProfile?.uid}
+                      userProfile={userProfile}
+                      onAddComment={(text) => handleAddComment(update.id, text)}
+                      onDeleteComment={(commentId) => void handleDeleteComment(update.id, commentId)}
+                      onRequireSignIn={onRequireSignIn}
+                      onViewProfile={onViewProfile}
                     />
                   )}
                 </PublicCard>

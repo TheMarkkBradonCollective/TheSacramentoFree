@@ -380,6 +380,22 @@ export interface HelpAnnouncementComment {
   createdAt: string;
 }
 
+export interface AppUpdateComment {
+  id: string;
+  updateId: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  userNeighborhood: string;
+  text: string;
+  createdAt: string;
+}
+
+export type DiscussionComment = Pick<
+  HelpAnnouncementComment,
+  'id' | 'userId' | 'userName' | 'userPhoto' | 'userNeighborhood' | 'text'
+>;
+
 export type CommunityContentVoteTarget = 'update' | 'review' | 'leader_message' | 'announcement';
 
 export interface CommunityContentVote {

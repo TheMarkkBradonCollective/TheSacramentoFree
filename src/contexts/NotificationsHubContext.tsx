@@ -33,8 +33,8 @@ const HUB_TAB_META: Record<
     label: 'Updates',
     mobileLabel: 'Updates',
     title: 'App updates',
-    subtitle: 'Director changelog — what shipped and why',
-    intro: 'Technical release notes for the app. Expand any entry for the full story.',
+    subtitle: 'Director changelog — vote and comment',
+    intro: 'Technical release notes for the app. Expand any entry for the full story and discussion.',
   },
   alerts: {
     label: 'Alerts',
@@ -152,7 +152,7 @@ export function NotificationsHubProvider({
             {tab === 'announcements' ? (
               <AnnouncementsList userProfile={userProfile} showVotes showComments />
             ) : null}
-            {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes /> : null}
+            {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes showComments /> : null}
             {tab === 'notifications' ? <UserNotificationsList userId={userProfile.uid} /> : null}
             {tab === 'alerts' ? (
               <NotificationSettings
