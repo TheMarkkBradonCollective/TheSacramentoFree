@@ -54,37 +54,48 @@ I'm still building it every day. This was just the start.
 ),
 
 -- ═══════════════════════════════════════════════════════════
--- MAY 20 — database, mobile, login, real data
+-- MAY 20 — map views, split layouts, database, login
 -- ═══════════════════════════════════════════════════════════
 (
   'mark-voice-2026-05-20-big-rebuild-day',
   '2026-05-20',
-  'May 20 was a crazy day — database, mobile, email login',
+  'May 20 — mobile map, desktop split view, real database',
   $body$Hey guys 👋
 
-May 20 I basically didn't sleep. Ripped out the old setup and rebuilt a bunch of it. Here's what shipped:
+May 20 I basically didn't sleep. Rebuilt how the whole app looks and works on different screens. Here's what I shipped:
 
-DATABASE & REAL DATA
-- Hooked up Supabase — posts and accounts save online for real, not fake placeholder listings
-- Stripped out all the hardcoded mock data — site runs on live community data now
+MOBILE MAP (its own thing)
+- Desktop stayed how it was — mobile got its own full-screen map view
+- Sacramento map with blips for every post — each category its own color
+- Map Colors Index — tap a color to filter what's on the map
+- Filters right on the map: search, give vs ask, categories, neighborhoods
+- Feels like a real phone app — full screen map, bottom tab bar (Map, Stuff, Chat, Account)
+
+DESKTOP MAP TOO
+- Added the map to desktop — feed on the left, live map on the right
+- Scroll the listings, map stays put and syncs with your filters
+- Map tab in nav works on all screen sizes now
+
+TABLET
+- Split the app into separate files: MobileView, TabletView, DesktopView
+- Tablet is a mix — feed and map side by side like desktop but sized for tablets
+
+POSTING A LOCATION
+- When you post you can use your current location OR tap the map and drop a pin where pickup is
+
+MAPS & DATABASE
+- Switched the map over to OpenStreetMap (real Sacramento streets)
+- Hooked up Supabase — posts and accounts save online, no fake placeholder data
+- Updated the database schema (imageUrl on listings and all that)
+- Stripped hardcoded mock stuff — site runs on live community data
 - Removed the "database active" debug junk from the UI
 
 LOGIN
-- Switched to email + password through Supabase (no more Google popup getting blocked)
-- Built a landing page BEFORE login so people can see what this is
-- Fixed signup errors to show what actually went wrong instead of useless "detour failed" text
+- Email + password through Supabase (no more Google popup getting blocked)
+- Landing page before login so people see what this is first
+- Signup errors actually tell you what went wrong now
 
-MOBILE
-- Reworked the whole app to be mobile-first — map, feed, chat, profile each use the FULL phone screen
-- Desktop view stayed mostly how it was
-- Add to home screen like a real app
-
-FEATURES
-- Interactive Sacramento map — zoom, pins, driving directions
-- Neighbor chat to set up porch pickup
-- Early director/staff roles for moderation as we grow
-
-Also fought through Firebase/Firestore headaches for a while before I went all-in on Supabase. You're welcome 😅
+Also fought through Firebase headaches before I went all-in on Supabase. You're welcome 😅
 
 — Mark$body$,
   NULL,
