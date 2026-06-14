@@ -2,7 +2,7 @@
 -- REWRITE ALL APP UPDATES — Mark's voice (individual entries)
 -- Paste into Supabase Dashboard → SQL → New query → Run
 --
--- One row per changelog entry (113 from GitHub SQL + 8 from main 6/14).
+-- One row per change (~129 entries: GitHub SQL + session + main 6/14).
 -- Regenerate: python3 scripts/generate-mark-voice-updates.py
 -- =========================================================
 
