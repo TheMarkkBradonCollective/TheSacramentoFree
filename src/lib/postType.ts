@@ -4,7 +4,7 @@ export type ListingTypeFilter = 'all' | PostType;
 
 export const LISTING_TYPE_FILTERS: ListingTypeFilter[] = ['all', 'giveaway', 'looking', 'trade'];
 
-export function getPostTypeLabel(type: PostType): string {
+export function getPostTypeLabel(type: PostType | string | null | undefined): string {
   switch (type) {
     case 'giveaway':
       return 'Giving';
@@ -12,6 +12,8 @@ export function getPostTypeLabel(type: PostType): string {
       return 'Looking for';
     case 'trade':
       return 'Trade & Barter';
+    default:
+      return 'Listing';
   }
 }
 
@@ -40,7 +42,7 @@ export function getPostTypeModalTitle(type: PostType, isEditing: boolean): strin
   }
 }
 
-export function getPostTypeCompletedLabel(type: PostType): string {
+export function getPostTypeCompletedLabel(type: PostType | string | null | undefined): string {
   switch (type) {
     case 'giveaway':
       return 'Claimed';
@@ -48,10 +50,12 @@ export function getPostTypeCompletedLabel(type: PostType): string {
       return 'Fulfilled';
     case 'trade':
       return 'Traded';
+    default:
+      return 'Completed';
   }
 }
 
-export function getPostTypeBadgeClass(type: PostType): string {
+export function getPostTypeBadgeClass(type: PostType | string | null | undefined): string {
   switch (type) {
     case 'giveaway':
       return 'sbn-badge-give';
@@ -59,10 +63,12 @@ export function getPostTypeBadgeClass(type: PostType): string {
       return 'sbn-badge-ask';
     case 'trade':
       return 'sbn-badge-trade';
+    default:
+      return 'sbn-badge-ask';
   }
 }
 
-export function getPostTypeMapLabel(type: PostType): string {
+export function getPostTypeMapLabel(type: PostType | string | null | undefined): string {
   switch (type) {
     case 'giveaway':
       return '🎁 GIFT';
@@ -70,10 +76,12 @@ export function getPostTypeMapLabel(type: PostType): string {
       return '🔍 ASK';
     case 'trade':
       return '🔄 TRADE';
+    default:
+      return '📌 POST';
   }
 }
 
-export function getPostTypeMapDetailLabel(type: PostType): string {
+export function getPostTypeMapDetailLabel(type: PostType | string | null | undefined): string {
   switch (type) {
     case 'giveaway':
       return '🎁 GIFT OFFER';
@@ -81,6 +89,8 @@ export function getPostTypeMapDetailLabel(type: PostType): string {
       return '🔍 ASK';
     case 'trade':
       return '🔄 TRADE OFFER';
+    default:
+      return '📌 LISTING';
   }
 }
 

@@ -18,7 +18,8 @@ import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight,
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import { motion, AnimatePresence } from 'motion/react';
-import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, getPostTypeMapDetailLabel, getPostTypeMapLabel, type ListingTypeFilter } from '../lib/postType';
+import L from 'leaflet';
+import { getPostTypeMapDetailLabel, getPostTypeMapLabel, type ListingTypeFilter } from '../lib/postType';
 
 interface SacramentoMapViewProps {
   items: ItemPost[];

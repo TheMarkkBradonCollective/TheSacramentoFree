@@ -50,7 +50,6 @@ import {
   Shield,
   LifeBuoy,
   Trash2,
-  UserPlus,
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
