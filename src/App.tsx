@@ -41,7 +41,7 @@ import {
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
-import AwardsComingSoon from './components/AwardsComingSoon';
+import AwardsView from './components/AwardsView';
 import { AppTab, parseAppTab } from './lib/appTabs';
 import {
   readCachedProfile,
@@ -1114,13 +1114,16 @@ export default function App() {
                 </FullScreenPanel>
               )}
 
-              {showAwardsPanel && (
+              {showAwardsPanel && userProfile && (
                 <FullScreenPanel
                   title={AWARDS.panelTitle}
                   subtitle={AWARDS.panelSubtitle}
                   onClose={() => setShowAwardsPanel(false)}
                 >
-                  <AwardsComingSoon />
+                  <AwardsView
+                    userProfile={userProfile}
+                    userPosts={visibleItems.filter((item) => item.userId === userProfile.uid)}
+                  />
                 </FullScreenPanel>
               )}
 

@@ -206,6 +206,7 @@ export default function DesktopView({
                 onViewProfile={onViewProfile}
                 scrollToDirectorOverview={scrollToDirectorOverview}
                 onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+                onOpenAwards={onOpenAwards}
               />
             </div>
           </div>

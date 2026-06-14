@@ -267,6 +267,7 @@ export default function TabletView({
                 onViewProfile={onViewProfile}
                 scrollToDirectorOverview={scrollToDirectorOverview}
                 onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+                onOpenAwards={onOpenAwards}
               />
             </div>
           </div>

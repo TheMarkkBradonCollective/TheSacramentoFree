@@ -303,6 +303,7 @@ export default function MobileView({
               scrollToDirectorOverview={scrollToDirectorOverview}
               onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               fullBleed
+              onOpenAwards={onOpenAwards}
             />
             <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
           </div>

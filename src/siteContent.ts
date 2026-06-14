@@ -227,15 +227,17 @@ export const IN_APP = {
 
 export const AWARDS = {
   panelTitle: 'Neighbor Awards',
-  panelSubtitle: 'Badges and streaks for generous neighbors — coming soon',
-  comingSoonTitle: 'Awards are on the way',
-  comingSoonBody:
-    'I am building a way to celebrate neighbors who give, help, trade fairly, and keep the community strong — with no money involved.',
-  comingSoonBullets: [
-    'Donation and giving streak badges',
-    'Milestones for items shared and requests fulfilled',
-    'Recognition for kind, reliable neighbors',
-  ],
+  panelSubtitle: 'Your badges and giving history',
+  panelIntro:
+    'Celebrate the free gifts, fulfilled requests, trades, and neighborly moments you have built over time.',
+  profileSectionTitle: 'Your awards',
+  profileSectionBody: 'See badges you have earned and scroll back through your community history.',
+  profileOpenButton: 'Go back in time',
+  timelineTitle: 'Go back in time',
+  timelineIntro:
+    'Your neighborhood story, newest first — giveaways completed, gifts received, requests fulfilled, and trades.',
+  timelineEmpty:
+    'No history yet. Give, request, trade, or help a neighbor — your timeline will grow from here.',
   comingSoonNote:
-    'This is not a donation page and will never charge neighbors. Awards are about community spirit, not payments.',
+    'Awards are about community spirit only — never payments or donations.',
 } as const;

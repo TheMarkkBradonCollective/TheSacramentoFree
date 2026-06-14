@@ -25,8 +25,12 @@ import {
   Camera,
 } from 'lucide-react';
 import ProfilePostList from './ProfilePostList';
+import ProfileAwardsSection from './ProfileAwardsSection';
 import ThemeSettings from './ThemeSettings';
+import CommunityMenuView from './CommunityMenuView';
 import { IN_APP } from '../siteContent';
+import { getNeighborAwardClaims, getNeighborStats } from '../supabase';
+import { buildNeighborAwardSummary, type NeighborAwardSummary } from '../lib/neighborAwards';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -42,6 +46,7 @@ interface UserProfileViewProps {
   onClearScrollToDirectorOverview?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
   fullBleed?: boolean;
+  onOpenAwards?: () => void;
 }
 
 function sanitizeRemotePhoto(url?: string): string | undefined {
@@ -62,6 +67,7 @@ export default function UserProfileView({
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
   fullBleed = false,
+  onOpenAwards,
 }: UserProfileViewProps) {
   const [displayName, setDisplayName] = useState(userProfile.displayName);
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
@@ -75,10 +81,35 @@ export default function UserProfileView({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
+  const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
 
   useEffect(() => {
     getNeighborStats(userProfile.uid).then(setStats);
   }, [userProfile.uid]);
+
+  useEffect(() => {
+    if (!onOpenAwards) return;
+    let cancelled = false;
+    setAwardsLoading(true);
+    void Promise.all([getNeighborStats(userProfile.uid), getNeighborAwardClaims(userProfile.uid)]).then(
+      ([nextStats, claims]) => {
+        if (cancelled) return;
+        setAwardSummary(
+          buildNeighborAwardSummary({
+            userId: userProfile.uid,
+            posts: userPosts,
+            claims,
+            stats: nextStats,
+          }),
+        );
+        setAwardsLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [onOpenAwards, userProfile.uid, userPosts]);
 
   useEffect(() => {
     if (isPhotoUploading) return;
@@ -629,6 +660,16 @@ export default function UserProfileView({
             <Trash2 className="w-4 h-4" />
             <span>{isDeletingAccount ? 'Deleting…' : 'Delete my account'}</span>
           </button>
+        </div>
+      )}
+
+      {onOpenAwards && (
+        <div className={fullBleed ? sectionShell : ''}>
+          <ProfileAwardsSection
+            summary={awardSummary}
+            loading={awardsLoading}
+            onOpenAwards={onOpenAwards}
+          />
         </div>
       )}
 
