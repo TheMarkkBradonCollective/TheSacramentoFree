@@ -5,6 +5,7 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
+import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
 import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
@@ -391,27 +392,12 @@ export async function syncProfilePhotoAcrossApp(
  * --- PROFILES ---
  */
 
-function normalizeAppUpdatePostedByUserId(raw: string, legacyDirectorUid?: string | null): string {
+function normalizeAppUpdatePostedByUserId(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed || trimmed === 'director') {
-    return legacyDirectorUid || trimmed || '';
+    return CHANGELOG_AUTHOR_UID;
   }
   return trimmed;
-}
-
-async function resolveDirectorUserId(): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('uid')
-      .eq('role', 'director')
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) return null;
-    return String((data as { uid: string }).uid);
-  } catch {
-    return null;
-  }
 }
 
 async function getDirectorDisplayName(): Promise<string> {
@@ -2886,7 +2872,6 @@ export async function updateSupabaseStaffMessage(
 function normalizeAppUpdateRow(
   row: Record<string, unknown>,
   authorDisplayName?: string,
-  legacyDirectorUid?: string | null,
 ): AppUpdateRecord {
   const rawDate = row.date;
   const date =
@@ -2896,10 +2881,7 @@ function normalizeAppUpdateRow(
         ? rawDate.toISOString().slice(0, 10)
         : new Date().toISOString().slice(0, 10);
 
-  const postedByUserId = normalizeAppUpdatePostedByUserId(
-    String(row.postedByUserId || ''),
-    legacyDirectorUid,
-  );
+  const postedByUserId = normalizeAppUpdatePostedByUserId(String(row.postedByUserId || ''));
   const directorName =
     authorDisplayName?.trim() ||
     String(row.directorName || '').trim() ||
@@ -2922,18 +2904,14 @@ function normalizeAppUpdateRow(
 async function enrichAppUpdatesWithAuthorProfiles(
   rows: Record<string, unknown>[],
 ): Promise<AppUpdateRecord[]> {
-  const legacyDirectorUid = await resolveDirectorUserId();
   const userIds = rows.map((row) =>
-    normalizeAppUpdatePostedByUserId(String(row.postedByUserId || ''), legacyDirectorUid),
-  ).filter(Boolean);
+    normalizeAppUpdatePostedByUserId(String(row.postedByUserId || '')),
+  );
   const displayInfo = await getUserDisplayInfoByIds(userIds);
   return rows.map((row) => {
-    const uid = normalizeAppUpdatePostedByUserId(
-      String(row.postedByUserId || ''),
-      legacyDirectorUid,
-    );
-    const profileName = uid ? displayInfo[uid]?.displayName : undefined;
-    return normalizeAppUpdateRow(row, profileName, legacyDirectorUid);
+    const uid = normalizeAppUpdatePostedByUserId(String(row.postedByUserId || ''));
+    const profileName = displayInfo[uid]?.displayName;
+    return normalizeAppUpdateRow(row, profileName);
   });
 }
 

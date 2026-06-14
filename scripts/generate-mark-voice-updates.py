@@ -7,9 +7,10 @@ import re
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DIRECTOR_UID_SQL = "(SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)"
+# Keep in sync with shared/changelogAuthor.ts
+CHANGELOG_AUTHOR_UID = "204b071f-100c-401d-b76d-40c594e1f132"
 DIRECTOR_NAME_SQL = (
-    '(SELECT "displayName" FROM public.users WHERE role = \'director\' LIMIT 1)'
+    f'(SELECT "displayName" FROM public.users WHERE uid = \'{CHANGELOG_AUTHOR_UID}\')'
 )
 
 SQL_FILES = [
@@ -1016,7 +1017,7 @@ def main() -> None:
             f"  {detail_sql},\n"
             f"  {DIRECTOR_NAME_SQL},\n"
             f"  'Buy Nothing Director',\n"
-            f"  {DIRECTOR_UID_SQL}\n"
+            f"  '{CHANGELOG_AUTHOR_UID}'\n"
             ")"
         )
 

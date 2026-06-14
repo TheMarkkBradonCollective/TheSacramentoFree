@@ -25,14 +25,14 @@ BEGIN
   SET "staffName" = 'Mark White'
   WHERE "userId" = director_uid;
 
-  -- Changelog posts — sync author from director profile; fix legacy postedByUserId
+  -- Changelog posts — Mark's uid so votes tie to the right account
   UPDATE public.app_updates au
   SET
     "directorName" = u."displayName",
-    "postedByUserId" = u.uid
+    "postedByUserId" = director_uid
   FROM public.users u
-  WHERE u.role = 'director'
-    AND au."postedByUserId" IN ('director', u.uid);
+  WHERE u.uid = director_uid
+    AND au."postedByUserId" IN ('director', director_uid);
 
   -- Listings, comments, reviews
   UPDATE public.items
