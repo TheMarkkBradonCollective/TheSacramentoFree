@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { isDirectorUser } from '../lib/directorIdentity';
+import { isDirectorRole } from '../lib/roles';
 import { UserProfile } from '../types';
 import { useDirectorMessage } from '../hooks/useDirectorMessage';
 import { useCommunityContentVotes, EMPTY_VOTE } from '../hooks/useCommunityContentVotes';
@@ -27,7 +27,7 @@ export default function DirectorMessage({
     userProfile,
   );
   const [editing, setEditing] = useState(false);
-  const isOwnDirectorMessage = Boolean(userProfile && isDirectorUser(userProfile.uid));
+  const isOwnDirectorMessage = isDirectorRole(userProfile?.role);
 
   return (
     <>

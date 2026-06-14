@@ -67,7 +67,7 @@ export function useAppUpdates(userProfile?: UserProfile | null) {
     return result;
   };
 
-  const canManage = canManageAppUpdates(userProfile);
+  const canManage = canManageAppUpdates(userProfile?.role);
 
   return { updates, loading, reload, createUpdate, saveUpdate, removeUpdate, canManage };
 }

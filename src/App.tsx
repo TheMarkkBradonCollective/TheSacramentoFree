@@ -27,8 +27,6 @@ import {
   getSupabaseProfile, 
   upsertSupabaseProfile,
   profileFromAuthUser,
-  ensureDirectorRoleInDb,
-  isDirectorUser,
   getSupabaseItems,
   getSupabaseEvents,
   cancelSupabaseEvent,
@@ -360,10 +358,6 @@ export default function App() {
     try {
       const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
         if (fromDb) {
-          if (isDirectorUser(user.id)) {
-            fromDb.role = 'director';
-            void ensureDirectorRoleInDb(user.id);
-          }
           setUserProfile(fromDb);
           writeCachedProfile(fromDb);
           return;

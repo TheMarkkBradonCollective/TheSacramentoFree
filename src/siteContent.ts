@@ -172,7 +172,7 @@ export const SUPPORT = {
 } as const;
 
 export const DIRECTOR_MESSAGE = {
-  /** Fallback until profile loads — live UI pulls from users.displayName for DIRECTOR_UID. */
+  /** Fallback until the director profile loads from the database. */
   name: 'Director',
   title: 'Buy Nothing Director',
   headline: 'A note from your director',

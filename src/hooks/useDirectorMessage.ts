@@ -5,7 +5,7 @@ import {
   getSupabaseDirectorMessage,
   updateSupabaseDirectorMessage,
 } from '../supabase';
-import { isDirectorUser } from '../lib/directorIdentity';
+import { isDirectorRole } from '../lib/roles';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 export function useDirectorMessage(userProfile?: UserProfile | null) {
@@ -44,7 +44,7 @@ export function useDirectorMessage(userProfile?: UserProfile | null) {
     return result;
   };
 
-  const canEdit = Boolean(userProfile && isDirectorUser(userProfile.uid));
+  const canEdit = isDirectorRole(userProfile?.role);
 
   return { message, loading, reload, saveMessage, canEdit };
 }

@@ -9,8 +9,7 @@ import {
   type UserProfile,
 } from '../types';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { isStaffRole } from '../lib/roles';
-import { isDirectorUser } from '../lib/directorIdentity';
+import { isDirectorRole, isStaffRole } from '../lib/roles';
 
 export type NotificationSettingsScope = 'alerts' | 'listings' | 'all';
 
@@ -402,7 +401,7 @@ export default function NotificationSettings({
                   >
                     {isTesting ? 'Sending…' : 'Send test alert'}
                   </button>
-                  {isDirectorUser(userId) && (
+                  {isDirectorRole(userRole) && (
                     <button
                       type="button"
                       onClick={() => setBroadcastModalOpen(true)}
@@ -526,7 +525,7 @@ export default function NotificationSettings({
                 </div>
               )}
 
-              {isDirectorUser(userId) && (
+              {isDirectorRole(userRole) && (
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
                     Director oversight

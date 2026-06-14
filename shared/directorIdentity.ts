@@ -1,11 +1,8 @@
-/** The only Buy Nothing Director account — all director identity pulls from this profile. */
-export const DIRECTOR_UID = '204b071f-100c-401d-b76d-40c594e1f132';
-
-export function isDirectorUser(uid: string): boolean {
-  return uid === DIRECTOR_UID;
+/** Server-side: director by users.role (not a hardcoded account id). */
+export function isDirectorRole(role: unknown): boolean {
+  return typeof role === 'string' && role.trim() === 'director';
 }
 
-/** Director account check — UID only (not role or email). */
-export function isDirectorAccount(uid: string): boolean {
-  return isDirectorUser(uid);
+export function isDirectorAccount(_uid: string, role?: unknown): boolean {
+  return isDirectorRole(role);
 }

@@ -23,9 +23,9 @@ INSERT INTO public.app_updates (
   $detail$Switched to email and password through Supabase — Google popups kept getting blocked.
 
 Google sign-in kept getting blocked in the browser, so I went with plain email and password through Supabase.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -36,9 +36,9 @@ Google sign-in kept getting blocked in the browser, so I went with plain email a
   $detail$Built a public page so you can see what this is, the rules, and neighborhoods before you make an account.
 
 You can read the rules and browse neighborhoods before creating an account.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -48,9 +48,9 @@ You can read the rules and browse neighborhoods before creating an account.$deta
   $body$You can browse free gifts on a map OR in a scrollable feed — gives and looking-for posts.$body$,
   $detail$What you'll notice:
 Browse free gifts on a map or scrollable Stuff feed — giveaways giveaways and looking-for posts.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -62,9 +62,9 @@ Browse free gifts on a map or scrollable Stuff feed — giveaways giveaways and 
 Basic browsing survives brief connection drops — cached profile/items and service worker shell.
 
 Service worker caches static assets.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -74,9 +74,9 @@ Service worker caches static assets.$detail$,
   $body$Gave it reddit orange and sage green — wanted it to feel like Sacramento, not some random app.$body$,
   $detail$What you'll notice:
 Warm orange + sage community palette and Sacramento Buy Nothing logo — local feel, not a generic template.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -86,9 +86,9 @@ Warm orange + sage community palette and Sacramento Buy Nothing logo — local f
   $body$You can upload pictures when you post so people know what they're picking up.$body$,
   $detail$What you'll notice:
 Upload photos when posting so you know exactly what you are giving or seeking.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -100,9 +100,9 @@ Upload photos when posting so you know exactly what you are giving or seeking.$d
 Sacramento Buy Nothing goes live — free local gifting, no selling, no bidding, you helping you.
 
 100% free rule enforced in post flows and moderation.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -114,9 +114,9 @@ Sacramento Buy Nothing goes live — free local gifting, no selling, no bidding,
 Pick your neighborhood at onboarding so posts stay local to your part of Sacramento.
 
 Used for feed filters, map centering, and profile display.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -127,9 +127,9 @@ Used for feed filters, map centering, and profile display.$detail$,
   $detail$Wrote out the full Supabase schema in databaseSQL.txt — paste it in Supabase SQL editor to set up tables.
 
 Handy if you're setting up a fresh Supabase project from scratch.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -141,9 +141,9 @@ Handy if you're setting up a fresh Supabase project from scratch.$detail$,
 Written mission: free gifting, local you, reduce waste, no money ever.
 
 Shown on public About and Rules pages.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -154,9 +154,9 @@ Shown on public About and Rules pages.$detail$,
   $detail$May 19, 2026 — day one.
 
 I sat down and started building Sacramento Buy Nothing for real: sign in, post gives and asks, profiles, messaging. That was the whole idea from the jump.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -165,9 +165,9 @@ I sat down and started building Sacramento Buy Nothing for real: sign in, post g
   'Works on phone, tablet, desktop',
   $body$Layout adapts to whatever screen you're on — same app everywhere.$body$,
   $detail$Layout adapts to whatever screen you're on — same app everywhere.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -176,9 +176,9 @@ I sat down and started building Sacramento Buy Nothing for real: sign in, post g
   'Desktop: feed left, map right',
   $body$Desktop shows listings on the left and a live sticky map on the right. Filters sync both sides.$body$,
   $detail$Desktop shows listings on the left and a live sticky map on the right. Filters sync both sides.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -187,9 +187,9 @@ I sat down and started building Sacramento Buy Nothing for real: sign in, post g
   'Separate layouts per screen size',
   $body$Split the app into MobileView, TabletView, and DesktopView — phone, tablet, and desktop each get their own layout file.$body$,
   $detail$Split the app into MobileView, TabletView, and DesktopView — phone, tablet, and desktop each get their own layout file.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -201,9 +201,9 @@ I sat down and started building Sacramento Buy Nothing for real: sign in, post g
 Map, Stuff, Chat, and Profile each fill the phone — no double scroll containers.
 
 Foundation for modern mobile UX.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -215,9 +215,9 @@ Foundation for modern mobile UX.$detail$,
 Posts and accounts persist in Supabase — you see the same listings every visit.
 
 Replaced demo/local-only data store.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -229,9 +229,9 @@ Replaced demo/local-only data store.$detail$,
 Install Sacramento Buy Nothing like an app — icon on home screen, standalone display mode, basic offline shell.
 
 Beforeinstallprompt handling on Android/desktop Chrome.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -241,9 +241,9 @@ Beforeinstallprompt handling on Android/desktop Chrome.$detail$,
   $body$Map with zoom, custom pins, and driving directions to free items.$body$,
   $detail$What you'll notice:
 Leaflet map with zoom, custom pins per listing type, and driving directions to items.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -255,9 +255,9 @@ Leaflet map with zoom, custom pins per listing type, and driving directions to i
 Phone experience rebuilt for touch-first use while desktop you keep the wider layout they already used.
 
 Parallel MobileView vs DesktopView components.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -266,9 +266,9 @@ Parallel MobileView vs DesktopView components.$detail$,
   'Mobile got its own full-screen map',
   $body$Desktop stayed the same — mobile got a full-screen Sacramento map with colored blips per category and a Map Colors Index to filter.$body$,
   $detail$Desktop stayed the same — mobile got a full-screen Sacramento map with colored blips per category and a Map Colors Index to filter.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -280,9 +280,9 @@ Parallel MobileView vs DesktopView components.$detail$,
 Message the person giving something away to arrange porch pickup.
 
 Start from listing Message button or accepted profile request.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -291,9 +291,9 @@ Start from listing Message button or accepted profile request.$detail$,
   'Switched to OpenStreetMap',
   $body$Map uses OpenStreetMap now — real Sacramento streets.$body$,
   $detail$Map uses OpenStreetMap now — real Sacramento streets.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -302,9 +302,9 @@ Start from listing Message button or accepted profile request.$detail$,
   'Pick your location when posting',
   $body$When you post you can use your current GPS location OR tap the map and drop a pin for pickup.$body$,
   $detail$When you post you can use your current GPS location OR tap the map and drop a pin for pickup.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -316,9 +316,9 @@ Start from listing Message button or accepted profile request.$detail$,
 Staff and director roles so the growing community can be moderated fairly.
 
 Early foundation for StaffModerationPanel and RoleBadge.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -332,9 +332,9 @@ Posts, profiles, chats, and votes live in Supabase — same community on every d
 MIGRATION from early local-only prototypes to cloud-backed app.
 
 Realtime sync across sessions.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -344,9 +344,9 @@ Realtime sync across sessions.$detail$,
   $body$Expanded the neighborhood list — 38 Sacramento areas to pick from.$body$,
   $detail$What you'll notice:
 Pick from 38 Sacramento-area neighborhoods when joining or posting — better local matching.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -356,9 +356,9 @@ Pick from 38 Sacramento-area neighborhoods when joining or posting — better lo
   $body$Block someone who makes you uncomfortable. Blocking auto-reports to me.$body$,
   $detail$What you'll notice:
 Block a neighbor (hide their posts/chats) or send a one-way report to staff.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -367,9 +367,9 @@ Block a neighbor (hide their posts/chats) or send a one-way report to staff.$det
   'Post multiple items in one listing',
   $body$One post can list several items — people claim separately and you confirm who got what.$body$,
   $detail$One post can list several items — people claim separately and you confirm who got what.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -379,9 +379,9 @@ Block a neighbor (hide their posts/chats) or send a one-way report to staff.$det
   $body$Live counts of neighbors, posts, and gifts at the top of the feed.$body$,
   $detail$What you'll notice:
 Live counts of you, active posts, items given, and requests fulfilled at top of Stuff feed.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -393,9 +393,9 @@ Live counts of you, active posts, items given, and requests fulfilled at top of 
 Welcome page shows community activity before you join — same stats as in-app bar.
 
 Builds trust for new visitors.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -404,9 +404,9 @@ Builds trust for new visitors.$detail$,
   'Contactless self-claim at pickup',
   $body$At your pickup spot you can claim themselves and pick which items they took — you confirm.$body$,
   $detail$At your pickup spot you can claim themselves and pick which items they took — you confirm.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -417,9 +417,9 @@ Builds trust for new visitors.$detail$,
   $detail$I can bump people up to moderator, administrator, or city manager from their profile.
 
 Helps as the community grows so I'm not the only one watching reports and tickets.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -431,9 +431,9 @@ Helps as the community grows so I'm not the only one watching reports and ticket
 Edit your listing title, description, photos, and category before it is claimed.
 
 Saved-item bookmarkers can get push on owner edits (if enabled).$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -445,9 +445,9 @@ Saved-item bookmarkers can get push on owner edits (if enabled).$detail$,
 Listing photos load faster and upload more smoothly when posting.
 
 ListingImage component with lazy-friendly loading.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -459,9 +459,9 @@ ListingImage component with lazy-friendly loading.$detail$,
 Modern cards, cleaner navigation, light/dark themes, consistent buttons and inputs across the app.
 
 Mobile/tablet/desktop shells share the same visual language.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -470,9 +470,9 @@ Mobile/tablet/desktop shells share the same visual language.$detail$,
   'Full-screen chat & profile on mobile',
   $body$Chat and account use the full phone screen like map and feed.$body$,
   $detail$Chat and account use the full phone screen like map and feed.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -484,9 +484,9 @@ Mobile/tablet/desktop shells share the same visual language.$detail$,
 Dedicated Community hub tab for reports, app updates, announcements, and reviews (support tickets now under Chat).
 
 Staff moderation panel on same tab for staff roles.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -496,9 +496,9 @@ Staff moderation panel on same tab for staff roles.$detail$,
   $body$Give generously and it helps when you post something you're looking for.$body$,
   $detail$What you'll notice:
 When someone helps fulfill your ISO request, they get “items given” credit and you get “items claimed” credit.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -510,9 +510,9 @@ When someone helps fulfill your ISO request, they get “items given” credit a
 Tap any post for full photos, description, comments, votes, bookmark, and claim/message actions.
 
 Opened from ItemGrid, map popups, profile listings.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -522,9 +522,9 @@ Opened from ItemGrid, map popups, profile listings.$detail$,
   $body$New posts, chats, votes, and ticket replies show up without refreshing.$body$,
   $detail$What you'll notice:
 New posts, chat messages, votes, ticket replies, and events appear without manual refresh.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -536,9 +536,9 @@ New posts, chat messages, votes, ticket replies, and events appear without manua
 Legend on the map explains pin colors for giveaways, looking-for posts, labor, pending pickup, etc.
 
 Category → color mapping in map marker renderer.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -551,9 +551,9 @@ Category → color mapping in map marker renderer.$detail$,
 DEFAULT TAB — App.tsx initial tab 'map' (localStorage sbn_active_tab_v1)
 
 SacramentoMapView.tsx with category-colored pins.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -563,9 +563,9 @@ SacramentoMapView.tsx with category-colored pins.$detail$,
   $body$New chats start as a request. You accept or decline before talking.$body$,
   $detail$What you'll notice:
 Cold DMs from profiles start as a request — accept or decline before chatting. Listing messages skip the gate.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -579,9 +579,9 @@ Tap avatars to open neighbor profiles with photo, neighborhood, bio, and listing
 Linked from ItemCard, ChatSystem, map pins, comments.
 
 Avatars from Google sign-in photoURL or dicebear fallback.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -590,9 +590,9 @@ Avatars from Google sign-in photoURL or dicebear fallback.$detail$,
   'Claim multiple items one trip',
   $body$Grab several things from the same neighbor in one pickup when they're giving away a bunch.$body$,
   $detail$Grab several things from the same neighbor in one pickup when they're giving away a bunch.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -604,9 +604,9 @@ Avatars from Google sign-in photoURL or dicebear fallback.$detail$,
 Top header and bottom tab bar stay fixed while scrolling on phones.
 
 Safe-area insets for notched iPhones.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -615,9 +615,9 @@ Safe-area insets for notched iPhones.$detail$,
   'Post button on the feed',
   $body$Post button on the feed on every screen size — not just the map.$body$,
   $detail$Post button on the feed on every screen size — not just the map.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -627,9 +627,9 @@ Safe-area insets for notched iPhones.$detail$,
   $body$About, How It Works, Rules, Areas — browse before you sign up.$body$,
   $detail$What you'll notice:
 Public pages before sign-in: Home, About, How It Works, Rules, Areas, Community, Updates, Reviews, GoFundMe.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -641,9 +641,9 @@ Public pages before sign-in: Home, About, How It Works, Rules, Areas, Community,
 Directions to free gifts use real streets (OSRM) instead of straight lines.
 
 Falls back to Haversine line if routing API unavailable.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -652,9 +652,9 @@ Falls back to Haversine line if routing API unavailable.$detail$,
   'Request to DM outside item chats',
   $body$You can request to DM other users directly — aside from listing chats.$body$,
   $detail$You can request to DM other users directly — aside from listing chats.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -664,9 +664,9 @@ Falls back to Haversine line if routing API unavailable.$detail$,
   $body$Director and staff badges show on profiles so you know who runs things.$body$,
   $detail$What you'll notice:
 Director and staff roles show on profiles and messages so you know who helps run the app.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -678,9 +678,9 @@ Director and staff roles show on profiles and messages so you know who helps run
 Listing owner can send porch/meetup address privately in the coordination chat.
 
 Respects showExactLocation privacy flag on items.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -690,9 +690,9 @@ Respects showExactLocation privacy flag on items.$detail$,
   $body$Staff can review reports, manage accounts, and keep the space safe.$body$,
   $detail$For staff:
 Review reports, manage support tickets, view directory, suspend/ban, audit log.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -702,9 +702,9 @@ Review reports, manage support tickets, view directory, suspend/ban, audit log.$
   $body$Stay signed in after refresh and posts load reliably once you're in.$body$,
   $detail$What you'll notice:
 Stay signed in after refresh; listings load reliably once logged in.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -714,9 +714,9 @@ Stay signed in after refresh; listings load reliably once logged in.$detail$,
   $body$Snap a screenshot or photo when you report a problem so I can see what you see.$body$,
   $detail$What you'll notice:
 Attach a photo when opening a support ticket so staff can see what you see.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -728,9 +728,9 @@ Attach a photo when opening a support ticket so staff can see what you see.$deta
 Android back button and browser back move between app tabs as expected.
 
 ParseTabFromHistoryState on popstate.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -740,9 +740,9 @@ ParseTabFromHistoryState on popstate.$detail$,
   $body$See who helps run the community and what role they have.$body$,
   $detail$What you'll notice:
 See who helps run Sacramento Buy Nothing and their role (moderator, administrator, city manager, director).$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -752,9 +752,9 @@ See who helps run Sacramento Buy Nothing and their role (moderator, administrato
   $body$Easier to see what's available, on hold, or already claimed.$body$,
   $detail$What you'll notice:
 Clearer buttons and labels for available, on hold, pending pickup, and claimed states on listings and in chat.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -766,9 +766,9 @@ Clearer buttons and labels for available, on hold, pending pickup, and claimed s
 Scroll-driven motion on the welcome page — depth layers move at different speeds as you scroll.
 
 Respects reduced-motion where possible via CSS.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -778,9 +778,9 @@ Respects reduced-motion where possible via CSS.$detail$,
   $body$You can remove your account and data if you want out.$body$,
   $detail$What you'll notice:
 Remove your account and community data when you no longer want to participate.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -790,9 +790,9 @@ Remove your account and community data when you no longer want to participate.$d
   $body$Guests can see real posts on the home page without signing up first.$body$,
   $detail$What you'll notice:
 Guests browse real active listings on the public home page without creating an account first.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -802,9 +802,9 @@ Guests browse real active listings on the public home page without creating an a
   $body$Leaders can remove comments, delete accounts, and purge data when we have to.$body$,
   $detail$For staff:
 Leaders can remove comments, suspend/ban you, delete accounts, and purge data when safety requires it.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -816,9 +816,9 @@ Leaders can remove comments, suspend/ban you, delete accounts, and purge data wh
 Tap listing photos to open a full-screen lightbox before messaging the giver.
 
 Escape or backdrop tap closes overlay.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -828,9 +828,9 @@ Escape or backdrop tap closes overlay.$detail$,
   $body$Bookmark posts to check later. New Labor section for free community help and skills.$body$,
   $detail$What you'll notice:
 Bookmark listings to check later. New Labor categories for community help/skills. Added Old Foothill Farms to neighborhood list.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -842,9 +842,9 @@ Bookmark listings to check later. New Labor categories for community help/skills
 Guest home page layout fixed on phones — less horizontal scroll, better spacing before sign-in.
 
 Touch-friendly sections and stats bar alignment on narrow screens.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -856,9 +856,9 @@ Touch-friendly sections and stats bar alignment on narrow screens.$detail$,
 Director welcome message on home and reviews — free forever, no ads, your data is not sold.
 
 Director can edit from Community hub when signed in as director.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -868,9 +868,9 @@ Director can edit from Community hub when signed in as director.$detail$,
   $body$Every switch in push settings actually delivers — messages, claims, discover, staff inbox, pickup reminders, all of it.$body$,
   $detail$What you'll notice:
 Every switch in Account → Push notifications should deliver when enabled — messages, claims, discover, staff inbox, pickup reminders, listing status, support, announcements, and more.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -894,9 +894,9 @@ NotifyAppUpdate() sends eventType app_update. notifyCommunityAnnouncement() send
 /updates opens Help → App updates panel. /help/announcements opens Help → Announcements panel.
 
 Row 14: push-app-updates on app_updates INSERT. Row 15: push-announcements on help_announcements INSERT (not app_updates).$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -910,9 +910,9 @@ Filters and sorting moved into one “Filters & sort” panel so the Stuff feed 
 Single panel: type (give/look), category, neighborhood, status, vote/comment filters, sort order.
 
 Mobile-friendly sheet instead of many inline controls.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -926,9 +926,9 @@ Listing owners get a push when someone comments on their post. You who bookmark 
 Item_comments INSERT → comment push to owner + saved-item bookmarkers. items UPDATE → listingStatus / saved-item paths with dedup tags.
 
 SETUP Each comment is its own alert (not bundled). Toggle Saved items if you only want alerts on bookmarked posts.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -941,9 +941,9 @@ SETUP Each comment is its own alert (not bundled). Toggle Saved items if you onl
 Users INSERT/DELETE, moderation_audit_log, user_reports, support_tickets, items, message_requests, item_claim_requests.
 
 Each category has its own toggle — turn off noise you do not need.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -957,9 +957,9 @@ Each staff member publishes their own welcome note on home and reviews — not o
 PK userId — one row per staff member.
 
 Director note remains separate in director_message table.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -974,9 +974,9 @@ Push_dispatch_log table with UNIQUE(tag). Fail-open on DB errors except duplicat
 CLIENT_PUSH_DISPATCH_ENABLED true again with dedup tags matching server.
 
 Listing expiry + pickup reminders when app closed.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -990,9 +990,9 @@ The main listings tab label changed from “Feed” to “Stuff” — same free
 IN_APP.feedTabLabel = 'Stuff' IN_APP.feedTitle = 'Community Stuff'
 
 No database changes — display copy only.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1006,9 +1006,9 @@ The same event should not ping your phone twice when both the open app and the s
 ClaimPushDispatch(tag) inserts into push_dispatch_log with UNIQUE(tag) and ~90s window.
 
 SQL CREATE UNIQUE INDEX IF NOT EXISTS push_dispatch_log_tag_unique ON push_dispatch_log (tag);.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1017,9 +1017,9 @@ SQL CREATE UNIQUE INDEX IF NOT EXISTS push_dispatch_log_tag_unique ON push_dispa
   'Free community events',
   $body$Post neighborhood gatherings, RSVP, comment. Every event has to be 100% free.$body$,
   $detail$Post neighborhood gatherings, RSVP (going / maybe / can’t go), and leave comments. Every event must be 100% free.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1029,9 +1029,9 @@ SQL CREATE UNIQUE INDEX IF NOT EXISTS push_dispatch_log_tag_unique ON push_dispa
   $body$Removed the GoFundMe strip from under the map tab. Still at the bottom elsewhere — tap for full page.$body$,
   $detail$What you'll notice:
 GoFundMe strip removed from under the map. On other scrollable pages it sits at the bottom; tap for full cost breakdown.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1043,9 +1043,9 @@ GoFundMe strip removed from under the map. On other scrollable pages it sits at 
 Full hosting cost breakdown on a dedicated page; every other screen shows a short optional support link at the bottom.
 
 Explains Vercel, Supabase, domain, and why the app stays free with no ads.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1059,9 +1059,9 @@ Optional push when you upvote or downvote your listings — each direction has i
 Respects listingUpvotes and listingDownvotes preference keys.
 
 WORKS IN BACKGROUND when push is enabled and device subscription is valid (Add to Home Screen on iPhone).$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1081,9 +1081,9 @@ Listens for sbn-notification-session-cleared and calls resetPreferencesState().
 Await clearNotificationDataOnLogout(userProfile.uid) before supabase.auth.signOut().
 
 IMPORTANT Prefs are per account in notification_preferences (one row per userId). Push delivery is per device in push_subscriptions. Re-enable notifications after switching accounts.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1095,9 +1095,9 @@ IMPORTANT Prefs are per account in notification_preferences (one row per userId)
 Filter by giving vs looking, category, neighborhood, status, votes, comments. Sort by newest, oldest, or most active.
 
 Helps find active looking-for posts or popular giveaways quickly.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1109,9 +1109,9 @@ Helps find active looking-for posts or popular giveaways quickly.$detail$,
 Re-enabled client dispatch WITH dedup:. Bad tags fixed: msg-{chatId} → msg-{messageId}, static community-announcement → announcement-{id}.
 
 Removed unauthenticated resubscribe that reassigned endpoints to wrong users.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1126,9 +1126,9 @@ Preferences vs savedPreferences state, preferencesEqual(), hasUnsavedRef prevent
 LOGOUT BEHAVIOR clearNotificationDataOnLogout clears device push + in-memory UI; DB prefs for the account remain for next login.
 
 WHY NOT AUTOSAVE Prevents accidental toggles and matches “prefs per account, push per device” model documented in Help copy.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1143,9 +1143,9 @@ Shared devices: browser push endpoint stayed registered to previous user’s row
 
 After you pull the update:
 Each neighbor: notifications off → on once while signed in as themselves.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1159,9 +1159,9 @@ Notifications reach your phone when Sacramento Buy Nothing is closed — not onl
 STACK. public/service-worker.js — push event + notificationclick → deep link.
 
 IPHONE.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1173,9 +1173,9 @@ IPHONE.$detail$,
 Optional browser push for messages, claims, new listings, comments, and more — controlled per account in settings.
 
 Enable in Account → Push notifications. iPhone: Add to Home Screen for background delivery.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1196,9 +1196,9 @@ Messages use msg-{messageId}, pickup chat notes use pickup-msg-{messageId}, anno
 
 What to do:
 On each device: Help or Account → Push notifications → turn off, then on again once. Tap Save settings if you changed toggles. Confirm test push still works, then trigger a real event (have someone message you).$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1212,9 +1212,9 @@ Saving a listing now stores the bookmark in your account online — not only on 
 BEFORE localStorage key sbn_saved_items_v1 only — server could not notify when app was closed.
 
 SyncSavedItemBookmark(userId, itemId, saved) writes saved_items rows. migrateLocalSavedItemsToDb() on login imports old local bookmarks.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1228,9 +1228,9 @@ Tap multiple quick filters at once — Trending, Saved, My area, With photos, Ne
 Trending = recent activity; Saved = useSavedItems hook; My area = your neighborhood; etc.
 
 Combines with full Filters & sort panel.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1257,9 +1257,9 @@ Added Heart icon import that had been causing a secondary crash.
 
 How to check:
 Sign in on phone and desktop, open Help, expand notification settings, switch accounts — app should remain interactive.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1290,9 +1290,9 @@ CanPostAnnouncements() = any staff role.
 UI.
 
 PUSH.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1304,9 +1304,9 @@ PUSH.$detail$,
 Leave a 0.5–5 star rating and optional text. One review per neighbor; edit anytime.
 
 UNIQUE userId.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1318,9 +1318,9 @@ UNIQUE userId.$detail$,
 Optional GoFundMe link explains real monthly costs — app stays 100% free, no ads, no selling data.
 
 Never required to participate in the community.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1330,9 +1330,9 @@ Never required to participate in the community.$detail$,
   $body$Send yourself a test alert from Account → Push notifications after you subscribe.$body$,
   $detail$What you'll notice:
 After enabling push, tap “Send test notification” in Account → Push notifications to confirm this device receives alerts.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1344,9 +1344,9 @@ After enabling push, tap “Send test notification” in Account → Push notifi
 Director changelog entries live in Supabase, not hard-coded. You read them under Community hub → App updates; director can post, edit, delete.
 
 Columns: id, date, title, body, detail, directorName, postedByUserId.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1358,9 +1358,9 @@ Columns: id, date, title, body, detail, directorName, postedByUserId.$detail$,
 Public Updates and Reviews pages for guests and you — changelog oldest→newest, star reviews, director note.
 
 Update votes feed back to director.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1376,9 +1376,9 @@ TargetType: update | review | leader_message | announcement.
 Used in UpdatesList, CommunityReviews, StaffMessage, DirectorMessage.
 
 Cannot vote on your own review. Sign in required.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1390,9 +1390,9 @@ Cannot vote on your own review. Sign in required.$detail$,
 When a neighbor withdraws a listing, it disappears from the community feed and map.
 
 Owner can still see withdrawn posts in profile history where applicable.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1407,9 +1407,9 @@ Open Chat → Support → My support tickets. Tap ← to return to the chat inbo
 CODE.
 
 Deploy only — no new SQL tables.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1428,9 +1428,9 @@ NOTIFICATION SETTINGS. Messages & support → Community chat (all you). Staff mo
 How it works:. Dedup tags: community-msg-{messageId} and staff-msg-{messageId}. Deep links: /messages/community-global and /messages/community-staff.
 
 CODE.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1443,9 +1443,9 @@ CODE.$detail$,
 COMMUNITY HUB (was Help) App updates, announcements, reviews, and safety reports. Tab label is now Community.
 
 CODE.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1461,9 +1461,9 @@ FOR DIRECTORS.
 Run once in Supabase SQL Editor:.
 
 Safe to re-run — ON CONFLICT DO UPDATE refreshes body and detail for all 87 rows.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1478,9 +1478,9 @@ What was broken:
 After posting, the app both (a) added the new row to the screen immediately and (b) refreshed from Supabase realtime a moment later. If realtime finished first, the immediate add ran again and duplicated the same announcement id in the list.
 
 No SQL required for this fix — deploy the app update only.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1489,9 +1489,9 @@ No SQL required for this fix — deploy the app update only.$detail$,
   'Bell tab order: Notify before Alerts',
   $body$Reorder: Notify → News → Updates → Alerts last so you find your inbox before settings.$body$,
   $detail$Reorder: Notify → News → Updates → Alerts last so you find your inbox before settings.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1500,9 +1500,9 @@ No SQL required for this fix — deploy the app update only.$detail$,
   'Can''t vote on your own stuff',
   $body$Upvotes/downvotes disabled on your own listings, reviews, updates, news, and messages.$body$,
   $detail$Applies everywhere you can vote:. Your listings. Your review. Your announcements or changelog entries. Director and staff messages you authored.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1511,9 +1511,9 @@ No SQL required for this fix — deploy the app update only.$detail$,
   'Map is the big center button',
   $body$On phones, Map is the round center button in the bottom nav.$body$,
   $detail$Bottom nav: Stuff | Events | Map (circle) | Chat | Account Tap the center circle to open the neighborhood map.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1522,9 +1522,9 @@ No SQL required for this fix — deploy the app update only.$detail$,
   'Chat empty states match',
   $body$Support, DMs, and reviews use the same empty layout when there's nothing yet.$body$,
   $detail$Support, DMs, and reviews use the same empty layout when there's nothing yet.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1533,9 +1533,9 @@ No SQL required for this fix — deploy the app update only.$detail$,
   'Delete your chat messages',
   $body$Delete messages you sent. I/city managers can remove community channel messages.$body$,
   $detail$Use delete on your own messages in DMs, community chat, staff chat, and support threads. Director and city manager can delete any message in community-global.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1548,9 +1548,9 @@ No SQL required for this fix — deploy the app update only.$detail$,
 REVIEWS & REPORTS. Community reviews — read and post yours. Send a report — one-way to staff. User reports — staff only.
 
 Group chats replaced the old "Community" label. Public channel is now All you.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1561,9 +1561,9 @@ Group chats replaced the old "Community" label. Public channel is now All you.$d
   $detail$QUICK ACTIONS (same row style as Send a report). Start conversation — opens Stuff to message from a listing. Open new support chat — private thread with staff.
 
 SIDEBAR ORDER 1. Direct messages 2. Group chats 3. Support 4. Reviews & reports.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1572,9 +1572,9 @@ SIDEBAR ORDER 1. Direct messages 2. Group chats 3. Support 4. Reviews & reports.
   'Chat sidebar: last 3 + View all',
   $body$Support and DMs show three recent threads with View all to expand.$body$,
   $detail$Support and DMs show three recent threads with View all to expand.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1583,9 +1583,9 @@ SIDEBAR ORDER 1. Direct messages 2. Group chats 3. Support 4. Reviews & reports.
   'Your review on top, neighbors below',
   $body$Chat → Community reviews: post yours up top, everyone else's below — yours isn't duplicated.$body$,
   $detail$Chat → Community reviews: post yours up top, everyone else's below — yours isn't duplicated.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1594,9 +1594,9 @@ SIDEBAR ORDER 1. Direct messages 2. Group chats 3. Support 4. Reviews & reports.
   'Delete conversations from Chat',
   $body$Remove profile DMs or post chats. Poster can delete post chats only after gifted or withdrawn. Delete closed support tickets too.$body$,
   $detail$Remove profile DMs or post chats. Poster can delete post chats only after gifted or withdrawn. Delete closed support tickets too.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1607,9 +1607,9 @@ SIDEBAR ORDER 1. Direct messages 2. Group chats 3. Support 4. Reviews & reports.
   $detail$STAFF & DIRECTOR Account tab → Staff tools (directory, audit log, welcome messages, etc.) Director → site overview on Account too.
 
 NEIGHBORS Five tabs on mobile: Stuff | Events | Map (center) | Chat | Account News and announcements: bell (top right) Reviews and reports: Chat.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1618,9 +1618,9 @@ NEIGHBORS Five tabs on mobile: Stuff | Events | Map (center) | Chat | Account Ne
   'No more browser OK/Cancel boxes',
   $body$Confirmations use in-app dialogs that match the site — not generic browser popups.$body$,
   $detail$Applies to deletes, director broadcast tests, and other sensitive actions — src/contexts/ConfirmContext.tsx, ConfirmDialog.tsx.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1645,9 +1645,9 @@ WHY TWO PUSH TABS? Notifications = you interacting with your posts. Alerts = gen
 DEEP LINKS. /help/announcements → Announcements. /updates → Updates. /notifications/listings → Notifications. /notifications → Alerts.
 
 IPhone: Home Screen app (Add to Home Screen), not a Safari tab.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1662,9 +1662,9 @@ IPhone: Home Screen app (Add to Home Screen), not a Safari tab.$detail$,
 KEY IDEA. Notifications = what happened (read it). Alerts = what you want pushed to your phone (toggle it)
 
 DEEP LINKS. /notifications → Notifications inbox. /notifications/alerts → Alerts settings.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1675,9 +1675,9 @@ DEEP LINKS. /notifications → Notifications inbox. /notifications/alerts → Al
   $detail$HOW TO NOTIFY EVERYONE ABOUT PUSH REFRESH.
 
 1. Deploy this app version 2. Run this SQL file for Updates tab entries 3. Bell → Announcements → Post announcement 4. Use title/summary about refreshing alerts under bell → Alerts tab 5. Save once — push goes to you with Announcements enabled under Alerts.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1690,9 +1690,9 @@ DEEP LINKS. /notifications → Notifications inbox. /notifications/alerts → Al
 I rebuilt the pipeline: webhooks, duplicate filtering, prefs that actually save, and logout clears your phone so shared devices don't cross wires.
 
 If you're still not getting pings: Bell → Alerts → turn off → Save → flip back on → Save. On iPhone, use the Home Screen app — Safari won't cut it.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1705,9 +1705,9 @@ If you're still not getting pings: Bell → Alerts → turn off → Save → fli
 IPhone you: use Sacramento Buy Nothing from your Home Screen (Add to Home Screen), not a Safari tab — background alerts need the installed app.
 
 After refreshing, you should receive messages, claims, community chat, saved listings, and other alerts reliably. Thank you for your patience!$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1716,9 +1716,9 @@ After refreshing, you should receive messages, claims, community chat, saved lis
   'Search the changelog',
   $body$Bell → Updates has a search field — find past releases by keyword.$body$,
   $detail$Use Search updates… to find past releases quickly. Works on the public updates page too.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1727,9 +1727,9 @@ After refreshing, you should receive messages, claims, community chat, saved lis
   'Support inbox in Chat',
   $body$Support tickets live in Chat with the same sidebar style as DMs.$body$,
   $detail$You: Chat → Support — open tickets, reply, back button to inbox. Staff: Chat → Support inbox — ticket list with last-message preview. Removed from Community hub moderation panel. Push: Alerts tab → Support tickets. Deep links /staff/tickets and /support open Messages support.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1740,9 +1740,9 @@ After refreshing, you should receive messages, claims, community chat, saved lis
   $detail$TABLE: user_notifications. One row per neighbor per alert (any event type they are eligible to receive). Written by the server when push is dispatched (service role). If you would see a push alert, you also see it under bell → Notifications. Toggle what sends push under Alerts (last tab)
 
 After deploy, trigger any alert (message, comment, nearby listing) to see inbox rows.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1751,9 +1751,9 @@ After deploy, trigger any alert (message, comment, nearby listing) to see inbox 
   'Edit welcome messages from Account',
   $body$Director and staff public welcome notes edited from Account → Staff tools.$body$,
   $detail$Director — Public welcome message (home + reviews) Staff — Your team message (home + reviews) Still shown on home carousel and reviews page.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1764,9 +1764,9 @@ After deploy, trigger any alert (message, comment, nearby listing) to see inbox 
   $detail$Swapped the header theme button for a glowing Awards button. Dark/light theme is under Account now.
 
 Tap Awards and you'll get a coming soon page — that's it for now, still building the rest.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1775,9 +1775,9 @@ Tap Awards and you'll get a coming soon page — that's it for now, still buildi
   'Cleaned up chat sidebar header',
   $body$Removed the redundant Chat title and count from the chat sidebar — less noise.$body$,
   $detail$Removed the redundant Chat title and count from the chat sidebar — less noise.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1788,9 +1788,9 @@ Tap Awards and you'll get a coming soon page — that's it for now, still buildi
   $detail$Map was white-screening for some people — I broke a Leaflet import. Fixed, sorry.
 
 Should be sorted now. If you still see it, hit support and tell me what screen you're on.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1801,9 +1801,9 @@ Should be sorted now. If you still see it, hit support and tell me what screen y
   $detail$Profile page crashed after I moved theme settings. Fixed a missing import — should be good now.
 
 Should be sorted now. If you still see it, hit support and tell me what screen you're on.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1812,9 +1812,9 @@ Should be sorted now. If you still see it, hit support and tell me what screen y
   'You land on the map when you sign in',
   $body$When you log in you go straight to the map tab now instead of somewhere random.$body$,
   $detail$When you log in you go straight to the map tab now instead of somewhere random.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1823,9 +1823,9 @@ Should be sorted now. If you still see it, hit support and tell me what screen y
   'Dark/light theme moved to Account',
   $body$Theme toggle isn't in the header anymore — find it under Account now. Less clutter up top.$body$,
   $detail$Theme toggle isn't in the header anymore — find it under Account now. Less clutter up top.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1840,9 +1840,9 @@ You can post item-for-item swaps now — trade/barter type. Still 100% free, no 
 You can post item-for-item swaps now — trade/barter type.
 
 Still 100% free. No money, no shipping, no sketchy side deals — just neighbors trading stuff.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 ),
 
 (
@@ -1851,8 +1851,8 @@ Still 100% free. No money, no shipping, no sketchy side deals — just neighbors
   'Grey map rings for trade posts',
   $body$Trade listings show a grey ring on the map. Giving stays black, looking stays white.$body$,
   $detail$Trade listings show a grey ring on the map. Giving stays black, looking stays white.$detail$,
-  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "displayName" FROM public.users WHERE role = 'director' LIMIT 1),
   'Buy Nothing Director',
-  '204b071f-100c-401d-b76d-40c594e1f132'
+  (SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)
 )
 ;

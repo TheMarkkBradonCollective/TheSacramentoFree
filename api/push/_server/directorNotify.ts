@@ -1,5 +1,5 @@
 import type { PushSendBody } from './runPushSend';
-import { isDirectorUser } from './directorIdentity';
+import { isDirectorRole } from './directorIdentity';
 import { runPushSend } from './runPushSend';
 
 export type DirectorAlertCategory =
@@ -44,7 +44,7 @@ export async function runDirectorJoinNotify(
   profile: { uid: string; displayName?: string; neighborhood?: string; email?: string | null },
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const uid = String(profile.uid || '');
-  if (!uid || isDirectorUser(uid)) {
+  if (!uid || isDirectorRole((profile as { role?: string }).role)) {
     return { status: 200, body: { ok: true, skipped: 'not a join alert candidate' } };
   }
 
@@ -71,7 +71,7 @@ export async function runDirectorLeaveNotify(
   },
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const uid = String(profile.uid || '');
-  if (!uid || isDirectorUser(uid)) {
+  if (!uid || isDirectorRole((profile as { role?: string }).role)) {
     return { status: 200, body: { ok: true, skipped: 'not a departure alert candidate' } };
   }
 

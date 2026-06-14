@@ -27,7 +27,7 @@ export async function runDirectorBroadcastTest(
     .eq('uid', callerId)
     .maybeSingle();
 
-  if (!isDirectorAccount(callerId)) {
+  if (!isDirectorAccount(callerId, (caller as { role?: string } | null)?.role)) {
     return { status: 403, body: { error: 'Director access required' } };
   }
 

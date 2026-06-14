@@ -13,7 +13,7 @@ export default function AccountHelpSection({
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
 }: AccountHelpSectionProps) {
-  const showDirectorOverview = canViewDirectorOverview(user);
+  const showDirectorOverview = canViewDirectorOverview(user.role);
 
   if (!showDirectorOverview) {
     return null;

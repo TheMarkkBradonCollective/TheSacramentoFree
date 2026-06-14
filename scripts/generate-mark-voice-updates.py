@@ -7,9 +7,9 @@ import re
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DIRECTOR_UID = "204b071f-100c-401d-b76d-40c594e1f132"  # shared/directorIdentity.ts — only director account
+DIRECTOR_UID_SQL = "(SELECT uid FROM public.users WHERE role = 'director' LIMIT 1)"
 DIRECTOR_NAME_SQL = (
-    f'(SELECT "displayName" FROM public.users WHERE uid = \'{DIRECTOR_UID}\')'
+    '(SELECT "displayName" FROM public.users WHERE role = \'director\' LIMIT 1)'
 )
 
 SQL_FILES = [
@@ -1016,7 +1016,7 @@ def main() -> None:
             f"  {detail_sql},\n"
             f"  {DIRECTOR_NAME_SQL},\n"
             f"  'Buy Nothing Director',\n"
-            f"  '{DIRECTOR_UID}'\n"
+            f"  {DIRECTOR_UID_SQL}\n"
             ")"
         )
 

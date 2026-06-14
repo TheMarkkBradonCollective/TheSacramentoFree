@@ -21,7 +21,6 @@ import {
   canViewDirectorOverview,
   ASSIGNABLE_ROLE_OPTIONS,
 } from '../lib/roles';
-import { DIRECTOR_UID, isDirectorUser } from '../lib/directorIdentity';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 import { useDirectorMessage } from '../hooks/useDirectorMessage';
 import { useStaffMessage } from '../hooks/useStaffMessage';
@@ -84,7 +83,7 @@ export default function StaffModerationPanel({
   const { confirm } = useConfirm();
 
   const canDirectory = canAccessStaffDirectory(viewer.role);
-  const canEditDirectorMessage = canViewDirectorOverview(viewer);
+  const canEditDirectorMessage = canViewDirectorOverview(viewer.role);
   const canEditStaffMessage = canEditOwnStaffMessage(viewer.role);
   const { message: directorMessage, saveMessage: saveDirectorMessage } = useDirectorMessage(viewer);
   const {
@@ -300,7 +299,7 @@ export default function StaffModerationPanel({
       displayName: editName,
       neighborhood: editNeighborhood,
       bio: editBio,
-      role: isDirectorUser(viewer.uid) ? editRole : undefined,
+      role: viewer.role === 'director' ? editRole : undefined,
     });
     setEditSaving(false);
     if (result.ok) {
@@ -567,7 +566,7 @@ export default function StaffModerationPanel({
                 onChange={(e) => setEditBio(e.target.value)}
               />
             </label>
-            {isDirectorUser(viewer.uid) && (
+            {viewer.role === 'director' && (
               <label className="block space-y-1">
                 <span className="text-[10px] font-bold uppercase text-muted">Role</span>
                 <select
@@ -575,9 +574,7 @@ export default function StaffModerationPanel({
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value as UserProfile['role'])}
                 >
-                  {ASSIGNABLE_ROLE_OPTIONS.filter(
-                    (opt) => opt.value !== 'director' || editUser.uid === DIRECTOR_UID,
-                  ).map((opt) => (
+                  {ASSIGNABLE_ROLE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>

@@ -21,7 +21,7 @@ export default function CommunityMenuView({
   fullBleed = false,
 }: CommunityMenuViewProps) {
   const isStaff = canAccessStaffDirectory(userProfile.role);
-  const isDirector = canViewDirectorOverview(userProfile);
+  const isDirector = canViewDirectorOverview(userProfile?.role);
 
   if (!isStaff && !isDirector) {
     return null;

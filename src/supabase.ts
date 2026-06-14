@@ -5,10 +5,7 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
-import { DIRECTOR_UID, isDirectorUser } from './lib/directorIdentity';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
-
-export { DIRECTOR_UID, isDirectorUser } from './lib/directorIdentity';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -351,7 +348,7 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     email: String(row.email ?? ''),
     neighborhood: String(row.neighborhood ?? 'Sacramento'),
     bio: typeof row.bio === 'string' ? row.bio : undefined,
-    role: isDirectorUser(uid) ? 'director' : normalizeUserRole(row.role),
+    role: normalizeUserRole(row.role),
     accountStatus,
     suspendedUntil,
     createdAt: row.createdAt ?? row.created_at,
@@ -394,25 +391,64 @@ export async function syncProfilePhotoAcrossApp(
  * --- PROFILES ---
  */
 
-function normalizeAppUpdatePostedByUserId(raw: string): string {
+function normalizeAppUpdatePostedByUserId(raw: string, legacyDirectorUid?: string | null): string {
   const trimmed = raw.trim();
-  if (!trimmed || trimmed === 'director') return DIRECTOR_UID;
+  if (!trimmed || trimmed === 'director') {
+    return legacyDirectorUid || trimmed || '';
+  }
   return trimmed;
 }
 
-async function getDirectorDisplayName(): Promise<string> {
-  const info = await getUserDisplayInfoByIds([DIRECTOR_UID]);
-  return info[DIRECTOR_UID]?.displayName?.trim() || DIRECTOR_MESSAGE.name;
+async function resolveDirectorUserId(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid')
+      .eq('role', 'director')
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+    return String((data as { uid: string }).uid);
+  } catch {
+    return null;
+  }
 }
 
-/** Keep users.role aligned with the director account UID. */
-export async function ensureDirectorRoleInDb(uid: string): Promise<void> {
-  if (!isDirectorUser(uid)) return;
+async function getDirectorDisplayName(): Promise<string> {
   try {
-    await supabase.from('users').update({ role: 'director' }).eq('uid', uid);
-  } catch (err) {
-    console.warn('Director role sync failed:', err);
+    const { data, error } = await supabase
+      .from('users')
+      .select('displayName')
+      .eq('role', 'director')
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return DIRECTOR_MESSAGE.name;
+    return String((data as { displayName?: string }).displayName || '').trim() || DIRECTOR_MESSAGE.name;
+  } catch {
+    return DIRECTOR_MESSAGE.name;
   }
+}
+
+async function assertStaffRoleSlotAvailable(
+  targetUserId: string,
+  role: UserRole,
+): Promise<{ ok: true } | { ok: false; errorMessage: string }> {
+  const limit = STAFF_ROLE_SLOTS[role];
+  if (limit === undefined) return { ok: true };
+
+  const { count, error } = await supabase
+    .from('users')
+    .select('uid', { count: 'exact', head: true })
+    .eq('role', role)
+    .neq('uid', targetUserId);
+
+  if (error) {
+    return { ok: false, errorMessage: error.message || 'Could not verify role limits.' };
+  }
+  if ((count ?? 0) >= limit) {
+    return { ok: false, errorMessage: staffRoleSlotMessage(role, limit) };
+  }
+  return { ok: true };
 }
 
 /** Instant profile from Supabase auth — never blocks on the database. */
@@ -422,7 +458,6 @@ export function profileFromAuthUser(user: {
   user_metadata?: Record<string, unknown>;
 }): UserProfile {
   const email = user.email?.trim() || '';
-  const isDirector = isDirectorUser(user.id);
   const meta = user.user_metadata ?? {};
 
   return {
@@ -433,7 +468,7 @@ export function profileFromAuthUser(user: {
     neighborhood: String(meta.neighborhood || 'Midtown'),
     bio: typeof meta.bio === 'string' ? meta.bio : undefined,
     createdAt: new Date().toISOString(),
-    role: isDirector ? 'director' : 'user',
+    role: 'user',
   };
 }
 
@@ -604,7 +639,7 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
-      role: isDirectorUser(profile.uid) ? 'director' : (profile.role || 'user'),
+      role: profile.role || 'user',
       createdAt: coerceToIsoDate(profile.createdAt),
     };
 
@@ -640,7 +675,7 @@ export async function upsertSupabaseProfile(
       void syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
     }
 
-    if ((isNewNeighbor || isRecentSignupProfile) && !isDirectorUser(profile.uid)) {
+    if ((isNewNeighbor || isRecentSignupProfile) && normalizeUserRole(profile.role) !== 'director') {
       await runPushTask(() =>
         import('./lib/pushIntegration').then((m) =>
           m.pushDirectorAlert({
@@ -1354,6 +1389,11 @@ export async function setUserRole(
   context?: { actorUserId: string; actorName: string; targetName: string; previousRole?: UserRole },
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
+    const slotCheck = await assertStaffRoleSlotAvailable(uid, role);
+    if (!slotCheck.ok) {
+      return { ok: false, errorMessage: slotCheck.errorMessage };
+    }
+
     const { error } = await supabase
       .from('users')
       .update({ role })
@@ -2620,7 +2660,7 @@ export function defaultDirectorMessageContent(): DirectorMessageContent {
     promises: [...DIRECTOR_MESSAGE.promises],
     closing: DIRECTOR_MESSAGE.closing,
     updatedAt: new Date().toISOString(),
-    updatedByUserId: DIRECTOR_UID,
+    updatedByUserId: null,
   };
 }
 
@@ -2642,7 +2682,7 @@ function normalizeDirectorMessageRow(
     promises,
     closing: String(row.closing || DIRECTOR_MESSAGE.closing),
     updatedAt: coerceToIsoDate(row.updatedAt),
-    updatedByUserId: row.updatedByUserId ? String(row.updatedByUserId) : DIRECTOR_UID,
+    updatedByUserId: row.updatedByUserId ? String(row.updatedByUserId) : null,
   };
 }
 
@@ -2678,7 +2718,7 @@ export async function updateSupabaseDirectorMessage(
   content: DirectorMessageContent,
   actor: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
-  if (!isDirectorUser(actor.uid)) {
+  if (!isDirectorRole(actor.role)) {
     return { ok: false, errorMessage: 'Only the director can edit this message.' };
   }
 
@@ -2694,7 +2734,7 @@ export async function updateSupabaseDirectorMessage(
       promises: content.promises.map((p) => p.trim()).filter(Boolean),
       closing: content.closing.trim(),
       updatedAt: new Date().toISOString(),
-      updatedByUserId: DIRECTOR_UID,
+      updatedByUserId: actor.uid,
     };
 
     const { error } = await supabase.from('director_message').upsert(payload, { onConflict: 'id' });
@@ -2846,6 +2886,7 @@ export async function updateSupabaseStaffMessage(
 function normalizeAppUpdateRow(
   row: Record<string, unknown>,
   authorDisplayName?: string,
+  legacyDirectorUid?: string | null,
 ): AppUpdateRecord {
   const rawDate = row.date;
   const date =
@@ -2855,7 +2896,10 @@ function normalizeAppUpdateRow(
         ? rawDate.toISOString().slice(0, 10)
         : new Date().toISOString().slice(0, 10);
 
-  const postedByUserId = normalizeAppUpdatePostedByUserId(String(row.postedByUserId || ''));
+  const postedByUserId = normalizeAppUpdatePostedByUserId(
+    String(row.postedByUserId || ''),
+    legacyDirectorUid,
+  );
   const directorName =
     authorDisplayName?.trim() ||
     String(row.directorName || '').trim() ||
@@ -2878,14 +2922,18 @@ function normalizeAppUpdateRow(
 async function enrichAppUpdatesWithAuthorProfiles(
   rows: Record<string, unknown>[],
 ): Promise<AppUpdateRecord[]> {
+  const legacyDirectorUid = await resolveDirectorUserId();
   const userIds = rows.map((row) =>
-    normalizeAppUpdatePostedByUserId(String(row.postedByUserId || '')),
-  );
+    normalizeAppUpdatePostedByUserId(String(row.postedByUserId || ''), legacyDirectorUid),
+  ).filter(Boolean);
   const displayInfo = await getUserDisplayInfoByIds(userIds);
   return rows.map((row) => {
-    const uid = normalizeAppUpdatePostedByUserId(String(row.postedByUserId || ''));
-    const profileName = displayInfo[uid]?.displayName;
-    return normalizeAppUpdateRow(row, profileName);
+    const uid = normalizeAppUpdatePostedByUserId(
+      String(row.postedByUserId || ''),
+      legacyDirectorUid,
+    );
+    const profileName = uid ? displayInfo[uid]?.displayName : undefined;
+    return normalizeAppUpdateRow(row, profileName, legacyDirectorUid);
   });
 }
 
@@ -2915,23 +2963,22 @@ export async function createSupabaseAppUpdate(
   input: AppUpdateInput,
   actor: UserProfile,
 ): Promise<{ ok: boolean; update?: AppUpdateRecord; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor)) {
+  if (!canManageAppUpdates(actor.role)) {
     return { ok: false, errorMessage: 'Only the director can post updates.' };
   }
 
   try {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const directorName = actor.displayName.trim() || (await getDirectorDisplayName());
     const payload = {
       id,
       date: input.date,
       title: input.title.trim(),
       body: input.body.trim(),
       detail: input.detail?.trim() || null,
-      directorName,
-      directorTitle: roleLabel('director'),
-      postedByUserId: DIRECTOR_UID,
+      directorName: actor.displayName.trim() || (await getDirectorDisplayName()),
+      directorTitle: roleLabel(actor.role),
+      postedByUserId: actor.uid,
       createdAt: now,
       updatedAt: now,
     };
@@ -2961,20 +3008,19 @@ export async function updateSupabaseAppUpdate(
   input: AppUpdateInput,
   actor: UserProfile,
 ): Promise<{ ok: boolean; update?: AppUpdateRecord; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor)) {
+  if (!canManageAppUpdates(actor.role)) {
     return { ok: false, errorMessage: 'Only the director can edit updates.' };
   }
 
   try {
-    const directorName = actor.displayName.trim() || (await getDirectorDisplayName());
     const payload = {
       date: input.date,
       title: input.title.trim(),
       body: input.body.trim(),
       detail: input.detail?.trim() || null,
-      directorName,
-      directorTitle: roleLabel('director'),
-      postedByUserId: DIRECTOR_UID,
+      directorName: actor.displayName.trim() || (await getDirectorDisplayName()),
+      directorTitle: roleLabel(actor.role),
+      postedByUserId: actor.uid,
       updatedAt: new Date().toISOString(),
     };
 
@@ -2996,7 +3042,7 @@ export async function deleteSupabaseAppUpdate(
   id: string,
   actor: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor)) {
+  if (!canManageAppUpdates(actor.role)) {
     return { ok: false, errorMessage: 'Only the director can delete updates.' };
   }
 
@@ -4361,9 +4407,10 @@ export async function staffUpdateUserProfile(params: {
       neighborhood: params.neighborhood,
       bio: params.bio?.trim() || null,
     };
-    if (params.role && isDirectorUser(params.actor.uid)) {
-      if (params.role === 'director' && params.targetUserId !== DIRECTOR_UID) {
-        return { ok: false, errorMessage: 'Only the director account can hold the director role.' };
+    if (params.role && isDirectorRole(params.actor.role)) {
+      const slotCheck = await assertStaffRoleSlotAvailable(params.targetUserId, params.role);
+      if (!slotCheck.ok) {
+        return { ok: false, errorMessage: slotCheck.errorMessage };
       }
       payload.role = params.role;
     }

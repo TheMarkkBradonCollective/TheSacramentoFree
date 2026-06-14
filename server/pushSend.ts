@@ -1,5 +1,5 @@
 import { getUserRole, isStaffRole, normalizeUserRole, roleRank, supabaseAdmin } from './auth';
-import { DIRECTOR_UIDS, isDirectorAccount } from './directorIdentity';
+import { isDirectorAccount } from './directorIdentity';
 import {
   getPreferencesForUsers,
   sendPushToUsers,
@@ -86,10 +86,7 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
       const uid = String((u as { uid: string }).uid);
       if (!uid || uid === callerId) continue;
       const row = u as { role?: string; email?: string };
-      if (isDirectorAccount(uid)) ids.add(uid);
-    }
-    for (const uid of DIRECTOR_UIDS) {
-      if (uid && uid !== callerId) ids.add(uid);
+      if (isDirectorAccount(uid, row.role)) ids.add(uid);
     }
     return [...ids];
   }
@@ -110,7 +107,7 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
         if (!uid || uid === callerId) return false;
         const row = u as { role?: string; email?: string };
         const role = normalizeUserRole(row.role);
-        if (!isStaffRole(role) || isDirectorAccount(uid)) return false;
+        if (!isStaffRole(role) || isDirectorAccount(uid, row.role)) return false;
         return roleRank(role) >= minRank;
       })
       .map((u) => String((u as { uid: string }).uid));

@@ -13,11 +13,11 @@ BEGIN
   SET "displayName" = 'Mark White'
   WHERE uid = director_uid;
 
-  -- Director welcome note — sync name from profile
+  -- Director welcome note — sync name from whoever holds the director role
   UPDATE public.director_message dm
   SET "directorName" = u."displayName"
   FROM public.users u
-  WHERE u.uid = director_uid
+  WHERE u.role = 'director'
     AND dm.id = 'main';
 
   -- Staff message row if you have one
@@ -25,14 +25,14 @@ BEGIN
   SET "staffName" = 'Mark White'
   WHERE "userId" = director_uid;
 
-  -- Changelog posts — sync author from profile, fix legacy postedByUserId
+  -- Changelog posts — sync author from director profile; fix legacy postedByUserId
   UPDATE public.app_updates au
   SET
     "directorName" = u."displayName",
-    "postedByUserId" = director_uid
+    "postedByUserId" = u.uid
   FROM public.users u
-  WHERE u.uid = director_uid
-    AND au."postedByUserId" IN ('director', director_uid);
+  WHERE u.role = 'director'
+    AND au."postedByUserId" IN ('director', u.uid);
 
   -- Listings, comments, reviews
   UPDATE public.items

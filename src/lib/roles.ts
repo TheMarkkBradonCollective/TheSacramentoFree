@@ -1,8 +1,15 @@
 import type { Message, UserProfile } from '../types';
 import { isCommunityChat, isGlobalCommunityChat } from './communityChats';
-import { isDirectorUser } from './directorIdentity';
 
 export type UserRole = NonNullable<UserProfile['role']>;
+
+/** Max seats per leadership/staff role across the whole community. */
+export const STAFF_ROLE_SLOTS: Partial<Record<UserRole, number>> = {
+  city_moderator: 5,
+  city_administrator: 3,
+  city_manager: 1,
+  director: 1,
+};
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   user: 'Neighbor',
@@ -11,6 +18,14 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   city_manager: 'City Manager',
   director: 'Buy Nothing Director',
 };
+
+export function staffRoleSlotMessage(role: UserRole, limit: number): string {
+  const label = ROLE_LABELS[role];
+  if (limit === 1) {
+    return `There can only be one ${label}. Demote the current ${label} first.`;
+  }
+  return `All ${limit} ${label} seats are filled. Demote someone first.`;
+}
 
 /** Director panel: assign roles from neighbor → staff → leadership. */
 export const ASSIGNABLE_ROLE_OPTIONS: {
@@ -104,24 +119,19 @@ export function canStaffDeleteAccount(role?: UserProfile['role']): boolean {
   return r === 'city_manager' || r === 'director';
 }
 
-/** Buy Nothing Director — the single director account (UID). */
-export function isDirectorActor(actor?: Pick<UserProfile, 'uid'> | null): boolean {
-  return Boolean(actor?.uid && isDirectorUser(actor.uid));
-}
-
-/** Buy Nothing Director role label (for display on the director profile). */
+/** Buy Nothing Director — full platform oversight. */
 export function isDirectorRole(role?: UserProfile['role']): boolean {
   return normalizeUserRole(role) === 'director';
 }
 
 /** Director site overview in Help & safety. */
-export function canViewDirectorOverview(actor?: Pick<UserProfile, 'uid'> | null): boolean {
-  return isDirectorActor(actor);
+export function canViewDirectorOverview(role?: UserProfile['role']): boolean {
+  return isDirectorRole(role);
 }
 
 /** Post, edit, and delete app changelog updates. */
-export function canManageAppUpdates(actor?: Pick<UserProfile, 'uid'> | null): boolean {
-  return isDirectorActor(actor);
+export function canManageAppUpdates(role?: UserProfile['role']): boolean {
+  return isDirectorRole(role);
 }
 
 /** Post announcements in Help & support. */
@@ -134,7 +144,7 @@ export function canEditAnnouncement(
   actor: Pick<UserProfile, 'uid' | 'role'>,
   postedByUserId: string,
 ): boolean {
-  return isDirectorActor(actor) || actor.uid === postedByUserId;
+  return isDirectorRole(actor.role) || actor.uid === postedByUserId;
 }
 
 /** Publish or edit this staff member's own public welcome message (director uses director_message). */
