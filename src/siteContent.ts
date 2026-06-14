@@ -172,7 +172,7 @@ export const SUPPORT = {
 } as const;
 
 export const DIRECTOR_MESSAGE = {
-  name: 'Markeith White',
+  name: 'Mark White',
   title: 'Buy Nothing Director',
   headline: 'A note from your director',
   goal:

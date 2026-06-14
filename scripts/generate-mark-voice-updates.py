@@ -27,7 +27,7 @@ ENTRY_RE = re.compile(
     r"\s*'((?:[^']|'')*)',\s*\n"
     r"\s*'((?:[^']|'')*)',\s*\n"
     r"\s*(?:NULL|'(?P<detail_quote>(?:[^']|'')*)'|\$detail\$(?P<detail_dollar>.*?)\$detail\$)\s*,\s*\n"
-    r"\s*'Markeith White'",
+    r"\s*'Mark White'",
     re.DOTALL,
 )
 
@@ -806,7 +806,7 @@ def main() -> None:
             f"  '{title.replace(chr(39), chr(39) + chr(39))}',\n"
             f"  {body_sql},\n"
             f"  {detail_sql},\n"
-            f"  'Markeith White',\n"
+            f"  'Mark White',\n"
             f"  'Buy Nothing Director',\n"
             f"  'director'\n"
             ")"
