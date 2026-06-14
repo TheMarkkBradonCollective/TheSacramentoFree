@@ -643,92 +643,295 @@ def sql_dollar(tag: str, content: str) -> str:
     raise ValueError("Could not find safe dollar-quote delimiter")
 
 
+def strip_signoffs(text: str) -> str:
+    return re.sub(r"\s*—\s*Mark\s*$", "", text, flags=re.MULTILINE).strip()
+
+
+def polish_title(title: str) -> str:
+    title = title.strip()
+    if not title:
+        return title
+    return title[0].upper() + title[1:]
+
+
+def polish_prose(text: str) -> str:
+    """Light caps/punctuation pass — keep Mark's casual tone."""
+    if not text.strip():
+        return text.strip()
+
+    blocks: list[str] = []
+    for block in re.split(r"\n\s*\n", text.strip()):
+        lines = [ln.strip() for ln in block.split("\n") if ln.strip()]
+        if not lines:
+            continue
+
+        if len(lines) >= 2 and lines[0].endswith(":"):
+            header = lines[0]
+            body = _finish_sentence(" ".join(lines[1:]))
+            blocks.append(f"{header}\n{body}")
+            continue
+
+        # Keep intentional short openers like "Hey guys 👋" on their own line.
+        if len(lines) == 1 and lines[0].endswith("👋"):
+            blocks.append(lines[0])
+            continue
+
+        blocks.append(_finish_sentence(" ".join(lines)))
+
+    return "\n\n".join(blocks)
+
+
+def _finish_sentence(merged: str) -> str:
+    if not merged:
+        return merged
+    if merged and merged[0].islower():
+        merged = merged[0].upper() + merged[1:]
+    if merged.startswith("i "):
+        merged = "I " + merged[2:]
+    if merged and merged[-1] not in ".!?…\"')👋":
+        merged += "."
+    return merged
+
+
+def clean_copy(text: str) -> str:
+    text = strip_signoffs(text)
+    text = re.sub(r"\s*•\s*", ". ", text)
+    text = re.sub(r"\.\s*\.", ".", text)
+    return polish_prose(text)
+
+
+TECH_LINE_RE = re.compile(
+    r"^(src/|FILE|API |TABLE |DEFAULT |LABELS |ROLE_|TYPES |STORAGE |ASSETS |UI |TABS |"
+    r"COMPONENT|ROUTE|HOOK|SQL |POST |GET |readCached|normalize|canEdit|subscribe|"
+    r"siteContent|ASSIGNABLE|LABELS —|PUSH |BELL |CHAT |MOBILE |DESKTOP |"
+    r"VISION |ONBOARDING |LAUNCH |NAV |AUTH |LOGIN |SIGNUP |FEED |MAP |"
+    r".*\.tsx?\b|.*\.sql\b|.*\.ts\b|Launch date:)",
+    re.I,
+)
+
+
+def _humanize_detail_line(line: str) -> str | None:
+    line = line.strip()
+    if not line or TECH_LINE_RE.match(line):
+        return None
+    if any(
+        needle in line.lower()
+        for needle in (
+            "supabase-sql/",
+            "vercel env",
+            "normalizeuserrole",
+            "stack: react",
+            "origin changelog entry",
+            "legacy role slugs",
+            "webhook",
+            "vapid",
+            "cron_secret",
+            "install-push",
+        )
+    ):
+        return None
+
+    line = re.sub(r"\bNeighbors\b", "You", line)
+    line = re.sub(r"\bneighbors\b", "you", line)
+    line = re.sub(r"\bNeighbor\b", "You", line)
+    line = re.sub(r"\bWe fixed\b", "I fixed", line)
+    line = re.sub(r"\bWe had\b", "I had", line)
+    line = re.sub(r"\bWe turned\b", "I turned", line)
+    line = re.sub(r"\bWe re-enabled\b", "I re-enabled", line)
+    line = re.sub(r"\bWe\b", "I", line)
+    line = re.sub(r"\bThe director\b", "I", line, flags=re.I)
+    line = line.replace("(OFFER)", "giveaways").replace("ISO requests", "looking-for posts")
+    return line
+
+
 def casualize_detail(text: str) -> str:
-    """Rewrite GitHub detail blocks in Mark's voice — still informative when expanded."""
-    t = text.strip()
-    replacements = [
-        ("WHAT NEIGHBORS SEE", "What you'll notice"),
-        ("WHAT STAFF SEE", "What staff see"),
-        ("WHAT WAS BROKEN", "What was broken"),
-        ("WHAT WE FIXED", "What I fixed"),
-        ("WHAT WE CHANGED (CODE)", "What I changed"),
-        ("WHAT WE CHANGED", "What I changed"),
-        ("WHAT YOU SHOULD DO", "What you should do"),
-        ("WHAT YOU NEED TO DO", "What you need to do"),
-        ("ROOT CAUSES", "Why it broke"),
-        ("ROOT CAUSE", "Why it broke"),
-        ("FILES TOUCHED", "Behind the scenes (files I touched)"),
-        ("FILES", "Behind the scenes"),
-        ("PROBLEM", "The problem"),
-        ("PHASE 1 FIX", "First fix I tried"),
-        ("PHASE 2 FIX (current)", "What actually fixed it"),
-        ("PHASE 2 FIX", "What actually fixed it"),
-        ("VERIFICATION", "How to check it"),
-        ("HOW IT WORKS", "How it works"),
-        ("HOW TO NOTIFY", "How to notify everyone"),
-        ("AFTER THIS DEPLOY", "After this update"),
-        ("AFTER DEPLOY", "After this update"),
-        ("DIRECTOR OPS", "If you're me and it's still broken"),
-        ("NEIGHBOR ACTION", "What you should do"),
-        ("REFRESH PUSH", "Refresh push on your phone"),
-        ("TAB ORDER", "Tab order"),
-        ("CHAT SIDEBAR ORDER", "Chat sidebar order"),
-        ("MOBILE BOTTOM", "Mobile bottom tabs"),
-        ("THE BELL", "The bell menu"),
-        ("PUSH GOT REBUILT", "Push got rebuilt"),
-        ("PUSH REMINDER", "Push reminder"),
-        ("DATABASE", "Database stuff"),
-        ("SQL TO RUN", "SQL I ran in Supabase"),
-        ("SQL SETUP", "SQL setup"),
-        ("Neighbors ", "You "),
-        ("neighbors ", "you "),
-        ("Neighbor ", "You "),
-        ("neighbor ", "you "),
-        ("We had", "I had"),
-        ("We fixed", "I fixed"),
-        ("We turned", "I turned"),
-        ("We re-enabled", "I re-enabled"),
-        ("We ", "I "),
-        ("Director ", "I "),
-        ("the director", "me"),
-    ]
-    for old, new in replacements:
-        t = t.replace(old, new)
-    if not t.endswith("— Mark"):
-        t = f"{t}\n\n— Mark"
-    return t
+    """Turn GitHub changelog detail into readable Mark voice — no signoffs, no file dumps."""
+    t = strip_signoffs(text.strip())
+    header_map = {
+        "WHAT NEIGHBORS SEE": "What you'll notice",
+        "WHAT NEIGHBORS SEE (DIRECTOR)": "What you'll notice",
+        "WHAT NEIGHBORS SEE (STAFF)": "For staff",
+        "WHAT STAFF SEE": "For staff",
+        "WHAT WAS BROKEN": "What was broken",
+        "WHAT WE FIXED": "What I fixed",
+        "WHAT WE CHANGED (CODE)": "What changed",
+        "WHAT WE CHANGED": "What changed",
+        "WHAT YOU SHOULD DO": "What to do",
+        "WHAT YOU NEED TO DO": "What to do",
+        "ROOT CAUSES": "Why it broke",
+        "ROOT CAUSE": "Why it broke",
+        "FILES TOUCHED": "Under the hood",
+        "FILES": "Under the hood",
+        "PROBLEM": "The problem",
+        "PHASE 1 FIX": "First thing I tried",
+        "PHASE 2 FIX (current)": "What actually fixed it",
+        "PHASE 2 FIX": "What actually fixed it",
+        "VERIFICATION": "How to check",
+        "HOW IT WORKS": "How it works",
+        "HOW TO NOTIFY": "How to spread the word",
+        "AFTER THIS DEPLOY": "After you pull the update",
+        "AFTER DEPLOY": "After you pull the update",
+        "DIRECTOR OPS": "If you're me debugging",
+        "NEIGHBOR ACTION": "What to do",
+        "REFRESH PUSH": "Refresh push on your phone",
+        "TAB ORDER": "Tab order",
+        "CHAT SIDEBAR ORDER": "Chat sidebar",
+        "MOBILE BOTTOM": "Mobile bottom nav",
+        "THE BELL": "The bell menu",
+        "PUSH GOT REBUILT": "Push rebuild",
+        "PUSH REMINDER": "Push reminder",
+        "DATABASE": "Database",
+        "SQL TO RUN": "SQL I ran",
+        "SQL SETUP": "SQL setup",
+    }
+
+    paragraphs: list[str] = []
+    for raw_block in re.split(r"\n\s*\n", t):
+        lines = [ln.strip() for ln in raw_block.split("\n") if ln.strip()]
+        if not lines:
+            continue
+
+        section_title: str | None = None
+        body_lines: list[str] = []
+
+        for line in lines:
+            human = _humanize_detail_line(line)
+            if human is None:
+                continue
+
+            upper_key = human.split(" — ")[0].strip() if " — " in human else human
+            if upper_key in header_map:
+                if body_lines:
+                    paragraphs.append(_join_section(section_title, body_lines))
+                    body_lines = []
+                section_title = header_map[upper_key]
+                rest = human.split(" — ", 1)[1].strip() if " — " in human else ""
+                if rest and not TECH_LINE_RE.match(rest):
+                    body_lines.append(rest)
+                continue
+
+            if human.isupper() and len(human) < 60 and human in header_map:
+                if body_lines:
+                    paragraphs.append(_join_section(section_title, body_lines))
+                    body_lines = []
+                section_title = header_map[human]
+                continue
+
+            if " — " in human and human.split(" — ")[0].strip().isupper():
+                # e.g. "ONBOARDING — Onboarding.tsx ..."
+                continue
+
+            body_lines.append(human)
+
+        if body_lines:
+            text = _join_section(section_title, body_lines)
+            if text.strip().rstrip(".") not in ("What to do", "How to check"):
+                paragraphs.append(text)
+
+    if not paragraphs:
+        cleaned = _humanize_detail_line(t)
+        return clean_copy(cleaned) if cleaned else clean_copy(t)
+    return clean_copy("\n\n".join(paragraphs))
 
 
-def expand_summary_to_detail(summary: str) -> str:
-    """Fallback detail for entries without a GitHub detail block."""
-    core = summary.replace("\n\n— Mark", "").replace("— Mark", "").strip()
-    return (
-        f"{core}\n\n"
-        "That's the quick version. Poke around the app and you should see it — "
-        "if something looks off, hit support and tell me what screen you're on.\n\n"
-        "— Mark"
-    )
+def _join_section(title: str | None, lines: list[str]) -> str:
+    body = " ".join(lines)
+    if title:
+        return f"{title}:\n{body}"
+    return body
 
 
-def pick_detail(entry: dict, casual_body: str) -> str | None:
+def detail_addon(entry_id: str) -> str | None:
+    """Optional second paragraph — only when it actually helps. No copy-paste filler."""
+    eid = entry_id.lower()
+    if any(k in eid for k in ("push", "notification", "alert", "bell")):
+        if any(k in eid for k in ("fix", "rebuild", "refresh", "reliab", "duplicate", "stuck")):
+            return (
+                "If your phone's still quiet: Bell → Alerts → turn everything off → Save → "
+                "flip back on → Save again. iPhone folks need the Home Screen app, not Safari."
+            )
+        return None
+    if any(k in eid for k in ("fix", "crash", "white-screen", "wrong", "broken")):
+        return "Should be sorted now. If you still see it, hit support and tell me what screen you're on."
+    if "login" in eid or "sign-in" in eid:
+        return None
+    if "map" in eid and "fix" in eid:
+        return "Hard refresh or reopen the app if the map looks blank."
+    return None
+
+
+# Hand-tuned expanded stories where GitHub detail is too technical or thin.
+DETAIL_OVERRIDES: dict[str, str] = {
+    "2026-05-19_where-it-all-started": (
+        "May 19, 2026 — day one.\n\n"
+        "I sat down and started building Sacramento Buy Nothing for real: sign in, post gives and asks, "
+        "profiles, messaging. That was the whole idea from the jump."
+    ),
+    "2026-05-29_director-role-management": (
+        "I can bump people up to moderator, administrator, or city manager from their profile.\n\n"
+        "Helps as the community grows so I'm not the only one watching reports and tickets."
+    ),
+    "2026-06-11_push-reliability-overhaul": (
+        "Push was a mess — a lot of you only got the test alert, not real messages or claims.\n\n"
+        "I rebuilt the pipeline: webhooks, duplicate filtering, prefs that actually save, and logout "
+        "clears your phone so shared devices don't cross wires.\n\n"
+        "If you're still not getting pings: Bell → Alerts → turn off → Save → flip back on → Save. "
+        "On iPhone, use the Home Screen app — Safari won't cut it."
+    ),
+    "2026-06-14_trade-barter-listing-type": (
+        "Hey guys 👋\n\n"
+        "You can post item-for-item swaps now — trade/barter type.\n\n"
+        "Still 100% free. No money, no shipping, no sketchy side deals — just neighbors trading stuff."
+    ),
+}
+
+
+def enrich_short_detail(entry: dict, core: str) -> str:
+    """When expanded text would duplicate the summary, add a natural second beat."""
+    eid = entry["id"].lower()
+    if "email" in eid and "login" in eid:
+        return f"{core}\n\nGoogle sign-in kept getting blocked in the browser, so I went with plain email and password through Supabase."
+    if "landing" in eid:
+        return f"{core}\n\nYou can read the rules and browse neighborhoods before creating an account."
+    if "schema" in eid or "databasesql" in eid:
+        return f"{core}\n\nHandy if you're setting up a fresh Supabase project from scratch."
+    if "trade" in eid or "barter" in eid:
+        return core  # already has Hey guys opener in body
+    if "awards" in eid:
+        return f"{core}\n\nStill building the real thing — the button's just a heads-up for now."
+    addon = detail_addon(entry["id"])
+    if addon:
+        return f"{core}\n\n{addon}"
+    return core
+
+
+def build_detail(entry: dict, casual_body: str) -> str:
+    if entry["id"] in DETAIL_OVERRIDES:
+        return clean_copy(DETAIL_OVERRIDES[entry["id"]])
+
+    core = clean_copy(casual_body)
     if entry.get("detail"):
-        return casualize_detail(entry["detail"])
-    prof_body = entry.get("body", "")
-    if len(prof_body) > len(casual_body) + 40:
-        return casualize_detail(prof_body)
-    return expand_summary_to_detail(casual_body)
+        detail = casualize_detail(entry["detail"])
+        if detail and detail != core and len(detail) > len(core) + 15:
+            return detail
+
+    prof = entry.get("body", "")
+    if prof and len(prof.strip()) > len(core) + 30:
+        detail = casualize_detail(prof)
+        if detail and len(detail) > len(core) + 15:
+            return detail
+
+    detail = enrich_short_detail(entry, core)
+    return detail
 
 
 def fallback_voice(title: str, body: str) -> tuple[str, str]:
-    casual_title = title[0].lower() + title[1:] if title else title
-    casual_body = (
+    casual_title = polish_title(title)
+    casual_body = clean_copy(
         body.replace("Neighbors ", "You ")
         .replace("neighbors ", "you ")
         .replace("The director ", "I ")
-        .replace("Director ", "I ")
     )
-    if not casual_body.endswith("— Mark"):
-        casual_body = f"{casual_body}\n\n— Mark"
     return casual_title, casual_body
 
 
@@ -759,9 +962,9 @@ def main() -> None:
             {
                 "id": extra[0],
                 "date": extra[1],
-                "title": extra[2],
-                "body": extra[3],
-                "detail": extra[4] if len(extra) > 4 else None,
+                "title": polish_title(extra[2]),
+                "body": clean_copy(extra[3]),
+                "detail": clean_copy(extra[4]) if len(extra) > 4 else None,
             }
         )
 
@@ -791,11 +994,12 @@ def main() -> None:
     with_detail = 0
     for e in rows:
         if e["id"] in VOICE:
-            title, body = VOICE[e["id"]]
+            raw_title, raw_body = VOICE[e["id"]]
+            title, body = polish_title(raw_title), clean_copy(raw_body)
         else:
             title, body = fallback_voice(e["title"], e["body"])
 
-        detail = pick_detail(e, body)
+        detail = build_detail(e, body)
 
         if detail:
             with_detail += 1
