@@ -2820,6 +2820,23 @@ Still shown on home carousel and reviews page.
 ),
 
 (
+  '2026-06-14_awards-coming-soon',
+  '2026-06-14',
+  'awards button — coming soon',
+  $body$There's a glowing Awards button in the header now. Tap it — page just says coming soon while I build it out.
+
+— Mark$body$,
+  $detail$Swapped the header theme button for a glowing Awards button. Dark/light theme is under Account now.
+
+Tap Awards and you'll get a coming soon page — that's it for now, still building the rest.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+
+(
   '2026-06-14_chat-sidebar-header-removed',
   '2026-06-14',
   'cleaned up chat sidebar header',
