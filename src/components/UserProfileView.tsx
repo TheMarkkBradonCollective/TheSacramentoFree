@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import ProfilePostList from './ProfilePostList';
 import ThemeSettings from './ThemeSettings';
+import CommunityMenuView from './CommunityMenuView';
 import { IN_APP } from '../siteContent';
 
 interface UserProfileViewProps {
