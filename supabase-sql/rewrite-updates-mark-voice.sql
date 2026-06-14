@@ -23,28 +23,49 @@ INSERT INTO public.app_updates (
 ) VALUES
 
 -- ═══════════════════════════════════════════════════════════
--- MAY 19 — day one
+-- MAY 19 — day one (full build session)
 -- ═══════════════════════════════════════════════════════════
 (
   'mark-voice-2026-05-19-day-one',
   '2026-05-19',
-  'I built Sacramento Buy Nothing — day one',
+  'Day one — I built Sacramento Buy Nothing from scratch',
   $body$Hey guys 👋
 
-I started building this May 19. Wanted a real site where Sacramento neighbors can log in, post stuff to give away or stuff they're looking for, have profiles, message each other, and actually find things without money involved.
+May 19 is when I actually sat down and built this. The goal was simple: Sacramento Buy Nothing — log in, post stuff you wanna give away or stuff you're looking for, profiles, messaging, easy to search and navigate. All free. No selling.
 
-Day one what I got working:
-
-- Sacramento Buy Nothing goes live — free gifting, no money, neighbors helping neighbors
-- Map + feed to browse gives and asks
-- Pick your Sacramento neighborhood when you join
-- Photos on listings
+WHAT I GOT WORKING DAY ONE
+- Sign up, pick your Sacramento neighborhood (Midtown, East Sac, Curtis Park, Pocket, etc.)
+- Post gives and asks with categories and search
+- Message neighbors about a specific listing so you know what you're talking about
+- Mark your post completed, withdrawn, or relist it
+- User profiles with name, photo, neighborhood, bio
 - Works on phone, tablet, desktop
-- Still kinda browsable if your connection hiccups
-- Reddit orange + sage green — wanted it to feel local, not generic
-- Wrote down what this is supposed to be: free forever, no selling, no flipping, just give and ask kindly
 
-I'm still building it every day. This was just the start.
+PUBLIC PAGE BEFORE LOGIN
+- Built a landing page so you can see what this is BEFORE making an account
+- What Sacramento Buy Nothing is, how it works, the rules (free only — no selling, no flipping)
+- Common stuff people share (furniture, clothes, baby items, etc.)
+- Neighborhood explorer — browse areas like Midtown, Land Park, Natomas, Pocket
+- Sign up / log in right from there
+
+LOOK & FEEL
+- Went through a few design passes — frosted glass, then clean high-contrast minimal
+- Landed on reddit orange + sage green. Wanted it sharp and local, not generic
+- Fixed the browser tab — says SacramentoBuyNothing now, not some placeholder name
+
+DATABASE & LOGIN
+- Hooked up Supabase — users, items, chats, messages tables
+- Wrote out the full databaseSQL.txt schema you paste into Supabase to set it up
+- Switched to email + password login (Google popups kept getting blocked)
+- Signup errors actually tell you what went wrong now — not useless "detour failed" text
+- If you need to verify email it tells you to check your inbox
+- Stripped hardcoded fake listings — site runs on real community data
+- Removed the "database active" debug banner from the UI
+- Better messages when the database is unreachable instead of raw "Failed to fetch"
+
+Also fought through Firebase/Firestore headaches that day before I went all-in on Supabase. Long day.
+
+This was just the start. May 20 I rebuilt the maps.
 
 — Mark$body$,
   NULL,
@@ -54,15 +75,15 @@ I'm still building it every day. This was just the start.
 ),
 
 -- ═══════════════════════════════════════════════════════════
--- MAY 20 — map views, split layouts, database, login
+-- MAY 20 — map views, split layouts, device-specific views
 -- ═══════════════════════════════════════════════════════════
 (
   'mark-voice-2026-05-20-big-rebuild-day',
   '2026-05-20',
-  'May 20 — mobile map, desktop split view, real database',
+  'May 20 — mobile map, desktop split view, pick your pin',
   $body$Hey guys 👋
 
-May 20 I basically didn't sleep. Rebuilt how the whole app looks and works on different screens. Here's what I shipped:
+May 20 I basically didn't sleep. Rebuilt how the map and layouts work on different screens:
 
 MOBILE MAP (its own thing)
 - Desktop stayed how it was — mobile got its own full-screen map view
@@ -76,26 +97,16 @@ DESKTOP MAP TOO
 - Scroll the listings, map stays put and syncs with your filters
 - Map tab in nav works on all screen sizes now
 
-TABLET
-- Split the app into separate files: MobileView, TabletView, DesktopView
+TABLET & DEVICE FILES
+- Split the app into MobileView, TabletView, and DesktopView — each screen size gets its own layout
 - Tablet is a mix — feed and map side by side like desktop but sized for tablets
 
 POSTING A LOCATION
 - When you post you can use your current location OR tap the map and drop a pin where pickup is
 
-MAPS & DATABASE
+MAPS
 - Switched the map over to OpenStreetMap (real Sacramento streets)
-- Hooked up Supabase — posts and accounts save online, no fake placeholder data
-- Updated the database schema (imageUrl on listings and all that)
-- Stripped hardcoded mock stuff — site runs on live community data
-- Removed the "database active" debug junk from the UI
-
-LOGIN
-- Email + password through Supabase (no more Google popup getting blocked)
-- Landing page before login so people see what this is first
-- Signup errors actually tell you what went wrong now
-
-Also fought through Firebase headaches before I went all-in on Supabase. You're welcome 😅
+- Updated database schema — imageUrl on listings and other fixes in databaseSQL.txt
 
 — Mark$body$,
   NULL,
