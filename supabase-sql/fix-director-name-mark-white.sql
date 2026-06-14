@@ -23,10 +23,14 @@ BEGIN
   SET "staffName" = 'Mark White'
   WHERE "userId" = director_uid;
 
-  -- Changelog posts
-  UPDATE public.app_updates
-  SET "directorName" = 'Mark White'
-  WHERE "postedByUserId" IN ('director', director_uid);
+  -- Changelog posts — sync author from profile, fix legacy postedByUserId
+  UPDATE public.app_updates au
+  SET
+    "directorName" = u."displayName",
+    "postedByUserId" = director_uid
+  FROM public.users u
+  WHERE u.uid = director_uid
+    AND au."postedByUserId" IN ('director', director_uid);
 
   -- Listings, comments, reviews
   UPDATE public.items

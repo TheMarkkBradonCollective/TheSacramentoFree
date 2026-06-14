@@ -27,9 +27,9 @@ INSERT INTO public.app_updates (
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -44,9 +44,9 @@ That's the quick version. Poke around the app and you should see it — if somet
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -63,9 +63,9 @@ TABS — map + feed (now Stuff) in app navigation
 TYPES — PostType giveaway | looking in src/types.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -82,9 +82,9 @@ readCachedProfile, readCachedItems in App.tsx initial state
 Service worker caches static assets.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -101,9 +101,9 @@ ASSETS — public/Logo.jpeg, CSS variables in src/index.css
 siteContent.ts SITE branding copy
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -120,9 +120,9 @@ STORAGE — Supabase storage upload from PostItemModal.tsx
 normalizeItemMedia in src/lib/listingContent.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -141,9 +141,9 @@ VISION — src/siteContent.ts ABOUT, RULES, HOW_IT_WORKS
 Launch date: May 19, 2026.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -160,9 +160,9 @@ ONBOARDING — Onboarding.tsx neighborhood select
 Used for feed filters, map centering, and profile display.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -177,9 +177,9 @@ Used for feed filters, map centering, and profile display.
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -196,9 +196,9 @@ CONTENT — src/siteContent.ts SITE, ABOUT, RULES, principles array
 Shown on public About and Rules pages.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -215,9 +215,9 @@ Origin changelog entry documenting project start
 Stack: React + Vite + Supabase + Vercel.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -234,9 +234,9 @@ Responsive breakpoints at 768px and 1024px
 One codebase, three layouts.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -251,9 +251,9 @@ One codebase, three layouts.
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -268,9 +268,9 @@ That's the quick version. Poke around the app and you should see it — if somet
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -287,9 +287,9 @@ Mobile shell refactor — sbn-mobile-shell CSS, flex min-h-0 children
 Foundation for modern mobile UX.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -308,9 +308,9 @@ SCHEMA — supabase-setup.sql (users, items, chats, messages, …)
 Replaced demo/local-only data store.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -327,9 +327,9 @@ PWA — public/manifest.json, InstallPrompt.tsx, registerServiceWorker.ts
 beforeinstallprompt handling on Android/desktop Chrome
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -346,9 +346,9 @@ COMPONENT — SacramentoMapView.tsx (react-leaflet)
 ROUTE — src/lib/mapRoute.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -365,9 +365,9 @@ Parallel MobileView vs DesktopView components
 Shared business logic in hooks + supabase.ts.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -382,9 +382,9 @@ Shared business logic in hooks + supabase.ts.
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -403,9 +403,9 @@ UI — ChatSystem.tsx
 Start from listing Message button or accepted profile request.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -420,9 +420,9 @@ Start from listing Message button or accepted profile request.
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -437,9 +437,9 @@ That's the quick version. Poke around the app and you should see it — if somet
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -456,9 +456,9 @@ ROLES — users.role column, src/lib/roles.ts
 Early foundation for StaffModerationPanel and RoleBadge.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -477,9 +477,9 @@ CORE — src/supabase.ts + supabase-setup.sql schema
 Realtime sync across sessions.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -497,9 +497,9 @@ MAP — NEIGHBORHOOD_COORDS for pin placement
 PUBLIC — NeighborhoodsPage.tsx lists all areas
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -518,9 +518,9 @@ REPORT — ReportNeighborModal.tsx, user_reports table, AccountHelpSection repor
 Blocked you cannot DM you; chats hidden via filterChatsByBlocked in src/supabase.ts.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -535,9 +535,9 @@ Blocked you cannot DM you; chats hidden via filterChatsByBlocked in src/supabase
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -554,9 +554,9 @@ COMPONENT — CommunityStatsBar.tsx
 DATA — getCommunityStats() in src/supabase.ts aggregates users/items/claims
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -573,9 +573,9 @@ HomePage.tsx embeds CommunityStatsBar (compact variant)
 Builds trust for new visitors.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -590,9 +590,9 @@ Builds trust for new visitors.
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -611,9 +611,9 @@ API — updateUserRole in src/supabase.ts
 Legacy role slugs normalized in normalizeUserRole().
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -632,9 +632,9 @@ API — updateSupabaseItem in src/supabase.ts
 Saved-item bookmarkers can get push on owner edits (if enabled).
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -653,9 +653,9 @@ STORAGE — Supabase storage buckets for listing images
 ListingImage component with lazy-friendly loading.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -674,9 +674,9 @@ ThemeToggle.tsx persists preference
 Mobile/tablet/desktop shells share the same visual language.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -693,9 +693,9 @@ LAYOUT — MobileView.tsx tab panes with min-h-0 flex columns
 ChatSystem fullBleed mode
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -714,9 +714,9 @@ TAB — app tab 'menu' labeled Community (src/siteContent.ts)
 Staff moderation panel on same tab for staff roles.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -735,9 +735,9 @@ CLAIM TYPE — request_fulfilled in item_claims
 STATS — getNeighborStats() on NeighborProfileView / UserProfileView
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -754,9 +754,9 @@ UI — ItemDetailView.tsx + ListingEngagement.tsx
 Opened from ItemGrid, map popups, profile listings
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -775,9 +775,9 @@ USED BY — useItemsRealtime, ChatSystem, useEventsEngagement, usePushNotificati
 Supabase Realtime publication on public tables (supabase-setup.sql).
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -794,9 +794,9 @@ UI — SacramentoMapView.tsx color guide toggle / index
 Category → color mapping in map marker renderer
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -814,9 +814,9 @@ DEFAULT TAB — App.tsx initial tab 'map' (localStorage sbn_active_tab_v1)
 SacramentoMapView.tsx with category-colored pins.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -835,9 +835,9 @@ UI — ChatSystem incoming requests section, NeighborProfileView send/accept
 API — sendMessageRequest, acceptMessageRequest in src/supabase.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -856,9 +856,9 @@ Linked from ItemCard, ChatSystem, map pins, comments
 Avatars from Google sign-in photoURL or dicebear fallback.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -877,9 +877,9 @@ UI — SubItemPicker.tsx, ClaimAtPickupButton.tsx, ChatClaimActions.tsx
 MESSAGES — formatSelfClaimRequestMessage in src/lib/claims.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -896,9 +896,9 @@ CSS — sbn-mobile-shell, sbn-mobile-header, bottom nav in MobileView.tsx
 safe-area insets for notched iPhones
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -915,9 +915,9 @@ FAB / header buttons in MobileView, DesktopView
 PostItemModal.tsx, PostEventModal.tsx
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -936,9 +936,9 @@ CONFIG — src/public/routes.ts
 App.tsx shows PublicSite until userProfile exists.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -957,9 +957,9 @@ MAP — SacramentoMapView.tsx draws polyline overlay
 Falls back to Haversine line if routing API unavailable.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -974,9 +974,9 @@ Falls back to Haversine line if routing API unavailable.
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -993,9 +993,9 @@ COMPONENT — RoleBadge.tsx
 LABELS — ROLE_LABELS in src/lib/roles.ts (city_moderator, city_administrator, city_manager, director)
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1013,9 +1013,9 @@ FORMAT — formatPickupLocationMessage() in src/lib/itemLocation.ts
 Respects showExactLocation privacy flag on items.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1034,9 +1034,9 @@ PERMS — src/lib/roles.ts staff rank system
 TABLES — user_reports, support_tickets, moderation_audit_log
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1054,9 +1054,9 @@ CACHE — readCachedProfile/readCachedItems for faster first paint
 FIXES — profile + items fetch retries in src/supabase.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1075,9 +1075,9 @@ STORAGE — upload to Supabase storage; support_ticket_messages.imageUrl column
 API — createSupportTicket, addSupportTicketMessage in src/supabase.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1094,9 +1094,9 @@ HISTORY — App.tsx TAB_HISTORY_KEY sbnTab in window.history state
 parseTabFromHistoryState on popstate
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1113,9 +1113,9 @@ UI — staff directory section in StaffModerationPanel.tsx
 BADGES — RoleBadge.tsx + roleLabel() from src/lib/roles.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1134,9 +1134,9 @@ STATUSES — active | on_hold | pending_pickup | completed | withdrawn
 ChatClaimActions.tsx for giveaway claim confirm flow.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1155,9 +1155,9 @@ Used by HomePage.tsx for pre-login marketing experience
 Respects reduced-motion where possible via CSS.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1178,9 +1178,9 @@ SQL — supabase-sql/account-deletion.sql (delete_own_account RPC + cascades)
 Staff can also delete accounts from StaffModerationPanel.tsx (higher permission).
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1199,9 +1199,9 @@ Read-only cards; tap opens GuestItemDetailView.tsx with sign-in CTA to message
 DATA — App.tsx passes visibleItems subset to PublicSite
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1221,9 +1221,9 @@ AUDIT — moderation_audit_log table tracks actions
 API — src/supabase.ts staff moderation helpers
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1242,9 +1242,9 @@ Used in ItemDetailView.tsx and listing cards
 Escape or backdrop tap closes overlay.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1265,9 +1265,9 @@ PostItemModal.tsx category picker; map pin colors in SacramentoMapView.tsx
 NEIGHBORHOODS — SACRAMENTO_NEIGHBORHOODS in src/types.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1285,9 +1285,9 @@ Behind the scenes — src/components/public/pages/HomePage.tsx, HomeScrollStage.
 Touch-friendly sections and stats bar alignment on narrow screens.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1309,9 +1309,9 @@ HOOK — useDirectorMessage.ts with realtime sync
 I can edit from Community hub when signed in as director.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1336,9 +1336,9 @@ After this update
 Run notifications SQL, confirm webhooks, toggle notifications off → on once per device.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1388,9 +1388,9 @@ Row 14: push-app-updates on app_updates INSERT.
 Row 15: push-announcements on help_announcements INSERT (not app_updates).
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1409,9 +1409,9 @@ Single panel: type (give/look), category, neighborhood, status, vote/comment fil
 Mobile-friendly sheet instead of many inline controls.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1440,9 +1440,9 @@ SETUP
 Each comment is its own alert (not bundled). Toggle Saved items if you only want alerts on bookmarked posts.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1465,9 +1465,9 @@ DEEP LINK — /director/overview → DirectorSiteOverview.tsx
 Each category has its own toggle — turn off noise you do not need.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1490,9 +1490,9 @@ PERMS — canEditOwnStaffMessage() in src/lib/roles.ts
 I note remains separate in director_message table.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1527,9 +1527,9 @@ CRON — api/cron/notification-jobs.ts
 Listing expiry + pickup reminders when app closed.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1551,9 +1551,9 @@ NAV — src/components/MobileView.tsx, TabletView.tsx, Navbar.tsx use IN_APP.fee
 No database changes — display copy only.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1577,9 +1577,9 @@ SQL
 CREATE UNIQUE INDEX IF NOT EXISTS push_dispatch_log_tag_unique ON push_dispatch_log (tag);
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1599,9 +1599,9 @@ UI — EventsView.tsx, EventCard.tsx, EventDetailView.tsx, PostEventModal.tsx
 REALTIME — useEventsRealtime.ts, useEventsEngagement.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1622,9 +1622,9 @@ SIGNED-IN — tap footer opens full-screen GoFundMe panel from App.tsx
 COPY — src/siteContent.ts GOFUNDME constants
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1643,9 +1643,9 @@ PAGE — GoFundMePage.tsx renders GoFundMeSupport.tsx
 Explains Vercel, Supabase, domain, and why the app stays free with no ads.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1668,9 +1668,9 @@ UI — src/components/ListingEngagement.tsx records votes; ItemDetailView shows 
 WORKS IN BACKGROUND when push is enabled and device subscription is valid (Add to Home Screen on iPhone).
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1702,9 +1702,9 @@ IMPORTANT
 Prefs are per account in notification_preferences (one row per userId). Push delivery is per device in push_subscriptions. Re-enable notifications after switching accounts.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1724,9 +1724,9 @@ UI — ItemGrid.tsx filter state persisted in component session
 Helps find active ISO requests or popular giveaways quickly.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1754,9 +1754,9 @@ Removed unauthenticated resubscribe that reassigned endpoints to wrong users.
 SUBSCRIBE — api/push/_server/pushSubscribe.ts claimPushSubscriptionForUser deletes endpoint then upserts for signed-in userId.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1787,9 +1787,9 @@ WHY NOT AUTOSAVE
 Prevents accidental toggles and matches “prefs per account, push per device” model documented in Help copy.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1816,9 +1816,9 @@ After this update
 Each neighbor: notifications off → on once while signed in as themselves.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1842,9 +1842,9 @@ Safari tabs alone do not get background push. Add to Home Screen (iOS 16.4+). In
 CLIENT — src/lib/pushNotifications.ts subscribe flow + src/pwa/registerServiceWorker.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1865,9 +1865,9 @@ SERVER — api/push/* routes, server/push.ts, public/service-worker.js
 Enable in Account → Push notifications. iPhone: Add to Home Screen for background delivery.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1908,9 +1908,9 @@ What you should do
 On each device: Help or Account → Push notifications → turn off, then on again once. Tap Save settings if you changed toggles. Confirm test push still works, then trigger a real event (have someone message you).
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1935,9 +1935,9 @@ PUSH — src/hooks/useSavedItemPushAlerts.ts + webhooks on items/item_comments/i
 UI — bookmark button on ItemCard.tsx and ItemDetailView.tsx; “Saved” quick pick in ItemGrid.tsx.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -1956,9 +1956,9 @@ Trending = recent activity; Saved = useSavedItems hook; My area = your neighborh
 Combines with full Filters & sort panel.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2003,9 +2003,9 @@ How to check it
 Sign in on phone and desktop, open Help, expand notification settings, switch accounts — app should remain interactive.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2056,9 +2056,9 @@ help_announcements INSERT → api/push/_server/webhookDispatch.ts → runAnnounc
 Add 15th webhook: help_announcements INSERT → /api/webhooks/supabase-push
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2078,9 +2078,9 @@ UI — CommunityReviews.tsx (in-app), public ReviewsPage.tsx
 VOTES — community_content_votes targetType 'review'
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2099,9 +2099,9 @@ UI — GoFundMeFooter.tsx, GoFundMeSupport.tsx, GoFundMePage.tsx
 Never required to participate in the community.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2121,9 +2121,9 @@ CLIENT — src/lib/pushNotifications.ts sendTestPush()
 USE THIS to verify VAPID keys and service worker before debugging “real” alerts that depend on prefs + webhooks.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2147,9 +2147,9 @@ PUBLIC — src/components/public/pages/UpdatesPage.tsx (#/updates)
 VOTES — community_content_votes targetType 'update'
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2170,9 +2170,9 @@ IN-APP — Community hub tiles mirror same data via UpdatesList and CommunityRev
 Update votes feed back to director.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2194,9 +2194,9 @@ Used in UpdatesList, CommunityReviews, StaffMessage, DirectorMessage
 Cannot vote on your own review. Sign in required.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2215,9 +2215,9 @@ QUERIES — getSupabaseItems filters active statuses for feed/map
 Owner can still see withdrawn posts in profile history where applicable.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2244,9 +2244,9 @@ CODE
 Deploy only — no new SQL tables.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2278,9 +2278,9 @@ CODE
 api/push/_server/communityChatNotify.ts, api/push/_server/neighborNotify.ts, api/push/_server/runPushSend.ts, api/push/_server/pushDelivery.ts, src/lib/pushEvents.ts, src/lib/pushIntegration.ts, src/supabase.ts, src/components/NotificationSettings.tsx
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2312,9 +2312,9 @@ CODE
 src/lib/communityChats.ts, src/components/ChatSystem.tsx, src/components/ChatSupportSection.tsx, src/components/AccountHelpSection.tsx, src/siteContent.ts
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2340,9 +2340,9 @@ Behind the scenes
 scripts/expand-changelog-details.mjs, supabase-sql/expand-all-community-updates-detail.sql, src/components/UpdatesList.tsx, src/components/AppUpdateEditModal.tsx
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2368,9 +2368,9 @@ src/hooks/useHelpAnnouncements.ts, src/hooks/useAppUpdates.ts, src/lib/supabaseR
 No SQL required for this fix — deploy the app update only.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2383,9 +2383,9 @@ No SQL required for this fix — deploy the app update only.
   $detail$See 2026-06-11_notifications-inbox-alerts-toggles for full explanation.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2402,9 +2402,9 @@ No SQL required for this fix — deploy the app update only.
 • I and staff messages you authored
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2418,9 +2418,9 @@ No SQL required for this fix — deploy the app update only.
 Tap the center circle to open the neighborhood map.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2433,9 +2433,9 @@ Tap the center circle to open the neighborhood map.
   $detail$Consistent icon, title, and description — sidebar and full inbox match.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2448,9 +2448,9 @@ Tap the center circle to open the neighborhood map.
   $detail$Use delete on your own messages in DMs, community chat, staff chat, and support threads. I and city manager can delete any message in community-global.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2474,9 +2474,9 @@ REVIEWS & REPORTS
 Group chats replaced the old "Community" label. Public channel is now All neighbors.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2497,9 +2497,9 @@ SIDEBAR ORDER
 4. Reviews & reports
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2512,9 +2512,9 @@ SIDEBAR ORDER
   $detail$Keeps the chat panel tidy on phones while everything stays one tap away.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2531,9 +2531,9 @@ FROM NEIGHBORS (below)
 Everyone else's reviews — yours is not duplicated in the list.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2547,9 +2547,9 @@ Everyone else's reviews — yours is not duplicated in the list.
 Post chats: buyer anytime; poster after listing is read-only.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2569,9 +2569,9 @@ News and announcements: bell (top right)
 Reviews and reports: Chat
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2584,9 +2584,9 @@ Reviews and reports: Chat
   $detail$Applies to deletes, director broadcast tests, and other sensitive actions — src/contexts/ConfirmContext.tsx, ConfirmDialog.tsx.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2636,9 +2636,9 @@ Bell → Alerts (last tab) → Turn off alerts → Enable alerts once per device
 iPhone: Home Screen app (Add to Home Screen), not a Safari tab.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2667,9 +2667,9 @@ DEEP LINKS
 • /notifications/alerts → Alerts settings
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2690,9 +2690,9 @@ DEEP LINKS
 Requires push-announcements webhook on help_announcements INSERT (install-push-webhooks.sql).
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2722,9 +2722,9 @@ What you should do
 Bell → Alerts → Turn off → Enable → Send test alert → Save settings if toggles changed.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2741,9 +2741,9 @@ iPhone neighbors: use Sacramento Buy Nothing from your Home Screen (Add to Home 
 After refreshing, you should receive messages, claims, community chat, saved listings, and other alerts reliably. Thank you for your patience!
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2756,9 +2756,9 @@ After refreshing, you should receive messages, claims, community chat, saved lis
   $detail$Use Search updates… to find past releases quickly. Works on the public updates page too.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2773,9 +2773,9 @@ Staff: Chat → Support inbox — ticket list with last-message preview. Removed
 Push: Alerts tab → Support tickets. Deep links /staff/tickets and /support open Messages support.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2797,9 +2797,9 @@ supabase-sql/user-notifications.sql
 After deploy, trigger any alert (message, comment, nearby listing) to see inbox rows.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2814,9 +2814,9 @@ Staff — Your team message (home + reviews)
 Still shown on home carousel and reviews page.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2831,9 +2831,9 @@ Still shown on home carousel and reviews page.
 Tap Awards and you'll get a coming soon page — that's it for now, still building the rest.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2848,9 +2848,9 @@ Tap Awards and you'll get a coming soon page — that's it for now, still buildi
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2865,9 +2865,9 @@ That's the quick version. Poke around the app and you should see it — if somet
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2882,9 +2882,9 @@ That's the quick version. Poke around the app and you should see it — if somet
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2899,9 +2899,9 @@ That's the quick version. Poke around the app and you should see it — if somet
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2916,9 +2916,9 @@ That's the quick version. Poke around the app and you should see it — if somet
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2937,9 +2937,9 @@ You can post item-for-item swaps now — trade/barter type. Still 100% free, no 
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 ),
 
 (
@@ -2954,8 +2954,8 @@ That's the quick version. Poke around the app and you should see it — if somet
 That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
 
 — Mark$detail$,
-  'Mark White',
+  (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
-  'director'
+  '204b071f-100c-401d-b76d-40c594e1f132'
 )
 ;

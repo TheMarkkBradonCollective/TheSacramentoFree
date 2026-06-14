@@ -7,6 +7,10 @@ import re
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+DIRECTOR_UID = "204b071f-100c-401d-b76d-40c594e1f132"
+DIRECTOR_NAME_SQL = (
+    f'(SELECT "displayName" FROM public.users WHERE uid = \'{DIRECTOR_UID}\')'
+)
 
 SQL_FILES = [
     "supabase-sql/all-community-updates.sql",
@@ -806,9 +810,9 @@ def main() -> None:
             f"  '{title.replace(chr(39), chr(39) + chr(39))}',\n"
             f"  {body_sql},\n"
             f"  {detail_sql},\n"
-            f"  'Mark White',\n"
+            f"  {DIRECTOR_NAME_SQL},\n"
             f"  'Buy Nothing Director',\n"
-            f"  'director'\n"
+            f"  '{DIRECTOR_UID}'\n"
             ")"
         )
 

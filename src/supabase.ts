@@ -391,8 +391,15 @@ export async function syncProfilePhotoAcrossApp(
  * --- PROFILES ---
  */
 
-const DIRECTOR_UIDS = new Set(['204b071f-100c-401d-b76d-40c594e1f132']);
+export const DIRECTOR_UID = '204b071f-100c-401d-b76d-40c594e1f132';
+const DIRECTOR_UIDS = new Set([DIRECTOR_UID]);
 const DIRECTOR_EMAIL = 'sigsecspec@gmail.com';
+
+function normalizeAppUpdatePostedByUserId(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === 'director') return DIRECTOR_UID;
+  return trimmed;
+}
 
 export function isDirectorUser(uid: string, email?: string | null): boolean {
   return DIRECTOR_UIDS.has(uid) || (email?.toLowerCase() === DIRECTOR_EMAIL);
@@ -2825,7 +2832,10 @@ export async function updateSupabaseStaffMessage(
   }
 }
 
-function normalizeAppUpdateRow(row: Record<string, unknown>): AppUpdateRecord {
+function normalizeAppUpdateRow(
+  row: Record<string, unknown>,
+  authorDisplayName?: string,
+): AppUpdateRecord {
   const rawDate = row.date;
   const date =
     typeof rawDate === 'string'
@@ -2834,18 +2844,38 @@ function normalizeAppUpdateRow(row: Record<string, unknown>): AppUpdateRecord {
         ? rawDate.toISOString().slice(0, 10)
         : new Date().toISOString().slice(0, 10);
 
+  const postedByUserId = normalizeAppUpdatePostedByUserId(String(row.postedByUserId || ''));
+  const directorName =
+    authorDisplayName?.trim() ||
+    String(row.directorName || '').trim() ||
+    DIRECTOR_MESSAGE.name;
+
   return {
     id: String(row.id),
     date,
     title: String(row.title || ''),
     body: String(row.body || ''),
     detail: row.detail ? String(row.detail) : null,
-    directorName: String(row.directorName || DIRECTOR_MESSAGE.name),
+    directorName,
     directorTitle: String(row.directorTitle || DIRECTOR_MESSAGE.title),
-    postedByUserId: String(row.postedByUserId || ''),
+    postedByUserId,
     createdAt: coerceToIsoDate(row.createdAt),
     updatedAt: coerceToIsoDate(row.updatedAt),
   };
+}
+
+async function enrichAppUpdatesWithAuthorProfiles(
+  rows: Record<string, unknown>[],
+): Promise<AppUpdateRecord[]> {
+  const userIds = rows.map((row) =>
+    normalizeAppUpdatePostedByUserId(String(row.postedByUserId || '')),
+  );
+  const displayInfo = await getUserDisplayInfoByIds(userIds);
+  return rows.map((row) => {
+    const uid = normalizeAppUpdatePostedByUserId(String(row.postedByUserId || ''));
+    const profileName = displayInfo[uid]?.displayName;
+    return normalizeAppUpdateRow(row, profileName);
+  });
 }
 
 export async function getSupabaseAppUpdates(): Promise<AppUpdateRecord[]> {
@@ -2864,7 +2894,7 @@ export async function getSupabaseAppUpdates(): Promise<AppUpdateRecord[]> {
 
     if (!data?.length) return [];
     setSupabaseConfigurationState(true);
-    return (data as Record<string, unknown>[]).map(normalizeAppUpdateRow);
+    return enrichAppUpdatesWithAuthorProfiles(data as Record<string, unknown>[]);
   } catch {
     return [];
   }
