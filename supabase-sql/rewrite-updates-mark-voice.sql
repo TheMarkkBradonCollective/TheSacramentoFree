@@ -8,7 +8,7 @@
 --      how Mark actually talks — not the polished corporate cards.
 --
 -- Source: all-community-updates.sql + june 9/10/11 SQL + main through 6/14
--- Voice: casual, first-person, honest — like directing the build in AI Studio
+-- Voice: casual, first-person, honest — Mark built it, Mark runs it
 --
 -- Safe to re-run: DELETE + INSERT
 -- =========================================================
@@ -23,17 +23,17 @@ INSERT INTO public.app_updates (
 ) VALUES
 
 -- ═══════════════════════════════════════════════════════════
--- MAY 19 — Google AI Studio, day one
+-- MAY 19 — day one
 -- ═══════════════════════════════════════════════════════════
 (
   'mark-voice-2026-05-19-day-one',
   '2026-05-19',
-  'ok so I basically started building this in Google AI Studio',
+  'I built Sacramento Buy Nothing — day one',
   $body$Hey guys 👋
 
-This whole thing started May 19 in Google AI Studio. I literally told it: build Sacramento Buy Nothing — log in, post stuff you wanna give away or stuff you're looking for, profiles, messaging, easy to search. That's it. That's where it came from.
+I started building this May 19. Wanted a real site where Sacramento neighbors can log in, post stuff to give away or stuff they're looking for, have profiles, message each other, and actually find things without money involved.
 
-Day one what you got:
+Day one what I got working:
 
 - Sacramento Buy Nothing goes live — free gifting, no money, neighbors helping neighbors
 - Map + feed to browse gives and asks
@@ -62,17 +62,17 @@ I'm still building it every day. This was just the start.
   'May 20 was a crazy day — database, mobile, email login',
   $body$Hey guys 👋
 
-May 20 I was in Google AI Studio all day bouncing between chats. Lot of "fix this" and "no do it this way instead." Here's what actually shipped:
+May 20 I basically didn't sleep. Ripped out the old setup and rebuilt a bunch of it. Here's what shipped:
 
 DATABASE & REAL DATA
-- Hooked up Supabase — posts and accounts save online for real, not fake mock listings
-- Told it: 100% real data, no hardcoded stuff, site needs to be LIVE
+- Hooked up Supabase — posts and accounts save online for real, not fake placeholder listings
+- Stripped out all the hardcoded mock data — site runs on live community data now
 - Removed the "database active" debug junk from the UI
 
 LOGIN
 - Switched to email + password through Supabase (no more Google popup getting blocked)
-- Added a landing page BEFORE login so people can see what this is
-- Better error messages when signup breaks instead of useless "detour failed" text
+- Built a landing page BEFORE login so people can see what this is
+- Fixed signup errors to show what actually went wrong instead of useless "detour failed" text
 
 MOBILE
 - Reworked the whole app to be mobile-first — map, feed, chat, profile each use the FULL phone screen
@@ -84,7 +84,7 @@ FEATURES
 - Neighbor chat to set up porch pickup
 - Early director/staff roles for moderation as we grow
 
-Also fought Firebase/Firestore errors for a while before I went all-in on Supabase. You're welcome 😅
+Also fought through Firebase/Firestore headaches for a while before I went all-in on Supabase. You're welcome 😅
 
 — Mark$body$,
   NULL,
@@ -426,7 +426,7 @@ OTHER
 - Profile page crashed after theme move — also fixed
 - Removed redundant Chat title clutter in sidebar
 
-Still just me with Cursor, Vercel, Supabase. Still free. Still no ads.
+Still just me building and hosting it (Cursor, Vercel, Supabase). Still free. Still no ads.
 
 — Mark White
 Sacramento Buy Nothing$body$,
