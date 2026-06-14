@@ -7,7 +7,7 @@
 --   B) Re-inserts the FULL changelog from supabase-sql/* rewritten
 --      how Mark actually talks — not the polished corporate cards.
 --
--- Source: all-community-updates.sql + june 9/10/11 SQL + main through 6/14
+-- Source: all supabase-sql app_updates (113 entries) + main branch through 6/14
 -- Voice: casual, first-person, honest — Mark built it, Mark runs it
 --
 -- Safe to re-run: DELETE + INSERT
@@ -35,11 +35,14 @@ May 19 is when I actually sat down and built this. The goal was simple: Sacramen
 
 WHAT I GOT WORKING DAY ONE
 - Sign up, pick your Sacramento neighborhood (Midtown, East Sac, Curtis Park, Pocket, etc.)
+- Neighborhood map + scrollable feed — browse gives and asks two ways
 - Post gives and asks with categories and search
+- Photos on listings
 - Message neighbors about a specific listing so you know what you're talking about
 - Mark your post completed, withdrawn, or relist it
 - User profiles with name, photo, neighborhood, bio
 - Works on phone, tablet, desktop
+- Still kinda browsable if your connection drops for a sec
 
 PUBLIC PAGE BEFORE LOGIN
 - Built a landing page so you can see what this is BEFORE making an account
@@ -106,7 +109,15 @@ POSTING A LOCATION
 
 MAPS
 - Switched the map over to OpenStreetMap (real Sacramento streets)
+- Interactive Sacramento map — zoom, pins, driving directions
 - Updated database schema — imageUrl on listings and other fixes in databaseSQL.txt
+
+ALSO SHIPPED
+- Neighbor chat — message whoever posted to set up porch pickup
+- Add to home screen like a real app (PWA)
+- Early director/staff user roles so we can moderate as this grows
+- Full-screen mobile layout — map, feed, chat, profile each own the whole phone
+- Desktop layout mostly stayed how it was while phones got rebuilt
 
 — Mark$body$,
   NULL,
@@ -157,6 +168,8 @@ POSTING & CLAIMING
 - Post button on feed on every screen size
 - Listing detail page — tap for full photos, comments, votes, claims
 - Edit your own posts before they're claimed
+- Post multiple items in one listing — people claim separately, you confirm who got what
+- Contactless pickup — neighbors can claim at your location and pick which items they took
 - Pick up several items in one trip
 - ISO fulfillment credits if you give a lot
 - Faster photo uploads
@@ -169,10 +182,11 @@ CHAT & PEOPLE
 - I can assign staff roles from profiles
 
 SAFETY & SUPPORT
-- Block & report
+- Block & report — blocking auto-reports to me
+- Report and support system in the app — bugs and help go straight to me
 - Help & support tab — bugs, tickets, reach staff
 - Attach photos to support tickets
-- Staff moderation tools
+- Staff moderation tools — review reports, manage accounts, keep it safe
 
 APP POLISH
 - Fresh design, dark/light themes
@@ -317,6 +331,7 @@ OK notifications. I've been grinding on this because everyone keeps asking and I
 
 WHAT SHOULD WORK
 - Push when the app is CLOSED, not just while you're on the site
+- Every alert type wired up like new listings — messages, comments, votes, pickup reminders, account notices, the works
 - Messages, claims, new listings, comments, votes, support replies, announcements
 - Comment alerts on YOUR listings
 - Saved listing alerts when you bookmarked something
@@ -324,16 +339,19 @@ WHAT SHOULD WORK
 - Bookmarks sync online so alerts work when you're not in the app
 - Staff announcements board in Help — separate from my changelog; vote & comment
 - App updates vs announcements = separate toggles
-- Director oversight alerts for me (joins, reports, moderation, etc.)
+- Director oversight alerts for me (joins, departures, reports, moderation, tickets, listings, message requests, claim requests — each its own toggle)
 - Test push button in Account
-- Save button on notification settings — flip toggles, review, THEN save
+- Save button for notification settings — flip toggles, review, THEN save
 - Logout clears push on THIS device so next person doesn't get your alerts
+- Every toggle in push settings actually does something now
 
 FIXES
 - Real alerts work again — not just the test button
 - No more double pings (same alert twice, drove me nuts)
+- Fewer duplicate notifications in general
 - Alerts go to the right account on shared phones
 - Fixed white screen / "something went wrong" crash after sign-in
+- App stays open after you sign in now
 
 WHAT YOU NEED TO DO (sorry)
 Each phone: Account → Push notifications → OFF then ON once. Save settings. iPhone: Add to Home Screen — Safari tabs alone won't background alert you.
@@ -369,7 +387,7 @@ OTHER FIXES
 - GoFundMe strip scrolls at bottom of chat instead of pinned on screen
 - Support tickets have a back button
 - Push for community chat & staff chat (own toggles)
-- Tap any changelog entry to expand the full story
+- Tap any changelog entry to expand the full story — every update has a write-up now
 - Help renamed Community hub — reports, updates, announcements still there
 
 — Mark$body$,
@@ -380,41 +398,45 @@ OTHER FIXES
 ),
 
 -- ═══════════════════════════════════════════════════════════
--- JUNE 11 (all github 6/11 entries)
+-- JUNE 11 — bell hub, inbox, nav (all github 6/11 entries)
 -- ═══════════════════════════════════════════════════════════
 (
   'mark-voice-2026-06-11-bell-and-tabs',
   '2026-06-11',
-  'new bell menu + cleaned up mobile tabs',
+  'new bell menu + notifications inbox + cleaned up tabs',
   $body$Hey guys 👋
 
 Nav was getting messy so I cleaned it up:
 
-THE BELL (top right)
-Four tabs:
-1. Notify — inbox of alerts you actually got
-2. News — staff announcements
+THE BELL (top right) — four tabs, left to right:
+1. Notify — your inbox. Every alert you'd get as a push also shows here (messages, comments, claims, nearby listings, chat, announcements, all of it)
+2. News — staff announcements (vote & comment)
 3. Updates — this changelog (searchable now!)
-4. Alerts — all your push toggles (last on purpose)
+4. Alerts — all your push toggles (last on purpose so you find your inbox first)
+
+PUSH GOT REBUILT
+- Fixed webhooks, duplicate alerts, stuck preference rows, shared-phone bugs
+- After updating: Bell → Alerts → turn OFF → ON → Save settings
+- iPhone: open from Home Screen, not Safari
+- Staff news posted from Bell → News triggers push for neighbors who enabled it
 
 MOBILE BOTTOM
 Stuff | Events | Map (big circle middle) | Chat | Account
 
 Hub tab is gone. Staff/director tools → Account → Staff tools.
+Director and staff welcome messages edited from Account → Staff tools too.
 
 CHAT
-- Reviews & reports moved into Chat sidebar
+- Reviews & reports moved into Chat sidebar (DMs → Groups → Support → Reviews)
 - Support inbox same style as DMs
 - Sidebar shows last 3 threads + View all
-- Delete DMs and post chats (rules apply)
+- Delete DMs, post chats, and closed support tickets (rules apply)
 - Delete messages you sent; I/city managers can remove community channel msgs
 - Start conversation + open new support chat rows
 - Your review on top, neighbors below — not duplicated
+- Empty states match across Support, DMs, and reviews — same look when there's nothing yet
 - Can't vote on your own stuff anymore
 - No more ugly browser OK/Cancel boxes — proper in-app confirms
-
-PUSH REMINDER
-Bell → Alerts → off → on → save. iPhone: Home Screen app, not Safari.
 
 — Mark$body$,
   NULL,
@@ -424,29 +446,32 @@ Bell → Alerts → off → on → save. iPhone: Home Screen app, not Safari.
 ),
 
 -- ═══════════════════════════════════════════════════════════
--- JUNE 14 — trade, awards, theme, fixes (main through 6/14)
+-- JUNE 14 — trade, awards, theme, fixes (main HEAD)
 -- ═══════════════════════════════════════════════════════════
 (
   'mark-voice-2026-06-14-trade-and-fixes',
   '2026-06-14',
-  'trade/barter posts + awards coming + some crash fixes',
+  'trade/barter + awards coming + crash fixes',
   $body$Hey guys 👋
 
-Latest:
+Latest shipped to the live site:
 
 TRADE / BARTER
 - New post type for item-for-item swaps — still 100% free, no money ever
-- Purple trade badge; map pins: giving=black, looking=white, trade=grey
+- Purple trade badge on listings
+- Map pin rings: giving=black, looking=white, trade=grey
 
-AWARDS
-- Glowing Awards button in header — building neighbor awards and a "go back in time" history. Not fully live yet but it's coming.
+AWARDS (COMING SOON)
+- Glowing Awards button in the header — working on neighbor awards and a "go back in time" history of your giving. Button's there, full thing still in progress.
 
-OTHER
-- Dark/light theme moved to Account
+NAV & THEME
+- Dark/light theme moved to Account (out of the header)
 - You land on the map when you sign in now
-- Map was crashing — fixed, sorry
-- Profile page crashed after theme move — also fixed
-- Removed redundant Chat title clutter in sidebar
+- Removed redundant Chat title/count clutter in the sidebar
+
+CRASH FIXES (sorry)
+- Map was white-screening — missing import, fixed
+- Profile page crashed after I moved theme settings — also fixed
 
 Still just me building and hosting it (Cursor, Vercel, Supabase). Still free. Still no ads.
 
