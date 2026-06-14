@@ -1,78 +1,50 @@
 -- =========================================================
--- REWRITE ALL APP UPDATES — Mark's voice
+-- REWRITE ALL APP UPDATES — Mark's voice (from GitHub changelog)
 -- Paste into Supabase Dashboard → SQL → New query → Run
 --
 -- What this does:
---   A) Deletes every row in app_updates (and old update votes)
---   B) Re-inserts the full changelog as fewer, casual posts — like the
---      Facebook updates — written by Mark, not corporate-speak.
+--   A) Deletes every row in app_updates (+ old update votes)
+--   B) Re-inserts the FULL changelog from supabase-sql/* rewritten
+--      how Mark actually talks — not the polished corporate cards.
 --
--- Safe to re-run: DELETE + INSERT (not ON CONFLICT).
--- Does NOT touch announcements, reviews, or other tables.
+-- Source: all-community-updates.sql + june 9/10/11 SQL + main through 6/14
+-- Voice: casual, first-person, honest — like directing the build in AI Studio
+--
+-- Safe to re-run: DELETE + INSERT
 -- =========================================================
 
--- Clear old changelog votes (old update ids won't match anymore)
 DELETE FROM public.community_content_votes
 WHERE "targetType" = 'update';
 
--- A) Delete all updates
 DELETE FROM public.app_updates;
 
--- B) Re-insert in Mark's voice (oldest → newest in the list below;
---    the app sorts by date DESC so newest shows first)
 INSERT INTO public.app_updates (
   id, date, title, body, detail, "directorName", "directorTitle", "postedByUserId"
 ) VALUES
 
--- ─────────────────────────────────────────────────────────
--- May 19 — where it all started
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- MAY 19 — Google AI Studio, day one
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-05-19-launch',
+  'mark-voice-2026-05-19-day-one',
   '2026-05-19',
-  'Sacramento Buy Nothing is live 🎉',
-  $body$Hey guys! 👋
+  'ok so I basically started building this in Google AI Studio',
+  $body$Hey guys 👋
 
-So I basically started building this on May 19 because I wanted Sacramento neighbors to have a real place to give stuff away and ask for things — no money, no selling, just neighbors helping neighbors.
+This whole thing started May 19 in Google AI Studio. I literally told it: build Sacramento Buy Nothing — log in, post stuff you wanna give away or stuff you're looking for, profiles, messaging, easy to search. That's it. That's where it came from.
 
-What you get right out the gate:
+Day one what you got:
 
-- Map + feed so you can browse free gifts around town
+- Sacramento Buy Nothing goes live — free gifting, no money, neighbors helping neighbors
+- Map + feed to browse gives and asks
 - Pick your Sacramento neighborhood when you join
-- Post photos on listings so people know what they're getting
-- Works on phone, tablet, and desktop
-- Still kinda works if your connection drops for a sec (offline-friendly)
-- Orange & sage colors — wanted it to feel like Sacramento, not some random app
+- Photos on listings
+- Works on phone, tablet, desktop
+- Still kinda browsable if your connection hiccups
+- Reddit orange + sage green — wanted it to feel local, not generic
+- Wrote down what this is supposed to be: free forever, no selling, no flipping, just give and ask kindly
 
-That's day one. More coming fast.
-
-— Mark White
-Sacramento Buy Nothing$body$,
-  NULL,
-  'Markeith White',
-  'Buy Nothing Director',
-  'director'
-),
-
--- ─────────────────────────────────────────────────────────
--- May 20 — database + mobile + map + chat
--- ─────────────────────────────────────────────────────────
-(
-  'mark-voice-2026-05-20-real-app',
-  '2026-05-20',
-  'Hooked it up for real + mobile overhaul',
-  $body$Hey guys! 👋
-
-Quick update on what I shipped:
-
-- Everything saves online now (Supabase) — same community on every device, not just your phone
-- Interactive Sacramento map with zoom, custom pins, and driving directions
-- Neighbor chat so you can message whoever posted something and set up porch pickup
-- Add it to your home screen like a real app (works pretty good offline for basic browsing)
-- Reworked mobile so map, feed, chat, and profile each use the FULL screen — no more tiny boxes
-- Early director/staff roles so we can moderate as this grows
-
-Desktop neighbors — I didn't wreck what you already liked on the wider layout, just made phones way better.
+I'm still building it every day. This was just the start.
 
 — Mark$body$,
   NULL,
@@ -81,190 +53,168 @@ Desktop neighbors — I didn't wreck what you already liked on the wider layout,
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- May 28 — original post energy
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- MAY 20 — database, mobile, login, real data
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-05-28-born',
-  '2026-05-28',
-  'So I got bored and turned the subreddit into a website 😅',
-  $body$Hey guys! 👋
+  'mark-voice-2026-05-20-big-rebuild-day',
+  '2026-05-20',
+  'May 20 was a crazy day — database, mobile, email login',
+  $body$Hey guys 👋
 
-So I got bored and turned this reddit into a website! I'm still working on it even as we speak but it's to a point where I can share it and take opinions 🙂
+May 20 I was in Google AI Studio all day bouncing between chats. Lot of "fix this" and "no do it this way instead." Here's what actually shipped:
 
-Big thing today: posts, profiles, and messages all live in the cloud now — nothing gets lost between devices.
+DATABASE & REAL DATA
+- Hooked up Supabase — posts and accounts save online for real, not fake mock listings
+- Told it: 100% real data, no hardcoded stuff, site needs to be LIVE
+- Removed the "database active" debug junk from the UI
 
-More soon.
+LOGIN
+- Switched to email + password through Supabase (no more Google popup getting blocked)
+- Added a landing page BEFORE login so people can see what this is
+- Better error messages when signup breaks instead of useless "detour failed" text
 
-— Mark White
-Sacramento Buy Nothing$body$,
+MOBILE
+- Reworked the whole app to be mobile-first — map, feed, chat, profile each use the FULL phone screen
+- Desktop view stayed mostly how it was
+- Add to home screen like a real app
+
+FEATURES
+- Interactive Sacramento map — zoom, pins, driving directions
+- Neighbor chat to set up porch pickup
+- Early director/staff roles for moderation as we grow
+
+Also fought Firebase/Firestore errors for a while before I went all-in on Supabase. You're welcome 😅
+
+— Mark$body$,
   NULL,
   'Markeith White',
   'Buy Nothing Director',
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- May 29 — huge feature drop (matches your FB post + more)
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- MAY 28
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-05-29-huge-drop',
+  'mark-voice-2026-05-28-cloud',
+  '2026-05-28',
+  'everything saves online now',
+  $body$Hey guys 👋
+
+Quick one — all posts, profiles, and messages live in the cloud now. Nothing stuck on one device. Sign in anywhere and it's the same community.
+
+Still tweaking stuff daily but it's shareable now.
+
+— Mark$body$,
+  NULL,
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+),
+
+-- ═══════════════════════════════════════════════════════════
+-- MAY 29 — massive feature day (all github 5/29 entries)
+-- ═══════════════════════════════════════════════════════════
+(
+  'mark-voice-2026-05-29-everything-at-once',
   '2026-05-29',
-  '😱 OMG you guys love this site — huge update',
-  $body$Hey guys! 👋
+  'y''all went nuts on the site so I shipped a TON',
+  $body$Hey guys 👋
 
-😱 OMG! I am in shock how much you guys all love the site. Thank you so much for all your kind words! I added quite a bit and want you all to get used to the way it is now before I make more changes. I want to see what you guys think and watch it be used.
+I am honestly shocked how fast this blew up. Thank you. I dumped a huge update and wanna let it sit so you can use it before I change more.
 
-Here's what's new:
+MAP & BROWSING
+- 38 Sacramento neighborhoods
+- Map opens first — see gifts near you right away
+- Real driving routes (actual streets, not straight lines)
+- Map color legend for pin types
+- Community stats bar on feed + public home page
 
-NEIGHBORHOODS & MAP
-- 38 Sacramento neighborhoods to choose from (was like 29+, I think 37 total at one point — kept adding)
-- Map opens first so you see gifts near you right away
-- Real driving routes on the map (actual streets, not straight lines)
-- Map color index so you know what the pins mean
-
-POSTING & PICKUPS
-- Post from the feed on every screen size, not just the map
-- Edit your own posts anytime before they're claimed
-- Listing detail page — tap any post for photos, comments, votes, claim options
-- Post multiple items in one listing — people can claim separately and you confirm who got what
-- Contactless pickup: neighbors can claim themselves at your location and pick which items they took
-- Pick up several items at once when someone's giving away a bunch
-- ISO fulfillment credits — give a lot and it helps when you need something
+POSTING & CLAIMING
+- Post button on feed on every screen size
+- Listing detail page — tap for full photos, comments, votes, claims
+- Edit your own posts before they're claimed
+- Pick up several items in one trip
+- ISO fulfillment credits if you give a lot
+- Faster photo uploads
 
 CHAT & PEOPLE
-- Message requests — new DMs start as a request, you accept or decline
-- Share pickup location in chat when you're arranging a meetup
-- Neighbor profiles with avatars; team directory so you know who runs things
-- Role badges on profiles (director, staff, etc.)
-- I can assign staff roles from neighbor profiles
+- Message requests — accept or decline before chatting
+- Share pickup location in chat
+- Neighbor profiles with avatars
+- Team directory + role badges (director, staff, etc.)
+- I can assign staff roles from profiles
 
 SAFETY & SUPPORT
-- Block & report — block someone uncomfortable; blocking auto-reports to me
-- Help & support tab — report bugs, open tickets, reach staff
+- Block & report
+- Help & support tab — bugs, tickets, reach staff
 - Attach photos to support tickets
-- Staff moderation tools to review reports and keep things safe
+- Staff moderation tools
 
-APP FEEL
-- Fresh design, dark/light themes, pinned mobile header & nav
+APP POLISH
+- Fresh design, dark/light themes
+- Pinned mobile header & bottom nav
 - Full-screen mobile chat & profile
-- Phone back button works between tabs like you'd expect
-- Live updates — posts, chats, votes, tickets show up without refreshing
-- Faster photo uploads
-- Community stats on the feed and public home page
-- Public welcome pages (About, How It Works, Rules, Areas) before you even sign in
+- Phone back button works between tabs
+- Live updates — no refresh spam
+- Public welcome pages before sign-in (About, Rules, Areas, etc.)
+- Steadier sign-in after refresh
 
-Go poke around and tell me what you think!
+Go break it and tell me what sucks.
 
-— Mark White
-Sacramento Buy Nothing$body$,
+— Mark$body$,
   NULL,
   'Markeith White',
   'Buy Nothing Director',
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- May 31 — Q&A + claim buttons (matches your FB post)
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- MAY 31
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-05-31-lets-talk',
+  'mark-voice-2026-05-31-claims-and-real-talk',
   '2026-05-31',
-  'Let''s talk — notifications, costs, privacy, staff',
-  $body$Hey guys! 👋
+  'clearer claim buttons + real talk about how this runs',
+  $body$Hey guys 👋
 
-I see the app/website is very much in use! I love it and appreciate the feedback I have gotten this far! But let's talk about a few things...
+Few things:
 
-- For now I have to ask that ALL USERS double back and check on your Post/Request/DMs because we don't have notifications pushed through the website yet. I also will be implementing a few more features like pending pickup/hold requests and more to make things more efficient and user friendly!
+CLAIMS
+- Claim & hold buttons are clearer — easier to see available vs on hold vs already claimed
 
-- Clearer claim & hold buttons so it's easier to see what's available, on hold, or already claimed.
+REAL TALK (people keep asking)
+- Please double-check your posts, requests, and DMs — notifications aren't fully pushed yet so don't assume you'll get pinged
+- YES this costs me money. Hosting, database, making it a real app with alerts — it adds up
+- Still 100% FREE for you, NO ADS, run by me
+- I use Cursor, Vercel, and Supabase to build and host — I'm not selling your info, I don't want it, I have no use for it
+- Looking for moderators, admins, and eventually city managers for other cities — being careful who gets controls
 
-People have asked questions and it's time — let's answer some of them.
+I ran free game servers for years (FiveM, Assetto Corsa) so I'm used to eating the cost. This one's actually working better so I'm keeping it up.
 
-- First, YES this cost me. For example to make this a full app and have notifications will definitely cost a bit. But I want to enforce this app being FREE to you all and better still, WITHOUT ADS! I may put up a GoFundMe for donations but otherwise this is 100% FREE AND RUN BY ME!
-
-I have operated game servers for free to play (FiveM/Assetto Corsa) under the same cost so this is nothing different and honestly seems to be more successful so I want to keep this up!
-
-- Software, hosting, and furthermore the database is all run by ME and ME ALONE! I am using third party websites to do so (Cursor/Vercel/Supabase).
-
-- As for your information, I can't speak for the third party websites but as for me, I want nothing to do with your information nor do I have no use for it nor the mindset to sell it for any reason!
-
-Lastly,
-
-- I may be looking for staff — I have implemented spots for moderators, administrators and a city manager (who will act as me as I develop other apps for other cities). I'm weary of who are in these positions for they have controls over the app.
-
-— Mark White
-Sacramento Buy Nothing$body$,
+— Mark$body$,
   NULL,
   'Markeith White',
   'Buy Nothing Director',
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- June 1 — 200+ members (matches your FB post)
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- JUNE 2
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-06-01-200-members',
-  '2026-06-01',
-  '200+ members — thank you + what''s next',
-  $body$Hey guys! 👋
-
-We're now over 200+ members, and I just want to say thank you. Seeing how active the site is and how much it's being used has been amazing.
-
-I've been going through feedback and watching how everything is being used, and I want to share the next step.
-
-I don't want Sacramento Buy Nothing to stay just a local project.
-
-My goal is to build this into a Buy Nothing brand and eventually create similar apps for other cities so more communities can have their own local version of this platform.
-
-I'm still actively improving the site with updates like:
-
-- Better post pickup/hold system
-- Improved messaging and DMs
-- Future notification system
-- Moderation and performance improvements
-
-Everything is still being built and managed by me directly using tools like Cursor, Vercel, and Supabase.
-
-I've set up a GoFundMe for anyone who wants to support the project and help with:
-
-- Hosting and development costs
-- New features
-- Expanding to other cities
-- Keeping the platform free and ad-free
-
-All support is appreciated, but just using and sharing the site already helps a lot.
-
-Thanks again everyone — this is only the beginning.
-
-— Mark White
-Sacramento Buy Nothing$body$,
-  NULL,
-  'Markeith White',
-  'Buy Nothing Director',
-  'director'
-),
-
--- ─────────────────────────────────────────────────────────
--- June 2 — guest preview + account stuff
--- ─────────────────────────────────────────────────────────
-(
-  'mark-voice-2026-06-02-browse-before-join',
+  'mark-voice-2026-06-02-guest-stuff',
   '2026-06-02',
-  'Browse before you sign up + a few account tools',
-  $body$Hey guys! 👋
+  'browse before you sign up + delete your account',
+  $body$Hey guys 👋
 
-Few things I pushed:
-
-- You can preview real listings on the home page BEFORE signing up — no account needed to see what's going on
-- Animated welcome page so it doesn't feel dead when you first land
-- Tap photos to enlarge (lightbox) so you can actually see what you're picking up
-- Delete your account if you ever want out — your data goes with it
+- Preview real listings on the home page before you make an account
+- Animated welcome page so it doesn't feel dead
+- Tap photos to enlarge
+- Delete your account if you want out — your data goes with it
 - Staff safety tools — leaders can remove comments, delete accounts, purge data when we have to
 
-Still building. Still me. Still free.
-
 — Mark$body$,
   NULL,
   'Markeith White',
@@ -272,21 +222,19 @@ Still building. Still me. Still free.
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- June 7 — bookmarks + labor
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- JUNE 7
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-06-07-bookmarks-labor',
+  'mark-voice-2026-06-07-saves-labor',
   '2026-06-07',
-  'Save listings + Labor section',
-  $body$Hey guys! 👋
+  'save listings + labor section',
+  $body$Hey guys 👋
 
-Quick one:
-
-- Bookmark/save listings to check later
-- New Labor section for community help and skills (still 100% free — no paid gigs)
-- Added Old Foothill Farms to the neighborhood list
-- Smoother mobile home page before you sign in
+- Bookmark listings to check later
+- Labor section for community help and skills (still free — no paid gigs)
+- Added Old Foothill Farms to neighborhoods
+- Smoother mobile home page before login
 
 — Mark$body$,
   NULL,
@@ -295,38 +243,37 @@ Quick one:
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- June 9 part 1 — community features
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- JUNE 9 — community pages & feed (github 6/9 non-notification)
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-06-09-community-stuff',
+  'mark-voice-2026-06-09-community-pages',
   '2026-06-09',
-  'Events, reviews, Stuff tab, filters, GoFundMe page',
-  $body$Hey guys! 👋
+  'events, reviews, Stuff tab, filters, GoFundMe page',
+  $body$Hey guys 👋
 
-Big community update today — a lot of this is stuff you've been asking for:
+Big community update:
 
-COMMUNITY PAGES
-- Feed is now called "Stuff" (same free gifts & requests, just a friendlier name)
-- Free community events — post neighborhood gatherings, RSVP, comment. Has to be 100% free, no exceptions
-- Star reviews — leave a rating for the app, one per person, edit anytime
-- Updates & Reviews pages under Community — changelog + neighbor reviews
-- A note from your director on home (why this exists: free forever, no ads, I don't sell your info)
-- Each staff member can write their OWN welcome message now (not one shared blurb)
-- Vote on updates, reviews, and team notes — up/down goes to me as feedback
+PAGES & STUFF
+- Feed renamed to "Stuff" — same listings, less weird name
+- Free community events — post gatherings, RSVP, comment (has to be 100% free)
+- Star reviews — rate the app, one per person
+- Updates & Reviews under Community menu
+- My director note on home — why this exists, free forever, no ads, I don't sell your data
+- Each staff member writes their OWN welcome message now
+- Vote on updates, reviews, and team notes — feedback comes to me
+- Changelog lives in the database now — I can post/edit from the app, not buried in code
 
 BROWSING STUFF
-- Filters & sort in one panel so the feed isn't a mess
-- Quick picks: Trending, Saved, My area, With photos, Needs pickup — tap multiple at once
-- Filter by giving vs looking, category, neighborhood, status, votes, comments
-- Sort by newest, oldest, or most active
-- Withdrawn posts stay hidden so the feed isn't cluttered
+- Filters & sort in one panel
+- Quick picks: Trending, Saved, My area, With photos, Needs pickup — stack multiple
+- Filter by give vs looking, category, neighborhood, status, votes, comments
+- Sort newest, oldest, most active
+- Withdrawn posts stay hidden
 
-SUPPORT THE APP (OPTIONAL)
-- GoFundMe got its own full page with the real cost breakdown
-- Short support link at the bottom of most pages (not stuck on the map anymore)
-
-I can post/edit/delete these changelog entries myself now — they live in the database, not buried in code.
+SUPPORT (OPTIONAL)
+- GoFundMe got its own page with real cost breakdown
+- Short support link at bottom of pages — not stuck on the map anymore
 
 — Mark$body$,
   NULL,
@@ -335,38 +282,41 @@ I can post/edit/delete these changelog entries myself now — they live in the d
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- June 9 part 2 — notifications (the big one)
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- JUNE 9 — notifications (all github 6/9 notification entries)
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-06-09-notifications',
+  'mark-voice-2026-06-09-notifications-grind',
   '2026-06-09',
-  'Push notifications — finally (please read this one)',
-  $body$Hey guys! 👋
+  'notifications — I''ve been fighting this for days (read this)',
+  $body$Hey guys 👋
 
-OK so notifications. I've been grinding on this because y'all kept asking and I kept breaking it trying to fix it. Here's where we're at:
+OK notifications. I've been grinding on this because everyone keeps asking and I keep breaking it fixing it. Here's the deal:
 
-WHAT WORKS NOW
-- Push alerts when the app is CLOSED (not just while you're on the site)
-- Messages, claims, new listings, comments, votes, support replies, announcements — the works
-- Comment alerts when someone comments on YOUR listing
-- Saved listing alerts when you bookmarked a post and it changes
-- Upvote/downvote alerts (optional toggles)
-- Saved bookmarks sync online so alerts work even when you're not on the app
-- Staff announcements in Help — separate board from my changelog; staff post, you vote & comment
-- App updates vs announcements are SEPARATE toggles in settings (my changelog ≠ staff news)
+WHAT SHOULD WORK
+- Push when the app is CLOSED, not just while you're on the site
+- Messages, claims, new listings, comments, votes, support replies, announcements
+- Comment alerts on YOUR listings
+- Saved listing alerts when you bookmarked something
+- Upvote/downvote alerts (optional)
+- Bookmarks sync online so alerts work when you're not in the app
+- Staff announcements board in Help — separate from my changelog; vote & comment
+- App updates vs announcements = separate toggles
 - Director oversight alerts for me (joins, reports, moderation, etc.)
-- Test push button in Account so you can make sure YOUR phone works
-- Save button for notification settings — flip toggles, review, then Save (not auto-save on every tap)
-- Logout clears push on THIS device so the next person who signs in doesn't get your alerts
-- Fixed double pings (same alert firing twice — annoying, I know)
-- Fixed alerts going to the wrong account on shared phones
-- Fixed white screen / "Something went wrong" crash after sign-in (that one was on me)
+- Test push button in Account
+- Save button on notification settings — flip toggles, review, THEN save
+- Logout clears push on THIS device so next person doesn't get your alerts
+
+FIXES
+- Real alerts work again — not just the test button
+- No more double pings (same alert twice, drove me nuts)
+- Alerts go to the right account on shared phones
+- Fixed white screen / "something went wrong" crash after sign-in
 
 WHAT YOU NEED TO DO (sorry)
-On each phone: Account → Push notifications → turn OFF, then ON again once. Tap Save settings. iPhone people: Add to Home Screen — Safari tabs alone won't get background alerts.
+Each phone: Account → Push notifications → OFF then ON once. Save settings. iPhone: Add to Home Screen — Safari tabs alone won't background alert you.
 
-Real alerts work again — not just the test button. If something still doesn't ping you, holler through support.
+If it still doesn't ping you, hit support and tell me your phone.
 
 — Mark$body$,
   NULL,
@@ -375,31 +325,30 @@ Real alerts work again — not just the test button. If something still doesn't 
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- June 10 — chat/community hub
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- JUNE 10 (all github 6/10 entries)
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-06-10-chat-hub',
+  'mark-voice-2026-06-10-chat-reorg',
   '2026-06-10',
-  'Community chat + staff lounge + support moved to Chat',
-  $body$Hey guys! 👋
+  'moved community chat + support into Chat tab',
+  $body$Hey guys 👋
 
-Reorganized how chat works — should feel more like one place for everything:
+Reorganized chat because stuff was scattered:
 
-CHAT TAB NOW HAS
-- Community chat — all neighbors (global channel)
-- Staff chat — staff only, hidden from everyone else
-- Support tickets — moved out of Help, lives in Chat now
+CHAT TAB NOW
+- Community chat — all neighbors
+- Staff chat — staff only
+- Support tickets — moved here from Help
 - Direct messages — same as before
 
 OTHER FIXES
-- Announcements don't show twice anymore when staff post (that was a bug)
-- GoFundMe strip scrolls at the bottom of chat instead of being pinned on your screen
-- Support tickets have a back button so you're not stuck
-- Push alerts for community chat & staff chat (each has its own toggle)
-- Every changelog entry can expand with the full story if you tap it
-
-Help is now called Community hub — reports, my updates, staff announcements, reviews still there.
+- Announcements don't show twice when staff post (bug on my end)
+- GoFundMe strip scrolls at bottom of chat instead of pinned on screen
+- Support tickets have a back button
+- Push for community chat & staff chat (own toggles)
+- Tap any changelog entry to expand the full story
+- Help renamed Community hub — reports, updates, announcements still there
 
 — Mark$body$,
   NULL,
@@ -408,40 +357,42 @@ Help is now called Community hub — reports, my updates, staff announcements, r
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- June 11 — bell + nav redesign
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- JUNE 11 (all github 6/11 entries)
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-06-11-bell-nav',
+  'mark-voice-2026-06-11-bell-and-tabs',
   '2026-06-11',
-  'New bell menu + simpler mobile tabs',
-  $body$Hey guys! 👋
+  'new bell menu + cleaned up mobile tabs',
+  $body$Hey guys 👋
 
-Did a nav cleanup because things were getting buried:
+Nav was getting messy so I cleaned it up:
 
 THE BELL (top right)
-Tap it — four tabs:
-1. Notify — your inbox (alerts you actually received)
+Four tabs:
+1. Notify — inbox of alerts you actually got
 2. News — staff announcements
 3. Updates — this changelog (searchable now!)
-4. Alerts — all your push toggles (last tab on purpose so you find your inbox first)
+4. Alerts — all your push toggles (last on purpose)
 
-MOBILE BOTTOM TABS
-Stuff | Events | Map (big circle in the middle) | Chat | Account
+MOBILE BOTTOM
+Stuff | Events | Map (big circle middle) | Chat | Account
 
-The old Hub tab is gone. Staff/director tools moved to Account → Staff tools.
+Hub tab is gone. Staff/director tools → Account → Staff tools.
 
-CHAT SIDEBAR
-- Reviews & reports moved into Chat
+CHAT
+- Reviews & reports moved into Chat sidebar
 - Support inbox same style as DMs
-- Sidebar shows last 3 threads + "View all"
-- Delete conversations (DMs, post chats — rules apply)
+- Sidebar shows last 3 threads + View all
+- Delete DMs and post chats (rules apply)
 - Delete messages you sent; I/city managers can remove community channel msgs
-- No more ugly browser OK/Cancel popups — proper in-app confirm dialogs
-- You can't vote on your own stuff anymore (listings, reviews, updates, etc.)
+- Start conversation + open new support chat rows
+- Your review on top, neighbors below — not duplicated
+- Can't vote on your own stuff anymore
+- No more ugly browser OK/Cancel boxes — proper in-app confirms
 
 PUSH REMINDER
-After updating: Bell → Alerts → Turn off → Enable → Save. iPhone: open from Home Screen, not Safari.
+Bell → Alerts → off → on → save. iPhone: Home Screen app, not Safari.
 
 — Mark$body$,
   NULL,
@@ -450,32 +401,32 @@ After updating: Bell → Alerts → Turn off → Enable → Save. iPhone: open f
   'director'
 ),
 
--- ─────────────────────────────────────────────────────────
--- June 14 — trade, awards, theme, fixes
--- ─────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════
+-- JUNE 14 — trade, awards, theme, fixes (main through 6/14)
+-- ═══════════════════════════════════════════════════════════
 (
-  'mark-voice-2026-06-14-trade-awards',
+  'mark-voice-2026-06-14-trade-and-fixes',
   '2026-06-14',
-  'Trade/barter posts + Awards button + a few fixes',
-  $body$Hey guys! 👋
+  'trade/barter posts + awards coming + some crash fixes',
+  $body$Hey guys 👋
 
-Latest drop:
+Latest:
 
 TRADE / BARTER
-- New post type: trade — item for item swaps, still 100% FREE, no money
-- Purple trade badge on listings; grey rings on map pins (giving = black, looking = white, trade = grey)
+- New post type for item-for-item swaps — still 100% free, no money ever
+- Purple trade badge; map pins: giving=black, looking=white, trade=grey
 
-AWARDS (COMING SOON)
-- Glowing Awards button in the header — I'm building neighbor awards & a "go back in time" history of your giving. Not live yet but the button's there so you know it's coming.
+AWARDS
+- Glowing Awards button in header — building neighbor awards and a "go back in time" history. Not fully live yet but it's coming.
 
-THEME
-- Dark/light theme moved to Account (not cluttering the header anymore)
+OTHER
+- Dark/light theme moved to Account
+- You land on the map when you sign in now
+- Map was crashing — fixed, sorry
+- Profile page crashed after theme move — also fixed
+- Removed redundant Chat title clutter in sidebar
 
-FIXES
-- Map was crashing for some people — fixed a missing import, sorry about that
-- Profile page crash after the theme move — also fixed
-
-Still just me building with Cursor, Vercel, and Supabase. Still free, still no ads.
+Still just me with Cursor, Vercel, Supabase. Still free. Still no ads.
 
 — Mark White
 Sacramento Buy Nothing$body$,
