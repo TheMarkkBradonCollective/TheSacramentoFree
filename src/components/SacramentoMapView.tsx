@@ -80,6 +80,13 @@ export const getCategoryColor = (category: string): string => {
   return colors[category] || '#FF6A39'; 
 };
 
+/** Pin ring color by listing type: giving = black, looking = white, trade = grey. */
+export function getMapPinBorderClass(type: ItemPost['type'] | string): string {
+  if (type === 'giveaway') return 'border-zinc-950';
+  if (type === 'trade') return 'border-zinc-400';
+  return 'border-white';
+}
+
 interface MapSelectionRouteRowProps {
   selectedPost: ItemPost;
   routeEndpoints: { start: LatLng; end: LatLng } | null;
@@ -595,9 +602,7 @@ export default function SacramentoMapView({
         html: `
           <div class="relative flex items-center justify-center cursor-pointer">
             <span style="border-color: ${color}" class="absolute inline-flex h-6 w-6 rounded-full border opacity-50 block animate-pulse"></span>
-            <div style="background-color: ${color}" class="h-3.5 w-3.5 rounded-full border-2 shadow-md ${
-              item.type === 'giveaway' ? 'border-zinc-950' : item.type === 'trade' ? 'border-purple-400' : 'border-white'
-            } ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
+            <div style="background-color: ${color}" class="h-3.5 w-3.5 rounded-full border-2 shadow-md ${getMapPinBorderClass(item.type)} ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
               <div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>
             </div>
           </div>
@@ -909,7 +914,7 @@ export default function SacramentoMapView({
                           selectedPost.type === 'giveaway'
                             ? 'bg-accent text-on-accent'
                             : selectedPost.type === 'trade'
-                              ? 'bg-purple-500 text-white'
+                              ? 'bg-zinc-500 text-white'
                               : 'bg-inset border border-app text-muted'
                         }`}>
                           {getPostTypeMapLabel(selectedPost.type)}
@@ -1162,12 +1167,16 @@ export default function SacramentoMapView({
         <div className="absolute top-3 left-3 bg-surface/95 border border-app p-3 z-10 space-y-1.5 shadow-xl max-w-[155px] scale-90 origin-top-left rounded-xl text-app">
           <span className="text-[8.5px] font-black text-subtle uppercase tracking-widest block font-mono">Legend</span>
           <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted">
-            <span className="w-2.5 h-2.5 rounded-full border border-app bg-[#FF4500] block shrink-0"></span>
-            <span>GIVEAWAY LIST</span>
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-zinc-950 bg-[#FF4500] block shrink-0"></span>
+            <span>GIVING (black ring)</span>
           </div>
           <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted">
-            <span className="w-2.5 h-2.5 rounded-full border border-white bg-white block shrink-0"></span>
-            <span>WANTED REQ (ISO)</span>
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-white bg-white block shrink-0"></span>
+            <span>LOOKING (white ring)</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-zinc-400 bg-zinc-400 block shrink-0"></span>
+            <span>TRADE (grey ring)</span>
           </div>
         </div>
 
@@ -1413,7 +1422,7 @@ export default function SacramentoMapView({
                       selectedPost.type === 'giveaway'
                         ? 'bg-accent text-on-accent font-mono'
                         : selectedPost.type === 'trade'
-                          ? 'bg-purple-500 text-white font-mono'
+                          ? 'bg-zinc-500 text-white font-mono'
                           : 'bg-inset border border-app text-muted font-mono'
                     }`}>
                       {getPostTypeMapDetailLabel(selectedPost.type)}
