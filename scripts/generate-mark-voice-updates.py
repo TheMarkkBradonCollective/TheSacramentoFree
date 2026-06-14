@@ -10,6 +10,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 SQL_FILES = [
     "supabase-sql/all-community-updates.sql",
+    "supabase-sql/expand-all-community-updates-detail.sql",
     "supabase-sql/add-june-10-latest-updates.sql",
     "supabase-sql/add-june-11-complete-updates.sql",
     "supabase-sql/add-june-11-latest-batch.sql",
@@ -18,6 +19,17 @@ SQL_FILES = [
     "supabase-sql/user-notifications.sql",
     "supabase-sql/post-push-refresh-announcement.sql",
 ]
+
+ENTRY_RE = re.compile(
+    r"\(\s*\n"
+    r"\s*'([^']+)',\s*\n"
+    r"\s*'(\d{4}-\d{2}-\d{2})',\s*\n"
+    r"\s*'((?:[^']|'')*)',\s*\n"
+    r"\s*'((?:[^']|'')*)',\s*\n"
+    r"\s*(?:NULL|'(?P<detail_quote>(?:[^']|'')*)'|\$detail\$(?P<detail_dollar>.*?)\$detail\$)\s*,\s*\n"
+    r"\s*'Markeith White'",
+    re.DOTALL,
+)
 
 # May 20 session entries not in github app_updates SQL
 EXTRA = [
@@ -598,24 +610,108 @@ VOICE: dict[str, tuple[str, str]] = {
 
 def parse_inserts(text: str) -> list[dict]:
     entries = []
-    pattern = re.compile(
-        r"\(\s*\n\s*'([^']+)',\s*\n\s*'(\d{4}-\d{2}-\d{2})',\s*\n\s*'((?:[^']|'')*)',\s*\n\s*'((?:[^']|'')*)'",
-        re.MULTILINE,
-    )
-    for m in pattern.finditer(text):
+    for m in ENTRY_RE.finditer(text):
+        if m.group("detail_dollar") is not None:
+            detail_raw = m.group("detail_dollar")
+        elif m.group("detail_quote") is not None:
+            detail_raw = m.group("detail_quote").replace("''", "'")
+        else:
+            detail_raw = None
         entries.append(
             {
                 "id": m.group(1),
                 "date": m.group(2),
                 "title": m.group(3).replace("''", "'"),
                 "body": m.group(4).replace("''", "'"),
+                "detail": detail_raw.strip() if detail_raw else None,
             }
         )
     return entries
 
 
-def sql_quote(s: str) -> str:
-    return s.replace("'", "''")
+def sql_dollar(tag: str, content: str) -> str:
+    """Pick a dollar-quote delimiter that does not appear in content."""
+    for n in ("", "d", "dt", "body", "detail"):
+        delim = f"${tag}{n}$"
+        if delim not in content:
+            return f"{delim}{content}{delim}"
+    raise ValueError("Could not find safe dollar-quote delimiter")
+
+
+def casualize_detail(text: str) -> str:
+    """Rewrite GitHub detail blocks in Mark's voice — still informative when expanded."""
+    t = text.strip()
+    replacements = [
+        ("WHAT NEIGHBORS SEE", "What you'll notice"),
+        ("WHAT STAFF SEE", "What staff see"),
+        ("WHAT WAS BROKEN", "What was broken"),
+        ("WHAT WE FIXED", "What I fixed"),
+        ("WHAT WE CHANGED (CODE)", "What I changed"),
+        ("WHAT WE CHANGED", "What I changed"),
+        ("WHAT YOU SHOULD DO", "What you should do"),
+        ("WHAT YOU NEED TO DO", "What you need to do"),
+        ("ROOT CAUSES", "Why it broke"),
+        ("ROOT CAUSE", "Why it broke"),
+        ("FILES TOUCHED", "Behind the scenes (files I touched)"),
+        ("FILES", "Behind the scenes"),
+        ("PROBLEM", "The problem"),
+        ("PHASE 1 FIX", "First fix I tried"),
+        ("PHASE 2 FIX (current)", "What actually fixed it"),
+        ("PHASE 2 FIX", "What actually fixed it"),
+        ("VERIFICATION", "How to check it"),
+        ("HOW IT WORKS", "How it works"),
+        ("HOW TO NOTIFY", "How to notify everyone"),
+        ("AFTER THIS DEPLOY", "After this update"),
+        ("AFTER DEPLOY", "After this update"),
+        ("DIRECTOR OPS", "If you're me and it's still broken"),
+        ("NEIGHBOR ACTION", "What you should do"),
+        ("REFRESH PUSH", "Refresh push on your phone"),
+        ("TAB ORDER", "Tab order"),
+        ("CHAT SIDEBAR ORDER", "Chat sidebar order"),
+        ("MOBILE BOTTOM", "Mobile bottom tabs"),
+        ("THE BELL", "The bell menu"),
+        ("PUSH GOT REBUILT", "Push got rebuilt"),
+        ("PUSH REMINDER", "Push reminder"),
+        ("DATABASE", "Database stuff"),
+        ("SQL TO RUN", "SQL I ran in Supabase"),
+        ("SQL SETUP", "SQL setup"),
+        ("Neighbors ", "You "),
+        ("neighbors ", "you "),
+        ("Neighbor ", "You "),
+        ("neighbor ", "you "),
+        ("We had", "I had"),
+        ("We fixed", "I fixed"),
+        ("We turned", "I turned"),
+        ("We re-enabled", "I re-enabled"),
+        ("We ", "I "),
+        ("Director ", "I "),
+        ("the director", "me"),
+    ]
+    for old, new in replacements:
+        t = t.replace(old, new)
+    if not t.endswith("— Mark"):
+        t = f"{t}\n\n— Mark"
+    return t
+
+
+def expand_summary_to_detail(summary: str) -> str:
+    """Fallback detail for entries without a GitHub detail block."""
+    core = summary.replace("\n\n— Mark", "").replace("— Mark", "").strip()
+    return (
+        f"{core}\n\n"
+        "That's the quick version. Poke around the app and you should see it — "
+        "if something looks off, hit support and tell me what screen you're on.\n\n"
+        "— Mark"
+    )
+
+
+def pick_detail(entry: dict, casual_body: str) -> str | None:
+    if entry.get("detail"):
+        return casualize_detail(entry["detail"])
+    prof_body = entry.get("body", "")
+    if len(prof_body) > len(casual_body) + 40:
+        return casualize_detail(prof_body)
+    return expand_summary_to_detail(casual_body)
 
 
 def fallback_voice(title: str, body: str) -> tuple[str, str]:
@@ -638,14 +734,30 @@ def main() -> None:
         if not path.exists():
             continue
         for e in parse_inserts(path.read_text()):
-            if e["id"] not in by_id or len(e["body"]) >= len(by_id[e["id"]]["body"]):
+            prev = by_id.get(e["id"])
+            if not prev:
                 by_id[e["id"]] = e
+                continue
+            # Prefer longest detail; keep professional body for fallback detail text
+            merged = {**prev, **e}
+            # Always keep the longest detail text available
+            prev_detail = prev.get("detail") or ""
+            new_detail = e.get("detail") or ""
+            merged["detail"] = new_detail if len(new_detail) >= len(prev_detail) else prev_detail
+            merged["body"] = e["body"] if len(e["body"]) >= len(prev.get("body", "")) else prev["body"]
+            by_id[e["id"]] = merged
 
     rows = sorted(by_id.values(), key=lambda x: (x["date"], x["id"]))
 
     for extra in EXTRA:
         rows.append(
-            {"id": extra[0], "date": extra[1], "title": extra[2], "body": extra[3]}
+            {
+                "id": extra[0],
+                "date": extra[1],
+                "title": extra[2],
+                "body": extra[3],
+                "detail": extra[4] if len(extra) > 4 else None,
+            }
         )
 
     rows = sorted(rows, key=lambda x: (x["date"], x["id"]))
@@ -655,7 +767,8 @@ def main() -> None:
         "-- REWRITE ALL APP UPDATES — Mark's voice (individual entries)",
         "-- Paste into Supabase Dashboard → SQL → New query → Run",
         "--",
-        "-- One row per change (~129 entries: GitHub SQL + session + main 6/14).",
+        "-- body  = short summary (collapsed)",
+        "-- detail = full story (expanded on tap)",
         "-- Regenerate: python3 scripts/generate-mark-voice-updates.py",
         "-- =========================================================",
         "",
@@ -670,19 +783,28 @@ def main() -> None:
     ]
 
     tuples = []
+    with_detail = 0
     for e in rows:
         if e["id"] in VOICE:
             title, body = VOICE[e["id"]]
         else:
             title, body = fallback_voice(e["title"], e["body"])
 
+        detail = pick_detail(e, body)
+
+        if detail:
+            with_detail += 1
+
+        body_sql = sql_dollar("body", body)
+        detail_sql = sql_dollar("detail", detail) if detail else "NULL"
+
         tuples.append(
             "(\n"
-            f"  '{sql_quote(e['id'])}',\n"
+            f"  '{e['id']}',\n"
             f"  '{e['date']}',\n"
-            f"  '{sql_quote(title)}',\n"
-            f"  '{sql_quote(body)}',\n"
-            f"  NULL,\n"
+            f"  '{title.replace(chr(39), chr(39) + chr(39))}',\n"
+            f"  {body_sql},\n"
+            f"  {detail_sql},\n"
             f"  'Markeith White',\n"
             f"  'Buy Nothing Director',\n"
             f"  'director'\n"
@@ -695,7 +817,7 @@ def main() -> None:
 
     target = ROOT / "supabase-sql/rewrite-updates-mark-voice.sql"
     target.write_text("\n".join(out))
-    print(f"Wrote {len(rows)} entries to {target}")
+    print(f"Wrote {len(rows)} entries ({with_detail} with detail) to {target}")
 
 
 if __name__ == "__main__":
