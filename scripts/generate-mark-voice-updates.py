@@ -155,6 +155,12 @@ EXTRA = [
         "cleaned up chat sidebar header",
         "Removed the redundant Chat title and count from the chat sidebar — less noise.\n\n— Mark",
     ),
+    (
+        "2026-06-14_app-update-comments",
+        "2026-06-14",
+        "comment on app updates now",
+        "Tap any changelog entry to expand it — read and post comments, same as staff announcements.",
+    ),
 ]
 
 # Casual rewrites: id -> (title, body)
@@ -611,6 +617,10 @@ VOICE: dict[str, tuple[str, str]] = {
         "staff: post news from bell for push",
         "Staff announcements posted from Bell → News trigger push for neighbors who enabled it.\n\n— Mark",
     ),
+    "2026-06-14_app-update-comments": (
+        "comment on app updates now",
+        "Tap any changelog entry to expand it — read and post comments, same as staff announcements.",
+    ),
 }
 
 
@@ -668,8 +678,12 @@ def polish_prose(text: str) -> str:
 
         if len(lines) >= 2 and lines[0].endswith(":"):
             header = lines[0]
-            body = _finish_sentence(" ".join(lines[1:]))
-            blocks.append(f"{header}\n{body}")
+            rest = lines[1:]
+            if all(r.startswith("•") for r in rest):
+                blocks.append(header + "\n" + "\n".join(rest))
+            else:
+                body = _finish_sentence(" ".join(rest))
+                blocks.append(f"{header}\n{body}")
             continue
 
         # Keep intentional short openers like "Hey guys 👋" on their own line.
@@ -696,7 +710,14 @@ def _finish_sentence(merged: str) -> str:
 
 def clean_copy(text: str) -> str:
     text = strip_signoffs(text)
-    text = re.sub(r"\s*•\s*", ". ", text)
+    # Only flatten inline bullets mid-sentence — keep real list lines intact.
+    flattened: list[str] = []
+    for line in text.split("\n"):
+        if line.strip().startswith("•"):
+            flattened.append(line)
+        else:
+            flattened.append(re.sub(r"\s*•\s*", ". ", line))
+    text = "\n".join(flattened)
     text = re.sub(r"\.\s*\.", ".", text)
     return polish_prose(text)
 
@@ -836,10 +857,238 @@ def casualize_detail(text: str) -> str:
 
 
 def _join_section(title: str | None, lines: list[str]) -> str:
-    body = " ".join(lines)
+    if len(lines) == 1:
+        body = lines[0]
+    elif all(len(ln) < 100 for ln in lines):
+        body = "\n".join(f"• {ln.lstrip('• ').strip()}" for ln in lines if ln.strip())
+    else:
+        body = "\n\n".join(lines)
     if title:
         return f"{title}:\n{body}"
     return body
+
+
+TECH_TO_PLAIN: list[tuple[str, str]] = [
+    (r"MobileView, TabletView, DesktopView shells? in App\.tsx", "The app picks a phone, tablet, or desktop layout automatically."),
+    (r"MobileView, TabletView, and DesktopView", "Separate layouts for phone, tablet, and desktop"),
+    (r"Responsive breakpoints at 768px and 1024px", "The layout shifts around typical tablet and laptop screen sizes."),
+    (r"One codebase, three layouts", "Same community and same account everywhere — just laid out for your screen."),
+    (r"readCachedProfile, readCachedItems in App\.tsx initial state", "Your profile and recent listings stay on your device for a moment if the connection drops."),
+    (r"Service worker caches static assets", "A lightweight offline cache keeps basic pages from instantly going blank."),
+    (r"OpenStreetMap", "OpenStreetMap (real Sacramento streets, not fake straight lines)"),
+    (r"help_announcements", "staff announcements"),
+    (r"app_updates", "director changelog entries"),
+    (r"Leaflet", "the map library"),
+]
+
+
+def humanize_tech_line(line: str) -> str | None:
+    line = line.strip()
+    if not line:
+        return None
+    if TECH_LINE_RE.match(line):
+        return None
+    if re.match(r"^[a-z0-9_./-]+\.(tsx?|sql|mjs|ts)$", line, re.I):
+        return None
+    if line.startswith("src/") and " " not in line:
+        return None
+    if re.search(r"\b(INSERT|UPDATE|DELETE|SELECT|\.tsx|\.sql|normalize|subscribe|webhook|vapid)\b", line, re.I):
+        return None
+    if "→" in line and re.search(r"\b(msg-|targetType|preference key|localStorage|PHASE \d)\b", line, re.I):
+        return None
+
+    human = _humanize_detail_line(line)
+    if human is None:
+        return None
+
+    for pattern, replacement in TECH_TO_PLAIN:
+        human = re.sub(pattern, replacement, human, flags=re.I)
+
+    if re.search(r"\b(src/|\.tsx|\.sql|supabase-sql/|webhook|vapid)\b", human, re.I):
+        return None
+    if human.rstrip().endswith(":") and len(human) < 40:
+        return None
+    return human
+
+
+def parse_source_sections(source: str) -> list[tuple[str, str]]:
+    """Pull neighbor-readable sections from GitHub/SQL detail text."""
+    if not source or not source.strip():
+        return []
+
+    header_map = {
+        "WHAT NEIGHBORS SEE": "What you'll notice",
+        "WHAT NEIGHBORS SEE (DIRECTOR)": "What you'll notice",
+        "WHAT NEIGHBORS SEE (STAFF)": "For staff",
+        "WHAT STAFF SEE": "For staff",
+        "WHAT WAS BROKEN": "What was broken",
+        "WHAT WE FIXED": "What I fixed",
+        "WHAT WE CHANGED (CODE)": "What changed under the hood",
+        "WHAT WE CHANGED": "What changed",
+        "WHAT YOU SHOULD DO": "What to do",
+        "WHAT YOU NEED TO DO": "What to do",
+        "ROOT CAUSES": "Why it broke",
+        "ROOT CAUSE": "Why it broke",
+        "HOW IT WORKS": "How it works",
+        "HOW TO NOTIFY": "How to spread the word",
+        "VERIFICATION": "How to check it's working",
+        "WHERE TO FIND IT": "Where to find it",
+        "TAB 1": "Announcements tab",
+        "TAB 2": "Updates tab",
+        "TAB 3": "Notifications tab",
+        "TAB 4": "Alerts tab",
+        "WHY TWO PUSH TABS?": "Why Notify and Alerts are separate",
+        "NEIGHBOR ACTION": "What to do",
+        "REFRESH PUSH": "Refresh push on your phone",
+        "DATABASE": "Database setup",
+        "SQL TO RUN": "SQL to run",
+        "FOR DIRECTORS": "For me (director)",
+        "FOR STAFF": "For staff",
+    }
+
+    sections: list[tuple[str, list[str]]] = []
+    current_title: str | None = None
+    current_lines: list[str] = []
+
+    def flush() -> None:
+        nonlocal current_title, current_lines
+        if not current_lines:
+            current_title = None
+            return
+        body_bits = [bit for ln in current_lines if (bit := humanize_tech_line(ln))]
+        if not body_bits:
+            current_title = None
+            current_lines = []
+            return
+        title = current_title or "How it works"
+        sections.append((title, body_bits))
+        current_title = None
+        current_lines = []
+
+    for raw_block in re.split(r"\n\s*\n", source.strip()):
+        for line in raw_block.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            upper = line.upper().rstrip(":")
+            mapped = header_map.get(upper) or header_map.get(upper.split(" — ")[0])
+            if mapped or (line.isupper() and len(line) < 70 and " " in line):
+                flush()
+                current_title = mapped or polish_title(line.lower())
+                rest = line.split(" — ", 1)[1].strip() if " — " in line else ""
+                if rest:
+                    current_lines.append(rest)
+                continue
+
+            if line.startswith("•"):
+                current_lines.append(line.lstrip("• ").strip())
+                continue
+
+            current_lines.append(line)
+
+        flush()
+
+    out: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for title, lines in sections:
+        body = _join_section(None, lines)
+        key = f"{title}:{body[:80]}"
+        if key in seen or len(body) < 20:
+            continue
+        seen.add(key)
+        out.append((title, body))
+    return out
+
+
+def entry_kind(entry_id: str) -> str:
+    eid = entry_id.lower()
+    if any(k in eid for k in ("fix", "crash", "white-screen", "duplicate", "wrong", "broken", "no-more")):
+        return "fix"
+    if any(k in eid for k in ("push", "notification", "alert", "bell")):
+        return "notify"
+    if any(k in eid for k in ("staff", "director", "moderat", "role")):
+        return "staff"
+    if any(k in eid for k in ("launch", "started", "vision", "community")):
+        return "mission"
+    return "feature"
+
+
+def how_to_use_section(entry_id: str, summary: str) -> str | None:
+    eid = entry_id.lower()
+    tips: list[str] = []
+
+    if "bell" in eid or "navbar" in eid or "hub" in eid:
+        tips.append("Tap the bell (top right). Notify = inbox of alerts you received. News = staff posts. Updates = this changelog. Alerts = every push toggle — last tab on purpose.")
+    if "notification" in eid and "inbox" in eid:
+        tips.append("Bell → Notify lists what already pinged you — messages, comments on your posts, claims, nearby listings, and more.")
+    if "search" in eid and "update" in eid:
+        tips.append("Bell → Updates → use the search box to find an old release by keyword.")
+    if "map" in eid:
+        tips.append("Open Map (center button on phones). Tap a pin for photos, directions, and chat.")
+    if "feed" in eid or "stuff" in eid or "listing" in eid or "post-from" in eid:
+        tips.append("Stuff tab → scroll or filter. Tap + to post a give, ask, trade, labor offer, or event.")
+    if "chat" in eid:
+        tips.append("Chat tab → community channel, DMs, and support live in the sidebar. Tap a thread to open it.")
+    if "trade" in eid or "barter" in eid:
+        tips.append("Tap + → choose Trade/barter → describe what you have and what you want in return. Still no money, ever.")
+    if "comment" in eid and "update" in eid:
+        tips.append("Bell → Updates (or the public Updates page) → tap an entry → scroll to Discussion. Sign in to post.")
+    if "announcement" in eid:
+        tips.append("Bell → News → tap a post to expand, vote, and comment.")
+    if "theme" in eid:
+        tips.append("Account → Appearance → switch light or dark. I moved it out of the header to reduce clutter.")
+    if "account" in eid and "delete" in eid:
+        tips.append("Account → scroll to Delete account → confirm. This removes your profile and posts from the community.")
+    if "push" in eid or "notification" in eid:
+        tips.append("Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.")
+
+    if not tips:
+        return None
+    return "\n".join(f"• {t}" for t in tips[:3])
+
+
+def why_section(entry_id: str, summary: str) -> str | None:
+    eid = entry_id.lower()
+    kind = entry_kind(entry_id)
+
+    if kind == "fix":
+        return (
+            "I ship fast and sometimes break my own stuff — thanks for the screenshots and support tickets. "
+            "This patch is me cleaning up so real porch pickups and chats are not blocked by a UI bug."
+        )
+    if kind == "notify":
+        return (
+            "Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, "
+            "got doubles, or shared phones crossed wires. You control every category under Bell → Alerts."
+        )
+    if "trade" in eid or "barter" in eid:
+        return (
+            "You asked for item swaps without money or shipping drama. Trade posts follow the same free-gifting rules — "
+            "just barter instead of a one-way give."
+        )
+    if "comment" in eid:
+        return (
+            "Staff announcements already had discussion threads. Changelog entries deserved the same — "
+            "you should be able to ask questions or tell me what landed well."
+        )
+    if "gofundme" in eid:
+        return (
+            "Hosting, database, and push cost real money. I will never charge neighbors or run ads — "
+            "the GoFundMe page is optional transparency about what it takes to keep this alive."
+        )
+    if kind == "mission":
+        return "This is the foundation — free, local, no selling. Everything else builds on that promise."
+    if kind == "staff":
+        return "As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate."
+
+    if any(k in eid for k in ("mobile", "desktop", "tablet", "layout", "map", "chat")):
+        return "I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse."
+
+    return (
+        "I write these updates so you know what changed and why — not as release notes for other developers. "
+        "If anything here is unclear, comment on the entry or open a support ticket and I'll tighten the wording."
+    )
 
 
 def detail_addon(entry_id: str) -> str | None:
@@ -861,69 +1110,169 @@ def detail_addon(entry_id: str) -> str | None:
     return None
 
 
-# Hand-tuned expanded stories where GitHub detail is too technical or thin.
+# Hand-tuned expanded stories where heuristics still fall short.
 DETAIL_OVERRIDES: dict[str, str] = {
     "2026-05-19_where-it-all-started": (
-        "May 19, 2026 — day one.\n\n"
-        "I sat down and started building Sacramento Buy Nothing for real: sign in, post gives and asks, "
-        "profiles, messaging. That was the whole idea from the jump."
+        "What you'll notice:\n"
+        "May 19, 2026 was day one — Sacramento Buy Nothing went from an idea to something you could actually open in a browser.\n\n"
+        "How it works:\n"
+        "Sign in, post gives and asks, set up a profile, and message neighbors. That was the whole scope on launch night — "
+        "no selling, no ads, just local free gifting.\n\n"
+        "Why I built it:\n"
+        "I wanted a Sacramento-specific home for Buy Nothing culture instead of fighting Facebook groups or apps that "
+        "eventually charge money. Everything since has been layers on top of that first version."
     ),
     "2026-05-29_director-role-management": (
-        "I can bump people up to moderator, administrator, or city manager from their profile.\n\n"
-        "Helps as the community grows so I'm not the only one watching reports and tickets."
+        "What you'll notice:\n"
+        "I can assign staff roles from a neighbor's profile — moderator, city administrator, city manager, and so on.\n\n"
+        "For staff:\n"
+        "Each role has a seat limit so the team stays small and accountable. You'll see role badges on profiles so you "
+        "know who helps run the community.\n\n"
+        "Why I changed it:\n"
+        "One person cannot watch every report and ticket as Sacramento grows. Trusted neighbors need tools without "
+        "handing everyone the keys."
+    ),
+    "2026-06-11_navbar-bell-community-hub": (
+        "What you'll notice:\n"
+        "The bell (top right, next to theme) is now a small hub with four tabs. Each tab has its own title and intro so you "
+        "always know what you're looking at.\n\n"
+        "The four tabs:\n"
+        "• Notify — inbox of alerts about YOUR posts and profile (comments, votes, claims, gifts, status changes)\n"
+        "• News — staff announcements; vote and comment\n"
+        "• Updates — this director changelog\n"
+        "• Alerts — last on purpose; turn push on here and choose every category\n\n"
+        "Why Notify and Alerts are separate:\n"
+        "Notify is what already happened to your listings. Alerts is what you want your phone to ping you about going forward — "
+        "messages, discover, community chat, staff news, pickup reminders, and more.\n\n"
+        "What to do after updating:\n"
+        "Bell → Alerts → turn off → turn back on → Save once per phone. iPhone neighbors need the Home Screen app, not Safari."
     ),
     "2026-06-11_push-reliability-overhaul": (
-        "Push was a mess — a lot of you only got the test alert, not real messages or claims.\n\n"
-        "I rebuilt the pipeline: webhooks, duplicate filtering, prefs that actually save, and logout "
-        "clears your phone so shared devices don't cross wires.\n\n"
-        "If you're still not getting pings: Bell → Alerts → turn off → Save → flip back on → Save. "
-        "On iPhone, use the Home Screen app — Safari won't cut it."
+        "What you'll notice:\n"
+        "Real alerts should reach your phone again — messages, claims, comments, nearby listings — not just the test button.\n\n"
+        "What was broken:\n"
+        "Webhooks, duplicate filtering, and device prefs were out of sync. Some phones only ever got test pushes. "
+        "Shared devices could cross wires between accounts.\n\n"
+        "What to do:\n"
+        "Bell → Alerts → turn everything off → Save → flip back on → Save again (once per phone). "
+        "iPhone neighbors: use the Home Screen app, not a Safari tab.\n\n"
+        "Why I rebuilt it:\n"
+        "Push is how you hear about a free couch before someone else grabs it. Broken alerts make the whole app feel dead."
     ),
     "2026-06-14_trade-barter-listing-type": (
+        "What you'll notice:\n"
         "Hey guys 👋\n\n"
-        "You can post item-for-item swaps now — trade/barter type.\n\n"
-        "Still 100% free. No money, no shipping, no sketchy side deals — just neighbors trading stuff."
+        "You can post item-for-item swaps now — pick Trade/barter when you create a listing.\n\n"
+        "How to use it:\n"
+        "• Tap + → Trade/barter → describe what you have and what you want back.\n"
+        "• Still 100% free — no money, no shipping labels, no payment apps.\n"
+        "• Meet locally like any other pickup.\n\n"
+        "Why I added it:\n"
+        "Neighbors kept asking for swaps that stay inside Buy Nothing rules. This is that — barter, not a marketplace."
+    ),
+    "2026-06-14_app-update-comments": (
+        "What you'll notice:\n"
+        "Every changelog entry can now host a real discussion — same idea as staff announcements.\n\n"
+        "How to use it:\n"
+        "• Bell → Updates (or the public Updates page) → tap an entry to expand it.\n"
+        "• Scroll to Discussion — read comments or add your own (sign in required to post).\n"
+        "• Collapsed cards show a comment count when a thread already exists.\n\n"
+        "SQL to run:\n"
+        "supabase-sql/app-update-comments.sql — creates the comments table, security rules, and live sync.\n\n"
+        "Why I added it:\n"
+        "You should be able to ask what something means or tell me a release helped — not just read a wall of text from me."
     ),
 }
 
 
-def enrich_short_detail(entry: dict, core: str) -> str:
-    """When expanded text would duplicate the summary, add a natural second beat."""
-    eid = entry["id"].lower()
-    if "email" in eid and "login" in eid:
-        return f"{core}\n\nGoogle sign-in kept getting blocked in the browser, so I went with plain email and password through Supabase."
-    if "landing" in eid:
-        return f"{core}\n\nYou can read the rules and browse neighborhoods before creating an account."
-    if "schema" in eid or "databasesql" in eid:
-        return f"{core}\n\nHandy if you're setting up a fresh Supabase project from scratch."
-    if "trade" in eid or "barter" in eid:
-        return core  # already has Hey guys opener in body
-    if "awards" in eid:
-        return f"{core}\n\nStill building the real thing — the button's just a heads-up for now."
-    addon = detail_addon(entry["id"])
-    if addon:
-        return f"{core}\n\n{addon}"
-    return core
+def _is_messy_detail(text: str) -> bool:
+    return bool(
+        re.search(r"\bWHERE TO FIND IT\b", text)
+        or text.count("Title:") >= 2
+        or re.search(r"\bPHASE \d", text)
+        or re.search(r"\b(INSERT|UPDATE|DELETE)\b", text)
+    )
+
+
+def _similar(a: str, b: str) -> bool:
+    na = re.sub(r"\s+", " ", a.strip().lower())
+    nb = re.sub(r"\s+", " ", b.strip().lower())
+    if not na or not nb:
+        return False
+    if na == nb:
+        return True
+    shorter, longer = (na, nb) if len(na) <= len(nb) else (nb, na)
+    return shorter in longer and len(shorter) / len(longer) > 0.82
+
+
+def build_neighbor_detail(entry: dict, summary: str) -> str:
+    """Long neighbor-facing read — always longer and deeper than the collapsed summary."""
+    eid = entry["id"]
+    source = entry.get("detail") or ""
+    sections: list[str] = []
+    used_titles: set[str] = set()
+
+    parsed = parse_source_sections(source)
+    casual = casualize_detail(source) if source else ""
+
+    # Lead with what you'll notice — expand summary, never paste it twice verbatim.
+    notice_bits = [summary.rstrip(".") + "."]
+    for title, body in parsed:
+        if title in ("What you'll notice", "Where to find it"):
+            notice_bits.append(body)
+    notice = polish_prose("\n\n".join(notice_bits))
+    if (
+        casual
+        and not _similar(casual, summary)
+        and len(casual) > len(summary) + 40
+        and not _is_messy_detail(casual)
+    ):
+        if "What you'll notice" not in casual:
+            notice = polish_prose(f"{notice}\n\n{casual}")
+    sections.append(f"What you'll notice:\n{notice}")
+    used_titles.add("What you'll notice")
+
+    for title, body in parsed:
+        if title in used_titles:
+            continue
+        if title == "How it works" and "How to use it" in used_titles:
+            continue
+        if _similar(body, summary):
+            continue
+        sections.append(f"{title}:\n{body}")
+        used_titles.add(title)
+
+    how = how_to_use_section(eid, summary)
+    if how:
+        sections.append(f"How to use it:\n{how}")
+
+    why = why_section(eid, summary)
+    if why:
+        sections.append(f"Why I changed it:\n{why}")
+
+    trouble = detail_addon(eid)
+    if trouble:
+        sections.append(f"If something still looks off:\n{trouble}")
+
+    detail = clean_copy("\n\n".join(sections))
+    min_len = max(280, int(len(summary) * 2.2))
+    if len(detail) < min_len:
+        extra = (
+            "More context:\n"
+            "I write these entries for neighbors using the app — not as developer patch notes. "
+            "Tap any update to read the full story, vote if it helped, and comment if something needs clarification."
+        )
+        detail = clean_copy(f"{detail}\n\n{extra}")
+
+    return detail
 
 
 def build_detail(entry: dict, casual_body: str) -> str:
     if entry["id"] in DETAIL_OVERRIDES:
         return clean_copy(DETAIL_OVERRIDES[entry["id"]])
 
-    core = clean_copy(casual_body)
-    if entry.get("detail"):
-        detail = casualize_detail(entry["detail"])
-        if detail and detail != core and len(detail) > len(core) + 15:
-            return detail
-
-    prof = entry.get("body", "")
-    if prof and len(prof.strip()) > len(core) + 30:
-        detail = casualize_detail(prof)
-        if detail and len(detail) > len(core) + 15:
-            return detail
-
-    detail = enrich_short_detail(entry, core)
-    return detail
+    summary = clean_copy(casual_body)
+    return build_neighbor_detail(entry, summary)
 
 
 def fallback_voice(title: str, body: str) -> tuple[str, str]:
