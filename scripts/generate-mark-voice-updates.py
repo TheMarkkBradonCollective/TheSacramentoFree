@@ -114,12 +114,6 @@ EXTRA = [
         "Trade listings show a grey ring on the map. Giving stays black, looking stays white.\n\n— Mark",
     ),
     (
-        "2026-06-14_awards-button-coming-soon",
-        "2026-06-14",
-        "glowing Awards button (coming soon)",
-        "Added a glowing Awards button in the header. Full neighbor awards + go-back-in-time history still in progress — button's a preview of what's coming.\n\n— Mark",
-    ),
-    (
         "2026-06-14_theme-moved-to-account",
         "2026-06-14",
         "dark/light theme moved to Account",

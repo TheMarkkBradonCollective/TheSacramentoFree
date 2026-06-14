@@ -2820,23 +2820,6 @@ Still shown on home carousel and reviews page.
 ),
 
 (
-  '2026-06-14_awards-button-coming-soon',
-  '2026-06-14',
-  'glowing Awards button (coming soon)',
-  $body$Added a glowing Awards button in the header. Full neighbor awards + go-back-in-time history still in progress — button's a preview of what's coming.
-
-— Mark$body$,
-  $detail$Added a glowing Awards button in the header. Full neighbor awards + go-back-in-time history still in progress — button's a preview of what's coming.
-
-That's the quick version. Poke around the app and you should see it — if something looks off, hit support and tell me what screen you're on.
-
-— Mark$detail$,
-  'Markeith White',
-  'Buy Nothing Director',
-  'director'
-),
-
-(
   '2026-06-14_chat-sidebar-header-removed',
   '2026-06-14',
   'cleaned up chat sidebar header',
