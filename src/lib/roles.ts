@@ -1,5 +1,6 @@
 import type { Message, UserProfile } from '../types';
 import { isCommunityChat, isGlobalCommunityChat } from './communityChats';
+import { isDirectorUser } from './directorIdentity';
 
 export type UserRole = NonNullable<UserProfile['role']>;
 
@@ -103,19 +104,24 @@ export function canStaffDeleteAccount(role?: UserProfile['role']): boolean {
   return r === 'city_manager' || r === 'director';
 }
 
-/** Buy Nothing Director — full platform oversight. */
+/** Buy Nothing Director — the single director account (UID). */
+export function isDirectorActor(actor?: Pick<UserProfile, 'uid'> | null): boolean {
+  return Boolean(actor?.uid && isDirectorUser(actor.uid));
+}
+
+/** Buy Nothing Director role label (for display on the director profile). */
 export function isDirectorRole(role?: UserProfile['role']): boolean {
   return normalizeUserRole(role) === 'director';
 }
 
 /** Director site overview in Help & safety. */
-export function canViewDirectorOverview(role?: UserProfile['role']): boolean {
-  return isDirectorRole(role);
+export function canViewDirectorOverview(actor?: Pick<UserProfile, 'uid'> | null): boolean {
+  return isDirectorActor(actor);
 }
 
-/** Post, edit, and delete app changelog updates (director — legacy alias). */
-export function canManageAppUpdates(role?: UserProfile['role']): boolean {
-  return isDirectorRole(role);
+/** Post, edit, and delete app changelog updates. */
+export function canManageAppUpdates(actor?: Pick<UserProfile, 'uid'> | null): boolean {
+  return isDirectorActor(actor);
 }
 
 /** Post announcements in Help & support. */
@@ -128,7 +134,7 @@ export function canEditAnnouncement(
   actor: Pick<UserProfile, 'uid' | 'role'>,
   postedByUserId: string,
 ): boolean {
-  return isDirectorRole(actor.role) || actor.uid === postedByUserId;
+  return isDirectorActor(actor) || actor.uid === postedByUserId;
 }
 
 /** Publish or edit this staff member's own public welcome message (director uses director_message). */

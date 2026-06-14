@@ -172,7 +172,8 @@ export const SUPPORT = {
 } as const;
 
 export const DIRECTOR_MESSAGE = {
-  name: 'Mark White',
+  /** Fallback until profile loads — live UI pulls from users.displayName for DIRECTOR_UID. */
+  name: 'Director',
   title: 'Buy Nothing Director',
   headline: 'A note from your director',
   goal:

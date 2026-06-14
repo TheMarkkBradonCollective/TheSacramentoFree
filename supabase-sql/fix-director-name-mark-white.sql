@@ -13,10 +13,12 @@ BEGIN
   SET "displayName" = 'Mark White'
   WHERE uid = director_uid;
 
-  -- Director welcome note
-  UPDATE public.director_message
-  SET "directorName" = 'Mark White'
-  WHERE id = 'main';
+  -- Director welcome note — sync name from profile
+  UPDATE public.director_message dm
+  SET "directorName" = u."displayName"
+  FROM public.users u
+  WHERE u.uid = director_uid
+    AND dm.id = 'main';
 
   -- Staff message row if you have one
   UPDATE public.staff_messages

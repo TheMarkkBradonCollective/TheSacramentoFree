@@ -32,6 +32,7 @@ import ReportNeighborModal from './ReportNeighborModal';
 import { ItemPost } from '../types';
 import RoleBadge from './RoleBadge';
 import { ASSIGNABLE_ROLE_OPTIONS } from '../lib/roles';
+import { isDirectorUser } from '../lib/directorIdentity';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { MessageRequest } from '../types';
 import ProfilePostList from './ProfilePostList';
@@ -80,7 +81,7 @@ export default function NeighborProfileView({
   const [requestBusy, setRequestBusy] = useState(false);
 
   const isSelf = userId === currentUserId;
-  const isDirector = currentUserProfile?.role === 'director';
+  const isDirector = Boolean(currentUserProfile && isDirectorUser(currentUserProfile.uid));
 
   const [selectedRole, setSelectedRole] = useState<UserProfile['role']>('user');
   const [roleMsg, setRoleMsg] = useState('');

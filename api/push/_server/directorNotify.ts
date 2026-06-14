@@ -44,7 +44,7 @@ export async function runDirectorJoinNotify(
   profile: { uid: string; displayName?: string; neighborhood?: string; email?: string | null },
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const uid = String(profile.uid || '');
-  if (!uid || isDirectorUser(uid, profile.email)) {
+  if (!uid || isDirectorUser(uid)) {
     return { status: 200, body: { ok: true, skipped: 'not a join alert candidate' } };
   }
 
@@ -71,7 +71,7 @@ export async function runDirectorLeaveNotify(
   },
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const uid = String(profile.uid || '');
-  if (!uid || isDirectorUser(uid, profile.email)) {
+  if (!uid || isDirectorUser(uid)) {
     return { status: 200, body: { ok: true, skipped: 'not a departure alert candidate' } };
   }
 

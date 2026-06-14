@@ -7,7 +7,7 @@ import re
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DIRECTOR_UID = "204b071f-100c-401d-b76d-40c594e1f132"
+DIRECTOR_UID = "204b071f-100c-401d-b76d-40c594e1f132"  # shared/directorIdentity.ts — only director account
 DIRECTOR_NAME_SQL = (
     f'(SELECT "displayName" FROM public.users WHERE uid = \'{DIRECTOR_UID}\')'
 )

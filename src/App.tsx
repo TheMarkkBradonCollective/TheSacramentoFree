@@ -360,9 +360,9 @@ export default function App() {
     try {
       const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
         if (fromDb) {
-          if (isDirectorUser(user.id, user.email)) {
+          if (isDirectorUser(user.id)) {
             fromDb.role = 'director';
-            void ensureDirectorRoleInDb(user.id, user.email);
+            void ensureDirectorRoleInDb(user.id);
           }
           setUserProfile(fromDb);
           writeCachedProfile(fromDb);

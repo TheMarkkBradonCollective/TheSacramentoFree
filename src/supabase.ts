@@ -5,7 +5,10 @@ import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
+import { DIRECTOR_UID, isDirectorUser } from './lib/directorIdentity';
 import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank } from './lib/roles';
+
+export { DIRECTOR_UID, isDirectorUser } from './lib/directorIdentity';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -348,7 +351,7 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     email: String(row.email ?? ''),
     neighborhood: String(row.neighborhood ?? 'Sacramento'),
     bio: typeof row.bio === 'string' ? row.bio : undefined,
-    role: normalizeUserRole(row.role),
+    role: isDirectorUser(uid) ? 'director' : normalizeUserRole(row.role),
     accountStatus,
     suspendedUntil,
     createdAt: row.createdAt ?? row.created_at,
@@ -391,23 +394,20 @@ export async function syncProfilePhotoAcrossApp(
  * --- PROFILES ---
  */
 
-export const DIRECTOR_UID = '204b071f-100c-401d-b76d-40c594e1f132';
-const DIRECTOR_UIDS = new Set([DIRECTOR_UID]);
-const DIRECTOR_EMAIL = 'sigsecspec@gmail.com';
-
 function normalizeAppUpdatePostedByUserId(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed || trimmed === 'director') return DIRECTOR_UID;
   return trimmed;
 }
 
-export function isDirectorUser(uid: string, email?: string | null): boolean {
-  return DIRECTOR_UIDS.has(uid) || (email?.toLowerCase() === DIRECTOR_EMAIL);
+async function getDirectorDisplayName(): Promise<string> {
+  const info = await getUserDisplayInfoByIds([DIRECTOR_UID]);
+  return info[DIRECTOR_UID]?.displayName?.trim() || DIRECTOR_MESSAGE.name;
 }
 
-/** Keep users.role aligned with isDirectorUser so server push routing matches the app UI. */
-export async function ensureDirectorRoleInDb(uid: string, email?: string | null): Promise<void> {
-  if (!isDirectorUser(uid, email)) return;
+/** Keep users.role aligned with the director account UID. */
+export async function ensureDirectorRoleInDb(uid: string): Promise<void> {
+  if (!isDirectorUser(uid)) return;
   try {
     await supabase.from('users').update({ role: 'director' }).eq('uid', uid);
   } catch (err) {
@@ -422,7 +422,7 @@ export function profileFromAuthUser(user: {
   user_metadata?: Record<string, unknown>;
 }): UserProfile {
   const email = user.email?.trim() || '';
-  const isDirector = isDirectorUser(user.id, email);
+  const isDirector = isDirectorUser(user.id);
   const meta = user.user_metadata ?? {};
 
   return {
@@ -604,7 +604,7 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
-      role: isDirectorUser(profile.uid, profile.email) ? 'director' : (profile.role || 'user'),
+      role: isDirectorUser(profile.uid) ? 'director' : (profile.role || 'user'),
       createdAt: coerceToIsoDate(profile.createdAt),
     };
 
@@ -640,7 +640,7 @@ export async function upsertSupabaseProfile(
       void syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
     }
 
-    if ((isNewNeighbor || isRecentSignupProfile) && !isDirectorUser(profile.uid, profile.email)) {
+    if ((isNewNeighbor || isRecentSignupProfile) && !isDirectorUser(profile.uid)) {
       await runPushTask(() =>
         import('./lib/pushIntegration').then((m) =>
           m.pushDirectorAlert({
@@ -2620,11 +2620,14 @@ export function defaultDirectorMessageContent(): DirectorMessageContent {
     promises: [...DIRECTOR_MESSAGE.promises],
     closing: DIRECTOR_MESSAGE.closing,
     updatedAt: new Date().toISOString(),
-    updatedByUserId: null,
+    updatedByUserId: DIRECTOR_UID,
   };
 }
 
-function normalizeDirectorMessageRow(row: Record<string, unknown>): DirectorMessageContent {
+function normalizeDirectorMessageRow(
+  row: Record<string, unknown>,
+  directorDisplayName?: string,
+): DirectorMessageContent {
   const rawPromises = row.promises;
   const promises = Array.isArray(rawPromises)
     ? rawPromises.map(String).filter(Boolean)
@@ -2632,18 +2635,20 @@ function normalizeDirectorMessageRow(row: Record<string, unknown>): DirectorMess
 
   return {
     id: String(row.id || 'main'),
-    directorName: String(row.directorName || DIRECTOR_MESSAGE.name),
+    directorName: directorDisplayName?.trim() || String(row.directorName || DIRECTOR_MESSAGE.name),
     directorTitle: String(row.directorTitle || DIRECTOR_MESSAGE.title),
     headline: String(row.headline || DIRECTOR_MESSAGE.headline),
     goal: String(row.goal || DIRECTOR_MESSAGE.goal),
     promises,
     closing: String(row.closing || DIRECTOR_MESSAGE.closing),
     updatedAt: coerceToIsoDate(row.updatedAt),
-    updatedByUserId: row.updatedByUserId ? String(row.updatedByUserId) : null,
+    updatedByUserId: row.updatedByUserId ? String(row.updatedByUserId) : DIRECTOR_UID,
   };
 }
 
 export async function getSupabaseDirectorMessage(): Promise<DirectorMessageContent> {
+  const directorDisplayName = await getDirectorDisplayName();
+
   try {
     const { data, error } = await supabase
       .from('director_message')
@@ -2652,16 +2657,20 @@ export async function getSupabaseDirectorMessage(): Promise<DirectorMessageConte
       .maybeSingle();
 
     if (error) {
-      if (error.code === '42P01') return defaultDirectorMessageContent();
+      if (error.code === '42P01') {
+        return normalizeDirectorMessageRow({}, directorDisplayName);
+      }
       handleSupabaseError(error, 'director_message');
-      return defaultDirectorMessageContent();
+      return normalizeDirectorMessageRow({}, directorDisplayName);
     }
 
-    if (!data) return defaultDirectorMessageContent();
+    if (!data) {
+      return normalizeDirectorMessageRow({}, directorDisplayName);
+    }
     setSupabaseConfigurationState(true);
-    return normalizeDirectorMessageRow(data as Record<string, unknown>);
+    return normalizeDirectorMessageRow(data as Record<string, unknown>, directorDisplayName);
   } catch {
-    return defaultDirectorMessageContent();
+    return normalizeDirectorMessageRow({}, directorDisplayName);
   }
 }
 
@@ -2669,21 +2678,23 @@ export async function updateSupabaseDirectorMessage(
   content: DirectorMessageContent,
   actor: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
-  if (normalizeUserRole(actor.role) !== 'director') {
+  if (!isDirectorUser(actor.uid)) {
     return { ok: false, errorMessage: 'Only the director can edit this message.' };
   }
 
   try {
+    const directorName =
+      actor.displayName.trim() || (await getDirectorDisplayName());
     const payload = {
       id: 'main',
-      directorName: content.directorName.trim(),
-      directorTitle: content.directorTitle.trim(),
+      directorName,
+      directorTitle: content.directorTitle.trim() || DIRECTOR_MESSAGE.title,
       headline: content.headline.trim(),
       goal: content.goal.trim(),
       promises: content.promises.map((p) => p.trim()).filter(Boolean),
       closing: content.closing.trim(),
       updatedAt: new Date().toISOString(),
-      updatedByUserId: actor.uid,
+      updatedByUserId: DIRECTOR_UID,
     };
 
     const { error } = await supabase.from('director_message').upsert(payload, { onConflict: 'id' });
@@ -2904,22 +2915,23 @@ export async function createSupabaseAppUpdate(
   input: AppUpdateInput,
   actor: UserProfile,
 ): Promise<{ ok: boolean; update?: AppUpdateRecord; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor.role)) {
+  if (!canManageAppUpdates(actor)) {
     return { ok: false, errorMessage: 'Only the director can post updates.' };
   }
 
   try {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    const directorName = actor.displayName.trim() || (await getDirectorDisplayName());
     const payload = {
       id,
       date: input.date,
       title: input.title.trim(),
       body: input.body.trim(),
       detail: input.detail?.trim() || null,
-      directorName: actor.displayName.trim() || DIRECTOR_MESSAGE.name,
-      directorTitle: roleLabel(actor.role),
-      postedByUserId: actor.uid,
+      directorName,
+      directorTitle: roleLabel('director'),
+      postedByUserId: DIRECTOR_UID,
       createdAt: now,
       updatedAt: now,
     };
@@ -2949,19 +2961,20 @@ export async function updateSupabaseAppUpdate(
   input: AppUpdateInput,
   actor: UserProfile,
 ): Promise<{ ok: boolean; update?: AppUpdateRecord; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor.role)) {
+  if (!canManageAppUpdates(actor)) {
     return { ok: false, errorMessage: 'Only the director can edit updates.' };
   }
 
   try {
+    const directorName = actor.displayName.trim() || (await getDirectorDisplayName());
     const payload = {
       date: input.date,
       title: input.title.trim(),
       body: input.body.trim(),
       detail: input.detail?.trim() || null,
-      directorName: actor.displayName.trim() || DIRECTOR_MESSAGE.name,
-      directorTitle: roleLabel(actor.role),
-      postedByUserId: actor.uid,
+      directorName,
+      directorTitle: roleLabel('director'),
+      postedByUserId: DIRECTOR_UID,
       updatedAt: new Date().toISOString(),
     };
 
@@ -2983,7 +2996,7 @@ export async function deleteSupabaseAppUpdate(
   id: string,
   actor: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
-  if (!canManageAppUpdates(actor.role)) {
+  if (!canManageAppUpdates(actor)) {
     return { ok: false, errorMessage: 'Only the director can delete updates.' };
   }
 
@@ -4348,7 +4361,10 @@ export async function staffUpdateUserProfile(params: {
       neighborhood: params.neighborhood,
       bio: params.bio?.trim() || null,
     };
-    if (params.role && params.actor.role === 'director') {
+    if (params.role && isDirectorUser(params.actor.uid)) {
+      if (params.role === 'director' && params.targetUserId !== DIRECTOR_UID) {
+        return { ok: false, errorMessage: 'Only the director account can hold the director role.' };
+      }
       payload.role = params.role;
     }
 
