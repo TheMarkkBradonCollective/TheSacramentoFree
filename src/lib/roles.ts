@@ -229,7 +229,7 @@ export function canDeleteSupportTicket(
   return canViewerAccessTicket(viewer, ticket);
 }
 
-/** Delete own chat messages everywhere; director + city manager may delete any in community chat. */
+/** Unsend own chat messages everywhere; director + city manager may remove any in community chat. */
 export function canDeleteChatMessage(
   viewer: Pick<UserProfile, 'uid' | 'role'>,
   message: Pick<Message, 'senderId'>,
