@@ -147,9 +147,9 @@ function resolveNotificationUrl(rawUrl) {
     if (parsed.origin === self.location.origin) {
       return parsed.pathname + parsed.search + parsed.hash;
     }
-    return rawUrl;
+    return '/';
   } catch {
-    return rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
+    return rawUrl.startsWith('/') ? rawUrl : '/';
   }
 }
 

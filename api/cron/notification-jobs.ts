@@ -1,11 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { secureCompare } from '../push/_server/secureSecrets';
 
 function isAuthorized(req: VercelRequest): boolean {
   const cronSecret = (process.env.CRON_SECRET || '').trim();
-  if (!cronSecret) return process.env.NODE_ENV !== 'production';
+  if (!cronSecret) return false;
 
   const auth = String(req.headers.authorization || '');
-  return auth === `Bearer ${cronSecret}`;
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  return Boolean(token) && secureCompare(token, cronSecret);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -31,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     console.error('[api/cron/notification-jobs]', err);
     return res.status(500).json({
-      error: err instanceof Error ? err.message : 'Notification cron failed.',
+      error: 'Notification cron failed.',
     });
   }
 }

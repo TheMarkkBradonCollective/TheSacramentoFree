@@ -107,7 +107,7 @@ export function createPushApp() {
   });
 
   app.post('/api/push/send', requireAuth, async (req: AuthedRequest, res) => {
-    const result = await runPushSend(req.user!.id, req.body as PushSendBody);
+    const result = await runPushSend(req.user!.id, req.body as PushSendBody, { trusted: false });
     res.status(result.status).json(result.body);
   });
 

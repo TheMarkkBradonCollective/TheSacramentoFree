@@ -1,13 +1,15 @@
 import FullScreenPanel from './FullScreenPanel';
 import ListingImage from './ListingImage';
+import type { UserProfile } from '../types';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
 
 interface StaffUserReportsPanelProps {
   onClose: () => void;
+  viewer: UserProfile;
 }
 
-export default function StaffUserReportsPanel({ onClose }: StaffUserReportsPanelProps) {
-  const { reports, loading, errorMessage, markReviewed } = useStaffUserReports(true);
+export default function StaffUserReportsPanel({ onClose, viewer }: StaffUserReportsPanelProps) {
+  const { reports, loading, errorMessage, markReviewed } = useStaffUserReports(true, viewer);
 
   return (
     <FullScreenPanel wide title="User reports" subtitle="One-way submissions from neighbors" onClose={onClose}>
