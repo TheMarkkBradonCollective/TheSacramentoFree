@@ -291,6 +291,86 @@ export const PRIVACY = {
   viewAgainNote: 'You can read this policy anytime from the home page or your Account tab.',
 } as const;
 
+export const TERMS = {
+  title: 'Terms of use',
+  shortTitle: 'Terms & user agreement',
+  lastUpdated: 'June 2025',
+  summary:
+    'By using Sacramento Buy Nothing, you agree to these terms. The app is run by Markeith White for local, free neighbor-to-neighbor gifting only — no selling, no flipping, no harassment.',
+  sections: [
+    {
+      heading: 'Agreement',
+      body:
+        'These Terms of Use are a binding agreement between you and Markeith White, the sole operator of Sacramento Buy Nothing. By creating an account, signing in, or using the app, you agree to follow these terms, our community rules, and our Privacy & data policy.',
+    },
+    {
+      heading: 'What this app is for',
+      bullets: [
+        'Giving away items for free to neighbors in the Sacramento area.',
+        'Requesting items you need, with no money involved.',
+        'Free item-for-item trades when both neighbors agree — still no cash.',
+        'Coordinating porch pickup, meetups, and community events.',
+      ],
+    },
+    {
+      heading: 'What you may not do',
+      bullets: [
+        'Sell items, run auctions, or ask for money in any form.',
+        'Flip or resell items received through this community for profit.',
+        'Harass, threaten, scam, or mislead other neighbors.',
+        'Post illegal, stolen, dangerous, or inappropriate content.',
+        'Impersonate another person or create accounts to evade a ban.',
+        'Scrape, spam, or attempt to break or overload the app.',
+      ],
+    },
+    {
+      heading: 'Your account',
+      bullets: [
+        'You are responsible for your account credentials and activity under your account.',
+        'Profile information you provide must be honest and appropriate for a local community.',
+        'You must be old enough to enter a binding agreement in your jurisdiction, or have a parent or guardian’s permission.',
+        'I may suspend or permanently disable accounts that break these terms or harm the community.',
+      ],
+    },
+    {
+      heading: 'Your content',
+      body:
+        'You keep ownership of photos and text you post, but you grant Sacramento Buy Nothing permission to display, store, and share that content within the app so neighbors can use the service — for example, showing your listing, messages, and profile to other members. You must only post content you have the right to share.',
+    },
+    {
+      heading: 'Safety & moderation',
+      bullets: [
+        'Meet neighbors in safe, public, or well-lit places when possible. Porch pickup is common, but use your judgment.',
+        'Report unsafe behavior, scams, or rule-breaking through the in-app report tools or Chat → Support.',
+        'Community staff may review reports, remove content, and restrict accounts to keep neighbors safe.',
+        'I am not responsible for disputes between neighbors, item condition, no-shows, or offline interactions.',
+      ],
+    },
+    {
+      heading: 'Service availability',
+      body:
+        'The app is provided as-is. I work to keep it online and safe, but I do not guarantee uninterrupted access, error-free operation, or that every listing or message will remain available. Features may change as the community grows.',
+    },
+    {
+      heading: 'Limitation of liability',
+      body:
+        'To the fullest extent allowed by law, Markeith White and Sacramento Buy Nothing are not liable for indirect, incidental, or consequential damages arising from your use of the app, offline exchanges, or third-party services (including Supabase and Vercel). Your use of the app is at your own risk.',
+    },
+    {
+      heading: 'Changes',
+      body:
+        'I may update these terms as the app evolves. When terms change materially, you may be asked to review and accept the updated agreement when you sign in. Continued use after changes means you accept the updated terms.',
+    },
+    {
+      heading: 'Contact',
+      body:
+        'Questions about these terms? Reach out through Chat → Support in the app. For privacy questions, see the Privacy & data policy.',
+    },
+  ],
+  acceptLabel: 'I have read and agree to the terms of use',
+  viewAgainNote: 'You can read these terms anytime from the home page or your Account tab.',
+} as const;
+
 export const AWARDS = {
   panelTitle: 'Neighbor Awards',
   panelSubtitle: 'Badges and streaks for generous neighbors — coming soon',

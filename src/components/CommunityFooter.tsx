@@ -1,11 +1,11 @@
 import { SITE, RULES, WHY_IT_MATTERS } from '../siteContent';
 import { Heart } from 'lucide-react';
-import GoFundMeFooter from './GoFundMeFooter';
+import LegalFooter from './LegalFooter';
 
-/** @deprecated Prefer GoFundMeFooter directly. Kept for any legacy full footer usage. */
+/** @deprecated Prefer LegalFooter directly. Kept for any legacy full footer usage. */
 export default function CommunityFooter({ compact = false }: { compact?: boolean }) {
   if (compact) {
-    return <GoFundMeFooter />;
+    return <LegalFooter />;
   }
 
   return (
@@ -46,7 +46,7 @@ export default function CommunityFooter({ compact = false }: { compact?: boolean
         </div>
       </div>
 
-      <GoFundMeFooter className="rounded-xl border border-app" />
+      <LegalFooter className="rounded-xl border border-app" />
 
       <p className="text-xs text-muted font-semibold text-center border-t border-app pt-3">
         {WHY_IT_MATTERS.closing} · {SITE.tagline}

@@ -27,6 +27,8 @@ interface ChatSupportSectionProps {
   onViewChange: (view: ChatSupportView) => void;
   onBackToChat?: () => void;
   onOpenGoFundMe?: () => void;
+  onOpenPrivacy?: () => void;
+  onOpenTerms?: () => void;
   initialTicketId?: string | null;
   onClearInitialTicketId?: () => void;
   /** Compact rows for the chat sidebar */
@@ -40,6 +42,8 @@ export default function ChatSupportSection({
   onViewChange,
   onBackToChat,
   onOpenGoFundMe,
+  onOpenPrivacy,
+  onOpenTerms,
   initialTicketId = null,
   onClearInitialTicketId,
   compact = false,
@@ -295,7 +299,7 @@ export default function ChatSupportSection({
               {ticketCreating ? 'Starting…' : 'Start conversation'}
             </button>
           </div>
-          {onOpenGoFundMe && <PageScrollFooter onOpenDetails={onOpenGoFundMe} />}
+          <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
         </div>
       </div>
     );
@@ -430,7 +434,7 @@ export default function ChatSupportSection({
             ))}
           </ul>
         )}
-        {onOpenGoFundMe && <PageScrollFooter onOpenDetails={onOpenGoFundMe} />}
+        <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
       </div>
     </div>
   );

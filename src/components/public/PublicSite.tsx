@@ -12,6 +12,7 @@ import UpdatesPage from './pages/UpdatesPage';
 import ReviewsPage from './pages/ReviewsPage';
 import GoFundMePage from './pages/GoFundMePage';
 import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import AuthPage from './AuthPage';
 import { ItemPost } from '../../types';
 
@@ -70,6 +71,8 @@ export default function PublicSite({
         return <GoFundMePage />;
       case 'privacy':
         return <PrivacyPage />;
+      case 'terms':
+        return <TermsPage />;
       case 'login':
         return (
           <AuthPage
@@ -98,7 +101,7 @@ export default function PublicSite({
       <PublicNav route={route} onNavigate={navigate} />
       <main className="flex-1 min-h-0 overflow-y-auto">
         {renderPage()}
-        {route !== 'gofundme' && <PageScrollFooter onOpenDetails={() => navigate('gofundme')} />}
+        <PageScrollFooter />
       </main>
     </div>
   );

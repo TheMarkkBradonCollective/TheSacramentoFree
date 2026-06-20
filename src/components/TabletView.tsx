@@ -45,6 +45,8 @@ interface TabletViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
+  onOpenPrivacy?: () => void;
+  onOpenTerms?: () => void;
   onOpenAwards?: () => void;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
@@ -93,6 +95,8 @@ export default function TabletView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
+  onOpenPrivacy,
+  onOpenTerms,
   onOpenAwards,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
@@ -242,11 +246,13 @@ export default function TabletView({
                 onViewProfile={onViewProfile}
                 onItemsChanged={onRefresh}
                 onOpenGoFundMe={onOpenGoFundMe}
+                onOpenPrivacy={onOpenPrivacy}
+                onOpenTerms={onOpenTerms}
                 onStartDirectMessage={() => setActiveTab('feed')}
                 className="h-full min-h-0 border-0 rounded-none"
               />
             </div>
-            <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
+            <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           </div>
         )}
 
@@ -273,7 +279,7 @@ export default function TabletView({
         )}
 
         {activeTab !== 'map' && activeTab !== 'chats' && (
-          <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
+          <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
         )}
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { ArrowRight, Heart, MapPin, Shield, Users } from 'lucide-react';
+import { ArrowRight, FileText, Heart, MapPin, Shield, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
 import CommunityReviews from '../../CommunityReviews';
@@ -21,7 +21,8 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
   { route: 'about', title: 'What we are', blurb: 'Local free gifting — no money, just neighbors.', icon: Heart },
   { route: 'how-it-works', title: 'How it works', blurb: 'Post, connect, porch pickup — four simple steps.', icon: Users },
   { route: 'rules', title: 'Community rules', blurb: "What's allowed and what isn't.", icon: Shield },
-  { route: 'privacy', title: 'Privacy & data', blurb: 'Your data is stored by Supabase — we never sell it.', icon: Shield },
+  { route: 'privacy', title: 'Privacy & data', blurb: 'Your data is stored by Supabase — never sold.', icon: Shield },
+  { route: 'terms', title: 'Terms of use', blurb: 'User agreement for free local gifting in Sacramento.', icon: FileText },
   { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 34+ areas.', icon: MapPin },
 ];
 

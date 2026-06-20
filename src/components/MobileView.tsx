@@ -46,6 +46,8 @@ interface MobileViewProps {
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
+  onOpenPrivacy?: () => void;
+  onOpenTerms?: () => void;
   onOpenAwards?: () => void;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
@@ -98,6 +100,8 @@ export default function MobileView({
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
+  onOpenPrivacy,
+  onOpenTerms,
   onOpenAwards,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
@@ -209,7 +213,7 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
             />
-            <PageScrollFooter className="-mx-4" onOpenDetails={onOpenGoFundMe} />
+            <PageScrollFooter className="-mx-4" onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           </div>
           <button
             type="button"
@@ -241,7 +245,7 @@ export default function MobileView({
               onRefresh={onRefreshEvents}
               isLoading={isEventsLoading}
             />
-            <PageScrollFooter className="-mx-4" onOpenDetails={onOpenGoFundMe} />
+            <PageScrollFooter className="-mx-4" onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           </div>
           <button
             type="button"
@@ -276,6 +280,8 @@ export default function MobileView({
             onViewProfile={onViewProfile}
             onItemsChanged={onRefresh}
             onOpenGoFundMe={onOpenGoFundMe}
+            onOpenPrivacy={onOpenPrivacy}
+            onOpenTerms={onOpenTerms}
             onStartDirectMessage={() => setActiveTab('feed')}
             fullBleed
             className="h-full min-h-0"
@@ -304,7 +310,7 @@ export default function MobileView({
               onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               fullBleed
             />
-            <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
+            <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           </div>
         </div>
       </main>

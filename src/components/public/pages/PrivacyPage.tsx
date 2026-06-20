@@ -7,7 +7,7 @@ export default function PrivacyPage() {
   return (
     <PublicPageShell
       title={PRIVACY.title}
-      subtitle="How we handle your information — and where your data actually lives."
+      subtitle="How your information is handled — and where your data actually lives."
     >
       <PublicCard>
         <PrivacyPolicyContent />

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { AlertCircle, Info, Lock, Mail, Shield, User } from 'lucide-react';
+import { AlertCircle, FileText, Info, Lock, Mail, Shield, User } from 'lucide-react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../../types';
 import { PRIVACY, RULES, SITE } from '../../siteContent';
 import { publicRouteHref } from '../../public/routes';
@@ -240,7 +240,11 @@ export default function AuthPage({
                   <a href={publicRouteHref('privacy')} className="text-accent font-bold hover:underline">
                     privacy policy
                   </a>{' '}
-                  and understand my data is stored by Supabase, not sold, and used only to run this community.
+                  and{' '}
+                  <a href={publicRouteHref('terms')} className="text-accent font-bold hover:underline">
+                    terms of use
+                  </a>{' '}
+                  and agree to follow community rules. My data is stored by Supabase and is never sold.
                 </span>
               </label>
               <button
@@ -258,13 +262,22 @@ export default function AuthPage({
             <span>{RULES.postReminder}</span>
           </div>
 
-          <a
-            href={publicRouteHref('privacy')}
-            className="flex items-center justify-center gap-2 text-[11px] font-semibold text-accent hover:underline"
-          >
-            <Shield className="w-3.5 h-3.5" />
-            Read our privacy & data policy
-          </a>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+            <a
+              href={publicRouteHref('privacy')}
+              className="flex items-center justify-center gap-2 text-[11px] font-semibold text-accent hover:underline"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              {PRIVACY.shortTitle}
+            </a>
+            <a
+              href={publicRouteHref('terms')}
+              className="flex items-center justify-center gap-2 text-[11px] font-semibold text-accent hover:underline"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Terms of use
+            </a>
+          </div>
         </div>
       </div>
     </PublicPageShell>

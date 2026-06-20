@@ -36,9 +36,11 @@ import {
   isAccountRestricted,
   migrateLocalSavedItemsToDb,
 } from './supabase';
-import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS } from './siteContent';
+import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
+import PrivacyPolicyContent from './components/PrivacyPolicyContent';
+import TermsOfUseContent from './components/TermsOfUseContent';
 import AwardsComingSoon from './components/AwardsComingSoon';
 import { AppTab, parseAppTab } from './lib/appTabs';
 import {
@@ -117,6 +119,7 @@ export default function App() {
   const [showPostModal, setShowPostModal] = useState(false);
   const [showPostEventModal, setShowPostEventModal] = useState(false);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
+  const [legalPanel, setLegalPanel] = useState<'privacy' | 'terms' | null>(null);
   const [showAwardsPanel, setShowAwardsPanel] = useState(false);
   const [privacyGateOpen, setPrivacyGateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
@@ -1012,6 +1015,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  onOpenPrivacy={() => setLegalPanel('privacy')}
+                  onOpenTerms={() => setLegalPanel('terms')}
                   onOpenAwards={() => setShowAwardsPanel(true)}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
@@ -1055,6 +1060,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  onOpenPrivacy={() => setLegalPanel('privacy')}
+                  onOpenTerms={() => setLegalPanel('terms')}
                   onOpenAwards={() => setShowAwardsPanel(true)}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
@@ -1098,6 +1105,8 @@ export default function App() {
                   engagement={engagement}
                   eventsEngagement={eventsEngagement}
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
+                  onOpenPrivacy={() => setLegalPanel('privacy')}
+                  onOpenTerms={() => setLegalPanel('terms')}
                   onOpenAwards={() => setShowAwardsPanel(true)}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
@@ -1117,6 +1126,26 @@ export default function App() {
                   onClose={() => setShowGoFundMeDetail(false)}
                 >
                   <GoFundMeSupport />
+                </FullScreenPanel>
+              )}
+
+              {legalPanel === 'privacy' && (
+                <FullScreenPanel
+                  title={PRIVACY.title}
+                  subtitle={PRIVACY.summary}
+                  onClose={() => setLegalPanel(null)}
+                >
+                  <PrivacyPolicyContent />
+                </FullScreenPanel>
+              )}
+
+              {legalPanel === 'terms' && (
+                <FullScreenPanel
+                  title={TERMS.title}
+                  subtitle={TERMS.summary}
+                  onClose={() => setLegalPanel(null)}
+                >
+                  <TermsOfUseContent />
                 </FullScreenPanel>
               )}
 
