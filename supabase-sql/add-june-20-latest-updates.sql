@@ -86,14 +86,12 @@ Neighbors told me two things: stop putting voter names in alerts, and stop mass 
   $detail$WHAT YOU''LL NOTICE
 Your own messages in direct chats and in the community-wide channel now show a small unsend button (↩). Tap it and the message disappears for everyone in that thread.
 
-EDIT AND RESEND
-After you unsend, the message text returns to the typing box with the cursor ready. That is the whole point — catch a typo, wrong address, or autocorrect disaster before it sits in the thread forever.
+FILES I CHANGED
+• src/components/ChatSystem.tsx — main Chat tab, unsend button on your messages
+• src/supabase.ts — deleteSupabaseMessage saves the delete online
 
-COMMUNITY CHAT MODERATION
-If you are not the sender, you will not see unsend on someone else''s message. City managers and I can still remove problematic messages in the public community channel when moderation is needed.
-
-WHERE THIS WORKS
-One-on-one listing chats, profile DMs, and the All neighbors community channel. Support tickets have their own unsend entry — same idea, separate thread type.
+DATABASE CHANGES I MADE
+None — app code only. I did not need new database tables for unsend; it uses the existing messages table.
 
 WHY I ADDED IT
 People asked for “delete but let me fix it,” not permanent delete with no recovery. Unsend is delete plus restore to the composer.$detail$,

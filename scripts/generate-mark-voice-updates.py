@@ -653,52 +653,44 @@ VOICE: dict[str, tuple[str, str]] = {
 }
 
 SKIP_SECTION_TITLES = {
-    "sql to run",
-    "sql i ran",
-    "sql setup",
-    "database setup",
-    "database",
-    "under the hood",
-    "what changed under the hood",
     "for me (director)",
     "if you're me debugging",
-    "what changed",
+    "if you're me debugging",
 }
 
-FORBIDDEN_DETAIL_PHRASES = (
-    "no sql required",
-    "deploy only",
-    "deploy the app update",
-    "supabase-sql/",
-    "paste into supabase",
-    "run sections",
-    "safe to re-run",
-    "on conflict do update",
-    "regenerate:",
-    "python3 scripts/",
-    "node scripts/",
-    "files touched",
-    "42p01",
-)
+FORBIDDEN_DETAIL_PHRASES: tuple[str, ...] = ()
+
+PHRASE_REWRITES: list[tuple[str, str]] = [
+    (r"\bNO SQL REQUIRED\b[^.\n]*\.?", "I did not need to change the database for this release."),
+    (r"\bNo SQL required\b[^.\n]*\.?", "I did not need to change the database for this release."),
+    (r"\bDeploy only\b[^.\n]*\.?", "I published a new version of the app — the database itself did not need changes."),
+    (r"\bdeploy only\b[^.\n]*\.?", "I published a new version of the app — the database itself did not need changes."),
+    (r"\bSQL TO RUN\b:?\s*", "Database script I ran: "),
+    (r"\bSQL TO RUN ONCE\b:?\s*", "Database script I ran once: "),
+    (r"\bpaste into Supabase\b", "I ran this in Supabase on my end"),
+    (r"\bRun once in Supabase SQL Editor\b", "I ran this once in Supabase on my end"),
+    (r"\bSafe to re-run\b[^.\n]*\.?", ""),
+]
 
 
 def should_skip_section(title: str) -> bool:
     t = title.lower().strip().rstrip(":")
-    if t in SKIP_SECTION_TITLES:
-        return True
-    if "sql" in t and any(word in t for word in ("run", "setup", "paste", "editor")):
-        return True
-    return False
+    return t in SKIP_SECTION_TITLES
+
+
+def rewrite_neighbor_phrases(text: str) -> str:
+    for pattern, repl in PHRASE_REWRITES:
+        text = re.sub(pattern, repl, text, flags=re.I)
+    return text
 
 
 def scrub_neighbor_detail(text: str) -> str:
-    """Remove operator/technical lines neighbors should never see."""
+    """Normalize phrasing — keep files/SQL context, rewrite third-person instructions."""
     lines_out: list[str] = []
     skip_block = False
 
     for line in text.split("\n"):
         stripped = line.strip()
-        low = stripped.lower()
 
         if stripped.endswith(":"):
             title = stripped[:-1]
@@ -710,22 +702,130 @@ def scrub_neighbor_detail(text: str) -> str:
         if skip_block:
             continue
 
-        if any(phrase in low for phrase in FORBIDDEN_DETAIL_PHRASES):
-            continue
-        if "sql editor" in low or low.startswith("database (run"):
-            continue
-        if re.match(r"^supabase-sql/", low):
-            continue
-        if re.match(r"^src/", stripped):
-            continue
-        if re.match(r"^[a-z0-9_./-]+\.(tsx?|sql|mjs)$", stripped, re.I):
-            continue
-
-        lines_out.append(line)
+        lines_out.append(rewrite_neighbor_phrases(line))
 
     text = "\n".join(lines_out)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return collapse_empty_sections(text.strip())
+
+
+FILE_COMPONENT_HINTS: dict[str, str] = {
+    "ChatSystem.tsx": "the main Chat tab — sidebar, threads, sending messages",
+    "AnnouncementsList.tsx": "Bell → News — staff announcement cards, votes, and comments",
+    "UpdatesList.tsx": "Bell → Updates — this changelog list you are reading",
+    "SupportTicketThread.tsx": "support ticket conversation view in Chat → Support",
+    "ItemGrid.tsx": "the Stuff feed — listings, filters, and sort chips",
+    "App.tsx": "the app shell — login flow, navigation, and legal popups",
+    "supabase.ts": "the online data layer — saves posts, messages, tickets, and account info",
+    "NotificationSettings.tsx": "Bell → Alerts — every push toggle and save button",
+    "PrivacyPolicyModal.tsx": "privacy policy popup on login",
+    "TermsOfUseModal.tsx": "terms of use popup on login",
+    "voteCooldown.ts": "fair-vote cooldown rules so mass voting cannot flood the feed",
+    "feedSort.ts": "Stuff feed sorting — New, Hot, Top, Active",
+    "roles.ts": "who can do what — staff permissions and message rules",
+}
+
+
+def camel_to_words(name: str) -> str:
+    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)
+    return spaced.replace("_", " ").lower()
+
+
+def explain_file_path(path: str) -> str:
+    base = path.rsplit("/", 1)[-1]
+    hint = FILE_COMPONENT_HINTS.get(path) or FILE_COMPONENT_HINTS.get(base)
+    if hint:
+        return f"• {path} — {hint}"
+    if path.endswith(".sql"):
+        return f"• {path} — database tables, security rules, or live-sync setup I executed in Supabase"
+    if base.startswith("use") and path.endswith(".ts"):
+        return f"• {path} — keeps this part of the app syncing live without refreshing"
+    if path.endswith(".tsx"):
+        return f"• {path} — UI for the {camel_to_words(base.replace('.tsx', ''))} part of the app"
+    if path.endswith(".ts"):
+        return f"• {path} — supporting logic for this feature"
+    return f"• {path}"
+
+
+def extract_file_paths(source: str) -> list[str]:
+    if not source:
+        return []
+    paths = re.findall(r"(?:src|api|server|scripts)/[\w./@-]+\.(?:tsx?|ts|mjs)", source)
+    paths += re.findall(r"supabase-sql/[\w.-]+\.sql", source, flags=re.I)
+    unique: list[str] = []
+    for path in paths:
+        if path not in unique:
+            unique.append(path)
+    return unique
+
+
+def extract_sql_files(source: str) -> list[str]:
+    if not source:
+        return []
+    found = re.findall(r"supabase-sql/[\w.-]+\.sql", source, flags=re.I)
+    for block in re.findall(r"SQL TO RUN[^\n]*\n+([\s\S]*?)(?:\n\n[A-Z]|\Z)", source, flags=re.I):
+        found.extend(re.findall(r"supabase-sql/[\w.-]+\.sql", block, flags=re.I))
+    unique: list[str] = []
+    for path in found:
+        lower = path.lower()
+        if lower not in [u.lower() for u in unique]:
+            unique.append(path)
+    return unique
+
+
+def source_mentions_app_only(source: str) -> bool:
+    low = source.lower()
+    return any(
+        phrase in low
+        for phrase in (
+            "deploy only",
+            "no sql",
+            "no new sql",
+            "no database",
+            "app update only",
+            "did not need to change the database",
+            "database itself did not need",
+        )
+    )
+
+
+def build_files_section(source: str) -> str | None:
+    paths = extract_file_paths(source)
+    if not paths:
+        return None
+    lines = [
+        "Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):",
+    ]
+    for path in paths[:14]:
+        lines.append(explain_file_path(path))
+    if len(paths) > 14:
+        lines.append(f"• …and {len(paths) - 14} more supporting files in the same release.")
+    return "\n".join(lines)
+
+
+def build_database_section(source: str) -> str:
+    sql_files = extract_sql_files(source)
+    if sql_files:
+        lines = [
+            "Database changes I made:",
+            "I ran these scripts in Supabase on my end when I shipped this release:",
+        ]
+        for path in sql_files:
+            lines.append(f"• {path}")
+        return "\n".join(lines)
+
+    if source_mentions_app_only(source) or not source.strip():
+        return (
+            "Database changes I made:\n"
+            "None for this release — I only updated the app/website code. Your existing tables and data stayed "
+            "the same; you just got new screens and behavior when the update went live."
+        )
+
+    return (
+        "Database changes I made:\n"
+        "As far as I can tell, this one did not need a new database script — it was shipped as an app update. "
+        "If I later discover a migration was involved, I will update this entry."
+    )
 
 
 def collapse_empty_sections(text: str) -> str:
@@ -769,18 +869,20 @@ def finalize_summary(entry_id: str, body: str) -> str:
 
 
 def scrub_summary(text: str) -> str:
-    text = clean_copy(text)
-    replacements = [
-        (r"paste it in Supabase SQL editor to set up tables\.?", "so the online database stays organized."),
-        (r"paste it in.*?SQL editor.*?\.", "so the online database stays organized."),
-        (r"Run once:?\s*supabase-sql/\S+", ""),
-        (r"NO SQL REQUIRED[^.]*\.?", ""),
-        (r"Deploy only[^.]*\.?", ""),
-        (r"DATABASE \(run in Supabase SQL Editor\)[^.]*", ""),
-    ]
-    for pattern, repl in replacements:
-        text = re.sub(pattern, repl, text, flags=re.I)
-    return polish_prose(re.sub(r"\s{2,}", " ", text).strip())
+    return polish_prose(rewrite_neighbor_phrases(clean_copy(text)))
+
+
+def append_technical_sections(sections: list[str], source: str, used_titles: set[str]) -> None:
+    """Add files + database transparency sections in Markeith's voice."""
+    files = build_files_section(source)
+    if files and "Files I changed" not in used_titles:
+        sections.append(files)
+        used_titles.add("Files I changed")
+
+    db = build_database_section(source)
+    if "Database changes I made" not in used_titles:
+        sections.append(db)
+        used_titles.add("Database changes I made")
 
 
 def narrative_depth(entry_id: str, summary: str) -> str:
@@ -1000,14 +1102,14 @@ def casualize_detail(text: str) -> str:
         "WHAT STAFF SEE": "For staff",
         "WHAT WAS BROKEN": "What was broken",
         "WHAT WE FIXED": "What I fixed",
-        "WHAT WE CHANGED (CODE)": "What changed",
+        "WHAT WE CHANGED (CODE)": "Files I changed",
         "WHAT WE CHANGED": "What changed",
         "WHAT YOU SHOULD DO": "What to do",
         "WHAT YOU NEED TO DO": "What to do",
         "ROOT CAUSES": "Why it broke",
         "ROOT CAUSE": "Why it broke",
-        "FILES TOUCHED": "Under the hood",
-        "FILES": "Under the hood",
+        "FILES TOUCHED": "Files I changed",
+        "FILES": "Files I changed",
         "PROBLEM": "The problem",
         "PHASE 1 FIX": "First thing I tried",
         "PHASE 2 FIX (current)": "What actually fixed it",
@@ -1026,9 +1128,9 @@ def casualize_detail(text: str) -> str:
         "THE BELL": "The bell menu",
         "PUSH GOT REBUILT": "Push rebuild",
         "PUSH REMINDER": "Push reminder",
-        "DATABASE": None,
-        "SQL TO RUN": None,
-        "SQL SETUP": None,
+        "DATABASE": "Database changes I made",
+        "SQL TO RUN": "Database changes I made",
+        "SQL SETUP": "Database changes I made",
     }
 
     paragraphs: list[str] = []
@@ -1050,12 +1152,7 @@ def casualize_detail(text: str) -> str:
                 if body_lines and section_title:
                     paragraphs.append(_join_section(section_title, body_lines))
                     body_lines = []
-                mapped = header_map[upper_key]
-                if mapped is None:
-                    section_title = None
-                    body_lines = []
-                    continue
-                section_title = mapped
+                section_title = header_map[upper_key]
                 rest = human.split(" — ", 1)[1].strip() if " — " in human else ""
                 if rest and not TECH_LINE_RE.match(rest):
                     body_lines.append(rest)
@@ -1065,12 +1162,7 @@ def casualize_detail(text: str) -> str:
                 if body_lines and section_title:
                     paragraphs.append(_join_section(section_title, body_lines))
                     body_lines = []
-                mapped = header_map[human]
-                if mapped is None:
-                    section_title = None
-                    body_lines = []
-                    continue
-                section_title = mapped
+                section_title = header_map[human]
                 continue
 
             if " — " in human and human.split(" — ")[0].strip().isupper():
@@ -1120,14 +1212,21 @@ def humanize_tech_line(line: str) -> str | None:
     line = line.strip()
     if not line:
         return None
+
+    path_match = re.match(
+        r"^((?:src|api|server|scripts)/[\w./@-]+\.(?:tsx?|ts|mjs)|supabase-sql/[\w.-]+\.sql)$",
+        line,
+        re.I,
+    )
+    if path_match:
+        return explain_file_path(path_match.group(1))
+
+    if re.match(r"^[\w./@-]+\.(tsx?|ts|mjs|sql)$", line, re.I):
+        return explain_file_path(line)
+
     if TECH_LINE_RE.match(line):
         return None
-    if re.match(r"^[a-z0-9_./-]+\.(tsx?|sql|mjs|ts)$", line, re.I):
-        return None
-    if line.startswith("src/") and " " not in line:
-        return None
-    if re.search(r"\b(INSERT|UPDATE|DELETE|SELECT|\.tsx|\.sql|normalize|subscribe|webhook|vapid)\b", line, re.I):
-        return None
+
     if "→" in line and re.search(r"\b(msg-|targetType|preference key|localStorage|PHASE \d)\b", line, re.I):
         return None
 
@@ -1138,8 +1237,14 @@ def humanize_tech_line(line: str) -> str | None:
     for pattern, replacement in TECH_TO_PLAIN:
         human = re.sub(pattern, replacement, human, flags=re.I)
 
-    if re.search(r"\b(src/|\.tsx|\.sql|supabase-sql/|webhook|vapid)\b", human, re.I):
-        return None
+    # Keep file paths embedded in longer lines, but explain inline SQL file mentions.
+    human = re.sub(
+        r"supabase-sql/([\w.-]+\.sql)",
+        lambda m: f"database script supabase-sql/{m.group(1)} (I ran this in Supabase)",
+        human,
+        flags=re.I,
+    )
+
     if human.rstrip().endswith(":") and len(human) < 40:
         return None
     return human
@@ -1157,7 +1262,7 @@ def parse_source_sections(source: str) -> list[tuple[str, str]]:
         "WHAT STAFF SEE": "For staff",
         "WHAT WAS BROKEN": "What was broken",
         "WHAT WE FIXED": "What I fixed",
-        "WHAT WE CHANGED (CODE)": "What changed under the hood",
+        "WHAT WE CHANGED (CODE)": "Files I changed",
         "WHAT WE CHANGED": "What changed",
         "WHAT YOU SHOULD DO": "What to do",
         "WHAT YOU NEED TO DO": "What to do",
@@ -1174,8 +1279,9 @@ def parse_source_sections(source: str) -> list[tuple[str, str]]:
         "WHY TWO PUSH TABS?": "Why Notify and Alerts are separate",
         "NEIGHBOR ACTION": "What to do",
         "REFRESH PUSH": "Refresh push on your phone",
-        "DATABASE": "Database setup",
-        "SQL TO RUN": "SQL to run",
+        "DATABASE": "Database changes I made",
+        "SQL TO RUN": "Database changes I made",
+        "SQL TO RUN ONCE": "Database changes I made",
         "FOR DIRECTORS": "For me (director)",
         "FOR STAFF": "For staff",
     }
@@ -1458,6 +1564,8 @@ def build_neighbor_detail(entry: dict, summary: str) -> str:
             how = how_to_use_section(eid, summary)
             if how:
                 sections.append(f"How to use it:\n{how}")
+            used: set[str] = {title for title, _ in parsed}
+            append_technical_sections(sections, source, used)
             from_me = narrative_depth(eid, summary)
             if from_me:
                 sections.append(f"From me:\n{from_me}")
@@ -1507,6 +1615,8 @@ def build_neighbor_detail(entry: dict, summary: str) -> str:
     why = why_section(eid, summary)
     if why:
         sections.append(f"Why I changed it:\n{why}")
+
+    append_technical_sections(sections, source, used_titles)
 
     from_me = narrative_depth(eid, summary)
     if from_me:

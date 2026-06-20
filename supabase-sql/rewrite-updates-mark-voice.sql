@@ -26,13 +26,13 @@ Switched to email and password through Supabase — Google popups kept getting b
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -49,13 +49,13 @@ Built a public page so you can see what this is, the rules, and neighborhoods be
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -77,6 +77,12 @@ How to use it:
 
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/types.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -103,6 +109,9 @@ A lightweight offline cache keeps basic pages from instantly going blank.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -125,13 +134,13 @@ Warm orange + sage community palette and Sacramento Buy Nothing logo — local f
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Warm orange + sage community palette and Sacramento Buy Nothing logo — local feel, not a generic template.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -152,6 +161,12 @@ How to use it:
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/listingContent.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -178,15 +193,16 @@ How it works:
 Why I changed it:
 This is the foundation — free, local, no selling. Everything else builds on that promise.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/siteContent.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.
-
-What you'll notice:
-Sacramento Buy Nothing goes live — free local gifting, no selling, no bidding, you helping you.
-
-100% free rule enforced in post flows and moderation.$detail$,
+Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -208,6 +224,9 @@ Used for feed filters, map centering, and profile display.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -228,13 +247,13 @@ I wrote down how accounts, posts, and messages are stored online so the communit
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -256,15 +275,16 @@ Shown on public About and Rules pages.
 Why I changed it:
 This is the foundation — free, local, no selling. Everything else builds on that promise.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/siteContent.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.
-
-What you'll notice:
-Written mission: free gifting, local you, reduce waste, no money ever.
-
-Shown on public About and Rules pages.$detail$,
+Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -303,14 +323,13 @@ How it works:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-How it works:
-• The layout shifts around typical tablet and laptop screen sizes.
-• Same community and same account everywhere — just laid out for your screen.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -330,6 +349,9 @@ How to use it:
 
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
+
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -351,13 +373,13 @@ Split the app into MobileView, TabletView, and DesktopView — phone, tablet, an
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -379,15 +401,13 @@ Foundation for modern mobile UX.
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Map, Stuff, Chat, and Profile each fill the phone — no double scroll containers.
-
-Foundation for modern mobile UX.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -409,15 +429,16 @@ Replaced demo/local-only data store.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Posts and accounts persist in Supabase — you see the same listings every visit.
-
-Replaced demo/local-only data store.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -438,6 +459,9 @@ Beforeinstallprompt handling on Android/desktop Chrome.
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -464,6 +488,12 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/mapRoute.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -489,15 +519,13 @@ Parallel MobileView vs DesktopView components.
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Phone experience rebuilt for touch-first use while desktop you keep the wider layout they already used.
-
-Parallel MobileView vs DesktopView components.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -517,13 +545,13 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -548,6 +576,9 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -571,13 +602,13 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -594,13 +625,13 @@ When you post you can use your current GPS location OR tap the map and drop a pi
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -622,15 +653,16 @@ Early foundation for StaffModerationPanel and RoleBadge.
 Why I changed it:
 As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/roles.ts — who can do what — staff permissions and message rules
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.
-
-What you'll notice:
-Staff and director roles so the growing community can be moderated fairly.
-
-Early foundation for StaffModerationPanel and RoleBadge.$detail$,
+Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -651,6 +683,12 @@ MIGRATION from early local-only prototypes to cloud-backed app.
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -674,13 +712,16 @@ Pick from 38 Sacramento-area neighborhoods when joining or posting — better lo
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/types.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -699,13 +740,16 @@ Block a neighbor (hide their posts/chats) or send a one-way report to staff.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -722,13 +766,13 @@ One post can list several items — people claim separately and you confirm who 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -747,13 +791,16 @@ Live counts of you, active posts, items given, and requests fulfilled at top of 
 Why I changed it:
 This is the foundation — free, local, no selling. Everything else builds on that promise.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -775,18 +822,13 @@ Builds trust for new visitors.
 Why I changed it:
 This is the foundation — free, local, no selling. Everything else builds on that promise.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.
-
-What you'll notice:
-Welcome page shows community activity before you join — same stats as in-app bar.
-
-Builds trust for new visitors.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -803,13 +845,13 @@ At your pickup spot you can claim themselves and pick which items they took — 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -849,15 +891,16 @@ Saved-item bookmarkers can get push on owner edits (if enabled).
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Edit your listing title, description, photos, and category before it is claimed.
-
-Saved-item bookmarkers can get push on owner edits (if enabled).$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -879,15 +922,16 @@ ListingImage component with lazy-friendly loading.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/imageUrl.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Listing photos load faster and upload more smoothly when posting.
-
-ListingImage component with lazy-friendly loading.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -904,10 +948,13 @@ New cards, cleaner nav, dark/light themes, polished look throughout.
 Modern cards, cleaner navigation, light/dark themes, consistent buttons and inputs across the app.
 
 How it works:
-Mobile/tablet/desktop shells share the same visual language.
+CSS — src/index.css design tokens (--color-accent, sbn-btn, sbn-card, item-feed-card)
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -935,13 +982,13 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -962,6 +1009,12 @@ Staff moderation panel on same tab for staff roles.
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/siteContent.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -987,6 +1040,12 @@ CLAIM TYPE — request_fulfilled in item_claims.
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1016,6 +1075,9 @@ How to use it:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -1040,6 +1102,12 @@ USED BY — useItemsRealtime, ChatSystem, useEventsEngagement, usePushNotificati
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/supabaseRealtime.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1068,6 +1136,9 @@ How to use it:
 
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1098,6 +1169,9 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -1120,13 +1194,16 @@ Cold DMs from profiles start as a request — accept or decline before chatting.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Cold DMs from profiles start as a request — accept or decline before chatting. Listing messages skip the gate.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1148,17 +1225,13 @@ Linked from ItemCard, ChatSystem, map pins, comments.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Tap avatars to open neighbor profiles with photo, neighborhood, bio, and listings.
-
-Linked from ItemCard, ChatSystem, map pins, comments.
-
-Avatars from Google sign-in photoURL or dicebear fallback.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1179,6 +1252,12 @@ TABLES — listing_subitems, item_claims, item_claim_requests.
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/claims.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1205,15 +1284,13 @@ Safe-area insets for notched iPhones.
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Top header and bottom tab bar stay fixed while scrolling on phones.
-
-Safe-area insets for notched iPhones.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1235,6 +1312,9 @@ How to use it:
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1258,13 +1338,17 @@ Public pages before sign-in: Home, About, How It Works, Rules, Areas, Community,
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/public/PublicSite.tsx — UI for the public site part of the app
+• src/public/routes.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Public pages before sign-in: Home, About, How It Works, Rules, Areas, Community, Updates, Reviews, GoFundMe.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1289,6 +1373,12 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/mapRoute.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -1309,13 +1399,13 @@ You can request to DM other users directly — aside from listing chats.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1334,13 +1424,16 @@ Director and staff roles show on profiles and messages so you know who helps run
 Why I changed it:
 As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/roles.ts — who can do what — staff permissions and message rules
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1364,6 +1457,12 @@ How to use it:
 
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/itemLocation.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1391,13 +1490,16 @@ TABLES — user_reports, support_tickets, moderation_audit_log.
 Why I changed it:
 As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/roles.ts — who can do what — staff permissions and message rules
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1422,6 +1524,12 @@ How to use it:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -1444,13 +1552,16 @@ Attach a photo when opening a support ticket so staff can see what you see.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1472,15 +1583,13 @@ ParseTabFromHistoryState on popstate.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Android back button and browser back move between app tabs as expected.
-
-ParseTabFromHistoryState on popstate.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1499,13 +1608,16 @@ See who helps run Sacramento Buy Nothing and their role (moderator, administrato
 Why I changed it:
 As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/roles.ts — who can do what — staff permissions and message rules
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.
-
-What you'll notice:
-See who helps run Sacramento Buy Nothing and their role (moderator, administrator, city manager, director).$detail$,
+Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1526,6 +1638,9 @@ STATUSES — active | on_hold | pending_pickup | completed | withdrawn.
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1552,6 +1667,9 @@ Respects reduced-motion where possible via CSS.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -1576,6 +1694,13 @@ How to use it:
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+• supabase-sql/account-deletion.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/account-deletion.sql.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1602,6 +1727,9 @@ How to use it:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -1619,19 +1747,26 @@ I test these changes on my own phone and laptop before they land here. If someth
   $detail$What you'll notice:
 Leaders can remove comments, delete accounts, and purge data when we have to.
 
+For staff:
+Leaders can remove comments, suspend/ban you, delete accounts, and purge data when safety requires it.
+
 How it works:
 AUDIT — moderation_audit_log table tracks actions.
 
 Why I changed it:
 As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/roles.ts — who can do what — staff permissions and message rules
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1653,15 +1788,13 @@ Escape or backdrop tap closes overlay.
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Tap listing photos to open a full-screen lightbox before messaging the giver.
-
-Escape or backdrop tap closes overlay.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1682,6 +1815,12 @@ How to use it:
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/types.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1708,15 +1847,16 @@ Touch-friendly sections and stats bar alignment on narrow screens.
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/public/pages/HomePage.tsx — UI for the home page part of the app
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Guest home page layout fixed on phones — less horizontal scroll, better spacing before sign-in.
-
-Touch-friendly sections and stats bar alignment on narrow screens.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1738,15 +1878,16 @@ Director can edit from Community hub when signed in as director.
 Why I changed it:
 As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/siteContent.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.
-
-What you'll notice:
-Director welcome message on home and reviews — free forever, no ads, your data is not sold.
-
-Director can edit from Community hub when signed in as director.$detail$,
+Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1768,6 +1909,15 @@ How to use it:
 Why I changed it:
 Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, got doubles, or shared phones crossed wires. You control every category under Bell → Alerts.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• api/push/_server/pushDelivery.ts — supporting logic for this feature
+• api/cron/notification-jobs.ts — supporting logic for this feature
+• supabase-sql/notifications-complete.sql — database tables, security rules, or live-sync setup I executed in Supabase
+• supabase-sql/supabase-push-webhook.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/notifications-complete.sql • supabase-sql/supabase-push-webhook.sql.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -1788,6 +1938,9 @@ App updates = director changelog in director changelog entries (technical “wha
 How it works:
 Account updates → accountUpdates (suspensions, bans, role changes — unchanged)
 
+Database changes I made:
+ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS "appUpdates" BOOLEAN DEFAULT true;.
+
 How it works:
 • app_update → appUpdates
 • announcement → announcements
@@ -1797,6 +1950,9 @@ How it works:
 Added app_update alongside announcement.
 
 How it works:
+Staff announcements INSERT → runAnnouncementNotify → url /help/announcements.
+
+How it works:
 • notifyAppUpdate() sends eventType app_update.
 • notifyCommunityAnnouncement() sends eventType announcement.
 
@@ -1804,9 +1960,23 @@ How it works:
 • /updates opens Help → App updates panel.
 • /help/announcements opens Help → Announcements panel.
 
+How it works:
+• Row 14: push-app-updates on director changelog entries INSERT.
+• Row 15: push-announcements on staff announcements INSERT (not director changelog entries).
+
 How to use it:
 • Bell → News → tap a post to expand, vote, and comment.
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/NotificationSettings.tsx — Bell → Alerts — every push toggle and save button
+• api/push/_server/pushDelivery.ts — supporting logic for this feature
+• api/push/_server/webhookDispatch.ts — supporting logic for this feature
+• api/push/_server/appUpdateNotify.ts — supporting logic for this feature
+• src/lib/pushEvents.ts — supporting logic for this feature
+• src/lib/pushDeepLink.ts — supporting logic for this feature
+• supabase-sql/add-app-updates-notification-pref.sql — database tables, security rules, or live-sync setup I executed in Supabase
+• supabase-sql/supabase-push-webhook.sql — database tables, security rules, or live-sync setup I executed in Supabase
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1836,6 +2006,12 @@ How to use it:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/ItemGrid.tsx — the Stuff feed — listings, filters, and sort chips
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -1858,12 +2034,25 @@ How it works:
 • Saved items → edits, comments, claims, status changes
 
 How it works:
+• item_comments INSERT → comment push to owner + saved-item bookmarkers.
+• items UPDATE → listingStatus / saved-item paths with dedup tags.
+
+How it works:
 SETUP.
 
 Each comment is its own alert (not bundled). Toggle Saved items if you only want alerts on bookmarked posts.
 
 How to use it:
 • Stuff tab → scroll or filter. Tap + to post a give, ask, trade, labor offer, or event.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/NotificationSettings.tsx — Bell → Alerts — every push toggle and save button
+• api/push/_server/neighborNotify.ts — supporting logic for this feature
+• src/hooks/useSavedItemPushAlerts.ts — keeps this part of the app syncing live without refreshing
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1879,17 +2068,21 @@ Push and inbox alerts are how you hear about a free couch before someone else gr
   '2026-06-09',
   'Director oversight alerts for me',
   $body$I get optional push for joins, reports, moderation, tickets, listings, message requests, claims — each toggleable. Look under the bell (top right) — Notify, News, Updates, or Alerts.$body$,
-  $detail$What you'll notice:
-I get optional push for joins, reports, moderation, tickets, listings, message requests, claims — each toggleable. Look under the bell (top right) — Notify, News, Updates, or Alerts.
-
-What neighbors see (directors):
+  $detail$What neighbors see (directors):
 Eight optional oversight categories in push settings: joins, departures, moderation, reports, tickets, listings, message requests, claim requests.
+
+How it works:
+Users INSERT/DELETE, moderation_audit_log, user_reports, support_tickets, items, message_requests, item_claim_requests.
 
 How it works:
 Each category has its own toggle — turn off noise you do not need.
 
-Why I changed it:
-Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, got doubles, or shared phones crossed wires. You control every category under Bell → Alerts.
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/NotificationSettings.tsx — Bell → Alerts — every push toggle and save button
+• api/push/_server/directorNotify.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1916,17 +2109,18 @@ PK userId — one row per staff member.
 Why I changed it:
 As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/StaffMessage.tsx — UI for the staff message part of the app
+• src/lib/roles.ts — who can do what — staff permissions and message rules
+• supabase-sql/staff-messages.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/staff-messages.sql.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.
-
-What you'll notice:
-Each staff member publishes their own welcome note on home and reviews — not one shared city-manager message.
-
-PK userId — one row per staff member.
-
-Director note remains separate in director_message table.$detail$,
+Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. Staff tools exist so trusted neighbors can help without turning this into a corporate platform.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -1938,7 +2132,10 @@ Director note remains separate in director_message table.$detail$,
   'Every alert type wired up',
   $body$Messages, comments, votes, pickup reminders, account notices — same pipeline as new listing alerts. Look under the bell (top right) — Notify, News, Updates, or Alerts.$body$,
   $detail$How it works:
+• message_requests INSERT/UPDATE (accepted)
 • item_claim_requests, item_claims, item_comments, item_votes
+• messages INSERT (per-message tags msg-{messageId})
+• items UPDATE → status, pickup_scheduled, saved-item alerts
 • moderation_audit_log → account_update pushes
 • director changelog entries / staff announcements → changelog vs staff announcements
 • support_ticket_messages, user_reports, director changelog entries
@@ -1954,6 +2151,17 @@ Listing expiry + pickup reminders when app closed.
 
 How to use it:
 • Stuff tab → scroll or filter. Tap + to post a give, ask, trade, labor offer, or event.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• api/push/_server/webhookDispatch.ts — supporting logic for this feature
+• api/push/_server/pushDedup.ts — supporting logic for this feature
+• src/lib/pushConfig.ts — supporting logic for this feature
+• api/cron/notification-jobs.ts — supporting logic for this feature
+• supabase-sql/notifications-complete.sql — database tables, security rules, or live-sync setup I executed in Supabase
+• supabase-sql/supabase-push-webhook.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/notifications-complete.sql • supabase-sql/supabase-push-webhook.sql.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -1984,6 +2192,13 @@ How to use it:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/siteContent.ts — supporting logic for this feature
+• src/components/MobileView.tsx — UI for the mobile view part of the app
+
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2011,6 +2226,16 @@ How it works:
 How to use it:
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• api/push/_server/pushDedup.ts — supporting logic for this feature
+• src/lib/pushEvents.ts — supporting logic for this feature
+• api/push/_server/neighborNotify.ts — supporting logic for this feature
+• api/push/_server/pushSubscribe.ts — supporting logic for this feature
+• api/push/resubscribe.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2034,13 +2259,16 @@ CHECK constraint isFree = true.
 Why I changed it:
 This is the foundation — free, local, no selling. Everything else builds on that promise.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• supabase-sql/all-community-updates.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/all-community-updates.sql.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -2058,6 +2286,13 @@ GoFundMe strip removed from under the map. On other scrollable pages it sits at 
 
 Why I changed it:
 Hosting, database, and push cost real money. I will never charge neighbors or run ads — the GoFundMe page is optional transparency about what it takes to keep this alive.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/public/pages/GoFundMePage.tsx — UI for the go fund me page part of the app
+• src/siteContent.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2085,6 +2320,12 @@ Explains Vercel, Supabase, domain, and why the app stays free with no ads.
 
 Why I changed it:
 Hosting, database, and push cost real money. I will never charge neighbors or run ads — the GoFundMe page is optional transparency about what it takes to keep this alive.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/public/routes.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2116,6 +2357,13 @@ WORKS IN BACKGROUND when push is enabled and device subscription is valid (Add t
 
 How to use it:
 • Stuff tab → scroll or filter. Tap + to post a give, ask, trade, labor offer, or event.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• api/push/_server/neighborNotify.ts — supporting logic for this feature
+• src/components/ListingEngagement.tsx — UI for the listing engagement part of the app
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2158,6 +2406,14 @@ Prefs are per account in notification_preferences (one row per userId). Push del
 How to use it:
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/pushNotifications.ts — supporting logic for this feature
+• src/hooks/usePushNotifications.ts — keeps this part of the app syncing live without refreshing
+• src/App.tsx — the app shell — login flow, navigation, and legal popups
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2186,6 +2442,9 @@ How to use it:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2200,21 +2459,24 @@ I test these changes on my own phone and laptop before they land here. If someth
   '2026-06-09',
   'No more double pings',
   $body$Same alert was firing twice — fixed that. Drove me nuts too.$body$,
-  $detail$What you'll notice:
-Same alert was firing twice — fixed that. Drove me nuts too.
-
-What actually fixed it:
-• Re-enabled client dispatch WITH dedup:
-• Bad tags fixed: msg-{chatId} → msg-{messageId}, static community-announcement → announcement-{id}
-
-Removed unauthenticated resubscribe that reassigned endpoints to wrong users.
-
-How it works:
+  $detail$How it works:
 • PHASE 2 FIX (current)
 • Bad tags fixed: msg-{chatId} → msg-{messageId}, static community-announcement → announcement-{id}
 
-Why I changed it:
-I ship fast and sometimes break my own stuff — thanks for the screenshots and support tickets. This patch is me cleaning up so real porch pickups and chats are not blocked by a UI bug.
+How it works:
+• SERVICE WORKER — public/service-worker.js
+• Removed unauthenticated resubscribe that reassigned endpoints to wrong users.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+• src/lib/pushConfig.ts — supporting logic for this feature
+• api/push/_server/pushDedup.ts — supporting logic for this feature
+• src/lib/pushEvents.ts — supporting logic for this feature
+• api/push/_server/neighborNotify.ts — supporting logic for this feature
+• api/push/_server/pushSubscribe.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2249,6 +2511,15 @@ Prevents accidental toggles and matches “prefs per account, push per device”
 How to use it:
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/NotificationSettings.tsx — Bell → Alerts — every push toggle and save button
+• src/lib/pushNotifications.ts — supporting logic for this feature
+• src/hooks/usePushNotifications.ts — keeps this part of the app syncing live without refreshing
+• supabase-sql/notifications-complete.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/notifications-complete.sql.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2269,7 +2540,8 @@ PROBLEM.
 Shared devices: browser push endpoint stayed registered to previous user’s row in push_subscriptions.
 
 How it works:
-2) UPSERT row with current auth userId, p256dh, auth keys.
+• 1) DELETE FROM push_subscriptions WHERE endpoint = $endpoint
+• 2) UPSERT row with current auth userId, p256dh, auth keys
 
 How it works:
 LOGOUT — clearNotificationDataOnLogout() detaches subscription for signed-out user.
@@ -2279,6 +2551,14 @@ Each neighbor: notifications off → on once while signed in as themselves.
 
 How to use it:
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• api/push/_server/pushSubscribe.ts — supporting logic for this feature
+• src/lib/pushNotifications.ts — supporting logic for this feature
+• api/push/resubscribe.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2295,8 +2575,6 @@ Push and inbox alerts are how you hear about a free couch before someone else gr
   'Push works when app is closed',
   $body$Notifications reach your phone when the app isn't open. iPhone: Add to Home Screen. Look under the bell (top right) — Notify, News, Updates, or Alerts.$body$,
   $detail$What you'll notice:
-Notifications reach your phone when the app isn't open. iPhone: Add to Home Screen. Look under the bell (top right) — Notify, News, Updates, or Alerts.
-
 Notifications reach your phone when Sacramento Buy Nothing is closed — not only while the tab is open.
 
 How it works:
@@ -2306,8 +2584,12 @@ How it works:
 How to use it:
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
 
-Why I changed it:
-Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, got doubles, or shared phones crossed wires. You control every category under Bell → Alerts.
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/pushNotifications.ts — supporting logic for this feature
+• src/pwa/registerServiceWorker.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2332,6 +2614,14 @@ Enable in Account → Push notifications. iPhone: Add to Home Screen for backgro
 How to use it:
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/pushNotifications.ts — supporting logic for this feature
+• server/push.ts — supporting logic for this feature
+• supabase-sql/push-notifications.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/push-notifications.sql.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2353,6 +2643,9 @@ How it works:
 Export const CLIENT_PUSH_DISPATCH_ENABLED = true;.
 
 How it works:
+New ensureNotificationPreferencesOnSubscribe(userId): if a notification_preferences row already exists, we UPDATE enabled=true without wiping other toggles. Previously ignoreDuplicates on subscribe left enabled=false forever, blocking all real pushes.
+
+How it works:
 SavePushSubscriptionDirect() now calls ensureNotificationPreferencesOnSubscribe() instead of upsert with ignoreDuplicates.
 
 How it works:
@@ -2363,6 +2656,21 @@ On each device: Help or Account → Push notifications → turn off, then on aga
 
 How to use it:
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/pushConfig.ts — supporting logic for this feature
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+• api/push/_server/pushDedup.ts — supporting logic for this feature
+• api/push/_server/pushSubscribe.ts — supporting logic for this feature
+• src/lib/pushNotifications.ts — supporting logic for this feature
+• src/lib/pushEvents.ts — supporting logic for this feature
+• api/push/_server/neighborNotify.ts — supporting logic for this feature
+• src/lib/pushIntegration.ts — supporting logic for this feature
+• api/push/subscribe.ts — supporting logic for this feature
+• server/app.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2379,16 +2687,23 @@ Push and inbox alerts are how you hear about a free couch before someone else gr
   'Saved bookmarks sync online',
   $body$Bookmarks save to your account so alerts work when the app is closed.$body$,
   $detail$What you'll notice:
-Bookmarks save to your account so alerts work when the app is closed.
-
 Saving a listing now stores the bookmark in your account online — not only on this phone — so the server can alert you when that post changes.
 
 How it works:
 • BEFORE
 • localStorage key sbn_saved_items_v1 only — server could not notify when app was closed.
 
-Why I changed it:
-I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+How it works:
+• syncSavedItemBookmark(userId, itemId, saved) writes saved_items rows.
+• migrateLocalSavedItemsToDb() on login imports old local bookmarks.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/hooks/useSavedItems.ts — keeps this part of the app syncing live without refreshing
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+• src/hooks/useSavedItemPushAlerts.ts — keeps this part of the app syncing live without refreshing
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2415,6 +2730,9 @@ Trending = recent activity; Saved = useSavedItems hook; My area = your neighborh
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2434,6 +2752,8 @@ Signing in should land you on the feed without a blank page or error boundary. O
 
 How it works:
 1) Duplicate Supabase Realtime channels.
+
+Two components both called usePushNotifications(userId) with the same channel name live-notification-prefs-{userId}. Supabase throws: “cannot add postgres_changes callbacks after subscribe()”. That uncaught error took down the React tree.
 
 How it works:
 2) Logout race with push cleanup.
@@ -2458,6 +2778,18 @@ Added Heart icon import that had been causing a secondary crash.
 How to check it's working:
 Sign in on phone and desktop, open Help, expand notification settings, switch accounts — app should remain interactive.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/hooks/usePushNotifications.ts — keeps this part of the app syncing live without refreshing
+• src/components/PushNotificationCelebration.tsx — UI for the push notification celebration part of the app
+• src/App.tsx — the app shell — login flow, navigation, and legal popups
+• src/components/AppErrorBoundary.tsx — UI for the app error boundary part of the app
+• src/components/Onboarding.tsx — UI for the onboarding part of the app
+• src/components/NotificationSettings.tsx — Bell → Alerts — every push toggle and save button
+• src/lib/pushNotifications.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2475,6 +2807,12 @@ I test these changes on my own phone and laptop before they land here. If someth
   $detail$What you'll notice:
 Help & support → Announcements. Tap a post to expand it, upvote/downvote, and join the discussion in comments. This is separate from App updates (director changelog).
 
+For staff:
+Any staff role can tap Post announcement. Authors and I can edit or delete their posts. Votes help staff see what resonates.
+
+How it works:
+DATABASE (run in Supabase SQL Editor)
+
 How it works:
 TABLE: staff announcements.
 
@@ -2482,6 +2820,8 @@ Columns mirror director changelog entries but use authorName/authorTitle instead
 
 How it works:
 TABLE: help_announcement_comments.
+
+AnnouncementId → staff announcements.id ON DELETE CASCADE, plus denormalized userName, userNeighborhood, text.
 
 How it works:
 GetSupabaseHelpAnnouncements, createSupabaseHelpAnnouncement, updateSupabaseHelpAnnouncement, deleteSupabaseHelpAnnouncement, comment helpers.
@@ -2491,6 +2831,21 @@ CanPostAnnouncements() = any staff role.
 
 How to use it:
 • Bell → News → tap a post to expand, vote, and comment.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/hooks/useHelpAnnouncementComments.ts — keeps this part of the app syncing live without refreshing
+• src/components/AnnouncementComments.tsx — UI for the announcement comments part of the app
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+• src/lib/roles.ts — who can do what — staff permissions and message rules
+• src/components/AnnouncementsList.tsx — Bell → News — staff announcement cards, votes, and comments
+• src/components/AccountHelpSection.tsx — UI for the account help section part of the app
+• api/push/_server/webhookDispatch.ts — supporting logic for this feature
+• supabase-sql/help-announcements.sql — database tables, security rules, or live-sync setup I executed in Supabase
+• supabase-sql/help-announcement-comments.sql — database tables, security rules, or live-sync setup I executed in Supabase
+• supabase-sql/add-app-updates-notification-pref.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/help-announcements.sql • supabase-sql/help-announcement-comments.sql • supabase-sql/add-app-updates-notification-pref.sql.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2517,13 +2872,16 @@ VOTES — community_content_votes targetType 'review'
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• supabase-sql/all-community-updates.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/all-community-updates.sql.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -2544,6 +2902,12 @@ Never required to participate in the community.
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/siteContent.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2570,6 +2934,13 @@ How to use it:
 Why I changed it:
 Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, got doubles, or shared phones crossed wires. You control every category under Bell → Alerts.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• api/push/test.ts — supporting logic for this feature
+• src/lib/pushNotifications.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2585,23 +2956,27 @@ Push and inbox alerts are how you hear about a free couch before someone else gr
   'I can post updates from the app now',
   $body$Changelog lives in the database — I post, edit, delete from the app instead of buried code.$body$,
   $detail$What you'll notice:
-Changelog lives in the database — I post, edit, delete from the app instead of buried code.
+Director changelog entries live in Supabase, not hard-coded. You read them under Community hub → App updates; director can post, edit, delete.
 
 How it works:
 Columns: id, date, title, body, detail, directorName, postedByUserId.
 
-Why I changed it:
-I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+How it works:
+VOTES — community_content_votes targetType 'update'
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/UpdatesList.tsx — Bell → Updates — this changelog list you are reading
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+• src/components/public/pages/UpdatesPage.tsx — UI for the updates page part of the app
+• supabase-sql/app-updates.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/app-updates.sql.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Director changelog entries live in Supabase, not hard-coded. You read them under Community hub → App updates; director can post, edit, delete.
-
-Columns: id, date, title, body, detail, directorName, postedByUserId.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -2623,6 +2998,12 @@ IN-APP — Community hub tiles mirror same data via UpdatesList and CommunityRev
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/public/routes.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2640,25 +3021,24 @@ I test these changes on my own phone and laptop before they land here. If someth
   $detail$What you'll notice:
 Upvote or downvote changelog entries, reviews, and staff messages. I see the feedback.
 
+Upvote or downvote changelog entries, neighbor app reviews, and staff/director welcome messages. Update votes go to I as product feedback.
+
 How it works:
-Used in UpdatesList, CommunityReviews, StaffMessage, DirectorMessage.
+TargetType: update | review | leader_message | announcement.
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• supabase-sql/community-content-votes.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/community-content-votes.sql.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What you'll notice:
-Upvote or downvote changelog entries, neighbor app reviews, and staff/director welcome messages. Update votes go to I as product feedback.
-
-TargetType: update | review | leader_message | announcement.
-
-Used in UpdatesList, CommunityReviews, StaffMessage, DirectorMessage.
-
-Cannot vote on your own review. Sign in required.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -2681,6 +3061,12 @@ How it works:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/types.ts — supporting logic for this feature
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2701,8 +3087,20 @@ On mobile, open Chat and scroll the conversation list — the optional GoFundMe 
 Chat → support → back:
 Open Chat → Support → My support tickets. Tap ← to return to the chat inbox. Inside a ticket thread, ← goes back to your ticket list.
 
+How it works:
+I published a new version of the app — the database itself did not need changes.
+
 How to use it:
 • Chat tab → community channel, DMs, and support live in the sidebar. Tap a thread to open it.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/MobileView.tsx — UI for the mobile view part of the app
+• src/components/ChatSystem.tsx — the main Chat tab — sidebar, threads, sending messages
+• src/components/ChatSupportSection.tsx — UI for the chat support section part of the app
+• src/components/DesktopView.tsx — UI for the desktop view part of the app
+
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2730,6 +3128,9 @@ Notification settings:
 • Messages & support → Community chat (all you)
 • Staff moderation → Staff chat (staff only)
 
+Database changes I made:
+• supabase-sql/add-community-chat-notification-prefs.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
 How it works:
 • Dedup tags: community-msg-{messageId} and staff-msg-{messageId}
 • Deep links: /messages/community-global and /messages/community-staff
@@ -2737,6 +3138,17 @@ How it works:
 How to use it:
 • Chat tab → community channel, DMs, and support live in the sidebar. Tap a thread to open it.
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• api/push/_server/communityChatNotify.ts — supporting logic for this feature
+• api/push/_server/neighborNotify.ts — supporting logic for this feature
+• api/push/_server/runPushSend.ts — supporting logic for this feature
+• api/push/_server/pushDelivery.ts — supporting logic for this feature
+• src/lib/pushEvents.ts — supporting logic for this feature
+• src/lib/pushIntegration.ts — supporting logic for this feature
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+• src/components/NotificationSettings.tsx — Bell → Alerts — every push toggle and save button
+• supabase-sql/add-community-chat-notification-prefs.sql — database tables, security rules, or live-sync setup I executed in Supabase
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2752,16 +3164,7 @@ Push and inbox alerts are how you hear about a free couch before someone else gr
   '2026-06-10',
   'Community chat + support moved to Chat tab',
   $body$Chat now has community-wide channel, staff lounge, and support tickets. Help renamed Community hub. Open the Chat tab to see it in the sidebar.$body$,
-  $detail$What you'll notice:
-Chat now has community-wide channel, staff lounge, and support tickets. Help renamed Community hub. Open the Chat tab to see it in the sidebar.
-
-• Community chat — all you (global channel) • Staff chat — staff only (hidden from you) • Support — personal tickets with staff (moved out of Community hub) • Direct messages — unchanged 1:1 listing/profile chats.
-
-• COMMUNITY HUB (was Help) • App updates, announcements, reviews, and safety reports. Tab label is now Community.
-
-CODE.
-
-Chat tab:
+  $detail$Chat tab:
 • Community chat — all you (global channel)
 • Staff chat — staff only (hidden from you)
 • Support — personal tickets with staff (moved out of Community hub)
@@ -2774,8 +3177,17 @@ How it works:
 How to use it:
 • Chat tab → community channel, DMs, and support live in the sidebar. Tap a thread to open it.
 
-Why I changed it:
-As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/lib/communityChats.ts — supporting logic for this feature
+• src/components/ChatSystem.tsx — the main Chat tab — sidebar, threads, sending messages
+• src/components/ChatSupportSection.tsx — UI for the chat support section part of the app
+• src/components/AccountHelpSection.tsx — UI for the account help section part of the app
+• src/siteContent.ts — supporting logic for this feature
+• supabase-sql/community-chats.sql — database tables, security rules, or live-sync setup I executed in Supabase
+• supabase-sql/help-announcements.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/community-chats.sql • supabase-sql/help-announcements.sql.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2792,12 +3204,19 @@ Sacramento is growing and I cannot be the only pair of eyes on reports, tickets,
   'Tap updates to read full story',
   $body$Every changelog entry can expand with the full write-up when you tap it.$body$,
   $detail$What you'll notice:
-Every changelog entry can expand with the full write-up when you tap it.
+Community hub → App updates → tap an entry. The short summary is still one or two sentences; expand to read the full story (what changed, which files, Database script I ran: ).
 
-Community hub → App updates → tap an entry. The short summary is still one or two sentences; expand to read the full story (what changed, which files, SQL to run).
+Sql to publish all detail text:
+• supabase-sql/expand-all-community-updates-detail.sql — database tables, security rules, or live-sync setup I executed in Supabase
 
-Why I changed it:
-I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• scripts/expand-changelog-details.mjs
+• src/components/UpdatesList.tsx — Bell → Updates — this changelog list you are reading
+• src/components/AppUpdateEditModal.tsx — UI for the app update edit modal part of the app
+• supabase-sql/expand-all-community-updates-detail.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
+Database changes I made:
+I ran these scripts in Supabase on my end when I shipped this release. You do not run these — this is me documenting what changed behind the scenes: • supabase-sql/expand-all-community-updates-detail.sql.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2819,8 +3238,19 @@ When staff post an announcement under Community hub → Announcements, you shoul
 What was broken:
 After posting, the app both (a) added the new row to the screen immediately and (b) refreshed from Supabase realtime a moment later. If realtime finished first, the immediate add ran again and duplicated the same announcement id in the list.
 
+How it works:
+I did not need to change the database for this release.
+
 How to use it:
 • Bell → News → tap a post to expand, vote, and comment.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/hooks/useHelpAnnouncements.ts — keeps this part of the app syncing live without refreshing
+• src/hooks/useAppUpdates.ts — keeps this part of the app syncing live without refreshing
+• src/lib/supabaseRealtime.ts — supporting logic for this feature
+
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2848,6 +3278,9 @@ How to use it:
 
 Why I changed it:
 Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, got doubles, or shared phones crossed wires. You control every category under Bell → Alerts.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -2881,6 +3314,9 @@ How it works:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2908,6 +3344,9 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2934,6 +3373,9 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -2951,18 +3393,22 @@ I test these changes on my own phone and laptop before they land here. If someth
   $detail$What you'll notice:
 Delete messages you sent. I/city managers can remove community channel messages. Open the Chat tab to see it in the sidebar.
 
+How it works:
+Use delete on your own messages in DMs, community chat, staff chat, and support threads. Director and city manager can delete any message in community-global.
+
 How to use it:
 • Chat tab → community channel, DMs, and support live in the sidebar. Tap a thread to open it.
 
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-Use delete on your own messages in DMs, community chat, staff chat, and support threads. Director and city manager can delete any message in community-global.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -2998,6 +3444,9 @@ How to use it:
 
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3037,6 +3486,9 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3063,6 +3515,9 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3087,13 +3542,13 @@ How it works:
 Why I changed it:
 This is the foundation — free, local, no selling. Everything else builds on that promise.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+Everything here still comes back to the same promise: free local gifting, no selling, no ads, no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -3115,6 +3570,9 @@ How to use it:
 
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3153,6 +3611,9 @@ How to use it:
 Why I changed it:
 As more neighbors join, I cannot be the only set of eyes. Staff tools keep reports and tickets moving without turning the app corporate.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3175,12 +3636,16 @@ Applies to deletes, director broadcast tests, and other sensitive actions — sr
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/contexts/ConfirmContext.tsx — UI for the confirm context part of the app
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-Applies to deletes, director broadcast tests, and other sensitive actions — src/contexts/ConfirmContext.tsx, ConfirmDialog.tsx.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -3239,6 +3704,9 @@ How to use it:
 • Bell → Notify lists what already pinged you — messages, comments on your posts, claims, nearby listings, and more.
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3273,6 +3741,9 @@ How to use it:
 
 Why I changed it:
 Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, got doubles, or shared phones crossed wires. You control every category under Bell → Alerts.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3327,6 +3798,9 @@ How to use it:
 Why I changed it:
 Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, got doubles, or shared phones crossed wires. You control every category under Bell → Alerts.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3355,6 +3829,9 @@ How to use it:
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3389,6 +3866,9 @@ Push: Alerts tab → Support tickets. Deep links /staff/tickets and /support ope
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3417,12 +3897,18 @@ How it works:
 • If you would see a push alert, you also see it under bell → Notifications
 • Toggle what sends push under Alerts (last tab)
 
+Database changes I made:
+• supabase-sql/user-notifications.sql — database tables, security rules, or live-sync setup I executed in Supabase
+
 How to use it:
 • Bell → Notify lists what already pinged you — messages, comments on your posts, claims, nearby listings, and more.
 • Bell → Alerts (last tab) → turn push on for this device, then flip individual categories. Tap Save settings when you're done.
 
 Why I changed it:
 Push has to be useful, not noisy. I rebuilt pieces of this when neighbors said they only got test alerts, got doubles, or shared phones crossed wires. You control every category under Bell → Alerts.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• supabase-sql/user-notifications.sql — database tables, security rules, or live-sync setup I executed in Supabase
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3450,6 +3936,9 @@ How it works:
 
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3498,6 +3987,9 @@ Swapped the header theme button for a glowing Awards button. Dark/light theme is
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3521,13 +4013,13 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -3546,6 +4038,9 @@ How to use it:
 
 Why I changed it:
 I ship fast and sometimes break my own stuff — thanks for the screenshots and support tickets. This patch is me cleaning up so real porch pickups and chats are not blocked by a UI bug.
+
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3569,6 +4064,9 @@ Profile page crashed after I moved theme settings. Fixed a missing import — sh
 
 Why I changed it:
 I ship fast and sometimes break my own stuff — thanks for the screenshots and support tickets. This patch is me cleaning up so real porch pickups and chats are not blocked by a UI bug.
+
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3596,13 +4094,13 @@ How to use it:
 Why I changed it:
 I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -3622,13 +4120,13 @@ How to use it:
 Why I changed it:
 I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
-I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.
-
-What I want you to take away:
-This update is live in the app you already have bookmarked or installed on your home screen. Pull to refresh or reopen the app if you do not see it immediately. When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else.$detail$,
+I test these changes on my own phone and laptop before they land here. If something still feels wrong after you update, comment on this entry or open a support ticket — I read both.$detail$,
   (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
@@ -3638,7 +4136,9 @@ This update is live in the app you already have bookmarked or installed on your 
   '2026-06-14_trade-barter-listing-type',
   '2026-06-14',
   'Trade/barter posts are live',
-  $body$Hey guys 👋 You can post item-for-item swaps now — trade/barter type. Still 100% free, no money involved ever. Browse from Stuff or the Map tab depending on what you're looking for.$body$,
+  $body$Hey guys 👋
+
+You can post item-for-item swaps now — trade/barter type. Still 100% free, no money involved ever. Browse from Stuff or the Map tab depending on what you're looking for.$body$,
   $detail$What you'll notice:
 Hey guys 👋
 
@@ -3671,6 +4171,9 @@ How to use it:
 Why I changed it:
 You asked for item swaps without money or shipping drama. Trade posts follow the same free-gifting rules — just barter instead of a one-way give.
 
+Database changes I made:
+None for this release — I only updated the app/website code. Your existing tables and data stayed the same; you just got new screens and behavior when the update went live.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3699,6 +4202,9 @@ You can still upvote and downvote normally when you browse at a human pace. The 
 Why i built it this way:
 You told me two things: stop putting voter names in alerts, and stop mass downvote waves without jumping straight to account bans. This is my answer to both — privacy in notifications and friction on abuse.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3716,17 +4222,21 @@ I test these changes on my own phone and laptop before they land here. If someth
   $detail$What you''ll notice:
 Your own messages in direct chats and in the community-wide channel now show a small unsend button (↩). Tap it and the message disappears for everyone in that thread.
 
-Edit and resend:
-After you unsend, the message text returns to the typing box with the cursor ready. That is the whole point — catch a typo, wrong address, or autocorrect disaster before it sits in the thread forever.
+Database changes i made:
+None — app code only. I did not need new database tables for unsend; it uses the existing messages table.
 
-Community chat moderation:
-If you are not the sender, you will not see unsend on someone else''s message. City managers and I can still remove problematic messages in the public community channel when moderation is needed.
-
-Where this works:
-One-on-one listing chats, profile DMs, and the All you community channel. Support tickets have their own unsend entry — same idea, separate thread type.
+Why i added it:
+People asked for “delete but let me fix it,” not permanent delete with no recovery. Unsend is delete plus restore to the composer.
 
 How to use it:
 • Chat tab → community channel, DMs, and support live in the sidebar. Tap a thread to open it.
+
+Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):
+• src/components/ChatSystem.tsx — the main Chat tab — sidebar, threads, sending messages
+• src/supabase.ts — the online data layer — saves posts, messages, tickets, and account info
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3762,6 +4272,9 @@ Newest-first is great for power browsers, but it hides posts that are buzzing ri
 How to use it:
 • Stuff tab → scroll or filter. Tap + to post a give, ask, trade, labor offer, or event.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3776,26 +4289,8 @@ I test these changes on my own phone and laptop before they land here. If someth
   '2026-06-20',
   'Privacy policy — read and accept when you sign in',
   $body$I added a real privacy policy you accept once at login (v2). Your account data lives in Supabase — our online database — not only on your phone. Read it anytime from Home, Account, or the footer. You can reread it from Home, Account, or the footer links.$body$,
-  $detail$What you'll notice:
-I added a real privacy policy you accept once at login (v2). Your account data lives in Supabase — our online database — not only on your phone. Read it anytime from Home, Account, or the footer. You can reread it from Home, Account, or the footer links.
-
-WHAT YOU''LL NOTICE.
-
+  $detail$What you''ll notice:
 The first time you sign in after this update, a full-screen popup walks you through the privacy policy. You need to read it and tap accept before you can use the app. That is intentional — I want everyone to know where their information goes.
-
-• WHERE TO READ IT AGAIN • Home page — link in the community section • Account tab — privacy section • Footer on most pages — Privacy policy link.
-
-WHAT THE POLICY EXPLAINS.
-
-Sacramento Buy Nothing stores profiles, posts, messages, votes, tickets, and notification preferences in Supabase. That is our database host in the cloud. The app on your phone is the window into that data; it is not a private notebook that never leaves your device.
-
-WHO RUNS THIS.
-
-I am Markeith White. I operate this app alone — not a volunteer committee, not a corporation. If the policy language is confusing, open a support ticket or comment on this update and I will rewrite it in plain English.
-
-WHY I DID THIS.
-
-You deserve honesty about data before they post photos of their porch or message strangers about pickup. I will never sell your information. I will never run ads. This policy is me putting that in writing.
 
 Where to read it again:
 • Home page — link in the community section
@@ -3805,11 +4300,14 @@ Where to read it again:
 What the policy explains:
 Sacramento Buy Nothing stores profiles, posts, messages, votes, tickets, and notification preferences in Supabase. That is our database host in the cloud. The app on your phone is the window into that data; it is not a private notebook that never leaves your device.
 
+Who runs this:
+I am Markeith White. I operate this app alone — not a volunteer committee, not a corporation. If the policy language is confusing, open a support ticket or comment on this update and I will rewrite it in plain English.
+
 Why i did this:
 You deserve honesty about data before they post photos of their porch or message strangers about pickup. I will never sell your information. I will never run ads. This policy is me putting that in writing.
 
-Why I changed it:
-I write these entries for you — the people actually giving away couches and coordinating porch pickups. If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense.
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3838,6 +4336,9 @@ Once a ticket is closed, unsend is turned off. Closed conversations are meant to
 
 Why support got the same treatment:
 Support threads are where you explain bugs and sensitive situations. Typos and “wait I meant to say” moments happen here too. You deserved the same unsend flow as regular chat.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
@@ -3870,6 +4371,9 @@ Free gifting rules, respectful behavior, how staff moderation works, and what ha
 Why separate from privacy:
 Privacy explains data. Terms explain behavior and community rules. They are related but not the same document, and I want you to see both clearly.
 
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
+
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
 
@@ -3900,6 +4404,9 @@ You told me you wanted to actually read what changed and talk back. Truncated su
 
 How to use it:
 • Bell → News → tap a post to expand, vote, and comment.
+
+Database changes I made:
+As far as I can tell, this one did not need a new database script — it was shipped as an app update. If I later discover a migration was involved, I will update this entry.
 
 From me:
 I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. When I post an update here, it is because something in the app actually changed for you, not because I am ticking boxes on a corporate release calendar.
