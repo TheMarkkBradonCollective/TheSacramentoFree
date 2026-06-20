@@ -58,7 +58,9 @@ import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 import PushNotificationCelebration from './components/PushNotificationCelebration';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
+import TermsOfUseModal from './components/TermsOfUseModal';
 import { isPrivacyAccepted } from './lib/privacyPolicyPrompt';
+import { isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
 import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
 
@@ -122,6 +124,7 @@ export default function App() {
   const [legalPanel, setLegalPanel] = useState<'privacy' | 'terms' | null>(null);
   const [showAwardsPanel, setShowAwardsPanel] = useState(false);
   const [privacyGateOpen, setPrivacyGateOpen] = useState(false);
+  const [termsGateOpen, setTermsGateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
@@ -145,13 +148,20 @@ export default function App() {
     persistActiveTab('map');
   }, []);
 
-  useEffect(() => {
-    if (sessionUser?.id) {
-      setPrivacyGateOpen(!isPrivacyAccepted(sessionUser.id));
-    } else {
+  const refreshLegalGates = useCallback(() => {
+    if (!sessionUser?.id) {
       setPrivacyGateOpen(false);
+      setTermsGateOpen(false);
+      return;
     }
+    const privacyOk = isPrivacyAccepted(sessionUser.id);
+    setPrivacyGateOpen(!privacyOk);
+    setTermsGateOpen(privacyOk && !isTermsAccepted(sessionUser.id));
   }, [sessionUser?.id]);
+
+  useEffect(() => {
+    refreshLegalGates();
+  }, [refreshLegalGates]);
 
   const visibleItems = useMemo(
     () => items.filter((item) => !blockedUserIds.has(item.userId)),
@@ -1365,7 +1375,15 @@ export default function App() {
         <PrivacyPolicyModal
           required
           userId={sessionUser.id}
-          onAccepted={() => setPrivacyGateOpen(false)}
+          onAccepted={refreshLegalGates}
+        />
+      )}
+
+      {sessionUser && termsGateOpen && !privacyGateOpen && (
+        <TermsOfUseModal
+          required
+          userId={sessionUser.id}
+          onAccepted={() => setTermsGateOpen(false)}
         />
       )}
     </div>
