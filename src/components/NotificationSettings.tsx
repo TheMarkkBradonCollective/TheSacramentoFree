@@ -88,8 +88,8 @@ const LISTING_PREF_SECTION = {
     { key: 'claims' as const, label: 'Claims', description: 'When someone claims your item' },
     { key: 'gifts' as const, label: 'Gifts', description: 'When an item is marked gifted' },
     { key: 'comments' as const, label: 'Comments', description: 'New comments on your listings' },
-    { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When a neighbor upvotes your listing' },
-    { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When a neighbor downvotes your listing' },
+    { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When someone upvotes your listing (anonymous)' },
+    { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When someone downvotes your listing (anonymous)' },
     {
       key: 'listingStatus' as const,
       label: 'Listing status',

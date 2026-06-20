@@ -203,13 +203,12 @@ export async function notifySavedListingActivity(params: {
 
 export async function notifyListingUpvote(params: {
   item: ItemPost;
-  voterName: string;
   voterUserId: string;
 }) {
   await sendPushNotification({
     eventType: 'listing_upvote',
     title: 'New upvote on your listing',
-    body: `${params.voterName} upvoted "${params.item.title}"`,
+    body: `Someone upvoted "${params.item.title}"`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
@@ -219,13 +218,12 @@ export async function notifyListingUpvote(params: {
 
 export async function notifyListingDownvote(params: {
   item: ItemPost;
-  voterName: string;
   voterUserId: string;
 }) {
   await sendPushNotification({
     eventType: 'listing_downvote',
-    title: 'Downvote on your listing',
-    body: `${params.voterName} downvoted "${params.item.title}"`,
+    title: 'Feedback on your listing',
+    body: `Someone downvoted "${params.item.title}"`,
     url: pushUrlForListing(params.item.id),
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],

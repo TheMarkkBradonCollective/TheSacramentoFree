@@ -228,12 +228,10 @@ export async function pushAfterItemVote(params: {
   const item = await getItemById(params.itemId);
   if (!item || item.userId === params.voterUserId) return;
 
-  const voterName = await getUserDisplayName(params.voterUserId);
-
   if (params.voteType === 'up') {
-    await notifyListingUpvote({ item, voterName, voterUserId: params.voterUserId });
+    await notifyListingUpvote({ item, voterUserId: params.voterUserId });
   } else {
-    await notifyListingDownvote({ item, voterName, voterUserId: params.voterUserId });
+    await notifyListingDownvote({ item, voterUserId: params.voterUserId });
   }
 }
 
