@@ -368,6 +368,7 @@ export const TERMS = {
     },
   ],
   acceptLabel: 'I have read and agree to the terms of use',
+  acceptButton: 'Accept & continue',
   viewAgainNote: 'You can read these terms anytime from the home page or your Account tab.',
 } as const;
 

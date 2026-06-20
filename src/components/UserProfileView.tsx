@@ -33,6 +33,7 @@ import PrivacyPolicyModal from './PrivacyPolicyModal';
 import TermsOfUseModal from './TermsOfUseModal';
 import { IN_APP, PRIVACY, TERMS } from '../siteContent';
 import { isPrivacyAccepted } from '../lib/privacyPolicyPrompt';
+import { isTermsAccepted } from '../lib/termsPolicyPrompt';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -465,11 +466,18 @@ export default function UserProfileView({
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-bold text-app uppercase tracking-wider">Privacy & legal</h3>
             <p className="text-xs text-muted mt-2 leading-relaxed">{PRIVACY.summary}</p>
-            <p className="text-[10px] text-subtle mt-2 font-semibold">
-              {isPrivacyAccepted(userProfile.uid)
-                ? `Privacy policy accepted (${PRIVACY.lastUpdated}).`
-                : 'Please review and accept the privacy policy to continue using the app.'}
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="text-[10px] text-subtle font-semibold">
+                {isPrivacyAccepted(userProfile.uid)
+                  ? `Privacy policy accepted (${PRIVACY.lastUpdated}).`
+                  : 'Privacy policy needs your review and acceptance.'}
+              </p>
+              <p className="text-[10px] text-subtle font-semibold">
+                {isTermsAccepted(userProfile.uid)
+                  ? `Terms of use accepted (${TERMS.lastUpdated}).`
+                  : 'Terms of use needs your review and acceptance.'}
+              </p>
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -501,7 +509,14 @@ export default function UserProfileView({
         />
       )}
 
-      {showTermsModal && <TermsOfUseModal onClose={() => setShowTermsModal(false)} />}
+      {showTermsModal && (
+        <TermsOfUseModal
+          userId={userProfile.uid}
+          required={!isTermsAccepted(userProfile.uid)}
+          onAccepted={() => setShowTermsModal(false)}
+          onClose={() => setShowTermsModal(false)}
+        />
+      )}
 
       {/* Modern PWA App Installation Widget */}
       <div
