@@ -5,12 +5,14 @@ import {
   Bookmark,
   ChevronDown,
   CircleDot,
+  Flame,
   Search as SearchIcon,
   MapPin,
   SlidersHorizontal,
   Tag,
   AlertCircle,
   ThumbsUp,
+  TrendingUp,
   X,
 } from 'lucide-react';
 import ItemCard from './ItemCard';
@@ -21,12 +23,19 @@ import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
 import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
+import {
+  compareFeedItems,
+  feedEngagementSlice,
+  isPrimaryFeedSort,
+  MORE_FEED_SORTS,
+  PRIMARY_FEED_SORTS,
+  type FeedSortMode,
+} from '../lib/feedSort';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
 type StatusFilter = 'all' | Exclude<PostStatus, 'withdrawn'>;
 type VoteFilter = 'all' | 'i_interested' | 'has_interest' | 'has_comments';
-type SortOption = 'newest' | 'oldest' | 'most_upvotes' | 'most_comments' | 'top_score';
 
 const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All statuses' },
@@ -43,10 +52,9 @@ const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
   { value: 'has_comments', label: 'Has comments' },
 ];
 
-type QuickPick = 'trending' | 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
+type QuickPick = 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
 
 const QUICK_PICKS: { id: QuickPick; label: string }[] = [
-  { id: 'trending', label: 'Trending' },
   { id: 'saved', label: 'Saved' },
   { id: 'my_neighborhood', label: 'My area' },
   { id: 'with_photos', label: 'With photos' },
@@ -58,13 +66,10 @@ function needsPickupListing(item: ItemPost): boolean {
   return /pickup|curb|porch/i.test(item.category);
 }
 
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'newest', label: 'Newest first' },
-  { value: 'oldest', label: 'Oldest first' },
-  { value: 'most_upvotes', label: 'Most interested (upvotes)' },
-  { value: 'most_comments', label: 'Most comments' },
-  { value: 'top_score', label: 'Highest score (upvotes − downvotes)' },
-];
+const PRIMARY_SORT_ICONS: Partial<Record<FeedSortMode, typeof Flame>> = {
+  hot: Flame,
+  top: TrendingUp,
+};
 
 function FilterSelect({
   id,
@@ -126,7 +131,7 @@ export default function ItemGrid({
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
   const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [sortBy, setSortBy] = useState<FeedSortMode>('new');
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
@@ -175,7 +180,7 @@ export default function ItemGrid({
   const hasRefineFilters =
     selectedStatus !== 'all' ||
     selectedVoteFilter !== 'all' ||
-    sortBy !== 'newest' ||
+    !isPrimaryFeedSort(sortBy) ||
     selectedCategory !== 'All Categories' ||
     selectedNeighborhood !== 'All Neighborhoods';
 
@@ -184,7 +189,7 @@ export default function ItemGrid({
     selectedNeighborhood !== 'All Neighborhoods',
     selectedStatus !== 'all',
     selectedVoteFilter !== 'all',
-    sortBy !== 'newest',
+    !isPrimaryFeedSort(sortBy),
   ].filter(Boolean).length;
 
   const hasExtraFilters =
@@ -200,7 +205,7 @@ export default function ItemGrid({
     setSelectedNeighborhood('All Neighborhoods');
     setSelectedStatus('all');
     setSelectedVoteFilter('all');
-    setSortBy('newest');
+    setSortBy('new');
     setActiveQuickPicks(new Set());
   };
 
@@ -229,29 +234,16 @@ export default function ItemGrid({
       }
       if (activeQuickPicks.has('with_photos') && extractListingImageUrls(item).length === 0) return false;
       if (activeQuickPicks.has('needs_pickup') && !needsPickupListing(item)) return false;
-      if (activeQuickPicks.has('trending') && votes.upvotes === 0) return false;
 
       return true;
     });
 
-    return [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'most_upvotes':
-          return getVotesForPost(b.id).upvotes - getVotesForPost(a.id).upvotes;
-        case 'most_comments':
-          return getCommentsForPost(b.id).length - getCommentsForPost(a.id).length;
-        case 'top_score': {
-          const scoreA = getVotesForPost(a.id).upvotes - getVotesForPost(a.id).downvotes;
-          const scoreB = getVotesForPost(b.id).upvotes - getVotesForPost(b.id).downvotes;
-          return scoreB - scoreA;
-        }
-        case 'newest':
-        default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-    });
+    const getEngagement = (itemId: string) => {
+      const votes = getVotesForPost(itemId);
+      return feedEngagementSlice(votes.upvotes, votes.downvotes, getCommentsForPost(itemId).length);
+    };
+
+    return [...filtered].sort((a, b) => compareFeedItems(a, b, sortBy, getEngagement));
   }, [
     items,
     searchTerm,
@@ -282,6 +274,36 @@ export default function ItemGrid({
             placeholder="Search listings…"
             className="sbn-input w-full"
           />
+        </div>
+
+        <div className="space-y-2" id="feed_sort_bar">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
+            <p className="text-[10px] text-subtle">
+              {PRIMARY_FEED_SORTS.find((option) => option.value === sortBy)?.hint ??
+                MORE_FEED_SORTS.find((option) => option.value === sortBy)?.label}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Sort feed">
+            {PRIMARY_FEED_SORTS.map(({ value, label }) => {
+              const Icon = PRIMARY_SORT_ICONS[value];
+              const active = sortBy === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  id={`feed_sort_${value}`}
+                  onClick={() => setSortBy(value)}
+                  className={`sbn-chip flex items-center gap-1.5 ${active ? 'sbn-chip-active' : ''}`}
+                >
+                  {Icon ? <Icon className="w-3.5 h-3.5" /> : null}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -446,16 +468,25 @@ export default function ItemGrid({
 
               <FilterSelect
                 id="filter_sort_select"
-                label="Sort results"
+                label="More sort options"
                 icon={ArrowDownUp}
                 value={sortBy}
-                onChange={(v) => setSortBy(v as SortOption)}
+                onChange={(v) => setSortBy(v as FeedSortMode)}
               >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
+                <optgroup label="Popular">
+                  {PRIMARY_FEED_SORTS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="More">
+                  {MORE_FEED_SORTS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
               </FilterSelect>
             </div>
           )}
