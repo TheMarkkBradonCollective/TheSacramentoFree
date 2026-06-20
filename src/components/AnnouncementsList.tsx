@@ -99,10 +99,13 @@ export default function AnnouncementsList({
         <ul className="space-y-3">
           {announcements.map((announcement) => {
             const expanded = expandedId === announcement.id;
-            const fullText = announcement.detail?.trim() || announcement.body;
+            const summary = announcement.body;
+            const fullStory = announcement.detail?.trim() || '';
+            const hasFullStory = Boolean(fullStory);
             const comments = getCommentsForAnnouncement(announcement.id);
             const editable = canEdit(announcement);
             const isOwnAnnouncement = signedIn && announcement.postedByUserId === userProfile?.uid;
+            const canExpand = hasFullStory || showComments;
 
             return (
               <li key={announcement.id}>
@@ -110,9 +113,13 @@ export default function AnnouncementsList({
                   <div className="flex items-start justify-between gap-2">
                     <button
                       type="button"
-                      onClick={() => setExpandedId(expanded ? null : announcement.id)}
-                      className="flex-1 text-left min-w-0"
-                      aria-expanded={expanded}
+                      onClick={() => {
+                        if (!canExpand) return;
+                        setExpandedId(expanded ? null : announcement.id);
+                      }}
+                      className={`flex-1 text-left min-w-0 ${canExpand ? '' : 'cursor-default'}`}
+                      aria-expanded={canExpand ? expanded : undefined}
+                      disabled={!canExpand}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -126,27 +133,38 @@ export default function AnnouncementsList({
                           <p className="mt-1 text-[11px] text-muted">
                             Posted by {announcement.authorName} · {announcement.authorTitle}
                           </p>
-                          <p
-                            className={`mt-2 text-sm text-muted leading-relaxed ${
-                              expanded ? 'whitespace-pre-wrap font-normal' : 'font-semibold line-clamp-2'
-                            }`}
-                          >
-                            {expanded ? fullText : announcement.body}
+                          <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap font-semibold">
+                            {summary}
                           </p>
+                          {expanded && hasFullStory ? (
+                            <p className="mt-3 text-sm text-muted leading-relaxed whitespace-pre-wrap font-normal border-t border-app pt-3">
+                              {fullStory}
+                            </p>
+                          ) : null}
                         </div>
-                        <span className="shrink-0 p-1 text-muted" aria-hidden>
-                          {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-semibold text-accent">
-                        <span>{expanded ? 'Tap to collapse' : 'Tap to read more'}</span>
-                        {showComments && comments.length > 0 && !expanded && (
-                          <span className="inline-flex items-center gap-1 text-muted">
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+                        {canExpand ? (
+                          <span className="shrink-0 p-1 text-muted" aria-hidden>
+                            {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                           </span>
-                        )}
+                        ) : null}
                       </div>
+                      {canExpand ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-semibold text-accent">
+                          <span>
+                            {expanded
+                              ? 'Tap to collapse'
+                              : hasFullStory
+                                ? 'Tap for full story'
+                                : 'Tap for comments'}
+                          </span>
+                          {showComments && comments.length > 0 && !expanded ? (
+                            <span className="inline-flex items-center gap-1 text-muted">
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </button>
 
                     {editable && (
