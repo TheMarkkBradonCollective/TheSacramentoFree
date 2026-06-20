@@ -50,6 +50,7 @@ import {
   Shield,
   LifeBuoy,
   Trash2,
+  Undo2,
 } from 'lucide-react';
 import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
@@ -125,12 +126,13 @@ export default function ChatSystem({
   const [isSending, setIsSending] = useState(false);
   const [isChatsLoading, setIsChatsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
   const userIsStaff = isStaffRole(userProfile.role);
   const { confirm } = useConfirm();
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!initialChatSupportView) return;
@@ -174,6 +176,11 @@ export default function ChatSystem({
   useEffect(() => {
     scrollToBottom();
   }, [messages, selectedChat]);
+
+  useEffect(() => {
+    setInputText('');
+    setErrorMsg('');
+  }, [selectedChat?.id]);
 
   useEffect(() => {
     let active = true;
@@ -459,19 +466,22 @@ export default function ChatSystem({
     setChats(visible);
   };
 
-  const handleDeleteMessage = async (message: Message) => {
-    if (!selectedChat || deletingMessageId) return;
+  const restoreUnsentMessageToInput = (text: string) => {
+    setInputText(text);
+    requestAnimationFrame(() => {
+      const input = messageInputRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(0, text.length);
+    });
+  };
+
+  const handleUnsendMessage = async (message: Message) => {
+    if (!selectedChat || unsendingMessageId) return;
+    if (message.senderId !== userProfile.uid) return;
     if (!canDeleteChatMessage(userProfile, message, selectedChat.id)) return;
 
-    const isOwn = message.senderId === userProfile.uid;
-    const confirmed = await confirm({
-      message: isOwn ? 'Remove your message?' : 'Remove this message from community chat?',
-      confirmLabel: 'Remove',
-      variant: 'danger',
-    });
-    if (!confirmed) return;
-
-    setDeletingMessageId(message.id);
+    setUnsendingMessageId(message.id);
     setErrorMsg('');
 
     const previousMessages = messages;
@@ -480,7 +490,43 @@ export default function ChatSystem({
     const result = await deleteSupabaseMessage(message.id, selectedChat.id, userProfile);
     if (!result.ok) {
       setMessages(previousMessages);
-      setErrorMsg(result.errorMessage || 'Could not delete message.');
+      setErrorMsg(result.errorMessage || 'Could not unsend message.');
+    } else {
+      restoreUnsentMessageToInput(message.text);
+      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+      const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
+      setChats(visible);
+      setSelectedChat((prev) => {
+        if (!prev) return prev;
+        return visible.find((c) => c.id === prev.id) ?? prev;
+      });
+    }
+
+    setUnsendingMessageId(null);
+  };
+
+  const handleRemoveMessage = async (message: Message) => {
+    if (!selectedChat || unsendingMessageId) return;
+    if (!canDeleteChatMessage(userProfile, message, selectedChat.id)) return;
+    if (message.senderId === userProfile.uid) return;
+
+    const confirmed = await confirm({
+      message: 'Remove this message from community chat?',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    setUnsendingMessageId(message.id);
+    setErrorMsg('');
+
+    const previousMessages = messages;
+    setMessages((prev) => prev.filter((m) => m.id !== message.id));
+
+    const result = await deleteSupabaseMessage(message.id, selectedChat.id, userProfile);
+    if (!result.ok) {
+      setMessages(previousMessages);
+      setErrorMsg(result.errorMessage || 'Could not remove message.');
     } else {
       const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
       const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
@@ -491,7 +537,7 @@ export default function ChatSystem({
       });
     }
 
-    setDeletingMessageId(null);
+    setUnsendingMessageId(null);
   };
 
   const sendChatText = async (text: string) => {
@@ -1307,7 +1353,9 @@ export default function ChatSystem({
                       const senderInfo = senderNames[msg.senderId];
                       const senderLabel = senderInfo?.displayName || 'Neighbor';
                       const canDelete = canDeleteChatMessage(userProfile, msg, selectedChat.id);
-                      const isDeleting = deletingMessageId === msg.id;
+                      const isUnsending = unsendingMessageId === msg.id;
+                      const showUnsend = isUser && canDelete;
+                      const showStaffRemove = !isUser && canDelete;
 
                       return (
                         <div
@@ -1331,18 +1379,26 @@ export default function ChatSystem({
                                 isUser ? 'justify-end' : 'justify-between'
                               }`}
                             >
-                              {canDelete && (
+                              {showUnsend && (
                                 <button
                                   type="button"
-                                  onClick={() => void handleDeleteMessage(msg)}
-                                  disabled={isDeleting}
-                                  className={`p-1 rounded-full shrink-0 disabled:opacity-50 ${
-                                    isUser
-                                      ? 'text-white/75 hover:text-white hover:bg-white/15'
-                                      : 'text-subtle hover:text-red-400 hover:bg-red-500/10'
-                                  }`}
-                                  title={isUser ? 'Remove your message' : 'Remove message'}
-                                  aria-label={isUser ? 'Remove your message' : 'Remove message'}
+                                  onClick={() => void handleUnsendMessage(msg)}
+                                  disabled={isUnsending}
+                                  className="p-1 rounded-full shrink-0 disabled:opacity-50 text-white/75 hover:text-white hover:bg-white/15"
+                                  title="Unsend and edit"
+                                  aria-label="Unsend and edit"
+                                >
+                                  <Undo2 className="w-3 h-3" />
+                                </button>
+                              )}
+                              {showStaffRemove && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleRemoveMessage(msg)}
+                                  disabled={isUnsending}
+                                  className="p-1 rounded-full shrink-0 disabled:opacity-50 text-subtle hover:text-red-400 hover:bg-red-500/10"
+                                  title="Remove message"
+                                  aria-label="Remove message"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </button>
@@ -1451,6 +1507,7 @@ export default function ChatSystem({
                     <input
                       type="text"
                       id="message_input_box"
+                      ref={messageInputRef}
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       onFocus={scrollToBottom}
