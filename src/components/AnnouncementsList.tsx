@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, MessageSquare, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { HelpAnnouncementInput, HelpAnnouncementRecord, UserProfile } from '../types';
 import { useHelpAnnouncements } from '../hooks/useHelpAnnouncements';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
@@ -99,7 +99,9 @@ export default function AnnouncementsList({
         <ul className="space-y-3">
           {announcements.map((announcement) => {
             const expanded = expandedId === announcement.id;
-            const fullText = announcement.detail?.trim() || announcement.body;
+            const summary = announcement.body;
+            const fullStory = announcement.detail?.trim() || '';
+            const hasFullStory = Boolean(fullStory);
             const comments = getCommentsForAnnouncement(announcement.id);
             const editable = canEdit(announcement);
             const isOwnAnnouncement = signedIn && announcement.postedByUserId === userProfile?.uid;
@@ -108,46 +110,48 @@ export default function AnnouncementsList({
               <li key={announcement.id}>
                 <PublicCard>
                   <div className="flex items-start justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(expanded ? null : announcement.id)}
-                      className="flex-1 text-left min-w-0"
-                      aria-expanded={expanded}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <time
-                            dateTime={announcement.date}
-                            className="text-xs font-bold text-accent uppercase tracking-wider"
+                    <div className="flex-1 text-left min-w-0">
+                      <time
+                        dateTime={announcement.date}
+                        className="text-xs font-bold text-accent uppercase tracking-wider"
+                      >
+                        {formatAnnouncementDate(announcement.date)}
+                      </time>
+                      <h2 className="mt-1 text-base font-black text-app">{announcement.title}</h2>
+                      <p className="mt-1 text-[11px] text-muted">
+                        Posted by {announcement.authorName} · {announcement.authorTitle}
+                      </p>
+                      <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap font-semibold">
+                        {summary}
+                      </p>
+                      {hasFullStory ? (
+                        <>
+                          {expanded ? (
+                            <p className="mt-3 text-sm text-muted leading-relaxed whitespace-pre-wrap font-normal border-t border-app pt-3">
+                              {fullStory}
+                            </p>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedId(expanded ? null : announcement.id)}
+                            className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent"
+                            aria-expanded={expanded}
                           >
-                            {formatAnnouncementDate(announcement.date)}
-                          </time>
-                          <h2 className="mt-1 text-base font-black text-app">{announcement.title}</h2>
-                          <p className="mt-1 text-[11px] text-muted">
-                            Posted by {announcement.authorName} · {announcement.authorTitle}
-                          </p>
-                          <p
-                            className={`mt-2 text-sm text-muted leading-relaxed ${
-                              expanded ? 'whitespace-pre-wrap font-normal' : 'font-semibold line-clamp-2'
-                            }`}
-                          >
-                            {expanded ? fullText : announcement.body}
-                          </p>
-                        </div>
-                        <span className="shrink-0 p-1 text-muted" aria-hidden>
-                          {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-semibold text-accent">
-                        <span>{expanded ? 'Tap to collapse' : 'Tap to read more'}</span>
-                        {showComments && comments.length > 0 && !expanded && (
-                          <span className="inline-flex items-center gap-1 text-muted">
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
-                          </span>
-                        )}
-                      </div>
-                    </button>
+                            {expanded ? (
+                              <>
+                                <ChevronUp className="w-4 h-4" aria-hidden />
+                                Tap to collapse full story
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-4 h-4" aria-hidden />
+                                Tap for full story
+                              </>
+                            )}
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
 
                     {editable && (
                       <div className="flex flex-col gap-1 shrink-0">
@@ -196,7 +200,7 @@ export default function AnnouncementsList({
                     />
                   )}
 
-                  {showComments && expanded && (
+                  {showComments && (
                     <AnnouncementComments
                       announcementId={announcement.id}
                       postedByUserId={announcement.postedByUserId}
