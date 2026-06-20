@@ -746,7 +746,7 @@ export default function ChatSystem({
             {
               channelName: `chat-sidebar-staff-ticket-msgs-${userProfile.uid}`,
               table: 'support_ticket_messages',
-              event: 'INSERT',
+              event: '*',
             },
             refresh,
           ),
@@ -765,7 +765,7 @@ export default function ChatSystem({
             {
               channelName: `chat-sidebar-support-msgs-${userProfile.uid}`,
               table: 'support_ticket_messages',
-              event: 'INSERT',
+              event: '*',
             },
             refresh,
           ),

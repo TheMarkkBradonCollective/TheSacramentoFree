@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Undo2 } from 'lucide-react';
 import { UserProfile, SupportTicket, SupportTicketMessage } from '../types';
 import {
   addSupportTicketMessage,
   closeSupportTicket,
   deleteSupportTicket,
+  deleteSupportTicketMessage,
   getSupportTicketMessages,
 } from '../supabase';
-import { canDeleteSupportTicket, canViewerAccessTicket } from '../lib/roles';
+import { canDeleteSupportTicket, canUnsendSupportTicketMessage, canViewerAccessTicket } from '../lib/roles';
 import RoleBadge from './RoleBadge';
 import ListingImage from './ListingImage';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
@@ -39,8 +41,10 @@ export default function SupportTicketThread({
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const replyRef = useRef<HTMLTextAreaElement>(null);
   const { confirm } = useConfirm();
 
   const canAccess = canViewerAccessTicket(viewer, ticket);
@@ -66,14 +70,19 @@ export default function SupportTicketThread({
       {
         channelName: `live-ticket-msgs-${ticket.id}`,
         table: 'support_ticket_messages',
-        event: 'INSERT',
+        event: '*',
         filter: `ticketId=eq.${ticket.id}`,
       },
       (payload) => {
-        const row = payload.new;
-        if (!row?.id) return;
-        if (String(row.senderUserId) === viewer.uid) return;
+        if (payload.eventType === 'INSERT') {
+          const row = payload.new;
+          if (!row?.id) return;
+          if (String(row.senderUserId) === viewer.uid) return;
+        }
         void reload();
+        if (payload.eventType === 'DELETE') {
+          refreshTicket();
+        }
       },
     );
 
@@ -96,6 +105,44 @@ export default function SupportTicketThread({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
+
+  const restoreUnsentMessageToInput = (text: string) => {
+    const restored = text === '📷 Photo' ? '' : text;
+    setReply(restored);
+    requestAnimationFrame(() => {
+      const input = replyRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(0, restored.length);
+    });
+  };
+
+  const handleUnsendMessage = async (message: SupportTicketMessage) => {
+    if (!isOpen || unsendingMessageId) return;
+    if (!canUnsendSupportTicketMessage(viewer, message)) return;
+
+    setUnsendingMessageId(message.id);
+    setErr('');
+
+    const previousMessages = messages;
+    setMessages((prev) => prev.filter((m) => m.id !== message.id));
+
+    const result = await deleteSupportTicketMessage({
+      messageId: message.id,
+      ticketId: ticket.id,
+      actor: viewer,
+    });
+
+    if (!result.ok) {
+      setMessages(previousMessages);
+      setErr(result.errorMessage || 'Could not unsend message.');
+    } else {
+      restoreUnsentMessageToInput(message.text);
+      onUpdated?.();
+    }
+
+    setUnsendingMessageId(null);
+  };
 
   const handleSend = async () => {
     const text = reply.trim();
@@ -193,6 +240,8 @@ export default function SupportTicketThread({
           messages.map((msg) => {
             const isMine = msg.senderUserId === viewer.uid;
             const showText = msg.text && msg.text !== '📷 Photo';
+            const showUnsend = isOpen && isMine && canUnsendSupportTicketMessage(viewer, msg);
+            const isUnsending = unsendingMessageId === msg.id;
             return (
               <div
                 key={msg.id}
@@ -228,9 +277,27 @@ export default function SupportTicketThread({
                   {showText && (
                     <p className="leading-snug whitespace-pre-wrap">{msg.text}</p>
                   )}
-                  <p className={`text-[9px] mt-1 ${isMine ? 'text-white/70' : 'text-muted'}`}>
-                    {new Date(msg.createdAt).toLocaleString()}
-                  </p>
+                  <div
+                    className={`flex items-center gap-1 mt-1 ${
+                      isMine ? 'justify-end' : 'justify-between'
+                    }`}
+                  >
+                    {showUnsend && (
+                      <button
+                        type="button"
+                        onClick={() => void handleUnsendMessage(msg)}
+                        disabled={isUnsending}
+                        className="p-1 rounded-full shrink-0 disabled:opacity-50 text-white/75 hover:text-white hover:bg-white/15"
+                        title="Unsend and edit"
+                        aria-label="Unsend and edit"
+                      >
+                        <Undo2 className="w-3 h-3" />
+                      </button>
+                    )}
+                    <p className={`text-[9px] ${isMine ? 'text-white/70' : 'text-muted'}`}>
+                      {new Date(msg.createdAt).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               </div>
             );
@@ -242,6 +309,7 @@ export default function SupportTicketThread({
       {isOpen ? (
         <div className="shrink-0 p-4 border-t border-app bg-surface space-y-2 sbn-input-tray">
           <textarea
+            ref={replyRef}
             className="sbn-input text-sm min-h-[4rem] resize-none"
             placeholder="Write a reply…"
             value={reply}

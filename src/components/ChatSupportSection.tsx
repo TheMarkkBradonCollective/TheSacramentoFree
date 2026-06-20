@@ -117,7 +117,7 @@ export default function ChatSupportSection({
             {
               channelName: `live-chat-staff-ticket-msgs-${user.uid}`,
               table: 'support_ticket_messages',
-              event: 'INSERT',
+              event: '*',
             },
             refresh,
           ),
@@ -136,7 +136,7 @@ export default function ChatSupportSection({
             {
               channelName: `live-chat-support-msgs-${user.uid}`,
               table: 'support_ticket_messages',
-              event: 'INSERT',
+              event: '*',
             },
             refresh,
           ),
