@@ -11,6 +11,7 @@ import {
 import { canDeleteSupportTicket, canUnsendSupportTicketMessage, canViewerAccessTicket } from '../lib/roles';
 import RoleBadge from './RoleBadge';
 import ListingImage from './ListingImage';
+import { safeHttpUrl } from '../lib/safeUrl';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
@@ -260,19 +261,36 @@ export default function SupportTicketThread({
                     </p>
                   )}
                   {msg.imageUrl && (
-                    <a
-                      href={msg.imageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`block rounded-lg overflow-hidden mb-1.5 ${isMine ? 'ring-1 ring-white/20' : 'border border-app'}`}
-                    >
-                      <ListingImage
-                        src={msg.imageUrl}
-                        alt="Attached photo"
-                        width={320}
-                        className="w-full max-h-52 object-contain bg-black/10"
-                      />
-                    </a>
+                    (() => {
+                      const safeHref = safeHttpUrl(msg.imageUrl);
+                      const image = (
+                        <ListingImage
+                          src={msg.imageUrl}
+                          alt="Attached photo"
+                          width={320}
+                          className="w-full max-h-52 object-contain bg-black/10"
+                        />
+                      );
+                      if (!safeHref) {
+                        return (
+                          <div
+                            className={`block rounded-lg overflow-hidden mb-1.5 ${isMine ? 'ring-1 ring-white/20' : 'border border-app'}`}
+                          >
+                            {image}
+                          </div>
+                        );
+                      }
+                      return (
+                        <a
+                          href={safeHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`block rounded-lg overflow-hidden mb-1.5 ${isMine ? 'ring-1 ring-white/20' : 'border border-app'}`}
+                        >
+                          {image}
+                        </a>
+                      );
+                    })()
                   )}
                   {showText && (
                     <p className="leading-snug whitespace-pre-wrap">{msg.text}</p>

@@ -24,7 +24,7 @@ export default function ChatFeedbackSection({
 }: ChatFeedbackSectionProps) {
   const [panel, setPanel] = useState<ChatFeedbackPanel>(null);
   const canStaffReports = canViewStaffReports(userProfile.role);
-  const { reports } = useStaffUserReports(canStaffReports);
+  const { reports } = useStaffUserReports(canStaffReports, userProfile);
 
   const newReportCount = reports.filter((report) => report.status === 'new').length;
 
@@ -102,7 +102,9 @@ export default function ChatFeedbackSection({
         <SendUserReportPanel user={userProfile} onClose={closePanel} />
       ) : null}
 
-      {panel === 'staffReports' ? <StaffUserReportsPanel onClose={closePanel} /> : null}
+      {panel === 'staffReports' ? (
+        <StaffUserReportsPanel onClose={closePanel} viewer={userProfile} />
+      ) : null}
     </>
   );
 }

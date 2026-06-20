@@ -5,6 +5,12 @@ const ITEMS_KEY = 'sbn_items_cache_v1';
 
 type ItemsCache = { savedAt: number; items: ItemPost[] };
 
+/** Fields safe to cache offline — never store role, email, or moderation state. */
+type CachedProfile = Pick<
+  UserProfile,
+  'uid' | 'displayName' | 'photoURL' | 'neighborhood' | 'bio' | 'createdAt'
+>;
+
 function safeParse<T>(raw: string | null): T | null {
   if (!raw) return null;
   try {
@@ -14,15 +20,35 @@ function safeParse<T>(raw: string | null): T | null {
   }
 }
 
+function toCachedProfile(profile: UserProfile): CachedProfile {
+  return {
+    uid: profile.uid,
+    displayName: profile.displayName,
+    photoURL: profile.photoURL,
+    neighborhood: profile.neighborhood,
+    bio: profile.bio,
+    createdAt: profile.createdAt,
+  };
+}
+
+function fromCachedProfile(cached: CachedProfile): UserProfile {
+  return {
+    ...cached,
+    email: '',
+    role: 'user',
+    accountStatus: 'active',
+  };
+}
+
 export function readCachedProfile(): UserProfile | null {
   if (typeof window === 'undefined') return null;
-  const profile = safeParse<UserProfile>(localStorage.getItem(PROFILE_KEY));
-  return profile?.uid ? profile : null;
+  const profile = safeParse<CachedProfile>(localStorage.getItem(PROFILE_KEY));
+  return profile?.uid ? fromCachedProfile(profile) : null;
 }
 
 export function writeCachedProfile(profile: UserProfile): void {
   try {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(toCachedProfile(profile)));
   } catch {
     /* storage full — ignore */
   }

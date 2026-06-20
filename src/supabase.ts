@@ -18,13 +18,22 @@ const metaEnv = (import.meta as any).env || {};
 const supabaseUrl =
   metaEnv.VITE_SUPABASE_URL ||
   metaEnv.NEXT_PUBLIC_SUPABASE_URL ||
-  'https://nezmabanjoqdzikliysd.supabase.co';
+  '';
 const supabaseKey =
   metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY ||
   metaEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  'sb_publishable_TmJr2L0c5ZbR7GSiFztjKQ_MHyiBfPe';
+  '';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+if (!supabaseUrl || !supabaseKey) {
+  console.error(
+    '[supabase] Missing VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY. Set them in your environment before building.',
+  );
+}
+
+export const supabase = createClient(
+  supabaseUrl || 'https://invalid.supabase.co',
+  supabaseKey || 'invalid-key',
+);
 
 import {
   GLOBAL_COMMUNITY_CHAT_ID,
@@ -464,8 +473,12 @@ export function profileFromAuthUser(user: {
 
 export async function getSupabaseProfile(uid: string): Promise<UserProfile | null> {
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentUid = sessionData.session?.user?.id || '';
+    const table = currentUid && currentUid === uid ? 'users' : 'users_public';
+
     const { data, error } = await supabase
-      .from('users')
+      .from(table)
       .select('*')
       .eq('uid', uid)
       .maybeSingle();
@@ -629,7 +642,6 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
-      role: profile.role || 'user',
       createdAt: coerceToIsoDate(profile.createdAt),
     };
 
@@ -1372,22 +1384,31 @@ export interface CommunityStats {
   requestsFulfilled: number;
 }
 
-/** Director-only: update another user's role. */
+/** Director-only: update another user's role (enforced by set_user_role RPC + RLS). */
 export async function setUserRole(
   uid: string,
   role: UserRole,
   context?: { actorUserId: string; actorName: string; targetName: string; previousRole?: UserRole },
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
+    if (!context?.actorUserId) {
+      return { ok: false, errorMessage: 'Actor context is required.' };
+    }
+
+    const actorProfile = await getSupabaseProfile(context.actorUserId);
+    if (!actorProfile || !isDirectorRole(actorProfile.role)) {
+      return { ok: false, errorMessage: 'Director access required.' };
+    }
+
     const slotCheck = await assertStaffRoleSlotAvailable(uid, role);
     if (!slotCheck.ok) {
       return { ok: false, errorMessage: slotCheck.errorMessage };
     }
 
-    const { error } = await supabase
-      .from('users')
-      .update({ role })
-      .eq('uid', uid);
+    const { error } = await supabase.rpc('set_user_role', {
+      target_uid: uid,
+      new_role: role,
+    });
 
     if (error) {
       handleSupabaseError(error, 'users');
@@ -4738,8 +4759,13 @@ export async function getStaffUserReports(limit = 100): Promise<UserReport[]> {
 
 export async function markUserReportReviewed(
   reportId: string,
+  actor?: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
+    if (!actor || !isStaffRole(actor.role)) {
+      return { ok: false, errorMessage: 'Staff access required.' };
+    }
+
     const { error } = await supabase
       .from('user_reports')
       .update({ status: 'reviewed' })

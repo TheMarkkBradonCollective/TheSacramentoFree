@@ -1,3 +1,4 @@
+import { assertStaffOrDirectorForPush, clampPushText, validateClientPush } from './clientPushAuth';
 import { getServiceRoleKey, getSupabaseAdmin } from './supabaseAdmin';
 import {
   getPreferencesForUsers,
@@ -7,7 +8,13 @@ import {
   type PushPayload,
 } from './pushDelivery';
 import { isDirectorAccount } from './directorIdentity';
+import { sanitizePushUrl } from './pushUrl';
 import { getUserRole, isStaffRole, normalizeUserRole, roleRank } from './staffRoles';
+
+export interface PushSendOptions {
+  /** When false (public /api/push/send), recipients are validated server-side. Default true. */
+  trusted?: boolean;
+}
 
 export interface PushSendBody {
   eventType: PushEventType;
@@ -211,60 +218,68 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
 export async function runPushSend(
   callerId: string,
   body: PushSendBody,
+  options: PushSendOptions = {},
 ): Promise<{ status: number; body: Record<string, unknown> }> {
+  const trusted = options.trusted !== false;
+
   if (!getServiceRoleKey()) {
     return {
       status: 503,
       body: {
-        error:
-          'Push delivery requires SUPABASE_SERVICE_ROLE_KEY on the server. Add it in Vercel environment variables and redeploy.',
+        error: 'Push delivery is temporarily unavailable.',
         sent: 0,
         recipients: 0,
       },
     };
   }
 
-  if (!body?.eventType || !body?.title || !body?.body || !body?.url) {
+  if (!body?.eventType || !body?.title || !body?.body || body?.url === undefined) {
     return { status: 400, body: { error: 'eventType, title, body, and url are required' } };
   }
 
-  const authError = await validateCallerForPush(callerId, body);
-  if (authError) {
-    return { status: 403, body: { error: authError } };
-  }
+  const safeBody = clampPushText({
+    ...body,
+    url: sanitizePushUrl(body.url),
+  });
 
-  if (body.eventType === 'announcement') {
-    const role = await getUserRole(callerId);
-    if (!isStaffRole(role)) {
-      return { status: 403, body: { error: 'Staff access required for announcements' } };
+  if (!trusted) {
+    const clientCheck = await validateClientPush(callerId, safeBody);
+    if (!clientCheck.ok) {
+      return { status: 403, body: { error: clientCheck.error } };
+    }
+    if (clientCheck.recipientUserIds?.length) {
+      safeBody.recipientUserIds = clientCheck.recipientUserIds;
+    }
+  } else {
+    const authError = await validateCallerForPush(callerId, safeBody);
+    if (authError) {
+      return { status: 403, body: { error: authError } };
+    }
+
+    const staffError = await assertStaffOrDirectorForPush(callerId, safeBody.eventType);
+    if (staffError) {
+      return { status: 403, body: { error: staffError } };
     }
   }
 
-  if (body.eventType === 'app_update') {
-    const role = await getUserRole(callerId);
-    if (normalizeUserRole(role) !== 'director') {
-      return { status: 403, body: { error: 'Director access required for app updates' } };
-    }
-  }
-
-  const recipients = await resolveRecipients(body, callerId);
-  const explicitRecipients = body.recipientUserIds?.filter(Boolean) || [];
+  const recipients = await resolveRecipients(safeBody, callerId);
+  const explicitRecipients = safeBody.recipientUserIds?.filter(Boolean) || [];
   const excludeIds =
     explicitRecipients.length > 0
-      ? body.excludeUserIds || []
-      : [callerId, ...(body.excludeUserIds || [])];
+      ? safeBody.excludeUserIds || []
+      : [callerId, ...(safeBody.excludeUserIds || [])];
 
   const payload: PushPayload = {
-    title: body.title,
-    body: body.body,
-    url: body.url,
-    tag: body.tag,
-    eventType: body.eventType,
+    title: safeBody.title,
+    body: safeBody.body,
+    url: safeBody.url,
+    tag: safeBody.tag,
+    eventType: safeBody.eventType,
     data: {
-      listingId: body.listingId || '',
-      conversationId: body.conversationId || '',
-      requestId: body.requestId || '',
-      ...(body.data || {}),
+      listingId: safeBody.listingId || '',
+      conversationId: safeBody.conversationId || '',
+      requestId: safeBody.requestId || '',
+      ...(safeBody.data || {}),
     },
   };
 

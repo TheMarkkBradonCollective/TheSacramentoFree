@@ -15,12 +15,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const body = parseJsonBody(req);
-    const result = await runPushSend(user.id, body);
+    const result = await runPushSend(user.id, body, { trusted: false });
     return res.status(result.status).json(result.body);
   } catch (err) {
     console.error('[api/push/send]', err);
     return res.status(500).json({
-      error: err instanceof Error ? err.message : 'Push send failed on the server.',
+      error: 'Push send failed on the server.',
     });
   }
 }

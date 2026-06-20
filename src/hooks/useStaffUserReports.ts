@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { UserReport } from '../types';
+import type { UserProfile, UserReport } from '../types';
 import { getStaffUserReports, markUserReportReviewed } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
-export function useStaffUserReports(enabled: boolean) {
+export function useStaffUserReports(enabled: boolean, actor?: UserProfile | null) {
   const [reports, setReports] = useState<UserReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -37,7 +37,7 @@ export function useStaffUserReports(enabled: boolean) {
 
   const markReviewed = async (reportId: string) => {
     setErrorMessage('');
-    const result = await markUserReportReviewed(reportId);
+    const result = await markUserReportReviewed(reportId, actor || undefined);
     if (result.ok) {
       await reload();
     } else {

@@ -827,6 +827,10 @@ BEGIN
 END;
 $purge$;
 
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM authenticated;
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM anon;
+
 CREATE OR REPLACE FUNCTION public.delete_own_account()
 RETURNS void
 LANGUAGE plpgsql

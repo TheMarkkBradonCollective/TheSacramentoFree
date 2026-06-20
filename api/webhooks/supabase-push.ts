@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { secureCompare } from '../push/_server/secureSecrets';
 
 function getWebhookSecret(): string {
   return (
@@ -15,27 +16,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { getServiceRoleKey, parseJsonBody, runSupabasePushWebhook } = await import(
-      '../../push-server.bundle.cjs'
-    );
+    const { parseJsonBody, runSupabasePushWebhook } = await import('../../push-server.bundle.cjs');
 
-    const serviceRoleKey = getServiceRoleKey();
-    if (!serviceRoleKey) {
+    const dedicatedSecret = getWebhookSecret();
+    if (!dedicatedSecret) {
       return res.status(503).json({
-        error: 'SUPABASE_SERVICE_ROLE_KEY is required for webhook push delivery.',
+        error: 'SUPABASE_PUSH_WEBHOOK_SECRET is required for webhook push delivery.',
       });
     }
 
-    const dedicatedSecret = getWebhookSecret();
     const authHeader = String(req.headers.authorization || '');
     const headerSecret = String(req.headers['x-webhook-secret'] || '');
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : headerSecret;
 
-    const authorized =
-      Boolean(token) &&
-      (token === dedicatedSecret || (!dedicatedSecret && token === serviceRoleKey) || token === serviceRoleKey);
-
-    if (!authorized) {
+    if (!token || !secureCompare(token, dedicatedSecret)) {
       return res.status(401).json({ error: 'Invalid webhook authorization' });
     }
 
@@ -45,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     console.error('[api/webhooks/supabase-push]', err);
     return res.status(500).json({
-      error: err instanceof Error ? err.message : 'Webhook push dispatch failed.',
+      error: 'Webhook push dispatch failed.',
     });
   }
 }
