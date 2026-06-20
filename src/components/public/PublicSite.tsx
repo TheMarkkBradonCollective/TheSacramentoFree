@@ -11,6 +11,7 @@ import CommunityPage from './pages/CommunityPage';
 import UpdatesPage from './pages/UpdatesPage';
 import ReviewsPage from './pages/ReviewsPage';
 import GoFundMePage from './pages/GoFundMePage';
+import PrivacyPage from './pages/PrivacyPage';
 import AuthPage from './AuthPage';
 import { ItemPost } from '../../types';
 
@@ -67,6 +68,8 @@ export default function PublicSite({
         return <ReviewsPage onRequireSignIn={onRequireSignIn} />;
       case 'gofundme':
         return <GoFundMePage />;
+      case 'privacy':
+        return <PrivacyPage />;
       case 'login':
         return (
           <AuthPage

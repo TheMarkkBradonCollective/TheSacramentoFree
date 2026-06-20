@@ -226,6 +226,71 @@ export const IN_APP = {
   shareOrRequest: 'Share or Request'
 } as const;
 
+export const PRIVACY = {
+  title: 'Privacy & data',
+  shortTitle: 'Privacy policy',
+  lastUpdated: 'June 2025',
+  summary:
+    'Sacramento Buy Nothing is a community app run by volunteers. We do not sell your information. Your account data is stored by Supabase — not on this website’s own servers.',
+  sections: [
+    {
+      heading: 'Who runs this app',
+      body:
+        'Sacramento Buy Nothing is operated by community volunteers to help neighbors give freely and connect locally. This is not a commercial marketplace — there are no ads, no paywalls, and no selling of your personal information.',
+    },
+    {
+      heading: 'Where your data is stored',
+      body:
+        'We do not host the database ourselves. Your profile, listings, messages, events, reviews, and sign-in credentials are stored in a Supabase-hosted PostgreSQL database (Supabase Inc.). Supabase provides authentication, data storage, file storage for photos, and live updates. The website you see is hosted separately (Vercel), but your community data lives in Supabase’s secure infrastructure.',
+    },
+    {
+      heading: 'What we collect',
+      bullets: [
+        'Account info: email, display name, neighborhood, bio, and profile photo you choose to upload.',
+        'Community content: posts, comments, messages, events, reviews, and reports you submit.',
+        'Optional location: approximate or exact pickup coordinates only when you choose to share them on a listing.',
+        'Device preferences: theme choice, saved items, and notification settings stored on your device or in your account.',
+        'Push notification tokens: only if you turn on alerts, so we can send community notifications you asked for.',
+      ],
+    },
+    {
+      heading: 'What we do not do',
+      bullets: [
+        'We do not sell, rent, or trade your personal information.',
+        'We do not run ads or track you across other websites.',
+        'We do not share your data with marketers.',
+        'Staff only access reports and account data when needed for safety, moderation, or support.',
+      ],
+    },
+    {
+      heading: 'Keeping you safe',
+      bullets: [
+        'You can block neighbors and report unsafe behavior to staff.',
+        'Listings can hide your exact address until you choose to show it.',
+        'Suspended or banned accounts cannot use the app until staff review is complete.',
+        'You can delete your account at any time from Account settings — this removes your profile and community content.',
+      ],
+    },
+    {
+      heading: 'Third-party services',
+      body:
+        'Besides Supabase (data & auth), the app uses Vercel (website hosting) and optional web-push services for notifications you enable. Each provider processes data only to run the service. See Supabase’s privacy policy at supabase.com/privacy for how they handle infrastructure data.',
+    },
+    {
+      heading: 'Your choices',
+      bullets: [
+        'Update your profile anytime in Account settings.',
+        'Turn push notifications on or off in the bell menu.',
+        'Delete your account permanently from Account → Delete account.',
+        'Contact staff through Chat → Support with any privacy question.',
+      ],
+    },
+  ],
+  acceptLabel: 'I have read and understand this privacy policy',
+  acceptButton: 'Accept & continue',
+  viewAgainNote: 'You can read this policy anytime from the home page or your Account tab.',
+} as const;
+
 export const AWARDS = {
   panelTitle: 'Neighbor Awards',
   panelSubtitle: 'Badges and streaks for generous neighbors — coming soon',

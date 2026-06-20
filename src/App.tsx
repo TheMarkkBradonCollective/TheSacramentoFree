@@ -55,6 +55,8 @@ import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 import PushNotificationCelebration from './components/PushNotificationCelebration';
+import PrivacyPolicyModal from './components/PrivacyPolicyModal';
+import { isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
 import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
 
@@ -116,6 +118,7 @@ export default function App() {
   const [showPostEventModal, setShowPostEventModal] = useState(false);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
   const [showAwardsPanel, setShowAwardsPanel] = useState(false);
+  const [privacyGateOpen, setPrivacyGateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
@@ -138,6 +141,15 @@ export default function App() {
     setActiveTab('map');
     persistActiveTab('map');
   }, []);
+
+  useEffect(() => {
+    if (sessionUser?.id) {
+      setPrivacyGateOpen(!isPrivacyAccepted(sessionUser.id));
+    } else {
+      setPrivacyGateOpen(false);
+    }
+  }, [sessionUser?.id]);
+
   const visibleItems = useMemo(
     () => items.filter((item) => !blockedUserIds.has(item.userId)),
     [items, blockedUserIds],
@@ -1318,6 +1330,14 @@ export default function App() {
             </div>
           )}
         </div>
+      )}
+
+      {sessionUser && privacyGateOpen && (
+        <PrivacyPolicyModal
+          required
+          userId={sessionUser.id}
+          onAccepted={() => setPrivacyGateOpen(false)}
+        />
       )}
     </div>
   );

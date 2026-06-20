@@ -18,20 +18,31 @@ export default function GoFundMeFooter({ className = '', onOpenDetails }: GoFund
 
   return (
     <footer className={className}>
-      <button
-        type="button"
-        onClick={openDetails}
-        className="w-full border-t border-app bg-inset px-4 py-4 text-center space-y-2.5 hover:bg-inset/80 transition-colors"
-      >
-        <p className="text-[10px] text-muted leading-relaxed max-w-sm mx-auto">{SUPPORT.gofundmeBlurb}</p>
-        <p className="text-[10px] text-subtle leading-relaxed max-w-sm mx-auto">{SUPPORT.gofundmeCostsSummary}</p>
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent">
-          Tap for full details
-          <ChevronRight className="w-3 h-3" aria-hidden />
-        </span>
+      <div className="w-full border-t border-app bg-inset px-4 py-4 text-center space-y-2.5">
+        <button
+          type="button"
+          onClick={openDetails}
+          className="w-full hover:opacity-90 transition-opacity space-y-2.5"
+        >
+          <p className="text-[10px] text-muted leading-relaxed max-w-sm mx-auto">{SUPPORT.gofundmeBlurb}</p>
+          <p className="text-[10px] text-subtle leading-relaxed max-w-sm mx-auto">{SUPPORT.gofundmeCostsSummary}</p>
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent">
+            Tap for full details
+            <ChevronRight className="w-3 h-3" aria-hidden />
+          </span>
+        </button>
         <p className="text-[10px] font-bold text-muted uppercase tracking-wider pt-1">{SITE.name}</p>
         <p className="text-[10px] text-subtle">{SITE.tagline}</p>
-      </button>
+        <button
+          type="button"
+          onClick={() => {
+            window.location.hash = '#/privacy';
+          }}
+          className="text-[10px] font-semibold text-accent hover:underline"
+        >
+          Privacy & data policy
+        </button>
+      </div>
     </footer>
   );
 }

@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { AlertCircle, Info, Lock, Mail, User } from 'lucide-react';
+import { AlertCircle, Info, Lock, Mail, Shield, User } from 'lucide-react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../../types';
-import { RULES, SITE } from '../../siteContent';
+import { PRIVACY, RULES, SITE } from '../../siteContent';
+import { publicRouteHref } from '../../public/routes';
 import PublicPageShell from './PublicPageShell';
 
 interface AuthPageProps {
@@ -29,6 +30,7 @@ export default function AuthPage({
   const [displayName, setDisplayName] = useState('');
   const [neighborhood, setNeighborhood] = useState('Midtown');
   const [bio, setBio] = useState('');
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState('');
 
@@ -62,6 +64,10 @@ export default function AuthPage({
     }
     if (password.length < 6) {
       setLocalError('Password must be at least 6 characters.');
+      return;
+    }
+    if (!privacyAccepted) {
+      setLocalError('Please read and accept the privacy policy to join.');
       return;
     }
     setLocalLoading(true);
@@ -222,6 +228,21 @@ export default function AuthPage({
                 className="w-full px-3 py-2.5 h-20 resize-none bg-inset border border-app rounded-xl text-sm text-app"
                 placeholder="Tell neighbors a little about yourself"
               />
+              <label className="flex items-start gap-3 p-3 rounded-xl bg-inset border border-app cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-app accent-[#FF4500]"
+                />
+                <span className="text-[11px] text-muted font-semibold leading-relaxed">
+                  I have read the{' '}
+                  <a href={publicRouteHref('privacy')} className="text-accent font-bold hover:underline">
+                    privacy policy
+                  </a>{' '}
+                  and understand my data is stored by Supabase, not sold, and used only to run this community.
+                </span>
+              </label>
               <button
                 type="submit"
                 disabled={busy}
@@ -236,6 +257,14 @@ export default function AuthPage({
             <Info className="w-4 h-4 mt-0.5 shrink-0 text-accent" />
             <span>{RULES.postReminder}</span>
           </div>
+
+          <a
+            href={publicRouteHref('privacy')}
+            className="flex items-center justify-center gap-2 text-[11px] font-semibold text-accent hover:underline"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            Read our privacy & data policy
+          </a>
         </div>
       </div>
     </PublicPageShell>
