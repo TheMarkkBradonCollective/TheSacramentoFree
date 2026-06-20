@@ -23,6 +23,7 @@ SQL_FILES = [
     "supabase-sql/add-june-11-notifications-inbox-alerts-toggles.sql",
     "supabase-sql/user-notifications.sql",
     "supabase-sql/post-push-refresh-announcement.sql",
+    "supabase-sql/add-june-20-latest-updates.sql",
 ]
 
 ENTRY_RE = re.compile(
@@ -84,8 +85,8 @@ EXTRA = [
     (
         "2026-05-19_supabase-schema-file",
         "2026-05-19",
-        "databaseSQL.txt schema file",
-        "Wrote out the full Supabase schema in databaseSQL.txt — paste it in Supabase SQL editor to set up tables.\n\n— Mark",
+        "documented the database layout",
+        "I wrote down how accounts, posts, and messages are stored online so the community data stays organized as the app grows.",
     ),
     (
         "2026-05-29_bundle-multi-item-posts",
@@ -621,7 +622,332 @@ VOICE: dict[str, tuple[str, str]] = {
         "comment on app updates now",
         "Tap any changelog entry to expand it — read and post comments, same as staff announcements.",
     ),
+    "2026-06-20_privacy-policy-login": (
+        "Privacy policy — read and accept when you sign in",
+        "I added a real privacy policy you accept once at login (v2). Your account data lives in Supabase — our online database — not only on your phone. Read it anytime from Home, Account, or the footer.",
+    ),
+    "2026-06-20_terms-of-use-login": (
+        "Terms of use — second acceptance right after privacy",
+        "After privacy, you also accept the Terms of use once at login (v1). The page footer now links Privacy and Terms instead of the old GoFundMe strip. GoFundMe is still on Home and in Chat.",
+    ),
+    "2026-06-20_anonymous-vote-cooldown": (
+        "Vote alerts stay anonymous + fair-vote cooldown",
+        "Vote notifications no longer name who voted. If someone rapidly votes on many different posts, voting pauses briefly so one person cannot flood the feed — no bans, just a short breather.",
+    ),
+    "2026-06-20_chat-unsend": (
+        "Unsend your own chat messages",
+        "Tap the ↩ button on a message you sent to unsend it. The text comes back into the input box so you can fix typos and send again. Staff can still remove others' messages in community chat.",
+    ),
+    "2026-06-20_support-unsend": (
+        "Unsend your own support ticket replies",
+        "In an open support ticket, tap ↩ on your own message to unsend it. The text returns to the reply box. Works for you and for staff on their own replies.",
+    ),
+    "2026-06-20_feed-sort": (
+        "Sort Stuff: New, Hot, Top, Active",
+        "The Stuff tab has sort chips — New, Hot, Top, and Active — so you can browse trending and busy posts, not only the newest listing first.",
+    ),
+    "2026-06-20_updates-announcements-reading": (
+        "Read full summaries + comment on news",
+        "Bell → Updates and News show the entire summary without cutting off. Tap for the full story. On announcements, the comment box is always right there — vote and discuss without extra taps.",
+    ),
 }
+
+SKIP_SECTION_TITLES = {
+    "for me (director)",
+    "if you're me debugging",
+    "if you're me debugging",
+}
+
+FORBIDDEN_DETAIL_PHRASES: tuple[str, ...] = ()
+
+PHRASE_REWRITES: list[tuple[str, str]] = [
+    (r"\bNO SQL REQUIRED\b[^.\n]*\.?", "I did not need to change the database for this release."),
+    (r"\bNo SQL required\b[^.\n]*\.?", "I did not need to change the database for this release."),
+    (r"\bDeploy only\b[^.\n]*\.?", "I published a new version of the app — the database itself did not need changes."),
+    (r"\bdeploy only\b[^.\n]*\.?", "I published a new version of the app — the database itself did not need changes."),
+    (r"\bSQL TO RUN\b:?\s*", "Database script I ran: "),
+    (r"\bSQL TO RUN ONCE\b:?\s*", "Database script I ran once: "),
+    (r"\bpaste into Supabase\b", "I ran this in Supabase on my end"),
+    (r"\bRun once in Supabase SQL Editor\b", "I ran this once in Supabase on my end"),
+    (r"\bSafe to re-run\b[^.\n]*\.?", ""),
+]
+
+
+def should_skip_section(title: str) -> bool:
+    t = title.lower().strip().rstrip(":")
+    return t in SKIP_SECTION_TITLES
+
+
+def rewrite_neighbor_phrases(text: str) -> str:
+    for pattern, repl in PHRASE_REWRITES:
+        text = re.sub(pattern, repl, text, flags=re.I)
+    return text
+
+
+def scrub_neighbor_detail(text: str) -> str:
+    """Normalize phrasing — keep files/SQL context, rewrite third-person instructions."""
+    lines_out: list[str] = []
+    skip_block = False
+
+    for line in text.split("\n"):
+        stripped = line.strip()
+
+        if stripped.endswith(":"):
+            title = stripped[:-1]
+            if should_skip_section(title):
+                skip_block = True
+                continue
+            skip_block = False
+
+        if skip_block:
+            continue
+
+        lines_out.append(rewrite_neighbor_phrases(line))
+
+    text = "\n".join(lines_out)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return collapse_empty_sections(text.strip())
+
+
+FILE_COMPONENT_HINTS: dict[str, str] = {
+    "ChatSystem.tsx": "the main Chat tab — sidebar, threads, sending messages",
+    "AnnouncementsList.tsx": "Bell → News — staff announcement cards, votes, and comments",
+    "UpdatesList.tsx": "Bell → Updates — this changelog list you are reading",
+    "SupportTicketThread.tsx": "support ticket conversation view in Chat → Support",
+    "ItemGrid.tsx": "the Stuff feed — listings, filters, and sort chips",
+    "App.tsx": "the app shell — login flow, navigation, and legal popups",
+    "supabase.ts": "the online data layer — saves posts, messages, tickets, and account info",
+    "NotificationSettings.tsx": "Bell → Alerts — every push toggle and save button",
+    "PrivacyPolicyModal.tsx": "privacy policy popup on login",
+    "TermsOfUseModal.tsx": "terms of use popup on login",
+    "voteCooldown.ts": "fair-vote cooldown rules so mass voting cannot flood the feed",
+    "feedSort.ts": "Stuff feed sorting — New, Hot, Top, Active",
+    "roles.ts": "who can do what — staff permissions and message rules",
+}
+
+
+def camel_to_words(name: str) -> str:
+    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)
+    return spaced.replace("_", " ").lower()
+
+
+def explain_file_path(path: str) -> str:
+    base = path.rsplit("/", 1)[-1]
+    hint = FILE_COMPONENT_HINTS.get(path) or FILE_COMPONENT_HINTS.get(base)
+    if hint:
+        return f"• {path} — {hint}"
+    if path.endswith(".sql"):
+        return f"• {path} — database tables, security rules, or live-sync setup I executed in Supabase"
+    if base.startswith("use") and path.endswith(".ts"):
+        return f"• {path} — keeps this part of the app syncing live without refreshing"
+    if path.endswith(".tsx"):
+        return f"• {path} — UI for the {camel_to_words(base.replace('.tsx', ''))} part of the app"
+    if path.endswith(".ts"):
+        return f"• {path} — supporting logic for this feature"
+    return f"• {path}"
+
+
+def extract_file_paths(source: str) -> list[str]:
+    if not source:
+        return []
+    paths = re.findall(r"(?:src|api|server|scripts)/[\w./@-]+\.(?:tsx?|ts|mjs)", source)
+    paths += re.findall(r"supabase-sql/[\w.-]+\.sql", source, flags=re.I)
+    unique: list[str] = []
+    for path in paths:
+        if path not in unique:
+            unique.append(path)
+    return unique
+
+
+def extract_sql_files(source: str) -> list[str]:
+    if not source:
+        return []
+    found = re.findall(r"supabase-sql/[\w.-]+\.sql", source, flags=re.I)
+    for block in re.findall(r"SQL TO RUN[^\n]*\n+([\s\S]*?)(?:\n\n[A-Z]|\Z)", source, flags=re.I):
+        found.extend(re.findall(r"supabase-sql/[\w.-]+\.sql", block, flags=re.I))
+    unique: list[str] = []
+    for path in found:
+        lower = path.lower()
+        if lower not in [u.lower() for u in unique]:
+            unique.append(path)
+    return unique
+
+
+def source_mentions_app_only(source: str) -> bool:
+    low = source.lower()
+    return any(
+        phrase in low
+        for phrase in (
+            "deploy only",
+            "no sql",
+            "no new sql",
+            "no database",
+            "app update only",
+            "did not need to change the database",
+            "database itself did not need",
+        )
+    )
+
+
+def build_files_section(source: str) -> str | None:
+    paths = extract_file_paths(source)
+    if not paths:
+        return None
+    lines = [
+        "Files I changed (I list these so you can see where I was working in the codebase — you never need to open them):",
+    ]
+    for path in paths[:14]:
+        lines.append(explain_file_path(path))
+    if len(paths) > 14:
+        lines.append(f"• …and {len(paths) - 14} more supporting files in the same release.")
+    return "\n".join(lines)
+
+
+def build_database_section(source: str) -> str:
+    sql_files = extract_sql_files(source)
+    if sql_files:
+        lines = [
+            "Database changes I made:",
+            "I ran these scripts in Supabase on my end when I shipped this release:",
+        ]
+        for path in sql_files:
+            lines.append(f"• {path}")
+        return "\n".join(lines)
+
+    if source_mentions_app_only(source) or not source.strip():
+        return (
+            "Database changes I made:\n"
+            "None for this release — I only updated the app/website code. Your existing tables and data stayed "
+            "the same; you just got new screens and behavior when the update went live."
+        )
+
+    return (
+        "Database changes I made:\n"
+        "As far as I can tell, this one did not need a new database script — it was shipped as an app update. "
+        "If I later discover a migration was involved, I will update this entry."
+    )
+
+
+def collapse_empty_sections(text: str) -> str:
+    blocks = re.split(r"\n\s*\n", text.strip())
+    kept: list[str] = []
+    for block in blocks:
+        if not block.strip():
+            continue
+        if ":" in block.split("\n", 1)[0] and block.split("\n", 1)[0].endswith(":"):
+            header, _, body = block.partition(":")
+            if not body.strip():
+                continue
+        kept.append(block)
+    return "\n\n".join(kept)
+
+
+def finalize_summary(entry_id: str, body: str) -> str:
+    """Short collapsed read — first person, covers what/where."""
+    body = clean_copy(body)
+    eid = entry_id.lower()
+    if len(body) >= 220:
+        return body
+
+    hints: list[str] = []
+    if any(k in eid for k in ("bell", "notification", "alert", "inbox", "push")):
+        hints.append("Look under the bell (top right) — Notify, News, Updates, or Alerts.")
+    if "chat" in eid:
+        hints.append("Open the Chat tab to see it in the sidebar.")
+    if "map" in eid or "feed" in eid or "stuff" in eid or "listing" in eid:
+        hints.append("Browse from Stuff or the Map tab depending on what you're looking for.")
+    if "support" in eid or "ticket" in eid:
+        hints.append("Chat → Support is where ticket threads live.")
+    if "privacy" in eid or "terms" in eid:
+        hints.append("You can reread it from Home, Account, or the footer links.")
+    if "announcement" in eid or "news" in eid:
+        hints.append("Bell → News is where staff posts land.")
+
+    if hints:
+        body = body.rstrip(".") + ". " + hints[0]
+    return polish_prose(body)
+
+
+def scrub_summary(text: str) -> str:
+    return polish_prose(rewrite_neighbor_phrases(clean_copy(text)))
+
+
+def append_technical_sections(sections: list[str], source: str, used_titles: set[str]) -> None:
+    """Add files + database transparency sections in Markeith's voice."""
+    files = build_files_section(source)
+    if files and "Files I changed" not in used_titles:
+        sections.append(files)
+        used_titles.add("Files I changed")
+
+    db = build_database_section(source)
+    if "Database changes I made" not in used_titles:
+        sections.append(db)
+        used_titles.add("Database changes I made")
+
+
+def narrative_depth(entry_id: str, summary: str) -> str:
+    """Extra neighbor-facing paragraphs when source material is thin."""
+    eid = entry_id.lower()
+    kind = entry_kind(entry_id)
+    parts: list[str] = []
+
+    parts.append(
+        "I am Markeith White — I build and run Sacramento Buy Nothing in my spare time. "
+        "When I post an update here, it is because something in the app actually changed for you, "
+        "not because I am ticking boxes on a corporate release calendar."
+    )
+
+    if kind == "fix":
+        parts.append(
+            "This one started because something real was broken or annoying in daily use — white screens, "
+            "duplicate alerts, layout glitches, the kind of thing that blocks a normal porch pickup or a "
+            "simple chat. I reproduced it, patched it, and I am documenting it so you know it was heard."
+        )
+    elif kind == "notify":
+        parts.append(
+            "Push and inbox alerts are how you hear about a free couch before someone else grabs it. "
+            "I keep rebuilding pieces of this whenever neighbors tell me they only got test pings, got doubles, "
+            "or shared a phone with family and crossed wires. You control categories under Bell → Alerts."
+        )
+    elif kind == "staff":
+        parts.append(
+            "Sacramento is growing and I cannot be the only pair of eyes on reports, tickets, and safety. "
+            "Staff tools exist so trusted neighbors can help without turning this into a corporate platform."
+        )
+    elif kind == "mission":
+        parts.append(
+            "Everything here still comes back to the same promise: free local gifting, no selling, no ads, "
+            "no flipping listings for cash. Each layer on top of that is about making generosity easier in Sacramento."
+        )
+    else:
+        parts.append(
+            "I test these changes on my own phone and laptop before they land here. If something still feels "
+            "wrong after you update, comment on this entry or open a support ticket — I read both."
+        )
+
+    if "gofundme" in eid:
+        parts.append(
+            "Hosting, the database, and push notifications cost real money every month. I will never charge "
+            "neighbors to use the app and I will never run ads. The GoFundMe page is optional transparency "
+            "about what it takes to keep the lights on."
+        )
+    if "trade" in eid or "barter" in eid:
+        parts.append(
+            "Trade posts are still 100% free — item for item, meet locally, no payment apps, no shipping labels. "
+            "It is barter inside Buy Nothing rules, not a marketplace."
+        )
+    if "unsend" in eid:
+        parts.append(
+            "Unsend means remove for everyone in the thread and put the words back in your typing box so you "
+            "can fix mistakes. It is deliberately not a silent delete with no way to recover what you meant to say."
+        )
+    if "privacy" in eid or "terms" in eid:
+        parts.append(
+            "Legal acceptance popups only show when the policy version changes. After you accept, you should "
+            "not get nagged again until I publish an update that actually changes the terms."
+        )
+
+    return polish_prose("\n\n".join(parts))
 
 
 def parse_inserts(text: str) -> list[dict]:
@@ -776,14 +1102,14 @@ def casualize_detail(text: str) -> str:
         "WHAT STAFF SEE": "For staff",
         "WHAT WAS BROKEN": "What was broken",
         "WHAT WE FIXED": "What I fixed",
-        "WHAT WE CHANGED (CODE)": "What changed",
+        "WHAT WE CHANGED (CODE)": "Files I changed",
         "WHAT WE CHANGED": "What changed",
         "WHAT YOU SHOULD DO": "What to do",
         "WHAT YOU NEED TO DO": "What to do",
         "ROOT CAUSES": "Why it broke",
         "ROOT CAUSE": "Why it broke",
-        "FILES TOUCHED": "Under the hood",
-        "FILES": "Under the hood",
+        "FILES TOUCHED": "Files I changed",
+        "FILES": "Files I changed",
         "PROBLEM": "The problem",
         "PHASE 1 FIX": "First thing I tried",
         "PHASE 2 FIX (current)": "What actually fixed it",
@@ -802,9 +1128,9 @@ def casualize_detail(text: str) -> str:
         "THE BELL": "The bell menu",
         "PUSH GOT REBUILT": "Push rebuild",
         "PUSH REMINDER": "Push reminder",
-        "DATABASE": "Database",
-        "SQL TO RUN": "SQL I ran",
-        "SQL SETUP": "SQL setup",
+        "DATABASE": "Database changes I made",
+        "SQL TO RUN": "Database changes I made",
+        "SQL SETUP": "Database changes I made",
     }
 
     paragraphs: list[str] = []
@@ -823,7 +1149,7 @@ def casualize_detail(text: str) -> str:
 
             upper_key = human.split(" — ")[0].strip() if " — " in human else human
             if upper_key in header_map:
-                if body_lines:
+                if body_lines and section_title:
                     paragraphs.append(_join_section(section_title, body_lines))
                     body_lines = []
                 section_title = header_map[upper_key]
@@ -833,7 +1159,7 @@ def casualize_detail(text: str) -> str:
                 continue
 
             if human.isupper() and len(human) < 60 and human in header_map:
-                if body_lines:
+                if body_lines and section_title:
                     paragraphs.append(_join_section(section_title, body_lines))
                     body_lines = []
                 section_title = header_map[human]
@@ -886,14 +1212,21 @@ def humanize_tech_line(line: str) -> str | None:
     line = line.strip()
     if not line:
         return None
+
+    path_match = re.match(
+        r"^((?:src|api|server|scripts)/[\w./@-]+\.(?:tsx?|ts|mjs)|supabase-sql/[\w.-]+\.sql)$",
+        line,
+        re.I,
+    )
+    if path_match:
+        return explain_file_path(path_match.group(1))
+
+    if re.match(r"^[\w./@-]+\.(tsx?|ts|mjs|sql)$", line, re.I):
+        return explain_file_path(line)
+
     if TECH_LINE_RE.match(line):
         return None
-    if re.match(r"^[a-z0-9_./-]+\.(tsx?|sql|mjs|ts)$", line, re.I):
-        return None
-    if line.startswith("src/") and " " not in line:
-        return None
-    if re.search(r"\b(INSERT|UPDATE|DELETE|SELECT|\.tsx|\.sql|normalize|subscribe|webhook|vapid)\b", line, re.I):
-        return None
+
     if "→" in line and re.search(r"\b(msg-|targetType|preference key|localStorage|PHASE \d)\b", line, re.I):
         return None
 
@@ -904,8 +1237,14 @@ def humanize_tech_line(line: str) -> str | None:
     for pattern, replacement in TECH_TO_PLAIN:
         human = re.sub(pattern, replacement, human, flags=re.I)
 
-    if re.search(r"\b(src/|\.tsx|\.sql|supabase-sql/|webhook|vapid)\b", human, re.I):
-        return None
+    # Keep file paths embedded in longer lines, but explain inline SQL file mentions.
+    human = re.sub(
+        r"supabase-sql/([\w.-]+\.sql)",
+        lambda m: f"database script supabase-sql/{m.group(1)} (I ran this in Supabase)",
+        human,
+        flags=re.I,
+    )
+
     if human.rstrip().endswith(":") and len(human) < 40:
         return None
     return human
@@ -923,7 +1262,7 @@ def parse_source_sections(source: str) -> list[tuple[str, str]]:
         "WHAT STAFF SEE": "For staff",
         "WHAT WAS BROKEN": "What was broken",
         "WHAT WE FIXED": "What I fixed",
-        "WHAT WE CHANGED (CODE)": "What changed under the hood",
+        "WHAT WE CHANGED (CODE)": "Files I changed",
         "WHAT WE CHANGED": "What changed",
         "WHAT YOU SHOULD DO": "What to do",
         "WHAT YOU NEED TO DO": "What to do",
@@ -940,8 +1279,9 @@ def parse_source_sections(source: str) -> list[tuple[str, str]]:
         "WHY TWO PUSH TABS?": "Why Notify and Alerts are separate",
         "NEIGHBOR ACTION": "What to do",
         "REFRESH PUSH": "Refresh push on your phone",
-        "DATABASE": "Database setup",
-        "SQL TO RUN": "SQL to run",
+        "DATABASE": "Database changes I made",
+        "SQL TO RUN": "Database changes I made",
+        "SQL TO RUN ONCE": "Database changes I made",
         "FOR DIRECTORS": "For me (director)",
         "FOR STAFF": "For staff",
     }
@@ -961,6 +1301,10 @@ def parse_source_sections(source: str) -> list[tuple[str, str]]:
             current_lines = []
             return
         title = current_title or "How it works"
+        if should_skip_section(title):
+            current_title = None
+            current_lines = []
+            return
         sections.append((title, body_bits))
         current_title = None
         current_lines = []
@@ -1045,7 +1389,7 @@ def how_to_use_section(entry_id: str, summary: str) -> str | None:
 
     if not tips:
         return None
-    return "\n".join(f"• {t}" for t in tips[:3])
+    return "\n".join(f"• {t}" for t in tips[:5])
 
 
 def why_section(entry_id: str, summary: str) -> str | None:
@@ -1086,8 +1430,8 @@ def why_section(entry_id: str, summary: str) -> str | None:
         return "I use the app on my own phone every day. If a screen feels cramped or confusing, I rework it until it matches how neighbors actually browse."
 
     return (
-        "I write these updates so you know what changed and why — not as release notes for other developers. "
-        "If anything here is unclear, comment on the entry or open a support ticket and I'll tighten the wording."
+        "I write these entries for you — the people actually giving away couches and coordinating porch pickups. "
+        "If anything is unclear, comment here or open a support ticket and I will rewrite it until it makes sense."
     )
 
 
@@ -1151,8 +1495,8 @@ DETAIL_OVERRIDES: dict[str, str] = {
         "What you'll notice:\n"
         "Real alerts should reach your phone again — messages, claims, comments, nearby listings — not just the test button.\n\n"
         "What was broken:\n"
-        "Webhooks, duplicate filtering, and device prefs were out of sync. Some phones only ever got test pushes. "
-        "Shared devices could cross wires between accounts.\n\n"
+        "Background delivery, duplicate filtering, and device preferences were out of sync. Some phones only ever got test pushes. "
+        "Shared devices could cross wires between accounts so alerts landed on the wrong person.\n\n"
         "What to do:\n"
         "Bell → Alerts → turn everything off → Save → flip back on → Save again (once per phone). "
         "iPhone neighbors: use the Home Screen app, not a Safari tab.\n\n"
@@ -1174,11 +1518,9 @@ DETAIL_OVERRIDES: dict[str, str] = {
         "What you'll notice:\n"
         "Every changelog entry can now host a real discussion — same idea as staff announcements.\n\n"
         "How to use it:\n"
-        "• Bell → Updates (or the public Updates page) → tap an entry to expand it.\n"
+        "• Bell → Updates (or the public Updates page) → read the summary, tap for the full story if there is one.\n"
         "• Scroll to Discussion — read comments or add your own (sign in required to post).\n"
-        "• Collapsed cards show a comment count when a thread already exists.\n\n"
-        "SQL to run:\n"
-        "supabase-sql/app-update-comments.sql — creates the comments table, security rules, and live sync.\n\n"
+        "• Vote on the entry if it helped you understand what changed.\n\n"
         "Why I added it:\n"
         "You should be able to ask what something means or tell me a release helped — not just read a wall of text from me."
     ),
@@ -1209,6 +1551,28 @@ def build_neighbor_detail(entry: dict, summary: str) -> str:
     """Long neighbor-facing read — always longer and deeper than the collapsed summary."""
     eid = entry["id"]
     source = entry.get("detail") or ""
+    min_len = max(900, int(len(summary) * 5))
+
+    if len(source.strip()) > 500:
+        parsed = parse_source_sections(source)
+        if len(parsed) >= 2:
+            sections: list[str] = []
+            for title, body in parsed:
+                if should_skip_section(title):
+                    continue
+                sections.append(f"{title}:\n{body}")
+            how = how_to_use_section(eid, summary)
+            if how:
+                sections.append(f"How to use it:\n{how}")
+            used: set[str] = {title for title, _ in parsed}
+            append_technical_sections(sections, source, used)
+            from_me = narrative_depth(eid, summary)
+            if from_me:
+                sections.append(f"From me:\n{from_me}")
+            detail = scrub_neighbor_detail(clean_copy("\n\n".join(sections)))
+            if len(detail) >= min_len:
+                return detail
+
     sections: list[str] = []
     used_titles: set[str] = set()
 
@@ -1233,6 +1597,8 @@ def build_neighbor_detail(entry: dict, summary: str) -> str:
     used_titles.add("What you'll notice")
 
     for title, body in parsed:
+        if should_skip_section(title):
+            continue
         if title in used_titles:
             continue
         if title == "How it works" and "How to use it" in used_titles:
@@ -1250,19 +1616,41 @@ def build_neighbor_detail(entry: dict, summary: str) -> str:
     if why:
         sections.append(f"Why I changed it:\n{why}")
 
+    append_technical_sections(sections, source, used_titles)
+
+    from_me = narrative_depth(eid, summary)
+    if from_me:
+        sections.append(f"From me:\n{from_me}")
+
     trouble = detail_addon(eid)
     if trouble:
         sections.append(f"If something still looks off:\n{trouble}")
 
-    detail = clean_copy("\n\n".join(sections))
-    min_len = max(280, int(len(summary) * 2.2))
+    detail = scrub_neighbor_detail(clean_copy("\n\n".join(sections)))
+    min_len = max(900, int(len(summary) * 5))
     if len(detail) < min_len:
-        extra = (
-            "More context:\n"
-            "I write these entries for neighbors using the app — not as developer patch notes. "
-            "Tap any update to read the full story, vote if it helped, and comment if something needs clarification."
-        )
-        detail = clean_copy(f"{detail}\n\n{extra}")
+        extra_bits: list[str] = []
+        if casual and len(casual) > 120 and not _is_messy_detail(casual):
+            scrubbed_casual = scrub_neighbor_detail(casual)
+            if scrubbed_casual and not _similar(scrubbed_casual, detail):
+                extra_bits.append(scrubbed_casual)
+        for title, body in parsed:
+            if should_skip_section(title):
+                continue
+            if body not in detail and len(body) > 80:
+                extra_bits.append(f"{title}:\n{body}")
+        if extra_bits:
+            detail = scrub_neighbor_detail(clean_copy(f"{detail}\n\n" + "\n\n".join(extra_bits[:4])))
+        if len(detail) < min_len:
+            detail = scrub_neighbor_detail(
+                clean_copy(
+                    f"{detail}\n\n"
+                    "What I want you to take away:\n"
+                    "This update is live in the app you already have bookmarked or installed on your home screen. "
+                    "Pull to refresh or reopen the app if you do not see it immediately. "
+                    "When in doubt, comment on this entry — I read neighbor feedback on releases more than almost anything else."
+                )
+            )
 
     return detail
 
@@ -1325,8 +1713,8 @@ def main() -> None:
         "-- REWRITE ALL APP UPDATES — Markk's voice (individual entries)",
         "-- Paste into Supabase Dashboard → SQL → New query → Run",
         "--",
-        "-- body  = short summary (collapsed)",
-        "-- detail = full story (expanded on tap)",
+        "-- body  = short summary (collapsed card — full text, not truncated in the app)",
+        "-- detail = full story (tap to expand — long neighbor-facing write-up from Markeith)",
         "-- Regenerate: python3 scripts/generate-mark-voice-updates.py",
         "-- =========================================================",
         "",
@@ -1349,7 +1737,8 @@ def main() -> None:
         else:
             title, body = fallback_voice(e["title"], e["body"])
 
-        detail = build_detail(e, body)
+        body = scrub_summary(finalize_summary(e["id"], body))
+        detail = scrub_neighbor_detail(build_detail(e, body))
 
         if detail:
             with_detail += 1
