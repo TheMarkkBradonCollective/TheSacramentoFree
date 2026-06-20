@@ -79,6 +79,8 @@ interface ChatSystemProps {
   onViewProfile?: (userId: string) => void;
   onItemsChanged?: () => void;
   onOpenGoFundMe?: () => void;
+  onOpenPrivacy?: () => void;
+  onOpenTerms?: () => void;
   onStartDirectMessage?: () => void;
 }
 
@@ -101,6 +103,8 @@ export default function ChatSystem({
   onViewProfile,
   onItemsChanged,
   onOpenGoFundMe,
+  onOpenPrivacy,
+  onOpenTerms,
   onStartDirectMessage,
 }: ChatSystemProps) {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -1105,8 +1109,8 @@ export default function ChatSystem({
             initialPanel={initialChatFeedbackPanel}
             onClearInitialPanel={onClearInitialChatFeedbackPanel}
           />
-          {fullBleed && onOpenGoFundMe && !selectedChat && !supportView && (
-            <PageScrollFooter onOpenDetails={onOpenGoFundMe} />
+          {fullBleed && !selectedChat && !supportView && (
+            <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           )}
         </div>
       </div>
@@ -1125,6 +1129,8 @@ export default function ChatSystem({
             onViewChange={openSupport}
             onBackToChat={() => setSupportView(null)}
             onOpenGoFundMe={onOpenGoFundMe}
+            onOpenPrivacy={onOpenPrivacy}
+            onOpenTerms={onOpenTerms}
             initialTicketId={supportOpenTicketId ?? initialSupportTicketId}
             onClearInitialTicketId={() => {
               setSupportOpenTicketId(null);

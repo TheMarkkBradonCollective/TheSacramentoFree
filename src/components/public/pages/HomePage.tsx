@@ -1,11 +1,11 @@
-import { ArrowRight, Heart, MapPin, Shield, Users } from 'lucide-react';
+import { ArrowRight, FileText, HandHeart, Heart, MapPin, Shield, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
 import CommunityReviews from '../../CommunityReviews';
 import CommunityStatsBar from '../../CommunityStatsBar';
 import GuestListingPreview from '../GuestListingPreview';
 import HomeScrollStage, { DepthPanel, DepthSection } from '../HomeScrollStage';
-import { SITE } from '../../../siteContent';
+import { SITE, SUPPORT } from '../../../siteContent';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
 
@@ -21,6 +21,9 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
   { route: 'about', title: 'What we are', blurb: 'Local free gifting — no money, just neighbors.', icon: Heart },
   { route: 'how-it-works', title: 'How it works', blurb: 'Post, connect, porch pickup — four simple steps.', icon: Users },
   { route: 'rules', title: 'Community rules', blurb: "What's allowed and what isn't.", icon: Shield },
+  { route: 'privacy', title: 'Privacy & data', blurb: 'Your data is stored by Supabase — never sold.', icon: Shield },
+  { route: 'terms', title: 'Terms of use', blurb: 'User agreement for free local gifting in Sacramento.', icon: FileText },
+  { route: 'gofundme', title: 'Support the app', blurb: 'Help keep Sacramento Buy Nothing free — no ads, ever.', icon: HandHeart },
   { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 34+ areas.', icon: MapPin },
 ];
 
@@ -101,6 +104,31 @@ export default function HomePage({
             onRequireSignIn={onRequireSignIn}
             onSeeAll={() => onNavigate('reviews')}
           />
+        </DepthPanel>
+      </DepthSection>
+
+      <DepthSection depth={2} className="mt-6" id="home_support_section">
+        <DepthPanel>
+          <button
+            type="button"
+            onClick={() => onNavigate('gofundme')}
+            className="sbn-card p-6 text-left w-full hover:border-accent/40 transition-colors group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
+                <HandHeart className="w-6 h-6 text-accent" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold text-accent uppercase tracking-widest">Community support</p>
+                <h2 className="mt-1 font-display text-xl font-bold text-app">{SUPPORT.gofundmeTitle}</h2>
+                <p className="mt-2 text-sm text-muted leading-relaxed">{SUPPORT.gofundmeBlurb}</p>
+                <p className="mt-2 text-xs text-subtle leading-relaxed">{SUPPORT.gofundmeCostsSummary}</p>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
+                  See how to help <ArrowRight className="w-4 h-4" />
+                </span>
+              </div>
+            </div>
+          </button>
         </DepthPanel>
       </DepthSection>
 

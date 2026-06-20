@@ -23,11 +23,16 @@ import {
   ChevronUp,
   ChevronDown,
   Camera,
+  Shield,
+  FileText,
 } from 'lucide-react';
 import ProfilePostList from './ProfilePostList';
 import ThemeSettings from './ThemeSettings';
 import CommunityMenuView from './CommunityMenuView';
-import { IN_APP } from '../siteContent';
+import PrivacyPolicyModal from './PrivacyPolicyModal';
+import TermsOfUseModal from './TermsOfUseModal';
+import { IN_APP, PRIVACY, TERMS } from '../siteContent';
+import { isPrivacyAccepted } from '../lib/privacyPolicyPrompt';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -76,6 +81,8 @@ export default function UserProfileView({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     getNeighborStats(userProfile.uid).then(setStats);
@@ -446,6 +453,55 @@ export default function UserProfileView({
           <ThemeSettings />
         </div>
       </div>
+
+      <div
+        className={fullBleed ? sectionShell : 'bg-surface border border-app rounded-2xl p-6 shadow-md'}
+        id="account_privacy_section"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
+            <Shield className="w-5 h-5 text-accent" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-bold text-app uppercase tracking-wider">Privacy & legal</h3>
+            <p className="text-xs text-muted mt-2 leading-relaxed">{PRIVACY.summary}</p>
+            <p className="text-[10px] text-subtle mt-2 font-semibold">
+              {isPrivacyAccepted(userProfile.uid)
+                ? `Privacy policy accepted (${PRIVACY.lastUpdated}).`
+                : 'Please review and accept the privacy policy to continue using the app.'}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-app text-xs font-bold uppercase tracking-wider text-accent hover:bg-inset transition-colors"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                {PRIVACY.shortTitle}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-app text-xs font-bold uppercase tracking-wider text-accent hover:bg-inset transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                {TERMS.shortTitle}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showPrivacyModal && (
+        <PrivacyPolicyModal
+          userId={userProfile.uid}
+          required={!isPrivacyAccepted(userProfile.uid)}
+          onAccepted={() => setShowPrivacyModal(false)}
+          onClose={() => setShowPrivacyModal(false)}
+        />
+      )}
+
+      {showTermsModal && <TermsOfUseModal onClose={() => setShowTermsModal(false)} />}
 
       {/* Modern PWA App Installation Widget */}
       <div
