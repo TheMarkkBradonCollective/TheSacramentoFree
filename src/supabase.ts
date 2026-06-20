@@ -6,6 +6,11 @@ import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './l
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
+import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
+import {
+  VOTE_COOLDOWN_MAX_NEW_VOTES,
+  VOTE_COOLDOWN_WINDOW_MS,
+} from './lib/voteCooldown';
 import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
@@ -21,7 +26,6 @@ const supabaseKey =
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import {
   GLOBAL_COMMUNITY_CHAT_ID,
   STAFF_COMMUNITY_CHAT_ID,
@@ -2233,7 +2237,68 @@ export async function getSupabaseItemVotes(itemIds: string[]): Promise<ItemVote[
   }
 }
 
-export async function setSupabaseItemVote(itemId: string, userId: string, voteType: 'up' | 'down' | null): Promise<boolean> {
+export type VoteWriteResult =
+  | { ok: true }
+  | { ok: false; reason: 'vote_cooldown' | 'error' };
+
+async function userHasItemVote(itemId: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('item_votes')
+    .select('itemId')
+    .eq('itemId', itemId)
+    .eq('userId', userId)
+    .maybeSingle();
+  return !!data;
+}
+
+async function countRecentItemVotes(userId: string): Promise<number> {
+  const cutoff = new Date(Date.now() - VOTE_COOLDOWN_WINDOW_MS).toISOString();
+  const { count, error } = await supabase
+    .from('item_votes')
+    .select('itemId', { count: 'exact', head: true })
+    .eq('userId', userId)
+    .gte('createdAt', cutoff);
+  if (error) {
+    handleSupabaseError(error, 'item_votes');
+    return 0;
+  }
+  return count ?? 0;
+}
+
+async function userHasCommunityContentVote(
+  targetType: CommunityContentVoteTarget,
+  targetId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('community_content_votes')
+    .select('id')
+    .eq('targetType', targetType)
+    .eq('targetId', targetId)
+    .eq('userId', userId)
+    .maybeSingle();
+  return !!data;
+}
+
+async function countRecentCommunityContentVotes(userId: string): Promise<number> {
+  const cutoff = new Date(Date.now() - VOTE_COOLDOWN_WINDOW_MS).toISOString();
+  const { count, error } = await supabase
+    .from('community_content_votes')
+    .select('id', { count: 'exact', head: true })
+    .eq('userId', userId)
+    .gte('createdAt', cutoff);
+  if (error) {
+    handleSupabaseError(error, 'community_content_votes');
+    return 0;
+  }
+  return count ?? 0;
+}
+
+export async function setSupabaseItemVote(
+  itemId: string,
+  userId: string,
+  voteType: 'up' | 'down' | null,
+): Promise<VoteWriteResult> {
   try {
     if (!voteType) {
       const { error: deleteError } = await supabase
@@ -2244,10 +2309,18 @@ export async function setSupabaseItemVote(itemId: string, userId: string, voteTy
 
       if (deleteError) {
         handleSupabaseError(deleteError, 'item_votes');
-        return false;
+        return { ok: false, reason: 'error' };
       }
       setSupabaseConfigurationState(true);
-      return true;
+      return { ok: true };
+    }
+
+    const alreadyVoted = await userHasItemVote(itemId, userId);
+    if (!alreadyVoted) {
+      const recentVotes = await countRecentItemVotes(userId);
+      if (recentVotes >= VOTE_COOLDOWN_MAX_NEW_VOTES) {
+        return { ok: false, reason: 'vote_cooldown' };
+      }
     }
 
     const { error } = await supabase
@@ -2259,7 +2332,7 @@ export async function setSupabaseItemVote(itemId: string, userId: string, voteTy
 
     if (error) {
       handleSupabaseError(error, 'item_votes');
-      return false;
+      return { ok: false, reason: 'error' };
     }
 
     await runPushTask(() =>
@@ -2269,10 +2342,10 @@ export async function setSupabaseItemVote(itemId: string, userId: string, voteTy
     );
 
     setSupabaseConfigurationState(true);
-    return true;
+    return { ok: true };
   } catch (err: any) {
     handleSupabaseError(err, 'item_votes');
-    return false;
+    return { ok: false, reason: 'error' };
   }
 }
 
@@ -3520,7 +3593,7 @@ export async function setSupabaseCommunityContentVote(
   targetId: string,
   userId: string,
   voteType: 'up' | 'down' | null,
-): Promise<boolean> {
+): Promise<VoteWriteResult> {
   try {
     if (!voteType) {
       const { error } = await supabase
@@ -3531,9 +3604,17 @@ export async function setSupabaseCommunityContentVote(
         .eq('userId', userId);
       if (error) {
         handleSupabaseError(error, 'community_content_votes');
-        return false;
+        return { ok: false, reason: 'error' };
       }
-      return true;
+      return { ok: true };
+    }
+
+    const alreadyVoted = await userHasCommunityContentVote(targetType, targetId, userId);
+    if (!alreadyVoted) {
+      const recentVotes = await countRecentCommunityContentVotes(userId);
+      if (recentVotes >= VOTE_COOLDOWN_MAX_NEW_VOTES) {
+        return { ok: false, reason: 'vote_cooldown' };
+      }
     }
 
     const id = `${targetType}_${targetId}_${userId}`;
@@ -3551,13 +3632,13 @@ export async function setSupabaseCommunityContentVote(
 
     if (error) {
       handleSupabaseError(error, 'community_content_votes');
-      return false;
+      return { ok: false, reason: 'error' };
     }
 
     setSupabaseConfigurationState(true);
-    return true;
+    return { ok: true };
   } catch {
-    return false;
+    return { ok: false, reason: 'error' };
   }
 }
 

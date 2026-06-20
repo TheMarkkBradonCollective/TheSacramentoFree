@@ -8,6 +8,7 @@ import {
   setSupabaseItemVote,
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
 import { useConfirm } from '../contexts/ConfirmContext';
 
 export interface PostVoteState {
@@ -26,7 +27,7 @@ export function useItemsEngagement(
   const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
 
   const uid = userProfile?.uid ?? '';
-  const { confirm } = useConfirm();
+  const { confirm, alert } = useConfirm();
   const itemIdSetRef = useRef(new Set<string>());
 
   const getVotesForPost = useCallback(
@@ -185,9 +186,12 @@ export function useItemsEngagement(
       },
     }));
 
-    setSupabaseItemVote(itemId, uid, newUserVote).catch((err) => {
-      console.warn('Failed to persist vote:', err);
+    void setSupabaseItemVote(itemId, uid, newUserVote).then((result) => {
+      if (result.ok) return;
       setItemVotes((prev) => ({ ...prev, [itemId]: current }));
+      if (result.reason === 'vote_cooldown') {
+        void alert({ message: VOTE_COOLDOWN_MESSAGE });
+      }
     });
   };
 

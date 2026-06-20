@@ -2,6 +2,7 @@ import { isCommunityChatId, runCommunityChatMessageNotify } from './communityCha
 import { itemCoordsFromDescription } from './itemCoords';
 import { runPushSend, type PushSendBody } from './runPushSend';
 import { getSupabaseAdmin } from './supabaseAdmin';
+import { shouldThrottleVoteNotify } from './voteNotifyCooldown';
 
 type ItemRow = {
   id?: string;
@@ -331,19 +332,17 @@ export async function runNeighborItemVoteNotify(
     return { status: 200, body: { ok: true, skipped: 'no vote alert needed' } };
   }
 
-  const { data: voter } = await supabaseAdmin
-    .from('users')
-    .select('displayName')
-    .eq('uid', voterUserId)
-    .maybeSingle();
-  const voterName = String((voter as { displayName?: string } | null)?.displayName || 'A neighbor');
+  if (await shouldThrottleVoteNotify(voterUserId)) {
+    return { status: 200, body: { ok: true, skipped: 'vote notify cooldown' } };
+  }
+
   const itemTitle = String((item as { title?: string }).title || 'your listing');
   const isUp = voteType === 'up';
 
   return sendNeighborPush(voterUserId, {
     eventType: isUp ? 'listing_upvote' : 'listing_downvote',
-    title: isUp ? 'New upvote on your listing' : 'Downvote on your listing',
-    body: `${voterName} ${isUp ? 'upvoted' : 'downvoted'} "${itemTitle}"`,
+    title: isUp ? 'New upvote on your listing' : 'Feedback on your listing',
+    body: `Someone ${isUp ? 'upvoted' : 'downvoted'} "${itemTitle}"`,
     url: listingUrl(itemId),
     listingId: itemId,
     recipientUserIds: [ownerId],

@@ -7,6 +7,8 @@ import {
 } from '../types';
 import { getSupabaseCommunityContentVotes, setSupabaseCommunityContentVote } from '../supabase';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 const EMPTY_VOTE: ContentVoteState = { userVote: null, upvotes: 0, downvotes: 0 };
 
@@ -36,6 +38,7 @@ export function useCommunityContentVotes(
   const uid = userProfile?.uid;
   const [rows, setRows] = useState<CommunityContentVote[]>([]);
   const [loading, setLoading] = useState(true);
+  const { alert } = useConfirm();
 
   const stableIds = useMemo(() => [...new Set(targetIds)].filter(Boolean).sort().join('|'), [targetIds]);
 
@@ -110,12 +113,16 @@ export function useCommunityContentVotes(
         ];
       });
 
-      void setSupabaseCommunityContentVote(targetType, targetId, uid, newUserVote).catch(() => {
+      void setSupabaseCommunityContentVote(targetType, targetId, uid, newUserVote).then((result) => {
+        if (result.ok) return;
         void reload();
+        if (result.reason === 'vote_cooldown') {
+          void alert({ message: VOTE_COOLDOWN_MESSAGE });
+        }
       });
       return true;
     },
-    [uid, rows, targetType, reload],
+    [uid, rows, targetType, reload, alert],
   );
 
   return { loading, getVoteState, handleVote, reload };
