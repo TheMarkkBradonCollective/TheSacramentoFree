@@ -11,7 +11,7 @@ import {
   VOTE_COOLDOWN_MAX_NEW_VOTES,
   VOTE_COOLDOWN_WINDOW_MS,
 } from './lib/voteCooldown';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -4978,6 +4978,75 @@ export async function addSupportTicketMessage(params: {
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send message.' };
+  }
+}
+
+export async function deleteSupportTicketMessage(params: {
+  messageId: string;
+  ticketId: string;
+  actor: Pick<UserProfile, 'uid'>;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data: msg, error: fetchError } = await supabase
+      .from('support_ticket_messages')
+      .select('id, ticketId, senderUserId, text')
+      .eq('id', params.messageId)
+      .maybeSingle();
+
+    if (fetchError) {
+      return { ok: false, errorMessage: fetchError.message };
+    }
+    if (!msg) {
+      return { ok: false, errorMessage: 'Message not found or already removed.' };
+    }
+    if (String(msg.ticketId) !== params.ticketId) {
+      return { ok: false, errorMessage: 'Message not in this ticket.' };
+    }
+    if (!canUnsendSupportTicketMessage(params.actor, { senderUserId: String(msg.senderUserId) })) {
+      return { ok: false, errorMessage: 'You cannot unsend this message.' };
+    }
+
+    const ticket = await getSupportTicketById(params.ticketId);
+    if (!ticket) return { ok: false, errorMessage: 'Ticket not found.' };
+    if (ticket.status === 'closed') {
+      return { ok: false, errorMessage: 'This ticket is closed.' };
+    }
+    if (!canViewerAccessTicket(params.actor, ticket)) {
+      return { ok: false, errorMessage: 'You cannot unsend messages in this ticket.' };
+    }
+
+    const { error: deleteError, count } = await supabase
+      .from('support_ticket_messages')
+      .delete({ count: 'exact' })
+      .eq('id', params.messageId);
+
+    if (deleteError) {
+      return { ok: false, errorMessage: deleteError.message };
+    }
+    if (count === 0) {
+      return { ok: false, errorMessage: 'Message not found or already removed.' };
+    }
+
+    const { data: latestMsgs } = await supabase
+      .from('support_ticket_messages')
+      .select('createdAt')
+      .eq('ticketId', params.ticketId)
+      .order('createdAt', { ascending: false })
+      .limit(1);
+
+    const updatedAt =
+      latestMsgs?.[0]?.createdAt != null
+        ? String(latestMsgs[0].createdAt)
+        : ticket.createdAt;
+
+    await supabase
+      .from('support_tickets')
+      .update({ updatedAt })
+      .eq('id', params.ticketId);
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not unsend message.' };
   }
 }
 

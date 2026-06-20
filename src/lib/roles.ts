@@ -229,6 +229,14 @@ export function canDeleteSupportTicket(
   return canViewerAccessTicket(viewer, ticket);
 }
 
+/** Any participant may unsend their own support ticket messages. */
+export function canUnsendSupportTicketMessage(
+  viewer: Pick<UserProfile, 'uid'>,
+  message: Pick<{ senderUserId: string }, 'senderUserId'>,
+): boolean {
+  return viewer.uid === message.senderUserId;
+}
+
 /** Unsend own chat messages everywhere; director + city manager may remove any in community chat. */
 export function canDeleteChatMessage(
   viewer: Pick<UserProfile, 'uid' | 'role'>,
