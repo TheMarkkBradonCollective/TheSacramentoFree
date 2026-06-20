@@ -1,5 +1,5 @@
 /** Bump when policy text changes — all users must re-accept. */
-export const PRIVACY_POLICY_VERSION = 'v1';
+export const PRIVACY_POLICY_VERSION = 'v2';
 
 const STORAGE_PREFIX = 'sbn_privacy_policy_accepted_';
 

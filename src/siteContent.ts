@@ -231,35 +231,35 @@ export const PRIVACY = {
   shortTitle: 'Privacy policy',
   lastUpdated: 'June 2025',
   summary:
-    'Sacramento Buy Nothing is a community app run by volunteers. We do not sell your information. Your account data is stored by Supabase — not on this website’s own servers.',
+    'Sacramento Buy Nothing is run by Markeith White. I do not sell your information. Your account data is stored by Supabase — not on this website’s own servers.',
   sections: [
     {
       heading: 'Who runs this app',
       body:
-        'Sacramento Buy Nothing is operated by community volunteers to help neighbors give freely and connect locally. This is not a commercial marketplace — there are no ads, no paywalls, and no selling of your personal information.',
+        'Sacramento Buy Nothing is built and operated by Markeith White alone to help neighbors give freely and connect locally. This is not a commercial marketplace — there are no ads, no paywalls, and I do not sell your personal information.',
     },
     {
       heading: 'Where your data is stored',
       body:
-        'We do not host the database ourselves. Your profile, listings, messages, events, reviews, and sign-in credentials are stored in a Supabase-hosted PostgreSQL database (Supabase Inc.). Supabase provides authentication, data storage, file storage for photos, and live updates. The website you see is hosted separately (Vercel), but your community data lives in Supabase’s secure infrastructure.',
+        'I do not host the database on my own servers. Your profile, listings, messages, events, reviews, and sign-in credentials are stored in a Supabase-hosted PostgreSQL database (Supabase Inc.). Supabase provides authentication, data storage, file storage for photos, and live updates. The website you see is hosted separately (Vercel), but your community data lives in Supabase’s secure infrastructure.',
     },
     {
-      heading: 'What we collect',
+      heading: 'What the app collects',
       bullets: [
         'Account info: email, display name, neighborhood, bio, and profile photo you choose to upload.',
         'Community content: posts, comments, messages, events, reviews, and reports you submit.',
         'Optional location: approximate or exact pickup coordinates only when you choose to share them on a listing.',
         'Device preferences: theme choice, saved items, and notification settings stored on your device or in your account.',
-        'Push notification tokens: only if you turn on alerts, so we can send community notifications you asked for.',
+        'Push notification tokens: only if you turn on alerts, so the app can send community notifications you asked for.',
       ],
     },
     {
-      heading: 'What we do not do',
+      heading: 'What I do not do',
       bullets: [
-        'We do not sell, rent, or trade your personal information.',
-        'We do not run ads or track you across other websites.',
-        'We do not share your data with marketers.',
-        'Staff only access reports and account data when needed for safety, moderation, or support.',
+        'I do not sell, rent, or trade your personal information.',
+        'I do not run ads or track you across other websites.',
+        'I do not share your data with marketers.',
+        'Community staff may access reports and account data only when needed for safety, moderation, or support.',
       ],
     },
     {
