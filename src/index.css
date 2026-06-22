@@ -1022,10 +1022,6 @@ html.sbn-keyboard-open .sbn-fixed-bottom {
     animation: none;
   }
 
-  .sbn-header-action-btn-dot {
-    animation: none;
-  }
-
   .sbn-award-icon-pop {
     animation: none;
   }
@@ -1057,17 +1053,9 @@ html.sbn-keyboard-open .sbn-fixed-bottom {
   animation: sbn-awards-glow 2.2s ease-in-out infinite;
 }
 
-.sbn-header-action-btn-dot {
-  animation: sbn-award-sparkle-pulse 1.8s ease-in-out infinite;
-}
-
 .sbn-awards-glow-active {
   position: relative;
   animation: sbn-awards-glow 2.2s ease-in-out infinite;
-}
-
-.sbn-awards-new-dot {
-  animation: sbn-award-sparkle-pulse 1.8s ease-in-out infinite;
 }
 
 .sbn-award-card {
