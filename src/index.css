@@ -1014,7 +1014,15 @@ html.sbn-keyboard-open .sbn-fixed-bottom {
     animation: none;
   }
 
+  .sbn-header-action-btn-glow {
+    animation: none;
+  }
+
   .sbn-awards-glow-active {
+    animation: none;
+  }
+
+  .sbn-header-action-btn-dot {
     animation: none;
   }
 
@@ -1043,6 +1051,14 @@ html.sbn-keyboard-open .sbn-fixed-bottom {
 
 .sbn-awards-glow-btn {
   animation: sbn-awards-glow 2.2s ease-in-out infinite;
+}
+
+.sbn-header-action-btn-glow {
+  animation: sbn-awards-glow 2.2s ease-in-out infinite;
+}
+
+.sbn-header-action-btn-dot {
+  animation: sbn-award-sparkle-pulse 1.8s ease-in-out infinite;
 }
 
 .sbn-awards-glow-active {

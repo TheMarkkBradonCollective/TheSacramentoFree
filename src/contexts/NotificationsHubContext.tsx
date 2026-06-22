@@ -7,6 +7,7 @@ import UpdatesList from '../components/UpdatesList';
 import AnnouncementsList from '../components/AnnouncementsList';
 import UserNotificationsList from '../components/UserNotificationsList';
 import { useNotificationsHubUnread } from '../hooks/useNotificationsHubUnread';
+import HeaderActionButton from '../components/HeaderActionButton';
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts';
 
@@ -82,21 +83,16 @@ export function NotificationsHubButton({ className = '' }: { className?: string 
   const { openHub, shouldGlow } = useNotificationsHub();
 
   return (
-    <button
-      type="button"
+    <HeaderActionButton
       onClick={() => openHub('notifications')}
-      className={`inline-flex items-center gap-1.5 p-2 rounded-xl border border-app bg-surface text-app hover:bg-surface-hover transition-all cursor-pointer ${
-        shouldGlow ? 'sbn-awards-glow-active border-accent/30' : ''
-      } ${className}`}
+      icon={Bell}
+      label="Notify"
+      glow={shouldGlow}
       title={shouldGlow ? 'You have unread notifications' : 'Notify, news, updates, and alerts'}
-      aria-label={shouldGlow ? 'Notifications — unread items' : 'Notify, news, updates, and alerts'}
+      ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notify, news, updates, and alerts'}
       id="notifications_hub_btn"
-    >
-      <Bell className="w-4 h-4 text-accent" />
-      {shouldGlow && (
-        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent border-2 border-surface sbn-awards-new-dot" aria-hidden />
-      )}
-    </button>
+      className={className}
+    />
   );
 }
 
