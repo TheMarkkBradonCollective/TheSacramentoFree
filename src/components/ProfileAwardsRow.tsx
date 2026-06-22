@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Award } from 'lucide-react';
 import { getAwardsUnlockStatus, getUserAwards } from '../lib/awardsApi';
 import { UserAward } from '../types';
 import AwardBadge from './AwardBadge';
@@ -45,9 +44,9 @@ export default function ProfileAwardsRow({
   return (
     <div className="w-full mt-4 pt-4 border-t border-app text-left">
       <div className="flex items-center justify-between gap-2 mb-2">
-        <p className="text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-1.5">
-          <Award className="w-3.5 h-3.5 text-accent" />
-          Awards
+        <p className="text-xs font-bold text-app flex items-center gap-1.5">
+          <span aria-hidden>🏅</span>
+          Badges
         </p>
         {onOpenAwards && (
           <button
@@ -55,13 +54,13 @@ export default function ProfileAwardsRow({
             onClick={onOpenAwards}
             className="text-[10px] font-bold text-accent hover:underline"
           >
-            View all
+            View all badges
           </button>
         )}
       </div>
       <div className="flex flex-wrap gap-1.5 justify-center">
-        {shown.map((grant) =>
-          grant.award ? <AwardBadge key={grant.id} award={grant.award} /> : null,
+        {shown.map((grant, i) =>
+          grant.award ? <AwardBadge key={grant.id} award={grant.award} index={i} /> : null,
         )}
         {extra > 0 && (
           <span className="text-[10px] text-muted font-semibold self-center">+{extra} more</span>

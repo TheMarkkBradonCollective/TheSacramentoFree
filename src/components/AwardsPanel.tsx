@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Award, Sparkles, Trophy } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Award, Heart, PartyPopper, Sparkles, Star, Trophy } from 'lucide-react';
 import { UserProfile } from '../types';
 import { useAwards } from '../hooks/useAwards';
+import { awardCategoryTheme } from '../lib/awardTheme';
 import { AWARDS } from '../siteContent';
 import AwardsSharePrompt from './AwardsSharePrompt';
 import AwardCard from './AwardCard';
@@ -34,6 +36,7 @@ export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
 
   const earnedCount = userAwards.length;
   const totalVisible = visibleDefinitions.length;
+  const progressPct = totalVisible > 0 ? Math.round((earnedCount / totalVisible) * 100) : 0;
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof visibleDefinitions>();
@@ -46,36 +49,58 @@ export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
   }, [visibleDefinitions]);
 
   if (loading) {
-    return <p className="text-sm text-muted text-center py-8">Loading awards…</p>;
+    return (
+      <div className="py-12 text-center space-y-3">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent-soft border border-accent/30 sbn-award-icon-pop">
+          <Sparkles className="w-7 h-7 text-accent animate-pulse" />
+        </div>
+        <p className="text-sm font-semibold text-muted">Gathering your badges…</p>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      {!showFullAwards && unlockStatus && (
-        <AwardsSharePrompt unlockStatus={unlockStatus} />
-      )}
+    <div className="space-y-6 max-w-2xl mx-auto pb-4">
+      {!showFullAwards && unlockStatus && <AwardsSharePrompt unlockStatus={unlockStatus} />}
 
       {showFullAwards && (
         <>
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent-soft border border-accent/30 sbn-awards-glow-btn">
-              <Trophy className="w-7 h-7 text-accent" />
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="sbn-award-hero sbn-card p-6 text-center space-y-4 border-accent/20"
+          >
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-accent-soft to-amber-500/15 border-2 border-accent/25 sbn-awards-glow-btn shadow-md">
+              <Trophy className="w-8 h-8 text-accent" />
             </div>
-            <p className="text-sm text-muted leading-relaxed">{AWARDS.unlockedIntro}</p>
-            <p className="text-xs font-bold text-accent">
-              {earnedCount} of {totalVisible} awards earned
-            </p>
-          </div>
+            <div className="space-y-1">
+              <p className="font-display text-lg font-bold text-app">Hey {userProfile.displayName.split(' ')[0]}! 👋</p>
+              <p className="text-sm text-muted leading-relaxed max-w-md mx-auto">{AWARDS.unlockedIntro}</p>
+            </div>
+
+            <div className="max-w-xs mx-auto space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-accent inline-flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 fill-accent" />
+                  {earnedCount} earned
+                </span>
+                <span className="text-muted">{totalVisible - earnedCount} to discover</span>
+              </div>
+              <div className="sbn-award-progress-track h-3 rounded-full overflow-hidden border border-accent/15">
+                <div className="sbn-award-progress-fill h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%` }} />
+              </div>
+            </div>
+          </motion.div>
 
           <div className="flex flex-wrap gap-2 justify-center">
-            <TabButton active={tab === 'mine'} onClick={() => setTab('mine')}>
-              My awards
+            <TabButton active={tab === 'mine'} onClick={() => setTab('mine')} emoji="🏅">
+              My badges
             </TabButton>
-            <TabButton active={tab === 'all'} onClick={() => setTab('all')}>
-              All awards
+            <TabButton active={tab === 'all'} onClick={() => setTab('all')} emoji="🗺️">
+              Explore all
             </TabButton>
             {canManage && (
-              <TabButton active={tab === 'manage'} onClick={() => setTab('manage')}>
+              <TabButton active={tab === 'manage'} onClick={() => setTab('manage')} emoji="🛠️">
                 Manage
               </TabButton>
             )}
@@ -84,18 +109,25 @@ export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
           {tab === 'mine' && (
             <section className="space-y-3">
               {userAwards.length === 0 ? (
-                <div className="sbn-card p-6 text-center space-y-2">
-                  <Award className="w-8 h-8 text-muted mx-auto" />
-                  <p className="text-sm text-muted">{AWARDS.noAwardsYet}</p>
-                  <p className="text-xs text-subtle">{AWARDS.noAwardsHint}</p>
+                <div className="sbn-card p-8 text-center space-y-3 rounded-2xl border-dashed border-accent/25 bg-accent-soft/10">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-inset border border-app">
+                    <PartyPopper className="w-7 h-7 text-accent" />
+                  </div>
+                  <p className="text-base font-display font-bold text-app">{AWARDS.noAwardsYet}</p>
+                  <p className="text-sm text-muted max-w-sm mx-auto">{AWARDS.noAwardsHint}</p>
                 </div>
               ) : (
-                <ul className="space-y-2">
-                  {userAwards.map((grant) =>
+                <ul className="grid gap-3 sm:grid-cols-1">
+                  {userAwards.map((grant, i) =>
                     grant.award ? (
-                      <li key={grant.id}>
+                      <motion.li
+                        key={grant.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                      >
                         <AwardCard award={grant.award} earned />
-                      </li>
+                      </motion.li>
                     ) : null,
                   )}
                 </ul>
@@ -104,26 +136,39 @@ export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
           )}
 
           {tab === 'all' && (
-            <section className="space-y-6">
-              {Array.from(grouped.entries()).map(([category, awards]) => (
-                <div key={category} className="space-y-2">
-                  <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-accent" />
-                    {category.replace(/_/g, ' ')}
-                  </h3>
-                  <ul className="space-y-2">
-                    {awards.map((award) => (
-                      <li key={award.id}>
-                        <AwardCard
-                          award={award}
-                          earned={earnedAwardIds.has(award.id)}
-                          locked={award.requiresUnlock && !showFullAwards}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            <section className="space-y-8">
+              {Array.from(grouped.entries()).map(([category, awards]) => {
+                const theme = awardCategoryTheme(category);
+                const earnedInGroup = awards.filter((a) => earnedAwardIds.has(a.id)).length;
+                return (
+                  <div key={category} className="space-y-3">
+                    <div
+                      className={`rounded-2xl border bg-gradient-to-r px-4 py-3 flex items-center justify-between gap-3 ${theme.header}`}
+                    >
+                      <h3 className="text-sm font-display font-bold text-app flex items-center gap-2">
+                        <span className="text-lg" aria-hidden>
+                          {theme.emoji}
+                        </span>
+                        {theme.label}
+                      </h3>
+                      <span className="text-[11px] font-bold text-muted shrink-0">
+                        {earnedInGroup}/{awards.length} earned
+                      </span>
+                    </div>
+                    <ul className="grid gap-3">
+                      {awards.map((award) => (
+                        <li key={award.id}>
+                          <AwardCard
+                            award={award}
+                            earned={earnedAwardIds.has(award.id)}
+                            locked={award.requiresUnlock && !showFullAwards}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
             </section>
           )}
 
@@ -132,15 +177,17 @@ export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
       )}
 
       {!showFullAwards && (
-        <div className="sbn-card p-4 text-left space-y-3 opacity-90">
-          <p className="text-xs font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            Coming when we hit 500
+        <div className="sbn-card p-5 text-left space-y-4 rounded-2xl border-accent/15 bg-gradient-to-b from-accent-soft/15 to-transparent">
+          <p className="text-sm font-display font-bold text-app flex items-center gap-2">
+            <Heart className="w-4 h-4 text-accent fill-accent/30" />
+            Sneak peek at what&apos;s coming
           </p>
-          <ul className="space-y-2 text-sm text-muted">
+          <ul className="space-y-2.5 text-sm text-muted">
             {AWARDS.previewBullets.map((line) => (
-              <li key={line} className="flex items-start gap-2">
-                <Award className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+              <li key={line} className="flex items-start gap-2.5">
+                <span className="shrink-0 w-6 h-6 rounded-full bg-accent-soft flex items-center justify-center text-xs">
+                  ✓
+                </span>
                 <span>{line}</span>
               </li>
             ))}
@@ -155,21 +202,24 @@ function TabButton({
   active,
   onClick,
   children,
+  emoji,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  emoji: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+      className={`px-4 py-2.5 rounded-2xl text-sm font-bold transition-all inline-flex items-center gap-1.5 ${
         active
-          ? 'bg-accent text-white shadow-sm'
-          : 'bg-inset text-muted border border-app hover:text-app'
+          ? 'bg-accent text-white shadow-md scale-[1.02]'
+          : 'bg-inset text-muted border border-app hover:text-app hover:border-accent/25'
       }`}
     >
+      <span aria-hidden>{emoji}</span>
       {children}
     </button>
   );

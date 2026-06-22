@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Check, Copy, Megaphone, Share2, Sparkles, Users } from 'lucide-react';
+import { Check, Copy, PartyPopper, Share2, Sparkles, Users } from 'lucide-react';
+import { motion } from 'motion/react';
 import { AwardsUnlockStatus } from '../types';
 import { getInviteShareUrl } from '../lib/awardsApi';
 import { AWARDS } from '../siteContent';
@@ -7,6 +8,8 @@ import { AWARDS } from '../siteContent';
 interface AwardsSharePromptProps {
   unlockStatus: AwardsUnlockStatus;
 }
+
+const FLOATERS = ['🎉', '🏡', '🎁', '⭐', '🤝', '✨'];
 
 export default function AwardsSharePrompt({ unlockStatus }: AwardsSharePromptProps) {
   const [copied, setCopied] = useState(false);
@@ -34,51 +37,73 @@ export default function AwardsSharePrompt({ unlockStatus }: AwardsSharePromptPro
   };
 
   return (
-    <div className="sbn-card p-6 space-y-5 text-center border-accent/30 bg-gradient-to-b from-accent-soft/30 to-transparent">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent-soft border border-accent/30 sbn-awards-glow-btn">
-        <Megaphone className="w-8 h-8 text-accent" />
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="sbn-award-hero sbn-card p-6 sm:p-8 space-y-6 text-center border-accent/25 relative overflow-hidden"
+    >
+      <div className="sbn-award-confetti" aria-hidden>
+        {FLOATERS.map((emoji, i) => (
+          <span key={emoji} className={`sbn-award-confetti-piece sbn-award-confetti-${i + 1}`}>
+            {emoji}
+          </span>
+        ))}
       </div>
 
-      <div className="space-y-2">
+      <div className="relative z-10 space-y-3">
+        <motion.div
+          animate={{ rotate: [0, -6, 6, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+          className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-accent-soft to-amber-500/20 border-2 border-accent/30 sbn-awards-glow-btn shadow-lg"
+        >
+          <PartyPopper className="w-9 h-9 text-accent" />
+        </motion.div>
+
         <p className="text-xs font-bold text-accent uppercase tracking-wider flex items-center justify-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" />
           {AWARDS.unlockBadge}
         </p>
-        <h3 className="font-display text-2xl font-bold text-app">{AWARDS.unlockTitle}</h3>
+        <h3 className="font-display text-2xl sm:text-3xl font-bold text-app leading-tight">
+          {AWARDS.unlockTitle}
+        </h3>
         <p className="text-sm text-muted leading-relaxed max-w-md mx-auto">{AWARDS.unlockBody}</p>
       </div>
 
-      <div className="space-y-2 max-w-sm mx-auto">
-        <div className="flex items-center justify-between text-xs font-semibold text-muted">
-          <span className="flex items-center gap-1.5">
+      <div className="relative z-10 space-y-3 max-w-sm mx-auto">
+        <div className="flex items-center justify-between text-xs font-bold text-app">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-inset px-3 py-1.5 border border-app">
             <Users className="w-3.5 h-3.5 text-accent" />
-            {unlockStatus.memberCount} neighbors
+            {unlockStatus.memberCount} neighbors here
           </span>
-          <span>{unlockStatus.target} to unlock</span>
+          <span className="text-muted">Goal: {unlockStatus.target}</span>
         </div>
-        <div className="h-3 rounded-full bg-inset border border-app overflow-hidden">
-          <div
-            className="h-full rounded-full bg-accent transition-all duration-500"
-            style={{ width: `${progress}%` }}
+
+        <div className="sbn-award-progress-track h-4 rounded-full overflow-hidden border border-accent/20 shadow-inner">
+          <motion.div
+            className="sbn-award-progress-fill h-full rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
           />
         </div>
-        <p className="text-xs text-subtle">
+
+        <p className="text-sm font-semibold text-app">
           {unlockStatus.remaining === 1
-            ? 'Just 1 more neighbor to unlock awards!'
-            : `${unlockStatus.remaining} more neighbors to go — help us get there!`}
+            ? '🙌 Just 1 more neighbor to unlock the party!'
+            : `🚀 ${unlockStatus.remaining} more neighbors and awards go live!`}
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="relative z-10 space-y-3">
         <button
           type="button"
           onClick={() => void handleCopy()}
-          className="sbn-btn sbn-btn-primary w-full max-w-sm mx-auto inline-flex items-center justify-center gap-2 text-base py-3"
+          className="sbn-btn sbn-btn-primary w-full max-w-sm mx-auto inline-flex items-center justify-center gap-2 text-base py-3.5 rounded-2xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-transform"
         >
           {copied ? (
             <>
               <Check className="w-5 h-5" />
-              Link copied — go share it!
+              Link copied — go share it! 🎉
             </>
           ) : (
             <>
@@ -91,14 +116,14 @@ export default function AwardsSharePrompt({ unlockStatus }: AwardsSharePromptPro
         <button
           type="button"
           onClick={() => void handleCopy()}
-          className="sbn-btn sbn-btn-ghost sbn-btn-sm inline-flex items-center gap-1.5 mx-auto"
+          className="sbn-btn sbn-btn-ghost sbn-btn-sm inline-flex items-center gap-1.5 mx-auto rounded-full"
         >
           <Copy className="w-4 h-4" />
           Copy invite link
         </button>
       </div>
 
-      <p className="text-xs text-subtle leading-relaxed max-w-md mx-auto">{AWARDS.unlockNote}</p>
-    </div>
+      <p className="relative z-10 text-xs text-muted leading-relaxed max-w-md mx-auto">{AWARDS.unlockNote}</p>
+    </motion.div>
   );
 }

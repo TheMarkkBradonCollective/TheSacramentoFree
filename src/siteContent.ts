@@ -374,26 +374,26 @@ export const TERMS = {
 
 export const AWARDS = {
   panelTitle: 'Neighbor Awards',
-  panelSubtitle: 'Badges for generous neighbors — unlock at 500 members',
-  unlockBadge: 'Almost there',
-  unlockTitle: 'Help us unlock awards!',
+  panelSubtitle: 'Fun badges for generous neighbors — unlock at 500 members!',
+  unlockBadge: 'Almost party time',
+  unlockTitle: 'Let\'s unlock awards together!',
   unlockBody:
-    'Awards stay locked until 500 neighbors join Sacramento Buy Nothing. Copy your invite link and share it — text friends, post in your neighborhood group, tell coworkers. Every signup counts.',
+    'We need 500 neighbors before the badge party starts. Copy your invite link and share it with friends, family, and folks in your neighborhood — every new neighbor helps!',
   unlockNote:
-    'Founding neighbors (the first 100, 200, 300, 400, and 500 members) earn special milestone badges when awards unlock. Auto badges track giving, claiming, events, and more.',
-  shareButton: 'Copy link & go big',
+    'Early joiners (the first 100, 200, 300, 400, and 500 members) get special founding badges. Lots more badges unlock automatically as you give, claim, chat, and show up for the community.',
+  shareButton: 'Copy link & spread the word',
   shareTitle: 'Join Sacramento Buy Nothing',
   shareMessage:
-    'Join our free Sacramento Buy Nothing community — give, receive, and trade with neighbors. No money, just kindness: {url}',
+    'Come join our free Sacramento Buy Nothing group — give, receive, and trade with neighbors. No money, just kindness: {url}',
   unlockedIntro:
-    'Celebrate neighbors who give, help, trade fairly, and keep the community strong — with no money involved.',
-  noAwardsYet: 'No awards yet — keep sharing and helping neighbors!',
-  noAwardsHint: 'Post listings, give items, join events, and chat in the community to earn auto badges.',
+    'Little badges for neighbors who give, help, show up, and make this community feel like home.',
+  noAwardsYet: 'Your badge shelf is waiting!',
+  noAwardsHint: 'Give an item, claim something, RSVP to an event, or say hi in community chat — badges show up as you participate.',
   previewBullets: [
     'Founding neighbor badges for the first 100, 200, 300, 400, and 500 members',
-    'Auto badges for gifts given, items claimed, and requests fulfilled',
-    'Recognition for events, community chat, upvotes, and more',
-    'Staff picks for neighbors who go above and beyond',
+    'Auto badges when you give gifts, claim items, and fulfill requests',
+    'Shout-outs for events, chat, upvotes, and being an awesome neighbor',
+    'Special staff picks for neighbors who go above and beyond',
   ],
   comingSoonTitle: 'Awards are on the way',
   comingSoonBody:
