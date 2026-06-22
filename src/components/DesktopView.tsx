@@ -210,6 +210,7 @@ export default function DesktopView({
                 onProfilePhotoSaved={onRefresh}
                 onDeleteAccount={onDeleteAccount}
                 onViewProfile={onViewProfile}
+                onOpenAwards={onOpenAwards}
                 scrollToDirectorOverview={scrollToDirectorOverview}
                 onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               />

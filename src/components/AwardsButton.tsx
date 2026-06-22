@@ -11,8 +11,8 @@ export default function AwardsButton({ onClick, className = '' }: AwardsButtonPr
       type="button"
       onClick={onClick}
       className={`sbn-awards-glow-btn inline-flex items-center gap-1.5 p-2 rounded-xl border text-accent hover:bg-accent-soft transition-colors cursor-pointer ${className}`}
-      title="Neighbor awards — coming soon"
-      aria-label="Neighbor awards — coming soon"
+      title="Neighbor awards"
+      aria-label="Neighbor awards"
       id="awards_header_btn"
     >
       <Award className="w-4 h-4" />

@@ -271,6 +271,7 @@ export default function TabletView({
                 onProfilePhotoSaved={onRefresh}
                 onDeleteAccount={onDeleteAccount}
                 onViewProfile={onViewProfile}
+                onOpenAwards={onOpenAwards}
                 scrollToDirectorOverview={scrollToDirectorOverview}
                 onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               />

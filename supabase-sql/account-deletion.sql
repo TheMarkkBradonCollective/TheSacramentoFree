@@ -74,6 +74,9 @@ BEGIN
 
   DELETE FROM public.moderation_audit_log
   WHERE "actorUserId" = target_uid OR "targetUserId" = target_uid;
+
+  DELETE FROM public.user_awards
+  WHERE "userId" = target_uid OR "grantedByUserId" = target_uid OR "revokedByUserId" = target_uid;
 END;
 $purge$;
 

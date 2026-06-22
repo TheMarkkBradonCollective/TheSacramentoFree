@@ -306,6 +306,7 @@ export default function MobileView({
               onProfilePhotoSaved={onRefresh}
               onDeleteAccount={onDeleteAccount}
               onViewProfile={onViewProfile}
+              onOpenAwards={onOpenAwards}
               scrollToDirectorOverview={scrollToDirectorOverview}
               onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               fullBleed

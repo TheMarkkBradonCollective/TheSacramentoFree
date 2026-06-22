@@ -27,6 +27,7 @@ import {
   FileText,
 } from 'lucide-react';
 import ProfilePostList from './ProfilePostList';
+import ProfileAwardsRow from './ProfileAwardsRow';
 import ThemeSettings from './ThemeSettings';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
@@ -45,6 +46,7 @@ interface UserProfileViewProps {
   onProfilePhotoSaved?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
   onViewProfile?: (userId: string) => void;
+  onOpenAwards?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
@@ -66,6 +68,7 @@ export default function UserProfileView({
   onProfilePhotoSaved,
   onDeleteAccount,
   onViewProfile,
+  onOpenAwards,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
   fullBleed = false,
@@ -341,6 +344,12 @@ export default function UserProfileView({
               <p className="text-[10px] text-muted">Downvotes received</p>
             </div>
           </div>
+
+          <ProfileAwardsRow
+            userId={userProfile.uid}
+            onOpenAwards={onOpenAwards}
+            viewerIsStaff={Boolean(userProfile.role && userProfile.role !== 'user')}
+          />
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
             Joined our sharing circle: {new Date(userProfile.createdAt?.seconds ? userProfile.createdAt.seconds * 1000 : userProfile.createdAt).toLocaleDateString()}

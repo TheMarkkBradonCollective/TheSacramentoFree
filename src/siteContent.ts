@@ -374,7 +374,27 @@ export const TERMS = {
 
 export const AWARDS = {
   panelTitle: 'Neighbor Awards',
-  panelSubtitle: 'Badges and streaks for generous neighbors — coming soon',
+  panelSubtitle: 'Badges for generous neighbors — unlock at 500 members',
+  unlockBadge: 'Almost there',
+  unlockTitle: 'Help us unlock awards!',
+  unlockBody:
+    'Awards stay locked until 500 neighbors join Sacramento Buy Nothing. Copy your invite link and share it — text friends, post in your neighborhood group, tell coworkers. Every signup counts.',
+  unlockNote:
+    'Founding neighbors (the first 100, 200, 300, 400, and 500 members) earn special milestone badges when awards unlock. Auto badges track giving, claiming, events, and more.',
+  shareButton: 'Copy link & go big',
+  shareTitle: 'Join Sacramento Buy Nothing',
+  shareMessage:
+    'Join our free Sacramento Buy Nothing community — give, receive, and trade with neighbors. No money, just kindness: {url}',
+  unlockedIntro:
+    'Celebrate neighbors who give, help, trade fairly, and keep the community strong — with no money involved.',
+  noAwardsYet: 'No awards yet — keep sharing and helping neighbors!',
+  noAwardsHint: 'Post listings, give items, join events, and chat in the community to earn auto badges.',
+  previewBullets: [
+    'Founding neighbor badges for the first 100, 200, 300, 400, and 500 members',
+    'Auto badges for gifts given, items claimed, and requests fulfilled',
+    'Recognition for events, community chat, upvotes, and more',
+    'Staff picks for neighbors who go above and beyond',
+  ],
   comingSoonTitle: 'Awards are on the way',
   comingSoonBody:
     'I am building a way to celebrate neighbors who give, help, trade fairly, and keep the community strong — with no money involved.',

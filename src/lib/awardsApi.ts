@@ -1,0 +1,258 @@
+import {
+  AwardDefinition,
+  AwardDefinitionInput,
+  AwardsUnlockStatus,
+  UserAward,
+  UserProfile,
+} from '../types';
+import { supabase } from '../supabase';
+import { canManageAwards } from './roles';
+
+export const AWARDS_UNLOCK_TARGET = 500;
+
+function normalizeAwardDefinitionRow(row: Record<string, unknown>): AwardDefinition {
+  const autoRuleRaw = row.autoRule as Record<string, unknown> | null | undefined;
+  return {
+    id: String(row.id),
+    slug: String(row.slug),
+    title: String(row.title),
+    description: String(row.description),
+    icon: String(row.icon || 'award'),
+    category: (row.category as AwardDefinition['category']) || 'community',
+    triggerType: (row.triggerType as AwardDefinition['triggerType']) || 'manual',
+    autoRule: autoRuleRaw?.type
+      ? {
+          type: autoRuleRaw.type as NonNullable<AwardDefinition['autoRule']>['type'],
+          threshold: Number(autoRuleRaw.threshold ?? 1),
+        }
+      : null,
+    sortOrder: Number(row.sortOrder ?? 0),
+    isActive: row.isActive !== false,
+    requiresUnlock: row.requiresUnlock !== false,
+    createdAt: String(row.createdAt || ''),
+    updatedAt: String(row.updatedAt || ''),
+    createdByUserId: row.createdByUserId ? String(row.createdByUserId) : null,
+  };
+}
+
+function normalizeUserAwardRow(
+  row: Record<string, unknown>,
+  definition?: AwardDefinition,
+): UserAward {
+  return {
+    id: String(row.id),
+    userId: String(row.userId),
+    awardId: String(row.awardId),
+    grantedAt: String(row.grantedAt || ''),
+    grantedByUserId: row.grantedByUserId ? String(row.grantedByUserId) : null,
+    revokedAt: row.revokedAt ? String(row.revokedAt) : null,
+    revokedByUserId: row.revokedByUserId ? String(row.revokedByUserId) : null,
+    source: (row.source as UserAward['source']) || 'auto',
+    metadata: (row.metadata as Record<string, unknown>) || null,
+    award: definition,
+  };
+}
+
+export async function getAwardsUnlockStatus(): Promise<AwardsUnlockStatus> {
+  try {
+    const { count, error } = await supabase.from('users').select('uid', { count: 'exact', head: true });
+    const memberCount = error ? 0 : count ?? 0;
+    const unlocked = memberCount >= AWARDS_UNLOCK_TARGET;
+    return {
+      unlocked,
+      memberCount,
+      target: AWARDS_UNLOCK_TARGET,
+      remaining: Math.max(0, AWARDS_UNLOCK_TARGET - memberCount),
+    };
+  } catch {
+    return { unlocked: false, memberCount: 0, target: AWARDS_UNLOCK_TARGET, remaining: AWARDS_UNLOCK_TARGET };
+  }
+}
+
+export async function getAwardDefinitions(): Promise<AwardDefinition[]> {
+  try {
+    const { data, error } = await supabase
+      .from('award_definitions')
+      .select('*')
+      .order('sortOrder', { ascending: true })
+      .order('title', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      console.warn('[awards] definitions:', error.message);
+      return [];
+    }
+
+    return (data as Record<string, unknown>[]).map(normalizeAwardDefinitionRow);
+  } catch {
+    return [];
+  }
+}
+
+export async function getUserAwards(userId: string): Promise<UserAward[]> {
+  try {
+    const [defs, grantsRes] = await Promise.all([
+      getAwardDefinitions(),
+      supabase
+        .from('user_awards')
+        .select('*')
+        .eq('userId', userId)
+        .is('revokedAt', null)
+        .order('grantedAt', { ascending: false }),
+    ]);
+
+    if (grantsRes.error) {
+      if (grantsRes.error.code === '42P01') return [];
+      console.warn('[awards] user grants:', grantsRes.error.message);
+      return [];
+    }
+
+    const defMap = new Map(defs.map((d) => [d.id, d]));
+    return (grantsRes.data as Record<string, unknown>[]).map((row) =>
+      normalizeUserAwardRow(row, defMap.get(String(row.awardId))),
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function staffCreateAwardDefinition(
+  input: AwardDefinitionInput,
+  actor: UserProfile,
+): Promise<{ ok: boolean; award?: AwardDefinition; errorMessage?: string }> {
+  if (!canManageAwards(actor.role)) {
+    return { ok: false, errorMessage: 'Only staff can create awards.' };
+  }
+
+  try {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const payload = {
+      id,
+      slug: input.slug.trim().toLowerCase().replace(/\s+/g, '-'),
+      title: input.title.trim(),
+      description: input.description.trim(),
+      icon: input.icon.trim() || 'award',
+      category: input.category,
+      triggerType: input.triggerType,
+      autoRule: input.autoRule ?? null,
+      sortOrder: input.sortOrder ?? 0,
+      isActive: input.isActive !== false,
+      requiresUnlock: input.requiresUnlock !== false,
+      createdAt: now,
+      updatedAt: now,
+      createdByUserId: actor.uid,
+    };
+
+    const { data, error } = await supabase.from('award_definitions').insert(payload).select('*').single();
+    if (error) {
+      return { ok: false, errorMessage: error.message };
+    }
+
+    return { ok: true, award: normalizeAwardDefinitionRow(data as Record<string, unknown>) };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not create award.' };
+  }
+}
+
+export async function staffUpdateAwardDefinition(
+  id: string,
+  input: Partial<AwardDefinitionInput>,
+  actor: UserProfile,
+): Promise<{ ok: boolean; award?: AwardDefinition; errorMessage?: string }> {
+  if (!canManageAwards(actor.role)) {
+    return { ok: false, errorMessage: 'Only staff can edit awards.' };
+  }
+
+  try {
+    const patch: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+    if (input.slug !== undefined) patch.slug = input.slug.trim().toLowerCase().replace(/\s+/g, '-');
+    if (input.title !== undefined) patch.title = input.title.trim();
+    if (input.description !== undefined) patch.description = input.description.trim();
+    if (input.icon !== undefined) patch.icon = input.icon.trim() || 'award';
+    if (input.category !== undefined) patch.category = input.category;
+    if (input.triggerType !== undefined) patch.triggerType = input.triggerType;
+    if (input.autoRule !== undefined) patch.autoRule = input.autoRule;
+    if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder;
+    if (input.isActive !== undefined) patch.isActive = input.isActive;
+    if (input.requiresUnlock !== undefined) patch.requiresUnlock = input.requiresUnlock;
+
+    const { data, error } = await supabase
+      .from('award_definitions')
+      .update(patch)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      return { ok: false, errorMessage: error.message };
+    }
+
+    return { ok: true, award: normalizeAwardDefinitionRow(data as Record<string, unknown>) };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not update award.' };
+  }
+}
+
+export async function staffGrantAward(
+  targetUserId: string,
+  awardSlug: string,
+  actor: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canManageAwards(actor.role)) {
+    return { ok: false, errorMessage: 'Only staff can grant awards.' };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('staff_grant_award', {
+      target_uid: targetUserId,
+      award_slug: awardSlug,
+    });
+
+    if (error) {
+      return { ok: false, errorMessage: error.message };
+    }
+
+    return { ok: Boolean(data) };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not grant award.' };
+  }
+}
+
+export async function staffRevokeAward(
+  targetUserId: string,
+  awardSlug: string,
+  actor: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canManageAwards(actor.role)) {
+    return { ok: false, errorMessage: 'Only staff can revoke awards.' };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('staff_revoke_award', {
+      target_uid: targetUserId,
+      award_slug: awardSlug,
+    });
+
+    if (error) {
+      return { ok: false, errorMessage: error.message };
+    }
+
+    return { ok: Boolean(data) };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not revoke award.' };
+  }
+}
+
+export async function evaluateAutoAwardsForUser(userId: string): Promise<void> {
+  try {
+    await supabase.rpc('evaluate_auto_awards_for_user', { target_uid: userId });
+  } catch {
+    // RPC may not exist until migration runs
+  }
+}
+
+export function getInviteShareUrl(): string {
+  if (typeof window === 'undefined') return 'https://sacramentobuynothing.com/#/login';
+  return `${window.location.origin}${window.location.pathname}#/login`;
+}

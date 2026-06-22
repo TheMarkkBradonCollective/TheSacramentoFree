@@ -41,7 +41,7 @@ import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
 import TermsOfUseContent from './components/TermsOfUseContent';
-import AwardsComingSoon from './components/AwardsComingSoon';
+import AwardsPanel from './components/AwardsPanel';
 import { AppTab, parseAppTab } from './lib/appTabs';
 import {
   readCachedProfile,
@@ -1159,13 +1159,13 @@ export default function App() {
                 </FullScreenPanel>
               )}
 
-              {showAwardsPanel && (
+              {showAwardsPanel && userProfile && (
                 <FullScreenPanel
                   title={AWARDS.panelTitle}
                   subtitle={AWARDS.panelSubtitle}
                   onClose={() => setShowAwardsPanel(false)}
                 >
-                  <AwardsComingSoon />
+                  <AwardsPanel userProfile={userProfile} />
                 </FullScreenPanel>
               )}
 

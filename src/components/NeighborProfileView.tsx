@@ -31,10 +31,11 @@ import BlockNeighborModal from './BlockNeighborModal';
 import ReportNeighborModal from './ReportNeighborModal';
 import { ItemPost } from '../types';
 import RoleBadge from './RoleBadge';
-import { ASSIGNABLE_ROLE_OPTIONS, isDirectorRole } from '../lib/roles';
+import { ASSIGNABLE_ROLE_OPTIONS, isDirectorRole, isStaffRole } from '../lib/roles';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { MessageRequest } from '../types';
 import ProfilePostList from './ProfilePostList';
+import ProfileAwardsRow from './ProfileAwardsRow';
 
 interface NeighborProfileViewProps {
   userId: string;
@@ -330,6 +331,11 @@ export default function NeighborProfileView({
                   <RoleBadge role={profile.role} />
                 </div>
               )}
+
+              <ProfileAwardsRow
+                userId={profile.uid}
+                viewerIsStaff={isStaffRole(currentUserProfile?.role)}
+              />
             </div>
 
             {!isSelf && !blockStatus.iBlockedThem && (

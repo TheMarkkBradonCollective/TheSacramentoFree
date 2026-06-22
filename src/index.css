@@ -1032,3 +1032,7 @@ html.sbn-keyboard-open .sbn-fixed-bottom {
 .sbn-awards-glow-btn {
   animation: sbn-awards-glow 2.2s ease-in-out infinite;
 }
+
+.sbn-award-earned {
+  box-shadow: 0 0 0 1px rgba(255, 69, 0, 0.08);
+}

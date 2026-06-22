@@ -139,6 +139,11 @@ export function canPostAnnouncements(role?: UserProfile['role']): boolean {
   return isStaffRole(role);
 }
 
+/** Staff can manage award definitions and grant/revoke awards on neighbors. */
+export function canManageAwards(role?: UserProfile['role']): boolean {
+  return isStaffRole(role);
+}
+
 /** Edit or delete an announcement — author or director. */
 export function canEditAnnouncement(
   actor: Pick<UserProfile, 'uid' | 'role'>,

@@ -369,6 +369,83 @@ export interface HelpAnnouncementRecord {
 
 export type HelpAnnouncementInput = Pick<HelpAnnouncementRecord, 'date' | 'title' | 'body' | 'detail'>;
 
+export type AwardCategory =
+  | 'milestone'
+  | 'giving'
+  | 'community'
+  | 'recognition'
+  | 'events'
+  | 'profile'
+  | 'staff';
+
+export type AwardTriggerType = 'manual' | 'auto';
+
+export type AwardSource = 'auto' | 'staff' | 'milestone';
+
+export type AutoAwardRuleType =
+  | 'items_posted'
+  | 'items_given'
+  | 'items_claimed'
+  | 'requests_fulfilled'
+  | 'trades_completed'
+  | 'upvotes_received'
+  | 'event_rsvps'
+  | 'community_messages'
+  | 'has_bio'
+  | 'has_app_review'
+  | 'join_rank_max'
+  | 'combined_giving';
+
+export interface AutoAwardRule {
+  type: AutoAwardRuleType;
+  threshold: number;
+}
+
+export interface AwardDefinition {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  icon: string;
+  category: AwardCategory;
+  triggerType: AwardTriggerType;
+  autoRule?: AutoAwardRule | null;
+  sortOrder: number;
+  isActive: boolean;
+  requiresUnlock: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdByUserId?: string | null;
+}
+
+export type AwardDefinitionInput = Pick<
+  AwardDefinition,
+  'slug' | 'title' | 'description' | 'icon' | 'category' | 'triggerType' | 'sortOrder' | 'requiresUnlock'
+> & {
+  autoRule?: AutoAwardRule | null;
+  isActive?: boolean;
+};
+
+export interface UserAward {
+  id: string;
+  userId: string;
+  awardId: string;
+  grantedAt: string;
+  grantedByUserId?: string | null;
+  revokedAt?: string | null;
+  revokedByUserId?: string | null;
+  source: AwardSource;
+  metadata?: Record<string, unknown> | null;
+  award?: AwardDefinition;
+}
+
+export interface AwardsUnlockStatus {
+  unlocked: boolean;
+  memberCount: number;
+  target: number;
+  remaining: number;
+}
+
 export interface HelpAnnouncementComment {
   id: string;
   announcementId: string;
