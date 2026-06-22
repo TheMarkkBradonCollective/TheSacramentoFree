@@ -114,7 +114,7 @@ export default function UserNotificationsList({ userId }: UserNotificationsListP
         const Icon = kindIcon(item.kind);
         return (
           <li key={item.id}>
-            <PublicCard>
+            <PublicCard className={item.readAt ? '' : 'border-accent/25 bg-accent-soft/10'}>
               <div className="flex gap-3">
                 <span
                   className={`shrink-0 p-2 rounded-xl h-fit ${kindColor(item.kind)}`}
@@ -124,7 +124,14 @@ export default function UserNotificationsList({ userId }: UserNotificationsListP
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-sm font-bold text-app">{item.title}</h3>
+                    <h3 className="text-sm font-bold text-app flex items-center gap-2">
+                      {item.title}
+                      {!item.readAt ? (
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-accent bg-accent-soft px-1.5 py-0.5 rounded-full">
+                          New
+                        </span>
+                      ) : null}
+                    </h3>
                     <time className="text-[10px] text-muted whitespace-nowrap shrink-0">
                       {formatWhen(item.at)}
                     </time>

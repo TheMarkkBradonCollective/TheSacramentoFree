@@ -3225,10 +3225,45 @@ function normalizeUserNotificationRow(row: Record<string, unknown>): UserNotific
     title: String(row.title || 'Notification'),
     body: String(row.body || ''),
     at: coerceToIsoDate(row.createdAt),
+    readAt: row.readAt ? coerceToIsoDate(row.readAt) : null,
     itemId: row.itemId ? String(row.itemId) : undefined,
     itemTitle: row.itemTitle ? String(row.itemTitle) : undefined,
     actorName: row.actorName ? String(row.actorName) : undefined,
   };
+}
+
+export async function getUnreadUserNotificationCount(userId: string): Promise<number> {
+  try {
+    const { count, error } = await supabase
+      .from('user_notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('userId', userId)
+      .is('readAt', null);
+
+    if (error) {
+      if (error.code === '42P01') return 0;
+      return 0;
+    }
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function markSupabaseNotificationsRead(userId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('user_notifications')
+      .update({ readAt: new Date().toISOString() })
+      .eq('userId', userId)
+      .is('readAt', null);
+
+    if (error && error.code !== '42P01') {
+      console.warn('[notifications] mark read:', error.message);
+    }
+  } catch {
+    // table may not exist yet
+  }
 }
 
 export async function getSupabaseUserNotifications(userId: string): Promise<UserNotificationItem[]> {

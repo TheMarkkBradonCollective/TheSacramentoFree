@@ -83,6 +83,7 @@ export interface UserNotificationItem {
   title: string;
   body: string;
   at: string;
+  readAt?: string | null;
   itemId?: string;
   itemTitle?: string;
   actorName?: string;
