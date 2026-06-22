@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Trash2,
   Download,
+  LogOut,
   Smartphone,
   Share2,
   Gift,
@@ -45,6 +46,7 @@ interface UserProfileViewProps {
   /** Refresh feed/listings after avatar is saved */
   onProfilePhotoSaved?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
+  onLogout?: () => void | Promise<void>;
   onViewProfile?: (userId: string) => void;
   onOpenAwards?: () => void;
   scrollToDirectorOverview?: boolean;
@@ -67,6 +69,7 @@ export default function UserProfileView({
   onUpdateProfile,
   onProfilePhotoSaved,
   onDeleteAccount,
+  onLogout,
   onViewProfile,
   onOpenAwards,
   scrollToDirectorOverview,
@@ -676,6 +679,30 @@ export default function UserProfileView({
           onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
           fullBleed={fullBleed}
         />
+      ) : null}
+
+      {onLogout ? (
+        <div
+          className={
+            fullBleed
+              ? sectionShell
+              : 'bg-surface border border-app rounded-2xl p-6 shadow-md'
+          }
+          id="account_sign_out_section"
+        >
+          <h3 className="text-sm font-bold text-app uppercase tracking-wider mb-2">Sign out</h3>
+          <p className="text-xs text-muted leading-relaxed mb-4">
+            Sign out of Sacramento Buy Nothing on this device. You can sign back in anytime.
+          </p>
+          <button
+            type="button"
+            onClick={() => void onLogout()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-app text-app text-xs font-bold uppercase tracking-wider hover:bg-inset transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign out</span>
+          </button>
+        </div>
       ) : null}
 
       {onDeleteAccount && (

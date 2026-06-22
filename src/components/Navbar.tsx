@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Plus, MapPin } from 'lucide-react';
+import { Plus, MapPin } from 'lucide-react';
 import { UserProfile } from '../types';
 import { IN_APP } from '../siteContent';
 import AwardsButton from './AwardsButton';
@@ -12,7 +12,6 @@ interface NavbarProps {
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
-  onLogout: () => void;
   onOpenAwards: () => void;
   awardsButtonGlow?: boolean;
 }
@@ -30,7 +29,6 @@ export default function Navbar({
   activeTab,
   setActiveTab,
   onOpenNewPost,
-  onLogout,
   onOpenAwards,
   awardsButtonGlow = false,
 }: NavbarProps) {
@@ -83,15 +81,6 @@ export default function Navbar({
                 >
                   <Plus className="w-4 h-4" />
                   <span className="hidden lg:inline">{IN_APP.postButton}</span>
-                </button>
-                <button
-                  type="button"
-                  id="navbar_logout_btn"
-                  onClick={onLogout}
-                  title="Sign out"
-                  className="p-2.5 rounded-full text-muted hover:text-app hover:bg-inset transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
                 </button>
               </>
             )}

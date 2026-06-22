@@ -5,7 +5,7 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { List, MessageSquare, User, Plus, LogOut, Map, CalendarDays } from 'lucide-react';
+import { List, MessageSquare, User, Plus, Map, CalendarDays } from 'lucide-react';
 import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import BrandLogo from './BrandLogo';
@@ -139,14 +139,6 @@ export default function TabletView({
             <Plus className="w-4 h-4" />
             <span className="hidden md:inline">{IN_APP.postButton}</span>
           </button>
-          <button
-            type="button"
-            id="tablet_header_logout"
-            onClick={onLogout}
-            className="p-2 rounded-full text-muted hover:bg-inset hover:text-app"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
         </div>
       </header>
@@ -272,6 +264,7 @@ export default function TabletView({
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
                 onDeleteAccount={onDeleteAccount}
+                onLogout={onLogout}
                 onViewProfile={onViewProfile}
                 onOpenAwards={onOpenAwards}
                 scrollToDirectorOverview={scrollToDirectorOverview}

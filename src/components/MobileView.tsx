@@ -5,7 +5,7 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, Plus, LogOut, CalendarDays } from 'lucide-react';
+import { Map, List, MessageSquare, User, Plus, CalendarDays } from 'lucide-react';
 import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
@@ -133,14 +133,6 @@ export default function MobileView({
         <div className="flex items-center gap-1 shrink-0">
           <NotificationsHubButton />
           {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
-          <button
-            type="button"
-            onClick={onLogout}
-            className="p-2 rounded-full text-muted hover:bg-inset hover:text-app"
-            title="Sign out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
         </div>
       </header>
@@ -307,6 +299,7 @@ export default function MobileView({
               onUpdateProfile={onUpdateProfile}
               onProfilePhotoSaved={onRefresh}
               onDeleteAccount={onDeleteAccount}
+              onLogout={onLogout}
               onViewProfile={onViewProfile}
               onOpenAwards={onOpenAwards}
               scrollToDirectorOverview={scrollToDirectorOverview}

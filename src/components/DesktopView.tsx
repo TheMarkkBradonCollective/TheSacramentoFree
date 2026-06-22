@@ -105,7 +105,6 @@ export default function DesktopView({
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenNewPost={onOpenNewPost}
-        onLogout={onLogout}
         onOpenAwards={onOpenAwards ?? (() => {})}
         awardsButtonGlow={awardsButtonGlow}
       />
@@ -212,6 +211,7 @@ export default function DesktopView({
                 onUpdateProfile={onUpdateProfile}
                 onProfilePhotoSaved={onRefresh}
                 onDeleteAccount={onDeleteAccount}
+                onLogout={onLogout}
                 onViewProfile={onViewProfile}
                 onOpenAwards={onOpenAwards}
                 scrollToDirectorOverview={scrollToDirectorOverview}
