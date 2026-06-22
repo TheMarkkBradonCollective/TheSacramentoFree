@@ -48,6 +48,7 @@ interface TabletViewProps {
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
   onOpenAwards?: () => void;
+  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -98,6 +99,7 @@ export default function TabletView({
   onOpenPrivacy,
   onOpenTerms,
   onOpenAwards,
+  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -132,7 +134,7 @@ export default function TabletView({
 
         <div className="flex items-center gap-2" id="tablet_actions">
           <NotificationsHubButton />
-          {onOpenAwards ? <AwardsButton onClick={onOpenAwards} /> : null}
+          {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
           <button type="button" id="tablet_header_post" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm">
             <Plus className="w-4 h-4" />
             <span className="hidden md:inline">{IN_APP.postButton}</span>

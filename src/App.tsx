@@ -63,6 +63,7 @@ import { isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
 import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
+import { useAwardsGlow } from './hooks/useAwardsGlow';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -142,6 +143,12 @@ export default function App() {
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const { confirm, alert } = useConfirm();
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
+  const { shouldGlow: awardsButtonGlow, markAwardsSeen } = useAwardsGlow(userProfile?.uid);
+
+  const handleOpenAwards = useCallback(() => {
+    markAwardsSeen();
+    setShowAwardsPanel(true);
+  }, [markAwardsSeen]);
 
   const goHomeTab = useCallback(() => {
     setActiveTab('map');
@@ -1027,7 +1034,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
-                  onOpenAwards={() => setShowAwardsPanel(true)}
+                  onOpenAwards={handleOpenAwards}
+                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1072,7 +1080,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
-                  onOpenAwards={() => setShowAwardsPanel(true)}
+                  onOpenAwards={handleOpenAwards}
+                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1117,7 +1126,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
-                  onOpenAwards={() => setShowAwardsPanel(true)}
+                  onOpenAwards={handleOpenAwards}
+                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}

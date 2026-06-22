@@ -14,6 +14,7 @@ interface NavbarProps {
   onOpenNewPost: () => void;
   onLogout: () => void;
   onOpenAwards: () => void;
+  awardsButtonGlow?: boolean;
 }
 
 const TABS: { id: AppTab; label: string }[] = [
@@ -31,6 +32,7 @@ export default function Navbar({
   onOpenNewPost,
   onLogout,
   onOpenAwards,
+  awardsButtonGlow = false,
 }: NavbarProps) {
   return (
     <header id="main_navbar" className="sticky top-0 z-40 sbn-glass-nav">
@@ -63,7 +65,7 @@ export default function Navbar({
 
           <div className="flex items-center gap-2" id="navbar_actions_container">
             {userProfile ? <NotificationsHubButton /> : null}
-            {userProfile ? <AwardsButton onClick={onOpenAwards} /> : null}
+            {userProfile ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
             {userProfile && (
               <>
                 <div

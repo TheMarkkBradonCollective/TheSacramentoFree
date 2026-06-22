@@ -49,6 +49,7 @@ interface MobileViewProps {
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
   onOpenAwards?: () => void;
+  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -103,6 +104,7 @@ export default function MobileView({
   onOpenPrivacy,
   onOpenTerms,
   onOpenAwards,
+  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -130,7 +132,7 @@ export default function MobileView({
         />
         <div className="flex items-center gap-1 shrink-0">
           <NotificationsHubButton />
-          {onOpenAwards ? <AwardsButton onClick={onOpenAwards} /> : null}
+          {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
           <button
             type="button"
             onClick={onLogout}

@@ -45,6 +45,7 @@ interface DesktopViewProps {
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
   onOpenAwards?: () => void;
+  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -87,6 +88,7 @@ export default function DesktopView({
   onOpenPrivacy,
   onOpenTerms,
   onOpenAwards,
+  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -105,6 +107,7 @@ export default function DesktopView({
         onOpenNewPost={onOpenNewPost}
         onLogout={onLogout}
         onOpenAwards={onOpenAwards ?? (() => {})}
+        awardsButtonGlow={awardsButtonGlow}
       />
 
       <main id="desktop_main" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
