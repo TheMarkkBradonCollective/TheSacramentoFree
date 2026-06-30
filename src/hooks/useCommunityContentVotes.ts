@@ -116,7 +116,7 @@ export function useCommunityContentVotes(
       void setSupabaseCommunityContentVote(targetType, targetId, uid, newUserVote).then((result) => {
         if (result.ok) return;
         void reload();
-        if (result.reason === 'vote_cooldown') {
+        if (result.ok === false && result.reason === 'vote_cooldown') {
           void alert({ message: VOTE_COOLDOWN_MESSAGE });
         }
       });

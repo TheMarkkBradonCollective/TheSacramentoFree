@@ -1401,7 +1401,7 @@ export async function setUserRole(
     }
 
     const slotCheck = await assertStaffRoleSlotAvailable(uid, role);
-    if (!slotCheck.ok) {
+    if (slotCheck.ok === false) {
       return { ok: false, errorMessage: slotCheck.errorMessage };
     }
 
@@ -4593,7 +4593,7 @@ export async function staffUpdateUserProfile(params: {
     };
     if (params.role && isDirectorRole(params.actor.role)) {
       const slotCheck = await assertStaffRoleSlotAvailable(params.targetUserId, params.role);
-      if (!slotCheck.ok) {
+      if (slotCheck.ok === false) {
         return { ok: false, errorMessage: slotCheck.errorMessage };
       }
       payload.role = params.role;

@@ -34,14 +34,17 @@ function pushApiPlugin(): Plugin {
         next();
         return;
       }
+      const handle = (app: NonNullable<typeof pushApp>) => {
+        (app as Connect.NextHandleFunction)(req, res, next);
+      };
       if (pushApp) {
-        pushApp(req, res, next);
+        handle(pushApp);
         return;
       }
       import('./server/app')
         .then((mod) => {
           pushApp = mod.createPushApp();
-          pushApp(req, res, next);
+          handle(pushApp);
         })
         .catch(next);
     });
@@ -64,10 +67,12 @@ export default defineConfig(({mode}) => {
       },
     },
     server: {
-      hmr: {
-        protocol: 'wss',
-        clientPort: 443,
-      },
+      hmr: process.env.CURSOR_CLOUD_AGENT
+        ? {
+            protocol: 'wss',
+            clientPort: 443,
+          }
+        : undefined,
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

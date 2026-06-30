@@ -709,7 +709,7 @@ export const NEIGHBORHOOD_COORDS: Record<string, { x: number; y: number }> = {
 
 // Help find the closest neighborhood based on custom coordinates
 export function findClosestNeighborhood(x: number, y: number): string {
-  let closestName = SACRAMENTO_NEIGHBORHOODS[0];
+  let closestName: (typeof SACRAMENTO_NEIGHBORHOODS)[number] = SACRAMENTO_NEIGHBORHOODS[0];
   let minDistance = Infinity;
 
   for (const name of SACRAMENTO_NEIGHBORHOODS) {
@@ -727,7 +727,7 @@ export function findClosestNeighborhood(x: number, y: number): string {
 }
 
 export function findClosestNeighborhoodByLatLng(lat: number, lng: number): string {
-  let closestName = SACRAMENTO_NEIGHBORHOODS[0];
+  let closestName: (typeof SACRAMENTO_NEIGHBORHOODS)[number] = SACRAMENTO_NEIGHBORHOODS[0];
   let minDistance = Infinity;
 
   for (const name of SACRAMENTO_NEIGHBORHOODS) {

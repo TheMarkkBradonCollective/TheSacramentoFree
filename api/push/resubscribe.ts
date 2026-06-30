@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const body = parseJsonBody<ResubscribeBody>(req);
+    const body = parseJsonBody(req) as ResubscribeBody;
     const result = await runPushResubscribe({
       userId: user.id,
       subscription: body.subscription || {},

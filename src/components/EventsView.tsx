@@ -58,14 +58,15 @@ export default function EventsView({
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {upcoming.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                currentUserId={userProfile.uid}
-                engagement={engagement}
-                onViewEvent={onViewEvent}
-                onViewProfile={onViewProfile}
-              />
+              <div key={event.id}>
+                <EventCard
+                  event={event}
+                  currentUserId={userProfile.uid}
+                  engagement={engagement}
+                  onViewEvent={onViewEvent}
+                  onViewProfile={onViewProfile}
+                />
+              </div>
             ))}
           </div>
         </section>
@@ -78,14 +79,15 @@ export default function EventsView({
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {past.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                currentUserId={userProfile.uid}
-                engagement={engagement}
-                onViewEvent={onViewEvent}
-                onViewProfile={onViewProfile}
-              />
+              <div key={event.id}>
+                <EventCard
+                  event={event}
+                  currentUserId={userProfile.uid}
+                  engagement={engagement}
+                  onViewEvent={onViewEvent}
+                  onViewProfile={onViewProfile}
+                />
+              </div>
             ))}
           </div>
         </section>

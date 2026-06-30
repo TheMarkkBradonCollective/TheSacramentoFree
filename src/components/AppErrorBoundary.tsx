@@ -9,6 +9,7 @@ type State = {
 };
 
 export default class AppErrorBoundary extends Component<Props, State> {
+  declare readonly props: Readonly<Props>;
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {

@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const body = parseJsonBody<BroadcastBody>(req);
+    const body = parseJsonBody(req) as BroadcastBody;
     if (!body.confirm) {
       return res.status(400).json({ error: 'confirm: true is required for broadcast test' });
     }

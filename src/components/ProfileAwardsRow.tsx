@@ -60,7 +60,11 @@ export default function ProfileAwardsRow({
       </div>
       <div className="flex flex-wrap gap-1.5 justify-center">
         {shown.map((grant, i) =>
-          grant.award ? <AwardBadge key={grant.id} award={grant.award} index={i} /> : null,
+          grant.award ? (
+            <span key={grant.id} className="contents">
+              <AwardBadge award={grant.award} index={i} />
+            </span>
+          ) : null,
         )}
         {extra > 0 && (
           <span className="text-[10px] text-muted font-semibold self-center">+{extra} more</span>

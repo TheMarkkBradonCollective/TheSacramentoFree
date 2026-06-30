@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { ArrowRight, FileText, HandHeart, Heart, MapPin, Shield, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
@@ -138,7 +139,8 @@ export default function HomePage({
 
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {EXPLORE_LINKS.map(({ route, title, blurb, icon: Icon }, index) => (
-            <DepthPanel key={route} floatDelay={index * 6}>
+            <Fragment key={route}>
+              <DepthPanel floatDelay={index * 6}>
               <button
                 type="button"
                 onClick={() => onNavigate(route)}
@@ -154,6 +156,7 @@ export default function HomePage({
                 </span>
               </button>
             </DepthPanel>
+            </Fragment>
           ))}
         </div>
 

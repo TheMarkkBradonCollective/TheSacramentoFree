@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const body = parseJsonBody<{ endpoint?: string }>(req);
+    const body = parseJsonBody(req) as { endpoint?: string };
     const supabase = await getSupabaseForUser(token);
 
     let query = supabase.from('push_subscriptions').delete().eq('userId', user.id);

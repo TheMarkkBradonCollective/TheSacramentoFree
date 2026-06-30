@@ -244,7 +244,7 @@ export async function runPushSend(
 
   if (!trusted) {
     const clientCheck = await validateClientPush(callerId, safeBody);
-    if (!clientCheck.ok) {
+    if (clientCheck.ok === false) {
       return { status: 403, body: { error: clientCheck.error } };
     }
     if (clientCheck.recipientUserIds?.length) {

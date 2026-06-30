@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { UserProfile } from '../types';
 import { usePublishedStaffMessages } from '../hooks/usePublishedStaffMessages';
 import { useStaffMessage } from '../hooks/useStaffMessage';
@@ -34,16 +35,17 @@ export default function PublishedStaffMessages({
   return (
     <div className={compact ? 'contents' : 'space-y-5'}>
       {messages.map((message) => (
-        <StaffMessage
-          key={message.userId}
-          message={message}
-          userProfile={userProfile}
-          compact={compact}
-          canEdit={userProfile?.uid === message.userId}
-          onSave={userProfile?.uid === message.userId ? saveMessage : undefined}
-          showVotes={showVotes}
-          onRequireSignIn={onRequireSignIn}
-        />
+        <Fragment key={message.userId}>
+          <StaffMessage
+            message={message}
+            userProfile={userProfile}
+            compact={compact}
+            canEdit={userProfile?.uid === message.userId}
+            onSave={userProfile?.uid === message.userId ? saveMessage : undefined}
+            showVotes={showVotes}
+            onRequireSignIn={onRequireSignIn}
+          />
+        </Fragment>
       ))}
     </div>
   );

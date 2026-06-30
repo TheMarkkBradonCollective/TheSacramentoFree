@@ -387,7 +387,7 @@ export default function ChatSupportSection({
             title="Open new support chat"
             subtitle="Two-way chat with staff"
             preview="Ask for help — staff will reply in this thread."
-            selected={view === 'new'}
+            selected={false}
             onClick={() => {
               setErr('');
               onViewChange('new');

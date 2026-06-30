@@ -3,7 +3,7 @@ import { supabase } from '../supabase';
 
 type PostgresEvent = 'INSERT' | 'UPDATE' | 'DELETE';
 
-export function subscribePostgresChanges<T extends Record<string, unknown>>(
+export function subscribePostgresChanges<T extends object>(
   options: {
     channelName: string;
     table: string;

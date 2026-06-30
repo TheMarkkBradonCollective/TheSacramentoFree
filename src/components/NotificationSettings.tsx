@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Bell, BellOff, MapPin } from 'lucide-react';
 import DirectorBroadcastTestModal from './DirectorBroadcastTestModal';
 import {
@@ -453,13 +453,14 @@ export default function NotificationSettings({
                 </h4>
                 <div className="rounded-xl border border-app bg-inset/30 px-3">
                   {LISTING_PREF_SECTION.items.map((toggle) => (
-                    <SwitchRow
-                      key={toggle.key}
-                      label={toggle.label}
-                      description={toggle.description}
-                      checked={Boolean(preferences[toggle.key])}
-                      onChange={(value) => setPref(toggle.key, value)}
-                    />
+                    <Fragment key={toggle.key}>
+                      <SwitchRow
+                        label={toggle.label}
+                        description={toggle.description}
+                        checked={Boolean(preferences[toggle.key])}
+                        onChange={(value) => setPref(toggle.key, value)}
+                      />
+                    </Fragment>
                   ))}
                 </div>
               </div>
@@ -477,13 +478,14 @@ export default function NotificationSettings({
                   </h4>
                   <div className="rounded-xl border border-app bg-inset/30 px-3">
                     {section.items.map((toggle) => (
-                      <SwitchRow
-                        key={toggle.key}
-                        label={toggle.label}
-                        description={toggle.description}
-                        checked={Boolean(preferences[toggle.key])}
-                        onChange={(value) => setPref(toggle.key, value)}
-                      />
+                      <Fragment key={toggle.key}>
+                        <SwitchRow
+                          label={toggle.label}
+                          description={toggle.description}
+                          checked={Boolean(preferences[toggle.key])}
+                          onChange={(value) => setPref(toggle.key, value)}
+                        />
+                      </Fragment>
                     ))}
                   </div>
                 </div>
@@ -495,13 +497,14 @@ export default function NotificationSettings({
                 </h4>
                 <div className="rounded-xl border border-app bg-inset/30 px-3">
                   {LISTING_PREF_SECTION.items.map((toggle) => (
-                    <SwitchRow
-                      key={toggle.key}
-                      label={toggle.label}
-                      description={toggle.description}
-                      checked={Boolean(preferences[toggle.key])}
-                      onChange={(value) => setPref(toggle.key, value)}
-                    />
+                    <Fragment key={toggle.key}>
+                      <SwitchRow
+                        label={toggle.label}
+                        description={toggle.description}
+                        checked={Boolean(preferences[toggle.key])}
+                        onChange={(value) => setPref(toggle.key, value)}
+                      />
+                    </Fragment>
                   ))}
                 </div>
               </div>
@@ -513,13 +516,14 @@ export default function NotificationSettings({
                   </h4>
                   <div className="rounded-xl border border-app bg-inset/30 px-3">
                     {STAFF_PREF_SECTION.items.map((toggle) => (
-                      <SwitchRow
-                        key={toggle.key}
-                        label={toggle.label}
-                        description={toggle.description}
-                        checked={Boolean(preferences[toggle.key])}
-                        onChange={(value) => setPref(toggle.key, value)}
-                      />
+                      <Fragment key={toggle.key}>
+                        <SwitchRow
+                          label={toggle.label}
+                          description={toggle.description}
+                          checked={Boolean(preferences[toggle.key])}
+                          onChange={(value) => setPref(toggle.key, value)}
+                        />
+                      </Fragment>
                     ))}
                   </div>
                 </div>
@@ -544,13 +548,14 @@ export default function NotificationSettings({
                     className={`rounded-xl border border-app bg-inset/30 px-3 mt-2 ${directorMasterDisabled ? 'opacity-50 pointer-events-none' : ''}`}
                   >
                     {DIRECTOR_CATEGORY_PREFS.map((toggle) => (
-                      <SwitchRow
-                        key={toggle.key}
-                        label={toggle.label}
-                        description={toggle.description}
-                        checked={Boolean(preferences[toggle.key])}
-                        onChange={(value) => setPref(toggle.key, value)}
-                      />
+                      <Fragment key={toggle.key}>
+                        <SwitchRow
+                          label={toggle.label}
+                          description={toggle.description}
+                          checked={Boolean(preferences[toggle.key])}
+                          onChange={(value) => setPref(toggle.key, value)}
+                        />
+                      </Fragment>
                     ))}
                   </div>
                 </div>

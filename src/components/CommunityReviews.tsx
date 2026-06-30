@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { AppReview, ContentVoteState, UserProfile } from '../types';
 import { useAppReviews } from '../hooks/useAppReviews';
@@ -343,9 +343,11 @@ export default function CommunityReviews({
           <div className="mt-4">
             <HorizontalSnapRow label="Neighbor reviews">
               {previewReviews.map((review) => (
-                <SnapSlide key={review.id} className="w-[min(100%,18rem)]">
-                  {renderReviewCard(review, false)}
-                </SnapSlide>
+                <Fragment key={review.id}>
+                  <SnapSlide className="w-[min(100%,18rem)]">
+                    {renderReviewCard(review, false)}
+                  </SnapSlide>
+                </Fragment>
               ))}
             </HorizontalSnapRow>
           </div>

@@ -536,9 +536,9 @@ export default function ItemGrid({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5" id="items_grid_cards">
           {filteredItems.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
+            <div key={item.id}>
+              <ItemCard
+                item={item}
               currentUserId={userProfile.uid}
               voteState={getVotesForPost(item.id)}
               comments={getCommentsForPost(item.id)}
@@ -559,6 +559,7 @@ export default function ItemGrid({
               }
               onViewProfile={onViewProfile}
             />
+            </div>
           ))}
         </div>
       )}

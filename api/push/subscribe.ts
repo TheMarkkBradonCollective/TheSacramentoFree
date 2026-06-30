@@ -34,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const body = parseJsonBody<SubscribeBody>(req);
+    const body = parseJsonBody(req) as SubscribeBody;
     const subscription = body.subscription;
     if (!subscription?.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
       return res.status(400).json({ error: 'Invalid push subscription payload' });

@@ -189,7 +189,7 @@ export function useItemsEngagement(
     void setSupabaseItemVote(itemId, uid, newUserVote).then((result) => {
       if (result.ok) return;
       setItemVotes((prev) => ({ ...prev, [itemId]: current }));
-      if (result.reason === 'vote_cooldown') {
+      if (result.ok === false && result.reason === 'vote_cooldown') {
         void alert({ message: VOTE_COOLDOWN_MESSAGE });
       }
     });

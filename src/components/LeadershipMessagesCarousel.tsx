@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { UserProfile } from '../types';
 import DirectorMessage from './DirectorMessage';
 import StaffMessage from './StaffMessage';
@@ -35,17 +36,19 @@ export default function LeadershipMessagesCarousel({
           <DirectorMessage userProfile={userProfile} compact showVotes={false} onRequireSignIn={onRequireSignIn} />
         </SnapSlide>
         {staffMessages.map((message) => (
-          <SnapSlide key={message.userId}>
-            <StaffMessage
-              message={message}
-              userProfile={userProfile}
-              compact
-              showVotes={false}
-              canEdit={userProfile?.uid === message.userId}
-              onSave={userProfile?.uid === message.userId ? saveMessage : undefined}
-              onRequireSignIn={onRequireSignIn}
-            />
-          </SnapSlide>
+          <Fragment key={message.userId}>
+            <SnapSlide>
+              <StaffMessage
+                message={message}
+                userProfile={userProfile}
+                compact
+                showVotes={false}
+                canEdit={userProfile?.uid === message.userId}
+                onSave={userProfile?.uid === message.userId ? saveMessage : undefined}
+                onRequireSignIn={onRequireSignIn}
+              />
+            </SnapSlide>
+          </Fragment>
         ))}
       </HorizontalSnapRow>
     </div>

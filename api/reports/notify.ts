@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const body = parseJsonBody<NotifyBody>(req);
+    const body = parseJsonBody(req) as NotifyBody;
     const reportId = body.reportId?.trim();
     if (!reportId) {
       return res.status(400).json({ error: 'reportId is required' });

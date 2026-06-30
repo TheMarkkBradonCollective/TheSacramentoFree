@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { AlertCircle, Eye, MapPin, Search } from 'lucide-react';
 import { ItemPost } from '../../types';
 import { stripListingMetadata } from '../../lib/itemLocation';
@@ -88,7 +88,8 @@ export default function GuestListingPreview({
             const preview = stripListingMetadata(item.description);
 
             return (
-              <SnapSlide key={item.id} className="w-[min(100%,19rem)] sm:w-[min(85%,20rem)]">
+              <Fragment key={item.id}>
+                <SnapSlide className="w-[min(100%,19rem)] sm:w-[min(85%,20rem)]">
                 <article className="sbn-card overflow-hidden flex flex-col text-left h-full">
                   <button
                     type="button"
@@ -142,6 +143,7 @@ export default function GuestListingPreview({
                   </div>
                 </article>
               </SnapSlide>
+              </Fragment>
             );
           })}
         </HorizontalSnapRow>
