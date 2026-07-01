@@ -144,7 +144,7 @@ function NavigationDetailsSheet({
           </button>
 
           <div className="flex-1 min-w-0 text-center">
-            <p className="text-3xl font-black text-[#FF4500] leading-none tabular-nums">
+            <p className="text-3xl font-black text-[#188038] leading-none tabular-nums">
               {arrived ? '0 min' : formatNavDuration(remainingSeconds)}
             </p>
             <p className="text-sm text-zinc-600 font-medium mt-1">
@@ -191,12 +191,12 @@ function NavigationDetailsSheet({
                 <li
                   key={step.id}
                   className={`flex items-start gap-3 rounded-2xl px-3 py-2.5 ${
-                    isCurrent ? 'bg-[#FF4500]/10 ring-1 ring-[#FF4500]/25' : isPast ? 'opacity-55' : ''
+                    isCurrent ? 'bg-[#188038]/10 ring-1 ring-[#188038]/25' : isPast ? 'opacity-55' : ''
                   }`}
                 >
                   <div
                     className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
-                      isCurrent ? 'bg-[#FF4500] text-white' : 'bg-zinc-100 text-zinc-700'
+                      isCurrent ? 'bg-[#188038] text-white' : 'bg-zinc-100 text-zinc-700'
                     }`}
                   >
                     <ManeuverIcon kind={kind} className="w-5 h-5" />
@@ -242,45 +242,72 @@ function ManeuverIcon({ kind, className = 'w-10 h-10' }: { kind: ManeuverIconKin
   }
 }
 
+const NAV_MAP_PITCH_DEG = 52;
+const NAV_LOOKAHEAD_SCREEN_RATIO = 0.24;
+
 function applyMapBearing(map: L.Map, bearing: number, center: LatLng, enabled: boolean): void {
-  // Rotating the entire tile pane is unstable on mobile — keep the map north-up.
-  void map;
-  void bearing;
-  void center;
-  void enabled;
+  const pane = map.getPanes().mapPane;
+  if (!pane) return;
+
+  if (!enabled) {
+    pane.style.transform = '';
+    pane.style.transformOrigin = '';
+    pane.style.willChange = '';
+    return;
+  }
+
+  const point = map.latLngToContainerPoint([center.lat, center.lng]);
+  pane.style.transformOrigin = `${point.x}px ${point.y}px`;
+  pane.style.willChange = 'transform';
+  pane.style.transform = `perspective(900px) rotateX(${NAV_MAP_PITCH_DEG}deg) rotateZ(${-bearing}deg)`;
 }
 
-function createNavUserIcon(heading: number): L.DivIcon {
+function createNavUserIcon(heading: number, headingUpMode: boolean): L.DivIcon {
+  const rotation = headingUpMode ? 0 : heading;
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center" style="transform: rotate(${heading}deg)">
-        <div class="h-10 w-10 rounded-full bg-white shadow-lg border-2 border-[#FF4500] flex items-center justify-center">
-          <div class="w-0 h-0 border-l-[7px] border-r-[7px] border-b-[12px] border-l-transparent border-r-transparent border-b-[#FF4500] -mt-1"></div>
+      <div class="relative flex items-center justify-center" style="transform: rotate(${rotation}deg)">
+        <div class="h-11 w-11 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.28)] border-[3px] border-white flex items-center justify-center">
+          <div class="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-[#2563EB] -mt-0.5"></div>
         </div>
       </div>
     `,
     className: 'nav-user-marker',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
   });
 }
 
 function drawRouteOnLayer(layer: L.LayerGroup, coords: [number, number][]): void {
   layer.clearLayers();
   L.polyline(coords, {
-    color: '#2563EB',
-    weight: 10,
-    opacity: 0.35,
+    color: '#1D4ED8',
+    weight: 11,
+    opacity: 0.28,
     lineCap: 'round',
     lineJoin: 'round',
   }).addTo(layer);
   L.polyline(coords, {
-    color: '#FF4500',
-    weight: 6,
-    opacity: 0.95,
+    color: '#3B82F6',
+    weight: 7,
+    opacity: 0.98,
     lineCap: 'round',
     lineJoin: 'round',
   }).addTo(layer);
+}
+
+function centerMapWithLookahead(map: L.Map, center: LatLng, zoom: number): void {
+  const mapSize = map.getSize();
+  const lookaheadPx = Math.round(mapSize.y * NAV_LOOKAHEAD_SCREEN_RATIO);
+  const targetPoint = map.project([center.lat, center.lng], zoom);
+  const shiftedCenter = map.unproject(L.point(targetPoint.x, targetPoint.y + lookaheadPx), zoom);
+
+  if (map.getZoom() !== zoom) {
+    map.setView(shiftedCenter, zoom, { animate: false });
+    return;
+  }
+
+  map.panTo(shiftedCenter, { animate: false, noMoveStart: true });
 }
 
 export default function MapNavigationView({
@@ -310,6 +337,9 @@ export default function MapNavigationView({
   const userPosRef = useRef<LatLng>(origin);
   const headingRef = useRef(0);
   const lastMarkerHeadingRef = useRef(0);
+  const lastAppliedBearingRef = useRef(0);
+  const bearingRafRef = useRef<number | null>(null);
+  const pendingBearingRef = useRef<{ bearing: number; center: LatLng } | null>(null);
   const lastNavPanRef = useRef<LatLng | null>(null);
   const hasFittedRouteRef = useRef(false);
   const uiTickRef = useRef(0);
@@ -477,6 +507,10 @@ export default function MapNavigationView({
     window.setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 200);
 
     return () => {
+      if (bearingRafRef.current != null) {
+        cancelAnimationFrame(bearingRafRef.current);
+        bearingRafRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
       routeLayerRef.current = null;
@@ -514,16 +548,44 @@ export default function MapNavigationView({
     }
 
     if (!hasFittedRouteRef.current) {
-      map.fitBounds(route.coords, { padding: [80, 80], maxZoom: 16, animate: false });
       hasFittedRouteRef.current = true;
+      const start = userPosRef.current;
+      const zoom = 17;
+      centerMapWithLookahead(map, start, zoom);
+      scheduleMapBearing(map, headingRef.current, start, true);
     }
   }, [route, destination]);
+
+  const scheduleMapBearing = useCallback((map: L.Map, bearing: number, center: LatLng, enabled: boolean) => {
+    if (!enabled) {
+      pendingBearingRef.current = null;
+      if (bearingRafRef.current != null) {
+        cancelAnimationFrame(bearingRafRef.current);
+        bearingRafRef.current = null;
+      }
+      applyMapBearing(map, 0, center, false);
+      lastAppliedBearingRef.current = 0;
+      return;
+    }
+
+    pendingBearingRef.current = { bearing, center };
+    if (bearingRafRef.current != null) return;
+
+    bearingRafRef.current = requestAnimationFrame(() => {
+      bearingRafRef.current = null;
+      const pending = pendingBearingRef.current;
+      if (!pending || !followUserRef.current) return;
+      applyMapBearing(map, pending.bearing, pending.center, true);
+      lastAppliedBearingRef.current = pending.bearing;
+    });
+  }, []);
 
   const syncNavigationMap = useCallback((next: LatLng, nextHeading: number) => {
     const map = mapRef.current;
     if (!map) return;
 
     headingRef.current = nextHeading;
+    const headingUpMode = followUserRef.current;
 
     const headingChanged =
       !userMarkerRef.current ||
@@ -532,29 +594,27 @@ export default function MapNavigationView({
       userMarkerRef.current.setLatLng([next.lat, next.lng]);
       if (headingChanged) {
         lastMarkerHeadingRef.current = nextHeading;
-        userMarkerRef.current.setIcon(createNavUserIcon(nextHeading));
+        userMarkerRef.current.setIcon(createNavUserIcon(nextHeading, headingUpMode));
       }
     } else {
       lastMarkerHeadingRef.current = nextHeading;
       userMarkerRef.current = L.marker([next.lat, next.lng], {
-        icon: createNavUserIcon(nextHeading),
+        icon: createNavUserIcon(nextHeading, headingUpMode),
         zIndexOffset: 500,
       }).addTo(map);
     }
 
-    if (!followUserRef.current) return;
-
-    const last = lastNavPanRef.current;
-    if (last && haversineMeters(last, next) < NAV_GPS_FOLLOW_METERS) return;
-
-    lastNavPanRef.current = next;
-    const zoom = Math.max(map.getZoom(), 17);
-    if (map.getZoom() < zoom) {
-      map.setView([next.lat, next.lng], zoom, { animate: false });
-      return;
+    if (followUserRef.current) {
+      const last = lastNavPanRef.current;
+      if (!last || haversineMeters(last, next) >= NAV_GPS_FOLLOW_METERS) {
+        lastNavPanRef.current = next;
+        centerMapWithLookahead(map, next, Math.max(map.getZoom(), 17));
+      }
+      scheduleMapBearing(map, nextHeading, next, true);
+    } else {
+      scheduleMapBearing(map, 0, next, false);
     }
-    map.panTo([next.lat, next.lng], { animate: false, noMoveStart: true });
-  }, []);
+  }, [scheduleMapBearing]);
 
   const handleGpsUpdate = useCallback(
     (position: GeolocationPosition) => {
@@ -691,14 +751,26 @@ export default function MapNavigationView({
     followUserRef.current = true;
     lastNavPanRef.current = null;
     const pos = userPosRef.current;
-    mapRef.current?.setView([pos.lat, pos.lng], 17, { animate: false });
+    const map = mapRef.current;
+    if (!map) return;
+    centerMapWithLookahead(map, pos, 17);
+    scheduleMapBearing(map, headingRef.current, pos, true);
+    if (userMarkerRef.current) {
+      userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current, true));
+    }
   };
 
   const handleOverview = () => {
     setFollowUser(false);
     followUserRef.current = false;
-    if (mapRef.current && route) {
-      mapRef.current.fitBounds(route.coords, { padding: [90, 90], maxZoom: 15, animate: false });
+    const map = mapRef.current;
+    if (!map) return;
+    scheduleMapBearing(map, 0, userPosRef.current, false);
+    if (userMarkerRef.current) {
+      userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current, false));
+    }
+    if (route) {
+      map.fitBounds(route.coords, { padding: [90, 90], maxZoom: 15, animate: false });
     }
   };
 
@@ -731,36 +803,39 @@ export default function MapNavigationView({
 
   return (
     <div className="fixed inset-0 z-[200] bg-zinc-900 flex flex-col" id="map_navigation_view">
-      <div className="bg-[#FF4500] text-white px-4 pt-4 pb-5 shadow-lg shrink-0 relative z-10 safe-area-pt">
-        <div className="flex items-center gap-4">
-          <div className="shrink-0 w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center">
+      <div className="bg-[#188038] text-white px-4 pt-3 pb-4 shadow-lg shrink-0 relative z-10 safe-area-pt" id="nav_instruction_banner">
+        <div className="flex items-center gap-3 min-h-[4.5rem]">
+          <div className="shrink-0 w-[4.5rem] flex flex-col items-center justify-center">
             {loading ? (
-              <Navigation className="w-9 h-9 animate-pulse" />
+              <Navigation className="w-10 h-10 animate-pulse" />
             ) : (
-              <ManeuverIcon kind={maneuverKind} className="w-9 h-9" />
+              <ManeuverIcon kind={maneuverKind} className="w-10 h-10" />
+            )}
+            {!loading && !arrived && (
+              <p className="text-sm font-bold mt-1 tabular-nums leading-none">{formatNavDistance(distanceToManeuver)}</p>
             )}
           </div>
+
           <div className="min-w-0 flex-1">
             {loading ? (
               <>
-                <p className="text-2xl font-black leading-none">Loading route</p>
-                <p className="text-sm font-medium mt-1 truncate">To {destinationLabel}</p>
+                <p className="text-[1.65rem] font-bold leading-tight">Loading route</p>
+                <p className="text-sm font-medium mt-1 truncate opacity-90">To {destinationLabel}</p>
               </>
             ) : arrived ? (
               <>
-                <p className="text-2xl font-black leading-none">You&apos;ve arrived</p>
-                <p className="text-lg font-bold leading-tight mt-1 truncate">{destinationLabel}</p>
+                <p className="text-[1.65rem] font-bold leading-tight">You&apos;ve arrived</p>
+                <p className="text-base font-semibold mt-1 truncate opacity-95">{destinationLabel}</p>
               </>
             ) : (
               <>
-                <p className="text-2xl font-black leading-none tabular-nums">{formatNavDistance(distanceToManeuver)}</p>
-                <p className="text-lg sm:text-xl font-bold leading-tight mt-1 truncate">{bannerStreet}</p>
-                <p className="text-xs text-white/85 mt-1 truncate">{currentStep?.instruction}</p>
+                <p className="text-[1.65rem] sm:text-[1.85rem] font-bold leading-tight truncate">{bannerStreet}</p>
+                <p className="text-sm font-medium mt-1 truncate opacity-90">{currentStep?.instruction}</p>
               </>
             )}
           </div>
         </div>
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/30" />
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/35" />
       </div>
 
       <div className="relative flex-1 min-h-0">
@@ -837,7 +912,7 @@ export default function MapNavigationView({
                 type="button"
                 onClick={handleRecenter}
                 className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center ${
-                  followUser ? 'bg-[#FF4500] text-white' : 'bg-white text-zinc-900'
+                  followUser ? 'bg-[#188038] text-white' : 'bg-white text-zinc-900'
                 }`}
                 title="Recenter on you"
               >

@@ -109,7 +109,16 @@ html.sbn-session-restore #root:empty {
 #map_navigation_view .leaflet-container {
   width: 100% !important;
   height: 100% !important;
-  background: #18181b;
+  background: #dfe8f2;
+}
+
+#map_navigation_view .leaflet-map-pane {
+  transform-style: preserve-3d;
+}
+
+#map_navigation_view .nav-user-marker {
+  background: transparent;
+  border: none;
 }
 
 input,
