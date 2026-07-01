@@ -35,11 +35,11 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[120] bg-black/60 flex items-end sm:items-center justify-center p-4 safe-area-pb"
+      className="fixed inset-0 z-[120] bg-black/60 flex items-end sm:items-center justify-center px-4 pt-4 sbn-mobile-prompt-offset sm:pb-4"
       onClick={onCancel}
     >
       <div
-        className="sbn-card w-full max-w-md p-5 space-y-4 rounded-b-2xl sm:rounded-2xl mb-0 sm:mb-auto"
+        className="sbn-card w-full max-w-md p-5 space-y-4 rounded-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'confirm_dialog_title' : undefined}

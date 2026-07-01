@@ -758,11 +758,6 @@ button {
   --sbn-mobile-header-h: calc(var(--sbn-mobile-header-body-h) + env(safe-area-inset-top, 0px));
   --sbn-mobile-nav-h: calc(4.25rem + env(safe-area-inset-bottom, 0px));
   --sbn-keyboard-inset: 0px;
-  /* Map overlays: clear the center nav tab that protrudes into the map pane */
-  --sbn-map-nav-protrusion: 1.1rem;
-  --sbn-map-nav-button-h: 3.5rem;
-  --sbn-map-controls-bottom: calc(1rem + var(--sbn-map-nav-protrusion));
-  --sbn-map-card-bottom: calc(1rem + var(--sbn-map-nav-protrusion) + var(--sbn-map-nav-button-h) + 0.5rem);
 }
 
 .sbn-mobile-shell {
@@ -942,12 +937,15 @@ html.sbn-keyboard-open .sbn-mobile-nav {
   padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
 }
 
-.sbn-map-controls-bottom {
-  bottom: var(--sbn-map-controls-bottom);
+/* Lift bottom sheets/dialogs above the mobile tab bar */
+.sbn-mobile-prompt-offset {
+  padding-bottom: calc(var(--sbn-mobile-nav-h) + 1rem);
 }
 
-.sbn-map-card-bottom {
-  bottom: var(--sbn-map-card-bottom);
+@media (min-width: 640px) {
+  .sbn-mobile-prompt-offset {
+    padding-bottom: 1rem;
+  }
 }
 
 html.sbn-keyboard-open .sbn-fixed-bottom {
