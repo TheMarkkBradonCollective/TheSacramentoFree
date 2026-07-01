@@ -89,7 +89,7 @@ export default function EventEngagement({
         )}
         {interactionsLocked && variant === 'detail' && (
           <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 w-full">
-            RSVP and comments open once we reach 100 neighbors — browse staff gatherings now.
+            RSVP and comments open once we reach 1,000 neighbors — browse staff gatherings now.
           </p>
         )}
         {variant === 'card' && (

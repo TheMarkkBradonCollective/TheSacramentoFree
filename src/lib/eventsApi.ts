@@ -1,7 +1,7 @@
 import type { AwardsUnlockStatus } from '../types';
 import { getCommunityUnlockStatus } from './communityUnlock';
 
-export const EVENTS_UNLOCK_TARGET = 100;
+export const EVENTS_UNLOCK_TARGET = 1000;
 
 export async function getEventsUnlockStatus(): Promise<AwardsUnlockStatus> {
   return getCommunityUnlockStatus(EVENTS_UNLOCK_TARGET);
