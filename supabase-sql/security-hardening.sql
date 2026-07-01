@@ -70,6 +70,29 @@ AS $$
   SELECT public.is_staff_role(public.current_user_role());
 $$;
 
+CREATE OR REPLACE FUNCTION public.community_member_count()
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COUNT(*)::INT FROM public.users;
+$$;
+
+CREATE OR REPLACE FUNCTION public.events_unlocked()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.community_member_count() >= 1000;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.community_member_count() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.events_unlocked() TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.is_director()
 RETURNS boolean
 LANGUAGE sql
@@ -495,37 +518,100 @@ DROP POLICY IF EXISTS "Allow read community events" ON public.community_events;
 DROP POLICY IF EXISTS "Allow write community events" ON public.community_events;
 DROP POLICY IF EXISTS "community_events_select" ON public.community_events;
 DROP POLICY IF EXISTS "community_events_write_own" ON public.community_events;
+DROP POLICY IF EXISTS "community_events_insert" ON public.community_events;
+DROP POLICY IF EXISTS "community_events_update" ON public.community_events;
+DROP POLICY IF EXISTS "community_events_delete" ON public.community_events;
 
 CREATE POLICY "community_events_select" ON public.community_events
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND (public.events_unlocked() OR public.is_staff())
+  );
 
-CREATE POLICY "community_events_write_own" ON public.community_events
-  FOR ALL USING (auth.uid()::text = "userId")
-  WITH CHECK (auth.uid()::text = "userId");
+CREATE POLICY "community_events_insert" ON public.community_events
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "community_events_update" ON public.community_events
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "community_events_delete" ON public.community_events
+  FOR DELETE USING (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
 
 DROP POLICY IF EXISTS "Allow read event rsvps" ON public.event_rsvps;
 DROP POLICY IF EXISTS "Allow write event rsvps" ON public.event_rsvps;
 DROP POLICY IF EXISTS "event_rsvps_select" ON public.event_rsvps;
 DROP POLICY IF EXISTS "event_rsvps_write_own" ON public.event_rsvps;
+DROP POLICY IF EXISTS "event_rsvps_insert" ON public.event_rsvps;
+DROP POLICY IF EXISTS "event_rsvps_update" ON public.event_rsvps;
+DROP POLICY IF EXISTS "event_rsvps_delete" ON public.event_rsvps;
 
 CREATE POLICY "event_rsvps_select" ON public.event_rsvps
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND (public.events_unlocked() OR public.is_staff())
+  );
 
-CREATE POLICY "event_rsvps_write_own" ON public.event_rsvps
-  FOR ALL USING (auth.uid()::text = "userId")
-  WITH CHECK (auth.uid()::text = "userId");
+CREATE POLICY "event_rsvps_insert" ON public.event_rsvps
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_rsvps_update" ON public.event_rsvps
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_rsvps_delete" ON public.event_rsvps
+  FOR DELETE USING (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
 
 DROP POLICY IF EXISTS "Allow read event comments" ON public.event_comments;
 DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;
 DROP POLICY IF EXISTS "event_comments_select" ON public.event_comments;
 DROP POLICY IF EXISTS "event_comments_write_own" ON public.event_comments;
+DROP POLICY IF EXISTS "event_comments_insert" ON public.event_comments;
+DROP POLICY IF EXISTS "event_comments_update" ON public.event_comments;
+DROP POLICY IF EXISTS "event_comments_delete" ON public.event_comments;
 
 CREATE POLICY "event_comments_select" ON public.event_comments
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND (public.events_unlocked() OR public.is_staff())
+  );
 
-CREATE POLICY "event_comments_write_own" ON public.event_comments
-  FOR ALL USING (auth.uid()::text = "userId")
-  WITH CHECK (auth.uid()::text = "userId");
+CREATE POLICY "event_comments_insert" ON public.event_comments
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_comments_update" ON public.event_comments
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_comments_delete" ON public.event_comments
+  FOR DELETE USING (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
 
 DROP POLICY IF EXISTS "Allow read app reviews" ON public.app_reviews;
 DROP POLICY IF EXISTS "Allow write app reviews" ON public.app_reviews;

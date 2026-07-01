@@ -438,6 +438,8 @@ ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_source_check
 
 -- =========================================================
 -- 17. Community events (free gatherings only)
+-- After supabase-setup, run supabase-sql/events-complete.sql for
+-- 1,000-member unlock RLS (or events-unlock.sql on existing DBs).
 -- =========================================================
 CREATE TABLE IF NOT EXISTS public.community_events (
   id TEXT PRIMARY KEY,
@@ -513,6 +515,12 @@ DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;
 CREATE POLICY "Allow write event comments" ON public.event_comments FOR ALL USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS event_comments_event_idx ON public.event_comments ("eventId");
+
+-- =========================================================
+-- 17b. Events unlock (1,000 neighbors) — run events-complete.sql
+-- for production RLS. Fresh installs: paste supabase-sql/events-complete.sql
+-- after this setup script, or permissive policies below stay until then.
+-- =========================================================
 
 -- =========================================================
 -- 18. Director message (editable by director in-app)
