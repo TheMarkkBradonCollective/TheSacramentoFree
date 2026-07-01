@@ -135,8 +135,11 @@ function parseOsrmSteps(data: unknown): NavigationStep[] {
   });
 }
 
-/** Fetch turn-by-turn driving route with OSRM steps. */
+/** Fetch turn-by-turn driving route with OSRM steps (API-first, OSRM mirror fallback). */
 export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<NavigationRouteResult | null> {
+  const viaApi = await fetchNavigationRouteFromApi(from, to);
+  if (viaApi) return viaApi;
+
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
   for (const base of OSRM_ENDPOINTS) {
@@ -169,7 +172,7 @@ export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<Na
     }
   }
 
-  return fetchNavigationRouteFromApi(from, to);
+  return null;
 }
 
 async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<NavigationRouteResult | null> {
