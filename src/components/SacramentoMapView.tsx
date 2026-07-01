@@ -11,9 +11,9 @@ import {
   formatRouteDistance,
   formatRouteDuration,
   isRoadGeometry,
-  openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
+import MapNavigationView from './MapNavigationView';
 import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
@@ -215,6 +215,8 @@ interface MapSelectionRouteRowProps {
   routeOnMap: boolean;
   hasLiveGps: boolean;
   viewerUserId: string;
+  onStartNavigation?: () => void;
+  canNavigate?: boolean;
 }
 
 function MapSelectionRouteRow({
@@ -226,6 +228,8 @@ function MapSelectionRouteRow({
   routeOnMap,
   hasLiveGps,
   viewerUserId,
+  onStartNavigation,
+  canNavigate = false,
 }: MapSelectionRouteRowProps) {
   if (!routeEndpoints) return null;
 
@@ -263,11 +267,10 @@ function MapSelectionRouteRow({
       </div>
       <button
         type="button"
-        onClick={() =>
-          openDrivingDirections(routeEndpoints.end, hasLiveGps ? routeEndpoints.start : undefined)
-        }
-        className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
-        title="Open turn-by-turn directions in Maps"
+        onClick={() => onStartNavigation?.()}
+        disabled={!canNavigate || !onStartNavigation}
+        className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0 disabled:opacity-40"
+        title={canNavigate ? 'Start in-app turn-by-turn navigation' : 'Enable GPS to navigate'}
       >
         <Navigation className="w-3.5 h-3.5" />
         Navigate
@@ -299,6 +302,7 @@ export default function SacramentoMapView({
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null);
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const [colorGuideInternal, setColorGuideInternal] = useState(false);
   const showColorGuide =
     colorGuideOpenProp !== undefined ? colorGuideOpenProp : colorGuideInternal;
@@ -741,6 +745,20 @@ export default function SacramentoMapView({
   }, [selectedPost, blipPositions, userLocation]);
 
   useEffect(() => {
+    setNavigationOpen(false);
+  }, [selectedPost?.id]);
+
+  const navigationOverlay =
+    navigationOpen && routeEndpoints && selectedPost ? (
+      <MapNavigationView
+        origin={routeEndpoints.start}
+        destination={routeEndpoints.end}
+        destinationLabel={selectedPost.title}
+        onExit={() => setNavigationOpen(false)}
+      />
+    ) : null;
+
+  useEffect(() => {
     if (!selectedPost || showingEvents) {
       routeEndpointsRef.current = null;
       routeFitForPostIdRef.current = null;
@@ -903,6 +921,7 @@ export default function SacramentoMapView({
   if (isFullScreenMobile) {
     return (
       <div id="sacramento_interactive_map_view" className="relative w-full h-full overflow-hidden font-sans">
+        {navigationOverlay}
         {/* Immersive Leaflet Container */}
         <div 
           ref={mapContainerRef} 
@@ -1151,6 +1170,8 @@ export default function SacramentoMapView({
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
                         viewerUserId={userProfile.uid}
+                        canNavigate={!!userLocation && isRoadGeometry(routeCoords)}
+                        onStartNavigation={() => setNavigationOpen(true)}
                       />
                     </div>
 
@@ -1226,6 +1247,7 @@ export default function SacramentoMapView({
   // Standard interactive map layouts for desktop/tablet
   return (
     <div id="sacramento_interactive_map_view" className="bg-surface border border-app p-5 rounded-2xl font-sans flex flex-col space-y-4 text-app">
+      {navigationOverlay}
       {selectedType === undefined && (
         <div className="flex flex-col space-y-1 pb-2 border-b border-app">
           <span className="text-[9px] font-black text-accent uppercase tracking-widest font-mono flex items-center gap-1.5">
@@ -1686,6 +1708,8 @@ export default function SacramentoMapView({
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
                     viewerUserId={userProfile.uid}
+                    canNavigate={!!userLocation && isRoadGeometry(routeCoords)}
+                    onStartNavigation={() => setNavigationOpen(true)}
                   />
                 </div>
 
