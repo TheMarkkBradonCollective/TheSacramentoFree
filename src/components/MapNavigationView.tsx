@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
 import { haversineMeters, openDrivingDirections } from '../lib/mapRoute';
+import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import {
   bearingDegrees,
   distanceToRouteMeters,
@@ -243,31 +244,12 @@ function ManeuverIcon({ kind, className = 'w-10 h-10' }: { kind: ManeuverIconKin
   }
 }
 
-const NAV_MAP_PITCH_DEG = 52;
-const NAV_LOOKAHEAD_SCREEN_RATIO = 0.24;
+const NAV_LOOKAHEAD_SCREEN_RATIO = 0.22;
 
-function applyMapBearing(map: L.Map, bearing: number, center: LatLng, enabled: boolean): void {
-  const pane = map.getPanes().mapPane;
-  if (!pane) return;
-
-  if (!enabled) {
-    pane.style.transform = '';
-    pane.style.transformOrigin = '';
-    pane.style.willChange = '';
-    return;
-  }
-
-  const point = map.latLngToContainerPoint([center.lat, center.lng]);
-  pane.style.transformOrigin = `${point.x}px ${point.y}px`;
-  pane.style.willChange = 'transform';
-  pane.style.transform = `perspective(900px) rotateX(${NAV_MAP_PITCH_DEG}deg) rotateZ(${-bearing}deg)`;
-}
-
-function createNavUserIcon(heading: number, headingUpMode: boolean): L.DivIcon {
-  const rotation = headingUpMode ? 0 : heading;
+function createNavUserIcon(heading: number): L.DivIcon {
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center" style="transform: rotate(${rotation}deg)">
+      <div class="relative flex items-center justify-center" style="transform: rotate(${heading}deg)">
         <div class="h-11 w-11 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.28)] border-[3px] border-white flex items-center justify-center">
           <div class="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-[#2563EB] -mt-0.5"></div>
         </div>
@@ -298,17 +280,29 @@ function drawRouteOnLayer(layer: L.LayerGroup, coords: [number, number][]): void
 }
 
 function centerMapWithLookahead(map: L.Map, center: LatLng, zoom: number): void {
-  const mapSize = map.getSize();
-  const lookaheadPx = Math.round(mapSize.y * NAV_LOOKAHEAD_SCREEN_RATIO);
-  const targetPoint = map.project([center.lat, center.lng], zoom);
-  const shiftedCenter = map.unproject(L.point(targetPoint.x, targetPoint.y + lookaheadPx), zoom);
+  if (!map.getContainer()?.isConnected) return;
 
-  if (map.getZoom() !== zoom) {
-    map.setView(shiftedCenter, zoom, { animate: false });
+  const mapSize = map.getSize();
+  if (mapSize.x <= 0 || mapSize.y <= 0) {
+    map.setView([center.lat, center.lng], zoom, { animate: false });
     return;
   }
 
-  map.panTo(shiftedCenter, { animate: false, noMoveStart: true });
+  try {
+    const lookaheadPx = Math.round(mapSize.y * NAV_LOOKAHEAD_SCREEN_RATIO);
+    const targetPoint = map.project([center.lat, center.lng], zoom);
+    const shiftedCenter = map.unproject(L.point(targetPoint.x, targetPoint.y + lookaheadPx), zoom);
+
+    if (map.getZoom() !== zoom) {
+      map.setView(shiftedCenter, zoom, { animate: false });
+      return;
+    }
+
+    map.panTo(shiftedCenter, { animate: false, noMoveStart: true });
+  } catch (error) {
+    console.warn('Could not apply navigation lookahead:', error);
+    map.setView([center.lat, center.lng], zoom, { animate: false });
+  }
 }
 
 export default function MapNavigationView({
@@ -322,7 +316,6 @@ export default function MapNavigationView({
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const destMarkerRef = useRef<L.Marker | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
-  const watchIdRef = useRef<number | null>(null);
   const stepIndexRef = useRef(0);
   const voiceRef = useRef(new NavigationVoice());
   const voiceOnRef = useRef(true);
@@ -338,15 +331,14 @@ export default function MapNavigationView({
   const userPosRef = useRef<LatLng>(origin);
   const headingRef = useRef(0);
   const lastMarkerHeadingRef = useRef(0);
-  const lastAppliedBearingRef = useRef(0);
-  const bearingRafRef = useRef<number | null>(null);
-  const pendingBearingRef = useRef<{ bearing: number; center: LatLng } | null>(null);
   const lastNavPanRef = useRef<LatLng | null>(null);
+  const navPanRafRef = useRef<number | null>(null);
+  const pendingNavPanRef = useRef<LatLng | null>(null);
   const hasFittedRouteRef = useRef(false);
   const uiTickRef = useRef(0);
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
 
-  const NAV_GPS_FOLLOW_METERS = 22;
+  const NAV_GPS_FOLLOW_METERS = 18;
   const NAV_UI_TICK_MS = 900;
   const NAV_HEADING_ICON_DEG = 12;
 
@@ -440,10 +432,6 @@ export default function MapNavigationView({
       void wakeLockRef.current?.release();
       wakeLockRef.current = null;
       voiceRef.current.cancel();
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
     };
   }, []);
 
@@ -510,9 +498,9 @@ export default function MapNavigationView({
     window.setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 200);
 
     return () => {
-      if (bearingRafRef.current != null) {
-        cancelAnimationFrame(bearingRafRef.current);
-        bearingRafRef.current = null;
+      if (navPanRafRef.current != null) {
+        cancelAnimationFrame(navPanRafRef.current);
+        navPanRafRef.current = null;
       }
       map.remove();
       mapRef.current = null;
@@ -553,71 +541,55 @@ export default function MapNavigationView({
     if (!hasFittedRouteRef.current) {
       hasFittedRouteRef.current = true;
       const start = userPosRef.current;
-      const zoom = 17;
-      centerMapWithLookahead(map, start, zoom);
-      scheduleMapBearing(map, headingRef.current, start, true);
+      centerMapWithLookahead(map, start, 17);
     }
   }, [route, destination]);
-
-  const scheduleMapBearing = useCallback((map: L.Map, bearing: number, center: LatLng, enabled: boolean) => {
-    if (!enabled) {
-      pendingBearingRef.current = null;
-      if (bearingRafRef.current != null) {
-        cancelAnimationFrame(bearingRafRef.current);
-        bearingRafRef.current = null;
-      }
-      applyMapBearing(map, 0, center, false);
-      lastAppliedBearingRef.current = 0;
-      return;
-    }
-
-    pendingBearingRef.current = { bearing, center };
-    if (bearingRafRef.current != null) return;
-
-    bearingRafRef.current = requestAnimationFrame(() => {
-      bearingRafRef.current = null;
-      const pending = pendingBearingRef.current;
-      if (!pending || !followUserRef.current) return;
-      applyMapBearing(map, pending.bearing, pending.center, true);
-      lastAppliedBearingRef.current = pending.bearing;
-    });
-  }, []);
 
   const syncNavigationMap = useCallback((next: LatLng, nextHeading: number) => {
     const map = mapRef.current;
     if (!map) return;
 
     headingRef.current = nextHeading;
-    const headingUpMode = followUserRef.current;
 
     const headingChanged =
       !userMarkerRef.current ||
       Math.abs(((nextHeading - lastMarkerHeadingRef.current + 540) % 360) - 180) >= NAV_HEADING_ICON_DEG;
-    if (userMarkerRef.current) {
-      userMarkerRef.current.setLatLng([next.lat, next.lng]);
-      if (headingChanged) {
+
+    try {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setLatLng([next.lat, next.lng]);
+        if (headingChanged) {
+          lastMarkerHeadingRef.current = nextHeading;
+          userMarkerRef.current.setIcon(createNavUserIcon(nextHeading));
+        }
+      } else {
         lastMarkerHeadingRef.current = nextHeading;
-        userMarkerRef.current.setIcon(createNavUserIcon(nextHeading, headingUpMode));
+        userMarkerRef.current = L.marker([next.lat, next.lng], {
+          icon: createNavUserIcon(nextHeading),
+          zIndexOffset: 500,
+        }).addTo(map);
       }
-    } else {
-      lastMarkerHeadingRef.current = nextHeading;
-      userMarkerRef.current = L.marker([next.lat, next.lng], {
-        icon: createNavUserIcon(nextHeading, headingUpMode),
-        zIndexOffset: 500,
-      }).addTo(map);
+    } catch (error) {
+      console.warn('Could not update navigation user marker:', error);
     }
 
-    if (followUserRef.current) {
-      const last = lastNavPanRef.current;
-      if (!last || haversineMeters(last, next) >= NAV_GPS_FOLLOW_METERS) {
-        lastNavPanRef.current = next;
-        centerMapWithLookahead(map, next, Math.max(map.getZoom(), 17));
-      }
-      scheduleMapBearing(map, nextHeading, next, true);
-    } else {
-      scheduleMapBearing(map, 0, next, false);
-    }
-  }, [scheduleMapBearing]);
+    if (!followUserRef.current) return;
+
+    const last = lastNavPanRef.current;
+    if (last && haversineMeters(last, next) < NAV_GPS_FOLLOW_METERS) return;
+
+    lastNavPanRef.current = next;
+    pendingNavPanRef.current = next;
+    if (navPanRafRef.current != null) return;
+
+    navPanRafRef.current = requestAnimationFrame(() => {
+      navPanRafRef.current = null;
+      const target = pendingNavPanRef.current;
+      const liveMap = mapRef.current;
+      if (!target || !liveMap || !followUserRef.current) return;
+      centerMapWithLookahead(liveMap, target, Math.max(liveMap.getZoom(), 17));
+    });
+  }, []);
 
   const handleGpsUpdate = useCallback(
     (position: GeolocationPosition) => {
@@ -720,22 +692,15 @@ export default function MapNavigationView({
   handleGpsUpdateRef.current = handleGpsUpdate;
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
-
-    const onPosition = (position: GeolocationPosition) => {
+    const unsubscribe = subscribeLiveGeolocation((position) => {
       handleGpsUpdateRef.current(position);
-    };
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      onPosition,
-      () => undefined,
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 },
-    );
+    });
 
     return () => {
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
+      unsubscribe();
+      if (navPanRafRef.current != null) {
+        cancelAnimationFrame(navPanRafRef.current);
+        navPanRafRef.current = null;
       }
     };
   }, []);
@@ -756,9 +721,8 @@ export default function MapNavigationView({
     const map = mapRef.current;
     if (!map) return;
     centerMapWithLookahead(map, pos, 17);
-    scheduleMapBearing(map, headingRef.current, pos, true);
     if (userMarkerRef.current) {
-      userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current, true));
+      userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
     }
   };
 
@@ -767,9 +731,8 @@ export default function MapNavigationView({
     followUserRef.current = false;
     const map = mapRef.current;
     if (!map) return;
-    scheduleMapBearing(map, 0, userPosRef.current, false);
     if (userMarkerRef.current) {
-      userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current, false));
+      userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
     }
     if (route) {
       map.fitBounds(route.coords, { padding: [90, 90], maxZoom: 15, animate: false });

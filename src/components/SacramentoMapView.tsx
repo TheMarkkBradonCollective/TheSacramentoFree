@@ -16,6 +16,7 @@ import {
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
+import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import MapNavigationView from './MapNavigationView';
 import NavigateNotifyDialog from './NavigateNotifyDialog';
 import { notifyPosterEnRoute } from '../lib/navigationNotify';
@@ -149,9 +150,8 @@ const MAP_TILE_OPTIONS = {
     '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
 } as const;
 
-const GPS_FOLLOW_PAN_METERS = 30;
-const GPS_STATE_UPDATE_METERS = 45;
-const GPS_MARKER_UPDATE_METERS = 8;
+const GPS_FOLLOW_PAN_METERS = 25;
+const GPS_STATE_UPDATE_METERS = 40;
 const MAP_INIT_OPTIONS: L.MapOptions = {
   zoomControl: false,
   attributionControl: true,
@@ -422,7 +422,9 @@ export default function SacramentoMapView({
   const isLocatingRef = useRef(true);
   const locationErrorRef = useRef<string | null>(null);
   const userLocationIconRef = useRef<L.DivIcon | null>(null);
-  const geoWatchIdRef = useRef<number | null>(null);
+  const geoUnsubscribeRef = useRef<(() => void) | null>(null);
+  const followPanRafRef = useRef<number | null>(null);
+  const pendingFollowPanRef = useRef<LatLng | null>(null);
   const followUserRef = useRef(true);
   const mapVisibleRef = useRef(mapVisible);
   const lastFollowPanRef = useRef<LatLng | null>(null);
@@ -475,27 +477,28 @@ export default function SacramentoMapView({
     followUserRef.current = followUser;
   }, [followUser]);
 
-  // One GPS watch for the community map — pause while turn-by-turn nav is active.
-  useEffect(() => {
-    if (!mapReady) return;
-
-    if (immersiveNavActive) {
-      stopLiveLocationWatch();
-      return;
-    }
-
-    startLiveLocationWatch();
-    return () => {
-      stopLiveLocationWatch();
-    };
-  }, [immersiveNavActive, mapReady]);
-
   useEffect(() => {
     mapVisibleRef.current = mapVisible;
     if (!mapVisible) return;
 
     const map = mapRef.current;
     if (!map) return;
+
+    const pos = userLocationRef.current;
+    if (pos) {
+      try {
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLatLng([pos.lat, pos.lng]);
+        } else if (!navigationOpenRef.current && !navigateNotifyOpenRef.current) {
+          userMarkerRef.current = L.marker([pos.lat, pos.lng], {
+            icon: createUserLocationIcon(),
+            zIndexOffset: 500,
+          }).addTo(map);
+        }
+      } catch (error) {
+        console.warn('Could not restore user marker on map tab:', error);
+      }
+    }
 
     // One refresh after the tab becomes visible (container was display:none).
     const timer = window.setTimeout(() => {
@@ -551,29 +554,23 @@ export default function SacramentoMapView({
       setUserLocation(nextPos);
     }
 
-    if (navigationOpenRef.current || navigateNotifyOpenRef.current) return;
+    if (navigationOpenRef.current || navigateNotifyOpenRef.current || !mapVisibleRef.current) return;
 
     const map = mapRef.current;
     if (!map) return;
 
-    const shouldMoveMarker =
-      !lastMarkerPositionRef.current ||
-      haversineMeters(lastMarkerPositionRef.current, nextPos) >= GPS_MARKER_UPDATE_METERS;
-
-    if (shouldMoveMarker) {
-      lastMarkerPositionRef.current = nextPos;
-      try {
-        if (userMarkerRef.current) {
-          userMarkerRef.current.setLatLng([latitude, longitude]);
-        } else {
-          userMarkerRef.current = L.marker([latitude, longitude], {
-            icon: createUserLocationIcon(),
-            zIndexOffset: 500,
-          }).addTo(map);
-        }
-      } catch (error) {
-        console.warn('Could not update user location marker:', error);
+    try {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setLatLng([latitude, longitude]);
+      } else {
+        userMarkerRef.current = L.marker([latitude, longitude], {
+          icon: createUserLocationIcon(),
+          zIndexOffset: 500,
+        }).addTo(map);
       }
+      lastMarkerPositionRef.current = nextPos;
+    } catch (error) {
+      console.warn('Could not update user location marker:', error);
     }
 
     if (!followUserRef.current || selectedPostRef.current) return;
@@ -593,16 +590,25 @@ export default function SacramentoMapView({
     if (lastPan && haversineMeters(lastPan, nextPos) < GPS_FOLLOW_PAN_METERS) return;
 
     lastFollowPanRef.current = nextPos;
-    try {
-      map.panTo([latitude, longitude], { animate: false, noMoveStart: true });
-    } catch (error) {
-      console.warn('Could not follow user on map:', error);
-    }
+    pendingFollowPanRef.current = nextPos;
+    if (followPanRafRef.current != null) return;
+
+    followPanRafRef.current = requestAnimationFrame(() => {
+      followPanRafRef.current = null;
+      const target = pendingFollowPanRef.current;
+      const liveMap = mapRef.current;
+      if (!target || !liveMap || !followUserRef.current || !mapVisibleRef.current) return;
+      try {
+        liveMap.panTo([target.lat, target.lng], { animate: false, noMoveStart: true });
+      } catch (error) {
+        console.warn('Could not follow user on map:', error);
+      }
+    });
   };
 
   const handleGeolocationError = (error: GeolocationPositionError) => {
     console.warn('Geolocation failed:', error);
-    if (hasGpsFixRef.current) return;
+    if (hasGpsFixRef.current || error.code === error.TIMEOUT) return;
 
     if (isLocatingRef.current) {
       isLocatingRef.current = false;
@@ -617,49 +623,6 @@ export default function SacramentoMapView({
     if (locationErrorRef.current !== message) {
       locationErrorRef.current = message;
       setLocationError(message);
-    }
-  };
-
-  const startLiveLocationWatch = () => {
-    if (!navigator.geolocation) {
-      const message = 'Geolocation is not supported on this device.';
-      if (locationErrorRef.current !== message) {
-        locationErrorRef.current = message;
-        setLocationError(message);
-      }
-      if (isLocatingRef.current) {
-        isLocatingRef.current = false;
-        setIsLocating(false);
-      }
-      return;
-    }
-    if (geoWatchIdRef.current != null) return;
-
-    if (!hasGpsFixRef.current && isLocatingRef.current) {
-      setIsLocating(true);
-    }
-    if (locationErrorRef.current) {
-      locationErrorRef.current = null;
-      setLocationError(null);
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
-      () => undefined,
-      { enableHighAccuracy: true, maximumAge: 15000, timeout: 12000 },
-    );
-
-    geoWatchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
-      handleGeolocationError,
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 },
-    );
-  };
-
-  const stopLiveLocationWatch = () => {
-    if (geoWatchIdRef.current != null) {
-      navigator.geolocation.clearWatch(geoWatchIdRef.current);
-      geoWatchIdRef.current = null;
     }
   };
 
@@ -874,6 +837,12 @@ export default function SacramentoMapView({
     mapRef.current = map;
     setMapReady(true);
 
+    const unsubscribeGeo = subscribeLiveGeolocation(
+      (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
+      handleGeolocationError,
+    );
+    geoUnsubscribeRef.current = unsubscribeGeo;
+
     const onUserPanMap = () => {
       setFollowUser(false);
       followUserRef.current = false;
@@ -899,7 +868,12 @@ export default function SacramentoMapView({
       if (resizeTimer) window.clearTimeout(resizeTimer);
       window.removeEventListener('resize', onWindowResize);
       map.off('dragstart', onUserPanMap);
-      stopLiveLocationWatch();
+      geoUnsubscribeRef.current?.();
+      geoUnsubscribeRef.current = null;
+      if (followPanRafRef.current != null) {
+        cancelAnimationFrame(followPanRafRef.current);
+        followPanRafRef.current = null;
+      }
       hasInitialMapCenterRef.current = false;
       lastFollowPanRef.current = null;
       lastMarkerPositionRef.current = null;
