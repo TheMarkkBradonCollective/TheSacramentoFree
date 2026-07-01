@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng, CommunityEvent } from '../types';
 import {
   canViewerSeeExactLocation,
@@ -14,6 +14,8 @@ import {
   type LatLng,
 } from '../lib/mapRoute';
 import MapNavigationView from './MapNavigationView';
+import NavigateNotifyDialog from './NavigateNotifyDialog';
+import { notifyPosterEnRoute } from '../lib/navigationNotify';
 import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
@@ -303,6 +305,8 @@ export default function SacramentoMapView({
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const [navigateNotifyOpen, setNavigateNotifyOpen] = useState(false);
+  const [notifyingPoster, setNotifyingPoster] = useState(false);
   const [colorGuideInternal, setColorGuideInternal] = useState(false);
   const showColorGuide =
     colorGuideOpenProp !== undefined ? colorGuideOpenProp : colorGuideInternal;
@@ -746,7 +750,56 @@ export default function SacramentoMapView({
 
   useEffect(() => {
     setNavigationOpen(false);
+    setNavigateNotifyOpen(false);
   }, [selectedPost?.id]);
+
+  const openNavigation = useCallback(() => {
+    setNavigationOpen(true);
+  }, []);
+
+  const handleNavigateRequest = useCallback(() => {
+    if (!selectedPost) return;
+    if (selectedPost.userId === userProfile.uid) {
+      openNavigation();
+      return;
+    }
+    setNavigateNotifyOpen(true);
+  }, [selectedPost, userProfile.uid, openNavigation]);
+
+  const handleNavigateSkipNotify = useCallback(() => {
+    setNavigateNotifyOpen(false);
+    openNavigation();
+  }, [openNavigation]);
+
+  const handleNavigateNotifyPoster = useCallback(async () => {
+    if (!selectedPost || routeDistanceMeters == null || routeDurationSeconds == null) {
+      setNavigateNotifyOpen(false);
+      openNavigation();
+      return;
+    }
+
+    setNotifyingPoster(true);
+    try {
+      await notifyPosterEnRoute({
+        item: selectedPost,
+        travelerUserId: userProfile.uid,
+        travelerName: userProfile.displayName,
+        distanceMeters: routeDistanceMeters,
+        durationSeconds: routeDurationSeconds,
+      });
+    } finally {
+      setNotifyingPoster(false);
+      setNavigateNotifyOpen(false);
+      openNavigation();
+    }
+  }, [
+    selectedPost,
+    routeDistanceMeters,
+    routeDurationSeconds,
+    userProfile.uid,
+    userProfile.displayName,
+    openNavigation,
+  ]);
 
   const navigationOverlay =
     navigationOpen && routeEndpoints && selectedPost ? (
@@ -755,6 +808,20 @@ export default function SacramentoMapView({
         destination={routeEndpoints.end}
         destinationLabel={selectedPost.title}
         onExit={() => setNavigationOpen(false)}
+      />
+    ) : null;
+
+  const navigateNotifyDialog =
+    selectedPost && selectedPost.userId !== userProfile.uid ? (
+      <NavigateNotifyDialog
+        open={navigateNotifyOpen}
+        posterName={selectedPost.userDisplayName}
+        itemTitle={selectedPost.title}
+        distanceMeters={routeDistanceMeters}
+        durationSeconds={routeDurationSeconds}
+        notifying={notifyingPoster}
+        onNotify={() => void handleNavigateNotifyPoster()}
+        onSkip={handleNavigateSkipNotify}
       />
     ) : null;
 
@@ -922,6 +989,7 @@ export default function SacramentoMapView({
     return (
       <div id="sacramento_interactive_map_view" className="relative w-full h-full overflow-hidden font-sans">
         {navigationOverlay}
+        {navigateNotifyDialog}
         {/* Immersive Leaflet Container */}
         <div 
           ref={mapContainerRef} 
@@ -1171,7 +1239,7 @@ export default function SacramentoMapView({
                         hasLiveGps={!!userLocation}
                         viewerUserId={userProfile.uid}
                         canNavigate={!!userLocation && isRoadGeometry(routeCoords)}
-                        onStartNavigation={() => setNavigationOpen(true)}
+                        onStartNavigation={handleNavigateRequest}
                       />
                     </div>
 
@@ -1248,6 +1316,7 @@ export default function SacramentoMapView({
   return (
     <div id="sacramento_interactive_map_view" className="bg-surface border border-app p-5 rounded-2xl font-sans flex flex-col space-y-4 text-app">
       {navigationOverlay}
+      {navigateNotifyDialog}
       {selectedType === undefined && (
         <div className="flex flex-col space-y-1 pb-2 border-b border-app">
           <span className="text-[9px] font-black text-accent uppercase tracking-widest font-mono flex items-center gap-1.5">
@@ -1709,7 +1778,7 @@ export default function SacramentoMapView({
                     hasLiveGps={!!userLocation}
                     viewerUserId={userProfile.uid}
                     canNavigate={!!userLocation && isRoadGeometry(routeCoords)}
-                    onStartNavigation={() => setNavigationOpen(true)}
+                    onStartNavigation={handleNavigateRequest}
                   />
                 </div>
 

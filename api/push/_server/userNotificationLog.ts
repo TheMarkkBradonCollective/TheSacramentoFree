@@ -25,6 +25,8 @@ function inboxKind(eventType: PushEventType): string {
     case 'pickup_scheduled':
     case 'pickup_reminder':
       return 'pickup_reminder';
+    case 'on_the_way':
+      return 'on_the_way';
     case 'new_message':
       return 'message';
     case 'message_request':

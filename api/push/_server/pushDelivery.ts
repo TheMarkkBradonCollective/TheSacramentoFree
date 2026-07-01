@@ -8,6 +8,7 @@ export type PushEventType =
   | 'item_gifted'
   | 'pickup_scheduled'
   | 'pickup_reminder'
+  | 'on_the_way'
   | 'new_message'
   | 'community_chat'
   | 'staff_chat'
@@ -105,6 +106,7 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   item_gifted: 'gifts',
   pickup_scheduled: 'pickupReminders',
   pickup_reminder: 'pickupReminders',
+  on_the_way: 'pickupReminders',
   new_message: 'messages',
   community_chat: 'communityChat',
   staff_chat: 'staffChat',
@@ -269,6 +271,7 @@ const HIGH_URGENCY_EVENTS = new Set<PushEventType>([
   'message_request_accepted',
   'item_claimed',
   'claim_request',
+  'on_the_way',
   'account_update',
 ]);
 

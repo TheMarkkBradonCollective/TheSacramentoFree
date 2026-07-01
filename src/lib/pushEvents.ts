@@ -265,6 +265,27 @@ export async function notifyPickupReminder(params: {
   });
 }
 
+export async function notifyPosterOnTheWay(params: {
+  item: ItemPost;
+  travelerUserId: string;
+  travelerName: string;
+  distanceLabel: string;
+  durationLabel: string;
+}) {
+  await sendPushNotification({
+    eventType: 'on_the_way',
+    title: 'Neighbor on the way',
+    body: `${params.travelerName} is heading to "${params.item.title}" — ${params.distanceLabel} away (${params.durationLabel})`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    tag: `on-the-way-${params.item.id}-${params.travelerUserId}`,
+    data: {
+      actorName: params.travelerName,
+      actorUserId: params.travelerUserId,
+    },
+  });
+}
+
 export async function notifyListingApproved(item: ItemPost) {
   await sendPushNotification({
     eventType: 'listing_approved',

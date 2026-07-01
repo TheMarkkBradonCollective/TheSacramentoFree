@@ -358,6 +358,17 @@ export async function validateClientPush(
       return { ok: true, recipientUserIds: [...recipientIds] };
     }
 
+    case 'on_the_way': {
+      const listingId = String(body.listingId || '').trim();
+      if (!listingId) return { ok: false, error: 'listingId is required' };
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data: item } = await supabaseAdmin.from('items').select('userId').eq('id', listingId).maybeSingle();
+      const ownerId = String((item as { userId?: string } | null)?.userId || '');
+      if (!ownerId) return { ok: false, error: 'Listing not found' };
+      if (ownerId === callerId) return { ok: false, error: 'Cannot notify yourself' };
+      return { ok: true, recipientUserIds: [ownerId] };
+    }
+
     case 'new_comment': {
       const listingId = String(body.listingId || '').trim();
       if (!listingId) return { ok: false, error: 'listingId is required' };

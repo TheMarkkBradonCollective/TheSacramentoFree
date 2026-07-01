@@ -367,6 +367,7 @@ export type PushEventType =
   | 'item_gifted'
   | 'pickup_scheduled'
   | 'pickup_reminder'
+  | 'on_the_way'
   | 'new_message'
   | 'community_chat'
   | 'staff_chat'
