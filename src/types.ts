@@ -447,6 +447,16 @@ export interface AwardsUnlockStatus {
   remaining: number;
 }
 
+export interface AwardLeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  photoURL?: string;
+  neighborhood: string;
+  awardCount: number;
+  latestGrantAt: string;
+}
+
 export interface HelpAnnouncementComment {
   id: string;
   announcementId: string;

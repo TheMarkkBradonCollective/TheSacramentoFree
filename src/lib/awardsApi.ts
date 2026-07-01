@@ -1,6 +1,7 @@
 import {
   AwardDefinition,
   AwardDefinitionInput,
+  AwardLeaderboardEntry,
   AwardsUnlockStatus,
   UserAward,
   UserProfile,
@@ -111,6 +112,75 @@ export async function getUserAwards(userId: string): Promise<UserAward[]> {
     return (grantsRes.data as Record<string, unknown>[]).map((row) =>
       normalizeUserAwardRow(row, defMap.get(String(row.awardId))),
     );
+  } catch {
+    return [];
+  }
+}
+
+export async function getAwardsLeaderboard(limit = 25): Promise<AwardLeaderboardEntry[]> {
+  try {
+    const { data: grants, error } = await supabase
+      .from('user_awards')
+      .select('userId, grantedAt')
+      .is('revokedAt', null);
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      console.warn('[awards] leaderboard grants:', error.message);
+      return [];
+    }
+
+    if (!grants?.length) return [];
+
+    const byUser = new Map<string, { count: number; latest: string }>();
+    for (const row of grants as { userId?: string; grantedAt?: string }[]) {
+      const uid = String(row.userId || '');
+      if (!uid) continue;
+      const grantedAt = String(row.grantedAt || '');
+      const current = byUser.get(uid);
+      if (!current) {
+        byUser.set(uid, { count: 1, latest: grantedAt });
+      } else {
+        current.count += 1;
+        if (grantedAt > current.latest) current.latest = grantedAt;
+      }
+    }
+
+    const ranked = [...byUser.entries()]
+      .sort((a, b) => b[1].count - a[1].count || b[1].latest.localeCompare(a[1].latest))
+      .slice(0, Math.max(1, Math.min(limit, 100)));
+
+    if (ranked.length === 0) return [];
+
+    const userIds = ranked.map(([uid]) => uid);
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('uid, displayName, photoURL, neighborhood')
+      .in('uid', userIds);
+
+    if (usersError) {
+      console.warn('[awards] leaderboard users:', usersError.message);
+    }
+
+    const userMap = new Map(
+      (users || []).map((user) => [
+        String((user as { uid: string }).uid),
+        user as { uid: string; displayName?: string; photoURL?: string; neighborhood?: string },
+      ]),
+    );
+
+    return ranked.map(([userId, stats], index) => {
+      const user = userMap.get(userId);
+      return {
+        rank: index + 1,
+        userId,
+        displayName: String(user?.displayName || 'Neighbor').trim() || 'Neighbor',
+        photoURL: user?.photoURL || undefined,
+        neighborhood: String(user?.neighborhood || ''),
+        awardCount: stats.count,
+        latestGrantAt: stats.latest,
+      };
+    });
   } catch {
     return [];
   }

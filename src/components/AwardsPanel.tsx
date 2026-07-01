@@ -7,15 +7,18 @@ import { awardCategoryTheme } from '../lib/awardTheme';
 import { AWARDS } from '../siteContent';
 import AwardsSharePrompt from './AwardsSharePrompt';
 import AwardCard from './AwardCard';
+import AwardsLeaderboard from './AwardsLeaderboard';
 import StaffAwardsAdmin from './StaffAwardsAdmin';
+import { useAwardsLeaderboard } from '../hooks/useAwardsLeaderboard';
 
 interface AwardsPanelProps {
   userProfile: UserProfile;
+  onViewProfile?: (userId: string) => void;
 }
 
-type AwardsTab = 'mine' | 'all' | 'manage';
+type AwardsTab = 'mine' | 'all' | 'leaderboard' | 'manage';
 
-export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
+export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelProps) {
   const {
     definitions,
     userAwards,
@@ -25,6 +28,11 @@ export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
     showFullAwards,
     canManage,
   } = useAwards(userProfile);
+
+  const { entries: leaderboardEntries, loading: leaderboardLoading } = useAwardsLeaderboard(
+    showFullAwards,
+    25,
+  );
 
   const [tab, setTab] = useState<AwardsTab>('mine');
 
@@ -99,6 +107,9 @@ export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
             <TabButton active={tab === 'all'} onClick={() => setTab('all')} emoji="🗺️">
               Explore all
             </TabButton>
+            <TabButton active={tab === 'leaderboard'} onClick={() => setTab('leaderboard')} emoji="🏆">
+              Leaderboard
+            </TabButton>
             {canManage && (
               <TabButton active={tab === 'manage'} onClick={() => setTab('manage')} emoji="🛠️">
                 Manage
@@ -170,6 +181,15 @@ export default function AwardsPanel({ userProfile }: AwardsPanelProps) {
                 );
               })}
             </section>
+          )}
+
+          {tab === 'leaderboard' && (
+            <AwardsLeaderboard
+              entries={leaderboardEntries}
+              loading={leaderboardLoading}
+              currentUserId={userProfile.uid}
+              onViewProfile={onViewProfile}
+            />
           )}
 
           {tab === 'manage' && canManage && <StaffAwardsAdmin userProfile={userProfile} />}

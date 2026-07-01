@@ -1202,7 +1202,7 @@ export default function App() {
                   subtitle={AWARDS.panelSubtitle}
                   onClose={() => setShowAwardsPanel(false)}
                 >
-                  <AwardsPanel userProfile={userProfile} />
+                  <AwardsPanel userProfile={userProfile} onViewProfile={handleViewProfile} />
                 </FullScreenPanel>
               )}
 

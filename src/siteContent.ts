@@ -389,6 +389,11 @@ export const AWARDS = {
     'Little badges for neighbors who give, help, show up, and make this community feel like home.',
   noAwardsYet: 'Your badge shelf is waiting!',
   noAwardsHint: 'Give an item, claim something, RSVP to an event, or say hi in community chat — badges show up as you participate.',
+  leaderboardTitle: 'Top neighbors',
+  leaderboardSubtitle: 'Neighbors ranked by badges earned — give, help, and show up to climb the board.',
+  leaderboardLoading: 'Loading the leaderboard…',
+  leaderboardEmptyTitle: 'No leaderboard yet',
+  leaderboardEmptyHint: 'As neighbors earn badges, the most decorated profiles will show up here.',
   previewBullets: [
     'Founding neighbor badges for the first 100, 200, 300, 400, and 500 members',
     'Auto badges when you give gifts, claim items, and fulfill requests',
