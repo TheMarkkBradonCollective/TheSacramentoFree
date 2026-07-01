@@ -3,22 +3,25 @@ import { getSupabaseAdmin } from './supabaseAdmin';
 import { getUserRole, isStaffRole, normalizeUserRole } from './staffRoles';
 import type { PushSendBody } from './runPushSend';
 
-/** Events that must only be dispatched from webhooks, cron, or trusted server handlers. */
+/** Events that cannot be sent from the public client API under any circumstance. */
 export const WEBHOOK_ONLY_PUSH_EVENTS = new Set<PushEventType>([
-  'new_item',
-  'new_request',
   'nearby_item',
   'nearby_request',
-  'community_chat',
-  'director_alert',
   'staff_support',
   'staff_report',
-  'listing_expiring',
   'pickup_reminder',
   'support_reply',
+]);
+
+/** Fan-out events: recipients are resolved server-side, never from the client payload. */
+export const CLIENT_FAN_OUT_PUSH_EVENTS = new Set<PushEventType>([
+  'new_item',
+  'new_request',
+  'community_chat',
+  'staff_chat',
+  'director_alert',
   'announcement',
   'app_update',
-  'staff_chat',
 ]);
 
 const TITLE_MAX = 120;
@@ -45,6 +48,96 @@ async function verifyChatParticipant(chatId: string, userId: string): Promise<st
   return participants.includes(userId) ? participants : [];
 }
 
+async function verifyRecentCommunityMessage(
+  chatId: string,
+  callerId: string,
+  tag?: string,
+): Promise<boolean> {
+  const supabaseAdmin = await getSupabaseAdmin();
+  const messageIdMatch = String(tag || '').match(/^(?:community|staff)-msg-(.+)$/);
+
+  if (messageIdMatch) {
+    const { data } = await supabaseAdmin
+      .from('messages')
+      .select('senderId, chatId')
+      .eq('id', messageIdMatch[1])
+      .maybeSingle();
+    if (!data) return false;
+    const row = data as { senderId?: string; chatId?: string };
+    return row.senderId === callerId && row.chatId === chatId;
+  }
+
+  const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const { data } = await supabaseAdmin
+    .from('messages')
+    .select('id')
+    .eq('chatId', chatId)
+    .eq('senderId', callerId)
+    .gte('createdAt', cutoff)
+    .limit(1)
+    .maybeSingle();
+
+  return Boolean(data);
+}
+
+async function validateDirectorAlertClient(
+  callerId: string,
+  body: PushSendBody,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const category = String(body.data?.directorCategory || '').trim();
+  const tag = String(body.tag || '').trim();
+
+  if (category === 'moderation') {
+    const role = await getUserRole(callerId);
+    if (!isStaffRole(role)) return { ok: false, error: 'Staff access required' };
+    return { ok: true };
+  }
+
+  if (category === 'join') {
+    return { ok: true };
+  }
+
+  if (tag.startsWith('director-listing-')) {
+    const listingId = tag.slice('director-listing-'.length) || String(body.listingId || '');
+    if (!listingId || !(await verifyListingOwner(listingId, callerId))) {
+      return { ok: false, error: 'Only the listing owner can send this alert' };
+    }
+    return { ok: true };
+  }
+
+  if (tag.startsWith('director-claim-')) {
+    const requestId = tag.slice('director-claim-'.length);
+    if (!requestId) return { ok: false, error: 'Invalid claim alert' };
+    const supabaseAdmin = await getSupabaseAdmin();
+    const { data } = await supabaseAdmin
+      .from('item_claim_requests')
+      .select('claimerUserId')
+      .eq('id', requestId)
+      .maybeSingle();
+    if (String((data as { claimerUserId?: string } | null)?.claimerUserId || '') !== callerId) {
+      return { ok: false, error: 'Not the claimer for this request' };
+    }
+    return { ok: true };
+  }
+
+  if (tag.startsWith('director-dmreq-')) {
+    const requestId = tag.slice('director-dmreq-'.length);
+    if (!requestId) return { ok: false, error: 'Invalid message request alert' };
+    const supabaseAdmin = await getSupabaseAdmin();
+    const { data } = await supabaseAdmin
+      .from('message_requests')
+      .select('fromUserId')
+      .eq('id', requestId)
+      .maybeSingle();
+    if (String((data as { fromUserId?: string } | null)?.fromUserId || '') !== callerId) {
+      return { ok: false, error: 'Not the sender of this message request' };
+    }
+    return { ok: true };
+  }
+
+  return { ok: true };
+}
+
 /**
  * When push is triggered from the public /api/push/send endpoint, never trust
  * recipientUserIds — derive and validate recipients from database state.
@@ -62,6 +155,63 @@ export async function validateClientPush(
   // Client-supplied recipientUserIds are ignored; recipients are derived from database state below.
 
   switch (eventType) {
+    case 'new_item':
+    case 'new_request': {
+      const listingId = String(body.listingId || '').trim();
+      if (!listingId) return { ok: false, error: 'listingId is required' };
+      if (!(await verifyListingOwner(listingId, callerId))) {
+        return { ok: false, error: 'Only the listing owner can notify neighbors' };
+      }
+      return { ok: true };
+    }
+
+    case 'community_chat': {
+      const chatId = String(body.conversationId || '').trim();
+      if (chatId !== 'community-global') return { ok: false, error: 'Invalid community chat' };
+      if (!(await verifyRecentCommunityMessage(chatId, callerId, body.tag))) {
+        return { ok: false, error: 'No recent community message from you' };
+      }
+      return { ok: true };
+    }
+
+    case 'staff_chat': {
+      const chatId = String(body.conversationId || '').trim();
+      if (chatId !== 'community-staff') return { ok: false, error: 'Invalid staff chat' };
+      const role = await getUserRole(callerId);
+      if (!isStaffRole(role)) return { ok: false, error: 'Staff access required' };
+      if (!(await verifyRecentCommunityMessage(chatId, callerId, body.tag))) {
+        return { ok: false, error: 'No recent staff chat message from you' };
+      }
+      return { ok: true };
+    }
+
+    case 'director_alert': {
+      const check = await validateDirectorAlertClient(callerId, body);
+      if (!check.ok) return check;
+      return { ok: true };
+    }
+
+    case 'announcement': {
+      const role = await getUserRole(callerId);
+      if (!isStaffRole(role)) return { ok: false, error: 'Staff access required' };
+      return { ok: true };
+    }
+
+    case 'app_update': {
+      const role = await getUserRole(callerId);
+      if (normalizeUserRole(role) !== 'director') return { ok: false, error: 'Director access required' };
+      return { ok: true };
+    }
+
+    case 'listing_expiring': {
+      const listingId = String(body.listingId || '').trim();
+      if (!listingId) return { ok: false, error: 'listingId is required' };
+      if (!(await verifyListingOwner(listingId, callerId))) {
+        return { ok: false, error: 'Only the listing owner can receive expiry reminders' };
+      }
+      return { ok: true, recipientUserIds: [callerId] };
+    }
+
     case 'account_update': {
       return { ok: true, recipientUserIds: [callerId] };
     }

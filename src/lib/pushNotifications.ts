@@ -591,7 +591,8 @@ async function postPushApi(path: string, body: unknown, retries = 2): Promise<Re
         await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
         continue;
       }
-      console.warn('[push] send rejected:', res.status, lastJson);
+      const errorText = typeof lastJson.error === 'string' ? lastJson.error : `HTTP ${res.status}`;
+      console.warn(`[push] send rejected (${path}):`, res.status, errorText);
       return lastJson;
     } catch (err) {
       if (attempt < retries) {
@@ -616,7 +617,14 @@ export async function notifyReportPush(reportId: string): Promise<void> {
 
 export async function sendPushNotification(options: SendPushOptions): Promise<void> {
   const json = await postPushApi('/api/push/send', options);
-  if (Number(json.sent) === 0 && !json.error) {
+  if (json.error) {
+    console.warn('[push] send failed:', {
+      eventType: options.eventType,
+      error: json.error,
+    });
+    return;
+  }
+  if (Number(json.sent) === 0) {
     console.warn('[push] send reached 0 devices:', {
       eventType: options.eventType,
       recipients: json.recipients,

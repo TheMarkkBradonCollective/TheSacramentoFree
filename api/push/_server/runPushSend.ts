@@ -1,4 +1,4 @@
-import { assertStaffOrDirectorForPush, clampPushText, validateClientPush } from './clientPushAuth';
+import { assertStaffOrDirectorForPush, clampPushText, CLIENT_FAN_OUT_PUSH_EVENTS, validateClientPush } from './clientPushAuth';
 import { getServiceRoleKey, getSupabaseAdmin } from './supabaseAdmin';
 import {
   getPreferencesForUsers,
@@ -249,6 +249,8 @@ export async function runPushSend(
     }
     if (clientCheck.recipientUserIds?.length) {
       safeBody.recipientUserIds = clientCheck.recipientUserIds;
+    } else if (CLIENT_FAN_OUT_PUSH_EVENTS.has(safeBody.eventType)) {
+      delete safeBody.recipientUserIds;
     }
   } else {
     const authError = await validateCallerForPush(callerId, safeBody);
