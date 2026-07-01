@@ -30,7 +30,8 @@ export function getPostTypeFilterLabel(filter: ListingTypeFilter): string {
   }
 }
 
-export function getPostTypeModalTitle(type: PostType, isEditing: boolean): string {
+export function getPostTypeModalTitle(type: PostType, isEditing: boolean, isReposting = false): string {
+  if (isReposting) return 'Repost listing';
   if (isEditing) return 'Edit listing';
   switch (type) {
     case 'giveaway':

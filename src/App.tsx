@@ -764,6 +764,30 @@ export default function App() {
     }
   };
 
+  const handleRepostPost = useCallback(
+    async (post: ItemPost) => {
+      if (!userProfile || post.userId !== userProfile.uid || post.status !== 'withdrawn') return;
+
+      setDetailUpdating(true);
+      try {
+        const ok = await updateSupabaseItemStatus(post.id, 'active', userProfile.uid);
+        if (!ok) {
+          setErrorMsg('Could not repost listing.');
+          return;
+        }
+        if (detailItem?.id === post.id) await refreshDetailItem();
+        await loadItems(false);
+        setActiveTab('feed');
+      } catch (err) {
+        console.warn('Failed to repost listing:', err);
+        setErrorMsg('Could not repost listing.');
+      } finally {
+        setDetailUpdating(false);
+      }
+    },
+    [userProfile, detailItem?.id, loadItems, refreshDetailItem],
+  );
+
   const handleDeletePost = useCallback(
     async (post: ItemPost) => {
       if (!userProfile || post.userId !== userProfile.uid || post.status !== 'withdrawn') return;
@@ -1021,6 +1045,7 @@ export default function App() {
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
@@ -1067,6 +1092,7 @@ export default function App() {
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
@@ -1113,6 +1139,7 @@ export default function App() {
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
                   onViewItem={setDetailItem}
+                  onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
                   onViewProfile={handleViewProfile}
@@ -1188,6 +1215,7 @@ export default function App() {
                   onClose={() => setViewProfileUid(null)}
                   onOpenChat={handleOpenChatFromProfile}
                   onViewPost={setDetailItem}
+                  onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onBlockListChanged={handleBlockListChanged}
                 />

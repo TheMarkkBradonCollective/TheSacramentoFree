@@ -949,7 +949,11 @@ export async function createSupabaseItem(
   }
 }
 
-function buildItemUpdatePayload(item: ItemPost, includeImageUrl: boolean) {
+function buildItemUpdatePayload(
+  item: ItemPost,
+  includeImageUrl: boolean,
+  options?: { repost?: boolean },
+) {
   const payload: Record<string, unknown> = {
     title: item.title,
     description: item.description,
@@ -960,6 +964,11 @@ function buildItemUpdatePayload(item: ItemPost, includeImageUrl: boolean) {
     userPhotoURL: item.userPhotoURL || null,
     updatedAt: new Date().toISOString(),
   };
+
+  if (options?.repost) {
+    payload.status = 'active';
+    payload.createdAt = new Date().toISOString();
+  }
 
   if (includeImageUrl && item.imageUrl) {
     if (item.imageUrl.startsWith('http://') || item.imageUrl.startsWith('https://')) {
@@ -972,14 +981,16 @@ function buildItemUpdatePayload(item: ItemPost, includeImageUrl: boolean) {
 
 export async function updateSupabaseItem(
   item: ItemPost,
+  options?: { repost?: boolean },
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
-    let payload = buildItemUpdatePayload(item, true);
+    const repost = options?.repost === true;
+    let payload = buildItemUpdatePayload(item, true, repost ? { repost: true } : undefined);
     let { error } = await supabase.from('items').update(payload).eq('id', item.id);
 
     if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
       const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
-      payload = buildItemUpdatePayload({ ...item, description: descriptionWithImage }, false);
+      payload = buildItemUpdatePayload({ ...item, description: descriptionWithImage }, false, repost ? { repost: true } : undefined);
       ({ error } = await supabase.from('items').update(payload).eq('id', item.id));
     }
 
@@ -993,7 +1004,15 @@ export async function updateSupabaseItem(
     }
 
     setSupabaseConfigurationState(true);
-    await runPushTask(() => import('./lib/pushIntegration').then((m) => m.pushAfterItemUpdated(item)));
+    if (repost) {
+      await runPushTask(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushAfterItemReposted({ ...item, status: 'active', createdAt: String(payload.createdAt) }),
+        ),
+      );
+    } else {
+      await runPushTask(() => import('./lib/pushIntegration').then((m) => m.pushAfterItemUpdated(item)));
+    }
     return { ok: true };
   } catch (err: any) {
     console.error('updateSupabaseItem exception:', err);
@@ -1014,10 +1033,16 @@ export async function updateSupabaseItemStatus(
       .eq('id', itemId)
       .maybeSingle();
     const previousStatus = String((existing as { status?: string } | null)?.status || '');
+    const now = new Date().toISOString();
+    const isRepost = previousStatus === 'withdrawn' && status === 'active';
 
     const { error } = await supabase
       .from('items')
-      .update({ status, updatedAt: new Date().toISOString() })
+      .update({
+        status,
+        updatedAt: now,
+        ...(isRepost ? { createdAt: now } : {}),
+      })
       .eq('id', itemId);
 
     if (error) {
@@ -1028,7 +1053,9 @@ export async function updateSupabaseItemStatus(
     if (previousStatus !== status) {
       await runPushTask(() =>
         import('./lib/pushIntegration').then((m) =>
-          m.pushAfterItemStatusChange(itemId, status, previousStatus),
+          isRepost
+            ? m.pushAfterItemReposted(itemId)
+            : m.pushAfterItemStatusChange(itemId, status, previousStatus),
         ),
       );
     }

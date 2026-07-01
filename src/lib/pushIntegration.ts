@@ -327,6 +327,19 @@ export async function pushAfterItemStatusChange(
   }
 }
 
+/** Withdrawn listing brought back to the community feed. */
+export async function pushAfterItemReposted(itemOrId: ItemPost | string) {
+  const item = typeof itemOrId === 'string' ? await getItemById(itemOrId) : itemOrId;
+  if (!item) return;
+
+  const reposted: ItemPost = { ...item, status: 'active' };
+  await notifyListingStatus({
+    item: reposted,
+    statusLabel: 'Back on the feed',
+  });
+  await notifyNewListingPosted(reposted);
+}
+
 export async function pushAfterPendingPickup(itemId: string, actorUserId: string) {
   const item = await getItemById(itemId);
   if (!item) return;

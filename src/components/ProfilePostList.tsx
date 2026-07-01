@@ -1,10 +1,11 @@
-import { Trash2 } from 'lucide-react';
+import { RotateCcw, Trash2 } from 'lucide-react';
 import type { ItemPost } from '../types';
 
 interface ProfilePostListProps {
   posts: ItemPost[];
   emptyMessage: string;
   onViewPost?: (post: ItemPost) => void;
+  onRepostPost?: (post: ItemPost) => void;
   onDeletePost?: (post: ItemPost) => void;
 }
 
@@ -12,6 +13,7 @@ export default function ProfilePostList({
   posts,
   emptyMessage,
   onViewPost,
+  onRepostPost,
   onDeletePost,
 }: ProfilePostListProps) {
   if (posts.length === 0) {
@@ -21,7 +23,9 @@ export default function ProfilePostList({
   return (
     <div className="space-y-2">
       {posts.map((post) => {
-        const canDelete = post.status === 'withdrawn' && !!onDeletePost;
+        const isWithdrawn = post.status === 'withdrawn';
+        const canRepost = isWithdrawn && !!onRepostPost;
+        const canDelete = isWithdrawn && !!onDeletePost;
         const clickable = !!onViewPost;
 
         return (
@@ -42,6 +46,17 @@ export default function ProfilePostList({
                 {post.category} · {post.status.replace('_', ' ')}
               </p>
             </button>
+            {canRepost && (
+              <button
+                type="button"
+                onClick={() => onRepostPost?.(post)}
+                className="shrink-0 p-2 rounded-lg text-accent hover:bg-accent-soft transition-colors"
+                aria-label={`Repost ${post.title}`}
+                title="Repost to community feed"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
             {canDelete && (
               <button
                 type="button"

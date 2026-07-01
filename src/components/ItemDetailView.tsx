@@ -404,10 +404,19 @@ export default function ItemDetailView({
                   <button
                     type="button"
                     disabled={updating}
+                    onClick={onEdit}
+                    className="sbn-btn sbn-btn-secondary"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Edit & repost
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updating}
                     onClick={() => onUpdateStatus('active')}
                     className="sbn-btn sbn-btn-primary"
                   >
-                    Relist
+                    Repost
                   </button>
                   {onDelete && (
                     <button

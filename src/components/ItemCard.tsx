@@ -172,9 +172,9 @@ export default function ItemCard({
           type="button"
           disabled={updating}
           onClick={() => onUpdateStatus('active')}
-          className="sbn-btn sbn-btn-sm sbn-btn-primary hidden sm:inline-flex"
+          className="sbn-btn sbn-btn-sm sbn-btn-primary shrink-0"
         >
-          Relist
+          Repost
         </button>
       ) : null}
     </div>

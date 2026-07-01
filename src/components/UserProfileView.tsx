@@ -41,6 +41,7 @@ interface UserProfileViewProps {
   userProfile: UserProfile;
   userPosts?: ItemPost[];
   onViewPost?: (post: ItemPost) => void;
+  onRepostPost?: (post: ItemPost) => void;
   onDeletePost?: (post: ItemPost) => void;
   onUpdateProfile: (updated: UserProfile) => void;
   /** Refresh feed/listings after avatar is saved */
@@ -65,6 +66,7 @@ export default function UserProfileView({
   userProfile,
   userPosts = [],
   onViewPost,
+  onRepostPost,
   onDeletePost,
   onUpdateProfile,
   onProfilePhotoSaved,
@@ -751,6 +753,7 @@ export default function UserProfileView({
             .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime())}
           emptyMessage="You have not posted anything yet."
           onViewPost={onViewPost}
+          onRepostPost={onRepostPost}
           onDeletePost={onDeletePost}
         />
       </div>

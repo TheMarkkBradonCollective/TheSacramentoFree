@@ -25,6 +25,7 @@ interface PostItemModalProps {
 
 export default function PostItemModal({ userProfile, editItem = null, onClose, onSuccess }: PostItemModalProps) {
   const isEditing = !!editItem;
+  const isReposting = isEditing && editItem?.status === 'withdrawn';
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [pickupNotes, setPickupNotes] = useState('');
@@ -257,8 +258,11 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       userDisplayName: userProfile.displayName,
       userPhotoURL: userProfile.photoURL,
       neighborhood,
-      status: isEditing && editItem ? editItem.status : 'active',
-      createdAt: isEditing && editItem ? editItem.createdAt : new Date().toISOString(),
+      status: isReposting ? 'active' : isEditing && editItem ? editItem.status : 'active',
+      createdAt:
+        isReposting || !isEditing
+          ? new Date().toISOString()
+          : editItem!.createdAt,
       updatedAt: new Date().toISOString(),
       imageUrl,
       imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
@@ -266,14 +270,18 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
 
     try {
       const result = isEditing
-        ? await updateSupabaseItem(listing)
+        ? await updateSupabaseItem(listing, isReposting ? { repost: true } : undefined)
         : await createSupabaseItem(listing, userProfile);
 
       if (!result.ok) {
         setIsSubmitting(false);
         setErrorMsg(
           result.errorMessage ||
-            (isEditing ? 'Unable to save changes. Please try again.' : 'Unable to publish listing. Please try again.'),
+            (isReposting
+              ? 'Unable to repost listing. Please try again.'
+              : isEditing
+                ? 'Unable to save changes. Please try again.'
+                : 'Unable to publish listing. Please try again.'),
         );
         return;
       }
@@ -297,9 +305,11 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       setErrorMsg(
         err instanceof Error
           ? err.message
-          : isEditing
-            ? 'Unable to save changes. Please try again.'
-            : 'Unable to publish listing. Please try again.',
+          : isReposting
+            ? 'Unable to repost listing. Please try again.'
+            : isEditing
+              ? 'Unable to save changes. Please try again.'
+              : 'Unable to publish listing. Please try again.',
       );
     }
   };
@@ -323,7 +333,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
               )}
             </div>
             <h3 className="text-base font-bold text-app font-display">
-              {getPostTypeModalTitle(type, isEditing)}
+              {getPostTypeModalTitle(type, isEditing, isReposting)}
             </h3>
           </div>
           <button
@@ -878,16 +888,20 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
               className="flex-1 py-3 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
             >
               {isSubmitting
-                ? isEditing
-                  ? 'Saving...'
-                  : type === 'looking'
-                    ? 'Posting...'
-                    : 'Sharing...'
-                : isEditing
-                  ? 'Save changes'
-                  : type === 'looking'
-                    ? 'Post Request'
-                    : 'Share Item'}
+                ? isReposting
+                  ? 'Reposting...'
+                  : isEditing
+                    ? 'Saving...'
+                    : type === 'looking'
+                      ? 'Posting...'
+                      : 'Sharing...'
+                : isReposting
+                  ? 'Repost'
+                  : isEditing
+                    ? 'Save changes'
+                    : type === 'looking'
+                      ? 'Post Request'
+                      : 'Share Item'}
             </button>
           </div>
         </form>

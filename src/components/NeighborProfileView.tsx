@@ -45,6 +45,7 @@ interface NeighborProfileViewProps {
   onClose: () => void;
   onOpenChat?: (chatId: string) => void;
   onViewPost?: (post: ItemPost) => void;
+  onRepostPost?: (post: ItemPost) => void;
   onDeletePost?: (post: ItemPost) => void;
   onBlockListChanged?: () => void;
 }
@@ -57,6 +58,7 @@ export default function NeighborProfileView({
   onClose,
   onOpenChat,
   onViewPost,
+  onRepostPost,
   onDeletePost,
   onBlockListChanged,
 }: NeighborProfileViewProps) {
@@ -492,6 +494,7 @@ export default function NeighborProfileView({
                 posts={neighborPosts}
                 emptyMessage="No posts to show."
                 onViewPost={onViewPost}
+                onRepostPost={isSelf ? onRepostPost : undefined}
                 onDeletePost={isSelf ? onDeletePost : undefined}
               />
             </div>
