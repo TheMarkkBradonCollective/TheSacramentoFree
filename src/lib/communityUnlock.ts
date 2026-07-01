@@ -3,8 +3,8 @@ import { supabase } from '../supabase';
 
 export async function getCommunityUnlockStatus(target: number): Promise<AwardsUnlockStatus> {
   try {
-    const { count, error } = await supabase.from('users').select('uid', { count: 'exact', head: true });
-    const memberCount = error ? 0 : count ?? 0;
+    const { data, error } = await supabase.rpc('community_member_count');
+    const memberCount = error ? 0 : Number(data ?? 0);
     const unlocked = memberCount >= target;
     return {
       unlocked,

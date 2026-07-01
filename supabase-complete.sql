@@ -7,7 +7,7 @@
 --
 -- Milestones enforced in DB:
 --   Awards unlock at 500 neighbors  (awards_unlocked)
---   Events unlock at 1,000 neighbors (events_unlocked)
+--   Events unlock at 100 neighbors  (events_unlocked)
 --
 -- After running, configure push webhooks in Supabase Dashboard
 -- (see PUSH WEBHOOKS section at bottom of this file).
@@ -375,7 +375,7 @@ ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_source_check
 
 -- =========================================================
 -- 17. Community events (free gatherings only)
--- 1,000-member unlock RLS (or events-unlock.sql on existing DBs).
+-- 100-member unlock RLS (included in supabase-complete.sql).
 -- =========================================================
 CREATE TABLE IF NOT EXISTS public.community_events (
   id TEXT PRIMARY KEY,
@@ -438,8 +438,7 @@ ALTER TABLE public.event_comments ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS event_comments_event_idx ON public.event_comments ("eventId");
 
 -- =========================================================
--- 17b. Events unlock (1,000 neighbors) — run events-complete.sql
--- after this setup script, or permissive policies below stay until then.
+-- 17b. Events unlock (100 neighbors)
 -- =========================================================
 
 -- =========================================================
@@ -1704,7 +1703,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT public.community_member_count() >= 1000;
+  SELECT public.community_member_count() >= 100;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.community_member_count() TO authenticated;

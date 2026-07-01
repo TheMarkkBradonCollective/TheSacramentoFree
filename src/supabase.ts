@@ -1461,7 +1461,7 @@ export async function setUserRole(
 export async function getCommunityStats(): Promise<CommunityStats> {
   try {
     const [membersRes, activeRes, givenRes, fulfilledRes] = await Promise.all([
-      supabase.from('users').select('uid', { count: 'exact', head: true }),
+      supabase.rpc('community_member_count'),
       supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
       supabase
         .from('items')
@@ -1476,7 +1476,7 @@ export async function getCommunityStats(): Promise<CommunityStats> {
     ]);
 
     return {
-      memberCount: membersRes.count ?? 0,
+      memberCount: membersRes.error ? 0 : Number(membersRes.data ?? 0),
       activeListings: activeRes.count ?? 0,
       itemsGiven: givenRes.count ?? 0,
       requestsFulfilled: fulfilledRes.count ?? 0,
@@ -2521,7 +2521,7 @@ export async function createSupabaseEvent(
         return {
           ok: false,
           errorMessage:
-            'Community events unlock at 1,000 neighbors. Share the invite link to help us get there!',
+            'Community events unlock at 100 neighbors. Share the invite link to help us get there!',
         };
       }
     }

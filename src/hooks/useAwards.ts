@@ -51,6 +51,10 @@ export function useAwards(userProfile?: UserProfile | null, targetUserId?: strin
       void reload();
     }, 150);
 
+    const unsubUsers = subscribePostgresChanges(
+      { channelName: 'live-awards-unlock', table: 'users', event: 'INSERT' },
+      refresh,
+    );
     const unsubDefs = subscribePostgresChanges(
       { channelName: 'live-award-definitions', table: 'award_definitions', event: '*' },
       refresh,
@@ -61,6 +65,7 @@ export function useAwards(userProfile?: UserProfile | null, targetUserId?: strin
     );
 
     return () => {
+      unsubUsers();
       unsubDefs();
       unsubGrants();
     };
