@@ -7,11 +7,12 @@ import { AWARDS } from '../siteContent';
 
 interface AwardsSharePromptProps {
   unlockStatus: AwardsUnlockStatus;
+  variant?: 'full' | 'compact';
 }
 
 const FLOATERS = ['🎉', '🏡', '🎁', '⭐', '🤝', '✨'];
 
-export default function AwardsSharePrompt({ unlockStatus }: AwardsSharePromptProps) {
+export default function AwardsSharePrompt({ unlockStatus, variant = 'full' }: AwardsSharePromptProps) {
   const [copied, setCopied] = useState(false);
   const shareUrl = getInviteShareUrl();
   const progress = Math.min(100, Math.round((unlockStatus.memberCount / unlockStatus.target) * 100));
@@ -35,6 +36,49 @@ export default function AwardsSharePrompt({ unlockStatus }: AwardsSharePromptPro
       window.prompt('Copy this link and share it:', text);
     }
   };
+
+  const progressBlock = (
+    <div className="space-y-3 max-w-sm mx-auto">
+      <div className="flex items-center justify-between text-xs font-bold text-app">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-inset px-3 py-1.5 border border-app">
+          <Users className="w-3.5 h-3.5 text-accent" />
+          {unlockStatus.memberCount} neighbors here
+        </span>
+        <span className="text-muted">Goal: {unlockStatus.target}</span>
+      </div>
+
+      <div className="sbn-award-progress-track h-4 rounded-full overflow-hidden border border-accent/20 shadow-inner">
+        <motion.div
+          className="sbn-award-progress-fill h-full rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        />
+      </div>
+
+      <p className="text-sm font-semibold text-app">
+        {unlockStatus.remaining === 1
+          ? '🙌 Just 1 more neighbor to unlock the party!'
+          : `🚀 ${unlockStatus.remaining} more neighbors and awards go live!`}
+      </p>
+    </div>
+  );
+
+  if (variant === 'compact') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="sbn-card p-4 sm:p-5 space-y-3 border-accent/20"
+      >
+        <p className="text-xs font-bold text-accent uppercase tracking-wider flex items-center justify-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5" />
+          {AWARDS.unlockBadge}
+        </p>
+        {progressBlock}
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -69,30 +113,7 @@ export default function AwardsSharePrompt({ unlockStatus }: AwardsSharePromptPro
         <p className="text-sm text-muted leading-relaxed max-w-md mx-auto">{AWARDS.unlockBody}</p>
       </div>
 
-      <div className="relative z-10 space-y-3 max-w-sm mx-auto">
-        <div className="flex items-center justify-between text-xs font-bold text-app">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-inset px-3 py-1.5 border border-app">
-            <Users className="w-3.5 h-3.5 text-accent" />
-            {unlockStatus.memberCount} neighbors here
-          </span>
-          <span className="text-muted">Goal: {unlockStatus.target}</span>
-        </div>
-
-        <div className="sbn-award-progress-track h-4 rounded-full overflow-hidden border border-accent/20 shadow-inner">
-          <motion.div
-            className="sbn-award-progress-fill h-full rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-          />
-        </div>
-
-        <p className="text-sm font-semibold text-app">
-          {unlockStatus.remaining === 1
-            ? '🙌 Just 1 more neighbor to unlock the party!'
-            : `🚀 ${unlockStatus.remaining} more neighbors and awards go live!`}
-        </p>
-      </div>
+      <div className="relative z-10">{progressBlock}</div>
 
       <div className="relative z-10 space-y-3">
         <button

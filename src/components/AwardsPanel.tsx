@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Award, Heart, PartyPopper, Sparkles, Star, Trophy } from 'lucide-react';
+import { Heart, PartyPopper, Sparkles, Star, Trophy } from 'lucide-react';
 import { UserProfile } from '../types';
 import { useAwards } from '../hooks/useAwards';
 import { awardCategoryTheme } from '../lib/awardTheme';
@@ -25,22 +25,22 @@ export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelP
     unlockStatus,
     loading,
     earnedAwardIds,
-    showFullAwards,
+    isCommunityUnlocked,
+    canAccessAwards,
     canManage,
   } = useAwards(userProfile);
 
   const { entries: leaderboardEntries, loading: leaderboardLoading } = useAwardsLeaderboard(
-    showFullAwards,
+    canAccessAwards,
     25,
   );
 
   const [tab, setTab] = useState<AwardsTab>('mine');
 
   const visibleDefinitions = useMemo(() => {
-    if (canManage) return definitions;
-    if (!showFullAwards) return definitions.filter((d) => d.requiresUnlock);
-    return definitions;
-  }, [definitions, canManage, showFullAwards]);
+    if (canManage || isCommunityUnlocked) return definitions;
+    return definitions.filter((d) => d.requiresUnlock);
+  }, [definitions, canManage, isCommunityUnlocked]);
 
   const earnedCount = userAwards.length;
   const totalVisible = visibleDefinitions.length;
@@ -69,37 +69,45 @@ export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelP
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-4">
-      {!showFullAwards && unlockStatus && <AwardsSharePrompt unlockStatus={unlockStatus} />}
+      {!isCommunityUnlocked && unlockStatus && !canManage && (
+        <AwardsSharePrompt unlockStatus={unlockStatus} />
+      )}
 
-      {showFullAwards && (
+      {!isCommunityUnlocked && unlockStatus && canManage && (
+        <AwardsSharePrompt unlockStatus={unlockStatus} variant="compact" />
+      )}
+
+      {isCommunityUnlocked && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="sbn-award-hero sbn-card p-6 text-center space-y-4 border-accent/20"
+        >
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-accent-soft to-amber-500/15 border-2 border-accent/25 sbn-awards-glow-btn shadow-md">
+            <Trophy className="w-8 h-8 text-accent" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-display text-lg font-bold text-app">Hey {userProfile.displayName.split(' ')[0]}! 👋</p>
+            <p className="text-sm text-muted leading-relaxed max-w-md mx-auto">{AWARDS.unlockedIntro}</p>
+          </div>
+
+          <div className="max-w-xs mx-auto space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-accent inline-flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-accent" />
+                {earnedCount} earned
+              </span>
+              <span className="text-muted">{totalVisible - earnedCount} to discover</span>
+            </div>
+            <div className="sbn-award-progress-track h-3 rounded-full overflow-hidden border border-accent/15">
+              <div className="sbn-award-progress-fill h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%` }} />
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {canAccessAwards && (
         <>
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="sbn-award-hero sbn-card p-6 text-center space-y-4 border-accent/20"
-          >
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-accent-soft to-amber-500/15 border-2 border-accent/25 sbn-awards-glow-btn shadow-md">
-              <Trophy className="w-8 h-8 text-accent" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-display text-lg font-bold text-app">Hey {userProfile.displayName.split(' ')[0]}! 👋</p>
-              <p className="text-sm text-muted leading-relaxed max-w-md mx-auto">{AWARDS.unlockedIntro}</p>
-            </div>
-
-            <div className="max-w-xs mx-auto space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-accent inline-flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-accent" />
-                  {earnedCount} earned
-                </span>
-                <span className="text-muted">{totalVisible - earnedCount} to discover</span>
-              </div>
-              <div className="sbn-award-progress-track h-3 rounded-full overflow-hidden border border-accent/15">
-                <div className="sbn-award-progress-fill h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%` }} />
-              </div>
-            </div>
-          </motion.div>
-
           <div className="flex flex-wrap gap-2 justify-center">
             <TabButton active={tab === 'mine'} onClick={() => setTab('mine')} emoji="🏅">
               My badges
@@ -172,7 +180,7 @@ export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelP
                           <AwardCard
                             award={award}
                             earned={earnedAwardIds.has(award.id)}
-                            locked={award.requiresUnlock && !showFullAwards}
+                            locked={award.requiresUnlock && !isCommunityUnlocked}
                           />
                         </li>
                       ))}
@@ -196,7 +204,7 @@ export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelP
         </>
       )}
 
-      {!showFullAwards && (
+      {!canAccessAwards && (
         <div className="sbn-card p-5 text-left space-y-4 rounded-2xl border-accent/15 bg-gradient-to-b from-accent-soft/15 to-transparent">
           <p className="text-sm font-display font-bold text-app flex items-center gap-2">
             <Heart className="w-4 h-4 text-accent fill-accent/30" />

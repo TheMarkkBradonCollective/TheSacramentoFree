@@ -76,8 +76,8 @@ export function useAwards(userProfile?: UserProfile | null, targetUserId?: strin
     [userAwards],
   );
 
-  const isUnlocked = unlockStatus?.unlocked ?? false;
-  const showFullAwards = isUnlocked || canManage;
+  const isCommunityUnlocked = unlockStatus?.unlocked ?? false;
+  const canAccessAwards = isCommunityUnlocked || canManage;
 
   const createDefinition = async (input: AwardDefinitionInput) => {
     if (!userProfile) return { ok: false, errorMessage: 'Sign in as staff.' };
@@ -114,8 +114,8 @@ export function useAwards(userProfile?: UserProfile | null, targetUserId?: strin
     loading,
     earnedAwardIds,
     earnedSlugs,
-    isUnlocked,
-    showFullAwards,
+    isCommunityUnlocked,
+    canAccessAwards,
     canManage,
     reload,
     createDefinition,
