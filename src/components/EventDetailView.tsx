@@ -17,6 +17,7 @@ interface EventDetailViewProps {
   onCancel?: () => void;
   onViewProfile: (userId: string) => void;
   updating?: boolean;
+  interactionsLocked?: boolean;
 }
 
 function formatEventDate(iso: string): string {
@@ -44,6 +45,7 @@ export default function EventDetailView({
   onCancel,
   onViewProfile,
   updating = false,
+  interactionsLocked = false,
 }: EventDetailViewProps) {
   const isOwner = event.userId === currentUserId;
   const isCancelled = event.status === 'cancelled';
@@ -163,7 +165,8 @@ export default function EventDetailView({
             userProfile={userProfile}
             onViewProfile={onViewProfile}
             variant="detail"
-            rsvpDisabled={isCancelled}
+            rsvpDisabled={isCancelled || interactionsLocked}
+            interactionsLocked={interactionsLocked}
           />
         </div>
       </div>

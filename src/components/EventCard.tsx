@@ -9,6 +9,7 @@ interface EventCardProps {
   engagement: EventsEngagementApi;
   onViewEvent: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
+  interactionsLocked?: boolean;
 }
 
 function formatEventDate(iso: string): string {
@@ -28,6 +29,7 @@ export default function EventCard({
   engagement,
   onViewEvent,
   onViewProfile,
+  interactionsLocked = false,
 }: EventCardProps) {
   const isCancelled = event.status === 'cancelled';
   const rsvpState = engagement.getRsvpsForEvent(event.id);
@@ -102,7 +104,7 @@ export default function EventCard({
         </button>
       </button>
 
-      {!isCancelled && (
+      {!isCancelled && !interactionsLocked && (
         <div className="px-4 pb-4">
           <EventEngagement
             hostUserId={event.userId}

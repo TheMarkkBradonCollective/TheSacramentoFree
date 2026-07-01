@@ -40,6 +40,9 @@ export default function EventsPanel({
     );
   }
 
+  const showSneakPeek = !canAccessEvents && events.length === 0;
+  const showEventsList = events.length > 0 || canAccessEvents;
+
   return (
     <div className="space-y-6">
       {!isCommunityUnlocked && unlockStatus && !canManage && (
@@ -63,17 +66,7 @@ export default function EventsPanel({
         </motion.div>
       )}
 
-      {canAccessEvents ? (
-        <EventsView
-          events={events}
-          userProfile={userProfile}
-          engagement={engagement}
-          onViewEvent={onViewEvent}
-          onViewProfile={onViewProfile}
-          onRefresh={onRefresh}
-          isLoading={isLoading}
-        />
-      ) : (
+      {showSneakPeek && (
         <div className="sbn-card p-5 text-left space-y-4 rounded-2xl border-accent/15 bg-gradient-to-b from-accent-soft/15 to-transparent">
           <p className="text-sm font-display font-bold text-app flex items-center gap-2">
             <Heart className="w-4 h-4 text-accent fill-accent/30" />
@@ -89,6 +82,26 @@ export default function EventsPanel({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {showEventsList && (
+        <div className="space-y-4">
+          {!isCommunityUnlocked && events.length > 0 && (
+            <p className="text-sm text-muted leading-relaxed border-l-2 border-l-accent pl-3">
+              {EVENTS.staffPreviewNote}
+            </p>
+          )}
+          <EventsView
+            events={events}
+            userProfile={userProfile}
+            engagement={engagement}
+            onViewEvent={onViewEvent}
+            onViewProfile={onViewProfile}
+            onRefresh={onRefresh}
+            isLoading={isLoading}
+            interactionsLocked={!canAccessEvents}
+          />
         </div>
       )}
     </div>

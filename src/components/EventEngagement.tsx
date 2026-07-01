@@ -16,6 +16,7 @@ interface EventEngagementProps {
   onViewProfile?: (userId: string) => void;
   variant?: 'card' | 'detail';
   rsvpDisabled?: boolean;
+  interactionsLocked?: boolean;
 }
 
 const RSVP_OPTIONS: { status: EventRsvpStatus; label: string; icon: typeof Check }[] = [
@@ -36,6 +37,7 @@ export default function EventEngagement({
   onViewProfile,
   variant = 'detail',
   rsvpDisabled = false,
+  interactionsLocked = false,
 }: EventEngagementProps) {
   const DETAIL_PREVIEW_COUNT = 5;
   const { userRsvp, going, maybe, notGoing } = rsvpState;
@@ -82,8 +84,13 @@ export default function EventEngagement({
             </button>
           );
         })}
-        {rsvpDisabled && variant === 'detail' && (
+        {rsvpDisabled && variant === 'detail' && !interactionsLocked && (
           <p className="text-xs text-muted italic">RSVPs are closed for cancelled events.</p>
+        )}
+        {interactionsLocked && variant === 'detail' && (
+          <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 w-full">
+            RSVP and comments open once we reach 100 neighbors — browse staff gatherings now.
+          </p>
         )}
         {variant === 'card' && (
           <span className="ml-auto text-xs text-muted flex items-center gap-1">
@@ -102,7 +109,11 @@ export default function EventEngagement({
       {variant === 'detail' && (
         <div className="space-y-3 pt-1 border-t border-app">
           {comments.length === 0 ? (
-            <p className="text-xs text-muted italic text-center py-2">No comments yet — ask a question or say hi!</p>
+            <p className="text-xs text-muted italic text-center py-2">
+              {interactionsLocked
+                ? 'No comments yet.'
+                : 'No comments yet — ask a question or say hi!'}
+            </p>
           ) : (
             <>
               <ul className="space-y-2 max-h-64 overflow-y-auto">
@@ -173,6 +184,7 @@ export default function EventEngagement({
               )}
             </>
           )}
+          {!interactionsLocked && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -195,6 +207,7 @@ export default function EventEngagement({
               Post
             </button>
           </form>
+          )}
         </div>
       )}
 

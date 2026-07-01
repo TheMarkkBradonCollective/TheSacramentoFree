@@ -2140,10 +2140,7 @@ DROP POLICY IF EXISTS "community_events_update" ON public.community_events;
 DROP POLICY IF EXISTS "community_events_delete" ON public.community_events;
 
 CREATE POLICY "community_events_select" ON public.community_events
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL
-    AND (public.events_unlocked() OR public.is_staff())
-  );
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "community_events_insert" ON public.community_events
   FOR INSERT WITH CHECK (
@@ -2173,10 +2170,7 @@ DROP POLICY IF EXISTS "event_rsvps_update" ON public.event_rsvps;
 DROP POLICY IF EXISTS "event_rsvps_delete" ON public.event_rsvps;
 
 CREATE POLICY "event_rsvps_select" ON public.event_rsvps
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL
-    AND (public.events_unlocked() OR public.is_staff())
-  );
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "event_rsvps_insert" ON public.event_rsvps
   FOR INSERT WITH CHECK (
@@ -2206,10 +2200,7 @@ DROP POLICY IF EXISTS "event_comments_update" ON public.event_comments;
 DROP POLICY IF EXISTS "event_comments_delete" ON public.event_comments;
 
 CREATE POLICY "event_comments_select" ON public.event_comments
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL
-    AND (public.events_unlocked() OR public.is_staff())
-  );
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "event_comments_insert" ON public.event_comments
   FOR INSERT WITH CHECK (
