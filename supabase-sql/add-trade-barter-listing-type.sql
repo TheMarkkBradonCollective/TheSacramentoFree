@@ -1,6 +1,0 @@
--- Trade & barter listing type support
--- The items.type column is TEXT with no enum constraint, so trade posts work without schema changes.
--- Optional: document trade in item_claims kinds if you add trade completion tracking later.
--- ALTER TABLE public.item_claims DROP CONSTRAINT IF EXISTS item_claims_kind_check;
--- ALTER TABLE public.item_claims ADD CONSTRAINT item_claims_kind_check
---   CHECK (kind IN ('giveaway', 'request_fulfilled', 'trade_completed'));

@@ -50,13 +50,13 @@ async function getAccessToken(): Promise<string | null> {
 function mapPushSubscriptionError(error: { code?: string; message?: string }): string {
   const message = error.message || '';
   if (error.code === '42P01' || message.includes('push_subscriptions')) {
-    return 'Push tables are missing in Supabase. Run supabase-sql/push-notifications.sql in the SQL editor, then try again.';
+    return 'Push tables are missing in Supabase. Run supabase-complete.sql in the SQL editor, then try again.';
   }
   if (error.code === '23503') {
     return 'Your profile is not synced yet. Open Profile, save your settings once, then enable notifications again.';
   }
   if (error.code === '42501' || message.toLowerCase().includes('permission denied')) {
-    return 'Database blocked saving your subscription. Run supabase-sql/push-notifications.sql and confirm you are signed in.';
+    return 'Database blocked saving your subscription. Run supabase-complete.sql and confirm you are signed in.';
   }
   return message || 'Could not save push subscription.';
 }

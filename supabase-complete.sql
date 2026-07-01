@@ -1,0 +1,2623 @@
+-- =========================================================
+-- SACRAMENTO BUY NOTHING — COMPLETE DATABASE SETUP
+-- Paste this entire file into: Supabase Dashboard → SQL → New query → Run
+--
+-- Safe to re-run: IF NOT EXISTS, CREATE OR REPLACE, DROP POLICY IF EXISTS
+-- Run this whenever the app schema changes — keeps the whole site intact.
+--
+-- Milestones enforced in DB:
+--   Awards unlock at 500 neighbors  (awards_unlocked)
+--   Events unlock at 1,000 neighbors (events_unlocked)
+--
+-- After running, configure push webhooks in Supabase Dashboard
+-- (see PUSH WEBHOOKS section at bottom of this file).
+-- =========================================================
+
+-- =========================================================
+-- TABLES, STORAGE, TRIGGERS
+-- =========================================================
+
+-- 1. User profiles
+CREATE TABLE IF NOT EXISTS public.users (
+  uid TEXT PRIMARY KEY,
+  "displayName" TEXT NOT NULL,
+  "photoURL" TEXT,
+  email TEXT NOT NULL,
+  neighborhood TEXT NOT NULL,
+  bio TEXT,
+  role TEXT NOT NULL DEFAULT 'user', -- user | city_moderator | city_administrator | city_manager | director
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add columns that may be missing if the table was created from an older script
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "photoURL" TEXT;
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+-- 2. Item listings
+CREATE TABLE IF NOT EXISTS public.items (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  type TEXT NOT NULL,
+  category TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "userDisplayName" TEXT NOT NULL,
+  "userPhotoURL" TEXT,
+  neighborhood TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  "imageUrl" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
+-- Add imageUrl if the table was created from an older script without it
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+
+CREATE INDEX IF NOT EXISTS items_created_at_idx ON public.items ("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS items_user_id_idx ON public.items ("userId");
+
+-- 3. Chat rooms
+CREATE TABLE IF NOT EXISTS public.chats (
+  id TEXT PRIMARY KEY,
+  "participantIds" JSONB NOT NULL DEFAULT '[]'::jsonb,
+  "participantNames" JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "participantPhotos" JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "lastMessageText" TEXT,
+  "lastMessageAt" TIMESTAMPTZ DEFAULT NOW(),
+  "lastMessageSenderId" TEXT,
+  "itemId" TEXT,
+  "itemTitle" TEXT
+);
+
+ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS chats_item_id_idx ON public.chats ("itemId");
+CREATE INDEX IF NOT EXISTS chats_last_message_at_idx ON public.chats ("lastMessageAt" DESC);
+
+-- 4. Chat messages
+CREATE TABLE IF NOT EXISTS public.messages (
+  id TEXT PRIMARY KEY,
+  "chatId" TEXT NOT NULL,
+  "senderId" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS messages_chat_id_idx ON public.messages ("chatId");
+CREATE INDEX IF NOT EXISTS messages_created_at_idx ON public.messages ("createdAt");
+
+-- 5. Item votes (interested / not interested)
+CREATE TABLE IF NOT EXISTS public.item_votes (
+  "itemId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("itemId", "userId")
+);
+
+ALTER TABLE public.item_votes ENABLE ROW LEVEL SECURITY;
+-- 6. Item comments (public replies on listings)
+CREATE TABLE IF NOT EXISTS public.item_comments (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.item_comments ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS item_comments_item_id_idx ON public.item_comments ("itemId");
+
+-- 7. Private claim records (claimer identity not on public listings)
+CREATE TABLE IF NOT EXISTS public.item_claims (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL,
+  "giverUserId" TEXT NOT NULL,
+  "claimerUserId" TEXT NOT NULL,
+  "chatId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- giveaway = neighbor picked up a giveaway; request_fulfilled = neighbor helped close an ISO request
+ALTER TABLE public.item_claims ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'giveaway';
+ALTER TABLE public.item_claims DROP CONSTRAINT IF EXISTS item_claims_kind_check;
+ALTER TABLE public.item_claims ADD CONSTRAINT item_claims_kind_check
+  CHECK (kind IN ('giveaway', 'request_fulfilled', 'trade_completed'));
+
+ALTER TABLE public.item_claims ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS item_claims_claimer_idx ON public.item_claims ("claimerUserId");
+CREATE INDEX IF NOT EXISTS item_claims_giver_idx ON public.item_claims ("giverUserId");
+
+-- 8. User blocks (mutual invisibility — either direction hides both users from each other)
+CREATE TABLE IF NOT EXISTS public.user_blocks (
+  "blockerUserId" TEXT NOT NULL,
+  "blockedUserId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("blockerUserId", "blockedUserId")
+);
+
+ALTER TABLE public.user_blocks ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS user_blocks_blocker_idx ON public.user_blocks ("blockerUserId");
+CREATE INDEX IF NOT EXISTS user_blocks_blocked_idx ON public.user_blocks ("blockedUserId");
+
+-- 9. Message requests (DM permission before opening a chat)
+CREATE TABLE IF NOT EXISTS public.message_requests (
+  id TEXT PRIMARY KEY,
+  "fromUserId" TEXT NOT NULL,
+  "toUserId" TEXT NOT NULL,
+  "fromUserName" TEXT NOT NULL,
+  "fromUserPhoto" TEXT,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.message_requests DROP CONSTRAINT IF EXISTS message_requests_status_check;
+ALTER TABLE public.message_requests ADD CONSTRAINT message_requests_status_check
+  CHECK (status IN ('pending', 'accepted', 'declined'));
+
+ALTER TABLE public.message_requests ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS message_requests_to_idx ON public.message_requests ("toUserId", status);
+CREATE INDEX IF NOT EXISTS message_requests_from_idx ON public.message_requests ("fromUserId", status);
+
+-- =========================================================
+-- STORAGE: public bucket for listing photos
+-- =========================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('items', 'items', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public read items bucket" ON storage.objects;
+CREATE POLICY "Public read items bucket"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'items');
+
+DROP POLICY IF EXISTS "Public upload items bucket" ON storage.objects;
+CREATE POLICY "Public upload items bucket"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'items');
+
+DROP POLICY IF EXISTS "Public update items bucket" ON storage.objects;
+CREATE POLICY "Public update items bucket"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'items');
+
+DROP POLICY IF EXISTS "Public delete items bucket" ON storage.objects;
+CREATE POLICY "Public delete items bucket"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'items');
+
+-- Profile avatars (dedicated bucket — run if profile photos fail to upload)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public read avatars bucket" ON storage.objects;
+CREATE POLICY "Public read avatars bucket"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Public upload avatars bucket" ON storage.objects;
+CREATE POLICY "Public upload avatars bucket"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Public update avatars bucket" ON storage.objects;
+CREATE POLICY "Public update avatars bucket"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Public delete avatars bucket" ON storage.objects;
+CREATE POLICY "Public delete avatars bucket"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'avatars');
+
+-- =========================================================
+-- 10. Staff account moderation (suspend / platform ban)
+-- =========================================================
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "accountStatus" TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "suspendedUntil" TIMESTAMPTZ;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "moderationNote" TEXT;
+
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_account_status_check;
+ALTER TABLE public.users ADD CONSTRAINT users_account_status_check
+  CHECK ("accountStatus" IN ('active', 'suspended', 'banned'));
+
+-- =========================================================
+-- 11. Moderation audit log (director + city manager review)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.moderation_audit_log (
+  id TEXT PRIMARY KEY,
+  "actorUserId" TEXT NOT NULL,
+  "actorName" TEXT NOT NULL,
+  "targetUserId" TEXT NOT NULL,
+  "targetName" TEXT NOT NULL,
+  action TEXT NOT NULL,
+  detail TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.moderation_audit_log ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS moderation_audit_created_idx ON public.moderation_audit_log ("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS moderation_audit_target_idx ON public.moderation_audit_log ("targetUserId");
+
+-- =========================================================
+-- 12. User reports (one-way, no follow-up — all neighbors)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.user_reports (
+  id TEXT PRIMARY KEY,
+  "reporterUserId" TEXT NOT NULL,
+  "reporterName" TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  "reportedUserId" TEXT,
+  "reportedUserName" TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.user_reports DROP CONSTRAINT IF EXISTS user_reports_status_check;
+ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_status_check
+  CHECK (status IN ('new', 'reviewed'));
+
+ALTER TABLE public.user_reports ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS user_reports_created_idx ON public.user_reports ("createdAt" DESC);
+
+-- =========================================================
+-- 13. Support tickets (two-way help — mods+ for neighbors; higher tier for staff-opened)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.support_tickets (
+  id TEXT PRIMARY KEY,
+  "openerUserId" TEXT NOT NULL,
+  "openerName" TEXT NOT NULL,
+  "openerRole" TEXT NOT NULL DEFAULT 'user',
+  "minStaffRank" INTEGER NOT NULL DEFAULT 1,
+  subject TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  "closedByUserId" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.support_tickets DROP CONSTRAINT IF EXISTS support_tickets_status_check;
+ALTER TABLE public.support_tickets ADD CONSTRAINT support_tickets_status_check
+  CHECK (status IN ('open', 'closed'));
+
+ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS support_tickets_opener_idx ON public.support_tickets ("openerUserId");
+CREATE INDEX IF NOT EXISTS support_tickets_status_idx ON public.support_tickets (status, "updatedAt" DESC);
+
+-- =========================================================
+-- 14. Support ticket messages
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.support_ticket_messages (
+  id TEXT PRIMARY KEY,
+  "ticketId" TEXT NOT NULL,
+  "senderUserId" TEXT NOT NULL,
+  "senderName" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.support_ticket_messages ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS support_ticket_messages_ticket_idx ON public.support_ticket_messages ("ticketId", "createdAt");
+
+ALTER TABLE public.support_ticket_messages ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+
+-- =========================================================
+-- 15. Multi-item listings + contactless self-claim at pickup
+-- =========================================================
+ALTER TABLE public.item_claims DROP CONSTRAINT IF EXISTS item_claims_itemId_key;
+ALTER TABLE public.item_claims ADD COLUMN IF NOT EXISTS "subItemId" TEXT;
+ALTER TABLE public.item_claims ADD COLUMN IF NOT EXISTS "claimRequestId" TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS item_claims_subitem_unique
+  ON public.item_claims ("itemId", "subItemId")
+  WHERE "subItemId" IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS item_claims_single_item_unique
+  ON public.item_claims ("itemId")
+  WHERE "subItemId" IS NULL;
+
+CREATE TABLE IF NOT EXISTS public.listing_subitems (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL,
+  label TEXT NOT NULL,
+  "sortOrder" INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'available',
+  "claimedAt" TIMESTAMPTZ
+);
+
+ALTER TABLE public.listing_subitems DROP CONSTRAINT IF EXISTS listing_subitems_status_check;
+ALTER TABLE public.listing_subitems ADD CONSTRAINT listing_subitems_status_check
+  CHECK (status IN ('available', 'claimed'));
+
+ALTER TABLE public.listing_subitems ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS listing_subitems_item_idx ON public.listing_subitems ("itemId", "sortOrder");
+
+CREATE TABLE IF NOT EXISTS public.item_claim_requests (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL,
+  "giverUserId" TEXT NOT NULL,
+  "claimerUserId" TEXT NOT NULL,
+  "claimerName" TEXT NOT NULL,
+  "subItemIds" TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  "chatId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.item_claim_requests DROP CONSTRAINT IF EXISTS item_claim_requests_status_check;
+ALTER TABLE public.item_claim_requests ADD CONSTRAINT item_claim_requests_status_check
+  CHECK (status IN ('pending', 'confirmed', 'rejected'));
+
+ALTER TABLE public.item_claim_requests ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS item_claim_requests_chat_idx ON public.item_claim_requests ("chatId", status);
+CREATE INDEX IF NOT EXISTS item_claim_requests_item_idx ON public.item_claim_requests ("itemId", status);
+
+-- =========================================================
+-- 16. Block reason + proof + staff auto-report fields
+-- =========================================================
+ALTER TABLE public.user_blocks ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE public.user_blocks ADD COLUMN IF NOT EXISTS "proofImageUrl" TEXT;
+
+ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS "proofImageUrl" TEXT;
+ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';
+ALTER TABLE public.user_reports DROP CONSTRAINT IF EXISTS user_reports_source_check;
+ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_source_check
+  CHECK (source IN ('manual', 'block'));
+
+-- =========================================================
+-- 17. Community events (free gatherings only)
+-- 1,000-member unlock RLS (or events-unlock.sql on existing DBs).
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.community_events (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  location TEXT NOT NULL,
+  neighborhood TEXT NOT NULL,
+  "eventStartAt" TIMESTAMPTZ NOT NULL,
+  "eventEndAt" TIMESTAMPTZ,
+  "userId" TEXT NOT NULL,
+  "userDisplayName" TEXT NOT NULL,
+  "userPhotoURL" TEXT,
+  "isFree" BOOLEAN NOT NULL DEFAULT true,
+  status TEXT NOT NULL DEFAULT 'active',
+  "imageUrl" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_status_check;
+ALTER TABLE public.community_events ADD CONSTRAINT community_events_status_check
+  CHECK (status IN ('active', 'cancelled'));
+
+ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_free_only;
+ALTER TABLE public.community_events ADD CONSTRAINT community_events_free_only
+  CHECK ("isFree" = true);
+
+ALTER TABLE public.community_events ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS community_events_start_idx ON public.community_events ("eventStartAt" ASC);
+CREATE INDEX IF NOT EXISTS community_events_user_idx ON public.community_events ("userId");
+
+CREATE TABLE IF NOT EXISTS public.event_rsvps (
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "rsvpStatus" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("eventId", "userId")
+);
+
+ALTER TABLE public.event_rsvps DROP CONSTRAINT IF EXISTS event_rsvps_status_check;
+ALTER TABLE public.event_rsvps ADD CONSTRAINT event_rsvps_status_check
+  CHECK ("rsvpStatus" IN ('going', 'maybe', 'not_going'));
+
+ALTER TABLE public.event_rsvps ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS event_rsvps_event_idx ON public.event_rsvps ("eventId");
+
+CREATE TABLE IF NOT EXISTS public.event_comments (
+  id TEXT PRIMARY KEY,
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.event_comments ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS event_comments_event_idx ON public.event_comments ("eventId");
+
+-- =========================================================
+-- 17b. Events unlock (1,000 neighbors) — run events-complete.sql
+-- after this setup script, or permissive policies below stay until then.
+-- =========================================================
+
+-- =========================================================
+-- 18. Director message (editable by director in-app)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.director_message (
+  id TEXT PRIMARY KEY DEFAULT 'main',
+  "directorName" TEXT NOT NULL,
+  "directorTitle" TEXT NOT NULL,
+  headline TEXT NOT NULL,
+  goal TEXT NOT NULL,
+  promises JSONB NOT NULL DEFAULT '[]'::jsonb,
+  closing TEXT NOT NULL,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedByUserId" TEXT
+);
+
+ALTER TABLE public.director_message ENABLE ROW LEVEL SECURITY;
+INSERT INTO public.director_message (
+  id, "directorName", "directorTitle", headline, goal, promises, closing
+)
+VALUES (
+  'main',
+  'Markeith White',
+  'Buy Nothing Director',
+  'A note from your director',
+  'Sacramento Buy Nothing exists so neighbors can give freely, ask kindly, and keep good things out of the landfill — with no money involved. That is the goal, plain and simple.',
+  '["This app is 100% free — always.","No ads. Ever.","I keep you in mind with every feature I build.","I do not want your information for anything beyond making the community work, and I will never sell it."]'::jsonb,
+  'Thank you for being part of this community.'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================================================
+-- 18b. Staff messages (one published note per staff member)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.staff_messages (
+  "userId" TEXT PRIMARY KEY,
+  "staffName" TEXT NOT NULL,
+  "staffTitle" TEXT NOT NULL,
+  headline TEXT NOT NULL,
+  goal TEXT NOT NULL,
+  promises JSONB NOT NULL DEFAULT '[]'::jsonb,
+  closing TEXT NOT NULL,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedByUserId" TEXT
+);
+
+ALTER TABLE public.staff_messages ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS staff_messages_updated_idx ON public.staff_messages ("updatedAt" DESC);
+
+-- =========================================================
+-- 18c. App updates (director changelog — editable in app)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.app_updates (
+  id TEXT PRIMARY KEY,
+  date DATE NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  detail TEXT,
+  "directorName" TEXT NOT NULL,
+  "directorTitle" TEXT NOT NULL,
+  "postedByUserId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.app_updates ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS app_updates_date_idx ON public.app_updates (date DESC, "updatedAt" DESC);
+
+INSERT INTO public.app_updates (
+  id, date, title, body, detail, "directorName", "directorTitle", "postedByUserId"
+)
+VALUES (
+  'update_staff_messages',
+  '2026-06-09',
+  'Each staff member writes their own message',
+  'Team notes are personal now — every staff member publishes their own welcome message on home and reviews.',
+  'Instead of one shared city manager note, each moderator, administrator, and city manager can write and save their own message from Help & support. Published messages appear in the home carousel and on the reviews page. The director still has a separate director note.',
+  'Markeith White',
+  'Buy Nothing Director',
+  'director'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================================================
+-- 19. App reviews (0–5 stars, half-star steps, one per user)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.app_reviews (
+  id TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL UNIQUE,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  rating NUMERIC(2,1) NOT NULL,
+  text TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.app_reviews DROP CONSTRAINT IF EXISTS app_reviews_rating_range;
+ALTER TABLE public.app_reviews ADD CONSTRAINT app_reviews_rating_range
+  CHECK (rating >= 0 AND rating <= 5 AND (rating * 2)::int = (rating * 2));
+
+ALTER TABLE public.app_reviews ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS app_reviews_created_idx ON public.app_reviews ("createdAt" DESC);
+
+
+-- =========================================================
+-- 9. AUTO-PROFILE TRIGGER
+-- Whenever a user is created in auth.users, automatically create a matching
+-- row in public.users so they are never "auth only" orphans.
+-- Safe to re-run — uses CREATE OR REPLACE and IF NOT EXISTS.
+-- =========================================================
+
+-- Function called by the trigger
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.users (
+    uid,
+    "displayName",
+    "photoURL",
+    email,
+    neighborhood,
+    bio,
+    "role",
+    "createdAt"
+  )
+  VALUES (
+    NEW.id::text,
+    COALESCE(
+      NULLIF(TRIM(NEW.raw_user_meta_data->>'displayName'), ''),
+      SPLIT_PART(NEW.email, '@', 1),
+      'Neighbor'
+    ),
+    -- Default pixel-art avatar — the app will update this on first login
+    'https://api.dicebear.com/7.x/pixel-art/svg?seed=' || NEW.id::text,
+    NEW.email,
+    COALESCE(
+      NULLIF(TRIM(NEW.raw_user_meta_data->>'neighborhood'), ''),
+      'Sacramento'
+    ),
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'bio', '')), ''),
+    'user',
+    NOW()
+  )
+  ON CONFLICT (uid) DO NOTHING;   -- never overwrite an existing profile
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger on auth.users — fires after every INSERT
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+
+-- =========================================================
+-- 10. ONE-TIME BACKFILL — fixes users already in auth but missing from public.users
+-- Run this once after adding the trigger above.
+-- =========================================================
+INSERT INTO public.users (
+  uid,
+  "displayName",
+  "photoURL",
+  email,
+  neighborhood,
+  "role",
+  "createdAt"
+)
+SELECT
+  au.id::text,
+  COALESCE(
+    NULLIF(TRIM(au.raw_user_meta_data->>'displayName'), ''),
+    SPLIT_PART(au.email, '@', 1),
+    'Neighbor'
+  ),
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=' || au.id::text,
+  au.email,
+  COALESCE(
+    NULLIF(TRIM(au.raw_user_meta_data->>'neighborhood'), ''),
+    'Sacramento'
+  ),
+  'user',
+  au.created_at
+FROM auth.users au
+WHERE au.id::text NOT IN (SELECT uid FROM public.users)
+  AND au.email IS NOT NULL;
+
+-- =========================================================
+-- 18. Account deletion (self-service + staff) — full data purge
+-- =========================================================
+DROP FUNCTION IF EXISTS public.delete_own_account();
+DROP FUNCTION IF EXISTS public.staff_delete_user_account(text);
+DROP FUNCTION IF EXISTS public.purge_user_community_data(text);
+
+CREATE OR REPLACE FUNCTION public.purge_user_community_data(target_uid text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $purge$
+BEGIN
+  IF target_uid IS NULL OR target_uid = '' THEN
+    RETURN;
+  END IF;
+
+  DELETE FROM public.item_claim_requests
+  WHERE "giverUserId" = target_uid OR "claimerUserId" = target_uid;
+
+  DELETE FROM public.item_claims
+  WHERE "giverUserId" = target_uid OR "claimerUserId" = target_uid;
+
+  DELETE FROM public.listing_subitems
+  WHERE "itemId" IN (SELECT id FROM public.items WHERE "userId" = target_uid);
+
+  DELETE FROM public.item_votes
+  WHERE "itemId" IN (SELECT id FROM public.items WHERE "userId" = target_uid);
+
+  DELETE FROM public.item_comments
+  WHERE "itemId" IN (SELECT id FROM public.items WHERE "userId" = target_uid);
+
+  DELETE FROM public.messages
+  WHERE "chatId" IN (
+    SELECT id FROM public.chats
+    WHERE "itemId" IN (SELECT id FROM public.items WHERE "userId" = target_uid)
+  );
+
+  DELETE FROM public.chats
+  WHERE "itemId" IN (SELECT id FROM public.items WHERE "userId" = target_uid);
+
+  DELETE FROM public.items WHERE "userId" = target_uid;
+
+  DELETE FROM public.item_votes WHERE "userId" = target_uid;
+  DELETE FROM public.item_comments WHERE "userId" = target_uid;
+
+  DELETE FROM public.messages
+  WHERE "senderId" = target_uid
+     OR "chatId" IN (
+       SELECT id FROM public.chats
+       WHERE "participantIds"::jsonb @> jsonb_build_array(target_uid)
+     );
+
+  DELETE FROM public.chats
+  WHERE "participantIds"::jsonb @> jsonb_build_array(target_uid);
+
+  DELETE FROM public.user_blocks
+  WHERE "blockerUserId" = target_uid OR "blockedUserId" = target_uid;
+
+  DELETE FROM public.message_requests
+  WHERE "fromUserId" = target_uid OR "toUserId" = target_uid;
+
+  DELETE FROM public.user_reports
+  WHERE "reporterUserId" = target_uid OR "reportedUserId" = target_uid;
+
+  DELETE FROM public.support_ticket_messages
+  WHERE "senderUserId" = target_uid
+     OR "ticketId" IN (
+       SELECT id FROM public.support_tickets WHERE "openerUserId" = target_uid
+     );
+
+  DELETE FROM public.support_tickets WHERE "openerUserId" = target_uid;
+
+  DELETE FROM public.moderation_audit_log
+  WHERE "actorUserId" = target_uid OR "targetUserId" = target_uid;
+END;
+$purge$;
+
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM authenticated;
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM anon;
+
+CREATE OR REPLACE FUNCTION public.delete_own_account()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $acctdel$
+DECLARE
+  user_uid text := auth.uid()::text;
+BEGIN
+  IF user_uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  PERFORM public.purge_user_community_data(user_uid);
+
+  DELETE FROM public.users WHERE uid = user_uid;
+
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$acctdel$;
+
+REVOKE ALL ON FUNCTION public.delete_own_account() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.staff_delete_user_account(target_uid text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $acctdel$
+DECLARE
+  actor_uid text := auth.uid()::text;
+  actor_role text;
+  target_role text;
+BEGIN
+  IF actor_uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  IF target_uid IS NULL OR target_uid = '' THEN
+    RAISE EXCEPTION 'Target user required';
+  END IF;
+  IF target_uid = actor_uid THEN
+    RAISE EXCEPTION 'Use account settings to delete your own account';
+  END IF;
+
+  SELECT role INTO actor_role FROM public.users WHERE uid = actor_uid;
+  IF actor_role IS NULL OR actor_role NOT IN ('city_manager', 'director') THEN
+    RAISE EXCEPTION 'Not authorized to delete accounts';
+  END IF;
+
+  SELECT role INTO target_role FROM public.users WHERE uid = target_uid;
+  IF target_role IS NULL THEN
+    RAISE EXCEPTION 'User not found';
+  END IF;
+
+  IF actor_role = 'city_manager' AND target_role IN ('city_manager', 'director') THEN
+    RAISE EXCEPTION 'Only a director can delete leadership accounts';
+  END IF;
+
+  PERFORM public.purge_user_community_data(target_uid);
+
+  DELETE FROM public.users WHERE uid = target_uid;
+
+  DELETE FROM auth.users WHERE id = target_uid::uuid;
+END;
+$acctdel$;
+
+REVOKE ALL ON FUNCTION public.staff_delete_user_account(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.staff_delete_user_account(text) TO authenticated;
+
+-- =========================================================
+-- OPTIONAL: set community director role (run after you sign up)
+-- UPDATE public.users SET role = 'director' WHERE email = 'you@example.com';
+--
+-- OPTIONAL: migrate legacy role slugs (moderator → city_administrator, admin → city_manager)
+-- UPDATE public.users SET role = 'city_administrator' WHERE role = 'moderator';
+-- UPDATE public.users SET role = 'city_manager' WHERE role = 'admin';
+-- =========================================================
+
+-- (Push tables in NOTIFICATIONS section below)
+
+
+
+ALTER TABLE public.item_claims DROP CONSTRAINT IF EXISTS item_claims_kind_check;
+ALTER TABLE public.item_claims ADD CONSTRAINT item_claims_kind_check
+  CHECK (kind IN ('giveaway', 'request_fulfilled', 'trade_completed'));
+
+
+-- =========================================================
+-- NOTIFICATIONS & SAVED ITEMS
+-- =========================================================
+
+-- 1. Push subscriptions (one row per browser/device endpoint)
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+  id TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  "userAgent" TEXT,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS push_subscriptions_user_id_idx ON public.push_subscriptions ("userId");
+CREATE INDEX IF NOT EXISTS push_subscriptions_endpoint_idx ON public.push_subscriptions (endpoint);
+
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- 2. Notification preferences (one row per user)
+CREATE TABLE IF NOT EXISTS public.notification_preferences (
+  "userId" TEXT PRIMARY KEY REFERENCES public.users(uid) ON DELETE CASCADE,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  messages BOOLEAN NOT NULL DEFAULT true,
+  "messageRequests" BOOLEAN NOT NULL DEFAULT true,
+  support BOOLEAN NOT NULL DEFAULT true,
+  claims BOOLEAN NOT NULL DEFAULT true,
+  gifts BOOLEAN NOT NULL DEFAULT true,
+  comments BOOLEAN NOT NULL DEFAULT true,
+  "listingUpvotes" BOOLEAN NOT NULL DEFAULT true,
+  "listingDownvotes" BOOLEAN NOT NULL DEFAULT true,
+  "listingStatus" BOOLEAN NOT NULL DEFAULT true,
+  "nearbyListings" BOOLEAN NOT NULL DEFAULT true,
+  requests BOOLEAN NOT NULL DEFAULT true,
+  announcements BOOLEAN NOT NULL DEFAULT true,
+  "pickupReminders" BOOLEAN NOT NULL DEFAULT true,
+  "newListings" BOOLEAN NOT NULL DEFAULT true,
+  "savedItems" BOOLEAN NOT NULL DEFAULT true,
+  "accountUpdates" BOOLEAN NOT NULL DEFAULT true,
+  "staffSupport" BOOLEAN NOT NULL DEFAULT true,
+  "staffReports" BOOLEAN NOT NULL DEFAULT true,
+  "directorAlerts" BOOLEAN NOT NULL DEFAULT true,
+  "directorJoins" BOOLEAN NOT NULL DEFAULT true,
+  "directorLeaves" BOOLEAN NOT NULL DEFAULT true,
+  "directorModeration" BOOLEAN NOT NULL DEFAULT true,
+  "directorReports" BOOLEAN NOT NULL DEFAULT true,
+  "directorTickets" BOOLEAN NOT NULL DEFAULT true,
+  "directorListings" BOOLEAN NOT NULL DEFAULT true,
+  "directorMessageRequests" BOOLEAN NOT NULL DEFAULT true,
+  "directorClaimRequests" BOOLEAN NOT NULL DEFAULT true,
+  "nearbyRadiusMiles" INTEGER NOT NULL DEFAULT 10,
+  "followedCategories" JSONB NOT NULL DEFAULT '[]'::jsonb,
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT notification_preferences_radius_check
+    CHECK ("nearbyRadiusMiles" IN (0, 5, 10, 25, 50))
+);
+
+-- Add any columns missing from older installs
+ALTER TABLE public.notification_preferences
+  ADD COLUMN IF NOT EXISTS support BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "messageRequests" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "listingUpvotes" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "listingDownvotes" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "listingStatus" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "savedItems" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "accountUpdates" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "staffSupport" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "staffReports" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorAlerts" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorJoins" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorLeaves" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorModeration" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorReports" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorTickets" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorListings" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorMessageRequests" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "directorClaimRequests" BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users manage own notification preferences" ON public.notification_preferences;
+CREATE POLICY "Users manage own notification preferences" ON public.notification_preferences
+  FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
+
+-- 3. User notifications inbox (bell → Notifications tab — run user-notifications.sql for full DDL)
+--    Rows are inserted by the server when listing activity is dispatched.
+
+-- 4. Push dedup log (prevents duplicate alerts from client + webhook)
+CREATE TABLE IF NOT EXISTS public.push_dispatch_log (
+  id TEXT PRIMARY KEY,
+  tag TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS push_dispatch_log_tag_created_idx
+  ON public.push_dispatch_log (tag, "createdAt" DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS push_dispatch_log_tag_unique
+  ON public.push_dispatch_log (tag);
+
+-- 4. Backfill preferences for existing users (all toggles ON by default)
+INSERT INTO public.notification_preferences ("userId")
+SELECT u.uid FROM public.users u
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.notification_preferences p WHERE p."userId" = u.uid
+);
+
+-- 5. Ensure directors have role set (optional — app also syncs on login)
+UPDATE public.users
+SET role = 'director'
+WHERE role IS DISTINCT FROM 'director'
+  AND (
+    uid = '204b071f-100c-401d-b76d-40c594e1f132'
+    OR lower(email) = 'sigsecspec@gmail.com'
+  );
+
+-- 6. Realtime for preference sync across tabs (optional)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'notification_preferences'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.notification_preferences;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
+
+-- 7. Saved items (server-side alerts when bookmarked listings change)
+CREATE TABLE IF NOT EXISTS public.saved_items (
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "itemId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY ("userId", "itemId")
+);
+
+CREATE INDEX IF NOT EXISTS saved_items_item_id_idx ON public.saved_items ("itemId");
+
+ALTER TABLE public.saved_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users manage own saved items" ON public.saved_items;
+CREATE POLICY "Users manage own saved items" ON public.saved_items
+  FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
+
+-- 8. Purge stale push subscriptions older than 90 days
+DELETE FROM public.push_subscriptions
+WHERE "updatedAt" < NOW() - INTERVAL '90 days';
+
+-- =========================================================
+
+ALTER TABLE public.notification_preferences
+  ADD COLUMN IF NOT EXISTS "communityChat" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "staffChat" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "appUpdates" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "listingUpvotes" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "listingDownvotes" BOOLEAN NOT NULL DEFAULT true;
+
+INSERT INTO public.notification_preferences ("userId")
+SELECT u.uid FROM public.users u
+WHERE NOT EXISTS (SELECT 1 FROM public.notification_preferences p WHERE p."userId" = u.uid);
+
+UPDATE public.users SET role = 'director'
+WHERE role IS DISTINCT FROM 'director'
+  AND (uid = '204b071f-100c-401d-b76d-40c594e1f132' OR lower(email) = 'sigsecspec@gmail.com');
+
+DELETE FROM public.push_subscriptions WHERE "updatedAt" < NOW() - INTERVAL '90 days';
+
+
+-- =========================================================
+-- USER NOTIFICATIONS INBOX
+-- =========================================================
+
+-- =========================================================
+-- USER NOTIFICATIONS INBOX (bell → Notifications tab)
+-- Run once in Supabase SQL Editor after notifications-complete.sql
+-- Safe to re-run
+-- =========================================================
+--
+-- Stores what neighbors see under bell → Notifications — every alert
+-- they receive (messages, discover, comments, claims, chat, etc.).
+-- Push toggles stay under Alerts. Rows are written by the server on dispatch.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS public.user_notifications (
+  id TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  "itemId" TEXT,
+  "itemTitle" TEXT,
+  "actorUserId" TEXT,
+  "actorName" TEXT,
+  "eventType" TEXT,
+  tag TEXT,
+  url TEXT,
+  "readAt" TIMESTAMPTZ,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS user_notifications_user_created_idx
+  ON public.user_notifications ("userId", "createdAt" DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS user_notifications_user_tag_unique
+  ON public.user_notifications ("userId", tag)
+  WHERE tag IS NOT NULL;
+
+ALTER TABLE public.user_notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users read own notifications" ON public.user_notifications;
+CREATE POLICY "Users read own notifications" ON public.user_notifications
+  FOR SELECT USING (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Users mark own notifications read" ON public.user_notifications;
+CREATE POLICY "Users mark own notifications read" ON public.user_notifications
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+-- Inserts use service role from /api/push (same as push_subscriptions).
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'user_notifications'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.user_notifications;
+  END IF;
+END $$;
+
+
+
+-- =========================================================
+-- HELP, VOTES, COMMENTS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS public.help_announcements (
+  id TEXT PRIMARY KEY,
+  date DATE NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  detail TEXT,
+  "authorName" TEXT NOT NULL,
+  "authorTitle" TEXT NOT NULL,
+  "postedByUserId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS help_announcements_date_idx
+  ON public.help_announcements (date DESC, "updatedAt" DESC);
+
+ALTER TABLE public.help_announcements ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.community_content_votes (
+  id TEXT PRIMARY KEY,
+  "targetType" TEXT NOT NULL CHECK ("targetType" IN ('update', 'review', 'leader_message', 'announcement')),
+  "targetId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE ("targetType", "targetId", "userId")
+);
+
+CREATE INDEX IF NOT EXISTS community_content_votes_target_idx
+  ON public.community_content_votes ("targetType", "targetId");
+
+ALTER TABLE public.community_content_votes ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.app_update_comments (
+  id TEXT PRIMARY KEY,
+  "updateId" TEXT NOT NULL REFERENCES public.app_updates(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS app_update_comments_update_id_idx
+  ON public.app_update_comments ("updateId");
+
+ALTER TABLE public.app_update_comments ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.help_announcement_comments (
+  id TEXT PRIMARY KEY,
+  "announcementId" TEXT NOT NULL REFERENCES public.help_announcements(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS help_announcement_comments_announcement_id_idx
+  ON public.help_announcement_comments ("announcementId");
+
+ALTER TABLE public.help_announcement_comments ENABLE ROW LEVEL SECURITY;
+
+
+-- =========================================================
+-- AWARDS
+-- =========================================================
+
+ of 3 — Awards tables
+-- Run in Supabase SQL Editor, then run awards-02-functions.sql, then awards-03-seed.sql
+
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "joinRank" INT;
+
+CREATE INDEX IF NOT EXISTS users_join_rank_idx ON public.users ("joinRank");
+
+CREATE TABLE IF NOT EXISTS public.award_definitions (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT 'award',
+  category TEXT NOT NULL DEFAULT 'community',
+  "triggerType" TEXT NOT NULL DEFAULT 'manual',
+  "autoRule" JSONB,
+  "sortOrder" INT NOT NULL DEFAULT 0,
+  "isActive" BOOLEAN NOT NULL DEFAULT true,
+  "requiresUnlock" BOOLEAN NOT NULL DEFAULT true,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "createdByUserId" TEXT REFERENCES public.users(uid) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.user_awards (
+  id TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "awardId" TEXT NOT NULL REFERENCES public.award_definitions(id) ON DELETE CASCADE,
+  "grantedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "grantedByUserId" TEXT REFERENCES public.users(uid) ON DELETE SET NULL,
+  "revokedAt" TIMESTAMPTZ,
+  "revokedByUserId" TEXT REFERENCES public.users(uid) ON DELETE SET NULL,
+  source TEXT NOT NULL DEFAULT 'auto',
+  metadata JSONB
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS user_awards_active_unique
+  ON public.user_awards ("userId", "awardId")
+  WHERE "revokedAt" IS NULL;
+
+CREATE INDEX IF NOT EXISTS user_awards_user_idx ON public.user_awards ("userId") WHERE "revokedAt" IS NULL;
+CREATE INDEX IF NOT EXISTS user_awards_award_idx ON public.user_awards ("awardId") WHERE "revokedAt" IS NULL;
+CREATE INDEX IF NOT EXISTS award_definitions_sort_idx ON public.award_definitions ("sortOrder", title);
+
+
+ of 3 — Awards functions, triggers, RLS
+-- Run AFTER awards-01-tables.sql, then run awards-03-seed.sql
+
+-- =========================================================
+-- 2. HELPERS
+-- =========================================================
+
+CREATE OR REPLACE FUNCTION public.community_member_count()
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COUNT(*)::INT FROM public.users;
+$$;
+
+CREATE OR REPLACE FUNCTION public.awards_unlocked()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.community_member_count() >= 500;
+$$;
+
+CREATE OR REPLACE FUNCTION public.assign_user_join_rank(target_uid TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  rank_val INT;
+BEGIN
+  SELECT "joinRank" INTO rank_val FROM public.users WHERE uid = target_uid;
+  IF rank_val IS NOT NULL THEN
+    RETURN rank_val;
+  END IF;
+
+  rank_val := public.community_member_count();
+
+  UPDATE public.users
+  SET "joinRank" = rank_val
+  WHERE uid = target_uid;
+
+  RETURN rank_val;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.grant_award_by_slug(
+  target_uid TEXT,
+  award_slug TEXT,
+  award_source TEXT DEFAULT 'auto',
+  granted_by TEXT DEFAULT NULL,
+  award_metadata JSONB DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  def_id TEXT;
+  grant_id TEXT;
+BEGIN
+  IF target_uid IS NULL OR target_uid = '' OR award_slug IS NULL OR award_slug = '' THEN
+    RETURN false;
+  END IF;
+
+  SELECT id INTO def_id
+  FROM public.award_definitions
+  WHERE slug = award_slug AND "isActive" = true
+  LIMIT 1;
+
+  IF def_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.user_awards
+    WHERE "userId" = target_uid AND "awardId" = def_id AND "revokedAt" IS NULL
+  ) THEN
+    RETURN false;
+  END IF;
+
+  grant_id := gen_random_uuid()::text;
+
+  INSERT INTO public.user_awards (
+    id, "userId", "awardId", "grantedAt", "grantedByUserId", source, metadata
+  ) VALUES (
+    grant_id, target_uid, def_id, NOW(), granted_by, award_source, award_metadata
+  );
+
+  RETURN true;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.revoke_award_by_slug(
+  target_uid TEXT,
+  award_slug TEXT,
+  revoked_by TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  def_id TEXT;
+BEGIN
+  IF NOT public.is_staff() THEN
+    RAISE EXCEPTION 'Only staff can revoke awards';
+  END IF;
+
+  SELECT id INTO def_id
+  FROM public.award_definitions
+  WHERE slug = award_slug
+  LIMIT 1;
+
+  IF def_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  UPDATE public.user_awards
+  SET "revokedAt" = NOW(), "revokedByUserId" = revoked_by
+  WHERE "userId" = target_uid AND "awardId" = def_id AND "revokedAt" IS NULL;
+
+  RETURN FOUND;
+END;
+$$;
+
+-- =========================================================
+-- 3. MILESTONE + AUTO EVALUATION
+-- =========================================================
+
+CREATE OR REPLACE FUNCTION public.grant_join_milestone_awards(target_uid TEXT, join_rank INT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF join_rank <= 100 THEN
+    PERFORM public.grant_award_by_slug(target_uid, 'first-hundred', 'milestone', NULL, jsonb_build_object('joinRank', join_rank));
+  END IF;
+  IF join_rank <= 200 THEN
+    PERFORM public.grant_award_by_slug(target_uid, 'first-two-hundred', 'milestone', NULL, jsonb_build_object('joinRank', join_rank));
+  END IF;
+  IF join_rank <= 300 THEN
+    PERFORM public.grant_award_by_slug(target_uid, 'first-three-hundred', 'milestone', NULL, jsonb_build_object('joinRank', join_rank));
+  END IF;
+  IF join_rank <= 400 THEN
+    PERFORM public.grant_award_by_slug(target_uid, 'first-four-hundred', 'milestone', NULL, jsonb_build_object('joinRank', join_rank));
+  END IF;
+  IF join_rank <= 500 THEN
+    PERFORM public.grant_award_by_slug(target_uid, 'first-five-hundred', 'milestone', NULL, jsonb_build_object('joinRank', join_rank));
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.evaluate_auto_awards_for_user(target_uid TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  items_posted INT;
+  items_given INT;
+  items_claimed INT;
+  requests_fulfilled INT;
+  trades_completed INT;
+  upvotes_received INT;
+  event_rsvps INT;
+  community_messages INT;
+  has_bio BOOLEAN;
+  has_review BOOLEAN;
+  join_rank INT;
+  def RECORD;
+  rule_type TEXT;
+  threshold INT;
+  current_val INT;
+BEGIN
+  IF target_uid IS NULL OR target_uid = '' THEN
+    RETURN;
+  END IF;
+
+  SELECT COUNT(*)::INT INTO items_posted FROM public.items WHERE "userId" = target_uid;
+  SELECT COUNT(*)::INT INTO items_given
+    FROM public.items WHERE "userId" = target_uid AND type = 'giveaway' AND status = 'completed';
+  SELECT COUNT(*)::INT INTO items_claimed
+    FROM public.item_claims WHERE "claimerUserId" = target_uid;
+  SELECT COUNT(*)::INT INTO requests_fulfilled
+    FROM public.items WHERE "userId" = target_uid AND type = 'looking' AND status = 'completed';
+  SELECT COUNT(*)::INT INTO trades_completed
+    FROM public.items WHERE "userId" = target_uid AND type = 'trade' AND status = 'completed';
+  SELECT COALESCE(SUM(CASE WHEN iv."voteType" = 'up' THEN 1 ELSE 0 END), 0)::INT INTO upvotes_received
+    FROM public.item_votes iv
+    JOIN public.items i ON i.id = iv."itemId"
+    WHERE i."userId" = target_uid;
+  SELECT COUNT(*)::INT INTO event_rsvps FROM public.event_rsvps WHERE "userId" = target_uid;
+  SELECT COUNT(*)::INT INTO community_messages
+    FROM public.messages WHERE "senderId" = target_uid AND "chatId" = 'community-global';
+  SELECT (bio IS NOT NULL AND TRIM(bio) <> '') INTO has_bio FROM public.users WHERE uid = target_uid;
+  SELECT EXISTS(SELECT 1 FROM public.app_reviews WHERE "userId" = target_uid) INTO has_review;
+  SELECT "joinRank" INTO join_rank FROM public.users WHERE uid = target_uid;
+
+  FOR def IN
+    SELECT id, slug, "autoRule"
+    FROM public.award_definitions
+    WHERE "triggerType" = 'auto' AND "isActive" = true AND "autoRule" IS NOT NULL
+  LOOP
+    rule_type := def."autoRule"->>'type';
+    threshold := COALESCE((def."autoRule"->>'threshold')::INT, 1);
+    current_val := 0;
+
+    CASE rule_type
+      WHEN 'items_posted' THEN current_val := items_posted;
+      WHEN 'items_given' THEN current_val := items_given;
+      WHEN 'items_claimed' THEN current_val := items_claimed;
+      WHEN 'requests_fulfilled' THEN current_val := requests_fulfilled;
+      WHEN 'trades_completed' THEN current_val := trades_completed;
+      WHEN 'upvotes_received' THEN current_val := upvotes_received;
+      WHEN 'event_rsvps' THEN current_val := event_rsvps;
+      WHEN 'community_messages' THEN current_val := community_messages;
+      WHEN 'has_bio' THEN current_val := CASE WHEN has_bio THEN 1 ELSE 0 END;
+      WHEN 'has_app_review' THEN current_val := CASE WHEN has_review THEN 1 ELSE 0 END;
+      WHEN 'join_rank_max' THEN current_val := CASE WHEN join_rank IS NOT NULL AND join_rank <= threshold THEN 1 ELSE 0 END;
+      WHEN 'combined_giving' THEN
+        current_val := items_given + items_claimed;
+        threshold := COALESCE((def."autoRule"->>'threshold')::INT, 10);
+      ELSE
+        CONTINUE;
+    END CASE;
+
+    IF rule_type IN ('has_bio', 'has_app_review', 'join_rank_max') THEN
+      IF current_val >= 1 THEN
+        PERFORM public.grant_award_by_slug(target_uid, def.slug, 'auto');
+      END IF;
+    ELSIF current_val >= threshold THEN
+      PERFORM public.grant_award_by_slug(target_uid, def.slug, 'auto');
+    END IF;
+  END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.on_user_created_awards()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  rank_val INT;
+BEGIN
+  rank_val := public.assign_user_join_rank(NEW.uid);
+  PERFORM public.grant_join_milestone_awards(NEW.uid, rank_val);
+  PERFORM public.evaluate_auto_awards_for_user(NEW.uid);
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_user_created_awards ON public.users;
+CREATE TRIGGER on_user_created_awards
+  AFTER INSERT ON public.users
+  FOR EACH ROW EXECUTE FUNCTION public.on_user_created_awards();
+
+CREATE OR REPLACE FUNCTION public.on_award_activity()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  uid TEXT;
+BEGIN
+  uid := NULL;
+  IF TG_TABLE_NAME = 'items' THEN
+    uid := COALESCE(NEW."userId", OLD."userId");
+  ELSIF TG_TABLE_NAME = 'item_claims' THEN
+    uid := COALESCE(NEW."claimerUserId", OLD."claimerUserId");
+    IF NEW."giverUserId" IS NOT NULL THEN
+      PERFORM public.evaluate_auto_awards_for_user(NEW."giverUserId");
+    END IF;
+  ELSIF TG_TABLE_NAME = 'messages' THEN
+    uid := COALESCE(NEW."senderId", OLD."senderId");
+  ELSIF TG_TABLE_NAME = 'event_rsvps' THEN
+    uid := COALESCE(NEW."userId", OLD."userId");
+  ELSIF TG_TABLE_NAME = 'app_reviews' THEN
+    uid := COALESCE(NEW."userId", OLD."userId");
+  ELSIF TG_TABLE_NAME = 'users' THEN
+    uid := COALESCE(NEW.uid, OLD.uid);
+  END IF;
+
+  IF uid IS NOT NULL THEN
+    PERFORM public.evaluate_auto_awards_for_user(uid);
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_items_award_activity ON public.items;
+CREATE TRIGGER on_items_award_activity
+  AFTER INSERT OR UPDATE ON public.items
+  FOR EACH ROW EXECUTE FUNCTION public.on_award_activity();
+
+DROP TRIGGER IF EXISTS on_item_claims_award_activity ON public.item_claims;
+CREATE TRIGGER on_item_claims_award_activity
+  AFTER INSERT ON public.item_claims
+  FOR EACH ROW EXECUTE FUNCTION public.on_award_activity();
+
+DROP TRIGGER IF EXISTS on_messages_award_activity ON public.messages;
+CREATE TRIGGER on_messages_award_activity
+  AFTER INSERT ON public.messages
+  FOR EACH ROW EXECUTE FUNCTION public.on_award_activity();
+
+DROP TRIGGER IF EXISTS on_event_rsvps_award_activity ON public.event_rsvps;
+CREATE TRIGGER on_event_rsvps_award_activity
+  AFTER INSERT ON public.event_rsvps
+  FOR EACH ROW EXECUTE FUNCTION public.on_award_activity();
+
+DROP TRIGGER IF EXISTS on_app_reviews_award_activity ON public.app_reviews;
+CREATE TRIGGER on_app_reviews_award_activity
+  AFTER INSERT OR UPDATE ON public.app_reviews
+  FOR EACH ROW EXECUTE FUNCTION public.on_award_activity();
+
+DROP TRIGGER IF EXISTS on_users_bio_award_activity ON public.users;
+CREATE TRIGGER on_users_bio_award_activity
+  AFTER UPDATE OF bio ON public.users
+  FOR EACH ROW EXECUTE FUNCTION public.on_award_activity();
+
+-- =========================================================
+-- 4. STAFF RPCS
+-- =========================================================
+
+CREATE OR REPLACE FUNCTION public.staff_grant_award(
+  target_uid TEXT,
+  award_slug TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_staff() THEN
+    RAISE EXCEPTION 'Only staff can grant awards';
+  END IF;
+  RETURN public.grant_award_by_slug(target_uid, award_slug, 'staff', auth.uid()::text);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.staff_revoke_award(
+  target_uid TEXT,
+  award_slug TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN public.revoke_award_by_slug(target_uid, award_slug, auth.uid()::text);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.staff_grant_award(text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.staff_grant_award(text, text) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.staff_revoke_award(text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.staff_revoke_award(text, text) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.evaluate_auto_awards_for_user(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.evaluate_auto_awards_for_user(text) TO authenticated;
+
+
+
+-- STEP 3 of 3 — Awards seed data + backfill
+-- Run AFTER awards-01-tables.sql AND awards-02-functions.sql
+
+INSERT INTO public.award_definitions (id, slug, title, description, icon, category, "triggerType", "autoRule", "sortOrder", "requiresUnlock")
+VALUES
+  ('awd-first-hundred', 'first-hundred', 'First Hundred', 'One of the first 100 neighbors to join Sacramento Buy Nothing.', 'users', 'milestone', 'auto', '{"type":"join_rank_max","threshold":100}', 10, true),
+  ('awd-first-two-hundred', 'first-two-hundred', 'First Two Hundred', 'Among the first 200 neighbors in our sharing circle.', 'users', 'milestone', 'auto', '{"type":"join_rank_max","threshold":200}', 20, true),
+  ('awd-first-three-hundred', 'first-three-hundred', 'First Three Hundred', 'Helped build momentum as one of the first 300 neighbors.', 'users', 'milestone', 'auto', '{"type":"join_rank_max","threshold":300}', 30, true),
+  ('awd-first-four-hundred', 'first-four-hundred', 'First Four Hundred', 'A founding neighbor from the first 400 members.', 'users', 'milestone', 'auto', '{"type":"join_rank_max","threshold":400}', 40, true),
+  ('awd-first-five-hundred', 'first-five-hundred', 'First Five Hundred', 'A true founding neighbor - one of the first 500 members.', 'crown', 'milestone', 'auto', '{"type":"join_rank_max","threshold":500}', 50, true),
+  ('awd-first-listing', 'first-listing', 'First Post', 'Posted your first listing on the feed.', 'plus-circle', 'giving', 'auto', '{"type":"items_posted","threshold":1}', 100, true),
+  ('awd-listings-5', 'listings-5', 'Regular Poster', 'Posted 5 listings for neighbors.', 'layers', 'giving', 'auto', '{"type":"items_posted","threshold":5}', 110, true),
+  ('awd-listings-10', 'listings-10', 'Feed Contributor', 'Posted 10 listings for the community.', 'layers', 'giving', 'auto', '{"type":"items_posted","threshold":10}', 120, true),
+  ('awd-listings-25', 'listings-25', 'Community Voice', 'Posted 25 listings - you keep the feed alive.', 'megaphone', 'giving', 'auto', '{"type":"items_posted","threshold":25}', 130, true),
+  ('awd-listings-50', 'listings-50', 'Listing Legend', 'Posted 50 listings for Sacramento neighbors.', 'star', 'giving', 'auto', '{"type":"items_posted","threshold":50}', 140, true),
+  ('awd-first-gift', 'first-gift', 'First Gift', 'Completed your first giveaway - thank you for giving!', 'gift', 'giving', 'auto', '{"type":"items_given","threshold":1}', 200, true),
+  ('awd-gifts-5', 'gifts-5', 'Generous Neighbor', 'Gave away 5 items to neighbors.', 'gift', 'giving', 'auto', '{"type":"items_given","threshold":5}', 210, true),
+  ('awd-gifts-10', 'gifts-10', 'Gift Champion', 'Gave away 10 items - incredible generosity.', 'gift', 'giving', 'auto', '{"type":"items_given","threshold":10}', 220, true),
+  ('awd-gifts-25', 'gifts-25', 'Sharing Superstar', 'Gave away 25 items to the community.', 'sparkles', 'giving', 'auto', '{"type":"items_given","threshold":25}', 230, true),
+  ('awd-gifts-50', 'gifts-50', 'Giving Hero', 'Gave away 50 items - you embody Buy Nothing spirit.', 'heart', 'giving', 'auto', '{"type":"items_given","threshold":50}', 240, true),
+  ('awd-gifts-100', 'gifts-100', 'Sacramento Saint', 'Gave away 100 items. Legendary generosity.', 'crown', 'giving', 'auto', '{"type":"items_given","threshold":100}', 250, true),
+  ('awd-first-claim', 'first-claim', 'First Claim', 'Claimed your first item from a neighbor.', 'package', 'community', 'auto', '{"type":"items_claimed","threshold":1}', 300, true),
+  ('awd-claims-5', 'claims-5', 'Savvy Saver', 'Claimed 5 items from generous neighbors.', 'package', 'community', 'auto', '{"type":"items_claimed","threshold":5}', 310, true),
+  ('awd-claims-10', 'claims-10', 'Treasure Hunter', 'Claimed 10 items through the community.', 'package', 'community', 'auto', '{"type":"items_claimed","threshold":10}', 320, true),
+  ('awd-claims-25', 'claims-25', 'Community Connector', 'Claimed 25 items - active participant.', 'link', 'community', 'auto', '{"type":"items_claimed","threshold":25}', 330, true),
+  ('awd-claims-50', 'claims-50', 'Neighborhood Navigator', 'Claimed 50 items from the sharing circle.', 'compass', 'community', 'auto', '{"type":"items_claimed","threshold":50}', 340, true),
+  ('awd-first-fulfilled', 'first-fulfilled', 'Wish Granted', 'Fulfilled your first neighbor request.', 'check-circle', 'giving', 'auto', '{"type":"requests_fulfilled","threshold":1}', 400, true),
+  ('awd-fulfilled-5', 'fulfilled-5', 'Helper', 'Fulfilled 5 neighbor requests.', 'hand-heart', 'giving', 'auto', '{"type":"requests_fulfilled","threshold":5}', 410, true),
+  ('awd-fulfilled-10', 'fulfilled-10', 'Problem Solver', 'Fulfilled 10 neighbor requests.', 'hand-heart', 'giving', 'auto', '{"type":"requests_fulfilled","threshold":10}', 420, true),
+  ('awd-fulfilled-25', 'fulfilled-25', 'Community Angel', 'Fulfilled 25 neighbor requests.', 'sparkles', 'giving', 'auto', '{"type":"requests_fulfilled","threshold":25}', 430, true),
+  ('awd-first-trade', 'first-trade', 'First Trade', 'Completed your first barter trade.', 'repeat', 'community', 'auto', '{"type":"trades_completed","threshold":1}', 500, true),
+  ('awd-trades-5', 'trades-5', 'Barter Pro', 'Completed 5 fair trades with neighbors.', 'repeat', 'community', 'auto', '{"type":"trades_completed","threshold":5}', 510, true),
+  ('awd-trades-10', 'trades-10', 'Trade Master', 'Completed 10 barter trades.', 'repeat', 'community', 'auto', '{"type":"trades_completed","threshold":10}', 520, true),
+  ('awd-first-upvote', 'first-upvote', 'First Cheer', 'Received your first upvote from a neighbor.', 'thumbs-up', 'recognition', 'auto', '{"type":"upvotes_received","threshold":1}', 600, true),
+  ('awd-upvotes-10', 'upvotes-10', 'Appreciated', 'Received 10 upvotes on your listings.', 'thumbs-up', 'recognition', 'auto', '{"type":"upvotes_received","threshold":10}', 610, true),
+  ('awd-upvotes-25', 'upvotes-25', 'Beloved Neighbor', 'Received 25 upvotes from the community.', 'heart', 'recognition', 'auto', '{"type":"upvotes_received","threshold":25}', 620, true),
+  ('awd-upvotes-50', 'upvotes-50', 'Community Favorite', 'Received 50 upvotes - neighbors love what you share.', 'star', 'recognition', 'auto', '{"type":"upvotes_received","threshold":50}', 630, true),
+  ('awd-upvotes-100', 'upvotes-100', 'Neighborhood Icon', 'Received 100 upvotes. A true favorite.', 'crown', 'recognition', 'auto', '{"type":"upvotes_received","threshold":100}', 640, true),
+  ('awd-first-rsvp', 'first-rsvp', 'Event Goer', 'RSVPed to your first community event.', 'calendar', 'events', 'auto', '{"type":"event_rsvps","threshold":1}', 700, true),
+  ('awd-events-5', 'events-5', 'Community Regular', 'RSVPed to 5 community events.', 'calendar', 'events', 'auto', '{"type":"event_rsvps","threshold":5}', 710, true),
+  ('awd-events-10', 'events-10', 'Event Enthusiast', 'RSVPed to 10 community events.', 'party-popper', 'events', 'auto', '{"type":"event_rsvps","threshold":10}', 720, true),
+  ('awd-first-chat', 'first-chat', 'Community Voice', 'Sent your first message in community chat.', 'message-circle', 'community', 'auto', '{"type":"community_messages","threshold":1}', 800, true),
+  ('awd-chat-50', 'chat-50', 'Chat Regular', 'Sent 50 messages in community chat.', 'messages-square', 'community', 'auto', '{"type":"community_messages","threshold":50}', 810, true),
+  ('awd-chat-100', 'chat-100', 'Conversation Starter', 'Sent 100 messages in community chat.', 'messages-square', 'community', 'auto', '{"type":"community_messages","threshold":100}', 820, true),
+  ('awd-chat-500', 'chat-500', 'Community Pillar', 'Sent 500 messages - you keep us connected.', 'radio', 'community', 'auto', '{"type":"community_messages","threshold":500}', 830, true),
+  ('awd-profile-complete', 'profile-complete', 'Profile Pro', 'Filled out your neighbor bio.', 'user-check', 'profile', 'auto', '{"type":"has_bio","threshold":1}', 900, true),
+  ('awd-app-reviewer', 'app-reviewer', 'Voice Heard', 'Left a review of the app for the community.', 'pen-line', 'profile', 'auto', '{"type":"has_app_review","threshold":1}', 910, true),
+  ('awd-combined-10', 'combined-giving-10', 'Circle Keeper', 'Gave and received 10+ items combined.', 'circle', 'giving', 'auto', '{"type":"combined_giving","threshold":10}', 950, true),
+  ('awd-combined-25', 'combined-giving-25', 'Full Circle', 'Gave and received 25+ items combined.', 'circle', 'giving', 'auto', '{"type":"combined_giving","threshold":25}', 960, true),
+  ('awd-combined-50', 'combined-giving-50', 'Sharing Legend', 'Gave and received 50+ items combined.', 'infinity', 'giving', 'auto', '{"type":"combined_giving","threshold":50}', 970, true),
+  ('awd-staff-star', 'staff-star', 'Staff Star', 'Recognized by staff for outstanding community spirit.', 'shield', 'staff', 'manual', NULL, 1000, false),
+  ('awd-community-hero', 'community-hero', 'Community Hero', 'Hand-picked by staff for going above and beyond.', 'medal', 'staff', 'manual', NULL, 1010, false),
+  ('awd-kindness-champion', 'kindness-champion', 'Kindness Champion', 'Awarded by staff for exceptional kindness.', 'heart-handshake', 'staff', 'manual', NULL, 1020, false)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Backfill join ranks for existing users
+WITH ranked AS (
+  SELECT uid, ROW_NUMBER() OVER (ORDER BY "createdAt" ASC, uid ASC) AS rn
+  FROM public.users
+  WHERE "joinRank" IS NULL
+)
+UPDATE public.users u
+SET "joinRank" = ranked.rn
+FROM ranked
+WHERE u.uid = ranked.uid;
+
+-- Backfill milestone + auto awards for existing users
+DO $$
+DECLARE
+  u RECORD;
+BEGIN
+  FOR u IN SELECT uid, "joinRank" FROM public.users WHERE "joinRank" IS NOT NULL LOOP
+    PERFORM public.grant_join_milestone_awards(u.uid, u."joinRank");
+    PERFORM public.evaluate_auto_awards_for_user(u.uid);
+  END LOOP;
+END $$;
+
+
+-- =========================================================
+-- SECURITY HELPERS & RLS
+-- =========================================================
+
+ — Sacramento Buy Nothing
+-- Run once in Supabase Dashboard → SQL Editor (safe to re-run)
+--
+-- Replaces permissive USING(true) RLS policies with real access control.
+-- After running, verify the app still works for neighbors, staff, and directors.
+-- =========================================================
+
+-- ---------------------------------------------------------
+-- 1. Security helper functions
+-- ---------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.current_user_id()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT auth.uid()::text;
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(
+    (SELECT role FROM public.users WHERE uid = auth.uid()::text),
+    'user'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.role_rank(role text)
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE role
+    WHEN 'director' THEN 4
+    WHEN 'city_manager' THEN 3
+    WHEN 'admin' THEN 3
+    WHEN 'city_administrator' THEN 2
+    WHEN 'moderator' THEN 2
+    WHEN 'city_moderator' THEN 1
+    ELSE 0
+  END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_staff_role(role text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT role IN (
+    'city_moderator', 'city_administrator', 'city_manager',
+    'director', 'moderator', 'admin'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_staff()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.is_staff_role(public.current_user_role());
+$$;
+
+CREATE OR REPLACE FUNCTION public.community_member_count()
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COUNT(*)::INT FROM public.users;
+$$;
+
+CREATE OR REPLACE FUNCTION public.events_unlocked()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.community_member_count() >= 1000;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.community_member_count() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.events_unlocked() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.awards_unlocked() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.is_director()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.current_user_role() IN ('director');
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_city_manager_or_director()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.current_user_role() IN ('city_manager', 'director', 'admin');
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_chat_participant(chat_id text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.chats
+    WHERE id = chat_id
+      AND "participantIds"::jsonb @> jsonb_build_array(auth.uid()::text)
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_read_chat(chat_id text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    chat_id = 'community-global'
+    OR (chat_id = 'community-staff' AND public.is_staff())
+    OR public.is_chat_participant(chat_id);
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_write_chat(chat_id text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    chat_id = 'community-global'
+    OR (chat_id = 'community-staff' AND public.is_staff())
+    OR public.is_chat_participant(chat_id);
+$$;
+
+-- Public profile view (no email) — use for neighbor lookups
+CREATE OR REPLACE VIEW public.users_public
+WITH (security_invoker = true) AS
+SELECT
+  uid,
+  "displayName",
+  "photoURL",
+  neighborhood,
+  bio,
+  role,
+  "accountStatus",
+  "createdAt"
+FROM public.users;
+
+GRANT SELECT ON public.users_public TO authenticated;
+
+-- ---------------------------------------------------------
+-- 2. USERS
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow public read users" ON public.users;
+DROP POLICY IF EXISTS "Allow insert and update" ON public.users;
+DROP POLICY IF EXISTS "users_select_own" ON public.users;
+DROP POLICY IF EXISTS "users_select_staff" ON public.users;
+DROP POLICY IF EXISTS "users_insert_own" ON public.users;
+DROP POLICY IF EXISTS "users_update_own" ON public.users;
+DROP POLICY IF EXISTS "users_staff_moderate" ON public.users;
+DROP POLICY IF EXISTS "users_director_role" ON public.users;
+
+CREATE POLICY "users_select_own" ON public.users
+  FOR SELECT USING (auth.uid()::text = uid);
+
+CREATE POLICY "users_select_staff" ON public.users
+  FOR SELECT USING (public.is_staff());
+
+CREATE POLICY "users_insert_own" ON public.users
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = uid
+    AND role = 'user'
+    AND "accountStatus" = 'active'
+  );
+
+CREATE POLICY "users_update_own" ON public.users
+  FOR UPDATE
+  USING (auth.uid()::text = uid)
+  WITH CHECK (
+    auth.uid()::text = uid
+    AND role = (SELECT u.role FROM public.users u WHERE u.uid = auth.uid()::text)
+    AND "accountStatus" = (SELECT u."accountStatus" FROM public.users u WHERE u.uid = auth.uid()::text)
+    AND "suspendedUntil" IS NOT DISTINCT FROM (SELECT u."suspendedUntil" FROM public.users u WHERE u.uid = auth.uid()::text)
+    AND "moderationNote" IS NOT DISTINCT FROM (SELECT u."moderationNote" FROM public.users u WHERE u.uid = auth.uid()::text)
+  );
+
+CREATE POLICY "users_staff_moderate" ON public.users
+  FOR UPDATE
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
+
+CREATE POLICY "users_director_role" ON public.users
+  FOR UPDATE
+  USING (public.is_director())
+  WITH CHECK (public.is_director());
+
+-- ---------------------------------------------------------
+-- 3. ITEMS
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow public read items" ON public.items;
+DROP POLICY IF EXISTS "Allow write operations" ON public.items;
+DROP POLICY IF EXISTS "items_select_authenticated" ON public.items;
+DROP POLICY IF EXISTS "items_insert_own" ON public.items;
+DROP POLICY IF EXISTS "items_update_own" ON public.items;
+DROP POLICY IF EXISTS "items_delete_own" ON public.items;
+
+CREATE POLICY "items_select_authenticated" ON public.items
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "items_insert_own" ON public.items
+  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
+
+CREATE POLICY "items_update_own" ON public.items
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+CREATE POLICY "items_delete_own" ON public.items
+  FOR DELETE USING (auth.uid()::text = "userId");
+
+-- ---------------------------------------------------------
+-- 4. CHATS & MESSAGES
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow public read chats" ON public.chats;
+DROP POLICY IF EXISTS "Allow write chats" ON public.chats;
+DROP POLICY IF EXISTS "chats_select" ON public.chats;
+DROP POLICY IF EXISTS "chats_insert" ON public.chats;
+DROP POLICY IF EXISTS "chats_update" ON public.chats;
+
+CREATE POLICY "chats_select" ON public.chats
+  FOR SELECT USING (public.can_read_chat(id));
+
+CREATE POLICY "chats_insert" ON public.chats
+  FOR INSERT WITH CHECK (
+    "participantIds"::jsonb @> jsonb_build_array(auth.uid()::text)
+    OR id IN ('community-global', 'community-staff')
+  );
+
+CREATE POLICY "chats_update" ON public.chats
+  FOR UPDATE USING (public.can_write_chat(id))
+  WITH CHECK (public.can_write_chat(id));
+
+DROP POLICY IF EXISTS "Allow public read messages" ON public.messages;
+DROP POLICY IF EXISTS "Allow insert messages" ON public.messages;
+DROP POLICY IF EXISTS "Allow edit or update" ON public.messages;
+DROP POLICY IF EXISTS "messages_select" ON public.messages;
+DROP POLICY IF EXISTS "messages_insert" ON public.messages;
+DROP POLICY IF EXISTS "messages_delete_own" ON public.messages;
+
+CREATE POLICY "messages_select" ON public.messages
+  FOR SELECT USING (public.can_read_chat("chatId"));
+
+CREATE POLICY "messages_insert" ON public.messages
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "senderId"
+    AND public.can_write_chat("chatId")
+  );
+
+CREATE POLICY "messages_delete_own" ON public.messages
+  FOR DELETE USING (auth.uid()::text = "senderId" OR public.is_staff());
+
+-- ---------------------------------------------------------
+-- 5. ITEM VOTES & COMMENTS
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow read item votes" ON public.item_votes;
+DROP POLICY IF EXISTS "Allow write item votes" ON public.item_votes;
+DROP POLICY IF EXISTS "item_votes_select" ON public.item_votes;
+DROP POLICY IF EXISTS "item_votes_write_own" ON public.item_votes;
+
+CREATE POLICY "item_votes_select" ON public.item_votes
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "item_votes_write_own" ON public.item_votes
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Allow read item comments" ON public.item_comments;
+DROP POLICY IF EXISTS "Allow write item comments" ON public.item_comments;
+DROP POLICY IF EXISTS "item_comments_select" ON public.item_comments;
+DROP POLICY IF EXISTS "item_comments_insert" ON public.item_comments;
+DROP POLICY IF EXISTS "item_comments_delete_own" ON public.item_comments;
+
+CREATE POLICY "item_comments_select" ON public.item_comments
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "item_comments_insert" ON public.item_comments
+  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
+
+CREATE POLICY "item_comments_delete_own" ON public.item_comments
+  FOR DELETE USING (auth.uid()::text = "userId" OR public.is_staff());
+
+-- ---------------------------------------------------------
+-- 6. ITEM CLAIMS & CLAIM REQUESTS
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow read item claims" ON public.item_claims;
+DROP POLICY IF EXISTS "Allow write item claims" ON public.item_claims;
+DROP POLICY IF EXISTS "item_claims_select" ON public.item_claims;
+DROP POLICY IF EXISTS "item_claims_write" ON public.item_claims;
+
+CREATE POLICY "item_claims_select" ON public.item_claims
+  FOR SELECT USING (
+    auth.uid()::text IN ("giverUserId", "claimerUserId")
+    OR public.is_staff()
+  );
+
+CREATE POLICY "item_claims_write" ON public.item_claims
+  FOR ALL USING (
+    auth.uid()::text IN ("giverUserId", "claimerUserId")
+  )
+  WITH CHECK (
+    auth.uid()::text IN ("giverUserId", "claimerUserId")
+  );
+
+DROP POLICY IF EXISTS "Allow read claim requests" ON public.item_claim_requests;
+DROP POLICY IF EXISTS "Allow write claim requests" ON public.item_claim_requests;
+DROP POLICY IF EXISTS "claim_requests_select" ON public.item_claim_requests;
+DROP POLICY IF EXISTS "claim_requests_write" ON public.item_claim_requests;
+
+CREATE POLICY "claim_requests_select" ON public.item_claim_requests
+  FOR SELECT USING (
+    auth.uid()::text IN ("giverUserId", "claimerUserId")
+    OR public.is_staff()
+  );
+
+CREATE POLICY "claim_requests_write" ON public.item_claim_requests
+  FOR ALL USING (
+    auth.uid()::text IN ("giverUserId", "claimerUserId")
+  )
+  WITH CHECK (
+    auth.uid()::text IN ("giverUserId", "claimerUserId")
+  );
+
+-- ---------------------------------------------------------
+-- 7. USER BLOCKS & MESSAGE REQUESTS
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow read user blocks" ON public.user_blocks;
+DROP POLICY IF EXISTS "Allow write user blocks" ON public.user_blocks;
+DROP POLICY IF EXISTS "user_blocks_select" ON public.user_blocks;
+DROP POLICY IF EXISTS "user_blocks_write" ON public.user_blocks;
+
+CREATE POLICY "user_blocks_select" ON public.user_blocks
+  FOR SELECT USING (
+    auth.uid()::text IN ("blockerUserId", "blockedUserId")
+    OR public.is_staff()
+  );
+
+CREATE POLICY "user_blocks_write" ON public.user_blocks
+  FOR ALL USING (auth.uid()::text = "blockerUserId")
+  WITH CHECK (auth.uid()::text = "blockerUserId");
+
+DROP POLICY IF EXISTS "Allow read message requests" ON public.message_requests;
+DROP POLICY IF EXISTS "Allow write message requests" ON public.message_requests;
+DROP POLICY IF EXISTS "message_requests_select" ON public.message_requests;
+DROP POLICY IF EXISTS "message_requests_write" ON public.message_requests;
+
+CREATE POLICY "message_requests_select" ON public.message_requests
+  FOR SELECT USING (
+    auth.uid()::text IN ("fromUserId", "toUserId")
+    OR public.is_staff()
+  );
+
+CREATE POLICY "message_requests_write" ON public.message_requests
+  FOR ALL USING (
+    auth.uid()::text IN ("fromUserId", "toUserId")
+  )
+  WITH CHECK (
+    auth.uid()::text IN ("fromUserId", "toUserId")
+  );
+
+-- ---------------------------------------------------------
+-- 8. MODERATION, REPORTS, SUPPORT
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow read moderation audit log" ON public.moderation_audit_log;
+DROP POLICY IF EXISTS "Allow write moderation audit log" ON public.moderation_audit_log;
+DROP POLICY IF EXISTS "moderation_audit_select" ON public.moderation_audit_log;
+DROP POLICY IF EXISTS "moderation_audit_insert" ON public.moderation_audit_log;
+
+CREATE POLICY "moderation_audit_select" ON public.moderation_audit_log
+  FOR SELECT USING (public.is_staff());
+
+CREATE POLICY "moderation_audit_insert" ON public.moderation_audit_log
+  FOR INSERT WITH CHECK (public.is_staff());
+
+DROP POLICY IF EXISTS "Allow read user reports" ON public.user_reports;
+DROP POLICY IF EXISTS "Allow write user reports" ON public.user_reports;
+DROP POLICY IF EXISTS "user_reports_select" ON public.user_reports;
+DROP POLICY IF EXISTS "user_reports_insert" ON public.user_reports;
+DROP POLICY IF EXISTS "user_reports_update_staff" ON public.user_reports;
+
+CREATE POLICY "user_reports_select" ON public.user_reports
+  FOR SELECT USING (
+    auth.uid()::text = "reporterUserId"
+    OR public.is_staff()
+  );
+
+CREATE POLICY "user_reports_insert" ON public.user_reports
+  FOR INSERT WITH CHECK (auth.uid()::text = "reporterUserId");
+
+CREATE POLICY "user_reports_update_staff" ON public.user_reports
+  FOR UPDATE USING (public.is_staff())
+  WITH CHECK (public.is_staff());
+
+DROP POLICY IF EXISTS "Allow read support tickets" ON public.support_tickets;
+DROP POLICY IF EXISTS "Allow write support tickets" ON public.support_tickets;
+DROP POLICY IF EXISTS "support_tickets_select" ON public.support_tickets;
+DROP POLICY IF EXISTS "support_tickets_write" ON public.support_tickets;
+
+CREATE POLICY "support_tickets_select" ON public.support_tickets
+  FOR SELECT USING (
+    auth.uid()::text = "openerUserId"
+    OR (public.is_staff() AND public.role_rank(public.current_user_role()) >= "minStaffRank")
+  );
+
+CREATE POLICY "support_tickets_write" ON public.support_tickets
+  FOR ALL USING (
+    auth.uid()::text = "openerUserId"
+    OR public.is_staff()
+  )
+  WITH CHECK (
+    auth.uid()::text = "openerUserId"
+    OR public.is_staff()
+  );
+
+DROP POLICY IF EXISTS "Allow read ticket messages" ON public.support_ticket_messages;
+DROP POLICY IF EXISTS "Allow write ticket messages" ON public.support_ticket_messages;
+DROP POLICY IF EXISTS "ticket_messages_select" ON public.support_ticket_messages;
+DROP POLICY IF EXISTS "ticket_messages_write" ON public.support_ticket_messages;
+
+CREATE POLICY "ticket_messages_select" ON public.support_ticket_messages
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.support_tickets t
+      WHERE t.id = "ticketId"
+        AND (
+          t."openerUserId" = auth.uid()::text
+          OR (public.is_staff() AND public.role_rank(public.current_user_role()) >= t."minStaffRank")
+        )
+    )
+  );
+
+CREATE POLICY "ticket_messages_write" ON public.support_ticket_messages
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.support_tickets t
+      WHERE t.id = "ticketId"
+        AND (
+          t."openerUserId" = auth.uid()::text
+          OR public.is_staff()
+        )
+    )
+  )
+  WITH CHECK (
+    auth.uid()::text = "senderUserId"
+    AND EXISTS (
+      SELECT 1 FROM public.support_tickets t
+      WHERE t.id = "ticketId"
+        AND (
+          t."openerUserId" = auth.uid()::text
+          OR public.is_staff()
+        )
+    )
+  );
+
+-- ---------------------------------------------------------
+-- 9. LISTING SUBITEMS, EVENTS, REVIEWS
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow read listing subitems" ON public.listing_subitems;
+DROP POLICY IF EXISTS "Allow write listing subitems" ON public.listing_subitems;
+DROP POLICY IF EXISTS "listing_subitems_select" ON public.listing_subitems;
+DROP POLICY IF EXISTS "listing_subitems_write" ON public.listing_subitems;
+
+CREATE POLICY "listing_subitems_select" ON public.listing_subitems
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "listing_subitems_write" ON public.listing_subitems
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.items i
+      WHERE i.id = "itemId" AND i."userId" = auth.uid()::text
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.items i
+      WHERE i.id = "itemId" AND i."userId" = auth.uid()::text
+    )
+  );
+
+DROP POLICY IF EXISTS "Allow read community events" ON public.community_events;
+DROP POLICY IF EXISTS "Allow write community events" ON public.community_events;
+DROP POLICY IF EXISTS "community_events_select" ON public.community_events;
+DROP POLICY IF EXISTS "community_events_write_own" ON public.community_events;
+DROP POLICY IF EXISTS "community_events_insert" ON public.community_events;
+DROP POLICY IF EXISTS "community_events_update" ON public.community_events;
+DROP POLICY IF EXISTS "community_events_delete" ON public.community_events;
+
+CREATE POLICY "community_events_select" ON public.community_events
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "community_events_insert" ON public.community_events
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "community_events_update" ON public.community_events
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "community_events_delete" ON public.community_events
+  FOR DELETE USING (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+DROP POLICY IF EXISTS "Allow read event rsvps" ON public.event_rsvps;
+DROP POLICY IF EXISTS "Allow write event rsvps" ON public.event_rsvps;
+DROP POLICY IF EXISTS "event_rsvps_select" ON public.event_rsvps;
+DROP POLICY IF EXISTS "event_rsvps_write_own" ON public.event_rsvps;
+DROP POLICY IF EXISTS "event_rsvps_insert" ON public.event_rsvps;
+DROP POLICY IF EXISTS "event_rsvps_update" ON public.event_rsvps;
+DROP POLICY IF EXISTS "event_rsvps_delete" ON public.event_rsvps;
+
+CREATE POLICY "event_rsvps_select" ON public.event_rsvps
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_rsvps_insert" ON public.event_rsvps
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_rsvps_update" ON public.event_rsvps
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_rsvps_delete" ON public.event_rsvps
+  FOR DELETE USING (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+DROP POLICY IF EXISTS "Allow read event comments" ON public.event_comments;
+DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;
+DROP POLICY IF EXISTS "event_comments_select" ON public.event_comments;
+DROP POLICY IF EXISTS "event_comments_write_own" ON public.event_comments;
+DROP POLICY IF EXISTS "event_comments_insert" ON public.event_comments;
+DROP POLICY IF EXISTS "event_comments_update" ON public.event_comments;
+DROP POLICY IF EXISTS "event_comments_delete" ON public.event_comments;
+
+CREATE POLICY "event_comments_select" ON public.event_comments
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_comments_insert" ON public.event_comments
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_comments_update" ON public.event_comments
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+CREATE POLICY "event_comments_delete" ON public.event_comments
+  FOR DELETE USING (
+    auth.uid()::text = "userId"
+    AND (public.events_unlocked() OR public.is_staff())
+  );
+
+DROP POLICY IF EXISTS "Allow read app reviews" ON public.app_reviews;
+DROP POLICY IF EXISTS "Allow write app reviews" ON public.app_reviews;
+DROP POLICY IF EXISTS "app_reviews_select" ON public.app_reviews;
+DROP POLICY IF EXISTS "app_reviews_write_own" ON public.app_reviews;
+
+CREATE POLICY "app_reviews_select" ON public.app_reviews
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "app_reviews_write_own" ON public.app_reviews
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+-- ---------------------------------------------------------
+-- 10. DIRECTOR / STAFF CONTENT
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow read director message" ON public.director_message;
+DROP POLICY IF EXISTS "Allow write director message" ON public.director_message;
+DROP POLICY IF EXISTS "director_message_select" ON public.director_message;
+DROP POLICY IF EXISTS "director_message_write" ON public.director_message;
+
+CREATE POLICY "director_message_select" ON public.director_message
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "director_message_write" ON public.director_message
+  FOR ALL USING (public.is_director())
+  WITH CHECK (public.is_director());
+
+DROP POLICY IF EXISTS "Allow read staff messages" ON public.staff_messages;
+DROP POLICY IF EXISTS "Allow write staff messages" ON public.staff_messages;
+DROP POLICY IF EXISTS "staff_messages_select" ON public.staff_messages;
+DROP POLICY IF EXISTS "staff_messages_write" ON public.staff_messages;
+
+CREATE POLICY "staff_messages_select" ON public.staff_messages
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "staff_messages_write" ON public.staff_messages
+  FOR ALL USING (
+    public.is_staff() AND auth.uid()::text = "userId"
+  )
+  WITH CHECK (
+    public.is_staff() AND auth.uid()::text = "userId"
+  );
+
+DROP POLICY IF EXISTS "Allow read app updates" ON public.app_updates;
+DROP POLICY IF EXISTS "Allow write app updates" ON public.app_updates;
+DROP POLICY IF EXISTS "app_updates_select" ON public.app_updates;
+DROP POLICY IF EXISTS "app_updates_write" ON public.app_updates;
+
+CREATE POLICY "app_updates_select" ON public.app_updates
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "app_updates_write" ON public.app_updates
+  FOR ALL USING (public.is_director())
+  WITH CHECK (public.is_director());
+
+-- push_dispatch_log — service role only
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'push_dispatch_log') THEN
+    EXECUTE 'ALTER TABLE public.push_dispatch_log ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "push_dispatch_log_deny" ON public.push_dispatch_log';
+    EXECUTE 'CREATE POLICY "push_dispatch_log_deny" ON public.push_dispatch_log FOR ALL USING (false)';
+  END IF;
+END $$;
+
+
+-- ---------------------------------------------------------
+-- 9b. HELP ANNOUNCEMENTS, COMMENTS, CONTENT VOTES
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Allow read help announcements" ON public.help_announcements;
+DROP POLICY IF EXISTS "Allow write help announcements" ON public.help_announcements;
+DROP POLICY IF EXISTS "help_announcements_select" ON public.help_announcements;
+DROP POLICY IF EXISTS "help_announcements_write" ON public.help_announcements;
+CREATE POLICY "help_announcements_select" ON public.help_announcements
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "help_announcements_write" ON public.help_announcements
+  FOR ALL USING (public.is_staff()) WITH CHECK (public.is_staff());
+
+DROP POLICY IF EXISTS "Allow read app update comments" ON public.app_update_comments;
+DROP POLICY IF EXISTS "Allow write app update comments" ON public.app_update_comments;
+DROP POLICY IF EXISTS "app_update_comments_select" ON public.app_update_comments;
+DROP POLICY IF EXISTS "app_update_comments_write" ON public.app_update_comments;
+CREATE POLICY "app_update_comments_select" ON public.app_update_comments
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "app_update_comments_write" ON public.app_update_comments
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Allow read help announcement comments" ON public.help_announcement_comments;
+DROP POLICY IF EXISTS "Allow write help announcement comments" ON public.help_announcement_comments;
+DROP POLICY IF EXISTS "help_announcement_comments_select" ON public.help_announcement_comments;
+DROP POLICY IF EXISTS "help_announcement_comments_write" ON public.help_announcement_comments;
+CREATE POLICY "help_announcement_comments_select" ON public.help_announcement_comments
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "help_announcement_comments_write" ON public.help_announcement_comments
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Allow read community content votes" ON public.community_content_votes;
+DROP POLICY IF EXISTS "Allow write community content votes" ON public.community_content_votes;
+DROP POLICY IF EXISTS "content_votes_select" ON public.community_content_votes;
+DROP POLICY IF EXISTS "content_votes_write" ON public.community_content_votes;
+CREATE POLICY "content_votes_select" ON public.community_content_votes
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "content_votes_write" ON public.community_content_votes
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Users read own notifications" ON public.user_notifications;
+DROP POLICY IF EXISTS "Users mark own notifications read" ON public.user_notifications;
+CREATE POLICY "Users read own notifications" ON public.user_notifications
+  FOR SELECT USING (auth.uid()::text = "userId");
+CREATE POLICY "Users mark own notifications read" ON public.user_notifications
+  FOR UPDATE USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Users manage own push subscriptions" ON public.push_subscriptions;
+CREATE POLICY "Users manage own push subscriptions" ON public.push_subscriptions
+  FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Users manage own notification preferences" ON public.notification_preferences;
+CREATE POLICY "Users manage own notification preferences" ON public.notification_preferences
+  FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Users manage own saved items" ON public.saved_items;
+CREATE POLICY "Users manage own saved items" ON public.saved_items
+  FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
+
+
+-- ---------------------------------------------------------
+-- 11. STORAGE — path-scoped uploads
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "Public read items bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public upload items bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public update items bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public delete items bucket" ON storage.objects;
+DROP POLICY IF EXISTS "items_storage_read" ON storage.objects;
+DROP POLICY IF EXISTS "items_storage_insert" ON storage.objects;
+DROP POLICY IF EXISTS "items_storage_update" ON storage.objects;
+DROP POLICY IF EXISTS "items_storage_delete" ON storage.objects;
+
+CREATE POLICY "items_storage_read" ON storage.objects
+  FOR SELECT USING (bucket_id = 'items');
+
+CREATE POLICY "items_storage_insert" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'items'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "items_storage_update" ON storage.objects
+  FOR UPDATE USING (
+    bucket_id = 'items'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "items_storage_delete" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'items'
+    AND (
+      (auth.uid() IS NOT NULL AND (storage.foldername(name))[1] = auth.uid()::text)
+      OR public.is_staff()
+    )
+  );
+
+DROP POLICY IF EXISTS "Public read avatars bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public upload avatars bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public update avatars bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public delete avatars bucket" ON storage.objects;
+DROP POLICY IF EXISTS "avatars_storage_read" ON storage.objects;
+DROP POLICY IF EXISTS "avatars_storage_insert" ON storage.objects;
+DROP POLICY IF EXISTS "avatars_storage_update" ON storage.objects;
+DROP POLICY IF EXISTS "avatars_storage_delete" ON storage.objects;
+
+CREATE POLICY "avatars_storage_read" ON storage.objects
+  FOR SELECT USING (bucket_id = 'avatars');
+
+CREATE POLICY "avatars_storage_insert" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'avatars'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "avatars_storage_update" ON storage.objects
+  FOR UPDATE USING (
+    bucket_id = 'avatars'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "avatars_storage_delete" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'avatars'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- ---------------------------------------------------------
+-- 12. Lock down dangerous RPCs
+-- ---------------------------------------------------------
+
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM authenticated;
+REVOKE ALL ON FUNCTION public.purge_user_community_data(text) FROM anon;
+
+-- Director-only role changes via RPC (client cannot PATCH role after hardening)
+CREATE OR REPLACE FUNCTION public.set_user_role(target_uid text, new_role text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  actor_uid text := auth.uid()::text;
+  actor_role text;
+BEGIN
+  IF actor_uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  SELECT role INTO actor_role FROM public.users WHERE uid = actor_uid;
+  IF actor_role IS DISTINCT FROM 'director' THEN
+    RAISE EXCEPTION 'Director access required';
+  END IF;
+
+  IF new_role NOT IN ('user', 'city_moderator', 'city_administrator', 'city_manager', 'director') THEN
+    RAISE EXCEPTION 'Invalid role';
+  END IF;
+
+  IF target_uid IS NULL OR target_uid = '' THEN
+    RAISE EXCEPTION 'Target user required';
+  END IF;
+
+  UPDATE public.users SET role = new_role WHERE uid = target_uid;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.set_user_role(text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.set_user_role(text, text) TO authenticated;
+
+
+
+-- =========================================================
+-- REALTIME — live sync for all public tables
+-- =========================================================
+DO $$
+DECLARE
+  tbl TEXT;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY[
+    'items',
+    'chats',
+    'messages',
+    'item_votes',
+    'item_comments',
+    'item_claims',
+    'listing_subitems',
+    'item_claim_requests',
+    'users',
+    'user_blocks',
+    'message_requests',
+    'moderation_audit_log',
+    'user_reports',
+    'support_tickets',
+    'support_ticket_messages',
+    'community_events',
+    'event_rsvps',
+    'event_comments',
+    'director_message',
+    'staff_messages',
+    'app_updates',
+    'app_reviews',
+    'push_subscriptions',
+    'notification_preferences',
+    'user_notifications',
+    'saved_items',
+    'award_definitions',
+    'user_awards',
+    'help_announcements',
+    'help_announcement_comments',
+    'app_update_comments',
+    'community_content_votes'
+  ]
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = tbl
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', tbl);
+    END IF;
+  END LOOP;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
+
+
+
+-- =========================================================
+-- COMMUNITY CHAT SEEDS
+-- =========================================================
+
+ and staff-only group chats (reuse chats + messages tables).
+-- Run once in Supabase SQL Editor. Safe to re-run.
+
+INSERT INTO public.chats (
+  id,
+  "participantIds",
+  "participantNames",
+  "participantPhotos",
+  "lastMessageText",
+  "lastMessageAt",
+  "itemId",
+  "itemTitle"
+) VALUES
+(
+  'community-global',
+  '[]'::jsonb,
+  '{}'::jsonb,
+  '{}'::jsonb,
+  'Welcome to the community chat — say hello!',
+  NOW(),
+  '',
+  ''
+),
+(
+  'community-staff',
+  '[]'::jsonb,
+  '{}'::jsonb,
+  '{}'::jsonb,
+  'Staff lounge — team coordination.',
+  NOW(),
+  '',
+  ''
+)
+ON CONFLICT (id) DO NOTHING;
+
+
+-- =========================================================
+-- PUSH WEBHOOKS (configure in Dashboard — not SQL)
+-- =========================================================
+
+-- =========================================================
+-- SERVER-SIDE PUSH WEBHOOKS — complete neighbor + staff list
+-- =========================================================
+--
+-- Run supabase-complete.sql first so all tables exist.
+--
+-- EASIEST (recommended): Supabase Dashboard → Database → Webhooks — see table below.
+-- Legacy SQL webhook installers are removed; Dashboard webhooks send the
+-- correct { type, table, record } payload. SQL triggers send an empty body and are skipped.
+--
+-- Auth (either works on /api/webhooks/supabase-push):
+--   Authorization: Bearer <SUPABASE_PUSH_WEBHOOK_SECRET>   (recommended)
+--   Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>      (legacy fallback)
+-- URL (all webhooks): https://sacramentobuynothing.com/api/webhooks/supabase-push
+--
+-- | Webhook name          | Table                   | Events         | Who gets notified                |
+-- |-----------------------|-------------------------|----------------|----------------------------------|
+-- | push-users-join       | users                   | INSERT         | Directors: new neighbors         |
+-- | push-users-leave      | users                   | DELETE         | Directors: departures            |
+-- | push-listings-insert  | items                   | INSERT         | Discover + directors             |
+-- | push-listings-update  | items                   | UPDATE         | Owner status, saved-item alerts  |
+-- | push-dm-requests      | message_requests        | INSERT, UPDATE | DM requests + directors          |
+-- | push-claim-reqs       | item_claim_requests     | INSERT         | Giver + directors                |
+-- | push-item-claims      | item_claims             | INSERT         | Listing owner (claim)            |
+-- | push-comments         | item_comments           | INSERT         | Owner + saved-item bookmarkers   |
+-- | push-votes            | item_votes              | INSERT, UPDATE | Listing owner (up/down)          |
+-- | push-messages         | messages                | INSERT         | Chat participant                 |
+-- | push-moderation       | moderation_audit_log    | INSERT         | Directors                        |
+-- | push-reports          | user_reports            | INSERT         | Staff inbox                      |
+-- | push-support          | support_ticket_messages | INSERT         | Support + staff inbox            |
+-- | push-app-updates      | app_updates             | INSERT         | Director changelog (app updates) |
+-- | push-announcements    | help_announcements      | INSERT         | Staff help announcements         |
+--
+-- items UPDATE covers: status changes, owner listing-status alerts, saved-item
+-- status alerts, pickup-scheduled alerts (pending_pickup), and saved-item alerts
+-- when the owner edits/saves their post.
+--
+-- moderation_audit_log INSERT covers director moderation alerts and account-update
+-- pushes to suspended/banned neighbors (suspend, unsuspend, ban, unban, set_role).
+--
+-- Daily cron (Vercel): /api/cron/notification-jobs — listing expiry + pickup reminders.

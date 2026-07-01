@@ -55,7 +55,7 @@ export function createPushApp() {
       console.error('[push] subscribe failed:', error.code, error.message);
       if (error.code === '42P01' || error.message?.includes('push_subscriptions')) {
         res.status(503).json({
-          error: 'Push tables are missing in Supabase. Run supabase-sql/push-notifications.sql in the SQL editor.',
+          error: 'Push tables are missing in Supabase. Run supabase-complete.sql in the SQL editor.',
         });
         return;
       }

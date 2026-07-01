@@ -60,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('[api/push/subscribe]', claimed.error);
       if (claimed.error?.includes('push_subscriptions') || claimed.error?.includes('42P01')) {
         return res.status(503).json({
-          error: 'Push tables are missing in Supabase. Run supabase-sql/notifications-complete.sql in the SQL editor.',
+          error: 'Push tables are missing in Supabase. Run supabase-complete.sql in the SQL editor.',
         });
       }
       return res.status(500).json({ error: claimed.error || 'Could not save subscription' });

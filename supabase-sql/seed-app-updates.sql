@@ -1,2 +1,0 @@
--- Changelog seed data is merged into all-community-updates.sql.
--- Run that file in Supabase SQL Editor (tables + all 71 updates in one go).
