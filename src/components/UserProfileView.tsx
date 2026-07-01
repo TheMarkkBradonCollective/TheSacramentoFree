@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import ProfilePostList from './ProfilePostList';
 import ProfileAwardsRow from './ProfileAwardsRow';
+import ProfileAwardsSection from './ProfileAwardsSection';
 import ThemeSettings from './ThemeSettings';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
@@ -36,6 +37,8 @@ import TermsOfUseModal from './TermsOfUseModal';
 import { IN_APP, PRIVACY, TERMS } from '../siteContent';
 import { isPrivacyAccepted } from '../lib/privacyPolicyPrompt';
 import { isTermsAccepted } from '../lib/termsPolicyPrompt';
+import { getNeighborAwardClaims } from '../supabase';
+import { buildNeighborAwardSummary, type NeighborAwardSummary } from '../lib/neighborAwards';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -92,10 +95,35 @@ export default function UserProfileView({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
+  const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
 
   useEffect(() => {
     getNeighborStats(userProfile.uid).then(setStats);
   }, [userProfile.uid]);
+
+  useEffect(() => {
+    if (!onOpenAwards) return;
+    let cancelled = false;
+    setAwardsLoading(true);
+    void Promise.all([getNeighborStats(userProfile.uid), getNeighborAwardClaims(userProfile.uid)]).then(
+      ([nextStats, claims]) => {
+        if (cancelled) return;
+        setAwardSummary(
+          buildNeighborAwardSummary({
+            userId: userProfile.uid,
+            posts: userPosts,
+            claims,
+            stats: nextStats,
+          }),
+        );
+        setAwardsLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [onOpenAwards, userProfile.uid, userPosts]);
 
   useEffect(() => {
     if (isPhotoUploading) return;
@@ -739,6 +767,16 @@ export default function UserProfileView({
             <Trash2 className="w-4 h-4" />
             <span>{isDeletingAccount ? 'Deleting…' : 'Delete my account'}</span>
           </button>
+        </div>
+      )}
+
+      {onOpenAwards && (
+        <div className={fullBleed ? sectionShell : ''}>
+          <ProfileAwardsSection
+            summary={awardSummary}
+            loading={awardsLoading}
+            onOpenAwards={onOpenAwards}
+          />
         </div>
       )}
 

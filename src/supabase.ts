@@ -1412,6 +1412,56 @@ export interface CommunityStats {
   requestsFulfilled: number;
 }
 
+export interface NeighborAwardClaimRow {
+  id: string;
+  itemId: string;
+  kind: string;
+  createdAt: string;
+  giverUserId: string;
+  claimerUserId: string;
+  itemTitle?: string;
+  itemType?: ItemPost['type'];
+}
+
+export async function getNeighborAwardClaims(uid: string): Promise<NeighborAwardClaimRow[]> {
+  try {
+    const [asClaimer, asGiver] = await Promise.all([
+      supabase
+        .from('item_claims')
+        .select('id, itemId, kind, createdAt, giverUserId, claimerUserId')
+        .eq('claimerUserId', uid)
+        .order('createdAt', { ascending: false })
+        .limit(80),
+      supabase
+        .from('item_claims')
+        .select('id, itemId, kind, createdAt, giverUserId, claimerUserId')
+        .eq('giverUserId', uid)
+        .eq('kind', 'request_fulfilled')
+        .order('createdAt', { ascending: false })
+        .limit(80),
+    ]);
+
+    const rows = [...(asClaimer.data ?? []), ...(asGiver.data ?? [])] as NeighborAwardClaimRow[];
+    if (rows.length === 0) return [];
+
+    const itemIds = [...new Set(rows.map((r) => r.itemId))];
+    const { data: items } = await supabase.from('items').select('id, title, type').in('id', itemIds);
+    const itemMap = new Map((items ?? []).map((row) => [String(row.id), row]));
+
+    return rows.map((row) => {
+      const item = itemMap.get(row.itemId);
+      return {
+        ...row,
+        createdAt: String(row.createdAt),
+        itemTitle: item?.title ? String(item.title) : undefined,
+        itemType: item?.type as ItemPost['type'] | undefined,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 /** Director-only: update another user's role (enforced by set_user_role RPC + RLS). */
 export async function setUserRole(
   uid: string,

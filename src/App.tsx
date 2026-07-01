@@ -1207,7 +1207,11 @@ export default function App() {
                   subtitle={AWARDS.panelSubtitle}
                   onClose={() => setShowAwardsPanel(false)}
                 >
-                  <AwardsPanel userProfile={userProfile} onViewProfile={handleViewProfile} />
+                  <AwardsPanel
+                    userProfile={userProfile}
+                    userPosts={visibleItems.filter((item) => item.userId === userProfile.uid)}
+                    onViewProfile={handleViewProfile}
+                  />
                 </FullScreenPanel>
               )}
 

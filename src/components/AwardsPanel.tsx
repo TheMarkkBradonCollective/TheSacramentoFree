@@ -1,24 +1,26 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Heart, PartyPopper, Sparkles, Star, Trophy } from 'lucide-react';
-import { UserProfile } from '../types';
+import { ItemPost, UserProfile } from '../types';
 import { useAwards } from '../hooks/useAwards';
 import { awardCategoryTheme } from '../lib/awardTheme';
 import { AWARDS } from '../siteContent';
 import AwardsSharePrompt from './AwardsSharePrompt';
 import AwardCard from './AwardCard';
 import AwardsLeaderboard from './AwardsLeaderboard';
+import AwardsNeighborHistory from './AwardsNeighborHistory';
 import StaffAwardsAdmin from './StaffAwardsAdmin';
 import { useAwardsLeaderboard } from '../hooks/useAwardsLeaderboard';
 
 interface AwardsPanelProps {
   userProfile: UserProfile;
+  userPosts?: ItemPost[];
   onViewProfile?: (userId: string) => void;
 }
 
-type AwardsTab = 'mine' | 'all' | 'leaderboard' | 'manage';
+type AwardsTab = 'mine' | 'all' | 'leaderboard' | 'history' | 'manage';
 
-export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelProps) {
+export default function AwardsPanel({ userProfile, userPosts = [], onViewProfile }: AwardsPanelProps) {
   const {
     definitions,
     userAwards,
@@ -106,7 +108,7 @@ export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelP
         </motion.div>
       )}
 
-      {canAccessAwards && (
+      {canAccessAwards ? (
         <>
           <div className="flex flex-wrap gap-2 justify-center">
             <TabButton active={tab === 'mine'} onClick={() => setTab('mine')} emoji="🏅">
@@ -117,6 +119,9 @@ export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelP
             </TabButton>
             <TabButton active={tab === 'leaderboard'} onClick={() => setTab('leaderboard')} emoji="🏆">
               Leaderboard
+            </TabButton>
+            <TabButton active={tab === 'history'} onClick={() => setTab('history')} emoji="🕰️">
+              Go back in time
             </TabButton>
             {canManage && (
               <TabButton active={tab === 'manage'} onClick={() => setTab('manage')} emoji="🛠️">
@@ -200,11 +205,26 @@ export default function AwardsPanel({ userProfile, onViewProfile }: AwardsPanelP
             />
           )}
 
+          {tab === 'history' && (
+            <AwardsNeighborHistory userId={userProfile.uid} userPosts={userPosts} />
+          )}
+
           {tab === 'manage' && canManage && <StaffAwardsAdmin userProfile={userProfile} />}
+        </>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <TabButton active={tab === 'history'} onClick={() => setTab('history')} emoji="🕰️">
+              Go back in time
+            </TabButton>
+          </div>
+          {tab === 'history' && (
+            <AwardsNeighborHistory userId={userProfile.uid} userPosts={userPosts} />
+          )}
         </>
       )}
 
-      {!canAccessAwards && (
+      {!canAccessAwards && tab !== 'history' && (
         <div className="sbn-card p-5 text-left space-y-4 rounded-2xl border-accent/15 bg-gradient-to-b from-accent-soft/15 to-transparent">
           <p className="text-sm font-display font-bold text-app flex items-center gap-2">
             <Heart className="w-4 h-4 text-accent fill-accent/30" />

@@ -375,6 +375,8 @@ export const TERMS = {
 export const AWARDS = {
   panelTitle: 'Neighbor Awards',
   panelSubtitle: 'Fun badges for generous neighbors — unlock at 500 members!',
+  panelIntro:
+    'Celebrate the free gifts, fulfilled requests, trades, and neighborly moments you have built over time.',
   unlockBadge: 'Almost party time',
   unlockTitle: 'Let\'s unlock awards together!',
   unlockBody:
@@ -394,6 +396,14 @@ export const AWARDS = {
   leaderboardLoading: 'Loading the leaderboard…',
   leaderboardEmptyTitle: 'No leaderboard yet',
   leaderboardEmptyHint: 'As neighbors earn badges, the most decorated profiles will show up here.',
+  profileSectionTitle: 'Your awards',
+  profileSectionBody: 'See badges you have earned and scroll back through your community history.',
+  profileOpenButton: 'Go back in time',
+  timelineTitle: 'Go back in time',
+  timelineIntro:
+    'Your neighborhood story, newest first — giveaways completed, gifts received, requests fulfilled, and trades.',
+  timelineEmpty:
+    'No history yet. Give, request, trade, or help a neighbor — your timeline will grow from here.',
   previewBullets: [
     'Founding neighbor badges for the first 100, 200, 300, 400, and 500 members',
     'Auto badges when you give gifts, claim items, and fulfill requests',
@@ -409,7 +419,7 @@ export const AWARDS = {
     'Recognition for kind, reliable neighbors',
   ],
   comingSoonNote:
-    'This is not a donation page and will never charge neighbors. Awards are about community spirit, not payments.',
+    'Awards are about community spirit only — never payments or donations.',
 } as const;
 
 export const EVENTS = {
