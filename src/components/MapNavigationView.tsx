@@ -233,7 +233,7 @@ function NavigationDetailsSheet({
   return (
     <motion.div
       id="nav_details_sheet"
-      className={`sbn-nav-sheet absolute inset-x-0 bottom-0 z-30 flex flex-col safe-area-pb ${
+      className={`sbn-nav-sheet relative z-30 flex flex-col w-full safe-area-pb ${
         expanded ? 'max-h-[72vh]' : ''
       }`}
       initial={false}
@@ -511,6 +511,9 @@ export default function MapNavigationView({
   routeRef.current = route;
   voiceOnRef.current = voiceOn;
 
+  const initialOriginRef = useRef(origin);
+  const mapBootstrappedRef = useRef(false);
+
   const currentStep: NavigationStep | undefined = route?.steps[stepIndex];
 
   const remainingMeters = useMemo(() => {
@@ -519,10 +522,10 @@ export default function MapNavigationView({
   }, [route, userPos]);
 
   const remainingSeconds = useMemo(() => {
-    if (!route || route.distanceMeters <= 0) return 0;
+    if (!route || route.distanceMeters <= 0 || arrived) return 0;
     const ratio = Math.min(1, remainingMeters / route.distanceMeters);
-    return Math.max(60, Math.round(route.durationSeconds * ratio));
-  }, [route, remainingMeters]);
+    return Math.max(0, Math.round(route.durationSeconds * ratio));
+  }, [route, remainingMeters, arrived]);
 
   const distanceToManeuver = useMemo(() => {
     if (!route) return 0;
@@ -615,7 +618,8 @@ export default function MapNavigationView({
     arrivedRef.current = false;
     setArrived(false);
 
-    void loadRoute(origin, destination, false).then((result) => {
+    const from = userPosRef.current;
+    void loadRoute(from, destination, false).then((result) => {
       if (cancelled) return;
       if (!result) {
         setError('Could not load driving directions. Try again in a moment.');
@@ -628,7 +632,7 @@ export default function MapNavigationView({
     return () => {
       cancelled = true;
     };
-  }, [origin, destination, loadRoute]);
+  }, [destination.lat, destination.lng, loadRoute]);
 
   useEffect(() => {
     if (!route || routeAnnouncedRef.current || !voiceOn) return;
@@ -645,15 +649,17 @@ export default function MapNavigationView({
   }, [route, destinationLabel, voiceOn]);
 
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (!mapContainerRef.current || mapRef.current || mapBootstrappedRef.current) return;
+    mapBootstrappedRef.current = true;
 
+    const start = initialOriginRef.current;
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
       attributionControl: true,
       fadeAnimation: false,
       zoomAnimation: false,
       markerZoomAnimation: false,
-    }).setView([origin.lat, origin.lng], 16);
+    }).setView([start.lat, start.lng], 16);
 
     const tileLayer = L.tileLayer(NAV_TILE_URLS[mapStyle], {
       maxZoom: 19,
@@ -668,9 +674,29 @@ export default function MapNavigationView({
     routeLayerRef.current = routeLayer;
     mapRef.current = map;
 
-    window.setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 200);
+    const invalidate = () => {
+      if (!mapRef.current?.getContainer()?.isConnected) return;
+      mapRef.current.invalidateSize({ animate: false, pan: false });
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            invalidate();
+          })
+        : null;
+    resizeObserver?.observe(mapContainerRef.current);
+
+    const onWindowResize = () => invalidate();
+    window.addEventListener('resize', onWindowResize);
+    window.addEventListener('orientationchange', onWindowResize);
+
+    window.setTimeout(invalidate, 200);
 
     return () => {
+      window.removeEventListener('resize', onWindowResize);
+      window.removeEventListener('orientationchange', onWindowResize);
+      resizeObserver?.disconnect();
       if (navPanRafRef.current != null) {
         cancelAnimationFrame(navPanRafRef.current);
         navPanRafRef.current = null;
@@ -682,12 +708,37 @@ export default function MapNavigationView({
       destMarkerRef.current = null;
       userMarkerRef.current = null;
       hasFittedRouteRef.current = false;
+      mapBootstrappedRef.current = false;
     };
-  }, [origin.lat, origin.lng]);
+  }, []);
 
   useEffect(() => {
     tileLayerRef.current?.setUrl(NAV_TILE_URLS[mapStyle]);
   }, [mapStyle]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    window.setTimeout(() => {
+      map.invalidateSize({ animate: false, pan: false });
+    }, 120);
+  }, [sheetSnap]);
+
+  useEffect(() => {
+    const sheet = document.getElementById('nav_details_sheet');
+    const root = document.getElementById('map_navigation_view');
+    if (!sheet || !root) return;
+
+    const updateSheetOffset = () => {
+      root.style.setProperty('--sbn-nav-sheet-height', `${sheet.offsetHeight}px`);
+      mapRef.current?.invalidateSize({ animate: false, pan: false });
+    };
+
+    updateSheetOffset();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateSheetOffset) : null;
+    observer?.observe(sheet);
+    return () => observer?.disconnect();
+  }, [sheetSnap, route, loading, arrived]);
 
   useEffect(() => {
     if (!route || !mapRef.current || !routeLayerRef.current) return;
@@ -957,7 +1008,7 @@ export default function MapNavigationView({
     setLoading(true);
     setError(null);
     routeAnnouncedRef.current = false;
-    void loadRoute(origin, destination, false).then((result) => {
+    void loadRoute(userPosRef.current, destination, false).then((result) => {
       if (!result) {
         setError('Could not load driving directions. Try again in a moment.');
         setLoading(false);
@@ -1030,7 +1081,7 @@ export default function MapNavigationView({
         )}
 
         <div className="absolute inset-0 z-20 pointer-events-none flex flex-col">
-          <div className="pointer-events-auto safe-area-pt">
+          <div className="pointer-events-auto safe-area-pt shrink-0">
             <motion.div
               id="nav_instruction_banner"
               className="sbn-nav-banner sbn-nav-glass sbn-nav-banner-accent"
@@ -1078,24 +1129,24 @@ export default function MapNavigationView({
               </div>
 
               {!loading && !arrived && maneuverKind !== 'arrive' && <LaneGuidanceStrip kind={maneuverKind} />}
+
+              {!loading && route && (rerouting || offRouteMeters > 55) && !arrived && (
+                <p className="mt-2 text-center text-xs font-semibold text-[var(--sbn-nav-warning)]">
+                  {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
+                </p>
+              )}
             </motion.div>
 
             <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
           </div>
 
           {!loading && route && (
-            <>
-              <div className="absolute left-3 top-[7.75rem] pointer-events-auto">
+            <div className="relative flex-1 min-h-0">
+              <div className="absolute left-3 bottom-3 pointer-events-auto">
                 <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} />
               </div>
 
-              {(rerouting || offRouteMeters > 55) && !arrived && (
-                <div className="absolute left-1/2 top-[7.75rem] -translate-x-1/2 sbn-nav-glass rounded-full px-3 py-1.5 text-xs font-semibold pointer-events-none">
-                  {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
-                </div>
-              )}
-
-              <div className="absolute right-3 top-[7.75rem] flex flex-col gap-2.5 pointer-events-auto">
+              <div className="absolute right-3 top-2 flex flex-col gap-2.5 pointer-events-auto">
                 <button
                   type="button"
                   onClick={() => setShowHeading((v) => !v)}
@@ -1145,37 +1196,39 @@ export default function MapNavigationView({
               </div>
 
               {showHeading && (
-                <div className="absolute right-3 top-[20.5rem] sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none">
+                <div className="absolute right-3 top-[17.5rem] sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none">
                   {Math.round(heading)}°
                 </div>
               )}
 
               {!arrived && currentRoadLabel && sheetSnap === 'collapsed' && (
-                <div className="absolute inset-x-0 bottom-[7.85rem] flex justify-center px-4">
+                <div className="absolute inset-x-0 bottom-3 flex justify-center px-20 pointer-events-none">
                   <div className="sbn-nav-road-pill truncate">{currentRoadLabel}</div>
                 </div>
               )}
+            </div>
+          )}
 
-              <div className="mt-auto pointer-events-auto">
-                <NavigationDetailsSheet
-                  snap={sheetSnap}
-                  onSnapChange={setSheetSnap}
-                  arrived={arrived}
-                  destinationLabel={destinationLabel}
-                  remainingSeconds={remainingSeconds}
-                  remainingMeters={remainingMeters}
-                  gpsAccuracy={gpsAccuracy}
-                  route={route}
-                  stepIndex={stepIndex}
-                  voiceOn={voiceOn}
-                  onVoiceToggle={handleVoiceToggle}
-                  onOverview={handleOverview}
-                  onShare={() => void handleShareTrip()}
-                  onRecenter={handleRecenter}
-                  onExit={handleExit}
-                />
-              </div>
-            </>
+          {!loading && route && (
+            <div className="shrink-0 pointer-events-auto">
+              <NavigationDetailsSheet
+                snap={sheetSnap}
+                onSnapChange={setSheetSnap}
+                arrived={arrived}
+                destinationLabel={destinationLabel}
+                remainingSeconds={remainingSeconds}
+                remainingMeters={remainingMeters}
+                gpsAccuracy={gpsAccuracy}
+                route={route}
+                stepIndex={stepIndex}
+                voiceOn={voiceOn}
+                onVoiceToggle={handleVoiceToggle}
+                onOverview={handleOverview}
+                onShare={() => void handleShareTrip()}
+                onRecenter={handleRecenter}
+                onExit={handleExit}
+              />
+            </div>
           )}
         </div>
       </div>
