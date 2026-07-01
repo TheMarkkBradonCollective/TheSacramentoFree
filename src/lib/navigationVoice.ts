@@ -56,7 +56,38 @@ export class NavigationVoice {
   private spokenKeys = new Set<string>();
   private queue: string[] = [];
   private processing = false;
+  private speaking = false;
+  private currentPhrase = '';
   private utterance: SpeechSynthesisUtterance | null = null;
+  private speakingListeners = new Set<(speaking: boolean, phrase: string) => void>();
+
+  subscribeSpeaking(listener: (speaking: boolean, phrase: string) => void): () => void {
+    this.speakingListeners.add(listener);
+    listener(this.speaking, this.currentPhrase);
+    return () => {
+      this.speakingListeners.delete(listener);
+    };
+  }
+
+  isSpeaking(): boolean {
+    return this.speaking;
+  }
+
+  getCurrentPhrase(): string {
+    return this.currentPhrase;
+  }
+
+  private setSpeaking(next: boolean, phrase = ''): void {
+    this.speaking = next;
+    this.currentPhrase = phrase;
+    for (const listener of this.speakingListeners) {
+      try {
+        listener(next, phrase);
+      } catch (error) {
+        console.warn('Navigation voice listener failed:', error);
+      }
+    }
+  }
 
   setEnabled(on: boolean): void {
     this.enabled = on;
@@ -74,6 +105,7 @@ export class NavigationVoice {
       window.speechSynthesis.cancel();
     }
     this.utterance = null;
+    this.setSpeaking(false);
   }
 
   clearSpokenKeys(): void {
@@ -110,6 +142,7 @@ export class NavigationVoice {
     utterance.rate = 1.02;
     utterance.pitch = 1;
     utterance.volume = 1;
+    this.setSpeaking(true, text);
 
     const voices = window.speechSynthesis.getVoices();
     const preferred =
@@ -120,6 +153,9 @@ export class NavigationVoice {
     const onDone = () => {
       this.processing = false;
       this.utterance = null;
+      if (this.queue.length === 0) {
+        this.setSpeaking(false);
+      }
       this.processQueue();
     };
 

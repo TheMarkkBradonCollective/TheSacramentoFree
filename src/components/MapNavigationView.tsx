@@ -6,12 +6,16 @@ import {
   ArrowRight,
   ArrowUp,
   ChevronUp,
+  Compass,
   CornerUpLeft,
   CornerUpRight,
+  Layers,
   LocateFixed,
   Map as MapIcon,
+  Mic,
   Navigation,
   RotateCcw,
+  Share2,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -19,9 +23,11 @@ import type { LatLng } from '../lib/mapRoute';
 import { haversineMeters, openDrivingDirections } from '../lib/mapRoute';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { touchActiveNavSession } from '../lib/navigationSession';
+import { useTheme } from '../theme/ThemeContext';
 import {
   bearingDegrees,
   distanceToRouteMeters,
+  estimateSpeedLimitMph,
   fetchNavigationRoute,
   findCurrentStepIndex,
   formatArrivalTime,
@@ -53,7 +59,63 @@ interface MapNavigationViewProps {
 
 const NAV_BRAND = '#FF4500';
 const NAV_BRAND_LIGHT = '#FF6B2E';
-const NAV_ROUTE_GLOW = 'rgba(255, 69, 0, 0.38)';
+const NAV_ROUTE_GLOW = 'rgba(255, 69, 0, 0.42)';
+
+type NavMapStyle = 'dark' | 'light' | 'standard';
+
+const NAV_TILE_URLS: Record<NavMapStyle, string> = {
+  dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png',
+  standard: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+};
+
+function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean }) {
+  if (!visible || !phrase) return null;
+  return (
+    <motion.div
+      className="sbn-nav-voice-bar sbn-nav-glass pointer-events-none"
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+    >
+      <Mic className="w-4 h-4 text-accent shrink-0" />
+      <div className="sbn-nav-voice-waves shrink-0" aria-hidden>
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+      <p className="text-xs font-semibold truncate text-[var(--sbn-nav-text)]">{phrase}</p>
+    </motion.div>
+  );
+}
+
+function NavSpeedCard({
+  currentMph,
+  limitMph,
+}: {
+  currentMph: string | null;
+  limitMph: number;
+}) {
+  if (!currentMph) return null;
+  const current = Number.parseInt(currentMph, 10);
+  const over = current > limitMph + 4;
+  const warn = !over && current > limitMph;
+  const tone = over ? 'over' : warn ? 'warn' : 'ok';
+
+  return (
+    <div className="sbn-nav-speed-card sbn-nav-glass pointer-events-auto">
+      <div className="sbn-nav-speed-limit">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--sbn-nav-text-secondary)]">Limit</p>
+        <p className="text-lg font-black leading-none tabular-nums text-[var(--sbn-nav-text)]">{limitMph}</p>
+      </div>
+      <div className={`sbn-nav-speed-current sbn-nav-speed-current--${tone}`}>
+        <p className="text-[1.45rem] font-black leading-none">{currentMph}</p>
+        <p className="text-[8px] font-bold uppercase tracking-wider mt-0.5 opacity-80">mph</p>
+      </div>
+    </div>
+  );
+}
 
 function LaneGuidanceStrip({ kind }: { kind: ManeuverIconKind }) {
   const activeIndices = useMemo(() => {
@@ -118,6 +180,11 @@ interface NavigationDetailsSheetProps {
   gpsAccuracy: number | null;
   route: NavigationRouteResult;
   stepIndex: number;
+  voiceOn: boolean;
+  onVoiceToggle: () => void;
+  onOverview: () => void;
+  onShare: () => void;
+  onRecenter: () => void;
   onExit: () => void;
 }
 
@@ -131,6 +198,11 @@ function NavigationDetailsSheet({
   gpsAccuracy,
   route,
   stepIndex,
+  voiceOn,
+  onVoiceToggle,
+  onOverview,
+  onShare,
+  onRecenter,
   onExit,
 }: NavigationDetailsSheetProps) {
   const dragStartYRef = useRef(0);
@@ -195,15 +267,18 @@ function NavigationDetailsSheet({
             <ChevronUp className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
           </button>
 
-          <div className="flex-1 min-w-0 text-center">
+          <div className="flex-1 min-h-0 text-center">
             <p className="text-[2rem] font-black text-accent leading-none tabular-nums font-display">
               {arrived ? '0 min' : formatNavDuration(remainingSeconds)}
             </p>
-            <p className="text-sm text-zinc-300 font-medium mt-1 tabular-nums">
+            <p className="text-sm font-medium mt-1 tabular-nums text-[var(--sbn-nav-text-secondary)]">
               {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
             </p>
+            <p className="text-[11px] truncate mt-0.5 text-[var(--sbn-nav-text-secondary)]">
+              {arrived ? `Arrived · ${destinationLabel}` : destinationLabel}
+            </p>
             {gpsAccuracy != null && gpsAccuracy > 35 && !arrived && (
-              <p className="text-[10px] text-amber-400 mt-1">GPS weak — ±{Math.round(gpsAccuracy)}m</p>
+              <p className="text-[10px] text-[var(--sbn-nav-warning)] mt-1">GPS weak — ±{Math.round(gpsAccuracy)}m</p>
             )}
           </div>
 
@@ -214,16 +289,31 @@ function NavigationDetailsSheet({
       </div>
 
       {expanded && (
-        <div className="flex-1 min-h-0 overflow-y-auto border-t border-white/8 px-4 pb-4">
-          <div className="py-3">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Trip summary</h3>
-            <p className="text-sm text-zinc-300 mt-1">
-              {formatNavDistance(route.distanceMeters)} total · {formatNavDuration(route.durationSeconds)} drive
-            </p>
-            <p className="text-sm font-semibold text-white mt-0.5 truncate">{destinationLabel}</p>
+        <div className="flex-1 min-h-0 overflow-y-auto border-t border-[var(--sbn-nav-glass-border)] px-4 pb-4">
+          <div className="flex items-center justify-center gap-2 py-3">
+            <button type="button" onClick={onOverview} className="sbn-nav-sheet-action" aria-label="Route overview" title="Overview">
+              <MapIcon className="w-4 h-4" />
+            </button>
+            <button type="button" onClick={onVoiceToggle} className="sbn-nav-sheet-action" aria-label={voiceOn ? 'Mute voice' : 'Enable voice'} title={voiceOn ? 'Mute' : 'Voice on'}>
+              {voiceOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            <button type="button" onClick={onRecenter} className="sbn-nav-sheet-action" aria-label="Recenter" title="Recenter">
+              <LocateFixed className="w-4 h-4" />
+            </button>
+            <button type="button" onClick={onShare} className="sbn-nav-sheet-action" aria-label="Share trip" title="Share trip">
+              <Share2 className="w-4 h-4" />
+            </button>
           </div>
 
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 pb-2 sticky top-0 bg-[#141416]">
+          <div className="py-1">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--sbn-nav-text-secondary)]">Trip summary</h3>
+            <p className="text-sm mt-1 text-[var(--sbn-nav-text-secondary)]">
+              {formatNavDistance(route.distanceMeters)} total · {formatNavDuration(route.durationSeconds)} drive
+            </p>
+            <p className="text-sm font-semibold mt-0.5 truncate text-[var(--sbn-nav-text)]">{destinationLabel}</p>
+          </div>
+
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--sbn-nav-text-secondary)] pb-2 sticky top-0 bg-[var(--sbn-nav-card)]">
             Turn-by-turn
           </h3>
           <ol className="space-y-1">
@@ -241,20 +331,20 @@ function NavigationDetailsSheet({
                 >
                   <div
                     className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
-                      isCurrent ? 'bg-accent text-on-accent' : 'bg-zinc-800 text-zinc-200'
+                      isCurrent ? 'bg-accent text-on-accent' : 'bg-[var(--sbn-nav-surface)] text-[var(--sbn-nav-text)]'
                     }`}
                   >
                     <ManeuverIcon kind={kind} className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm leading-snug ${isCurrent ? 'font-bold text-white' : 'font-medium text-zinc-200'}`}>
+                    <p className={`text-sm leading-snug ${isCurrent ? 'font-bold text-[var(--sbn-nav-text)]' : 'font-medium text-[var(--sbn-nav-text-secondary)]'}`}>
                       {step.instruction}
                     </p>
                     {step.name ? (
-                      <p className="text-xs text-zinc-500 truncate mt-0.5">{step.name}</p>
+                      <p className="text-xs truncate mt-0.5 text-[var(--sbn-nav-text-secondary)]">{step.name}</p>
                     ) : null}
                     {step.distanceMeters > 0 && index < route.steps.length - 1 ? (
-                      <p className="text-[11px] text-zinc-600 mt-1">{formatNavDistance(step.distanceMeters)}</p>
+                      <p className="text-[11px] mt-1 text-[var(--sbn-nav-text-secondary)] opacity-70">{formatNavDistance(step.distanceMeters)}</p>
                     ) : null}
                   </div>
                 </li>
@@ -293,34 +383,37 @@ function createNavUserIcon(heading: number): L.DivIcon {
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center" style="transform: rotate(${heading}deg)">
-        <div class="h-[3.25rem] w-[3.25rem] rounded-full bg-white/95 shadow-[0_0_0_10px_rgba(255,255,255,0.18),0_4px_16px_rgba(0,0,0,0.45)] border-[3px] border-white flex items-center justify-center">
-          <div class="w-0 h-0 border-l-[9px] border-r-[9px] border-b-[16px] border-l-transparent border-r-transparent border-b-[${NAV_BRAND}] -mt-0.5"></div>
+        <div class="absolute h-[4.5rem] w-[4.5rem] rounded-full bg-[${NAV_BRAND}] opacity-20 blur-md"></div>
+        <div class="relative h-[3.5rem] w-[3.5rem] rounded-full bg-white/96 shadow-[0_0_0_12px_rgba(255,255,255,0.16),0_6px_20px_rgba(0,0,0,0.45)] border-[3px] border-white flex items-center justify-center">
+          <div class="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[18px] border-l-transparent border-r-transparent border-b-[${NAV_BRAND}] -mt-0.5 drop-shadow-sm"></div>
         </div>
       </div>
     `,
     className: 'nav-user-marker',
-    iconSize: [52, 52],
-    iconAnchor: [26, 26],
+    iconSize: [56, 56],
+    iconAnchor: [28, 28],
   });
 }
 
 function drawRouteOnLayer(layer: L.LayerGroup, coords: [number, number][]): void {
   layer.clearLayers();
   L.polyline(coords, {
+    className: 'sbn-nav-route-glow',
     color: NAV_ROUTE_GLOW,
-    weight: 13,
-    opacity: 0.95,
+    weight: 15,
+    opacity: 0.9,
     lineCap: 'round',
     lineJoin: 'round',
   }).addTo(layer);
   L.polyline(coords, {
     color: NAV_BRAND_LIGHT,
-    weight: 8,
-    opacity: 0.98,
+    weight: 9,
+    opacity: 0.95,
     lineCap: 'round',
     lineJoin: 'round',
   }).addTo(layer);
   L.polyline(coords, {
+    className: 'sbn-nav-route-animated',
     color: NAV_BRAND,
     weight: 5,
     opacity: 1,
@@ -361,8 +454,10 @@ export default function MapNavigationView({
   destinationLabel,
   onExit,
 }: MapNavigationViewProps) {
+  const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const destMarkerRef = useRef<L.Marker | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
@@ -406,6 +501,10 @@ export default function MapNavigationView({
   const [rerouting, setRerouting] = useState(false);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [sheetSnap, setSheetSnap] = useState<NavSheetSnap>('collapsed');
+  const [mapStyle, setMapStyle] = useState<NavMapStyle>(() => (theme === 'light' ? 'light' : 'dark'));
+  const [voiceSpeaking, setVoiceSpeaking] = useState(false);
+  const [voicePhrase, setVoicePhrase] = useState('');
+  const [showHeading, setShowHeading] = useState(false);
 
   destinationRef.current = destination;
   destinationLabelRef.current = destinationLabel;
@@ -431,6 +530,15 @@ export default function MapNavigationView({
     if (!cueStep) return 0;
     return haversineMeters(userPos, cueStep.location);
   }, [route, stepIndex, userPos]);
+
+  const speedLimitMph = useMemo(() => estimateSpeedLimitMph(currentStep), [currentStep]);
+
+  const bannerScale = useMemo(() => {
+    if (arrived) return 1;
+    if (distanceToManeuver < 80) return 1.05;
+    if (distanceToManeuver < 250) return 1.025;
+    return 1;
+  }, [distanceToManeuver, arrived]);
 
   const loadRoute = useCallback(async (from: LatLng, to: LatLng, isReroute = false) => {
     const result = await fetchNavigationRoute(from, to);
@@ -458,6 +566,11 @@ export default function MapNavigationView({
   useEffect(() => {
     voiceRef.current.prime();
     voiceRef.current.setEnabled(true);
+
+    const unsubscribeSpeaking = voiceRef.current.subscribeSpeaking((speaking, phrase) => {
+      setVoiceSpeaking(speaking);
+      setVoicePhrase(phrase);
+    });
 
     const requestWakeLock = async () => {
       try {
@@ -487,6 +600,7 @@ export default function MapNavigationView({
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', onPageHide);
+      unsubscribeSpeaking();
       void wakeLockRef.current?.release();
       wakeLockRef.current = null;
       voiceRef.current.cancel();
@@ -541,13 +655,14 @@ export default function MapNavigationView({
       markerZoomAnimation: false,
     }).setView([origin.lat, origin.lng], 16);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
+    const tileLayer = L.tileLayer(NAV_TILE_URLS[mapStyle], {
       maxZoom: 19,
       updateWhenIdle: true,
       updateWhenZooming: false,
       keepBuffer: 3,
       attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(map);
+    tileLayerRef.current = tileLayer;
 
     const routeLayer = L.layerGroup().addTo(map);
     routeLayerRef.current = routeLayer;
@@ -562,12 +677,17 @@ export default function MapNavigationView({
       }
       map.remove();
       mapRef.current = null;
+      tileLayerRef.current = null;
       routeLayerRef.current = null;
       destMarkerRef.current = null;
       userMarkerRef.current = null;
       hasFittedRouteRef.current = false;
     };
   }, [origin.lat, origin.lng]);
+
+  useEffect(() => {
+    tileLayerRef.current?.setUrl(NAV_TILE_URLS[mapStyle]);
+  }, [mapStyle]);
 
   useEffect(() => {
     if (!route || !mapRef.current || !routeLayerRef.current) return;
@@ -582,13 +702,16 @@ export default function MapNavigationView({
     } else {
       const destIcon = L.divIcon({
         html: `
-          <div class="relative flex items-center justify-center">
-            <div class="h-5 w-5 bg-red-500 rounded-full border-2 border-white shadow-lg"></div>
+          <div class="sbn-nav-dest-pin relative flex flex-col items-center">
+            <div class="h-9 w-9 rounded-full bg-[#FF4500] border-[3px] border-white shadow-[0_4px_16px_rgba(255,69,0,0.55)] flex items-center justify-center">
+              <div class="h-2.5 w-2.5 rounded-full bg-white"></div>
+            </div>
+            <div class="w-0 h-0 border-l-[7px] border-r-[7px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#FF4500] -mt-0.5"></div>
           </div>
         `,
         className: 'nav-dest-marker',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
+        iconSize: [36, 48],
+        iconAnchor: [18, 42],
       });
       destMarkerRef.current = L.marker([destination.lat, destination.lng], {
         icon: destIcon,
@@ -798,6 +921,32 @@ export default function MapNavigationView({
     }
   };
 
+  const handleMapStyleCycle = () => {
+    setMapStyle((current) => {
+      if (current === 'dark') return 'light';
+      if (current === 'light') return 'standard';
+      return 'dark';
+    });
+  };
+
+  const handleShareTrip = async () => {
+    const summary = `${formatNavDuration(remainingSeconds)} · ${formatNavDistance(remainingMeters)} to ${destinationLabel}`;
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Buy Nothing navigation', text: summary, url: mapsUrl });
+        return;
+      }
+    } catch {
+      // User cancelled or share failed.
+    }
+    try {
+      await navigator.clipboard.writeText(`${summary}\n${mapsUrl}`);
+    } catch {
+      // Clipboard unavailable.
+    }
+  };
+
   const handleExit = () => {
     voiceRef.current.cancel();
     void wakeLockRef.current?.release();
@@ -844,68 +993,26 @@ export default function MapNavigationView({
     : currentStep?.name?.trim() || bannerStreet;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-[#0b0b0c] flex flex-col" id="map_navigation_view">
-      <div className="sbn-nav-banner px-4 pt-3 pb-3 shrink-0 relative z-10 safe-area-pt" id="nav_instruction_banner">
-        <div className="flex items-start gap-3 min-h-[4.25rem]">
-          <div className="shrink-0 w-[4.75rem] flex flex-col items-center justify-center pt-0.5">
-            {loading ? (
-              <Navigation className="w-11 h-11 animate-pulse" />
-            ) : (
-              <ManeuverIcon kind={maneuverKind} className="w-11 h-11" />
-            )}
-            {!loading && !arrived && (
-              <p className="text-base font-black mt-1.5 tabular-nums leading-none tracking-tight">
-                {formatNavDistance(distanceToManeuver)}
-              </p>
-            )}
-          </div>
-
-          <div className="min-w-0 flex-1 pt-0.5">
-            {loading ? (
-              <>
-                <p className="text-[1.75rem] font-display font-extrabold leading-tight tracking-tight">Loading route</p>
-                <p className="text-sm font-semibold mt-1 truncate opacity-90">To {destinationLabel}</p>
-              </>
-            ) : arrived ? (
-              <>
-                <p className="text-[1.75rem] font-display font-extrabold leading-tight tracking-tight">You&apos;ve arrived</p>
-                <p className="text-base font-bold mt-1 truncate opacity-95">{destinationLabel}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-[1.75rem] sm:text-[2rem] font-display font-extrabold leading-[1.05] tracking-tight truncate">
-                  {bannerStreet}
-                </p>
-                {bannerInstruction ? (
-                  <p className="text-sm font-semibold mt-1 truncate opacity-90">{bannerInstruction}</p>
-                ) : null}
-              </>
-            )}
-          </div>
-        </div>
-
-        {!loading && !arrived && maneuverKind !== 'arrive' && <LaneGuidanceStrip kind={maneuverKind} />}
-      </div>
-
+    <div
+      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}`}
+      id="map_navigation_view"
+      style={{ background: 'var(--sbn-nav-bg)' }}
+    >
       <div className="relative flex-1 min-h-0">
         <div ref={mapContainerRef} className="absolute inset-0 z-0" />
 
         {loading && (
-          <div className="absolute inset-0 z-10 bg-black/55 flex flex-col items-center justify-center gap-3 text-white pointer-events-none">
+          <div className="absolute inset-0 z-10 bg-black/50 flex flex-col items-center justify-center gap-3 text-white pointer-events-none">
             <Navigation className="w-10 h-10 text-accent animate-pulse" />
             <p className="text-sm font-semibold">Loading your route…</p>
           </div>
         )}
 
         {showFatalError && (
-          <div className="absolute inset-0 z-20 bg-black/90 flex flex-col items-center justify-center gap-4 p-6 text-center text-white safe-area-pb">
+          <div className="absolute inset-0 z-20 bg-black/88 flex flex-col items-center justify-center gap-4 p-6 text-center text-white safe-area-pb">
             <p className="text-sm text-zinc-300">{error}</p>
             <div className="flex flex-col gap-2 w-full max-w-xs pointer-events-auto">
-              <button
-                type="button"
-                onClick={handleRetryRoute}
-                className="px-5 py-3 rounded-full bg-accent text-on-accent font-bold text-sm"
-              >
+              <button type="button" onClick={handleRetryRoute} className="px-5 py-3 rounded-full bg-accent text-on-accent font-bold text-sm">
                 Retry route
               </button>
               <button
@@ -922,72 +1029,155 @@ export default function MapNavigationView({
           </div>
         )}
 
-        {!loading && route && (
-          <>
-            {speedMph && (
-              <div className="absolute left-3 top-4 z-20 sbn-nav-speed-sign">
-                <p className="text-[1.35rem] font-black text-zinc-900 leading-none tabular-nums">{speedMph}</p>
-                <p className="text-[8px] font-extrabold text-zinc-700 uppercase tracking-wider mt-0.5">mph</p>
+        <div className="absolute inset-0 z-20 pointer-events-none flex flex-col">
+          <div className="pointer-events-auto safe-area-pt">
+            <motion.div
+              id="nav_instruction_banner"
+              className="sbn-nav-banner sbn-nav-glass sbn-nav-banner-accent"
+              animate={{ scale: bannerScale }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            >
+              <div className="flex items-start gap-3 min-h-[4rem]">
+                <div className="shrink-0 w-[4.5rem] flex flex-col items-center justify-center">
+                  {loading ? (
+                    <Navigation className="w-10 h-10 text-accent animate-pulse" />
+                  ) : (
+                    <div className="rounded-2xl bg-[var(--sbn-nav-surface)] p-2 border border-[var(--sbn-nav-glass-border)]">
+                      <ManeuverIcon kind={maneuverKind} className="w-9 h-9 text-accent" />
+                    </div>
+                  )}
+                  {!loading && !arrived && (
+                    <p className="text-sm font-black mt-2 tabular-nums leading-none tracking-tight text-accent">
+                      {formatNavDistance(distanceToManeuver)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  {loading ? (
+                    <>
+                      <p className="text-[1.65rem] font-display font-extrabold leading-tight">Loading route</p>
+                      <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">To {destinationLabel}</p>
+                    </>
+                  ) : arrived ? (
+                    <>
+                      <p className="text-[1.65rem] font-display font-extrabold leading-tight">You&apos;ve arrived</p>
+                      <p className="text-base font-bold mt-1 truncate">{destinationLabel}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[1.65rem] sm:text-[1.85rem] font-display font-extrabold leading-[1.05] tracking-tight truncate">
+                        {bannerStreet}
+                      </p>
+                      {bannerInstruction ? (
+                        <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">{bannerInstruction}</p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               </div>
-            )}
 
-            {(rerouting || offRouteMeters > 55) && !arrived && (
-              <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 bg-black/85 text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
-                {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
+              {!loading && !arrived && maneuverKind !== 'arrive' && <LaneGuidanceStrip kind={maneuverKind} />}
+            </motion.div>
+
+            <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
+          </div>
+
+          {!loading && route && (
+            <>
+              <div className="absolute left-3 top-[7.75rem] pointer-events-auto">
+                <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} />
               </div>
-            )}
 
-            <div className="absolute right-3 top-4 z-20 flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={handleOverview}
-                className="sbn-nav-fab"
-                title="Route overview"
-                aria-label="Route overview"
-              >
-                <MapIcon className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                onClick={handleVoiceToggle}
-                className="sbn-nav-fab"
-                title={voiceOn ? 'Voice guidance on' : 'Voice guidance off'}
-                aria-pressed={voiceOn}
-                aria-label={voiceOn ? 'Mute voice guidance' : 'Enable voice guidance'}
-              >
-                {voiceOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 opacity-80" />}
-              </button>
-              <button
-                type="button"
-                onClick={handleRecenter}
-                className={`sbn-nav-fab ${followUser ? 'sbn-nav-fab-active' : ''}`}
-                title="Recenter on you"
-                aria-label="Recenter on you"
-              >
-                <LocateFixed className="w-5 h-5" />
-              </button>
-            </div>
+              {(rerouting || offRouteMeters > 55) && !arrived && (
+                <div className="absolute left-1/2 top-[7.75rem] -translate-x-1/2 sbn-nav-glass rounded-full px-3 py-1.5 text-xs font-semibold pointer-events-none">
+                  {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
+                </div>
+              )}
 
-            {!arrived && currentRoadLabel && sheetSnap === 'collapsed' && (
-              <div className="absolute inset-x-0 bottom-[7.75rem] z-20 flex justify-center px-4 pointer-events-none">
-                <div className="sbn-nav-road-pill truncate">{currentRoadLabel}</div>
+              <div className="absolute right-3 top-[7.75rem] flex flex-col gap-2.5 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowHeading((v) => !v)}
+                  className={`sbn-nav-fab ${showHeading ? 'sbn-nav-fab-active' : ''}`}
+                  title={`Heading ${Math.round(heading)}°`}
+                  aria-label={`Heading ${Math.round(heading)} degrees`}
+                >
+                  <Compass className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVoiceToggle}
+                  className={`sbn-nav-fab ${voiceOn ? 'sbn-nav-fab-active' : ''}`}
+                  title={voiceOn ? 'Voice guidance on' : 'Voice guidance off'}
+                  aria-pressed={voiceOn}
+                  aria-label={voiceOn ? 'Mute voice guidance' : 'Enable voice guidance'}
+                >
+                  {voiceOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 opacity-80" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRecenter}
+                  className={`sbn-nav-fab ${followUser ? 'sbn-nav-fab-active' : ''}`}
+                  title="Recenter on you"
+                  aria-label="Recenter on you"
+                >
+                  <LocateFixed className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMapStyleCycle}
+                  className="sbn-nav-fab"
+                  title={`Map style: ${mapStyle}`}
+                  aria-label="Change map style"
+                >
+                  <Layers className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOverview}
+                  className="sbn-nav-fab"
+                  title="Route overview"
+                  aria-label="Route overview"
+                >
+                  <MapIcon className="w-5 h-5" />
+                </button>
               </div>
-            )}
 
-            <NavigationDetailsSheet
-              snap={sheetSnap}
-              onSnapChange={setSheetSnap}
-              arrived={arrived}
-              destinationLabel={destinationLabel}
-              remainingSeconds={remainingSeconds}
-              remainingMeters={remainingMeters}
-              gpsAccuracy={gpsAccuracy}
-              route={route}
-              stepIndex={stepIndex}
-              onExit={handleExit}
-            />
-          </>
-        )}
+              {showHeading && (
+                <div className="absolute right-3 top-[20.5rem] sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none">
+                  {Math.round(heading)}°
+                </div>
+              )}
+
+              {!arrived && currentRoadLabel && sheetSnap === 'collapsed' && (
+                <div className="absolute inset-x-0 bottom-[7.85rem] flex justify-center px-4">
+                  <div className="sbn-nav-road-pill truncate">{currentRoadLabel}</div>
+                </div>
+              )}
+
+              <div className="mt-auto pointer-events-auto">
+                <NavigationDetailsSheet
+                  snap={sheetSnap}
+                  onSnapChange={setSheetSnap}
+                  arrived={arrived}
+                  destinationLabel={destinationLabel}
+                  remainingSeconds={remainingSeconds}
+                  remainingMeters={remainingMeters}
+                  gpsAccuracy={gpsAccuracy}
+                  route={route}
+                  stepIndex={stepIndex}
+                  voiceOn={voiceOn}
+                  onVoiceToggle={handleVoiceToggle}
+                  onOverview={handleOverview}
+                  onShare={() => void handleShareTrip()}
+                  onRecenter={handleRecenter}
+                  onExit={handleExit}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

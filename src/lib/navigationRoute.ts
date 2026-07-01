@@ -322,6 +322,14 @@ export function isOffRoute(coords: [number, number][], user: LatLng, thresholdMe
   return distanceToRouteMeters(coords, user) > thresholdMeters;
 }
 
+export function estimateSpeedLimitMph(step?: NavigationStep | null): number {
+  const name = (step?.name ?? step?.instruction ?? '').toLowerCase();
+  if (/\b(fwy|freeway|expy|expressway|interstate|i-|hwy|highway)\b/.test(name)) return 65;
+  if (/\b(blvd|boulevard|ave|avenue|pkwy|parkway)\b/.test(name)) return 35;
+  if (/\b(st|street|rd|road|dr|drive|ln|lane|ct|court)\b/.test(name)) return 25;
+  return 30;
+}
+
 export function formatSpeedMph(speedMetersPerSecond: number | null | undefined): string | null {
   if (speedMetersPerSecond == null || Number.isNaN(speedMetersPerSecond) || speedMetersPerSecond < 0) {
     return null;
