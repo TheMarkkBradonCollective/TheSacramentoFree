@@ -286,14 +286,7 @@ export default function ItemCard({
               name={item.userDisplayName}
               size="sm"
               lastActiveAt={authorLastActive ?? undefined}
-              className="sm:hidden"
-            />
-            <UserAvatar
-              src={item.userPhotoURL}
-              name={item.userDisplayName}
-              size="md"
-              lastActiveAt={authorLastActive ?? undefined}
-              className="hidden sm:inline-block"
+              imgClassName="sm:w-10 sm:h-10"
             />
             <div className="min-w-0">
               <p className="text-xs sm:text-sm font-semibold text-app truncate">{item.userDisplayName}</p>
