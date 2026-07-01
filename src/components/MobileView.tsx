@@ -9,7 +9,7 @@ import { Map, List, MessageSquare, User, Plus, CalendarDays } from 'lucide-react
 import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
-import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
+import { MAP_CONTENT_FILTERS, getMapContentFilterLabel, type MapContentFilter } from '../lib/postType';
 import AwardsButton from './AwardsButton';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
@@ -119,7 +119,7 @@ export default function MobileView({
   onClearScrollToDirectorOverview,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
-  const [selectedMobileType, setSelectedMobileType] = useState<ListingTypeFilter>('all');
+  const [selectedMobileType, setSelectedMobileType] = useState<MapContentFilter>('all');
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
 
   useKeyboardInset();
@@ -152,12 +152,14 @@ export default function MobileView({
         >
           <SacramentoMapView
             items={items}
+            events={events}
             userProfile={userProfile}
             selectedType={selectedMobileType}
             selectedCategory={selectedMobileCategory}
             onInitiateChat={onInitiateChat}
             onClaimSubmitted={onClaimSubmitted}
             onViewItem={onViewItem}
+            onViewEvent={onViewEvent}
             onEditItem={onEditItem}
             isFullScreenMobile
             mapVisible={activeTab === 'map'}
@@ -167,14 +169,14 @@ export default function MobileView({
           />
           <div className="absolute top-3 left-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
             <div className="flex gap-2 overflow-x-auto flex-1 min-w-0 pb-1">
-              {LISTING_TYPE_FILTERS.map((t) => (
+              {MAP_CONTENT_FILTERS.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setSelectedMobileType(t)}
                   className={`sbn-chip shrink-0 ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
                 >
-                  {getPostTypeFilterLabel(t)}
+                  {getMapContentFilterLabel(t)}
                 </button>
               ))}
             </div>

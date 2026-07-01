@@ -2,7 +2,15 @@ import { PostType } from '../types';
 
 export type ListingTypeFilter = 'all' | PostType;
 
+export type MapContentFilter = ListingTypeFilter | 'events';
+
 export const LISTING_TYPE_FILTERS: ListingTypeFilter[] = ['all', 'giveaway', 'looking', 'trade'];
+
+export const MAP_CONTENT_FILTERS: MapContentFilter[] = [...LISTING_TYPE_FILTERS, 'events'];
+
+export function isEventsMapFilter(filter: MapContentFilter): filter is 'events' {
+  return filter === 'events';
+}
 
 export function getPostTypeLabel(type: PostType | string | null | undefined): string {
   switch (type) {
@@ -28,6 +36,11 @@ export function getPostTypeFilterLabel(filter: ListingTypeFilter): string {
     case 'trade':
       return 'Trade';
   }
+}
+
+export function getMapContentFilterLabel(filter: MapContentFilter): string {
+  if (filter === 'events') return 'Events';
+  return getPostTypeFilterLabel(filter);
 }
 
 export function getPostTypeModalTitle(type: PostType, isEditing: boolean, isReposting = false): string {

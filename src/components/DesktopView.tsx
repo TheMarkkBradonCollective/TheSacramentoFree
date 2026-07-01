@@ -237,10 +237,12 @@ export default function DesktopView({
             <div className="sbn-card-elevated overflow-hidden p-2">
               <SacramentoMapView
                 items={items}
+                events={events}
                 userProfile={userProfile}
                 onInitiateChat={onInitiateChat}
                 onClaimSubmitted={onClaimSubmitted}
                 onViewItem={onViewItem}
+                onViewEvent={onViewEvent}
                 onEditItem={onEditItem}
               />
             </div>

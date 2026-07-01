@@ -212,10 +212,12 @@ export default function TabletView({
             <div className="sbn-card-elevated p-2 h-[520px]">
               <SacramentoMapView
                 items={items}
+                events={events}
                 userProfile={userProfile}
                 onInitiateChat={onInitiateChat}
                 onClaimSubmitted={onClaimSubmitted}
                 onViewItem={onViewItem}
+                onViewEvent={onViewEvent}
                 onEditItem={onEditItem}
               />
             </div>

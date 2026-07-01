@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng, CommunityEvent } from '../types';
 import {
   canViewerSeeExactLocation,
   hasStoredGps,
@@ -14,23 +14,25 @@ import {
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
-import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation } from 'lucide-react';
+import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
-import { getPostTypeMapDetailLabel, getPostTypeMapLabel, type ListingTypeFilter } from '../lib/postType';
+import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
 
 interface SacramentoMapViewProps {
   items: ItemPost[];
+  events?: CommunityEvent[];
   userProfile: UserProfile;
-  selectedType?: ListingTypeFilter;
+  selectedType?: MapContentFilter;
   selectedCategory?: string;
   selectedNeighborhood?: string;
   searchTerm?: string;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem?: (item: ItemPost) => void;
+  onViewEvent?: (event: CommunityEvent) => void;
   onEditItem?: (item: ItemPost) => void;
   /** @deprecated Use onViewItem */
   onItemDetail?: (item: ItemPost) => void;
@@ -41,6 +43,18 @@ interface SacramentoMapViewProps {
   colorGuideOpen?: boolean;
   onColorGuideOpenChange?: (open: boolean) => void;
   onOpenNewPost?: () => void;
+}
+
+const EVENT_MAP_COLOR = '#9333EA';
+
+function formatEventMapDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 // Map each post category to a specific distinct color for blips
@@ -85,6 +99,111 @@ export function getMapPinBorderClass(type: ItemPost['type'] | string): string {
   if (type === 'giveaway') return 'border-zinc-950';
   if (type === 'trade') return 'border-zinc-400';
   return 'border-white';
+}
+
+function MapSelectedEventCard({
+  event,
+  currentIndex,
+  total,
+  slideDirection,
+  compact = false,
+  onClose,
+  onPrev,
+  onNext,
+  onViewEvent,
+}: {
+  event: CommunityEvent;
+  currentIndex: number;
+  total: number;
+  slideDirection: 'left' | 'right';
+  compact?: boolean;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onViewEvent?: (event: CommunityEvent) => void;
+}) {
+  return (
+    <motion.div
+      key={event.id}
+      initial={{ opacity: 0, x: slideDirection === 'right' ? (compact ? 70 : 80) : -(compact ? 70 : 80) }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: slideDirection === 'right' ? -(compact ? 70 : 80) : compact ? 70 : 80 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+      className={compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}
+      id={compact ? 'mobile_map_event_detail_card' : 'map_event_detail_card'}
+    >
+      <div className={`absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg ${compact ? '' : 'top-2.5 py-0.5'}`}>
+        <button
+          type="button"
+          onClick={onPrev}
+          disabled={total <= 1}
+          className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+        >
+          <ChevronLeft className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+        </button>
+        <span className={`font-bold font-mono text-muted text-center ${compact ? 'text-[9px] min-w-[24px]' : 'text-[10px] min-w-[28px]'}`}>
+          {currentIndex + 1}/{total}
+        </span>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={total <= 1}
+          className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+        >
+          <ChevronRight className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
+      >
+        <X className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+      </button>
+
+      <div className={`flex gap-3 ${compact ? 'mt-2' : 'gap-4 text-left'}`}>
+        <div
+          className={`shrink-0 rounded-xl border border-app flex items-center justify-center ${compact ? 'w-16 h-16' : 'w-18 h-18 sm:w-24 sm:h-24'}`}
+          style={{ backgroundColor: `${EVENT_MAP_COLOR}22` }}
+        >
+          <CalendarDays className={compact ? 'w-7 h-7' : 'w-9 h-9'} style={{ color: EVENT_MAP_COLOR }} />
+        </div>
+
+        <div className="flex-1 min-w-0 flex flex-col justify-between">
+          <div>
+            <span
+              className="inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider text-white"
+              style={{ backgroundColor: EVENT_MAP_COLOR }}
+            >
+              📅 EVENT
+            </span>
+            <h4 className={`font-semibold text-app mt-1 truncate ${compact ? 'text-xs' : 'text-sm'}`}>{event.title}</h4>
+            <p className={`text-muted mt-0.5 line-clamp-2 ${compact ? 'text-[9.5px]' : 'text-xs'}`}>{event.description}</p>
+            <p className={`text-accent font-semibold mt-1 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+              {formatEventMapDate(event.eventStartAt)}
+            </p>
+            <p className={`text-muted mt-0.5 truncate ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
+              {event.location} · {event.neighborhood}
+            </p>
+          </div>
+
+          {onViewEvent && (
+            <div className={`flex gap-1 shrink-0 ${compact ? 'mt-2 pt-2 border-t border-app' : 'mt-3 pt-3 border-t border-app'}`}>
+              <button
+                type="button"
+                onClick={() => onViewEvent(event)}
+                className="sbn-btn sbn-btn-primary sbn-btn-sm"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                View event
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 interface MapSelectionRouteRowProps {
@@ -159,6 +278,7 @@ function MapSelectionRouteRow({
 
 export default function SacramentoMapView({
   items,
+  events = [],
   userProfile,
   selectedType,
   selectedCategory,
@@ -167,6 +287,7 @@ export default function SacramentoMapView({
   onInitiateChat,
   onClaimSubmitted,
   onViewItem,
+  onViewEvent,
   onEditItem,
   onItemDetail,
   isFullScreenMobile = false,
@@ -177,6 +298,7 @@ export default function SacramentoMapView({
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null);
   const [colorGuideInternal, setColorGuideInternal] = useState(false);
   const showColorGuide =
     colorGuideOpenProp !== undefined ? colorGuideOpenProp : colorGuideInternal;
@@ -188,7 +310,7 @@ export default function SacramentoMapView({
 
   // Local overrides in case filters are not controlled by a parent grid
   const [localSearch, setLocalSearch] = useState('');
-  const [localType, setLocalType] = useState<ListingTypeFilter>('all');
+  const [localType, setLocalType] = useState<MapContentFilter>('all');
   const [localCategory, setLocalCategory] = useState('All Categories');
   const [localNeighborhood, setLocalNeighborhood] = useState('All Neighborhoods');
 
@@ -196,6 +318,15 @@ export default function SacramentoMapView({
   const sType = selectedType !== undefined ? selectedType : localType;
   const sCat = selectedCategory !== undefined ? selectedCategory : localCategory;
   const sNeigh = selectedNeighborhood !== undefined ? selectedNeighborhood : localNeighborhood;
+  const showingEvents = isEventsMapFilter(sType);
+
+  useEffect(() => {
+    if (showingEvents) {
+      setSelectedPost(null);
+    } else {
+      setSelectedEvent(null);
+    }
+  }, [showingEvents]);
 
   // React Leaflet Refs
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -364,6 +495,8 @@ export default function SacramentoMapView({
 
   // Filter items in real time for accuracy
   const activeItems = useMemo(() => {
+    if (showingEvents) return [];
+
     return items.filter((item) => {
       if (item.status !== 'active') return false;
 
@@ -382,13 +515,32 @@ export default function SacramentoMapView({
 
       return matchesSearch && matchesType && matchesCategory && matchesNeighborhood;
     });
-  }, [items, sType, sCat, sNeigh, sTerm]);
+  }, [items, sType, sCat, sNeigh, sTerm, showingEvents]);
+
+  const activeEvents = useMemo(() => {
+    if (!showingEvents) return [];
+
+    return events.filter((event) => {
+      if (event.status !== 'active') return false;
+
+      const searchString = `${event.title} ${event.description} ${event.location} ${event.neighborhood}`.toLowerCase();
+      const matchesSearch = searchString.includes(sTerm.toLowerCase());
+      const matchesNeighborhood = sNeigh === 'All Neighborhoods' || event.neighborhood === sNeigh;
+
+      return matchesSearch && matchesNeighborhood;
+    });
+  }, [events, showingEvents, sNeigh, sTerm]);
 
   // Find current listing index in filtered list for pagination
   const currentIndex = useMemo(() => {
     if (!selectedPost) return -1;
     return activeItems.findIndex(item => item.id === selectedPost.id);
   }, [selectedPost, activeItems]);
+
+  const currentEventIndex = useMemo(() => {
+    if (!selectedEvent) return -1;
+    return activeEvents.findIndex((event) => event.id === selectedEvent.id);
+  }, [selectedEvent, activeEvents]);
 
   const handleNextPost = () => {
     if (activeItems.length <= 1 || currentIndex === -1) return;
@@ -404,7 +556,21 @@ export default function SacramentoMapView({
     setSelectedPost(activeItems[prevIdx]);
   };
 
-  // Distribute points deterministically so multiple posts in the same neighbourhood don't stack directly
+  const handleNextEvent = () => {
+    if (activeEvents.length <= 1 || currentEventIndex === -1) return;
+    setSlideDirection('right');
+    const nextIdx = (currentEventIndex + 1) % activeEvents.length;
+    setSelectedEvent(activeEvents[nextIdx]);
+  };
+
+  const handlePrevEvent = () => {
+    if (activeEvents.length <= 1 || currentEventIndex === -1) return;
+    setSlideDirection('left');
+    const prevIdx = (currentEventIndex - 1 + activeEvents.length) % activeEvents.length;
+    setSelectedEvent(activeEvents[prevIdx]);
+  };
+
+  // Distribute points deterministically
   const blipPositions = useMemo(() => {
     const neighborhoodCounts: Record<string, number> = {};
     
@@ -452,6 +618,32 @@ export default function SacramentoMapView({
       };
     });
   }, [activeItems, userProfile?.uid]);
+
+  const eventBlipPositions = useMemo(() => {
+    const neighborhoodCounts: Record<string, number> = {};
+
+    return activeEvents.map((event) => {
+      const parentCoord = NEIGHBORHOOD_COORDS[event.neighborhood] || { x: 50, y: 50 };
+      const currentCount = neighborhoodCounts[event.neighborhood] || 0;
+      neighborhoodCounts[event.neighborhood] = currentCount + 1;
+
+      let hash = 0;
+      for (let i = 0; i < event.id.length; i++) {
+        hash = (hash * 17 + event.id.charCodeAt(i)) % 360;
+      }
+
+      const angle = (hash + currentCount * 61) * (Math.PI / 180);
+      const radius = currentCount === 0 ? 0 : 3.5 + Math.min(currentCount * 1.6, 8);
+
+      const dx = Math.cos(angle) * radius;
+      const dy = Math.sin(angle) * radius;
+      const px = Math.max(8, Math.min(92, parentCoord.x + dx));
+      const py = Math.max(8, Math.min(92, parentCoord.y + dy));
+      const { lat, lng } = convertPercentToLatLng(px, py);
+
+      return { event, lat, lng };
+    });
+  }, [activeEvents]);
 
   // Map mounted lifecycle hook
   useEffect(() => {
@@ -532,11 +724,11 @@ export default function SacramentoMapView({
     };
   }, [mapVisible]);
 
-  // Resume map follow when a listing popup is closed and follow mode is on
+  // Resume map follow when a listing/event popup is closed and follow mode is on
   useEffect(() => {
-    if (selectedPost || !followUser || !userLocation || !mapRef.current) return;
+    if (selectedPost || selectedEvent || !followUser || !userLocation || !mapRef.current) return;
     mapRef.current.panTo([userLocation.lat, userLocation.lng], { animate: true });
-  }, [selectedPost, followUser]);
+  }, [selectedPost, selectedEvent, followUser, userLocation]);
 
   const routeEndpoints = useMemo(() => {
     if (!selectedPost || !userLocation) return null;
@@ -549,7 +741,7 @@ export default function SacramentoMapView({
   }, [selectedPost, blipPositions, userLocation]);
 
   useEffect(() => {
-    if (!selectedPost) {
+    if (!selectedPost || showingEvents) {
       routeEndpointsRef.current = null;
       routeFitForPostIdRef.current = null;
       setRouteCoords(null);
@@ -598,7 +790,36 @@ export default function SacramentoMapView({
 
     markersGroup.clearLayers();
 
-    // 1. Draw Listing locations pins
+    if (showingEvents) {
+      eventBlipPositions.forEach(({ event, lat, lng }) => {
+        const isSelected = selectedEvent?.id === event.id;
+
+        const eventIcon = L.divIcon({
+          html: `
+            <div class="relative flex items-center justify-center cursor-pointer">
+              <span style="border-color: ${EVENT_MAP_COLOR}" class="absolute inline-flex h-7 w-7 rounded-md border opacity-50 block animate-pulse"></span>
+              <div style="background-color: ${EVENT_MAP_COLOR}" class="h-4 w-4 rounded-md border-2 border-white shadow-md flex items-center justify-center ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
+                <div class="w-1.5 h-1.5 rounded-sm bg-white opacity-90"></div>
+              </div>
+            </div>
+          `,
+          className: 'custom-event-blip-marker',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+        });
+
+        L.marker([lat, lng], { icon: eventIcon })
+          .addTo(markersGroup)
+          .on('click', () => {
+            setSlideDirection('right');
+            setSelectedEvent(event);
+            map.setView([lat, lng], map.getZoom(), { animate: true });
+          });
+      });
+      return;
+    }
+
+    // Listing pins
     blipPositions.forEach(({ item, lat, lng, color }) => {
       const isSelected = selectedPost?.id === item.id;
 
@@ -622,11 +843,12 @@ export default function SacramentoMapView({
         .on('click', () => {
           setSlideDirection('right');
           setSelectedPost(item);
+          setSelectedEvent(null);
           map.setView([lat, lng], map.getZoom(), { animate: true });
         });
     });
 
-  }, [blipPositions, selectedPost, activeItems, mapReady, mapVisible]);
+  }, [blipPositions, eventBlipPositions, selectedPost, selectedEvent, activeItems, activeEvents, mapReady, mapVisible, showingEvents]);
 
   // Route layer — separate from blips so marker refreshes don't wipe the line.
   useEffect(() => {
@@ -817,6 +1039,19 @@ export default function SacramentoMapView({
         {/* Selected Blip floating detours block panel */}
         <div className="absolute bottom-4 left-4 right-4 z-30 pointer-events-none">
           <AnimatePresence mode="popLayout">
+            {selectedEvent && currentEventIndex >= 0 && (
+              <MapSelectedEventCard
+                event={selectedEvent}
+                currentIndex={currentEventIndex}
+                total={activeEvents.length}
+                slideDirection={slideDirection}
+                compact
+                onClose={() => setSelectedEvent(null)}
+                onPrev={handlePrevEvent}
+                onNext={handleNextEvent}
+                onViewEvent={onViewEvent}
+              />
+            )}
             {selectedPost && (
               <motion.div
                 key={selectedPost.id}
@@ -1052,6 +1287,14 @@ export default function SacramentoMapView({
                 Trade
               </button>
               <button
+                onClick={() => { setLocalType('events'); setLocalCategory('All Categories'); }}
+                className={`px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg ${
+                  localType === 'events' ? 'bg-accent text-on-accent shadow-xs' : 'text-muted hover:text-app'
+                }`}
+              >
+                Events
+              </button>
+              <button
                 type="button"
                 onClick={() => setShowColorGuide(true)}
                 className="px-3 py-1 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all rounded-lg text-muted hover:text-app border-l border-app ml-0.5 pl-2.5"
@@ -1062,8 +1305,9 @@ export default function SacramentoMapView({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5" id="map_internal_dropdowns">
+          <div className={`grid gap-2.5 ${localType === 'events' ? 'grid-cols-1' : 'grid-cols-2'}`} id="map_internal_dropdowns">
             {/* Category selection */}
+            {localType !== 'events' && (
             <div className="flex items-center space-x-1.5 bg-surface px-3 py-2 border border-app rounded-xl">
               <Tag className="w-3.5 h-3.5 text-subtle shrink-0" />
               <select
@@ -1097,6 +1341,7 @@ export default function SacramentoMapView({
                 )}
               </select>
             </div>
+            )}
 
             {/* Neighborhood selection */}
             <div className="flex items-center space-x-1.5 bg-surface px-3 py-2 border border-app rounded-xl">
@@ -1300,16 +1545,20 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Fallback Empty Guide - Beautiful, non-blocking friendly popup overlay */}
-        {activeItems.length === 0 && (
+        {((showingEvents && activeEvents.length === 0) || (!showingEvents && activeItems.length === 0)) && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md border border-[#FF4500]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
             <div className="flex items-start space-x-3 text-left">
               <div className="p-2 bg-[#FF4500]/10 text-accent rounded-xl shrink-0 mt-0.5">
-                <MapPin className="w-4 h-4" />
+                {showingEvents ? <CalendarDays className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
               </div>
               <div className="space-y-0.5">
-                <h4 className="text-[11px] font-black text-app uppercase tracking-widest">Quiet Neighborhood Sector</h4>
+                <h4 className="text-[11px] font-black text-app uppercase tracking-widest">
+                  {showingEvents ? 'No Events On Map' : 'Quiet Neighborhood Sector'}
+                </h4>
                 <p className="text-[10px] text-muted font-semibold leading-relaxed">
-                  No active listings or ISO request pins match your selected filters. Create a new post or modify your filtering to light up the map!
+                  {showingEvents
+                    ? 'No upcoming community events match your filters. Check the Events tab or post a free neighborhood gathering!'
+                    : 'No active listings or ISO request pins match your selected filters. Create a new post or modify your filtering to light up the map!'}
                 </p>
               </div>
             </div>
@@ -1319,6 +1568,18 @@ export default function SacramentoMapView({
 
       {/* Selected Blip Mini Card Slide Panel */}
       <AnimatePresence mode="popLayout">
+        {selectedEvent && currentEventIndex >= 0 && (
+          <MapSelectedEventCard
+            event={selectedEvent}
+            currentIndex={currentEventIndex}
+            total={activeEvents.length}
+            slideDirection={slideDirection}
+            onClose={() => setSelectedEvent(null)}
+            onPrev={handlePrevEvent}
+            onNext={handleNextEvent}
+            onViewEvent={onViewEvent}
+          />
+        )}
         {selectedPost && (
           <motion.div
             key={selectedPost.id}
