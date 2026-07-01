@@ -222,6 +222,58 @@ export function remainingRouteMeters(coords: [number, number][], user: LatLng): 
   return total;
 }
 
+/** Shortest distance from user to any point on the route polyline. */
+export function distanceToRouteMeters(coords: [number, number][], user: LatLng): number {
+  if (coords.length === 0) return Infinity;
+  if (coords.length === 1) {
+    return haversineMeters(user, { lat: coords[0][0], lng: coords[0][1] });
+  }
+
+  let min = Infinity;
+  for (let i = 0; i < coords.length; i++) {
+    min = Math.min(min, haversineMeters(user, { lat: coords[i][0], lng: coords[i][1] }));
+  }
+  return min;
+}
+
+export function isOffRoute(coords: [number, number][], user: LatLng, thresholdMeters = 55): boolean {
+  return distanceToRouteMeters(coords, user) > thresholdMeters;
+}
+
+export function formatSpeedMph(speedMetersPerSecond: number | null | undefined): string | null {
+  if (speedMetersPerSecond == null || Number.isNaN(speedMetersPerSecond) || speedMetersPerSecond < 0) {
+    return null;
+  }
+  const mph = speedMetersPerSecond * 2.23694;
+  if (mph < 1) return null;
+  return `${Math.round(mph)}`;
+}
+
+/** Whether a distance-based voice cue should fire for the current step. */
+export function shouldFireVoiceCue(
+  stepDistanceMeters: number,
+  distanceToManeuver: number,
+  kind: 'far' | 'medium' | 'near' | 'now',
+  thresholds: { far: number; medium: number; near: number; now: number },
+): boolean {
+  const minStepForCue =
+    kind === 'far' ? thresholds.far + 120 : kind === 'medium' ? thresholds.medium + 80 : thresholds.near + 30;
+  if (stepDistanceMeters < minStepForCue) return false;
+
+  switch (kind) {
+    case 'far':
+      return distanceToManeuver <= thresholds.far && distanceToManeuver > thresholds.medium;
+    case 'medium':
+      return distanceToManeuver <= thresholds.medium && distanceToManeuver > thresholds.near;
+    case 'near':
+      return distanceToManeuver <= thresholds.near && distanceToManeuver > thresholds.now;
+    case 'now':
+      return distanceToManeuver <= thresholds.now;
+    default:
+      return false;
+  }
+}
+
 export type ManeuverIconKind =
   | 'straight'
   | 'left'
