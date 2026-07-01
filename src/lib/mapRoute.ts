@@ -73,29 +73,31 @@ export function openDrivingDirections(dest: LatLng, origin?: LatLng): void {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-/** Fetch a real driving route along roads (OpenStreetMap via OSRM). */
+/** Fetch a real driving route along roads (proxied through /api/map/route). */
 export async function fetchDrivingRoute(
   from: LatLng,
   to: LatLng,
 ): Promise<DrivingRouteResult | null> {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 10_000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 12_000);
 
   try {
-    const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordPath}?overview=full&geometries=geojson`;
-    const res = await fetch(url, { signal: controller.signal });
+    const params = new URLSearchParams({
+      fromLat: String(from.lat),
+      fromLng: String(from.lng),
+      toLat: String(to.lat),
+      toLng: String(to.lng),
+    });
+    const res = await fetch(`/api/map/route?${params.toString()}`, { signal: controller.signal });
     if (!res.ok) return null;
 
-    const data = await res.json();
-    const route = data?.routes?.[0];
-    const coordinates = route?.geometry?.coordinates as [number, number][] | undefined;
-    if (data?.code !== 'Ok' || !coordinates?.length) return null;
+    const data = (await res.json()) as DrivingRouteResult;
+    if (!Array.isArray(data.coords) || data.coords.length < 2) return null;
 
     return {
-      coords: coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
-      distanceMeters: route.distance as number,
-      durationSeconds: route.duration as number,
+      coords: data.coords,
+      distanceMeters: Number(data.distanceMeters),
+      durationSeconds: Number(data.durationSeconds),
     };
   } catch {
     return null;

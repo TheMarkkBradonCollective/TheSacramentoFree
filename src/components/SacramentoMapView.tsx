@@ -117,7 +117,7 @@ function MapSelectionRouteRow({
     <div className="mt-2 pt-2 border-t border-app flex items-center gap-2">
       <div className="flex-1 min-w-0">
         {routeLoading ? (
-          <p className="text-[9px] font-medium text-muted animate-pulse">Calculating distance…</p>
+          <p className="text-[9px] font-medium text-muted animate-pulse">Calculating route…</p>
         ) : distanceMeters != null ? (
           <>
             <p className="text-[10px] font-bold text-app leading-snug">
