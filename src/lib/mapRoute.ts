@@ -7,11 +7,13 @@ export interface DrivingRouteResult {
   coords: [number, number][];
   distanceMeters: number;
   durationSeconds: number;
+  /** True when geometry came from OSRM road network data. */
+  onRoads: boolean;
 }
 
 const EARTH_RADIUS_M = 6_371_000;
 
-const OSRM_CLIENT_ENDPOINTS = [
+const OSRM_ENDPOINTS = [
   'https://router.project-osrm.org',
   'https://routing.openstreetmap.de/routed-car',
 ] as const;
@@ -27,19 +29,29 @@ export function haversineMeters(from: LatLng, to: LatLng): number {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a));
 }
 
-/** Rough driving estimate when OSRM is unavailable (stats only — not road geometry). */
-export function estimateDrivingStats(from: LatLng, to: LatLng): DrivingRouteResult {
+/**
+ * Street-aligned block segments between two points — the original SSS map fallback
+ * before OSRM (L-shaped urban grid path, not a straight line).
+ */
+export function generateUberRouteCoords(from: LatLng, to: LatLng): [number, number][] {
+  const midLat = from.lat + (to.lat - from.lat) * 0.55;
+  const midLng = from.lng + (to.lng - from.lng) * 0.45;
+
+  return [
+    [from.lat, from.lng],
+    [midLat, from.lng],
+    [midLat, midLng],
+    [to.lat, midLng],
+    [to.lat, to.lng],
+  ];
+}
+
+/** Rough driving estimate when OSRM is unavailable. */
+export function estimateDrivingStats(from: LatLng, to: LatLng): Pick<DrivingRouteResult, 'distanceMeters' | 'durationSeconds'> {
   const straight = haversineMeters(from, to);
   const distanceMeters = straight * 1.35;
   const durationSeconds = Math.max(60, (distanceMeters / 1609.34 / 28) * 3600);
-  return {
-    coords: [
-      [from.lat, from.lng],
-      [to.lat, to.lng],
-    ],
-    distanceMeters,
-    durationSeconds,
-  };
+  return { distanceMeters, durationSeconds };
 }
 
 export function isRoadGeometry(coords: [number, number][] | null | undefined): boolean {
@@ -82,10 +94,19 @@ export function openDrivingDirections(dest: LatLng, origin?: LatLng): void {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+function buildGridFallback(from: LatLng, to: LatLng): DrivingRouteResult {
+  const stats = estimateDrivingStats(from, to);
+  return {
+    coords: generateUberRouteCoords(from, to),
+    ...stats,
+    onRoads: false,
+  };
+}
+
 async function fetchOsrmDirect(from: LatLng, to: LatLng, signal: AbortSignal): Promise<DrivingRouteResult | null> {
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
-  for (const base of OSRM_CLIENT_ENDPOINTS) {
+  for (const base of OSRM_ENDPOINTS) {
     try {
       const url = `${base}/route/v1/driving/${coordPath}?overview=full&geometries=geojson&steps=false`;
       const res = await fetch(url, { signal, headers: { Accept: 'application/json' } });
@@ -100,6 +121,7 @@ async function fetchOsrmDirect(from: LatLng, to: LatLng, signal: AbortSignal): P
         coords: coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
         distanceMeters: Number(route.distance),
         durationSeconds: Number(route.duration),
+        onRoads: coordinates.length > 2,
       };
     } catch {
       // try next mirror
@@ -126,24 +148,30 @@ async function fetchRouteFromApi(from: LatLng, to: LatLng, signal: AbortSignal):
     coords: data.coords,
     distanceMeters: Number(data.distanceMeters),
     durationSeconds: Number(data.durationSeconds),
+    onRoads: true,
   };
 }
 
-/** Fetch a real driving route along roads (API proxy, then direct OSRM fallback). */
-export async function fetchDrivingRoute(
-  from: LatLng,
-  to: LatLng,
-): Promise<DrivingRouteResult | null> {
+/**
+ * Fetch a driving route for the map — direct OSRM first (original SSS pattern),
+ * API proxy second, then the grid-style fallback path.
+ */
+export async function fetchDrivingRoute(from: LatLng, to: LatLng): Promise<DrivingRouteResult> {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 14_000);
 
   try {
+    const viaOsrm = await fetchOsrmDirect(from, to, controller.signal);
+    if (viaOsrm?.onRoads) return viaOsrm;
+
     const viaApi = await fetchRouteFromApi(from, to, controller.signal);
     if (viaApi) return viaApi;
 
-    return await fetchOsrmDirect(from, to, controller.signal);
+    if (viaOsrm) return viaOsrm;
+
+    return buildGridFallback(from, to);
   } catch {
-    return null;
+    return buildGridFallback(from, to);
   } finally {
     window.clearTimeout(timeoutId);
   }

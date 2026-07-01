@@ -7,11 +7,9 @@ import {
 } from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
 import {
-  estimateDrivingStats,
   fetchDrivingRoute,
   formatRouteDistance,
   formatRouteDuration,
-  isRoadGeometry,
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
@@ -584,18 +582,9 @@ export default function SacramentoMapView({
     fetchDrivingRoute(routeEndpoints.start, routeEndpoints.end).then((result) => {
       if (fetchId !== routeFetchIdRef.current) return;
 
-      if (result && isRoadGeometry(result.coords)) {
-        setRouteCoords(result.coords);
-        setRouteDistanceMeters(result.distanceMeters);
-        setRouteDurationSeconds(result.durationSeconds);
-        setRouteLoading(false);
-        return;
-      }
-
-      const estimate = estimateDrivingStats(routeEndpoints.start, routeEndpoints.end);
-      setRouteDistanceMeters(estimate.distanceMeters);
-      setRouteDurationSeconds(estimate.durationSeconds);
-      setRouteCoords(null);
+      setRouteCoords(result.coords);
+      setRouteDistanceMeters(result.distanceMeters);
+      setRouteDurationSeconds(result.durationSeconds);
       setRouteLoading(false);
     });
   }, [selectedPost, routeEndpoints]);
@@ -952,7 +941,7 @@ export default function SacramentoMapView({
                         routeLoading={routeLoading}
                         distanceMeters={routeDistanceMeters}
                         durationSeconds={routeDurationSeconds}
-                        routeOnMap={isRoadGeometry(routeCoords)}
+                        routeOnMap={!!routeCoords && routeCoords.length > 2}
                         hasLiveGps={!!userLocation}
                         viewerUserId={userProfile.uid}
                       />
@@ -1461,7 +1450,7 @@ export default function SacramentoMapView({
                     routeLoading={routeLoading}
                     distanceMeters={routeDistanceMeters}
                     durationSeconds={routeDurationSeconds}
-                    routeOnMap={isRoadGeometry(routeCoords)}
+                    routeOnMap={!!routeCoords && routeCoords.length > 2}
                     hasLiveGps={!!userLocation}
                     viewerUserId={userProfile.uid}
                   />
