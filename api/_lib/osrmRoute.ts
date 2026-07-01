@@ -18,7 +18,7 @@ function isValidCoord(lat: number, lng: number): boolean {
   return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
 
-/** Server-side OSRM fetch — avoids browser CSP blocks on public routers. */
+/** Fetch driving geometry from public OSRM mirrors. */
 export async function fetchOsrmDrivingRoute(
   from: LatLng,
   to: LatLng,

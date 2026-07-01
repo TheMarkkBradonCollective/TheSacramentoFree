@@ -153,7 +153,7 @@ export function createPushApp() {
       return;
     }
 
-    const { fetchOsrmDrivingRoute } = await import('./osrmRoute');
+    const { fetchOsrmDrivingRoute } = await import('../api/_lib/osrmRoute');
     const route = await fetchOsrmDrivingRoute(
       { lat: fromLat, lng: fromLng },
       { lat: toLat, lng: toLng },
