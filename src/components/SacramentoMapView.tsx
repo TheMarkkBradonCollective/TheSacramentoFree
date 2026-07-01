@@ -132,7 +132,7 @@ function MapSelectedEventCard({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: slideDirection === 'right' ? -(compact ? 70 : 80) : compact ? 70 : 80 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full overflow-y-auto max-h-[inherit]' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}
+      className={compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}
       id={compact ? 'mobile_map_event_detail_card' : 'map_event_detail_card'}
     >
       <div className={`absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg ${compact ? '' : 'top-2.5 py-0.5'}`}>
@@ -359,6 +359,8 @@ export default function SacramentoMapView({
   const geoWatchIdRef = useRef<number | null>(null);
   const followUserRef = useRef(true);
   const selectedPostRef = useRef<ItemPost | null>(null);
+  const navigationOpenRef = useRef(false);
+  const navigateNotifyOpenRef = useRef(false);
   const hasInitialMapCenterRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
 
@@ -390,6 +392,14 @@ export default function SacramentoMapView({
   useEffect(() => {
     selectedPostRef.current = selectedPost;
   }, [selectedPost]);
+
+  useEffect(() => {
+    navigationOpenRef.current = navigationOpen;
+  }, [navigationOpen]);
+
+  useEffect(() => {
+    navigateNotifyOpenRef.current = navigateNotifyOpen;
+  }, [navigateNotifyOpen]);
 
   useEffect(() => {
     followUserRef.current = followUser;
@@ -436,7 +446,7 @@ export default function SacramentoMapView({
       userMarkerRef.current = userMarker;
     }
 
-    if (!followUserRef.current || selectedPostRef.current) return;
+    if (!followUserRef.current || selectedPostRef.current || navigationOpenRef.current || navigateNotifyOpenRef.current) return;
 
     if (!hasInitialMapCenterRef.current) {
       map.setView([latitude, longitude], 14, { animate: false });
@@ -703,14 +713,18 @@ export default function SacramentoMapView({
     startLiveLocationWatch();
 
     // Trigger immediate and asynchronous container size invalidation to solve hidden tab layout bug
-    map.invalidateSize();
+    map.invalidateSize({ animate: false, pan: false });
     const timer = setTimeout(() => {
-      map.invalidateSize();
+      map.invalidateSize({ animate: false, pan: false });
     }, 150);
 
     // Watch dynamic resize adjustments (tab changes, screen resizing, device orientation)
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     const resizeObserver = new ResizeObserver(() => {
-      map.invalidateSize();
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        map.invalidateSize({ animate: false, pan: false });
+      }, 120);
     });
     if (mapContainerRef.current) {
       resizeObserver.observe(mapContainerRef.current);
@@ -718,6 +732,7 @@ export default function SacramentoMapView({
 
     return () => {
       clearTimeout(timer);
+      if (resizeTimer) clearTimeout(resizeTimer);
       resizeObserver.disconnect();
       map.off('dragstart', onUserPanMap);
       stopLiveLocationWatch();
@@ -736,13 +751,10 @@ export default function SacramentoMapView({
     const map = mapRef.current;
     if (!mapVisible || !map) return;
 
-    const refresh = () => map.invalidateSize({ animate: false });
-    refresh();
-    const raf = requestAnimationFrame(refresh);
-    const timer = setTimeout(refresh, 200);
+    const refresh = () => map.invalidateSize({ animate: false, pan: false });
+    const timer = setTimeout(refresh, 180);
 
     return () => {
-      cancelAnimationFrame(raf);
       clearTimeout(timer);
     };
   }, [mapVisible]);
@@ -984,9 +996,15 @@ export default function SacramentoMapView({
 
     if (routeFitForPostIdRef.current !== selectedPost.id) {
       routeFitForPostIdRef.current = selectedPost.id;
-      map.fitBounds(routeCoords, { padding: [60, 60], maxZoom: 14, animate: true });
+      const bottomPad = isFullScreenMobile ? 220 : 60;
+      map.fitBounds(routeCoords, {
+        paddingTopLeft: [60, 60],
+        paddingBottomRight: [bottomPad, 60],
+        maxZoom: 14,
+        animate: !isFullScreenMobile,
+      });
     }
-  }, [selectedPost, routeCoords]);
+  }, [selectedPost, routeCoords, isFullScreenMobile]);
 
   // Handle programmatically panning/zooming to a selected neighborhood
   useEffect(() => {
@@ -1005,8 +1023,6 @@ export default function SacramentoMapView({
   // Route bounds fit inside the markers rendering effect when routeCoords load.
 
   // Immersive mobile layout implementation
-  const hasMobileBottomPanel = !!(selectedPost || selectedEvent);
-
   if (isFullScreenMobile) {
     return (
       <div id="sacramento_interactive_map_view" className="relative w-full h-full overflow-hidden font-sans">
@@ -1044,9 +1060,7 @@ export default function SacramentoMapView({
 
         <button
           onClick={handleLocateUser}
-          className={`absolute z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
-            hasMobileBottomPanel ? 'top-[9.75rem] left-3' : 'sbn-map-controls-bottom left-4'
-          } ${
+          className={`absolute bottom-4 left-4 z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
             isLocating
               ? 'bg-accent text-on-accent border-accent'
               : followUser
@@ -1059,11 +1073,11 @@ export default function SacramentoMapView({
           <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
         </button>
 
-        {onOpenNewPost && !hasMobileBottomPanel && (
+        {onOpenNewPost && (
           <button
             type="button"
             onClick={onOpenNewPost}
-            className="sbn-fab absolute sbn-map-controls-bottom right-4 z-20 pointer-events-auto"
+            className="sbn-fab absolute bottom-4 right-4 z-20 pointer-events-auto"
             aria-label="New post"
             id="mobile_map_new_post_btn"
           >
@@ -1091,7 +1105,7 @@ export default function SacramentoMapView({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 z-30 flex flex-col px-4 pt-4 justify-end font-sans safe-area-pb"
+              className="absolute inset-0 bg-black/60 z-30 flex flex-col p-4 justify-end font-sans"
               id="mobile_color_guide_overlay"
               role="presentation"
               onClick={() => setShowColorGuide(false)}
@@ -1101,7 +1115,7 @@ export default function SacramentoMapView({
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-                className="sbn-card w-full max-h-[min(72vh,calc(100%-var(--sbn-map-card-bottom)-1rem))] flex flex-col p-5 shadow-2xl rounded-b-none mb-0"
+                className="sbn-card w-full max-h-[72vh] flex flex-col p-5 shadow-2xl rounded-b-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between pb-3 mb-4 border-b border-app shrink-0">
@@ -1147,9 +1161,9 @@ export default function SacramentoMapView({
           )}
         </AnimatePresence>
 
-        {/* Selected listing/event floating panel — raised above protruding nav tab */}
-        <div className="absolute sbn-map-card-bottom left-4 right-4 z-30 pointer-events-none max-h-[min(52vh,calc(100%-var(--sbn-map-card-bottom)-1rem))]">
-          <AnimatePresence mode="popLayout">
+        {/* Selected listing/event floating panel */}
+        <div className="absolute bottom-4 left-4 right-4 z-30 pointer-events-none">
+          <AnimatePresence>
             {selectedEvent && currentEventIndex >= 0 && (
               <MapSelectedEventCard
                 event={selectedEvent}
@@ -1171,7 +1185,7 @@ export default function SacramentoMapView({
                 exit={{ opacity: 0, x: slideDirection === 'right' ? -70 : 70 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 id="mobile_map_detail_floating_card"
-                className="pointer-events-auto sbn-card p-4 shadow-2xl w-full overflow-y-auto max-h-[inherit]"
+                className="pointer-events-auto sbn-card p-4 shadow-2xl w-full"
               >
                 {/* Sliding Pagination Controls */}
                 <div className="absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg">
