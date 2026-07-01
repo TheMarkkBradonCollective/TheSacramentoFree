@@ -262,8 +262,9 @@ export function findCurrentStepIndex(steps: NavigationStep[], user: LatLng, star
     const toNext = haversineMeters(user, next.location);
 
     if (current.maneuverType === 'depart') {
-      const advanceAfterMeters = Math.max(45, Math.min(next.distanceMeters * 0.5, next.distanceMeters - 20));
-      if (toNext > advanceAfterMeters) break;
+      const segmentMeters = Math.max(next.distanceMeters, 1);
+      const remainThreshold = Math.min(50, Math.max(28, segmentMeters * 0.22));
+      if (toNext > remainThreshold) break;
       index++;
       continue;
     }
