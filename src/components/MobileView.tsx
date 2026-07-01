@@ -43,6 +43,7 @@ interface MobileViewProps {
   onRefresh: () => void;
   onRefreshEvents: () => void;
   isEventsLoading?: boolean;
+  itemsHydrated?: boolean;
   onViewEvent: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
@@ -100,6 +101,7 @@ export default function MobileView({
   onRefresh,
   onRefreshEvents,
   isEventsLoading = false,
+  itemsHydrated = true,
   onViewEvent,
   engagement,
   eventsEngagement,
@@ -171,6 +173,7 @@ export default function MobileView({
             onColorGuideOpenChange={setColorGuideOpen}
             onOpenNewPost={onOpenNewPost}
             onImmersiveModeChange={setMapImmersiveNav}
+            itemsHydrated={itemsHydrated}
           />
           {!mapImmersiveNav && (
           <div className="absolute top-3 left-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">

@@ -120,7 +120,7 @@ export default function App() {
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     if (typeof window === 'undefined') return 'map';
-    if (hasActiveNavSession()) return 'map';
+    if (hasActiveNavSession(initialAuth.userProfile?.uid)) return 'map';
     return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
   });
   const [showPostModal, setShowPostModal] = useState(false);
@@ -1058,6 +1058,7 @@ export default function App() {
                   onRefresh={loadItems}
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
+                  itemsHydrated={!isItemsLoading}
                   onViewItem={setDetailItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
@@ -1106,6 +1107,7 @@ export default function App() {
                   onRefresh={loadItems}
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
+                  itemsHydrated={!isItemsLoading}
                   onViewItem={setDetailItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
@@ -1154,6 +1156,7 @@ export default function App() {
                   onRefresh={loadItems}
                   onRefreshEvents={() => void loadEvents(false)}
                   isEventsLoading={isEventsLoading}
+                  itemsHydrated={!isItemsLoading}
                   onViewItem={setDetailItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}

@@ -21,7 +21,6 @@ import {
   clearActiveNavSession,
   readActiveNavSession,
   saveActiveNavSession,
-  touchActiveNavSession,
 } from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
 import NavigateNotifyDialog from './NavigateNotifyDialog';
@@ -57,6 +56,8 @@ interface SacramentoMapViewProps {
   onOpenNewPost?: () => void;
   /** Hide mobile header/nav while navigating or showing nav prompts. */
   onImmersiveModeChange?: (active: boolean) => void;
+  /** When false, defer nav session restore until listings have finished loading. */
+  itemsHydrated?: boolean;
 }
 
 const EVENT_MAP_COLOR = '#9333EA';
@@ -378,6 +379,7 @@ export default function SacramentoMapView({
   onColorGuideOpenChange,
   onOpenNewPost,
   onImmersiveModeChange,
+  itemsHydrated = true,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -1002,9 +1004,11 @@ export default function SacramentoMapView({
   const routeDestination = useMemo(() => {
     if (!selectedPost) return null;
     const selectedBlip = blipPositions.find((b) => b.item.id === selectedPost.id);
-    if (!selectedBlip) return null;
-    return { lat: selectedBlip.lat, lng: selectedBlip.lng } as LatLng;
-  }, [selectedPost?.id, blipPositions]);
+    if (selectedBlip) return { lat: selectedBlip.lat, lng: selectedBlip.lng } as LatLng;
+    const session = readActiveNavSession(userProfile.uid);
+    if (session?.postId === selectedPost.id) return session.destination;
+    return null;
+  }, [selectedPost?.id, blipPositions, userProfile.uid]);
 
   const hasGpsFix = userLocation != null;
 
@@ -1016,18 +1020,22 @@ export default function SacramentoMapView({
   }, [routeDestination, hasGpsFix]);
 
   useEffect(() => {
-    if (navRestoreDoneRef.current || items.length === 0) return;
+    if (navRestoreDoneRef.current || !itemsHydrated) return;
 
     const session = readActiveNavSession(userProfile.uid);
-    navRestoreDoneRef.current = true;
-    if (!session) return;
+    if (!session) {
+      navRestoreDoneRef.current = true;
+      return;
+    }
 
     const post = items.find((item) => item.id === session.postId);
     if (!post) {
       clearActiveNavSession();
+      navRestoreDoneRef.current = true;
       return;
     }
 
+    navRestoreDoneRef.current = true;
     skipNavResetForRestoreRef.current = true;
     setSelectedPost(post);
     setSelectedEvent(null);
@@ -1035,7 +1043,7 @@ export default function SacramentoMapView({
     window.setTimeout(() => {
       skipNavResetForRestoreRef.current = false;
     }, 0);
-  }, [items, userProfile.uid]);
+  }, [items, itemsHydrated, userProfile.uid]);
 
   useEffect(() => {
     if (skipNavResetForRestoreRef.current) return;
@@ -1120,7 +1128,7 @@ export default function SacramentoMapView({
     openNavigation,
   ]);
 
-  const navOrigin = userLocationRef.current ?? userLocation ?? getLastLiveLatLng();
+  const navOrigin = userLocationRef.current ?? userLocation ?? getLastLiveLatLng() ?? fallbackLatLng;
 
   const navigationOverlay =
     navigationOpen && routeDestination && selectedPost && navOrigin

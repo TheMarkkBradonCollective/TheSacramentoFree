@@ -42,6 +42,7 @@ interface TabletViewProps {
   onRefresh: () => void;
   onRefreshEvents: () => void;
   isEventsLoading?: boolean;
+  itemsHydrated?: boolean;
   onViewEvent: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
@@ -95,6 +96,7 @@ export default function TabletView({
   onRefresh,
   onRefreshEvents,
   isEventsLoading = false,
+  itemsHydrated = true,
   onViewEvent,
   engagement,
   eventsEngagement,
@@ -219,6 +221,7 @@ export default function TabletView({
                 onViewItem={onViewItem}
                 onViewEvent={onViewEvent}
                 onEditItem={onEditItem}
+                itemsHydrated={itemsHydrated}
               />
             </div>
           </div>

@@ -39,6 +39,7 @@ interface DesktopViewProps {
   onRefresh: () => void;
   onRefreshEvents: () => void;
   isEventsLoading?: boolean;
+  itemsHydrated?: boolean;
   onViewEvent: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
@@ -84,6 +85,7 @@ export default function DesktopView({
   onRefresh,
   onRefreshEvents,
   isEventsLoading = false,
+  itemsHydrated = true,
   onViewEvent,
   engagement,
   eventsEngagement,
@@ -244,6 +246,7 @@ export default function DesktopView({
                 onViewItem={onViewItem}
                 onViewEvent={onViewEvent}
                 onEditItem={onEditItem}
+                itemsHydrated={itemsHydrated}
               />
             </div>
           </div>
