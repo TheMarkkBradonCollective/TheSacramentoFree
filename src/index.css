@@ -106,6 +106,17 @@ html.sbn-session-restore #root:empty {
   background: var(--color-bg-secondary);
 }
 
+#map_navigation_view .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  background: #dfe8f2;
+}
+
+#map_navigation_view .nav-user-marker {
+  background: transparent;
+  border: none;
+}
+
 input,
 select,
 textarea {

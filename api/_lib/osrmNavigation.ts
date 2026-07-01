@@ -23,6 +23,35 @@ const OSRM_ENDPOINTS = [
   'https://routing.openstreetmap.de/routed-car',
 ] as const;
 
+function bearingModifierToPhrase(modifier?: string): string | null {
+  if (!modifier) return null;
+  const normalized = modifier.toLowerCase().trim();
+  const map: Record<string, string> = {
+    north: 'north',
+    south: 'south',
+    east: 'east',
+    west: 'west',
+    northeast: 'northeast',
+    northwest: 'northwest',
+    southeast: 'southeast',
+    southwest: 'southwest',
+    n: 'north',
+    s: 'south',
+    e: 'east',
+    w: 'west',
+  };
+  return map[normalized] ?? null;
+}
+
+function formatDepartInstruction(modifier: string | undefined, name: string): string {
+  const street = name?.trim();
+  const bearing = bearingModifierToPhrase(modifier);
+  if (bearing && street) return `Go ${bearing} on ${street}`;
+  if (bearing) return `Go ${bearing}`;
+  if (street) return `Head on ${street}`;
+  return 'Head toward your route';
+}
+
 function formatManeuverInstruction(
   type: string,
   modifier: string | undefined,
@@ -33,9 +62,7 @@ function formatManeuverInstruction(
   if (isArrival || type === 'arrive') return 'Arrive at pickup';
   switch (type) {
     case 'depart':
-      if (modifier === 'left') return `Head northwest on ${street}`;
-      if (modifier === 'right') return `Head southeast on ${street}`;
-      return `Head on ${street}`;
+      return formatDepartInstruction(modifier, name);
     case 'turn':
       if (modifier === 'left') return `Turn left onto ${street}`;
       if (modifier === 'right') return `Turn right onto ${street}`;

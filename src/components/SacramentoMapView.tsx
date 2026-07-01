@@ -16,6 +16,7 @@ import {
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
+import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import MapNavigationView from './MapNavigationView';
 import NavigateNotifyDialog from './NavigateNotifyDialog';
 import { notifyPosterEnRoute } from '../lib/navigationNotify';
@@ -112,7 +113,7 @@ function createEventBlipIcon(isSelected: boolean): L.DivIcon {
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center cursor-pointer">
-        <span style="border-color: ${EVENT_MAP_COLOR}" class="absolute inline-flex h-7 w-7 rounded-md border opacity-50 block animate-pulse"></span>
+        <span style="border-color: ${EVENT_MAP_COLOR}" class="absolute inline-flex h-7 w-7 rounded-md border opacity-40 block"></span>
         <div style="background-color: ${EVENT_MAP_COLOR}" class="h-4 w-4 rounded-md border-2 border-white shadow-md flex items-center justify-center ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
           <div class="w-1.5 h-1.5 rounded-sm bg-white opacity-90"></div>
         </div>
@@ -128,7 +129,7 @@ function createItemBlipIcon(item: ItemPost, color: string, isSelected: boolean):
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center cursor-pointer">
-        <span style="border-color: ${color}" class="absolute inline-flex h-6 w-6 rounded-full border opacity-50 block animate-pulse"></span>
+        <span style="border-color: ${color}" class="absolute inline-flex h-6 w-6 rounded-full border opacity-40 block"></span>
         <div style="background-color: ${color}" class="h-3.5 w-3.5 rounded-full border-2 shadow-md ${getMapPinBorderClass(item.type)} ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
           <div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>
         </div>
@@ -149,7 +150,15 @@ const MAP_TILE_OPTIONS = {
     '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
 } as const;
 
-const GPS_FOLLOW_PAN_METERS = 28;
+const GPS_FOLLOW_PAN_METERS = 25;
+const GPS_STATE_UPDATE_METERS = 40;
+const MAP_INIT_OPTIONS: L.MapOptions = {
+  zoomControl: false,
+  attributionControl: true,
+  fadeAnimation: false,
+  zoomAnimation: false,
+  markerZoomAnimation: false,
+};
 
 function MapSelectedEventCard({
   event,
@@ -406,11 +415,19 @@ export default function SacramentoMapView({
   const itemMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const eventMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.Marker | null>(null);
-  const geoWatchIdRef = useRef<number | null>(null);
+  const userLocationRef = useRef<LatLng | null>(null);
+  const lastGpsStateUpdateRef = useRef<LatLng | null>(null);
+  const lastMarkerPositionRef = useRef<LatLng | null>(null);
+  const hasGpsFixRef = useRef(false);
+  const isLocatingRef = useRef(true);
+  const locationErrorRef = useRef<string | null>(null);
+  const userLocationIconRef = useRef<L.DivIcon | null>(null);
+  const geoUnsubscribeRef = useRef<(() => void) | null>(null);
+  const followPanRafRef = useRef<number | null>(null);
+  const pendingFollowPanRef = useRef<LatLng | null>(null);
   const followUserRef = useRef(true);
   const mapVisibleRef = useRef(mapVisible);
   const lastFollowPanRef = useRef<LatLng | null>(null);
-  const lastMapSizeRef = useRef<{ width: number; height: number } | null>(null);
   const selectedPostRef = useRef<ItemPost | null>(null);
   const navigationOpenRef = useRef(false);
   const navigateNotifyOpenRef = useRef(false);
@@ -429,13 +446,6 @@ export default function SacramentoMapView({
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const routeEndpointsRef = useRef<{ start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null>(null);
   const routeFitForPostIdRef = useRef<string | null>(null);
-
-  /** ~40 m — avoid refetching OSRM on every GPS tick. */
-  const coordsMovedEnough = (
-    a: { lat: number; lng: number },
-    b: { lat: number; lng: number },
-    thresholdDeg = 0.00035,
-  ) => Math.abs(a.lat - b.lat) > thresholdDeg || Math.abs(a.lng - b.lng) > thresholdDeg;
 
   // Default coordinate centered around the user's neighborhood
   const userNeighborhood = userProfile?.neighborhood || 'Midtown';
@@ -474,6 +484,22 @@ export default function SacramentoMapView({
     const map = mapRef.current;
     if (!map) return;
 
+    const pos = userLocationRef.current;
+    if (pos) {
+      try {
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLatLng([pos.lat, pos.lng]);
+        } else if (!navigationOpenRef.current && !navigateNotifyOpenRef.current) {
+          userMarkerRef.current = L.marker([pos.lat, pos.lng], {
+            icon: createUserLocationIcon(),
+            zIndexOffset: 500,
+          }).addTo(map);
+        }
+      } catch (error) {
+        console.warn('Could not restore user marker on map tab:', error);
+      }
+    }
+
     // One refresh after the tab becomes visible (container was display:none).
     const timer = window.setTimeout(() => {
       map.invalidateSize({ animate: false, pan: false });
@@ -484,96 +510,119 @@ export default function SacramentoMapView({
     };
   }, [mapVisible]);
 
-  const createUserLocationIcon = () =>
-    L.divIcon({
-      html: `
+  const createUserLocationIcon = () => {
+    if (!userLocationIconRef.current) {
+      userLocationIconRef.current = L.divIcon({
+        html: `
         <div class="relative flex items-center justify-center">
-          <span class="absolute inline-flex h-10 w-10 rounded-full bg-blue-500/25 animate-ping"></span>
-          <span class="absolute inline-flex h-6 w-6 rounded-full bg-blue-500/40"></span>
-          <div class="h-4.5 w-4.5 rounded-full bg-blue-600 border-2.5 border-white shadow-xl flex items-center justify-center">
+          <span class="absolute inline-flex h-8 w-8 rounded-full bg-blue-500/20"></span>
+          <div class="h-4 w-4 rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center">
             <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
           </div>
         </div>
       `,
-      className: 'custom-user-avatar-marker',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-    });
+        className: 'custom-user-avatar-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+    }
+    return userLocationIconRef.current;
+  };
 
   const applyLiveUserPosition = (latitude: number, longitude: number) => {
-    setUserLocation({ lat: latitude, lng: longitude });
-    setIsLocating(false);
-    setLocationError(null);
+    const nextPos = { lat: latitude, lng: longitude };
+    userLocationRef.current = nextPos;
+
+    const shouldUpdateState =
+      !lastGpsStateUpdateRef.current ||
+      haversineMeters(lastGpsStateUpdateRef.current, nextPos) >= GPS_STATE_UPDATE_METERS;
+
+    if (!hasGpsFixRef.current) {
+      hasGpsFixRef.current = true;
+      lastGpsStateUpdateRef.current = nextPos;
+      if (isLocatingRef.current) {
+        isLocatingRef.current = false;
+        setIsLocating(false);
+      }
+      if (locationErrorRef.current) {
+        locationErrorRef.current = null;
+        setLocationError(null);
+      }
+      setUserLocation(nextPos);
+    } else if (shouldUpdateState) {
+      lastGpsStateUpdateRef.current = nextPos;
+      setUserLocation(nextPos);
+    }
+
+    if (navigationOpenRef.current || navigateNotifyOpenRef.current || !mapVisibleRef.current) return;
 
     const map = mapRef.current;
     if (!map) return;
 
-    if (userMarkerRef.current) {
-      userMarkerRef.current.setLatLng([latitude, longitude]);
-    } else {
-      const userMarker = L.marker([latitude, longitude], {
-        icon: createUserLocationIcon(),
-        zIndexOffset: 500,
-      })
-        .addTo(map)
-        .bindPopup(`
-          <div class="p-1.5 font-sans">
-            <b class="text-[10px] uppercase font-black text-blue-600 tracking-wide">Your Location</b>
-            <p class="text-[10px] text-subtle mt-0.5 font-semibold">Live GPS — map follows you while moving</p>
-          </div>
-        `);
-      userMarkerRef.current = userMarker;
+    try {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setLatLng([latitude, longitude]);
+      } else {
+        userMarkerRef.current = L.marker([latitude, longitude], {
+          icon: createUserLocationIcon(),
+          zIndexOffset: 500,
+        }).addTo(map);
+      }
+      lastMarkerPositionRef.current = nextPos;
+    } catch (error) {
+      console.warn('Could not update user location marker:', error);
     }
 
-    if (!followUserRef.current || selectedPostRef.current || navigationOpenRef.current || navigateNotifyOpenRef.current) return;
+    if (!followUserRef.current || selectedPostRef.current) return;
 
     if (!hasInitialMapCenterRef.current) {
-      map.setView([latitude, longitude], 14, { animate: false });
-      hasInitialMapCenterRef.current = true;
-      lastFollowPanRef.current = { lat: latitude, lng: longitude };
+      try {
+        map.setView([latitude, longitude], 14, { animate: false });
+        hasInitialMapCenterRef.current = true;
+        lastFollowPanRef.current = nextPos;
+      } catch (error) {
+        console.warn('Could not center map on first GPS fix:', error);
+      }
       return;
     }
 
     const lastPan = lastFollowPanRef.current;
-    const nextPos = { lat: latitude, lng: longitude };
     if (lastPan && haversineMeters(lastPan, nextPos) < GPS_FOLLOW_PAN_METERS) return;
 
     lastFollowPanRef.current = nextPos;
-    map.panTo([latitude, longitude], { animate: true, duration: 0.35, noMoveStart: true });
+    pendingFollowPanRef.current = nextPos;
+    if (followPanRafRef.current != null) return;
+
+    followPanRafRef.current = requestAnimationFrame(() => {
+      followPanRafRef.current = null;
+      const target = pendingFollowPanRef.current;
+      const liveMap = mapRef.current;
+      if (!target || !liveMap || !followUserRef.current || !mapVisibleRef.current) return;
+      try {
+        liveMap.panTo([target.lat, target.lng], { animate: false, noMoveStart: true });
+      } catch (error) {
+        console.warn('Could not follow user on map:', error);
+      }
+    });
   };
 
   const handleGeolocationError = (error: GeolocationPositionError) => {
     console.warn('Geolocation failed:', error);
-    setIsLocating(false);
-    if (error.code === error.PERMISSION_DENIED) {
-      setLocationError('Location permission denied. Enable GPS in your browser to follow the map.');
-    } else {
-      setLocationError('Could not get GPS. Check permissions and try again.');
-    }
-  };
+    if (hasGpsFixRef.current || error.code === error.TIMEOUT) return;
 
-  const startLiveLocationWatch = () => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported on this device.');
+    if (isLocatingRef.current) {
+      isLocatingRef.current = false;
       setIsLocating(false);
-      return;
     }
-    if (geoWatchIdRef.current != null) return;
 
-    setIsLocating(true);
-    setLocationError(null);
+    const message =
+      error.code === error.PERMISSION_DENIED
+        ? 'Location permission denied. Enable GPS in your browser to follow the map.'
+        : 'Could not get GPS. Check permissions and try again.';
 
-    geoWatchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
-      handleGeolocationError,
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 },
-    );
-  };
-
-  const stopLiveLocationWatch = () => {
-    if (geoWatchIdRef.current != null) {
-      navigator.geolocation.clearWatch(geoWatchIdRef.current);
-      geoWatchIdRef.current = null;
+    if (locationErrorRef.current !== message) {
+      locationErrorRef.current = message;
+      setLocationError(message);
     }
   };
 
@@ -582,10 +631,12 @@ export default function SacramentoMapView({
     setFollowUser(true);
     followUserRef.current = true;
 
-    if (userLocation && mapRef.current) {
-      mapRef.current.setView([userLocation.lat, userLocation.lng], Math.max(mapRef.current.getZoom(), 14), {
-        animate: true,
+    if (userLocationRef.current && mapRef.current) {
+      const pos = userLocationRef.current;
+      mapRef.current.setView([pos.lat, pos.lng], Math.max(mapRef.current.getZoom(), 14), {
+        animate: false,
       });
+      lastFollowPanRef.current = pos;
       return;
     }
 
@@ -768,12 +819,10 @@ export default function SacramentoMapView({
     if (!mapContainerRef.current) return;
 
     // Build leaflet map focusing on user sector
-    const map = L.map(mapContainerRef.current, {
-      zoomControl: false,
-      attributionControl: true,
-      fadeAnimation: false,
-      zoomAnimation: false,
-    }).setView([fallbackLatLng.lat, fallbackLatLng.lng], 12);
+    const map = L.map(mapContainerRef.current, MAP_INIT_OPTIONS).setView(
+      [fallbackLatLng.lat, fallbackLatLng.lng],
+      12,
+    );
 
     // Apply soft, beautiful CartoDB Voyager tile layer with NO labels/city-icons to keep the focus solely on the user's listing blips
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', MAP_TILE_OPTIONS).addTo(map);
@@ -788,50 +837,51 @@ export default function SacramentoMapView({
     mapRef.current = map;
     setMapReady(true);
 
+    const unsubscribeGeo = subscribeLiveGeolocation(
+      (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
+      handleGeolocationError,
+    );
+    geoUnsubscribeRef.current = unsubscribeGeo;
+
     const onUserPanMap = () => {
       setFollowUser(false);
       followUserRef.current = false;
     };
     map.on('dragstart', onUserPanMap);
 
-    startLiveLocationWatch();
-
-    // Defer one size fix after first paint when the container may still be settling.
-    const timer = setTimeout(() => {
-      map.invalidateSize({ animate: false, pan: false });
-    }, 200);
-
-    // Only invalidate when dimensions actually change (avoids tile reload spam).
-    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
-    const resizeObserver = new ResizeObserver((entries) => {
+    const refreshMapSize = () => {
       if (!mapVisibleRef.current) return;
+      map.invalidateSize({ animate: false, pan: false });
+    };
 
-      const entry = entries[0];
-      if (!entry) return;
+    const timer = window.setTimeout(refreshMapSize, 250);
 
-      const { width, height } = entry.contentRect;
-      const last = lastMapSizeRef.current;
-      if (last && Math.abs(last.width - width) < 2 && Math.abs(last.height - height) < 2) return;
-      lastMapSizeRef.current = { width, height };
-
-      if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        map.invalidateSize({ animate: false, pan: false });
-      }, 280);
-    });
-    if (mapContainerRef.current) {
-      resizeObserver.observe(mapContainerRef.current);
-    }
+    let resizeTimer: number | null = null;
+    const onWindowResize = () => {
+      if (resizeTimer) window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(refreshMapSize, 300);
+    };
+    window.addEventListener('resize', onWindowResize, { passive: true });
 
     return () => {
-      clearTimeout(timer);
-      if (resizeTimer) clearTimeout(resizeTimer);
-      resizeObserver.disconnect();
+      window.clearTimeout(timer);
+      if (resizeTimer) window.clearTimeout(resizeTimer);
+      window.removeEventListener('resize', onWindowResize);
       map.off('dragstart', onUserPanMap);
-      stopLiveLocationWatch();
+      geoUnsubscribeRef.current?.();
+      geoUnsubscribeRef.current = null;
+      if (followPanRafRef.current != null) {
+        cancelAnimationFrame(followPanRafRef.current);
+        followPanRafRef.current = null;
+      }
       hasInitialMapCenterRef.current = false;
       lastFollowPanRef.current = null;
-      lastMapSizeRef.current = null;
+      lastMarkerPositionRef.current = null;
+      lastGpsStateUpdateRef.current = null;
+      hasGpsFixRef.current = false;
+      isLocatingRef.current = true;
+      locationErrorRef.current = null;
+      userLocationRef.current = null;
       itemMarkersRef.current.clear();
       eventMarkersRef.current.clear();
       setMapReady(false);
@@ -843,45 +893,81 @@ export default function SacramentoMapView({
     };
   }, []);
 
-  // Update listing/event pins when data changes — not on every selection or tab toggle.
+  // Sync listing/event pins incrementally — avoid clearLayers on every filter tick.
   useEffect(() => {
     const map = mapRef.current;
     const markersGroup = markersGroupRef.current;
     if (!mapReady || !map || !markersGroup) return;
 
-    markersGroup.clearLayers();
-    itemMarkersRef.current.clear();
-    eventMarkersRef.current.clear();
+    const syncMarkers = <T,>(
+      positions: { id: string; lat: number; lng: number; data: T }[],
+      registry: Map<string, L.Marker>,
+      createIcon: (data: T) => L.DivIcon,
+      onSelect: (data: T, lat: number, lng: number) => void,
+    ) => {
+      const nextIds = new Set(positions.map((entry) => entry.id));
+
+      registry.forEach((marker, id) => {
+        if (nextIds.has(id)) return;
+        markersGroup.removeLayer(marker);
+        registry.delete(id);
+      });
+
+      positions.forEach(({ id, lat, lng, data }) => {
+        const existing = registry.get(id);
+        if (existing) {
+          existing.setLatLng([lat, lng]);
+          return;
+        }
+
+        const marker = L.marker([lat, lng], { icon: createIcon(data) })
+          .addTo(markersGroup)
+          .on('click', () => onSelect(data, lat, lng));
+        registry.set(id, marker);
+      });
+    };
 
     if (showingEvents) {
-      eventBlipPositions.forEach(({ event, lat, lng }) => {
-        const marker = L.marker([lat, lng], {
-          icon: createEventBlipIcon(selectedEvent?.id === event.id),
-        })
-          .addTo(markersGroup)
-          .on('click', () => {
-            setSlideDirection('right');
-            setSelectedEvent(event);
-            map.setView([lat, lng], map.getZoom(), { animate: false });
-          });
-        eventMarkersRef.current.set(event.id, marker);
-      });
+      itemMarkersRef.current.forEach((marker) => markersGroup.removeLayer(marker));
+      itemMarkersRef.current.clear();
+
+      syncMarkers(
+        eventBlipPositions.map(({ event, lat, lng }) => ({
+          id: event.id,
+          lat,
+          lng,
+          data: event,
+        })),
+        eventMarkersRef.current,
+        (event) => createEventBlipIcon(false),
+        (event, lat, lng) => {
+          setSlideDirection('right');
+          setSelectedEvent(event);
+          map.setView([lat, lng], map.getZoom(), { animate: false });
+        },
+      );
       return;
     }
 
-    blipPositions.forEach(({ item, lat, lng, color }) => {
-      const marker = L.marker([lat, lng], {
-        icon: createItemBlipIcon(item, color, selectedPost?.id === item.id),
-      })
-        .addTo(markersGroup)
-        .on('click', () => {
-          setSlideDirection('right');
-          setSelectedPost(item);
-          setSelectedEvent(null);
-          map.setView([lat, lng], map.getZoom(), { animate: false });
-        });
-      itemMarkersRef.current.set(item.id, marker);
-    });
+    eventMarkersRef.current.forEach((marker) => markersGroup.removeLayer(marker));
+    eventMarkersRef.current.clear();
+
+    syncMarkers(
+      blipPositions.map(({ item, lat, lng, color }) => ({
+        id: item.id,
+        lat,
+        lng,
+        data: { item, color },
+      })),
+      itemMarkersRef.current,
+      ({ item, color }) => createItemBlipIcon(item, color, false),
+      ({ item }, lat, lng) => {
+        setSlideDirection('right');
+        setSelectedPost(item);
+        setSelectedEvent(null);
+        map.setView([lat, lng], map.getZoom(), { animate: false });
+      },
+    );
   }, [blipPositions, eventBlipPositions, showingEvents, mapReady]);
 
   // Highlight selected pin without rebuilding every marker.
@@ -900,15 +986,21 @@ export default function SacramentoMapView({
     });
   }, [selectedPost?.id, selectedEvent?.id, showingEvents, blipPositions, eventBlipPositions]);
 
-  const routeEndpoints = useMemo(() => {
-    if (!selectedPost || !userLocation) return null;
+  const routeDestination = useMemo(() => {
+    if (!selectedPost) return null;
     const selectedBlip = blipPositions.find((b) => b.item.id === selectedPost.id);
     if (!selectedBlip) return null;
-    return {
-      start: userLocation,
-      end: { lat: selectedBlip.lat, lng: selectedBlip.lng },
-    };
-  }, [selectedPost, blipPositions, userLocation]);
+    return { lat: selectedBlip.lat, lng: selectedBlip.lng } as LatLng;
+  }, [selectedPost?.id, blipPositions]);
+
+  const hasGpsFix = userLocation != null;
+
+  const routeEndpoints = useMemo(() => {
+    if (!routeDestination) return null;
+    const start = userLocationRef.current ?? userLocation;
+    if (!start) return null;
+    return { start, end: routeDestination };
+  }, [routeDestination, hasGpsFix]);
 
   useEffect(() => {
     setNavigationOpen(false);
@@ -969,11 +1061,11 @@ export default function SacramentoMapView({
   ]);
 
   const navigationOverlay =
-    navigationOpen && routeEndpoints && selectedPost
+    navigationOpen && routeDestination && selectedPost && (userLocationRef.current ?? userLocation)
       ? createPortal(
           <MapNavigationView
-            origin={routeEndpoints.start}
-            destination={routeEndpoints.end}
+            origin={(userLocationRef.current ?? userLocation)!}
+            destination={routeDestination}
             destinationLabel={selectedPost.title}
             onExit={() => setNavigationOpen(false)}
           />,
@@ -996,7 +1088,7 @@ export default function SacramentoMapView({
     ) : null;
 
   useEffect(() => {
-    if (!selectedPost || showingEvents) {
+    if (!selectedPost || showingEvents || !routeDestination) {
       routeEndpointsRef.current = null;
       routeFitForPostIdRef.current = null;
       setRouteCoords(null);
@@ -1007,27 +1099,19 @@ export default function SacramentoMapView({
       return;
     }
 
-    if (!routeEndpoints) return;
+    const start = userLocationRef.current ?? userLocation;
+    if (!start) return;
 
-    const prev = routeEndpointsRef.current;
-    const destMoved = !prev || coordsMovedEnough(prev.end, routeEndpoints.end);
-    const startMoved = !prev || coordsMovedEnough(prev.start, routeEndpoints.start);
-    const selectionChanged = routeFitForPostIdRef.current !== selectedPost.id;
-
-    if (!selectionChanged && !destMoved && !startMoved) return;
-
-    routeEndpointsRef.current = routeEndpoints;
+    routeEndpointsRef.current = { start, end: routeDestination };
 
     const fetchId = ++routeFetchIdRef.current;
-    if (selectionChanged) {
-      routeFitForPostIdRef.current = null;
-      setRouteCoords(null);
-      setRouteDistanceMeters(null);
-      setRouteDurationSeconds(null);
-      setRouteLoading(true);
-    }
+    routeFitForPostIdRef.current = null;
+    setRouteCoords(null);
+    setRouteDistanceMeters(null);
+    setRouteDurationSeconds(null);
+    setRouteLoading(true);
 
-    fetchDrivingRoute(routeEndpoints.start, routeEndpoints.end).then((result) => {
+    fetchDrivingRoute(start, routeDestination).then((result) => {
       if (fetchId !== routeFetchIdRef.current) return;
 
       setRouteCoords(result.onRoads && isRoadGeometry(result.coords) ? result.coords : null);
@@ -1035,7 +1119,7 @@ export default function SacramentoMapView({
       setRouteDurationSeconds(result.durationSeconds);
       setRouteLoading(false);
     });
-  }, [selectedPost, routeEndpoints]);
+  }, [selectedPost?.id, routeDestination, showingEvents, hasGpsFix]);
 
   // Route layer — separate from blips so marker refreshes don't wipe the line.
   useEffect(() => {
@@ -1071,7 +1155,7 @@ export default function SacramentoMapView({
         paddingTopLeft: [60, 60],
         paddingBottomRight: [bottomPad, 60],
         maxZoom: 14,
-        animate: !isFullScreenMobile,
+        animate: false,
       });
     }
   }, [selectedPost, routeCoords, isFullScreenMobile]);
@@ -1085,7 +1169,7 @@ export default function SacramentoMapView({
       const parentCoord = NEIGHBORHOOD_COORDS[sNeigh];
       if (parentCoord) {
         const { lat, lng } = convertPercentToLatLng(parentCoord.x, parentCoord.y);
-        map.setView([lat, lng], 13, { animate: true });
+        map.setView([lat, lng], 13, { animate: false });
       }
     }
   }, [sNeigh]);
@@ -1346,7 +1430,7 @@ export default function SacramentoMapView({
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
                         viewerUserId={userProfile.uid}
-                        canNavigate={!!userLocation && !!routeEndpoints}
+                        canNavigate={hasGpsFix && !!routeDestination}
                         onStartNavigation={handleNavigateRequest}
                         onOpenExternalMaps={handleOpenExternalMaps}
                       />
@@ -1886,7 +1970,7 @@ export default function SacramentoMapView({
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
                     viewerUserId={userProfile.uid}
-                    canNavigate={!!userLocation && !!routeEndpoints}
+                    canNavigate={hasGpsFix && !!routeDestination}
                     onStartNavigation={handleNavigateRequest}
                     onOpenExternalMaps={handleOpenExternalMaps}
                   />

@@ -24,6 +24,35 @@ const OSRM_ENDPOINTS = [
   'https://routing.openstreetmap.de/routed-car',
 ] as const;
 
+export function bearingModifierToPhrase(modifier?: string): string | null {
+  if (!modifier) return null;
+  const normalized = modifier.toLowerCase().trim();
+  const map: Record<string, string> = {
+    north: 'north',
+    south: 'south',
+    east: 'east',
+    west: 'west',
+    northeast: 'northeast',
+    northwest: 'northwest',
+    southeast: 'southeast',
+    southwest: 'southwest',
+    n: 'north',
+    s: 'south',
+    e: 'east',
+    w: 'west',
+  };
+  return map[normalized] ?? null;
+}
+
+export function formatDepartInstruction(modifier: string | undefined, name: string): string {
+  const street = name?.trim();
+  const bearing = bearingModifierToPhrase(modifier);
+  if (bearing && street) return `Go ${bearing} on ${street}`;
+  if (bearing) return `Go ${bearing}`;
+  if (street) return `Head on ${street}`;
+  return 'Head toward your route';
+}
+
 function formatManeuverInstruction(
   type: string,
   modifier: string | undefined,
@@ -34,9 +63,7 @@ function formatManeuverInstruction(
   if (isArrival || type === 'arrive') return 'Arrive at pickup';
   switch (type) {
     case 'depart':
-      if (modifier === 'left') return `Head northwest on ${street}`;
-      if (modifier === 'right') return `Head southeast on ${street}`;
-      return `Head on ${street}`;
+      return formatDepartInstruction(modifier, name);
     case 'turn':
       if (modifier === 'left') return `Turn left onto ${street}`;
       if (modifier === 'right') return `Turn right onto ${street}`;
@@ -212,25 +239,45 @@ export function bearingDegrees(from: LatLng, to: LatLng): number {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
+/** Step used for distance-based voice cues (depart/continue cue the next turn). */
+export function getActiveVoiceCueStep(steps: NavigationStep[], index: number): NavigationStep | undefined {
+  const current = steps[index];
+  if (!current) return undefined;
+  if ((current.maneuverType === 'depart' || current.maneuverType === 'continue') && steps[index + 1]) {
+    return steps[index + 1];
+  }
+  return current;
+}
+
 /** Find the next step index based on user position. */
 export function findCurrentStepIndex(steps: NavigationStep[], user: LatLng, startIndex = 0): number {
   if (steps.length === 0) return 0;
 
-  let bestIndex = Math.min(startIndex, steps.length - 1);
-  let bestDistance = Infinity;
+  let index = Math.max(0, Math.min(startIndex, steps.length - 1));
 
-  for (let i = startIndex; i < steps.length; i++) {
-    const d = haversineMeters(user, steps[i].location);
-    if (d < bestDistance) {
-      bestDistance = d;
-      bestIndex = i;
+  while (index < steps.length - 1) {
+    const current = steps[index];
+    const next = steps[index + 1];
+    const toCurrent = haversineMeters(user, current.location);
+    const toNext = haversineMeters(user, next.location);
+
+    if (current.maneuverType === 'depart') {
+      const segmentMeters = Math.max(next.distanceMeters, 1);
+      const remainThreshold = Math.min(50, Math.max(28, segmentMeters * 0.22));
+      if (toNext > remainThreshold) break;
+      index++;
+      continue;
     }
-    if (d < 35 && i < steps.length - 1) {
-      return i + 1;
+
+    if (toCurrent < 40 && toNext + 12 < toCurrent) {
+      index++;
+      continue;
     }
+
+    break;
   }
 
-  return bestIndex;
+  return index;
 }
 
 /** Remaining distance along route polyline from nearest point to end. */
