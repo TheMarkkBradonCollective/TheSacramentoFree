@@ -59,9 +59,7 @@ export async function validateClientPush(
     return { ok: false, error: 'This notification type cannot be sent from the client API' };
   }
 
-  if (body.recipientUserIds?.length) {
-    return { ok: false, error: 'recipientUserIds is not accepted from the client API' };
-  }
+  // Client-supplied recipientUserIds are ignored; recipients are derived from database state below.
 
   switch (eventType) {
     case 'account_update': {

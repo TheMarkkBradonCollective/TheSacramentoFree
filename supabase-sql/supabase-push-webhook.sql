@@ -4,12 +4,13 @@
 --
 -- Run supabase-sql/notifications-complete.sql FIRST.
 --
--- EASIEST: run supabase-sql/install-push-webhooks.sql in the SQL Editor
--- (replace YOUR_SERVICE_ROLE_KEY, then Run). That creates all triggers at once.
+-- EASIEST (recommended): Supabase Dashboard → Database → Webhooks — see table below.
+-- The SQL installer (install-push-webhooks.sql) is legacy; Dashboard webhooks send the
+-- correct { type, table, record } payload. SQL triggers send an empty body and are skipped.
 --
--- OR add each hook manually in Dashboard → Database → Webhooks.
---
--- Auth: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
+-- Auth (either works on /api/webhooks/supabase-push):
+--   Authorization: Bearer <SUPABASE_PUSH_WEBHOOK_SECRET>   (recommended)
+--   Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>      (legacy fallback)
 -- URL (all webhooks): https://sacramentobuynothing.com/api/webhooks/supabase-push
 --
 -- | Webhook name          | Table                   | Events         | Who gets notified                |

@@ -4,8 +4,13 @@
 --
 -- Prerequisites:
 --   1. Run supabase-sql/notifications-complete.sql first
---   2. Replace YOUR_SERVICE_ROLE_KEY below (Settings → API → service_role)
---   3. Confirm WEBHOOK_URL matches your live site (default: sacramentobuynothing.com)
+--   2. Prefer Supabase Dashboard → Database → Webhooks (sends proper { type, table, record } payloads)
+--   3. If using this SQL installer, set webhook_secret below (generate: openssl rand -hex 32)
+--      and add the same value as SUPABASE_PUSH_WEBHOOK_SECRET in Vercel env vars.
+--   4. Confirm WEBHOOK_URL matches your live site (default: sacramentobuynothing.com)
+--
+-- NOTE: supabase_functions.http_request triggers send an empty body and will NOT dispatch
+-- notifications with the current handler. Use Dashboard webhooks for production reliability.
 --
 -- This creates 17 database triggers (15 logical webhooks; some tables use INSERT + UPDATE).
 -- Under the hood this is the same as Database → Webhooks in the Dashboard.
@@ -16,18 +21,18 @@
 DO $install$
 DECLARE
   webhook_url text := 'https://sacramentobuynothing.com/api/webhooks/supabase-push';
-  -- ↓ Paste your service role key between the quotes (keep the Bearer prefix out — it is added below)
-  service_role_key text := 'YOUR_SERVICE_ROLE_KEY';
+  -- ↓ Dedicated webhook secret (must match SUPABASE_PUSH_WEBHOOK_SECRET on Vercel)
+  webhook_secret text := 'YOUR_WEBHOOK_SECRET';
   webhook_headers text;
   timeout_ms text := '5000';
 BEGIN
-  IF service_role_key = 'YOUR_SERVICE_ROLE_KEY' OR length(trim(service_role_key)) < 20 THEN
-    RAISE EXCEPTION 'Replace YOUR_SERVICE_ROLE_KEY in this script with your Supabase service_role key before running.';
+  IF webhook_secret = 'YOUR_WEBHOOK_SECRET' OR length(trim(webhook_secret)) < 20 THEN
+    RAISE EXCEPTION 'Replace YOUR_WEBHOOK_SECRET with your SUPABASE_PUSH_WEBHOOK_SECRET before running.';
   END IF;
 
   webhook_headers := json_build_object(
     'Content-Type', 'application/json',
-    'Authorization', 'Bearer ' || service_role_key
+    'Authorization', 'Bearer ' || webhook_secret
   )::text;
 
   -- 1. users INSERT — director join alerts

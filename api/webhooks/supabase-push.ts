@@ -9,6 +9,22 @@ function getWebhookSecret(): string {
   ).trim();
 }
 
+function getServiceRoleKey(): string {
+  return (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+}
+
+function isAuthorizedWebhook(token: string): boolean {
+  if (!token) return false;
+
+  const dedicatedSecret = getWebhookSecret();
+  if (dedicatedSecret && secureCompare(token, dedicatedSecret)) return true;
+
+  const serviceRoleKey = getServiceRoleKey();
+  if (serviceRoleKey && secureCompare(token, serviceRoleKey)) return true;
+
+  return false;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -19,9 +35,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { parseJsonBody, runSupabasePushWebhook } = await import('../../push-server.bundle.cjs');
 
     const dedicatedSecret = getWebhookSecret();
-    if (!dedicatedSecret) {
+    const serviceRoleKey = getServiceRoleKey();
+    if (!dedicatedSecret && !serviceRoleKey) {
       return res.status(503).json({
-        error: 'SUPABASE_PUSH_WEBHOOK_SECRET is required for webhook push delivery.',
+        error:
+          'Set SUPABASE_PUSH_WEBHOOK_SECRET (recommended) or SUPABASE_SERVICE_ROLE_KEY for webhook push delivery.',
       });
     }
 
@@ -29,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const headerSecret = String(req.headers['x-webhook-secret'] || '');
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : headerSecret;
 
-    if (!token || !secureCompare(token, dedicatedSecret)) {
+    if (!isAuthorizedWebhook(token)) {
       return res.status(401).json({ error: 'Invalid webhook authorization' });
     }
 
