@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng, CommunityEvent } from '../types';
 import {
   canViewerSeeExactLocation,
@@ -46,6 +47,8 @@ interface SacramentoMapViewProps {
   colorGuideOpen?: boolean;
   onColorGuideOpenChange?: (open: boolean) => void;
   onOpenNewPost?: () => void;
+  /** Hide mobile header/nav while navigating or showing nav prompts. */
+  onImmersiveModeChange?: (active: boolean) => void;
 }
 
 const EVENT_MAP_COLOR = '#9333EA';
@@ -315,6 +318,7 @@ export default function SacramentoMapView({
   colorGuideOpen: colorGuideOpenProp,
   onColorGuideOpenChange,
   onOpenNewPost,
+  onImmersiveModeChange,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -400,6 +404,15 @@ export default function SacramentoMapView({
   useEffect(() => {
     navigateNotifyOpenRef.current = navigateNotifyOpen;
   }, [navigateNotifyOpen]);
+
+  const immersiveNavActive = navigationOpen || navigateNotifyOpen;
+
+  useEffect(() => {
+    onImmersiveModeChange?.(immersiveNavActive);
+    return () => {
+      onImmersiveModeChange?.(false);
+    };
+  }, [immersiveNavActive, onImmersiveModeChange]);
 
   useEffect(() => {
     followUserRef.current = followUser;
@@ -834,14 +847,17 @@ export default function SacramentoMapView({
   ]);
 
   const navigationOverlay =
-    navigationOpen && routeEndpoints && selectedPost ? (
-      <MapNavigationView
-        origin={routeEndpoints.start}
-        destination={routeEndpoints.end}
-        destinationLabel={selectedPost.title}
-        onExit={() => setNavigationOpen(false)}
-      />
-    ) : null;
+    navigationOpen && routeEndpoints && selectedPost
+      ? createPortal(
+          <MapNavigationView
+            origin={routeEndpoints.start}
+            destination={routeEndpoints.end}
+            destinationLabel={selectedPost.title}
+            onExit={() => setNavigationOpen(false)}
+          />,
+          document.body,
+        )
+      : null;
 
   const navigateNotifyDialog =
     selectedPost && selectedPost.userId !== userProfile.uid ? (

@@ -798,7 +798,21 @@ button {
   right: 0;
   overflow: hidden;
   overflow-x: clip;
-  transition: bottom 0.12s ease-out;
+  transition: top 0.12s ease-out, bottom 0.12s ease-out;
+}
+
+/* Full-screen map navigation — hide app chrome */
+.sbn-mobile-shell.sbn-immersive-nav .sbn-mobile-main {
+  top: 0;
+  bottom: 0;
+}
+
+.sbn-mobile-chrome-hidden {
+  display: none !important;
+}
+
+.sbn-mobile-shell.sbn-immersive-nav .sbn-mobile-prompt-offset {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
 /* Shrink the app above the virtual keyboard; hide bottom nav while typing */
