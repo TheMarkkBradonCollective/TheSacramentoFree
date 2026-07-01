@@ -112,6 +112,7 @@ html.sbn-session-restore #root:empty {
   --sbn-nav-danger: #ff4444;
   --sbn-nav-warning: #ffb000;
   --sbn-nav-success: #22c55e;
+  --sbn-nav-sheet-height: 8.5rem;
   font-family: var(--font-sans);
   overflow: hidden;
 }
@@ -152,6 +153,18 @@ html.sbn-session-restore #root:empty {
   width: 100% !important;
   height: 100% !important;
   background: var(--sbn-nav-map-bg);
+}
+
+#map_navigation_view .leaflet-control-attribution {
+  margin-right: 0.5rem;
+  margin-bottom: calc(var(--sbn-nav-sheet-height, 8.5rem) + 0.35rem);
+  max-width: calc(100% - 5.5rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 9px;
+  opacity: 0.72;
+  z-index: 5;
 }
 
 #map_navigation_view .nav-user-marker,
@@ -293,10 +306,11 @@ html.sbn-session-restore #root:empty {
   letter-spacing: 0.01em;
   box-shadow: var(--sbn-nav-shadow);
   border: 1px solid var(--sbn-nav-glass-border);
-  max-width: calc(100% - 2rem);
+  max-width: min(100%, 18rem);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 #map_navigation_view .sbn-nav-voice-bar {

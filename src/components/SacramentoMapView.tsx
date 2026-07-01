@@ -385,6 +385,7 @@ export default function SacramentoMapView({
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const [lockedNavOrigin, setLockedNavOrigin] = useState<LatLng | null>(null);
   const [navigateNotifyOpen, setNavigateNotifyOpen] = useState(false);
   const [notifyingPoster, setNotifyingPoster] = useState(false);
   const [colorGuideInternal, setColorGuideInternal] = useState(false);
@@ -461,6 +462,13 @@ export default function SacramentoMapView({
   const userNeighborhood = userProfile?.neighborhood || 'Midtown';
   const defaultCoord = NEIGHBORHOOD_COORDS[userNeighborhood] || { x: 53, y: 40 };
   const fallbackLatLng = useMemo(() => convertPercentToLatLng(defaultCoord.x, defaultCoord.y), [defaultCoord]);
+  const resolveNavOrigin = useCallback((): LatLng => {
+    return userLocationRef.current ?? userLocation ?? getLastLiveLatLng() ?? fallbackLatLng;
+  }, [userLocation, fallbackLatLng]);
+
+  const lockNavOrigin = useCallback(() => {
+    setLockedNavOrigin(resolveNavOrigin());
+  }, [resolveNavOrigin]);
 
   useEffect(() => {
     selectedPostRef.current = selectedPost;
@@ -1037,13 +1045,14 @@ export default function SacramentoMapView({
 
     navRestoreDoneRef.current = true;
     skipNavResetForRestoreRef.current = true;
+    lockNavOrigin();
     setSelectedPost(post);
     setSelectedEvent(null);
     setNavigationOpen(true);
     window.setTimeout(() => {
       skipNavResetForRestoreRef.current = false;
     }, 0);
-  }, [items, itemsHydrated, userProfile.uid]);
+  }, [items, itemsHydrated, userProfile.uid, lockNavOrigin]);
 
   useEffect(() => {
     if (skipNavResetForRestoreRef.current) return;
@@ -1065,12 +1074,14 @@ export default function SacramentoMapView({
   }, [selectedPost, routeDestination, userProfile.uid]);
 
   const openNavigation = useCallback(() => {
+    lockNavOrigin();
     persistNavigationSession();
     setNavigationOpen(true);
-  }, [persistNavigationSession]);
+  }, [lockNavOrigin, persistNavigationSession]);
 
   const handleExitNavigation = useCallback(() => {
     clearActiveNavSession();
+    setLockedNavOrigin(null);
     setNavigationOpen(false);
   }, []);
 
@@ -1128,13 +1139,11 @@ export default function SacramentoMapView({
     openNavigation,
   ]);
 
-  const navOrigin = userLocationRef.current ?? userLocation ?? getLastLiveLatLng() ?? fallbackLatLng;
-
   const navigationOverlay =
-    navigationOpen && routeDestination && selectedPost && navOrigin
+    navigationOpen && routeDestination && selectedPost && lockedNavOrigin
       ? createPortal(
           <MapNavigationView
-            origin={navOrigin}
+            origin={lockedNavOrigin}
             destination={routeDestination}
             destinationLabel={selectedPost.title}
             onExit={handleExitNavigation}

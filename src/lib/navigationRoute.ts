@@ -215,6 +215,7 @@ export function formatNavDistance(meters: number): string {
 }
 
 export function formatNavDuration(seconds: number): string {
+  if (seconds < 45) return '< 1 min';
   const mins = Math.max(1, Math.round(seconds / 60));
   if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
@@ -280,26 +281,69 @@ export function findCurrentStepIndex(steps: NavigationStep[], user: LatLng, star
   return index;
 }
 
+function latLngFromCoord(coord: [number, number]): LatLng {
+  return { lat: coord[0], lng: coord[1] };
+}
+
+/** Project a user position onto a route segment (planar approximation, accurate at city scale). */
+function projectOntoSegment(
+  user: LatLng,
+  a: LatLng,
+  b: LatLng,
+): { point: LatLng; along: number } {
+  const latScale = Math.cos(((a.lat + b.lat) / 2) * (Math.PI / 180));
+  const ax = a.lng * latScale;
+  const ay = a.lat;
+  const bx = b.lng * latScale;
+  const by = b.lat;
+  const px = user.lng * latScale;
+  const py = user.lat;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) {
+    return { point: a, along: 0 };
+  }
+
+  const along = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return {
+    point: { lat: ay + along * dy, lng: (ax + along * dx) / latScale },
+    along,
+  };
+}
+
+function distanceToSegmentMeters(user: LatLng, a: LatLng, b: LatLng): number {
+  const { point } = projectOntoSegment(user, a, b);
+  return haversineMeters(user, point);
+}
+
 /** Remaining distance along route polyline from nearest point to end. */
 export function remainingRouteMeters(coords: [number, number][], user: LatLng): number {
   if (coords.length < 2) return 0;
 
-  let nearestIndex = 0;
+  let nearestSegment = 0;
   let nearestDist = Infinity;
-  for (let i = 0; i < coords.length; i++) {
-    const d = haversineMeters(user, { lat: coords[i][0], lng: coords[i][1] });
-    if (d < nearestDist) {
-      nearestDist = d;
-      nearestIndex = i;
+  let nearestPoint = latLngFromCoord(coords[0]);
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = latLngFromCoord(coords[i]);
+    const b = latLngFromCoord(coords[i + 1]);
+    const projection = projectOntoSegment(user, a, b);
+    const dist = haversineMeters(user, projection.point);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearestSegment = i;
+      nearestPoint = projection.point;
     }
   }
 
-  let total = haversineMeters(user, { lat: coords[nearestIndex][0], lng: coords[nearestIndex][1] });
-  for (let i = nearestIndex; i < coords.length - 1; i++) {
-    total += haversineMeters(
-      { lat: coords[i][0], lng: coords[i][1] },
-      { lat: coords[i + 1][0], lng: coords[i + 1][1] },
-    );
+  let total = haversineMeters(user, nearestPoint);
+  const segmentEnd = latLngFromCoord(coords[nearestSegment + 1]);
+  total += haversineMeters(nearestPoint, segmentEnd);
+
+  for (let i = nearestSegment + 1; i < coords.length - 1; i++) {
+    total += haversineMeters(latLngFromCoord(coords[i]), latLngFromCoord(coords[i + 1]));
   }
   return total;
 }
@@ -308,12 +352,15 @@ export function remainingRouteMeters(coords: [number, number][], user: LatLng): 
 export function distanceToRouteMeters(coords: [number, number][], user: LatLng): number {
   if (coords.length === 0) return Infinity;
   if (coords.length === 1) {
-    return haversineMeters(user, { lat: coords[0][0], lng: coords[0][1] });
+    return haversineMeters(user, latLngFromCoord(coords[0]));
   }
 
   let min = Infinity;
-  for (let i = 0; i < coords.length; i++) {
-    min = Math.min(min, haversineMeters(user, { lat: coords[i][0], lng: coords[i][1] }));
+  for (let i = 0; i < coords.length - 1; i++) {
+    min = Math.min(
+      min,
+      distanceToSegmentMeters(user, latLngFromCoord(coords[i]), latLngFromCoord(coords[i + 1])),
+    );
   }
   return min;
 }
