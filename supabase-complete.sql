@@ -1111,8 +1111,7 @@ ALTER TABLE public.help_announcement_comments ENABLE ROW LEVEL SECURITY;
 -- AWARDS
 -- =========================================================
 
- of 3 — Awards tables
--- Run in Supabase SQL Editor, then run awards-02-functions.sql, then awards-03-seed.sql
+-- Awards tables
 
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "joinRank" INT;
 
@@ -1156,8 +1155,7 @@ CREATE INDEX IF NOT EXISTS user_awards_award_idx ON public.user_awards ("awardId
 CREATE INDEX IF NOT EXISTS award_definitions_sort_idx ON public.award_definitions ("sortOrder", title);
 
 
- of 3 — Awards functions, triggers, RLS
--- Run AFTER awards-01-tables.sql, then run awards-03-seed.sql
+-- Awards functions, triggers, RLS
 
 -- =========================================================
 -- 2. HELPERS
@@ -1618,7 +1616,7 @@ END $$;
 -- SECURITY HELPERS & RLS
 -- =========================================================
 
- — Sacramento Buy Nothing
+-- Sacramento Buy Nothing — security helpers & RLS
 -- Run once in Supabase Dashboard → SQL Editor (safe to re-run)
 --
 -- Replaces permissive USING(true) RLS policies with real access control.
