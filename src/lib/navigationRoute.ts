@@ -251,8 +251,40 @@ export function getActiveVoiceCueStep(steps: NavigationStep[], index: number): N
 }
 
 /** Find the next step index based on user position. */
-export function findCurrentStepIndex(steps: NavigationStep[], user: LatLng, startIndex = 0): number {
+export function findCurrentStepIndex(
+  steps: NavigationStep[],
+  user: LatLng,
+  startIndex = 0,
+  route?: { coords: [number, number][]; distanceMeters: number },
+): number {
   if (steps.length === 0) return 0;
+
+  if (route && route.coords.length >= 2 && route.distanceMeters > 0) {
+    const traveled = Math.max(0, route.distanceMeters - remainingRouteMeters(route.coords, user));
+    let cumulative = 0;
+    let index = Math.max(0, Math.min(startIndex, steps.length - 1));
+
+    for (let i = 0; i < index; i++) {
+      cumulative += Math.max(steps[i].distanceMeters, 0);
+    }
+
+    for (let i = index; i < steps.length - 1; i++) {
+      const segmentLen = Math.max(steps[i].distanceMeters, 0);
+      if (segmentLen <= 0) {
+        index = i + 1;
+        continue;
+      }
+      const advanceAt = cumulative + Math.max(segmentLen - 40, segmentLen * 0.82);
+      if (traveled >= advanceAt) {
+        index = i + 1;
+        cumulative += segmentLen;
+      } else {
+        break;
+      }
+    }
+
+    return index;
+  }
 
   let index = Math.max(0, Math.min(startIndex, steps.length - 1));
 
@@ -270,7 +302,7 @@ export function findCurrentStepIndex(steps: NavigationStep[], user: LatLng, star
       continue;
     }
 
-    if (toCurrent < 40 && toNext + 12 < toCurrent) {
+    if (toCurrent < 45 && toNext + 15 < toCurrent) {
       index++;
       continue;
     }
@@ -279,6 +311,40 @@ export function findCurrentStepIndex(steps: NavigationStep[], user: LatLng, star
   }
 
   return index;
+}
+
+/** Bearing along the route polyline at the user's nearest projected point. */
+export function bearingAlongRoute(coords: [number, number][], user: LatLng): number {
+  if (coords.length < 2) return 0;
+
+  let nearestSegment = 0;
+  let nearestDist = Infinity;
+  let nearestAlong = 0;
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = latLngFromCoord(coords[i]);
+    const b = latLngFromCoord(coords[i + 1]);
+    const projection = projectOntoSegment(user, a, b);
+    const dist = haversineMeters(user, projection.point);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearestSegment = i;
+      nearestAlong = projection.along;
+    }
+  }
+
+  if (nearestAlong > 0.9 && nearestSegment < coords.length - 2) {
+    return bearingDegrees(latLngFromCoord(coords[nearestSegment + 1]), latLngFromCoord(coords[nearestSegment + 2]));
+  }
+
+  return bearingDegrees(latLngFromCoord(coords[nearestSegment]), latLngFromCoord(coords[nearestSegment + 1]));
+}
+
+/** Smooth heading changes to reduce GPS jitter. */
+export function smoothHeadingDegrees(previous: number, next: number, maxStep = 22): number {
+  const delta = ((next - previous + 540) % 360) - 180;
+  if (Math.abs(delta) <= maxStep) return next;
+  return (previous + Math.sign(delta) * maxStep + 360) % 360;
 }
 
 function latLngFromCoord(coord: [number, number]): LatLng {
