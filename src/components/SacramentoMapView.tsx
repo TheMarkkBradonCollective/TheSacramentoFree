@@ -11,12 +11,13 @@ import {
   formatRouteDistance,
   formatRouteDuration,
   isRoadGeometry,
+  openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
 import MapNavigationView from './MapNavigationView';
 import NavigateNotifyDialog from './NavigateNotifyDialog';
 import { notifyPosterEnRoute } from '../lib/navigationNotify';
-import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays } from 'lucide-react';
+import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import { motion, AnimatePresence } from 'motion/react';
@@ -131,7 +132,7 @@ function MapSelectedEventCard({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: slideDirection === 'right' ? -(compact ? 70 : 80) : compact ? 70 : 80 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}
+      className={compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full overflow-y-auto max-h-[inherit]' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}
       id={compact ? 'mobile_map_event_detail_card' : 'map_event_detail_card'}
     >
       <div className={`absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg ${compact ? '' : 'top-2.5 py-0.5'}`}>
@@ -218,6 +219,7 @@ interface MapSelectionRouteRowProps {
   hasLiveGps: boolean;
   viewerUserId: string;
   onStartNavigation?: () => void;
+  onOpenExternalMaps?: () => void;
   canNavigate?: boolean;
 }
 
@@ -231,6 +233,7 @@ function MapSelectionRouteRow({
   hasLiveGps,
   viewerUserId,
   onStartNavigation,
+  onOpenExternalMaps,
   canNavigate = false,
 }: MapSelectionRouteRowProps) {
   if (!routeEndpoints) return null;
@@ -267,16 +270,28 @@ function MapSelectionRouteRow({
           </>
         ) : null}
       </div>
-      <button
-        type="button"
-        onClick={() => onStartNavigation?.()}
-        disabled={!canNavigate || !onStartNavigation}
-        className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0 disabled:opacity-40"
-        title={canNavigate ? 'Start in-app turn-by-turn navigation' : 'Enable GPS to navigate'}
-      >
-        <Navigation className="w-3.5 h-3.5" />
-        Navigate
-      </button>
+      <div className="flex shrink-0 gap-1">
+        <button
+          type="button"
+          onClick={() => onStartNavigation?.()}
+          disabled={!canNavigate || !onStartNavigation}
+          className="sbn-btn sbn-btn-primary sbn-btn-sm disabled:opacity-40"
+          title={canNavigate ? 'Start in-app turn-by-turn navigation' : 'Enable GPS to navigate'}
+        >
+          <Navigation className="w-3.5 h-3.5" />
+          Navigate
+        </button>
+        {onOpenExternalMaps && hasLiveGps && (
+          <button
+            type="button"
+            onClick={onOpenExternalMaps}
+            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+            title="Open directions in Google or Apple Maps"
+          >
+            <MapIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -766,6 +781,11 @@ export default function SacramentoMapView({
     setNavigateNotifyOpen(true);
   }, [selectedPost, userProfile.uid, openNavigation]);
 
+  const handleOpenExternalMaps = useCallback(() => {
+    if (!routeEndpoints) return;
+    openDrivingDirections(routeEndpoints.end, routeEndpoints.start);
+  }, [routeEndpoints]);
+
   const handleNavigateSkipNotify = useCallback(() => {
     setNavigateNotifyOpen(false);
     openNavigation();
@@ -985,6 +1005,8 @@ export default function SacramentoMapView({
   // Route bounds fit inside the markers rendering effect when routeCoords load.
 
   // Immersive mobile layout implementation
+  const hasMobileBottomPanel = !!(selectedPost || selectedEvent);
+
   if (isFullScreenMobile) {
     return (
       <div id="sacramento_interactive_map_view" className="relative w-full h-full overflow-hidden font-sans">
@@ -1022,7 +1044,9 @@ export default function SacramentoMapView({
 
         <button
           onClick={handleLocateUser}
-          className={`absolute bottom-4 left-4 z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
+          className={`absolute z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
+            hasMobileBottomPanel ? 'top-[9.75rem] left-3' : 'sbn-map-controls-bottom left-4'
+          } ${
             isLocating
               ? 'bg-accent text-on-accent border-accent'
               : followUser
@@ -1035,11 +1059,11 @@ export default function SacramentoMapView({
           <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
         </button>
 
-        {onOpenNewPost && (
+        {onOpenNewPost && !hasMobileBottomPanel && (
           <button
             type="button"
             onClick={onOpenNewPost}
-            className="sbn-fab absolute bottom-4 right-4 z-20 pointer-events-auto"
+            className="sbn-fab absolute sbn-map-controls-bottom right-4 z-20 pointer-events-auto"
             aria-label="New post"
             id="mobile_map_new_post_btn"
           >
@@ -1049,7 +1073,7 @@ export default function SacramentoMapView({
 
         {/* Location error toast */}
         {locationError && (
-          <div className="absolute top-20 left-4 right-4 z-35 sbn-card p-3 flex items-center justify-between gap-3">
+          <div className="absolute top-20 left-4 right-4 z-[35] sbn-card p-3 flex items-center justify-between gap-3">
             <span className="text-sm font-medium text-app">⚠️ {locationError}</span>
             <button
               onClick={() => setLocationError(null)}
@@ -1067,7 +1091,7 @@ export default function SacramentoMapView({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 z-30 flex flex-col p-4 justify-end font-sans"
+              className="absolute inset-0 bg-black/60 z-30 flex flex-col px-4 pt-4 justify-end font-sans safe-area-pb"
               id="mobile_color_guide_overlay"
               role="presentation"
               onClick={() => setShowColorGuide(false)}
@@ -1077,7 +1101,7 @@ export default function SacramentoMapView({
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-                className="sbn-card w-full max-h-[72vh] flex flex-col p-5 shadow-2xl rounded-b-none"
+                className="sbn-card w-full max-h-[min(72vh,calc(100%-var(--sbn-map-card-bottom)-1rem))] flex flex-col p-5 shadow-2xl rounded-b-none mb-0"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between pb-3 mb-4 border-b border-app shrink-0">
@@ -1123,8 +1147,8 @@ export default function SacramentoMapView({
           )}
         </AnimatePresence>
 
-        {/* Selected Blip floating detours block panel */}
-        <div className="absolute bottom-4 left-4 right-4 z-30 pointer-events-none">
+        {/* Selected listing/event floating panel — raised above protruding nav tab */}
+        <div className="absolute sbn-map-card-bottom left-4 right-4 z-30 pointer-events-none max-h-[min(52vh,calc(100%-var(--sbn-map-card-bottom)-1rem))]">
           <AnimatePresence mode="popLayout">
             {selectedEvent && currentEventIndex >= 0 && (
               <MapSelectedEventCard
@@ -1147,7 +1171,7 @@ export default function SacramentoMapView({
                 exit={{ opacity: 0, x: slideDirection === 'right' ? -70 : 70 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 id="mobile_map_detail_floating_card"
-                className="pointer-events-auto sbn-card p-4 shadow-2xl w-full"
+                className="pointer-events-auto sbn-card p-4 shadow-2xl w-full overflow-y-auto max-h-[inherit]"
               >
                 {/* Sliding Pagination Controls */}
                 <div className="absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg">
@@ -1238,8 +1262,9 @@ export default function SacramentoMapView({
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
                         viewerUserId={userProfile.uid}
-                        canNavigate={!!userLocation && isRoadGeometry(routeCoords)}
+                        canNavigate={!!userLocation && !!routeEndpoints}
                         onStartNavigation={handleNavigateRequest}
+                        onOpenExternalMaps={handleOpenExternalMaps}
                       />
                     </div>
 
@@ -1777,8 +1802,9 @@ export default function SacramentoMapView({
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
                     viewerUserId={userProfile.uid}
-                    canNavigate={!!userLocation && isRoadGeometry(routeCoords)}
+                    canNavigate={!!userLocation && !!routeEndpoints}
                     onStartNavigation={handleNavigateRequest}
+                    onOpenExternalMaps={handleOpenExternalMaps}
                   />
                 </div>
 

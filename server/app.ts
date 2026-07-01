@@ -168,5 +168,36 @@ export function createPushApp() {
     res.json(route);
   });
 
+  app.get('/api/map/navigation', async (req, res) => {
+    const parseCoord = (value: unknown): number | null => {
+      const n = typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const fromLat = parseCoord(req.query.fromLat);
+    const fromLng = parseCoord(req.query.fromLng);
+    const toLat = parseCoord(req.query.toLat);
+    const toLng = parseCoord(req.query.toLng);
+
+    if (fromLat === null || fromLng === null || toLat === null || toLng === null) {
+      res.status(400).json({ error: 'fromLat, fromLng, toLat, and toLng are required' });
+      return;
+    }
+
+    const { fetchOsrmNavigationRoute } = await import('../api/_lib/osrmNavigation');
+    const route = await fetchOsrmNavigationRoute(
+      { lat: fromLat, lng: fromLng },
+      { lat: toLat, lng: toLng },
+    );
+
+    if (!route) {
+      res.status(502).json({ error: 'Could not calculate navigation route' });
+      return;
+    }
+
+    res.setHeader('Cache-Control', 'public, max-age=120');
+    res.json(route);
+  });
+
   return app;
 }

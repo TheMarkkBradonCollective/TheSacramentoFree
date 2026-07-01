@@ -142,7 +142,42 @@ export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<Na
     }
   }
 
-  return null;
+  return fetchNavigationRouteFromApi(from, to);
+}
+
+async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<NavigationRouteResult | null> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 16_000);
+
+  try {
+    const params = new URLSearchParams({
+      fromLat: String(from.lat),
+      fromLng: String(from.lng),
+      toLat: String(to.lat),
+      toLng: String(to.lng),
+    });
+    const res = await fetch(`/api/map/navigation?${params.toString()}`, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as NavigationRouteResult;
+    if (!Array.isArray(data.coords) || data.coords.length < 2 || !Array.isArray(data.steps) || data.steps.length === 0) {
+      return null;
+    }
+
+    return {
+      coords: data.coords,
+      distanceMeters: Number(data.distanceMeters),
+      durationSeconds: Number(data.durationSeconds),
+      steps: data.steps,
+    };
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 export function formatNavDistance(meters: number): string {
