@@ -29,23 +29,6 @@ export function haversineMeters(from: LatLng, to: LatLng): number {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a));
 }
 
-/**
- * Street-aligned block segments between two points — the original SSS map fallback
- * before OSRM (L-shaped urban grid path, not a straight line).
- */
-export function generateUberRouteCoords(from: LatLng, to: LatLng): [number, number][] {
-  const midLat = from.lat + (to.lat - from.lat) * 0.55;
-  const midLng = from.lng + (to.lng - from.lng) * 0.45;
-
-  return [
-    [from.lat, from.lng],
-    [midLat, from.lng],
-    [midLat, midLng],
-    [to.lat, midLng],
-    [to.lat, to.lng],
-  ];
-}
-
 /** Rough driving estimate when OSRM is unavailable. */
 export function estimateDrivingStats(from: LatLng, to: LatLng): Pick<DrivingRouteResult, 'distanceMeters' | 'durationSeconds'> {
   const straight = haversineMeters(from, to);
@@ -94,10 +77,52 @@ export function openDrivingDirections(dest: LatLng, origin?: LatLng): void {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-function buildGridFallback(from: LatLng, to: LatLng): DrivingRouteResult {
+function stitchRouteToEndpoints(
+  coords: [number, number][],
+  from: LatLng,
+  to: LatLng,
+): [number, number][] {
+  if (coords.length < 2) {
+    return [
+      [from.lat, from.lng],
+      [to.lat, to.lng],
+    ];
+  }
+
+  const stitched = coords.slice() as [number, number][];
+  const [firstLat, firstLng] = stitched[0];
+  const [lastLat, lastLng] = stitched[stitched.length - 1];
+  const snapMeters = 45;
+
+  if (haversineMeters({ lat: firstLat, lng: firstLng }, from) > snapMeters) {
+    stitched.unshift([from.lat, from.lng]);
+  }
+  if (haversineMeters({ lat: lastLat, lng: lastLng }, to) > snapMeters) {
+    stitched.push([to.lat, to.lng]);
+  }
+
+  return stitched;
+}
+
+function withRoadGeometry(
+  coords: [number, number][],
+  from: LatLng,
+  to: LatLng,
+  distanceMeters: number,
+  durationSeconds: number,
+): DrivingRouteResult {
+  return {
+    coords: stitchRouteToEndpoints(coords, from, to),
+    distanceMeters,
+    durationSeconds,
+    onRoads: true,
+  };
+}
+
+function buildStatsFallback(from: LatLng, to: LatLng): DrivingRouteResult {
   const stats = estimateDrivingStats(from, to);
   return {
-    coords: generateUberRouteCoords(from, to),
+    coords: [],
     ...stats,
     onRoads: false,
   };
@@ -117,12 +142,16 @@ async function fetchOsrmDirect(from: LatLng, to: LatLng, signal: AbortSignal): P
       const coordinates = route?.geometry?.coordinates as [number, number][] | undefined;
       if (data?.code !== 'Ok' || !coordinates || coordinates.length < 2) continue;
 
-      return {
-        coords: coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
-        distanceMeters: Number(route.distance),
-        durationSeconds: Number(route.duration),
-        onRoads: coordinates.length > 2,
-      };
+      const latLngCoords = coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
+      if (latLngCoords.length <= 2) continue;
+
+      return withRoadGeometry(
+        latLngCoords,
+        from,
+        to,
+        Number(route.distance),
+        Number(route.duration),
+      );
     } catch {
       // try next mirror
     }
@@ -144,17 +173,18 @@ async function fetchRouteFromApi(from: LatLng, to: LatLng, signal: AbortSignal):
   const data = (await res.json()) as DrivingRouteResult;
   if (!isRoadGeometry(data.coords)) return null;
 
-  return {
-    coords: data.coords,
-    distanceMeters: Number(data.distanceMeters),
-    durationSeconds: Number(data.durationSeconds),
-    onRoads: true,
-  };
+  return withRoadGeometry(
+    data.coords,
+    from,
+    to,
+    Number(data.distanceMeters),
+    Number(data.durationSeconds),
+  );
 }
 
 /**
- * Fetch a driving route for the map — direct OSRM first (original SSS pattern),
- * API proxy second, then the grid-style fallback path.
+ * Fetch a driving route from the user's GPS to a listing pin.
+ * Draws road geometry only when OSRM succeeds; otherwise returns stats without a line.
  */
 export async function fetchDrivingRoute(from: LatLng, to: LatLng): Promise<DrivingRouteResult> {
   const controller = new AbortController();
@@ -162,16 +192,14 @@ export async function fetchDrivingRoute(from: LatLng, to: LatLng): Promise<Drivi
 
   try {
     const viaOsrm = await fetchOsrmDirect(from, to, controller.signal);
-    if (viaOsrm?.onRoads) return viaOsrm;
+    if (viaOsrm) return viaOsrm;
 
     const viaApi = await fetchRouteFromApi(from, to, controller.signal);
     if (viaApi) return viaApi;
 
-    if (viaOsrm) return viaOsrm;
-
-    return buildGridFallback(from, to);
+    return buildStatsFallback(from, to);
   } catch {
-    return buildGridFallback(from, to);
+    return buildStatsFallback(from, to);
   } finally {
     window.clearTimeout(timeoutId);
   }

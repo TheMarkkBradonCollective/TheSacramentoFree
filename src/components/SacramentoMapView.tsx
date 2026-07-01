@@ -10,6 +10,7 @@ import {
   fetchDrivingRoute,
   formatRouteDistance,
   formatRouteDuration,
+  isRoadGeometry,
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
@@ -538,14 +539,14 @@ export default function SacramentoMapView({
   }, [selectedPost, followUser]);
 
   const routeEndpoints = useMemo(() => {
-    if (!selectedPost) return null;
+    if (!selectedPost || !userLocation) return null;
     const selectedBlip = blipPositions.find((b) => b.item.id === selectedPost.id);
     if (!selectedBlip) return null;
     return {
-      start: userLocation || fallbackLatLng,
+      start: userLocation,
       end: { lat: selectedBlip.lat, lng: selectedBlip.lng },
     };
-  }, [selectedPost, blipPositions, userLocation, fallbackLatLng]);
+  }, [selectedPost, blipPositions, userLocation]);
 
   useEffect(() => {
     if (!selectedPost) {
@@ -582,7 +583,7 @@ export default function SacramentoMapView({
     fetchDrivingRoute(routeEndpoints.start, routeEndpoints.end).then((result) => {
       if (fetchId !== routeFetchIdRef.current) return;
 
-      setRouteCoords(result.coords);
+      setRouteCoords(result.onRoads && isRoadGeometry(result.coords) ? result.coords : null);
       setRouteDistanceMeters(result.distanceMeters);
       setRouteDurationSeconds(result.durationSeconds);
       setRouteLoading(false);
@@ -638,8 +639,6 @@ export default function SacramentoMapView({
     const endpoints = routeEndpointsRef.current;
     if (!selectedPost || !endpoints || !routeCoords || routeCoords.length < 2) return;
 
-    const { start: startLatLng, end: selectedLatLng } = endpoints;
-
     L.polyline(routeCoords, {
       color: '#FF4500',
       weight: 8,
@@ -655,33 +654,6 @@ export default function SacramentoMapView({
       lineCap: 'round',
       lineJoin: 'round',
     }).addTo(routeLayer);
-
-    const startIcon = L.divIcon({
-      html: `
-        <div class="h-3.5 w-3.5 bg-[#FF4500] rounded-full border-2.5 border-white shadow-md flex items-center justify-center">
-          <div class="h-1 w-1 bg-white rounded-full"></div>
-        </div>
-      `,
-      className: 'route-start-marker',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
-    });
-    L.marker([startLatLng.lat, startLatLng.lng], { icon: startIcon, zIndexOffset: 200 }).addTo(routeLayer);
-
-    const destIcon = L.divIcon({
-      html: `
-        <div class="relative flex items-center justify-center">
-          <span class="absolute inline-flex h-8 w-8 rounded-full bg-[#FF4500]/25 animate-ping"></span>
-          <div class="h-4.5 w-4.5 bg-[#FF4500] rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-            <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
-          </div>
-        </div>
-      `,
-      className: 'route-destination-pulsing-marker',
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-    });
-    L.marker([selectedLatLng.lat, selectedLatLng.lng], { icon: destIcon, zIndexOffset: 201 }).addTo(routeLayer);
 
     if (routeFitForPostIdRef.current !== selectedPost.id) {
       routeFitForPostIdRef.current = selectedPost.id;
@@ -941,7 +913,7 @@ export default function SacramentoMapView({
                         routeLoading={routeLoading}
                         distanceMeters={routeDistanceMeters}
                         durationSeconds={routeDurationSeconds}
-                        routeOnMap={!!routeCoords && routeCoords.length > 2}
+                        routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
                         viewerUserId={userProfile.uid}
                       />
@@ -1450,7 +1422,7 @@ export default function SacramentoMapView({
                     routeLoading={routeLoading}
                     distanceMeters={routeDistanceMeters}
                     durationSeconds={routeDurationSeconds}
-                    routeOnMap={!!routeCoords && routeCoords.length > 2}
+                    routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
                     viewerUserId={userProfile.uid}
                   />
