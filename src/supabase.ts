@@ -7,6 +7,7 @@ import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
+import { getEventsUnlockStatus } from './lib/eventsApi';
 import {
   VOTE_COOLDOWN_MAX_NEW_VOTES,
   VOTE_COOLDOWN_WINDOW_MS,
@@ -2512,6 +2513,17 @@ export async function createSupabaseEvent(
   try {
     if (!event.isFree) {
       return { ok: false, errorMessage: 'Only free community events are allowed.' };
+    }
+
+    if (author && !isStaffRole(author.role)) {
+      const unlockStatus = await getEventsUnlockStatus();
+      if (!unlockStatus.unlocked) {
+        return {
+          ok: false,
+          errorMessage:
+            'Community events unlock at 1,000 neighbors. Share the invite link to help us get there!',
+        };
+      }
     }
 
     if (author?.email) {

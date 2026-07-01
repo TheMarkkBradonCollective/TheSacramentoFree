@@ -211,7 +211,7 @@ export const IN_APP = {
   mapDescription: 'Explore free gifts and requests across Sacramento. Message neighbors to arrange porch pickup.',
   eventsTitle: 'Free Community Events',
   eventsDescription:
-    'Post and discover free neighborhood gatherings — potlucks, swaps, meetups, and more. No tickets or fees allowed.',
+    'Neighborhood potlucks, swaps, and meetups — always 100% free. Unlocks for everyone when we reach 1,000 neighbors.',
   eventsTabLabel: 'Events',
   postEventButton: 'Post Event',
   chatsTitle: 'Chat',
@@ -410,4 +410,25 @@ export const AWARDS = {
   ],
   comingSoonNote:
     'This is not a donation page and will never charge neighbors. Awards are about community spirit, not payments.',
+} as const;
+
+export const EVENTS = {
+  unlockBadge: 'Almost meetup time',
+  unlockTitle: 'Let\'s unlock community events!',
+  unlockBody:
+    'We need 1,000 neighbors before the Events tab goes live. Copy your invite link and share it — every new neighbor gets us closer to potlucks, swaps, and park meetups!',
+  unlockNote:
+    'Events are always 100% free — no tickets, no fees. Once we hit 1,000 members, you can post and RSVP to neighborhood gatherings.',
+  shareButton: 'Copy link & spread the word',
+  shareTitle: 'Join Sacramento Buy Nothing',
+  shareMessage:
+    'Come join our free Sacramento Buy Nothing group — give, receive, trade, and meet neighbors. No money, just kindness: {url}',
+  unlockedIntro:
+    'Post and discover free neighborhood gatherings — potlucks, swaps, meetups, and more.',
+  previewBullets: [
+    'Free potlucks, clothing swaps, and park meetups',
+    'RSVP so hosts know who\'s coming',
+    'Comments and updates on each gathering',
+    'Always free — no tickets or fees allowed',
+  ],
 } as const;

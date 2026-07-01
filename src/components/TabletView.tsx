@@ -6,7 +6,7 @@ import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import { List, MessageSquare, User, Plus, Map, CalendarDays } from 'lucide-react';
-import EventsView from './EventsView';
+import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import BrandLogo from './BrandLogo';
 import { IN_APP } from '../siteContent';
@@ -24,6 +24,7 @@ interface TabletViewProps {
   setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
   onOpenNewEvent: () => void;
+  canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
@@ -76,6 +77,7 @@ export default function TabletView({
   setActiveTab,
   onOpenNewPost,
   onOpenNewEvent,
+  canAccessEvents = true,
   onInitiateChat,
   onClaimSubmitted,
   onViewItem,
@@ -182,12 +184,14 @@ export default function TabletView({
                   <h2>{IN_APP.eventsTitle}</h2>
                   <p>{IN_APP.eventsDescription}</p>
                 </div>
+                {canAccessEvents && (
                 <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary shrink-0">
                   <Plus className="w-4 h-4" /> {IN_APP.postEventButton}
                 </button>
+                )}
               </div>
             </div>
-            <EventsView
+            <EventsPanel
               events={events}
               userProfile={userProfile}
               engagement={eventsEngagement}

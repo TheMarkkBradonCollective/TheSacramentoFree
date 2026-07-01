@@ -8,6 +8,7 @@ import {
 } from '../types';
 import { supabase } from '../supabase';
 import { canManageAwards } from './roles';
+import { getCommunityUnlockStatus } from './communityUnlock';
 
 export const AWARDS_UNLOCK_TARGET = 500;
 
@@ -55,19 +56,7 @@ function normalizeUserAwardRow(
 }
 
 export async function getAwardsUnlockStatus(): Promise<AwardsUnlockStatus> {
-  try {
-    const { count, error } = await supabase.from('users').select('uid', { count: 'exact', head: true });
-    const memberCount = error ? 0 : count ?? 0;
-    const unlocked = memberCount >= AWARDS_UNLOCK_TARGET;
-    return {
-      unlocked,
-      memberCount,
-      target: AWARDS_UNLOCK_TARGET,
-      remaining: Math.max(0, AWARDS_UNLOCK_TARGET - memberCount),
-    };
-  } catch {
-    return { unlocked: false, memberCount: 0, target: AWARDS_UNLOCK_TARGET, remaining: AWARDS_UNLOCK_TARGET };
-  }
+  return getCommunityUnlockStatus(AWARDS_UNLOCK_TARGET);
 }
 
 export async function getAwardDefinitions(): Promise<AwardDefinition[]> {
@@ -322,7 +311,4 @@ export async function evaluateAutoAwardsForUser(userId: string): Promise<void> {
   }
 }
 
-export function getInviteShareUrl(): string {
-  if (typeof window === 'undefined') return 'https://sacramentobuynothing.com/#/login';
-  return `${window.location.origin}${window.location.pathname}#/login`;
-}
+export { getInviteShareUrl } from './communityUnlock';

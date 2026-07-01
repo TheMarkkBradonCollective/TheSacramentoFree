@@ -6,7 +6,7 @@ import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import { Map, List, MessageSquare, User, Plus, CalendarDays } from 'lucide-react';
-import EventsView from './EventsView';
+import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
@@ -25,6 +25,7 @@ interface MobileViewProps {
   setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
   onOpenNewEvent: () => void;
+  canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
@@ -81,6 +82,7 @@ export default function MobileView({
   setActiveTab,
   onOpenNewPost,
   onOpenNewEvent,
+  canAccessEvents = true,
   onInitiateChat,
   onClaimSubmitted,
   onViewItem,
@@ -232,7 +234,7 @@ export default function MobileView({
               <h2>{IN_APP.eventsTitle}</h2>
               <p>{IN_APP.eventsDescription}</p>
             </div>
-            <EventsView
+            <EventsPanel
               events={events}
               userProfile={userProfile}
               engagement={eventsEngagement}
@@ -243,6 +245,7 @@ export default function MobileView({
             />
             <PageScrollFooter className="-mx-4" onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           </div>
+          {canAccessEvents && (
           <button
             type="button"
             onClick={onOpenNewEvent}
@@ -252,6 +255,7 @@ export default function MobileView({
           >
             <Plus className="w-6 h-6" />
           </button>
+          )}
         </div>
 
         <div

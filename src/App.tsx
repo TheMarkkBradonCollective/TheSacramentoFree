@@ -64,6 +64,7 @@ import { isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
 import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
+import { useEventsUnlock } from './hooks/useEventsUnlock';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -144,6 +145,7 @@ export default function App() {
   const { confirm, alert } = useConfirm();
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
   const { shouldGlow: awardsButtonGlow, markAwardsSeen } = useAwardsGlow(userProfile?.uid);
+  const { canAccessEvents } = useEventsUnlock(userProfile);
 
   const handleOpenAwards = useCallback(() => {
     markAwardsSeen();
@@ -1032,6 +1034,7 @@ export default function App() {
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
                   onOpenNewEvent={() => setShowPostEventModal(true)}
+                  canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
@@ -1079,6 +1082,7 @@ export default function App() {
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
                   onOpenNewEvent={() => setShowPostEventModal(true)}
+                  canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
@@ -1126,6 +1130,7 @@ export default function App() {
                   setActiveTab={setActiveTab}
                   onOpenNewPost={() => setShowPostModal(true)}
                   onOpenNewEvent={() => setShowPostEventModal(true)}
+                  canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
@@ -1322,7 +1327,7 @@ export default function App() {
                 />
               )}
 
-              {(showPostEventModal || editingEvent) && (
+              {(showPostEventModal || editingEvent) && canAccessEvents && (
                 <PostEventModal
                   userProfile={userProfile}
                   editEvent={editingEvent}

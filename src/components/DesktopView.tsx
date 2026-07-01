@@ -7,7 +7,7 @@ import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import Navbar from './Navbar';
 import CommunityStatsBar from './CommunityStatsBar';
-import EventsView from './EventsView';
+import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { AppTab } from '../lib/appTabs';
@@ -21,6 +21,7 @@ interface DesktopViewProps {
   setActiveTab: (tab: AppTab) => void;
   onOpenNewPost: () => void;
   onOpenNewEvent: () => void;
+  canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
@@ -65,6 +66,7 @@ export default function DesktopView({
   setActiveTab,
   onOpenNewPost,
   onOpenNewEvent,
+  canAccessEvents = true,
   onInitiateChat,
   onClaimSubmitted,
   onViewItem,
@@ -148,12 +150,14 @@ export default function DesktopView({
                   <h2>{IN_APP.eventsTitle}</h2>
                   <p>{IN_APP.eventsDescription}</p>
                 </div>
+                {canAccessEvents && (
                 <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary shrink-0">
                   <Plus className="w-4 h-4" /> {IN_APP.postEventButton}
                 </button>
+                )}
               </div>
             </div>
-            <EventsView
+            <EventsPanel
               events={events}
               userProfile={userProfile}
               engagement={eventsEngagement}
