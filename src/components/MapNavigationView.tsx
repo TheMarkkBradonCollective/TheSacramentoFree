@@ -484,22 +484,22 @@ export default function MapNavigationView({
     return (
       <div className="fixed inset-0 z-[200] bg-zinc-950 flex flex-col items-center justify-center gap-4 p-6 text-center text-white safe-area-pb">
         <p className="text-sm text-zinc-300">{error ?? 'Route unavailable'}</p>
-        <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+        <div className="flex flex-col gap-2 w-full max-w-xs">
           <button
             type="button"
             onClick={handleRetryRoute}
-            className="px-5 py-2.5 rounded-full bg-zinc-800 text-white font-bold text-sm border border-zinc-600"
+            className="px-5 py-3 rounded-full bg-[#FF4500] text-white font-bold text-sm"
           >
-            Retry
+            Retry route
           </button>
           <button
             type="button"
             onClick={() => openDrivingDirections(destination, origin)}
-            className="px-5 py-2.5 rounded-full bg-white text-zinc-900 font-bold text-sm"
+            className="px-5 py-3 rounded-full bg-white text-zinc-900 font-bold text-sm"
           >
             Open in Maps
           </button>
-          <button type="button" onClick={handleExit} className="px-5 py-2.5 rounded-full bg-[#FF4500] font-bold text-sm">
+          <button type="button" onClick={handleExit} className="px-5 py-3 rounded-full bg-zinc-800 text-zinc-200 font-semibold text-sm">
             Back to map
           </button>
         </div>

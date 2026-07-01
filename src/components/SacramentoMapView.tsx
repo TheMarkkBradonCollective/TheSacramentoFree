@@ -132,7 +132,7 @@ function MapSelectedEventCard({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: slideDirection === 'right' ? -(compact ? 70 : 80) : compact ? 70 : 80 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}
+      className={compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full overflow-y-auto max-h-[inherit]' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}
       id={compact ? 'mobile_map_event_detail_card' : 'map_event_detail_card'}
     >
       <div className={`absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg ${compact ? '' : 'top-2.5 py-0.5'}`}>
@@ -1045,7 +1045,7 @@ export default function SacramentoMapView({
         <button
           onClick={handleLocateUser}
           className={`absolute z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
-            hasMobileBottomPanel ? 'top-[4.75rem] left-3' : 'sbn-map-controls-bottom left-4'
+            hasMobileBottomPanel ? 'top-[9.75rem] left-3' : 'sbn-map-controls-bottom left-4'
           } ${
             isLocating
               ? 'bg-accent text-on-accent border-accent'
