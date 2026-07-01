@@ -121,13 +121,17 @@ export default function MobileView({
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<MapContentFilter>('all');
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
+  const [mapImmersiveNav, setMapImmersiveNav] = useState(false);
 
   useKeyboardInset();
   useScrollInputOnFocus();
 
   return (
-    <div id="mobile_device_workspace" className="sbn-mobile-shell flex flex-col bg-app text-app">
-      <header className="sbn-mobile-header sbn-glass-nav">
+    <div
+      id="mobile_device_workspace"
+      className={`sbn-mobile-shell flex flex-col bg-app text-app${mapImmersiveNav ? ' sbn-immersive-nav' : ''}`}
+    >
+      <header className={`sbn-mobile-header sbn-glass-nav${mapImmersiveNav ? ' sbn-mobile-chrome-hidden' : ''}`}>
         <div className="sbn-mobile-header-row">
         <BrandLogo
           imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
@@ -166,7 +170,9 @@ export default function MobileView({
             colorGuideOpen={colorGuideOpen}
             onColorGuideOpenChange={setColorGuideOpen}
             onOpenNewPost={onOpenNewPost}
+            onImmersiveModeChange={setMapImmersiveNav}
           />
+          {!mapImmersiveNav && (
           <div className="absolute top-3 left-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
             <div className="flex gap-2 overflow-x-auto flex-1 min-w-0 pb-1">
               {MAP_CONTENT_FILTERS.map((t) => (
@@ -189,6 +195,7 @@ export default function MobileView({
               🎨 Index
             </button>
           </div>
+          )}
         </div>
 
         <div
@@ -320,7 +327,7 @@ export default function MobileView({
         </div>
       </main>
 
-      <footer id="mobile_sticky_footer_nav" className="sbn-mobile-nav">
+      <footer id="mobile_sticky_footer_nav" className={`sbn-mobile-nav${mapImmersiveNav ? ' sbn-mobile-chrome-hidden' : ''}`}>
         <div className="sbn-mobile-nav-bar">
           <div className="sbn-mobile-nav-side">
             {MOBILE_NAV_LEFT.map(({ id, label, icon: Icon }) => {
