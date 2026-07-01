@@ -27,6 +27,7 @@ import { useTheme } from '../theme/ThemeContext';
 import {
   bearingDegrees,
   distanceToRouteMeters,
+  estimateLaneCount,
   estimateSpeedLimitMph,
   fetchNavigationRoute,
   findCurrentStepIndex,
@@ -117,26 +118,33 @@ function NavSpeedCard({
   );
 }
 
-function LaneGuidanceStrip({ kind }: { kind: ManeuverIconKind }) {
-  const activeIndices = useMemo(() => {
-    switch (kind) {
-      case 'left':
-        return [0, 1];
-      case 'slight-left':
-        return [1];
-      case 'right':
-        return [3, 4];
-      case 'slight-right':
-        return [3];
-      case 'uturn':
-      case 'roundabout':
-        return [0];
-      case 'arrive':
-        return [2];
-      default:
-        return [1, 2, 3];
-    }
-  }, [kind]);
+function activeLaneIndices(kind: ManeuverIconKind, laneCount: number): number[] {
+  const last = laneCount - 1;
+
+  switch (kind) {
+    case 'left':
+      return laneCount <= 2 ? [0] : [0, 1];
+    case 'slight-left':
+      return [Math.min(1, last)];
+    case 'right':
+      return laneCount <= 2 ? [last] : [last - 1, last];
+    case 'slight-right':
+      return [Math.max(0, last - 1)];
+    case 'uturn':
+      return [0];
+    case 'roundabout':
+      return laneCount === 2 ? [0, 1] : [0, last];
+    default:
+      return [];
+  }
+}
+
+function LaneGuidanceStrip({ kind, laneCount }: { kind: ManeuverIconKind; laneCount: number }) {
+  const activeIndices = useMemo(() => activeLaneIndices(kind, laneCount), [kind, laneCount]);
+
+  if (laneCount < 2 || kind === 'straight' || kind === 'arrive' || activeIndices.length === 0) {
+    return null;
+  }
 
   const iconForSlot = (index: number, active: boolean) => {
     const className = `w-4 h-4 ${active ? '' : 'opacity-90'}`;
@@ -148,13 +156,12 @@ function LaneGuidanceStrip({ kind }: { kind: ManeuverIconKind }) {
     if (kind === 'slight-left') return <CornerUpLeft className={className} strokeWidth={2.75} />;
     if (kind === 'slight-right') return <CornerUpRight className={className} strokeWidth={2.75} />;
     if (kind === 'roundabout') return <RotateCcw className={className} strokeWidth={2.75} />;
-    if (kind === 'arrive') return <Navigation className={className} strokeWidth={2.75} />;
     return <ArrowUp className={className} strokeWidth={2.75} />;
   };
 
   return (
     <div className="sbn-nav-lane" aria-hidden>
-      {Array.from({ length: 5 }, (_, index) => {
+      {Array.from({ length: laneCount }, (_, index) => {
         const active = activeIndices.includes(index);
         return (
           <div key={index} className={`sbn-nav-lane-slot ${active ? 'sbn-nav-lane-slot-active' : ''}`}>
@@ -535,6 +542,7 @@ export default function MapNavigationView({
   }, [route, stepIndex, userPos]);
 
   const speedLimitMph = useMemo(() => estimateSpeedLimitMph(currentStep), [currentStep]);
+  const laneCount = useMemo(() => estimateLaneCount(currentStep), [currentStep]);
 
   const bannerScale = useMemo(() => {
     if (arrived) return 1;
@@ -1128,7 +1136,9 @@ export default function MapNavigationView({
                 </div>
               </div>
 
-              {!loading && !arrived && maneuverKind !== 'arrive' && <LaneGuidanceStrip kind={maneuverKind} />}
+              {!loading && !arrived && maneuverKind !== 'arrive' && (
+                <LaneGuidanceStrip kind={maneuverKind} laneCount={laneCount} />
+              )}
 
               {!loading && route && (rerouting || offRouteMeters > 55) && !arrived && (
                 <p className="mt-2 text-center text-xs font-semibold text-[var(--sbn-nav-warning)]">

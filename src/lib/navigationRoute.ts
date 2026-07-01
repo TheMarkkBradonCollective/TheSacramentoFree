@@ -369,12 +369,34 @@ export function isOffRoute(coords: [number, number][], user: LatLng, thresholdMe
   return distanceToRouteMeters(coords, user) > thresholdMeters;
 }
 
-export function estimateSpeedLimitMph(step?: NavigationStep | null): number {
+function roadClassFromStep(step?: NavigationStep | null): 'freeway' | 'arterial' | 'local' {
   const name = (step?.name ?? step?.instruction ?? '').toLowerCase();
-  if (/\b(fwy|freeway|expy|expressway|interstate|i-|hwy|highway)\b/.test(name)) return 65;
-  if (/\b(blvd|boulevard|ave|avenue|pkwy|parkway)\b/.test(name)) return 35;
-  if (/\b(st|street|rd|road|dr|drive|ln|lane|ct|court)\b/.test(name)) return 25;
-  return 30;
+  if (/\b(fwy|freeway|expy|expressway|interstate|i-|hwy|highway)\b/.test(name)) return 'freeway';
+  if (/\b(blvd|boulevard|ave|avenue|pkwy|parkway)\b/.test(name)) return 'arterial';
+  return 'local';
+}
+
+export function estimateSpeedLimitMph(step?: NavigationStep | null): number {
+  switch (roadClassFromStep(step)) {
+    case 'freeway':
+      return 65;
+    case 'arterial':
+      return 35;
+    case 'local':
+      return 25;
+  }
+}
+
+/** Best-effort lane count from street type (OSRM does not provide real lane data). */
+export function estimateLaneCount(step?: NavigationStep | null): number {
+  switch (roadClassFromStep(step)) {
+    case 'freeway':
+      return 4;
+    case 'arterial':
+      return 3;
+    case 'local':
+      return 2;
+  }
 }
 
 export function formatSpeedMph(speedMetersPerSecond: number | null | undefined): string | null {
