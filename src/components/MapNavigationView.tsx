@@ -261,10 +261,15 @@ export default function MapNavigationView({
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
       attributionControl: true,
+      fadeAnimation: false,
+      zoomAnimation: false,
     }).setView([origin.lat, origin.lng], 16);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
+      updateWhenIdle: true,
+      updateWhenZooming: false,
+      keepBuffer: 3,
       attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(map);
 

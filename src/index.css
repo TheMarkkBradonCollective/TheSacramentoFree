@@ -798,7 +798,6 @@ button {
   right: 0;
   overflow: hidden;
   overflow-x: clip;
-  transition: top 0.12s ease-out, bottom 0.12s ease-out;
 }
 
 /* Full-screen map navigation — hide app chrome */
