@@ -391,7 +391,7 @@ export default function MapNavigationView({
     const result = await fetchNavigationRoute(from, to);
     if (!result) {
       if (isReroute) {
-        voiceRef.current.speak('Unable to recalculate route. Continue toward your destination.', 'reroute-fail', true);
+        voiceRef.current.speak('Unable to recalculate route. Continue toward your destination.', 'reroute-fail');
       }
       return null;
     }
@@ -403,7 +403,7 @@ export default function MapNavigationView({
 
     if (isReroute) {
       voiceRef.current.clearSpokenKeys();
-      voiceRef.current.speak('Route updated', 'reroute-done', true);
+      voiceRef.current.speak('Route updated', 'reroute-done');
       if (routeLayerRef.current) drawRouteOnLayer(routeLayerRef.current, result.coords);
     }
 
@@ -470,15 +470,11 @@ export default function MapNavigationView({
   useEffect(() => {
     if (!route || routeAnnouncedRef.current || !voiceOn) return;
     routeAnnouncedRef.current = true;
-    voiceRef.current.speak(buildStepVoiceCue(route.steps[0], 0, 'start', destinationLabel), 'nav-start', true);
-    window.setTimeout(() => {
-      if (voiceOnRef.current) {
-        voiceRef.current.speak(
-          buildRouteSummaryVoice(destinationLabel, route.distanceMeters, route.durationSeconds),
-          'nav-summary',
-        );
-      }
-    }, 1800);
+    voiceRef.current.speak(buildStepVoiceCue(route.steps[0], 0, 'start', destinationLabel), 'nav-start');
+    voiceRef.current.speak(
+      buildRouteSummaryVoice(destinationLabel, route.distanceMeters, route.durationSeconds),
+      'nav-summary',
+    );
   }, [route, destinationLabel, voiceOn]);
 
   useEffect(() => {
@@ -661,7 +657,6 @@ export default function MapNavigationView({
               destLabel,
             ),
             'arrival',
-            true,
           );
         }
         return;
@@ -674,7 +669,7 @@ export default function MapNavigationView({
           setStepIndex(nextIdx);
           const step = activeRoute.steps[nextIdx];
           if (voiceOnRef.current && step) {
-            voiceRef.current.speak(step.instruction, `step-change-${nextIdx}`, true);
+            voiceRef.current.speak(step.instruction, `step-change-${nextIdx}`);
           }
         }
 
@@ -686,7 +681,6 @@ export default function MapNavigationView({
               voiceRef.current.speak(
                 buildStepVoiceCue(step, VOICE_CUE_THRESHOLDS[kind], kind, destLabel),
                 `cue-${stepIndexRef.current}-${kind}`,
-                kind === 'now',
               );
               break;
             }
@@ -699,7 +693,7 @@ export default function MapNavigationView({
             reroutingRef.current = true;
             setRerouting(true);
             if (voiceOnRef.current) {
-              voiceRef.current.speak(buildStepVoiceCue(step!, 0, 'reroute'), 'reroute', true);
+              voiceRef.current.speak(buildStepVoiceCue(step!, 0, 'reroute'), 'reroute');
             }
             void loadRoute(next, dest, true).finally(() => {
               reroutingRef.current = false;

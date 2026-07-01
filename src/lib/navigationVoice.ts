@@ -54,6 +54,8 @@ export function buildRouteSummaryVoice(
 export class NavigationVoice {
   private enabled = true;
   private spokenKeys = new Set<string>();
+  private queue: string[] = [];
+  private processing = false;
   private utterance: SpeechSynthesisUtterance | null = null;
 
   setEnabled(on: boolean): void {
@@ -66,6 +68,8 @@ export class NavigationVoice {
   }
 
   cancel(): void {
+    this.queue = [];
+    this.processing = false;
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -76,8 +80,12 @@ export class NavigationVoice {
     this.spokenKeys.clear();
   }
 
-  /** Speak once per unique key (e.g. step-3-far). Interrupt=false queues behind current speech. */
-  speak(text: string, key?: string, interrupt = false): void {
+  /**
+   * Queue speech so each phrase finishes before the next begins.
+   * The optional third argument is kept for callers but no longer interrupts.
+   */
+  speak(text: string, key?: string, _interrupt = false): void {
+    void _interrupt;
     if (!this.enabled || !text.trim()) return;
     if (key) {
       if (this.spokenKeys.has(key)) return;
@@ -86,21 +94,37 @@ export class NavigationVoice {
 
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
-    if (interrupt) {
-      window.speechSynthesis.cancel();
-    } else if (window.speechSynthesis.speaking) {
-      return;
-    }
+    this.queue.push(text.trim());
+    this.processQueue();
+  }
 
+  private processQueue(): void {
+    if (this.processing || !this.enabled || this.queue.length === 0) return;
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    const text = this.queue.shift();
+    if (!text) return;
+
+    this.processing = true;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.02;
     utterance.pitch = 1;
     utterance.volume = 1;
+
     const voices = window.speechSynthesis.getVoices();
     const preferred =
       voices.find((v) => v.lang.startsWith('en') && /samantha|google us english|karen|daniel/i.test(v.name)) ??
       voices.find((v) => v.lang.startsWith('en'));
     if (preferred) utterance.voice = preferred;
+
+    const onDone = () => {
+      this.processing = false;
+      this.utterance = null;
+      this.processQueue();
+    };
+
+    utterance.onend = onDone;
+    utterance.onerror = onDone;
 
     this.utterance = utterance;
     window.speechSynthesis.speak(utterance);
