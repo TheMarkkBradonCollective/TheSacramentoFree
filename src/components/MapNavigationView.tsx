@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { motion } from 'motion/react';
 import L from 'leaflet';
 import {
   ArrowLeft,
@@ -44,6 +45,181 @@ interface MapNavigationViewProps {
   destination: LatLng;
   destinationLabel: string;
   onExit: () => void;
+}
+
+type NavSheetSnap = 'collapsed' | 'expanded';
+
+const SHEET_DRAG_THRESHOLD_PX = 44;
+
+interface NavigationDetailsSheetProps {
+  snap: NavSheetSnap;
+  onSnapChange: (snap: NavSheetSnap) => void;
+  arrived: boolean;
+  destinationLabel: string;
+  remainingSeconds: number;
+  remainingMeters: number;
+  gpsAccuracy: number | null;
+  route: NavigationRouteResult;
+  stepIndex: number;
+  onOverview: () => void;
+  onExit: () => void;
+}
+
+function NavigationDetailsSheet({
+  snap,
+  onSnapChange,
+  arrived,
+  destinationLabel,
+  remainingSeconds,
+  remainingMeters,
+  gpsAccuracy,
+  route,
+  stepIndex,
+  onOverview,
+  onExit,
+}: NavigationDetailsSheetProps) {
+  const dragStartYRef = useRef(0);
+  const expanded = snap === 'expanded';
+
+  const handleSheetPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    dragStartYRef.current = event.clientY;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleSheetPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+
+    const deltaY = dragStartYRef.current - event.clientY;
+    if (deltaY > SHEET_DRAG_THRESHOLD_PX) {
+      onSnapChange('expanded');
+      return;
+    }
+    if (deltaY < -SHEET_DRAG_THRESHOLD_PX) {
+      onSnapChange('collapsed');
+      return;
+    }
+
+    onSnapChange(expanded ? 'collapsed' : 'expanded');
+  };
+
+  return (
+    <motion.div
+      id="nav_details_sheet"
+      className="absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.18)] flex flex-col safe-area-pb"
+      initial={false}
+      animate={{ height: expanded ? 'min(72vh, calc(100% - 4.5rem))' : 'auto' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-label={expanded ? 'Collapse route details' : 'Expand route details'}
+        className="shrink-0 pt-3 pb-2 px-4 cursor-grab active:cursor-grabbing touch-none select-none"
+        onPointerDown={handleSheetPointerDown}
+        onPointerUp={handleSheetPointerUp}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onSnapChange(expanded ? 'collapsed' : 'expanded');
+          }
+        }}
+      >
+        <div className="w-10 h-1 rounded-full bg-zinc-300 mx-auto" />
+        <p className="text-[10px] text-zinc-400 text-center mt-2 font-medium">
+          {expanded ? 'Swipe down for map' : 'Swipe up for route details'}
+        </p>
+      </div>
+
+      <div className="shrink-0 px-4 pb-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onOverview}
+            className="w-11 h-11 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-700 shrink-0"
+            aria-label="Route overview"
+          >
+            <MapIcon className="w-5 h-5" />
+          </button>
+
+          <div className="flex-1 min-w-0 text-center">
+            <p className="text-3xl font-black text-[#FF4500] leading-none tabular-nums">
+              {arrived ? '0 min' : formatNavDuration(remainingSeconds)}
+            </p>
+            <p className="text-sm text-zinc-600 font-medium mt-1">
+              {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
+            </p>
+            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+              {arrived ? `Arrived at ${destinationLabel}` : `To ${destinationLabel}`}
+            </p>
+            {gpsAccuracy != null && gpsAccuracy > 35 && !arrived && (
+              <p className="text-[10px] text-amber-600 mt-1">GPS signal weak — accuracy ±{Math.round(gpsAccuracy)}m</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onExit}
+            className="px-5 py-2.5 rounded-full bg-zinc-100 text-zinc-900 font-bold text-sm shrink-0 hover:bg-zinc-200"
+          >
+            {arrived ? 'Done' : 'Exit'}
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="flex-1 min-h-0 overflow-y-auto border-t border-zinc-100 px-4 pb-4">
+          <div className="py-3">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-500">Trip summary</h3>
+            <p className="text-sm text-zinc-700 mt-1">
+              {formatNavDistance(route.distanceMeters)} total · {formatNavDuration(route.durationSeconds)} drive
+            </p>
+            <p className="text-sm font-semibold text-zinc-900 mt-0.5 truncate">{destinationLabel}</p>
+          </div>
+
+          <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-500 pb-2 sticky top-0 bg-white">
+            Turn-by-turn
+          </h3>
+          <ol className="space-y-1">
+            {route.steps.map((step, index) => {
+              const isCurrent = !arrived && index === stepIndex;
+              const isPast = !arrived && index < stepIndex;
+              const kind = maneuverIconKind(step);
+
+              return (
+                <li
+                  key={step.id}
+                  className={`flex items-start gap-3 rounded-2xl px-3 py-2.5 ${
+                    isCurrent ? 'bg-[#FF4500]/10 ring-1 ring-[#FF4500]/25' : isPast ? 'opacity-55' : ''
+                  }`}
+                >
+                  <div
+                    className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
+                      isCurrent ? 'bg-[#FF4500] text-white' : 'bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    <ManeuverIcon kind={kind} className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-sm leading-snug ${isCurrent ? 'font-bold text-zinc-900' : 'font-medium text-zinc-800'}`}>
+                      {step.instruction}
+                    </p>
+                    {step.name ? (
+                      <p className="text-xs text-zinc-500 truncate mt-0.5">{step.name}</p>
+                    ) : null}
+                    {step.distanceMeters > 0 && index < route.steps.length - 1 ? (
+                      <p className="text-[11px] text-zinc-400 mt-1">{formatNavDistance(step.distanceMeters)}</p>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+    </motion.div>
+  );
 }
 
 function ManeuverIcon({ kind, className = 'w-10 h-10' }: { kind: ManeuverIconKind; className?: string }) {
@@ -134,6 +310,7 @@ export default function MapNavigationView({
   const [arrived, setArrived] = useState(false);
   const [rerouting, setRerouting] = useState(false);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [sheetSnap, setSheetSnap] = useState<NavSheetSnap>('collapsed');
 
   destinationRef.current = destination;
   destinationLabelRef.current = destinationLabel;
@@ -590,42 +767,20 @@ export default function MapNavigationView({
             <LocateFixed className="w-5 h-5" />
           </button>
         </div>
-      </div>
 
-      <div className="bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.15)] px-4 pt-4 pb-5 shrink-0 z-10 safe-area-pb">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleOverview}
-            className="w-11 h-11 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-700 shrink-0"
-            aria-label="Route overview"
-          >
-            <MapIcon className="w-5 h-5" />
-          </button>
-
-          <div className="flex-1 min-w-0 text-center">
-            <p className="text-3xl font-black text-[#FF4500] leading-none tabular-nums">
-              {arrived ? '0 min' : formatNavDuration(remainingSeconds)}
-            </p>
-            <p className="text-sm text-zinc-600 font-medium mt-1">
-              {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
-            </p>
-            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-              {arrived ? `Arrived at ${destinationLabel}` : `To ${destinationLabel}`}
-            </p>
-            {gpsAccuracy != null && gpsAccuracy > 35 && !arrived && (
-              <p className="text-[10px] text-amber-600 mt-1">GPS signal weak — accuracy ±{Math.round(gpsAccuracy)}m</p>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleExit}
-            className="px-5 py-2.5 rounded-full bg-zinc-100 text-zinc-900 font-bold text-sm shrink-0 hover:bg-zinc-200"
-          >
-            {arrived ? 'Done' : 'Exit'}
-          </button>
-        </div>
+        <NavigationDetailsSheet
+          snap={sheetSnap}
+          onSnapChange={setSheetSnap}
+          arrived={arrived}
+          destinationLabel={destinationLabel}
+          remainingSeconds={remainingSeconds}
+          remainingMeters={remainingMeters}
+          gpsAccuracy={gpsAccuracy}
+          route={route}
+          stepIndex={stepIndex}
+          onOverview={handleOverview}
+          onExit={handleExit}
+        />
       </div>
     </div>
   );
