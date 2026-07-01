@@ -2538,7 +2538,7 @@ END $$;
 -- COMMUNITY CHAT SEEDS
 -- =========================================================
 
- and staff-only group chats (reuse chats + messages tables).
+-- Community global and staff-only group chats (reuse chats + messages tables).
 -- Run once in Supabase SQL Editor. Safe to re-run.
 
 INSERT INTO public.chats (
