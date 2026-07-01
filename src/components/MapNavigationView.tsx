@@ -14,7 +14,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
-import { haversineMeters } from '../lib/mapRoute';
+import { haversineMeters, openDrivingDirections } from '../lib/mapRoute';
 import {
   bearingDegrees,
   distanceToRouteMeters,
@@ -457,6 +457,20 @@ export default function MapNavigationView({
     onExit();
   };
 
+  const handleRetryRoute = () => {
+    setLoading(true);
+    setError(null);
+    routeAnnouncedRef.current = false;
+    void loadRoute(origin, destination, false).then((result) => {
+      if (!result) {
+        setError('Could not load driving directions. Try again in a moment.');
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+    });
+  };
+
   if (loading) {
     return (
       <div className="fixed inset-0 z-[200] bg-zinc-950 flex flex-col items-center justify-center gap-3 text-white">
@@ -468,11 +482,27 @@ export default function MapNavigationView({
 
   if (error || !route) {
     return (
-      <div className="fixed inset-0 z-[200] bg-zinc-950 flex flex-col items-center justify-center gap-4 p-6 text-center text-white">
+      <div className="fixed inset-0 z-[200] bg-zinc-950 flex flex-col items-center justify-center gap-4 p-6 text-center text-white safe-area-pb">
         <p className="text-sm text-zinc-300">{error ?? 'Route unavailable'}</p>
-        <button type="button" onClick={handleExit} className="px-5 py-2.5 rounded-full bg-[#FF4500] font-bold text-sm">
-          Back to map
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+          <button
+            type="button"
+            onClick={handleRetryRoute}
+            className="px-5 py-2.5 rounded-full bg-zinc-800 text-white font-bold text-sm border border-zinc-600"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => openDrivingDirections(destination, origin)}
+            className="px-5 py-2.5 rounded-full bg-white text-zinc-900 font-bold text-sm"
+          >
+            Open in Maps
+          </button>
+          <button type="button" onClick={handleExit} className="px-5 py-2.5 rounded-full bg-[#FF4500] font-bold text-sm">
+            Back to map
+          </button>
+        </div>
       </div>
     );
   }
@@ -485,7 +515,7 @@ export default function MapNavigationView({
 
   return (
     <div className="fixed inset-0 z-[200] bg-zinc-900 flex flex-col" id="map_navigation_view">
-      <div className="bg-[#FF4500] text-white px-4 pt-4 pb-5 shadow-lg shrink-0 relative z-10">
+      <div className="bg-[#FF4500] text-white px-4 pt-4 pb-5 shadow-lg shrink-0 relative z-10 safe-area-pt">
         <div className="flex items-center gap-4">
           <div className="shrink-0 w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center">
             <ManeuverIcon kind={maneuverKind} className="w-9 h-9" />
@@ -557,7 +587,7 @@ export default function MapNavigationView({
         </div>
       </div>
 
-      <div className="bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.15)] px-4 pt-4 pb-5 shrink-0 z-10">
+      <div className="bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.15)] px-4 pt-4 pb-5 shrink-0 z-10 safe-area-pb">
         <div className="flex items-center gap-3">
           <button
             type="button"
