@@ -45,7 +45,7 @@ export default function HomePage({
           {SITE.name}
         </span>
 
-        <h1 className="mt-6 font-display text-4xl md:text-5xl font-extrabold text-app leading-[1.1] tracking-tight">
+        <h1 className="mt-6 font-display text-4xl md:text-5xl font-bold text-app leading-[1.08] tracking-tight">
           Give freely.
           <br />
           <span className="text-accent">Ask kindly.</span>

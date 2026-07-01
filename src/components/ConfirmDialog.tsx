@@ -30,7 +30,7 @@ export default function ConfirmDialog({
 
   const confirmClass =
     variant === 'danger'
-      ? 'sbn-btn bg-red-600 hover:bg-red-500 text-white border-transparent flex-1'
+      ? 'sbn-btn sbn-btn-danger flex-1'
       : 'sbn-btn sbn-btn-primary flex-1';
 
   return (

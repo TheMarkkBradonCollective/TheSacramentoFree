@@ -22,8 +22,8 @@ function StatPill({
   color: string;
 }) {
   return (
-    <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-inset border border-app shrink-0">
-      <span className={`p-1.5 rounded-xl ${color}`}>
+    <div className="sbn-stat-pill">
+      <span className={`sbn-stat-icon ${color}`}>
         <Icon className="w-3.5 h-3.5" strokeWidth={2.5} />
       </span>
       <div className="min-w-0">
@@ -53,7 +53,7 @@ function StatCard({
 }) {
   return (
     <div className="sbn-card p-4 flex items-center gap-3">
-      <span className={`p-2.5 rounded-xl shrink-0 ${color}`}>
+      <span className={`sbn-stat-icon ${color}`}>
         <Icon className="w-5 h-5" strokeWidth={2.5} />
       </span>
       <div className="min-w-0">

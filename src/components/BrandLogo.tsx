@@ -20,7 +20,7 @@ export default function BrandLogo({
   if (failed) {
     return (
       <div className={className}>
-        <div className="w-9 h-9 bg-accent text-on-accent rounded-xl flex items-center justify-center shrink-0">
+        <div className="w-9 h-9 bg-accent text-on-accent rounded-lg flex items-center justify-center shrink-0">
           <Gift className="w-5 h-5" />
         </div>
         {showTitle && (

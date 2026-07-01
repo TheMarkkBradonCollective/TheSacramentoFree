@@ -233,7 +233,7 @@ export default function AuthPage({
                   type="checkbox"
                   checked={privacyAccepted}
                   onChange={(e) => setPrivacyAccepted(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-app accent-[#FF4500]"
+                  className="mt-0.5 w-4 h-4 rounded border-app accent-accent"
                 />
                 <span className="text-[11px] text-muted font-semibold leading-relaxed">
                   I have read the{' '}

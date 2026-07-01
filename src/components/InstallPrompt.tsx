@@ -72,10 +72,10 @@ export default function InstallPrompt() {
   return (
     <div 
       id="pwa_install_container" 
-      className="p-4 bg-surface border border-[#FF4500]/50 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-sans text-app mx-4 mt-4 transition-all animate-fade-in"
+      className="p-4 bg-surface border border-accent/50 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-sans text-app mx-4 mt-4 transition-all animate-fade-in"
     >
       <div className="flex items-start space-x-3.5 flex-1 min-w-0" id="pwa_text_info">
-        <div className="p-2.5 bg-[#FF4500]/15 border border-[#FF4500]/30 rounded-xl flex items-center justify-center shrink-0">
+        <div className="p-2.5 bg-accent/15 border border-accent/30 rounded-xl flex items-center justify-center shrink-0">
           <Smartphone className="w-5 h-5 text-accent" />
         </div>
         <div className="text-left min-w-0">

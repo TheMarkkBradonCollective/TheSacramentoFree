@@ -274,7 +274,7 @@ export default function UserProfileView({
 
   const sectionShell = fullBleed
     ? 'border-b border-app px-4 py-6 bg-surface'
-    : 'bg-surface border border-app rounded-2xl p-6 shadow-md';
+    : 'sbn-section';
 
   return (
     <div
@@ -297,7 +297,7 @@ export default function UserProfileView({
             src={photoURL}
             referrerPolicy="no-referrer"
             alt={userProfile.displayName}
-            className="w-24 h-24 rounded-full border-2 border-[#FF4500] shadow-md animate-fade-in"
+            className="w-24 h-24 rounded-full border-2 border-accent animate-fade-in"
             id="profile_card_avatar"
           />
           <label
@@ -322,7 +322,7 @@ export default function UserProfileView({
           
           <RoleBadge role={userProfile.role} showForUser />
 
-          <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-full text-xs font-bold text-accent mt-3">
+          <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-xs font-bold text-accent mt-3">
             <MapPin className="w-3.5 h-3.5 text-accent" />
             <span>{userProfile.neighborhood} Sector</span>
           </div>
@@ -418,7 +418,7 @@ export default function UserProfileView({
                   required
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-semibold focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors focus:outline-hidden"
                 />
               </div>
 
@@ -429,7 +429,7 @@ export default function UserProfileView({
                   id="pref_neighborhood"
                   value={neighborhood}
                   onChange={(e) => setNeighborhood(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-bold cursor-pointer focus:border-[#FF4500] focus:outline-hidden"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-bold cursor-pointer focus:border-accent focus:outline-hidden"
                 >
                   {SACRAMENTO_NEIGHBORHOODS.map((n) => (
                     <option key={n} value={n} className="bg-surface text-app select-dark-opt">{n}</option>
@@ -448,7 +448,7 @@ export default function UserProfileView({
                 placeholder="Tell your neighbors who you are and why sharing matters to your household."
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                className="block w-full p-3 bg-inset border border-app rounded-xl text-xs text-app placeholder:text-subtle font-semibold resize-none focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+                className="block w-full p-3 bg-inset border border-app rounded-xl text-xs text-app placeholder:text-subtle font-semibold resize-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors focus:outline-hidden"
               />
               <div className="text-right text-[10px] text-subtle font-mono font-medium">{bio.length}/500 chars</div>
             </div>
@@ -470,11 +470,11 @@ export default function UserProfileView({
       </div>
 
       <div
-        className={fullBleed ? sectionShell : 'bg-surface border border-app rounded-2xl p-6 shadow-md'}
+        className={fullBleed ? sectionShell : 'sbn-section'}
         id="account_privacy_section"
       >
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-accent-soft flex items-center justify-center shrink-0">
             <Shield className="w-5 h-5 text-accent" />
           </div>
           <div className="min-w-0 flex-1">
@@ -534,7 +534,7 @@ export default function UserProfileView({
 
       {/* Modern PWA App Installation Widget */}
       <div
-        className={`${fullBleed ? `${sectionShell} shadow-none` : 'bg-surface border border-app rounded-2xl p-6 shadow-lg'} animate-fade-in min-w-0 overflow-hidden`}
+        className={`${fullBleed ? `${sectionShell} shadow-none` : 'sbn-section'} animate-fade-in min-w-0 overflow-hidden`}
         id="pwa_installs_section"
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-app/70 pb-6 mb-6 min-w-0">
@@ -560,7 +560,7 @@ export default function UserProfileView({
             ) : deferredPrompt ? (
               <button
                 onClick={triggerDirectPWAInstall}
-                className="inline-flex items-center space-x-2 px-5 py-3.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md hover:scale-[1.02] cursor-pointer"
+                className="inline-flex items-center space-x-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-lg text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
                 id="pwa_install_direct_trigger"
               >
                 <Download className="w-4 h-4" />
@@ -688,7 +688,7 @@ export default function UserProfileView({
           className={
             fullBleed
               ? sectionShell
-              : 'bg-surface border border-app rounded-2xl p-6 shadow-md'
+              : 'sbn-section'
           }
           id="account_sign_out_section"
         >
@@ -712,7 +712,7 @@ export default function UserProfileView({
           className={
             fullBleed
               ? sectionShell
-              : 'bg-surface border border-red-900/40 rounded-2xl p-6 shadow-md'
+              : 'sbn-section border-red-900/40'
           }
           id="account_delete_section"
         >
@@ -742,7 +742,7 @@ export default function UserProfileView({
         </div>
       )}
 
-      <div className={fullBleed ? sectionShell : 'bg-surface border border-app rounded-2xl p-6 shadow-md'}>
+      <div className={fullBleed ? sectionShell : 'sbn-section'}>
         <div className="flex items-center justify-between gap-3 mb-3">
           <h3 className="text-sm font-bold text-app uppercase tracking-wider">Your posts</h3>
           <span className="text-xs text-muted">{userPosts.length}</span>

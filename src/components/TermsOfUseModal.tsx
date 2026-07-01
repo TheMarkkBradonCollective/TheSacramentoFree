@@ -69,7 +69,7 @@ export default function TermsOfUseModal({
               type="checkbox"
               checked={checked}
               onChange={(e) => setChecked(e.target.checked)}
-              className="mt-1 w-4 h-4 rounded border-app accent-[#FF4500]"
+              className="mt-1 w-4 h-4 rounded border-app accent-accent"
             />
             <span className="text-xs text-muted font-semibold leading-relaxed">{TERMS.acceptLabel}</span>
           </label>

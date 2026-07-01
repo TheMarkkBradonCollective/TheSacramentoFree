@@ -363,7 +363,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 onClick={() => setType('giveaway')}
                 className={`py-3 px-2 rounded-xl text-[10px] font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-1.5 cursor-pointer ${
                   type === 'giveaway'
-                    ? 'bg-[#FF4500] border-[#FF4500] text-white shadow-xs'
+                    ? 'bg-accent border-accent text-white shadow-xs'
                     : 'bg-inset border-app text-muted hover:bg-surface-hover'
                 }`}
               >
@@ -377,7 +377,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 onClick={() => setType('looking')}
                 className={`py-3 px-2 rounded-xl text-[10px] font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-1.5 cursor-pointer ${
                   type === 'looking'
-                    ? 'bg-[#FF4500] border-[#FF4500] text-white shadow-xs'
+                    ? 'bg-accent border-accent text-white shadow-xs'
                     : 'bg-inset border-app text-muted hover:bg-surface-hover'
                 }`}
               >
@@ -391,7 +391,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 onClick={() => setType('trade')}
                 className={`py-3 px-2 rounded-xl text-[10px] font-bold border uppercase tracking-wider transition-all inline-flex items-center justify-center space-x-1.5 cursor-pointer ${
                   type === 'trade'
-                    ? 'bg-[#FF4500] border-[#FF4500] text-white shadow-xs'
+                    ? 'bg-accent border-accent text-white shadow-xs'
                     : 'bg-inset border-app text-muted hover:bg-surface-hover'
                 }`}
               >
@@ -429,7 +429,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
               value={title}
               maxLength={100}
               onChange={(e) => setTitle(e.target.value)}
-              className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-app font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+              className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-app font-semibold focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors focus:outline-hidden"
             />
           </div>
 
@@ -446,7 +446,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 value={tradeSeeking}
                 maxLength={120}
                 onChange={(e) => setTradeSeeking(e.target.value)}
-                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-app font-semibold focus:border-[#FF4500] focus:ring-1 focus:ring-[#FF4500] transition-colors focus:outline-hidden"
+                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs text-app font-semibold focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors focus:outline-hidden"
               />
             </div>
           )}
@@ -484,7 +484,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                           next[idx] = e.target.value;
                           setSubItemLabels(next);
                         }}
-                        className="block flex-1 px-3 py-2 bg-inset border border-app rounded-xl text-xs text-app font-medium focus:border-[#FF4500] focus:outline-hidden"
+                        className="block flex-1 px-3 py-2 bg-inset border border-app rounded-xl text-xs text-app font-medium focus:border-accent focus:outline-hidden"
                       />
                       {subItemLabels.length > 2 && (
                         <button
@@ -523,7 +523,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                   setCategory(next);
                   if (categoryRequiresGps(next)) setLocationIsPublic(true);
                 }}
-                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-accent focus:outline-hidden uppercase"
               >
                 {ITEM_CATEGORIES.map((c) => (
                   <option key={c} value={c} className="bg-surface text-app">{c.toUpperCase()}</option>
@@ -540,7 +540,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                     id="post_iso_category"
                     value={isoCategory}
                     onChange={(e) => setIsoCategory(e.target.value)}
-                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-accent focus:outline-hidden uppercase"
                   >
                     {ISO_CATEGORIES.map((c) => (
                       <option key={c} value={c} className="bg-surface text-app select-dark-opt">{c.toUpperCase()}</option>
@@ -555,7 +555,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                     id="post_collection_method"
                     value={collectionMethod}
                     onChange={(e) => setCollectionMethod(e.target.value)}
-                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                    className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-accent focus:outline-hidden uppercase"
                   >
                     {ISO_DELIVERY_PREFS.map((m) => (
                       <option key={m} value={m} className="bg-surface text-app select-dark-opt">{m.toUpperCase()}</option>
@@ -589,7 +589,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                     setNeighborhood(e.target.value);
                     setGpsStatus('');
                   }}
-                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-[#FF4500] focus:outline-hidden uppercase"
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-bold text-app cursor-pointer focus:border-accent focus:outline-hidden uppercase"
                 >
                   {SACRAMENTO_NEIGHBORHOODS.map((n) => (
                     <option key={`unified_neigh_${n}`} value={n} className="bg-surface text-app select-dark-opt">{n.toUpperCase()}</option>
@@ -615,7 +615,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 title="Pinpoint neighborhood on interactive district map"
                 className={`px-3.5 border rounded-xl flex items-center justify-center cursor-pointer transition-all select-none ${
                   showMiniMap
-                    ? 'bg-[#FF4500] border-[#FF4500] text-white'
+                    ? 'bg-accent border-accent text-white'
                     : 'bg-inset hover:bg-surface-hover border-app text-muted'
                 }`}
               >
@@ -626,7 +626,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             {/* GPS Feedback text */}
             {gpsStatus && (
               <p className="text-[9.5px] font-black text-muted tracking-wider uppercase flex items-center gap-1.5 mt-1 font-mono">
-                <span className="w-1.5 h-1.5 bg-[#FF4500] rounded-full inline-block animate-ping"></span>
+                <span className="w-1.5 h-1.5 bg-accent rounded-full inline-block animate-ping"></span>
                 {gpsStatus}
               </p>
             )}
@@ -643,7 +643,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                   type="checkbox"
                   checked={locationIsPublic}
                   onChange={(e) => setLocationIsPublic(e.target.checked)}
-                  className="mt-0.5 accent-[#FF4500]"
+                  className="mt-0.5 accent-accent"
                 />
                 <span>
                   Show exact pickup spot on the public map. If unchecked, share GPS and address in chat instead.
@@ -712,7 +712,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                         className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 flex flex-col items-center"
                       >
                         <span className="relative flex h-5 w-5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF4500] opacity-75"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-5 w-5 bg-white shadow-xl flex items-center justify-center">
                             <MapPin className="w-3.5 h-3.5 text-accent" />
                           </span>
@@ -800,7 +800,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 onDrop={handleDrop}
                 onClick={() => document.getElementById('item_file_input')?.click()}
                 className={`border-2 border-dashed p-5 text-center cursor-pointer transition-all select-none rounded-2xl flex flex-col items-center justify-center space-y-2 ${
-                  dragActive ? 'border-[#FF4500] bg-[#FF4500]/10' : 'border-app hover:border-[#FF4500] bg-inset'
+                  dragActive ? 'border-accent bg-accent/10' : 'border-app hover:border-accent bg-inset'
                 }`}
                 id="image_drag_drop_zone"
               >

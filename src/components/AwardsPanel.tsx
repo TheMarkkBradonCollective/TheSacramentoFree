@@ -241,11 +241,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2.5 rounded-2xl text-sm font-bold transition-all inline-flex items-center gap-1.5 ${
-        active
-          ? 'bg-accent text-white shadow-md scale-[1.02]'
-          : 'bg-inset text-muted border border-app hover:text-app hover:border-accent/25'
-      }`}
+      className={`sbn-chip text-sm py-2 px-3.5 ${active ? 'sbn-chip-active' : ''}`}
     >
       <span aria-hidden>{emoji}</span>
       {children}

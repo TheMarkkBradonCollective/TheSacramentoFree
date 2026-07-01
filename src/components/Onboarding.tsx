@@ -107,7 +107,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="e.g. Grandma Rosie, TreeHugger Sam"
-                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm text-app placeholder:text-subtle font-medium focus:outline-hidden focus:border-[#FF4500]"
+                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm text-app placeholder:text-subtle font-medium focus:outline-hidden focus:border-accent"
               />
             </div>
           </div>
@@ -125,7 +125,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
                 id="on_neighborhood"
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
-                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm font-bold text-app appearance-none cursor-pointer focus:outline-hidden focus:border-[#FF4500]"
+                className="block w-full pl-11 pr-3 py-3 bg-inset border border-app rounded-xl text-sm font-bold text-app appearance-none cursor-pointer focus:outline-hidden focus:border-accent"
               >
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
                   <option key={n} value={n} className="bg-surface text-app">
@@ -151,7 +151,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
               onChange={(e) => setBio(e.target.value)}
               placeholder="e.g., 'Just moved to Curtis Park. Excited to meet neighbors, reduce waste, and find warm homes for extra garden tomatoes!'"
               maxLength={500}
-              className="block w-full p-3 bg-inset border border-app rounded-xl text-sm text-app placeholder:text-subtle font-medium resize-none focus:outline-hidden focus:border-[#FF4500]"
+              className="block w-full p-3 bg-inset border border-app rounded-xl text-sm text-app placeholder:text-subtle font-medium resize-none focus:outline-hidden focus:border-accent"
             />
             <div className="text-right text-[10px] text-subtle font-mono font-medium">
               {bio.length}/500 chars

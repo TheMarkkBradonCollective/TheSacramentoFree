@@ -23,13 +23,11 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const linkClass = (r: PublicRoute) =>
-    `px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-      route === r ? 'bg-accent-soft text-accent' : 'text-muted hover:text-app hover:bg-inset'
-    }`;
+    `sbn-nav-tab ${route === r ? 'sbn-nav-tab-active' : ''}`;
 
   const mobileLinkClass = (r: PublicRoute) =>
-    `px-3 py-2 rounded-xl text-sm font-medium transition-colors text-left ${
-      route === r ? 'bg-accent-soft text-accent' : 'text-muted hover:text-app hover:bg-inset'
+    `w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+      route === r ? 'bg-accent-soft text-accent border-l-2 border-l-accent' : 'text-muted hover:text-app hover:bg-inset'
     }`;
 
   const navigateMobile = (r: PublicRoute) => {
@@ -64,7 +62,7 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            className="p-2 rounded-full border border-app text-app"
+            className="p-2 rounded-lg border border-app text-app hover:bg-inset transition-colors"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

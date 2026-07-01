@@ -40,16 +40,16 @@ export default function EventsSharePrompt({ unlockStatus, variant = 'full' }: Ev
   const progressBlock = (
     <div className="space-y-3 max-w-sm mx-auto">
       <div className="flex items-center justify-between text-xs font-bold text-app">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-inset px-3 py-1.5 border border-app">
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-inset px-3 py-1.5 border border-app text-xs font-semibold">
           <Users className="w-3.5 h-3.5 text-accent" />
           {unlockStatus.memberCount} neighbors here
         </span>
         <span className="text-muted">Goal: {unlockStatus.target.toLocaleString()}</span>
       </div>
 
-      <div className="sbn-award-progress-track h-4 rounded-full overflow-hidden border border-accent/20 shadow-inner">
+      <div className="sbn-award-progress-track h-3 rounded-md overflow-hidden border border-app">
         <motion.div
-          className="sbn-award-progress-fill h-full rounded-full"
+          className="sbn-award-progress-fill h-full rounded-md"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -98,7 +98,7 @@ export default function EventsSharePrompt({ unlockStatus, variant = 'full' }: Ev
         <motion.div
           animate={{ rotate: [0, -6, 6, 0] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-          className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-accent-soft to-amber-500/20 border-2 border-accent/30 sbn-awards-glow-btn shadow-lg"
+          className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-accent-soft border border-accent/30"
         >
           <CalendarDays className="w-9 h-9 text-accent" />
         </motion.div>
@@ -119,7 +119,7 @@ export default function EventsSharePrompt({ unlockStatus, variant = 'full' }: Ev
         <button
           type="button"
           onClick={() => void handleCopy()}
-          className="sbn-btn sbn-btn-primary w-full max-w-sm mx-auto inline-flex items-center justify-center gap-2 text-base py-3.5 rounded-2xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-transform"
+          className="sbn-btn sbn-btn-primary w-full max-w-sm mx-auto inline-flex items-center justify-center gap-2 py-3"
         >
           {copied ? (
             <>
@@ -137,7 +137,7 @@ export default function EventsSharePrompt({ unlockStatus, variant = 'full' }: Ev
         <button
           type="button"
           onClick={() => void handleCopy()}
-          className="sbn-btn sbn-btn-ghost sbn-btn-sm inline-flex items-center gap-1.5 mx-auto rounded-full"
+          className="sbn-btn sbn-btn-ghost sbn-btn-sm inline-flex items-center gap-1.5 mx-auto"
         >
           <Copy className="w-4 h-4" />
           Copy invite link
