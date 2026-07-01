@@ -103,7 +103,7 @@ export default function CommunityStatsBar({ items = [], variant = 'full' }: Comm
         )}
         <StatPill
           icon={Package}
-          label="Available"
+          label="Listed"
           value={activeListings}
           color="bg-accent/15 text-accent"
         />
@@ -138,7 +138,7 @@ export default function CommunityStatsBar({ items = [], variant = 'full' }: Comm
       />
       <StatCard
         icon={Package}
-        label="Available"
+        label="Listed"
         value={activeListings}
         color="bg-accent/15 text-accent"
         sub="active listings"
