@@ -11,6 +11,7 @@ import {
   fetchDrivingRoute,
   formatRouteDistance,
   formatRouteDuration,
+  haversineMeters,
   isRoadGeometry,
   openDrivingDirections,
   type LatLng,
@@ -106,6 +107,49 @@ export function getMapPinBorderClass(type: ItemPost['type'] | string): string {
   if (type === 'trade') return 'border-zinc-400';
   return 'border-white';
 }
+
+function createEventBlipIcon(isSelected: boolean): L.DivIcon {
+  return L.divIcon({
+    html: `
+      <div class="relative flex items-center justify-center cursor-pointer">
+        <span style="border-color: ${EVENT_MAP_COLOR}" class="absolute inline-flex h-7 w-7 rounded-md border opacity-50 block animate-pulse"></span>
+        <div style="background-color: ${EVENT_MAP_COLOR}" class="h-4 w-4 rounded-md border-2 border-white shadow-md flex items-center justify-center ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
+          <div class="w-1.5 h-1.5 rounded-sm bg-white opacity-90"></div>
+        </div>
+      </div>
+    `,
+    className: 'custom-event-blip-marker',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
+
+function createItemBlipIcon(item: ItemPost, color: string, isSelected: boolean): L.DivIcon {
+  return L.divIcon({
+    html: `
+      <div class="relative flex items-center justify-center cursor-pointer">
+        <span style="border-color: ${color}" class="absolute inline-flex h-6 w-6 rounded-full border opacity-50 block animate-pulse"></span>
+        <div style="background-color: ${color}" class="h-3.5 w-3.5 rounded-full border-2 shadow-md ${getMapPinBorderClass(item.type)} ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
+          <div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>
+        </div>
+      </div>
+    `,
+    className: 'custom-item-blip-marker',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+}
+
+const MAP_TILE_OPTIONS = {
+  maxZoom: 19,
+  updateWhenIdle: true,
+  updateWhenZooming: false,
+  keepBuffer: 3,
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
+} as const;
+
+const GPS_FOLLOW_PAN_METERS = 28;
 
 function MapSelectedEventCard({
   event,
@@ -359,9 +403,14 @@ export default function SacramentoMapView({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
+  const itemMarkersRef = useRef<Map<string, L.Marker>>(new Map());
+  const eventMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.Marker | null>(null);
   const geoWatchIdRef = useRef<number | null>(null);
   const followUserRef = useRef(true);
+  const mapVisibleRef = useRef(mapVisible);
+  const lastFollowPanRef = useRef<LatLng | null>(null);
+  const lastMapSizeRef = useRef<{ width: number; height: number } | null>(null);
   const selectedPostRef = useRef<ItemPost | null>(null);
   const navigationOpenRef = useRef(false);
   const navigateNotifyOpenRef = useRef(false);
@@ -418,6 +467,23 @@ export default function SacramentoMapView({
     followUserRef.current = followUser;
   }, [followUser]);
 
+  useEffect(() => {
+    mapVisibleRef.current = mapVisible;
+    if (!mapVisible) return;
+
+    const map = mapRef.current;
+    if (!map) return;
+
+    // One refresh after the tab becomes visible (container was display:none).
+    const timer = window.setTimeout(() => {
+      map.invalidateSize({ animate: false, pan: false });
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [mapVisible]);
+
   const createUserLocationIcon = () =>
     L.divIcon({
       html: `
@@ -464,10 +530,16 @@ export default function SacramentoMapView({
     if (!hasInitialMapCenterRef.current) {
       map.setView([latitude, longitude], 14, { animate: false });
       hasInitialMapCenterRef.current = true;
+      lastFollowPanRef.current = { lat: latitude, lng: longitude };
       return;
     }
 
-    map.panTo([latitude, longitude], { animate: true, duration: 0.35 });
+    const lastPan = lastFollowPanRef.current;
+    const nextPos = { lat: latitude, lng: longitude };
+    if (lastPan && haversineMeters(lastPan, nextPos) < GPS_FOLLOW_PAN_METERS) return;
+
+    lastFollowPanRef.current = nextPos;
+    map.panTo([latitude, longitude], { animate: true, duration: 0.35, noMoveStart: true });
   };
 
   const handleGeolocationError = (error: GeolocationPositionError) => {
@@ -698,14 +770,13 @@ export default function SacramentoMapView({
     // Build leaflet map focusing on user sector
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
-      attributionControl: true
+      attributionControl: true,
+      fadeAnimation: false,
+      zoomAnimation: false,
     }).setView([fallbackLatLng.lat, fallbackLatLng.lng], 12);
 
     // Apply soft, beautiful CartoDB Voyager tile layer with NO labels/city-icons to keep the focus solely on the user's listing blips
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>'
-    }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', MAP_TILE_OPTIONS).addTo(map);
 
     // Dynamic Markers Layer Group
     const markersGroup = L.layerGroup().addTo(map);
@@ -725,19 +796,28 @@ export default function SacramentoMapView({
 
     startLiveLocationWatch();
 
-    // Trigger immediate and asynchronous container size invalidation to solve hidden tab layout bug
-    map.invalidateSize({ animate: false, pan: false });
+    // Defer one size fix after first paint when the container may still be settling.
     const timer = setTimeout(() => {
       map.invalidateSize({ animate: false, pan: false });
-    }, 150);
+    }, 200);
 
-    // Watch dynamic resize adjustments (tab changes, screen resizing, device orientation)
+    // Only invalidate when dimensions actually change (avoids tile reload spam).
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
-    const resizeObserver = new ResizeObserver(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!mapVisibleRef.current) return;
+
+      const entry = entries[0];
+      if (!entry) return;
+
+      const { width, height } = entry.contentRect;
+      const last = lastMapSizeRef.current;
+      if (last && Math.abs(last.width - width) < 2 && Math.abs(last.height - height) < 2) return;
+      lastMapSizeRef.current = { width, height };
+
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         map.invalidateSize({ animate: false, pan: false });
-      }, 120);
+      }, 280);
     });
     if (mapContainerRef.current) {
       resizeObserver.observe(mapContainerRef.current);
@@ -750,6 +830,10 @@ export default function SacramentoMapView({
       map.off('dragstart', onUserPanMap);
       stopLiveLocationWatch();
       hasInitialMapCenterRef.current = false;
+      lastFollowPanRef.current = null;
+      lastMapSizeRef.current = null;
+      itemMarkersRef.current.clear();
+      eventMarkersRef.current.clear();
       setMapReady(false);
       map.remove();
       mapRef.current = null;
@@ -759,24 +843,62 @@ export default function SacramentoMapView({
     };
   }, []);
 
-  // Recalculate size when mobile tab becomes visible again (display:none → block)
+  // Update listing/event pins when data changes — not on every selection or tab toggle.
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapVisible || !map) return;
+    const markersGroup = markersGroupRef.current;
+    if (!mapReady || !map || !markersGroup) return;
 
-    const refresh = () => map.invalidateSize({ animate: false, pan: false });
-    const timer = setTimeout(refresh, 180);
+    markersGroup.clearLayers();
+    itemMarkersRef.current.clear();
+    eventMarkersRef.current.clear();
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [mapVisible]);
+    if (showingEvents) {
+      eventBlipPositions.forEach(({ event, lat, lng }) => {
+        const marker = L.marker([lat, lng], {
+          icon: createEventBlipIcon(selectedEvent?.id === event.id),
+        })
+          .addTo(markersGroup)
+          .on('click', () => {
+            setSlideDirection('right');
+            setSelectedEvent(event);
+            map.setView([lat, lng], map.getZoom(), { animate: false });
+          });
+        eventMarkersRef.current.set(event.id, marker);
+      });
+      return;
+    }
 
-  // Resume map follow when a listing/event popup is closed and follow mode is on
+    blipPositions.forEach(({ item, lat, lng, color }) => {
+      const marker = L.marker([lat, lng], {
+        icon: createItemBlipIcon(item, color, selectedPost?.id === item.id),
+      })
+        .addTo(markersGroup)
+        .on('click', () => {
+          setSlideDirection('right');
+          setSelectedPost(item);
+          setSelectedEvent(null);
+          map.setView([lat, lng], map.getZoom(), { animate: false });
+        });
+      itemMarkersRef.current.set(item.id, marker);
+    });
+  }, [blipPositions, eventBlipPositions, showingEvents, mapReady]);
+
+  // Highlight selected pin without rebuilding every marker.
   useEffect(() => {
-    if (selectedPost || selectedEvent || !followUser || !userLocation || !mapRef.current) return;
-    mapRef.current.panTo([userLocation.lat, userLocation.lng], { animate: true });
-  }, [selectedPost, selectedEvent, followUser, userLocation]);
+    if (showingEvents) {
+      eventMarkersRef.current.forEach((marker, eventId) => {
+        marker.setIcon(createEventBlipIcon(selectedEvent?.id === eventId));
+      });
+      return;
+    }
+
+    itemMarkersRef.current.forEach((marker, itemId) => {
+      const blip = blipPositions.find((entry) => entry.item.id === itemId);
+      if (!blip) return;
+      marker.setIcon(createItemBlipIcon(blip.item, blip.color, selectedPost?.id === itemId));
+    });
+  }, [selectedPost?.id, selectedEvent?.id, showingEvents, blipPositions, eventBlipPositions]);
 
   const routeEndpoints = useMemo(() => {
     if (!selectedPost || !userLocation) return null;
@@ -914,74 +1036,6 @@ export default function SacramentoMapView({
       setRouteLoading(false);
     });
   }, [selectedPost, routeEndpoints]);
-
-  // Update all items points & neighborhood labels
-  useEffect(() => {
-    const map = mapRef.current;
-    const markersGroup = markersGroupRef.current;
-    if (!mapReady || !map || !markersGroup) return;
-
-    markersGroup.clearLayers();
-
-    if (showingEvents) {
-      eventBlipPositions.forEach(({ event, lat, lng }) => {
-        const isSelected = selectedEvent?.id === event.id;
-
-        const eventIcon = L.divIcon({
-          html: `
-            <div class="relative flex items-center justify-center cursor-pointer">
-              <span style="border-color: ${EVENT_MAP_COLOR}" class="absolute inline-flex h-7 w-7 rounded-md border opacity-50 block animate-pulse"></span>
-              <div style="background-color: ${EVENT_MAP_COLOR}" class="h-4 w-4 rounded-md border-2 border-white shadow-md flex items-center justify-center ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
-                <div class="w-1.5 h-1.5 rounded-sm bg-white opacity-90"></div>
-              </div>
-            </div>
-          `,
-          className: 'custom-event-blip-marker',
-          iconSize: [28, 28],
-          iconAnchor: [14, 14],
-        });
-
-        L.marker([lat, lng], { icon: eventIcon })
-          .addTo(markersGroup)
-          .on('click', () => {
-            setSlideDirection('right');
-            setSelectedEvent(event);
-            map.setView([lat, lng], map.getZoom(), { animate: true });
-          });
-      });
-      return;
-    }
-
-    // Listing pins
-    blipPositions.forEach(({ item, lat, lng, color }) => {
-      const isSelected = selectedPost?.id === item.id;
-
-      const blipIcon = L.divIcon({
-        html: `
-          <div class="relative flex items-center justify-center cursor-pointer">
-            <span style="border-color: ${color}" class="absolute inline-flex h-6 w-6 rounded-full border opacity-50 block animate-pulse"></span>
-            <div style="background-color: ${color}" class="h-3.5 w-3.5 rounded-full border-2 shadow-md ${getMapPinBorderClass(item.type)} ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
-              <div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>
-            </div>
-          </div>
-        `,
-        className: 'custom-item-blip-marker',
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
-      });
-
-      // Marker mapping click handler
-      L.marker([lat, lng], { icon: blipIcon })
-        .addTo(markersGroup)
-        .on('click', () => {
-          setSlideDirection('right');
-          setSelectedPost(item);
-          setSelectedEvent(null);
-          map.setView([lat, lng], map.getZoom(), { animate: true });
-        });
-    });
-
-  }, [blipPositions, eventBlipPositions, selectedPost, selectedEvent, activeItems, activeEvents, mapReady, mapVisible, showingEvents]);
 
   // Route layer — separate from blips so marker refreshes don't wipe the line.
   useEffect(() => {
