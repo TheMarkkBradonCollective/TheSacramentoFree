@@ -17,6 +17,7 @@ import {
 import type { LatLng } from '../lib/mapRoute';
 import { haversineMeters, openDrivingDirections } from '../lib/mapRoute';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { touchActiveNavSession } from '../lib/navigationSession';
 import {
   bearingDegrees,
   distanceToRouteMeters,
@@ -424,11 +425,19 @@ export default function MapNavigationView({
       if (document.visibilityState === 'visible' && !wakeLockRef.current) {
         void requestWakeLock();
       }
+      if (document.visibilityState === 'visible') {
+        touchActiveNavSession();
+      }
+    };
+    const onPageHide = () => {
+      touchActiveNavSession();
     };
     document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
 
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPageHide);
       void wakeLockRef.current?.release();
       wakeLockRef.current = null;
       voiceRef.current.cancel();
@@ -603,6 +612,7 @@ export default function MapNavigationView({
         setUserPos(next);
         setGpsAccuracy(position.coords.accuracy ?? null);
         setSpeedMph(formatSpeedMph(position.coords.speed));
+        touchActiveNavSession();
       }
 
       const activeRoute = routeRef.current;

@@ -66,6 +66,7 @@ import { NotificationsHubProvider, openNotificationsHub } from './contexts/Notif
 import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
+import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -119,6 +120,7 @@ export default function App() {
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     if (typeof window === 'undefined') return 'map';
+    if (hasActiveNavSession()) return 'map';
     return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
   });
   const [showPostModal, setShowPostModal] = useState(false);
@@ -172,6 +174,12 @@ export default function App() {
   useEffect(() => {
     refreshLegalGates();
   }, [refreshLegalGates]);
+
+  useEffect(() => {
+    if (!userProfile?.uid || !hasActiveNavSession(userProfile.uid)) return;
+    setActiveTab('map');
+    persistActiveTab('map');
+  }, [userProfile?.uid]);
 
   const visibleItems = useMemo(
     () => items.filter((item) => !blockedUserIds.has(item.userId)),
@@ -721,6 +729,7 @@ export default function App() {
       await supabase.auth.signOut();
     } catch (_) {}
     lastSignedInUserIdRef.current = null;
+    clearActiveNavSession();
     clearSessionCache();
     setSessionUser(null);
     setUserProfile(null);

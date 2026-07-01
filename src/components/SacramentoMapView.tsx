@@ -16,7 +16,13 @@ import {
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
-import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { subscribeLiveGeolocation, getLastLiveLatLng, retainLiveGeolocation } from '../lib/liveGeolocation';
+import {
+  clearActiveNavSession,
+  readActiveNavSession,
+  saveActiveNavSession,
+  touchActiveNavSession,
+} from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
 import NavigateNotifyDialog from './NavigateNotifyDialog';
 import { notifyPosterEnRoute } from '../lib/navigationNotify';
@@ -432,6 +438,8 @@ export default function SacramentoMapView({
   const navigationOpenRef = useRef(false);
   const navigateNotifyOpenRef = useRef(false);
   const hasInitialMapCenterRef = useRef(false);
+  const navRestoreDoneRef = useRef(false);
+  const skipNavResetForRestoreRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -476,6 +484,11 @@ export default function SacramentoMapView({
   useEffect(() => {
     followUserRef.current = followUser;
   }, [followUser]);
+
+  useEffect(() => {
+    if (!navigationOpen && !readActiveNavSession(userProfile.uid)) return;
+    return retainLiveGeolocation();
+  }, [navigationOpen, userProfile.uid]);
 
   useEffect(() => {
     mapVisibleRef.current = mapVisible;
@@ -1003,13 +1016,60 @@ export default function SacramentoMapView({
   }, [routeDestination, hasGpsFix]);
 
   useEffect(() => {
-    setNavigationOpen(false);
+    if (navRestoreDoneRef.current || items.length === 0) return;
+
+    const session = readActiveNavSession(userProfile.uid);
+    navRestoreDoneRef.current = true;
+    if (!session) return;
+
+    const post = items.find((item) => item.id === session.postId);
+    if (!post) {
+      clearActiveNavSession();
+      return;
+    }
+
+    skipNavResetForRestoreRef.current = true;
+    setSelectedPost(post);
+    setSelectedEvent(null);
+    setNavigationOpen(true);
+    window.setTimeout(() => {
+      skipNavResetForRestoreRef.current = false;
+    }, 0);
+  }, [items, userProfile.uid]);
+
+  useEffect(() => {
+    if (skipNavResetForRestoreRef.current) return;
     setNavigateNotifyOpen(false);
+    if (!navigationOpenRef.current) return;
+    setNavigationOpen(false);
+    clearActiveNavSession();
   }, [selectedPost?.id]);
 
+  const persistNavigationSession = useCallback(() => {
+    if (!selectedPost || !routeDestination) return;
+    saveActiveNavSession({
+      userId: userProfile.uid,
+      postId: selectedPost.id,
+      destination: routeDestination,
+      destinationLabel: selectedPost.title,
+      startedAt: Date.now(),
+    });
+  }, [selectedPost, routeDestination, userProfile.uid]);
+
   const openNavigation = useCallback(() => {
+    persistNavigationSession();
     setNavigationOpen(true);
+  }, [persistNavigationSession]);
+
+  const handleExitNavigation = useCallback(() => {
+    clearActiveNavSession();
+    setNavigationOpen(false);
   }, []);
+
+  useEffect(() => {
+    if (!navigationOpen || !selectedPost || !routeDestination) return;
+    persistNavigationSession();
+  }, [navigationOpen, selectedPost, routeDestination, persistNavigationSession]);
 
   const handleNavigateRequest = useCallback(() => {
     if (!selectedPost) return;
@@ -1060,14 +1120,16 @@ export default function SacramentoMapView({
     openNavigation,
   ]);
 
+  const navOrigin = userLocationRef.current ?? userLocation ?? getLastLiveLatLng();
+
   const navigationOverlay =
-    navigationOpen && routeDestination && selectedPost && (userLocationRef.current ?? userLocation)
+    navigationOpen && routeDestination && selectedPost && navOrigin
       ? createPortal(
           <MapNavigationView
-            origin={(userLocationRef.current ?? userLocation)!}
+            origin={navOrigin}
             destination={routeDestination}
             destinationLabel={selectedPost.title}
-            onExit={() => setNavigationOpen(false)}
+            onExit={handleExitNavigation}
           />,
           document.body,
         )
