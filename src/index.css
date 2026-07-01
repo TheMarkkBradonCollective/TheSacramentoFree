@@ -106,15 +106,157 @@ html.sbn-session-restore #root:empty {
   background: var(--color-bg-secondary);
 }
 
+#map_navigation_view {
+  --sbn-nav-map-bg: #121214;
+  --sbn-nav-panel: #141416;
+  --sbn-nav-panel-elevated: #1c1c1f;
+  --sbn-nav-fab: #0f0f10;
+  --sbn-nav-route-glow: rgba(255, 69, 0, 0.38);
+  --sbn-nav-route-core: #ff6b2e;
+  --sbn-nav-route-line: #ff4500;
+  font-family: var(--font-sans);
+}
+
 #map_navigation_view .leaflet-container {
   width: 100% !important;
   height: 100% !important;
-  background: #dfe8f2;
+  background: var(--sbn-nav-map-bg);
 }
 
 #map_navigation_view .nav-user-marker {
   background: transparent;
   border: none;
+}
+
+#map_navigation_view .sbn-nav-banner {
+  background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+  color: var(--color-on-accent);
+  border-bottom-left-radius: 1.25rem;
+  border-bottom-right-radius: 1.25rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+#map_navigation_view .sbn-nav-lane {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding-top: 0.65rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+#map_navigation_view .sbn-nav-lane-slot {
+  width: 2rem;
+  height: 1.65rem;
+  border-radius: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.28);
+}
+
+#map_navigation_view .sbn-nav-lane-slot-active {
+  background: rgba(255, 255, 255, 0.96);
+  color: #111;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+#map_navigation_view .sbn-nav-fab {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: var(--sbn-nav-fab);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#map_navigation_view .sbn-nav-fab:hover {
+  background: #1a1a1d;
+}
+
+#map_navigation_view .sbn-nav-fab-active {
+  background: var(--color-accent);
+  border-color: transparent;
+}
+
+#map_navigation_view .sbn-nav-speed-sign {
+  background: #fff;
+  border: 3px solid #111;
+  border-radius: 0.65rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 3.25rem;
+  padding: 0.45rem 0.55rem;
+  text-align: center;
+}
+
+#map_navigation_view .sbn-nav-road-pill {
+  background: rgba(15, 15, 16, 0.92);
+  color: #fff;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: calc(100% - 2rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#map_navigation_view .sbn-nav-sheet {
+  background: var(--sbn-nav-panel);
+  color: #f4f4f5;
+  border-top-left-radius: 1.5rem;
+  border-top-right-radius: 1.5rem;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.55);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+#map_navigation_view .sbn-nav-sheet-handle {
+  width: 2.5rem;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.22);
+  margin: 0 auto;
+}
+
+#map_navigation_view .sbn-nav-sheet-expand {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: var(--sbn-nav-panel-elevated);
+  color: #e4e4e7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#map_navigation_view .sbn-nav-exit-btn {
+  background: var(--sbn-nav-panel-elevated);
+  color: #fff;
+  border-radius: 9999px;
+  padding: 0.65rem 1.35rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#map_navigation_view .sbn-nav-exit-btn:hover {
+  background: #26262b;
+}
+
+#map_navigation_view .sbn-nav-step-current {
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 
 input,

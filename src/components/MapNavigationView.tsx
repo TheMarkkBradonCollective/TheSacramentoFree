@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  ChevronUp,
   CornerUpLeft,
   CornerUpRight,
   LocateFixed,
@@ -50,6 +51,59 @@ interface MapNavigationViewProps {
   onExit: () => void;
 }
 
+const NAV_BRAND = '#FF4500';
+const NAV_BRAND_LIGHT = '#FF6B2E';
+const NAV_ROUTE_GLOW = 'rgba(255, 69, 0, 0.38)';
+
+function LaneGuidanceStrip({ kind }: { kind: ManeuverIconKind }) {
+  const activeIndices = useMemo(() => {
+    switch (kind) {
+      case 'left':
+        return [0, 1];
+      case 'slight-left':
+        return [1];
+      case 'right':
+        return [3, 4];
+      case 'slight-right':
+        return [3];
+      case 'uturn':
+      case 'roundabout':
+        return [0];
+      case 'arrive':
+        return [2];
+      default:
+        return [1, 2, 3];
+    }
+  }, [kind]);
+
+  const iconForSlot = (index: number, active: boolean) => {
+    const className = `w-4 h-4 ${active ? '' : 'opacity-90'}`;
+    if (!active) return <ArrowUp className={className} strokeWidth={2.75} />;
+    if (kind === 'left' || (kind === 'uturn' && index === 0)) {
+      return <ArrowLeft className={className} strokeWidth={2.75} />;
+    }
+    if (kind === 'right') return <ArrowRight className={className} strokeWidth={2.75} />;
+    if (kind === 'slight-left') return <CornerUpLeft className={className} strokeWidth={2.75} />;
+    if (kind === 'slight-right') return <CornerUpRight className={className} strokeWidth={2.75} />;
+    if (kind === 'roundabout') return <RotateCcw className={className} strokeWidth={2.75} />;
+    if (kind === 'arrive') return <Navigation className={className} strokeWidth={2.75} />;
+    return <ArrowUp className={className} strokeWidth={2.75} />;
+  };
+
+  return (
+    <div className="sbn-nav-lane" aria-hidden>
+      {Array.from({ length: 5 }, (_, index) => {
+        const active = activeIndices.includes(index);
+        return (
+          <div key={index} className={`sbn-nav-lane-slot ${active ? 'sbn-nav-lane-slot-active' : ''}`}>
+            {iconForSlot(index, active)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 type NavSheetSnap = 'collapsed' | 'expanded';
 
 const SHEET_DRAG_THRESHOLD_PX = 44;
@@ -64,7 +118,6 @@ interface NavigationDetailsSheetProps {
   gpsAccuracy: number | null;
   route: NavigationRouteResult;
   stepIndex: number;
-  onOverview: () => void;
   onExit: () => void;
 }
 
@@ -78,7 +131,6 @@ function NavigationDetailsSheet({
   gpsAccuracy,
   route,
   stepIndex,
-  onOverview,
   onExit,
 }: NavigationDetailsSheetProps) {
   const dragStartYRef = useRef(0);
@@ -109,7 +161,7 @@ function NavigationDetailsSheet({
   return (
     <motion.div
       id="nav_details_sheet"
-      className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.18)] flex flex-col safe-area-pb ${
+      className={`sbn-nav-sheet absolute inset-x-0 bottom-0 z-30 flex flex-col safe-area-pb ${
         expanded ? 'max-h-[72vh]' : ''
       }`}
       initial={false}
@@ -119,7 +171,7 @@ function NavigationDetailsSheet({
         tabIndex={0}
         aria-expanded={expanded}
         aria-label={expanded ? 'Collapse route details' : 'Expand route details'}
-        className="shrink-0 pt-3 pb-2 px-4 cursor-grab active:cursor-grabbing touch-none select-none"
+        className="shrink-0 pt-3 pb-1 px-4 cursor-grab active:cursor-grabbing touch-none select-none"
         onPointerDown={handleSheetPointerDown}
         onPointerUp={handleSheetPointerUp}
         onKeyDown={(event) => {
@@ -129,59 +181,49 @@ function NavigationDetailsSheet({
           }
         }}
       >
-        <div className="w-10 h-1 rounded-full bg-zinc-300 mx-auto" />
-        <p className="text-[10px] text-zinc-400 text-center mt-2 font-medium">
-          {expanded ? 'Swipe down for map' : 'Swipe up for route details'}
-        </p>
+        <div className="sbn-nav-sheet-handle" />
       </div>
 
-      <div className="shrink-0 px-4 pb-3">
+      <div className="shrink-0 px-4 pb-4 pt-1">
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={onOverview}
-            className="w-11 h-11 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-700 shrink-0"
-            aria-label="Route overview"
+            onClick={() => onSnapChange(expanded ? 'collapsed' : 'expanded')}
+            className="sbn-nav-sheet-expand shrink-0"
+            aria-label={expanded ? 'Collapse route details' : 'Expand route details'}
           >
-            <MapIcon className="w-5 h-5" />
+            <ChevronUp className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
           </button>
 
           <div className="flex-1 min-w-0 text-center">
-            <p className="text-3xl font-black text-[#188038] leading-none tabular-nums">
+            <p className="text-[2rem] font-black text-accent leading-none tabular-nums font-display">
               {arrived ? '0 min' : formatNavDuration(remainingSeconds)}
             </p>
-            <p className="text-sm text-zinc-600 font-medium mt-1">
+            <p className="text-sm text-zinc-300 font-medium mt-1 tabular-nums">
               {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
             </p>
-            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-              {arrived ? `Arrived at ${destinationLabel}` : `To ${destinationLabel}`}
-            </p>
             {gpsAccuracy != null && gpsAccuracy > 35 && !arrived && (
-              <p className="text-[10px] text-amber-600 mt-1">GPS signal weak — accuracy ±{Math.round(gpsAccuracy)}m</p>
+              <p className="text-[10px] text-amber-400 mt-1">GPS weak — ±{Math.round(gpsAccuracy)}m</p>
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={onExit}
-            className="px-5 py-2.5 rounded-full bg-zinc-100 text-zinc-900 font-bold text-sm shrink-0 hover:bg-zinc-200"
-          >
+          <button type="button" onClick={onExit} className="sbn-nav-exit-btn shrink-0">
             {arrived ? 'Done' : 'Exit'}
           </button>
         </div>
       </div>
 
       {expanded && (
-        <div className="flex-1 min-h-0 overflow-y-auto border-t border-zinc-100 px-4 pb-4">
+        <div className="flex-1 min-h-0 overflow-y-auto border-t border-white/8 px-4 pb-4">
           <div className="py-3">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-500">Trip summary</h3>
-            <p className="text-sm text-zinc-700 mt-1">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Trip summary</h3>
+            <p className="text-sm text-zinc-300 mt-1">
               {formatNavDistance(route.distanceMeters)} total · {formatNavDuration(route.durationSeconds)} drive
             </p>
-            <p className="text-sm font-semibold text-zinc-900 mt-0.5 truncate">{destinationLabel}</p>
+            <p className="text-sm font-semibold text-white mt-0.5 truncate">{destinationLabel}</p>
           </div>
 
-          <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-500 pb-2 sticky top-0 bg-white">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 pb-2 sticky top-0 bg-[#141416]">
             Turn-by-turn
           </h3>
           <ol className="space-y-1">
@@ -194,25 +236,25 @@ function NavigationDetailsSheet({
                 <li
                   key={step.id}
                   className={`flex items-start gap-3 rounded-2xl px-3 py-2.5 ${
-                    isCurrent ? 'bg-[#188038]/10 ring-1 ring-[#188038]/25' : isPast ? 'opacity-55' : ''
+                    isCurrent ? 'sbn-nav-step-current' : isPast ? 'opacity-50' : ''
                   }`}
                 >
                   <div
                     className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
-                      isCurrent ? 'bg-[#188038] text-white' : 'bg-zinc-100 text-zinc-700'
+                      isCurrent ? 'bg-accent text-on-accent' : 'bg-zinc-800 text-zinc-200'
                     }`}
                   >
                     <ManeuverIcon kind={kind} className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm leading-snug ${isCurrent ? 'font-bold text-zinc-900' : 'font-medium text-zinc-800'}`}>
+                    <p className={`text-sm leading-snug ${isCurrent ? 'font-bold text-white' : 'font-medium text-zinc-200'}`}>
                       {step.instruction}
                     </p>
                     {step.name ? (
                       <p className="text-xs text-zinc-500 truncate mt-0.5">{step.name}</p>
                     ) : null}
                     {step.distanceMeters > 0 && index < route.steps.length - 1 ? (
-                      <p className="text-[11px] text-zinc-400 mt-1">{formatNavDistance(step.distanceMeters)}</p>
+                      <p className="text-[11px] text-zinc-600 mt-1">{formatNavDistance(step.distanceMeters)}</p>
                     ) : null}
                   </div>
                 </li>
@@ -251,30 +293,37 @@ function createNavUserIcon(heading: number): L.DivIcon {
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center" style="transform: rotate(${heading}deg)">
-        <div class="h-11 w-11 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.28)] border-[3px] border-white flex items-center justify-center">
-          <div class="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-[#2563EB] -mt-0.5"></div>
+        <div class="h-[3.25rem] w-[3.25rem] rounded-full bg-white/95 shadow-[0_0_0_10px_rgba(255,255,255,0.18),0_4px_16px_rgba(0,0,0,0.45)] border-[3px] border-white flex items-center justify-center">
+          <div class="w-0 h-0 border-l-[9px] border-r-[9px] border-b-[16px] border-l-transparent border-r-transparent border-b-[${NAV_BRAND}] -mt-0.5"></div>
         </div>
       </div>
     `,
     className: 'nav-user-marker',
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
+    iconSize: [52, 52],
+    iconAnchor: [26, 26],
   });
 }
 
 function drawRouteOnLayer(layer: L.LayerGroup, coords: [number, number][]): void {
   layer.clearLayers();
   L.polyline(coords, {
-    color: '#1D4ED8',
-    weight: 11,
-    opacity: 0.28,
+    color: NAV_ROUTE_GLOW,
+    weight: 13,
+    opacity: 0.95,
     lineCap: 'round',
     lineJoin: 'round',
   }).addTo(layer);
   L.polyline(coords, {
-    color: '#3B82F6',
-    weight: 7,
+    color: NAV_BRAND_LIGHT,
+    weight: 8,
     opacity: 0.98,
+    lineCap: 'round',
+    lineJoin: 'round',
+  }).addTo(layer);
+  L.polyline(coords, {
+    color: NAV_BRAND,
+    weight: 5,
+    opacity: 1,
     lineCap: 'round',
     lineJoin: 'round',
   }).addTo(layer);
@@ -492,7 +541,7 @@ export default function MapNavigationView({
       markerZoomAnimation: false,
     }).setView([origin.lat, origin.lng], 16);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       updateWhenIdle: true,
       updateWhenZooming: false,
@@ -790,62 +839,72 @@ export default function MapNavigationView({
       ? currentStep.instruction
       : currentStep?.instruction;
   const offRouteMeters = route ? distanceToRouteMeters(route.coords, userPos) : 0;
+  const currentRoadLabel = arrived
+    ? destinationLabel
+    : currentStep?.name?.trim() || bannerStreet;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-zinc-900 flex flex-col" id="map_navigation_view">
-      <div className="bg-[#188038] text-white px-4 pt-3 pb-4 shadow-lg shrink-0 relative z-10 safe-area-pt" id="nav_instruction_banner">
-        <div className="flex items-center gap-3 min-h-[4.5rem]">
-          <div className="shrink-0 w-[4.5rem] flex flex-col items-center justify-center">
+    <div className="fixed inset-0 z-[200] bg-[#0b0b0c] flex flex-col" id="map_navigation_view">
+      <div className="sbn-nav-banner px-4 pt-3 pb-3 shrink-0 relative z-10 safe-area-pt" id="nav_instruction_banner">
+        <div className="flex items-start gap-3 min-h-[4.25rem]">
+          <div className="shrink-0 w-[4.75rem] flex flex-col items-center justify-center pt-0.5">
             {loading ? (
-              <Navigation className="w-10 h-10 animate-pulse" />
+              <Navigation className="w-11 h-11 animate-pulse" />
             ) : (
-              <ManeuverIcon kind={maneuverKind} className="w-10 h-10" />
+              <ManeuverIcon kind={maneuverKind} className="w-11 h-11" />
             )}
             {!loading && !arrived && (
-              <p className="text-sm font-bold mt-1 tabular-nums leading-none">{formatNavDistance(distanceToManeuver)}</p>
+              <p className="text-base font-black mt-1.5 tabular-nums leading-none tracking-tight">
+                {formatNavDistance(distanceToManeuver)}
+              </p>
             )}
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pt-0.5">
             {loading ? (
               <>
-                <p className="text-[1.65rem] font-bold leading-tight">Loading route</p>
-                <p className="text-sm font-medium mt-1 truncate opacity-90">To {destinationLabel}</p>
+                <p className="text-[1.75rem] font-display font-extrabold leading-tight tracking-tight">Loading route</p>
+                <p className="text-sm font-semibold mt-1 truncate opacity-90">To {destinationLabel}</p>
               </>
             ) : arrived ? (
               <>
-                <p className="text-[1.65rem] font-bold leading-tight">You&apos;ve arrived</p>
-                <p className="text-base font-semibold mt-1 truncate opacity-95">{destinationLabel}</p>
+                <p className="text-[1.75rem] font-display font-extrabold leading-tight tracking-tight">You&apos;ve arrived</p>
+                <p className="text-base font-bold mt-1 truncate opacity-95">{destinationLabel}</p>
               </>
             ) : (
               <>
-                <p className="text-[1.65rem] sm:text-[1.85rem] font-bold leading-tight truncate">{bannerStreet}</p>
-                <p className="text-sm font-medium mt-1 truncate opacity-90">{bannerInstruction}</p>
+                <p className="text-[1.75rem] sm:text-[2rem] font-display font-extrabold leading-[1.05] tracking-tight truncate">
+                  {bannerStreet}
+                </p>
+                {bannerInstruction ? (
+                  <p className="text-sm font-semibold mt-1 truncate opacity-90">{bannerInstruction}</p>
+                ) : null}
               </>
             )}
           </div>
         </div>
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/35" />
+
+        {!loading && !arrived && maneuverKind !== 'arrive' && <LaneGuidanceStrip kind={maneuverKind} />}
       </div>
 
       <div className="relative flex-1 min-h-0">
         <div ref={mapContainerRef} className="absolute inset-0 z-0" />
 
         {loading && (
-          <div className="absolute inset-0 z-10 bg-zinc-950/55 flex flex-col items-center justify-center gap-3 text-white pointer-events-none">
-            <Navigation className="w-10 h-10 text-[#FF4500] animate-pulse" />
+          <div className="absolute inset-0 z-10 bg-black/55 flex flex-col items-center justify-center gap-3 text-white pointer-events-none">
+            <Navigation className="w-10 h-10 text-accent animate-pulse" />
             <p className="text-sm font-semibold">Loading your route…</p>
           </div>
         )}
 
         {showFatalError && (
-          <div className="absolute inset-0 z-20 bg-zinc-950/90 flex flex-col items-center justify-center gap-4 p-6 text-center text-white safe-area-pb">
+          <div className="absolute inset-0 z-20 bg-black/90 flex flex-col items-center justify-center gap-4 p-6 text-center text-white safe-area-pb">
             <p className="text-sm text-zinc-300">{error}</p>
             <div className="flex flex-col gap-2 w-full max-w-xs pointer-events-auto">
               <button
                 type="button"
                 onClick={handleRetryRoute}
-                className="px-5 py-3 rounded-full bg-[#FF4500] text-white font-bold text-sm"
+                className="px-5 py-3 rounded-full bg-accent text-on-accent font-bold text-sm"
               >
                 Retry route
               </button>
@@ -856,7 +915,7 @@ export default function MapNavigationView({
               >
                 Open in Maps
               </button>
-              <button type="button" onClick={handleExit} className="px-5 py-3 rounded-full bg-zinc-800 text-zinc-200 font-semibold text-sm">
+              <button type="button" onClick={handleExit} className="sbn-nav-exit-btn px-5 py-3">
                 Back to map
               </button>
             </div>
@@ -866,49 +925,54 @@ export default function MapNavigationView({
         {!loading && route && (
           <>
             {speedMph && (
-              <div className="absolute left-3 top-4 z-20 bg-white rounded-xl shadow-lg px-3 py-2 text-center min-w-[52px]">
-                <p className="text-xl font-black text-zinc-900 leading-none tabular-nums">{speedMph}</p>
-                <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wide mt-0.5">mph</p>
+              <div className="absolute left-3 top-4 z-20 sbn-nav-speed-sign">
+                <p className="text-[1.35rem] font-black text-zinc-900 leading-none tabular-nums">{speedMph}</p>
+                <p className="text-[8px] font-extrabold text-zinc-700 uppercase tracking-wider mt-0.5">mph</p>
               </div>
             )}
 
             {(rerouting || offRouteMeters > 55) && !arrived && (
-              <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 bg-zinc-900/90 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+              <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 bg-black/85 text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
                 {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
               </div>
             )}
 
-            <div className="absolute right-3 top-4 z-20 flex flex-col gap-2">
+            <div className="absolute right-3 top-4 z-20 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={handleOverview}
-                className="w-11 h-11 rounded-full bg-white shadow-lg flex items-center justify-center text-zinc-900"
+                className="sbn-nav-fab"
                 title="Route overview"
+                aria-label="Route overview"
               >
                 <MapIcon className="w-5 h-5" />
               </button>
               <button
                 type="button"
                 onClick={handleVoiceToggle}
-                className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center ${
-                  voiceOn ? 'bg-white text-zinc-900' : 'bg-zinc-800 text-white'
-                }`}
+                className="sbn-nav-fab"
                 title={voiceOn ? 'Voice guidance on' : 'Voice guidance off'}
                 aria-pressed={voiceOn}
+                aria-label={voiceOn ? 'Mute voice guidance' : 'Enable voice guidance'}
               >
-                {voiceOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                {voiceOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 opacity-80" />}
               </button>
               <button
                 type="button"
                 onClick={handleRecenter}
-                className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center ${
-                  followUser ? 'bg-[#188038] text-white' : 'bg-white text-zinc-900'
-                }`}
+                className={`sbn-nav-fab ${followUser ? 'sbn-nav-fab-active' : ''}`}
                 title="Recenter on you"
+                aria-label="Recenter on you"
               >
                 <LocateFixed className="w-5 h-5" />
               </button>
             </div>
+
+            {!arrived && currentRoadLabel && sheetSnap === 'collapsed' && (
+              <div className="absolute inset-x-0 bottom-[7.75rem] z-20 flex justify-center px-4 pointer-events-none">
+                <div className="sbn-nav-road-pill truncate">{currentRoadLabel}</div>
+              </div>
+            )}
 
             <NavigationDetailsSheet
               snap={sheetSnap}
@@ -920,7 +984,6 @@ export default function MapNavigationView({
               gpsAccuracy={gpsAccuracy}
               route={route}
               stepIndex={stepIndex}
-              onOverview={handleOverview}
               onExit={handleExit}
             />
           </>
