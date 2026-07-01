@@ -25,6 +25,7 @@ import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { touchActiveNavSession } from '../lib/navigationSession';
 import { useTheme } from '../theme/ThemeContext';
 import {
+  bearingAlongRoute,
   bearingDegrees,
   distanceToRouteMeters,
   estimateLaneCount,
@@ -40,6 +41,7 @@ import {
   maneuverIconKind,
   remainingRouteMeters,
   shouldFireVoiceCue,
+  smoothHeadingDegrees,
   type ManeuverIconKind,
   type NavigationRouteResult,
   type NavigationStep,
@@ -455,6 +457,32 @@ function centerMapWithLookahead(map: L.Map, center: LatLng, zoom: number): void 
   }
 }
 
+function resetMapBearing(map: L.Map | null): void {
+  const pane = map?.getPane('mapPane');
+  if (!pane) return;
+  pane.style.transform = '';
+  pane.style.transformOrigin = '';
+}
+
+function applyMapBearing(map: L.Map, center: LatLng, heading: number, northUp: boolean): void {
+  const pane = map.getPane('mapPane');
+  if (!pane) return;
+
+  if (northUp) {
+    resetMapBearing(map);
+    return;
+  }
+
+  try {
+    const point = map.latLngToContainerPoint([center.lat, center.lng]);
+    pane.style.transformOrigin = `${point.x}px ${point.y}px`;
+    pane.style.transform = `rotate(${-heading}deg)`;
+  } catch (error) {
+    console.warn('Could not rotate navigation map:', error);
+    resetMapBearing(map);
+  }
+}
+
 export default function MapNavigationView({
   origin,
   destination,
@@ -488,6 +516,7 @@ export default function MapNavigationView({
   const pendingNavPanRef = useRef<LatLng | null>(null);
   const hasFittedRouteRef = useRef(false);
   const uiTickRef = useRef(0);
+  const lastGpsPosRef = useRef<LatLng | null>(null);
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
 
   const NAV_GPS_FOLLOW_METERS = 18;
@@ -503,6 +532,9 @@ export default function MapNavigationView({
   const [stepIndex, setStepIndex] = useState(0);
   const [followUser, setFollowUser] = useState(true);
   followUserRef.current = followUser;
+  const [northUp, setNorthUp] = useState(false);
+  const northUpRef = useRef(false);
+  northUpRef.current = northUp;
   const [voiceOn, setVoiceOn] = useState(true);
   const [arrived, setArrived] = useState(false);
   const [rerouting, setRerouting] = useState(false);
@@ -710,6 +742,7 @@ export default function MapNavigationView({
         navPanRafRef.current = null;
       }
       map.remove();
+      resetMapBearing(map);
       mapRef.current = null;
       tileLayerRef.current = null;
       routeLayerRef.current = null;
@@ -790,22 +823,23 @@ export default function MapNavigationView({
     if (!map) return;
 
     headingRef.current = nextHeading;
+    const markerHeading = northUpRef.current ? nextHeading : 0;
 
     const headingChanged =
       !userMarkerRef.current ||
-      Math.abs(((nextHeading - lastMarkerHeadingRef.current + 540) % 360) - 180) >= NAV_HEADING_ICON_DEG;
+      Math.abs(((markerHeading - lastMarkerHeadingRef.current + 540) % 360) - 180) >= NAV_HEADING_ICON_DEG;
 
     try {
       if (userMarkerRef.current) {
         userMarkerRef.current.setLatLng([next.lat, next.lng]);
         if (headingChanged) {
-          lastMarkerHeadingRef.current = nextHeading;
-          userMarkerRef.current.setIcon(createNavUserIcon(nextHeading));
+          lastMarkerHeadingRef.current = markerHeading;
+          userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
         }
       } else {
-        lastMarkerHeadingRef.current = nextHeading;
+        lastMarkerHeadingRef.current = markerHeading;
         userMarkerRef.current = L.marker([next.lat, next.lng], {
-          icon: createNavUserIcon(nextHeading),
+          icon: createNavUserIcon(markerHeading),
           zIndexOffset: 500,
         }).addTo(map);
       }
@@ -816,7 +850,10 @@ export default function MapNavigationView({
     if (!followUserRef.current) return;
 
     const last = lastNavPanRef.current;
-    if (last && haversineMeters(last, next) < NAV_GPS_FOLLOW_METERS) return;
+    if (last && haversineMeters(last, next) < NAV_GPS_FOLLOW_METERS) {
+      applyMapBearing(map, next, nextHeading, northUpRef.current);
+      return;
+    }
 
     lastNavPanRef.current = next;
     pendingNavPanRef.current = next;
@@ -828,6 +865,7 @@ export default function MapNavigationView({
       const liveMap = mapRef.current;
       if (!target || !liveMap || !followUserRef.current) return;
       centerMapWithLookahead(liveMap, target, Math.max(liveMap.getZoom(), 17));
+      applyMapBearing(liveMap, target, headingRef.current, northUpRef.current);
     });
   }, []);
 
@@ -851,12 +889,19 @@ export default function MapNavigationView({
       const destLabel = destinationLabelRef.current;
 
       let nextHeading = headingRef.current;
-      if (position.coords.heading != null && !Number.isNaN(position.coords.heading) && position.coords.heading >= 0) {
-        nextHeading = position.coords.heading;
+      const gpsHeading = position.coords.heading;
+      const speed = position.coords.speed;
+
+      if (speed != null && speed >= 1.4 && lastGpsPosRef.current) {
+        nextHeading = bearingDegrees(lastGpsPosRef.current, next);
+      } else if (gpsHeading != null && !Number.isNaN(gpsHeading) && gpsHeading >= 0) {
+        nextHeading = gpsHeading;
       } else if (activeRoute) {
-        const target = activeRoute.steps[stepIndexRef.current]?.location ?? dest;
-        nextHeading = bearingDegrees(next, target);
+        nextHeading = bearingAlongRoute(activeRoute.coords, next);
       }
+
+      nextHeading = smoothHeadingDegrees(headingRef.current, nextHeading);
+      lastGpsPosRef.current = next;
       if (shouldUpdateUi) {
         setHeading(nextHeading);
       }
@@ -883,7 +928,10 @@ export default function MapNavigationView({
       }
 
       if (activeRoute && !arrivedRef.current) {
-        const nextIdx = findCurrentStepIndex(activeRoute.steps, next, stepIndexRef.current);
+        const nextIdx = findCurrentStepIndex(activeRoute.steps, next, stepIndexRef.current, {
+          coords: activeRoute.coords,
+          distanceMeters: activeRoute.distanceMeters,
+        });
         if (nextIdx !== stepIndexRef.current) {
           stepIndexRef.current = nextIdx;
           setStepIndex(nextIdx);
@@ -957,23 +1005,29 @@ export default function MapNavigationView({
   const handleRecenter = () => {
     setFollowUser(true);
     followUserRef.current = true;
+    setNorthUp(false);
     lastNavPanRef.current = null;
     const pos = userPosRef.current;
     const map = mapRef.current;
     if (!map) return;
     centerMapWithLookahead(map, pos, 17);
+    applyMapBearing(map, pos, headingRef.current, false);
     if (userMarkerRef.current) {
-      userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
+      userMarkerRef.current.setIcon(createNavUserIcon(0));
+      lastMarkerHeadingRef.current = 0;
     }
   };
 
   const handleOverview = () => {
     setFollowUser(false);
     followUserRef.current = false;
+    setNorthUp(true);
     const map = mapRef.current;
     if (!map) return;
+    resetMapBearing(map);
     if (userMarkerRef.current) {
       userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
+      lastMarkerHeadingRef.current = headingRef.current;
     }
     if (route) {
       map.fitBounds(route.coords, { padding: [90, 90], maxZoom: 15, animate: false });
@@ -1027,29 +1081,48 @@ export default function MapNavigationView({
   };
 
   const showFatalError = Boolean(error && !route);
+  const navigationCueStep =
+    route && !arrived ? getActiveVoiceCueStep(route.steps, stepIndex) ?? currentStep : currentStep;
+  const onConnectorStep =
+    currentStep?.maneuverType === 'depart' ||
+    currentStep?.maneuverType === 'continue' ||
+    currentStep?.maneuverType === 'new name';
+
   const maneuverKind = route
     ? arrived
       ? 'arrive'
-      : maneuverIconKind(
-          currentStep?.maneuverType === 'depart'
-            ? getActiveVoiceCueStep(route.steps, stepIndex) ?? currentStep
-            : currentStep,
-        )
+      : maneuverIconKind(navigationCueStep)
     : 'arrive';
   const bannerStreet = arrived
     ? destinationLabel
-    : currentStep?.maneuverType === 'depart'
-      ? currentStep.name?.trim() || currentStep.instruction
-      : currentStep?.name?.trim() || (maneuverKind === 'arrive' ? destinationLabel : 'Continue on route');
+    : onConnectorStep
+      ? currentStep?.name?.trim() || navigationCueStep?.name?.trim() || 'Continue on route'
+      : navigationCueStep?.name?.trim() ||
+        currentStep?.name?.trim() ||
+        (maneuverKind === 'arrive' ? destinationLabel : 'Continue on route');
   const bannerInstruction = arrived
     ? undefined
-    : currentStep?.maneuverType === 'depart'
-      ? currentStep.instruction
-      : currentStep?.instruction;
+    : onConnectorStep
+      ? navigationCueStep?.instruction
+      : navigationCueStep?.instruction || currentStep?.instruction;
   const offRouteMeters = route ? distanceToRouteMeters(route.coords, userPos) : 0;
   const currentRoadLabel = arrived
     ? destinationLabel
-    : currentStep?.name?.trim() || bannerStreet;
+    : onConnectorStep
+      ? currentStep?.name?.trim() || navigationCueStep?.name?.trim() || bannerStreet
+      : navigationCueStep?.name?.trim() || currentStep?.name?.trim() || bannerStreet;
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const pos = userPosRef.current;
+    if (!map || !followUserRef.current) return;
+    applyMapBearing(map, pos, headingRef.current, northUp);
+    if (userMarkerRef.current) {
+      const markerHeading = northUp ? headingRef.current : 0;
+      userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
+      lastMarkerHeadingRef.current = markerHeading;
+    }
+  }, [northUp]);
 
   return (
     <div
@@ -1159,10 +1232,14 @@ export default function MapNavigationView({
               <div className="absolute right-3 top-2 flex flex-col gap-2.5 pointer-events-auto">
                 <button
                   type="button"
-                  onClick={() => setShowHeading((v) => !v)}
-                  className={`sbn-nav-fab ${showHeading ? 'sbn-nav-fab-active' : ''}`}
-                  title={`Heading ${Math.round(heading)}°`}
-                  aria-label={`Heading ${Math.round(heading)} degrees`}
+                  onClick={() => {
+                    setNorthUp((value) => !value);
+                    setShowHeading(true);
+                  }}
+                  className={`sbn-nav-fab ${northUp ? '' : 'sbn-nav-fab-active'}`}
+                  title={northUp ? 'North up — tap for heading up' : 'Heading up — tap for north up'}
+                  aria-label={northUp ? 'Switch to heading up map' : 'Switch to north up map'}
+                  aria-pressed={!northUp}
                 >
                   <Compass className="w-5 h-5" />
                 </button>
@@ -1206,8 +1283,9 @@ export default function MapNavigationView({
               </div>
 
               {showHeading && (
-                <div className="absolute right-3 top-[17.5rem] sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none">
-                  {Math.round(heading)}°
+                <div className="absolute right-3 top-[17.5rem] sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none text-center">
+                  <p>{northUp ? 'North up' : 'Heading up'}</p>
+                  <p className="mt-0.5 opacity-80">{Math.round(heading)}°</p>
                 </div>
               )}
 
