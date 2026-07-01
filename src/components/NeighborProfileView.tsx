@@ -36,6 +36,8 @@ import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealt
 import type { MessageRequest } from '../types';
 import ProfilePostList from './ProfilePostList';
 import ProfileAwardsRow from './ProfileAwardsRow';
+import UserAvatar from './UserAvatar';
+import { formatLastActive } from '../lib/presence';
 
 interface NeighborProfileViewProps {
   userId: string;
@@ -311,16 +313,17 @@ export default function NeighborProfileView({
         ) : (
           <div className="space-y-5">
             <div className="sbn-card p-6 flex flex-col items-center text-center">
-              <img
-                src={
-                  profile.photoURL ||
-                  `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(profile.displayName)}`
-                }
-                alt=""
-                className="w-24 h-24 rounded-full border-2 border-accent object-cover"
-                referrerPolicy="no-referrer"
+              <UserAvatar
+                src={profile.photoURL}
+                name={profile.displayName}
+                size="xl"
+                lastActiveAt={profile.lastActiveAt}
+                borderClassName="border-accent"
               />
               <h2 className="font-display text-xl font-bold text-app mt-4">{profile.displayName}</h2>
+              <p className="text-[11px] font-semibold text-emerald-400 mt-1">
+                {formatLastActive(profile.lastActiveAt)}
+              </p>
               <p className="text-sm text-muted flex items-center gap-1.5 mt-1">
                 <MapPin className="w-4 h-4 text-accent" />
                 {profile.neighborhood}

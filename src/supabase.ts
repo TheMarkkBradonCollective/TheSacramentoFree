@@ -367,6 +367,12 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     accountStatus,
     suspendedUntil,
     createdAt: row.createdAt ?? row.created_at,
+    lastActiveAt:
+      typeof row.lastActiveAt === 'string'
+        ? row.lastActiveAt
+        : typeof row.last_active_at === 'string'
+          ? row.last_active_at
+          : null,
   };
 }
 
@@ -4290,10 +4296,50 @@ export async function getStaffUserDirectory(): Promise<StaffUserRow[]> {
   }
 }
 
+export async function touchLastActive(): Promise<void> {
+  try {
+    await supabase.rpc('touch_last_active');
+  } catch {
+    // non-fatal
+  }
+}
+
+export async function getUsersLastActive(uids: string[]): Promise<Record<string, string | null>> {
+  const unique = [...new Set(uids.filter(Boolean))];
+  if (unique.length === 0) return {};
+
+  try {
+    const { data, error } = await supabase
+      .from('users_public')
+      .select('uid, lastActiveAt')
+      .in('uid', unique);
+
+    if (error) {
+      handleSupabaseError(error, 'users_public');
+      return {};
+    }
+
+    const map: Record<string, string | null> = {};
+    for (const uid of unique) map[uid] = null;
+    for (const row of data ?? []) {
+      const r = row as Record<string, unknown>;
+      const uid = String(r.uid ?? '');
+      if (!uid) continue;
+      const raw = r.lastActiveAt ?? r.last_active_at;
+      map[uid] = typeof raw === 'string' ? raw : null;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export async function getDirectorSiteOverview(): Promise<import('./types').DirectorSiteOverview> {
   const empty: import('./types').DirectorSiteOverview = {
     totalNeighbors: 0,
     neighborsJoinedToday: 0,
+    activeOnlineCount: 0,
+    activeNeighbors: [],
     activeListings: 0,
     openReports: 0,
     openTickets: 0,
@@ -4306,10 +4352,13 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const todayIso = startOfToday.toISOString();
+    const onlineSince = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
     const [
       usersRes,
       joinedTodayRes,
+      activeOnlineRes,
+      activeNeighborsRes,
       activeListingsRes,
       openReportsRes,
       openTicketsRes,
@@ -4322,6 +4371,14 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
     ] = await Promise.all([
       supabase.from('users').select('uid', { count: 'exact', head: true }),
       supabase.from('users').select('uid', { count: 'exact', head: true }).gte('createdAt', todayIso),
+      supabase.rpc('active_neighbor_count', { within_minutes: 5 }),
+      supabase
+        .from('users')
+        .select('uid, displayName, photoURL, neighborhood, lastActiveAt')
+        .eq('accountStatus', 'active')
+        .gte('lastActiveAt', onlineSince)
+        .order('lastActiveAt', { ascending: false })
+        .limit(12),
       supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
       supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'new'),
       supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
@@ -4401,6 +4458,17 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
     return {
       totalNeighbors: usersRes.count ?? 0,
       neighborsJoinedToday: joinedTodayRes.count ?? 0,
+      activeOnlineCount: Number(activeOnlineRes.data ?? 0),
+      activeNeighbors: (activeNeighborsRes.data ?? []).map((row) => {
+        const r = row as Record<string, unknown>;
+        return {
+          uid: String(r.uid),
+          displayName: String(r.displayName ?? 'Neighbor'),
+          photoURL: typeof r.photoURL === 'string' ? r.photoURL : undefined,
+          neighborhood: String(r.neighborhood ?? 'Sacramento'),
+          lastActiveAt: String(r.lastActiveAt ?? new Date().toISOString()),
+        };
+      }),
       activeListings: activeListingsRes.count ?? 0,
       openReports: openReportsRes.count ?? 0,
       openTickets: openTicketsRes.count ?? 0,

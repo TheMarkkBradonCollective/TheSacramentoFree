@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Chat, Message, UserProfile, ItemPost, MessageRequest, PendingChatCompose, SupportTicket } from '../types';
 import {
   getSupabaseChats,
@@ -35,6 +35,8 @@ import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSecti
 import ChatSidebarRow, { chatSidebarRowClass } from './ChatSidebarRow';
 import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { PresenceUserAvatar } from './UserAvatar';
+import { useTrackPresence } from '../contexts/PresenceContext';
 import {
   MessageSquare,
   Send,
@@ -710,6 +712,18 @@ export default function ChatSystem({
     return { otherId, otherName, otherPhoto };
   };
 
+  const presenceUids = useMemo(() => {
+    const ids = new Set<string>();
+    for (const chat of chats) {
+      if (isCommunityChat(chat.id)) continue;
+      const otherId = chat.participantIds.find((id) => id !== userProfile.uid);
+      if (otherId) ids.add(otherId);
+    }
+    for (const request of incomingRequests) ids.add(request.fromUserId);
+    return [...ids];
+  }, [chats, incomingRequests, userProfile.uid]);
+  useTrackPresence(presenceUids);
+
   const selectChat = (chat: Chat) => {
     setSelectedChat(chat);
     setSupportView(null);
@@ -906,11 +920,11 @@ export default function ChatSystem({
                         onClick={() => onViewProfile?.(request.fromUserId)}
                         className="shrink-0 rounded-full"
                       >
-                        <img
+                        <PresenceUserAvatar
+                          uid={request.fromUserId}
                           src={photo}
-                          referrerPolicy="no-referrer"
-                          alt=""
-                          className="w-10 h-10 rounded-full border border-app object-cover"
+                          name={request.fromUserName}
+                          size="md"
                         />
                       </button>
                       <div className="min-w-0 flex-1">
@@ -993,11 +1007,12 @@ export default function ChatSystem({
                         }}
                         className="shrink-0 rounded-full"
                       >
-                        <img
+                        <PresenceUserAvatar
+                          uid={otherId}
                           src={otherPhoto}
-                          referrerPolicy="no-referrer"
-                          alt=""
-                          className="w-10 h-10 rounded-full border border-app object-cover hover:ring-2 hover:ring-accent/40"
+                          name={displayTitle}
+                          size="md"
+                          imgClassName="hover:ring-2 hover:ring-accent/40"
                         />
                       </button>
                       <div className="flex-1 min-w-0">
@@ -1272,11 +1287,11 @@ export default function ChatSystem({
                       className="shrink-0 rounded-full cursor-pointer hover:opacity-90"
                       title="View neighbor profile"
                     >
-                      <img
+                      <PresenceUserAvatar
+                        uid={getRecipientInfo(selectedChat).otherId}
                         src={otherPhoto}
-                        referrerPolicy="no-referrer"
-                        alt=""
-                        className="w-10 h-10 rounded-full border border-app object-cover"
+                        name={displayTitleHeader}
+                        size="md"
                       />
                     </button>
                   )}

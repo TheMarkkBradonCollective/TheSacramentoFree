@@ -51,6 +51,7 @@ export interface UserProfile {
   accountStatus?: AccountStatus;
   suspendedUntil?: string | null;
   createdAt: any;
+  lastActiveAt?: string | null;
 }
 
 export interface StaffUserRow extends UserProfile {
@@ -92,12 +93,22 @@ export interface UserNotificationItem {
 export interface DirectorSiteOverview {
   totalNeighbors: number;
   neighborsJoinedToday: number;
+  activeOnlineCount: number;
+  activeNeighbors: DirectorActiveNeighbor[];
   activeListings: number;
   openReports: number;
   openTickets: number;
   suspendedCount: number;
   bannedCount: number;
   recentActivity: DirectorActivityItem[];
+}
+
+export interface DirectorActiveNeighbor {
+  uid: string;
+  displayName: string;
+  photoURL?: string;
+  neighborhood: string;
+  lastActiveAt: string;
 }
 
 export interface ModerationAuditEntry {

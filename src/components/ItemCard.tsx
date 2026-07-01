@@ -5,6 +5,8 @@ import { getPostTypeBadgeClass, getPostTypeLabel, getPostTypeCompletedLabel } fr
 import { extractListingImageUrls } from '../lib/listingContent';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
+import UserAvatar from './UserAvatar';
+import { usePresence } from '../contexts/PresenceContext';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 
 export type ItemCardVoteState = PostVoteState;
@@ -50,6 +52,7 @@ export default function ItemCard({
   onMessage,
   onViewProfile,
 }: ItemCardProps) {
+  const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;
   const inactive = item.status === 'completed' || item.status === 'withdrawn';
 
@@ -278,14 +281,19 @@ export default function ItemCard({
             onClick={() => onViewProfile(item.userId)}
             className="flex items-center gap-1.5 sm:gap-2 min-w-0 text-left hover:opacity-90 cursor-pointer"
           >
-            <img
-              src={
-                item.userPhotoURL ||
-                `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(item.userDisplayName)}`
-              }
-              alt=""
-              className="w-7 h-7 sm:w-9 sm:h-9 rounded-full border border-app shrink-0"
-              referrerPolicy="no-referrer"
+            <UserAvatar
+              src={item.userPhotoURL}
+              name={item.userDisplayName}
+              size="sm"
+              lastActiveAt={authorLastActive ?? undefined}
+              className="sm:hidden"
+            />
+            <UserAvatar
+              src={item.userPhotoURL}
+              name={item.userDisplayName}
+              size="md"
+              lastActiveAt={authorLastActive ?? undefined}
+              className="hidden sm:inline-block"
             />
             <div className="min-w-0">
               <p className="text-xs sm:text-sm font-semibold text-app truncate">{item.userDisplayName}</p>

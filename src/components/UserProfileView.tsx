@@ -30,6 +30,8 @@ import {
 import ProfilePostList from './ProfilePostList';
 import ProfileAwardsRow from './ProfileAwardsRow';
 import ProfileAwardsSection from './ProfileAwardsSection';
+import UserAvatar from './UserAvatar';
+import { formatLastActive } from '../lib/presence';
 import ThemeSettings from './ThemeSettings';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
@@ -321,13 +323,17 @@ export default function UserProfileView({
         <div
           className={`${fullBleed ? sectionShell : 'md:col-span-1'} flex flex-col items-center text-center h-fit`}
         >
-          <img
+          <UserAvatar
             src={photoURL}
-            referrerPolicy="no-referrer"
-            alt={userProfile.displayName}
-            className="w-24 h-24 rounded-full border-2 border-accent animate-fade-in"
-            id="profile_card_avatar"
+            name={userProfile.displayName}
+            size="xl"
+            lastActiveAt={userProfile.lastActiveAt}
+            borderClassName="border-accent"
+            imgClassName="animate-fade-in"
           />
+          <p className="text-[10px] font-semibold text-emerald-400 mt-2">
+            {formatLastActive(userProfile.lastActiveAt)}
+          </p>
           <label
             htmlFor="profile_photo_upload"
             className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${

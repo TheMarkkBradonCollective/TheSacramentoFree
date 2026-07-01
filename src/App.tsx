@@ -63,6 +63,7 @@ import { isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
 import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
+import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
 
@@ -1025,6 +1026,7 @@ export default function App() {
             </div>
           ) : (
             <NotificationsHubProvider userProfile={userProfile}>
+            <PresenceProvider userId={userProfile.uid}>
                {deviceType === 'mobile' ? (
                 <MobileView
                   items={visibleItems}
@@ -1348,6 +1350,7 @@ export default function App() {
                   }}
                 />
               )}
+            </PresenceProvider>
             </NotificationsHubProvider>
           )}
         </>

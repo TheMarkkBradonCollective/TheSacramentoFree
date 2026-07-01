@@ -31,6 +31,7 @@ import {
   PRIMARY_FEED_SORTS,
   type FeedSortMode,
 } from '../lib/feedSort';
+import { useTrackPresence } from '../contexts/PresenceContext';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
@@ -259,6 +260,9 @@ export default function ItemGrid({
     getVotesForPost,
     getCommentsForPost,
   ]);
+
+  const authorIds = useMemo(() => filteredItems.map((item) => item.userId), [filteredItems]);
+  useTrackPresence(authorIds);
 
   return (
     <>

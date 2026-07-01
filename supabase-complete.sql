@@ -33,6 +33,9 @@ CREATE TABLE IF NOT EXISTS public.users (
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "photoURL" TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "lastActiveAt" TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS users_last_active_at_idx ON public.users ("lastActiveAt" DESC);
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 -- 2. Item listings
@@ -1170,6 +1173,35 @@ AS $$
   SELECT COUNT(*)::INT FROM public.users;
 $$;
 
+CREATE OR REPLACE FUNCTION public.touch_last_active()
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  UPDATE public.users
+  SET "lastActiveAt" = NOW()
+  WHERE uid = auth.uid()::text;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.touch_last_active() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.active_neighbor_count(within_minutes int DEFAULT 5)
+RETURNS bigint
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COUNT(*)::bigint
+  FROM public.users
+  WHERE COALESCE("accountStatus", 'active') = 'active'
+    AND "lastActiveAt" IS NOT NULL
+    AND "lastActiveAt" >= NOW() - (GREATEST(within_minutes, 1) || ' minutes')::interval;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.active_neighbor_count(int) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.awards_unlocked()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -1781,7 +1813,8 @@ SELECT
   bio,
   role,
   "accountStatus",
-  "createdAt"
+  "createdAt",
+  "lastActiveAt"
 FROM public.users;
 
 GRANT SELECT ON public.users_public TO authenticated;

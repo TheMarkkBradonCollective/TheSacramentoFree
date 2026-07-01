@@ -13,6 +13,8 @@ import {
 import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
 import { getDirectorSiteOverview } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import UserAvatar from './UserAvatar';
+import { formatLastActive } from '../lib/presence';
 
 interface DirectorSiteOverviewProps {
   scrollIntoView?: boolean;
@@ -146,6 +148,8 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
   const data = overview ?? {
     totalNeighbors: 0,
     neighborsJoinedToday: 0,
+    activeOnlineCount: 0,
+    activeNeighbors: [],
     activeListings: 0,
     openReports: 0,
     openTickets: 0,
@@ -188,20 +192,26 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           sub={data.neighborsJoinedToday > 0 ? `+${data.neighborsJoinedToday} today` : 'all members'}
           accent="text-violet-400"
         />
+        <StatTile
+          label="Active (online)"
+          value={data.activeOnlineCount}
+          sub="last 5 min"
+          accent="text-emerald-400"
+        />
         <StatTile label="Active listings" value={data.activeListings} accent="text-accent" />
         <StatTile
           label="Open reports"
           value={data.openReports}
           accent={data.openReports > 0 ? 'text-red-400' : undefined}
         />
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         <StatTile
           label="Open tickets"
           value={data.openTickets}
           accent={data.openTickets > 0 ? 'text-sky-400' : undefined}
         />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-inset border border-app">
           <Users className="w-4 h-4 text-amber-400 shrink-0" />
           <div>
@@ -216,6 +226,39 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
             <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Banned</div>
           </div>
         </div>
+      </div>
+
+      <div>
+        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          Active now
+        </h4>
+        {loading ? (
+          <p className="text-sm text-muted py-3 text-center">Loading online neighbors…</p>
+        ) : data.activeNeighbors.length === 0 ? (
+          <p className="text-sm text-muted py-3 text-center">No neighbors online in the last 5 minutes.</p>
+        ) : (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {data.activeNeighbors.map((neighbor) => (
+              <li
+                key={neighbor.uid}
+                className="flex items-center gap-2.5 p-2.5 rounded-xl bg-inset/60 border border-app/60"
+              >
+                <UserAvatar
+                  src={neighbor.photoURL}
+                  name={neighbor.displayName}
+                  size="sm"
+                  lastActiveAt={neighbor.lastActiveAt}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-app truncate">{neighbor.displayName}</p>
+                  <p className="text-[10px] text-muted truncate">{neighbor.neighborhood}</p>
+                  <p className="text-[10px] text-emerald-400 font-semibold">{formatLastActive(neighbor.lastActiveAt)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div>
