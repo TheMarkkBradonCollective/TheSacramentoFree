@@ -18,9 +18,12 @@ import {
   Share2,
   Volume2,
   VolumeX,
+  WifiOff,
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
 import { haversineMeters, openDrivingDirections } from '../lib/mapRoute';
+import { splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
+import NavManeuverShield from './navigation/NavManeuverShield';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { touchActiveNavSession } from '../lib/navigationSession';
 import { useTheme } from '../theme/ThemeContext';
@@ -28,8 +31,6 @@ import {
   bearingAlongRoute,
   bearingDegrees,
   distanceToRouteMeters,
-  estimateLaneCount,
-  estimateSpeedLimitMph,
   fetchNavigationRoute,
   findCurrentStepIndex,
   formatArrivalTime,
@@ -57,8 +58,11 @@ interface MapNavigationViewProps {
   origin: LatLng;
   destination: LatLng;
   destinationLabel: string;
+  initialRoute?: NavigationRouteResult | null;
   onExit: () => void;
 }
+
+type NavLoadingStage = 'locating' | 'routing' | 'ready';
 
 const NAV_BRAND = '#FF4500';
 const NAV_BRAND_LIGHT = '#FF6B2E';
@@ -93,84 +97,33 @@ function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean 
   );
 }
 
-function NavSpeedCard({
-  currentMph,
-  limitMph,
-}: {
-  currentMph: string | null;
-  limitMph: number;
-}) {
+function NavSpeedPuck({ currentMph }: { currentMph: string | null }) {
   if (!currentMph) return null;
-  const current = Number.parseInt(currentMph, 10);
-  const over = current > limitMph + 4;
-  const warn = !over && current > limitMph;
-  const tone = over ? 'over' : warn ? 'warn' : 'ok';
-
   return (
-    <div className="sbn-nav-speed-card sbn-nav-glass pointer-events-auto">
-      <div className="sbn-nav-speed-limit">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--sbn-nav-text-secondary)]">Limit</p>
-        <p className="text-lg font-black leading-none tabular-nums text-[var(--sbn-nav-text)]">{limitMph}</p>
-      </div>
-      <div className={`sbn-nav-speed-current sbn-nav-speed-current--${tone}`}>
-        <p className="text-[1.45rem] font-black leading-none">{currentMph}</p>
-        <p className="text-[8px] font-bold uppercase tracking-wider mt-0.5 opacity-80">mph</p>
-      </div>
+    <div className="sbn-nav-speed-puck sbn-nav-glass pointer-events-auto" aria-label={`Current speed ${currentMph} miles per hour`}>
+      <p className="sbn-nav-speed-puck-value">{currentMph}</p>
+      <p className="sbn-nav-speed-puck-unit">mph</p>
     </div>
   );
 }
 
-function activeLaneIndices(kind: ManeuverIconKind, laneCount: number): number[] {
-  const last = laneCount - 1;
-
-  switch (kind) {
-    case 'left':
-      return laneCount <= 2 ? [0] : [0, 1];
-    case 'slight-left':
-      return [Math.min(1, last)];
-    case 'right':
-      return laneCount <= 2 ? [last] : [last - 1, last];
-    case 'slight-right':
-      return [Math.max(0, last - 1)];
-    case 'uturn':
-      return [0];
-    case 'roundabout':
-      return laneCount === 2 ? [0, 1] : [0, last];
-    default:
-      return [];
-  }
-}
-
-function LaneGuidanceStrip({ kind, laneCount }: { kind: ManeuverIconKind; laneCount: number }) {
-  const activeIndices = useMemo(() => activeLaneIndices(kind, laneCount), [kind, laneCount]);
-
-  if (laneCount < 2 || kind === 'straight' || kind === 'arrive' || activeIndices.length === 0) {
-    return null;
-  }
-
-  const iconForSlot = (index: number, active: boolean) => {
-    const className = `w-4 h-4 ${active ? '' : 'opacity-90'}`;
-    if (!active) return <ArrowUp className={className} strokeWidth={2.75} />;
-    if (kind === 'left' || (kind === 'uturn' && index === 0)) {
-      return <ArrowLeft className={className} strokeWidth={2.75} />;
-    }
-    if (kind === 'right') return <ArrowRight className={className} strokeWidth={2.75} />;
-    if (kind === 'slight-left') return <CornerUpLeft className={className} strokeWidth={2.75} />;
-    if (kind === 'slight-right') return <CornerUpRight className={className} strokeWidth={2.75} />;
-    if (kind === 'roundabout') return <RotateCcw className={className} strokeWidth={2.75} />;
-    return <ArrowUp className={className} strokeWidth={2.75} />;
-  };
+function NavLoadingOverlay({ stage, destinationLabel }: { stage: NavLoadingStage; destinationLabel: string }) {
+  const label =
+    stage === 'locating' ? 'Acquiring GPS signal…' : stage === 'routing' ? 'Calculating best route…' : 'Starting guidance…';
 
   return (
-    <div className="sbn-nav-lane" aria-hidden>
-      {Array.from({ length: laneCount }, (_, index) => {
-        const active = activeIndices.includes(index);
-        return (
-          <div key={index} className={`sbn-nav-lane-slot ${active ? 'sbn-nav-lane-slot-active' : ''}`}>
-            {iconForSlot(index, active)}
-          </div>
-        );
-      })}
+    <div className="sbn-nav-loading-overlay pointer-events-none">
+      <div className="sbn-nav-loading-card sbn-nav-glass">
+        <div className="sbn-nav-loading-ring" aria-hidden />
+        <Navigation className="w-8 h-8 text-accent" />
+        <p className="text-sm font-bold text-[var(--sbn-nav-text)] mt-4">{label}</p>
+        <p className="text-xs text-[var(--sbn-nav-text-secondary)] mt-1 truncate max-w-[16rem]">To {destinationLabel}</p>
+        <div className="sbn-nav-loading-steps" aria-hidden>
+          <span className={stage === 'locating' ? 'active' : stage !== 'locating' ? 'done' : ''} />
+          <span className={stage === 'routing' ? 'active' : stage === 'ready' ? 'done' : ''} />
+          <span className={stage === 'ready' ? 'active' : ''} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -390,23 +343,33 @@ const NAV_LOOKAHEAD_SCREEN_RATIO = 0.22;
 
 function createNavUserIcon(heading: number): L.DivIcon {
   return L.divIcon({
-    html: `
-      <div class="relative flex items-center justify-center" style="transform: rotate(${heading}deg)">
-        <div class="absolute h-[4.5rem] w-[4.5rem] rounded-full bg-[${NAV_BRAND}] opacity-20 blur-md"></div>
-        <div class="relative h-[3.5rem] w-[3.5rem] rounded-full bg-white/96 shadow-[0_0_0_12px_rgba(255,255,255,0.16),0_6px_20px_rgba(0,0,0,0.45)] border-[3px] border-white flex items-center justify-center">
-          <div class="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[18px] border-l-transparent border-r-transparent border-b-[${NAV_BRAND}] -mt-0.5 drop-shadow-sm"></div>
-        </div>
-      </div>
-    `,
+    html: `<div class="sbn-nav-user-puck" style="transform: rotate(${heading}deg)"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-core"></span><span class="sbn-nav-user-puck-arrow"></span></div>`,
     className: 'nav-user-marker',
     iconSize: [56, 56],
     iconAnchor: [28, 28],
   });
 }
 
-function drawRouteOnLayer(layer: L.LayerGroup, coords: [number, number][]): void {
+function drawRouteWithProgress(
+  layer: L.LayerGroup,
+  traveled: [number, number][],
+  remaining: [number, number][],
+): void {
   layer.clearLayers();
-  L.polyline(coords, {
+
+  if (traveled.length >= 2) {
+    L.polyline(traveled, {
+      color: 'rgba(148, 163, 184, 0.55)',
+      weight: 8,
+      opacity: 0.85,
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(layer);
+  }
+
+  if (remaining.length < 2) return;
+
+  L.polyline(remaining, {
     className: 'sbn-nav-route-glow',
     color: NAV_ROUTE_GLOW,
     weight: 15,
@@ -414,14 +377,14 @@ function drawRouteOnLayer(layer: L.LayerGroup, coords: [number, number][]): void
     lineCap: 'round',
     lineJoin: 'round',
   }).addTo(layer);
-  L.polyline(coords, {
+  L.polyline(remaining, {
     color: NAV_BRAND_LIGHT,
     weight: 9,
     opacity: 0.95,
     lineCap: 'round',
     lineJoin: 'round',
   }).addTo(layer);
-  L.polyline(coords, {
+  L.polyline(remaining, {
     className: 'sbn-nav-route-animated',
     color: NAV_BRAND,
     weight: 5,
@@ -487,6 +450,7 @@ export default function MapNavigationView({
   origin,
   destination,
   destinationLabel,
+  initialRoute = null,
   onExit,
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
@@ -523,9 +487,10 @@ export default function MapNavigationView({
   const NAV_UI_TICK_MS = 900;
   const NAV_HEADING_ICON_DEG = 12;
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialRoute);
+  const [loadingStage, setLoadingStage] = useState<NavLoadingStage>(initialRoute ? 'ready' : 'locating');
   const [error, setError] = useState<string | null>(null);
-  const [route, setRoute] = useState<NavigationRouteResult | null>(null);
+  const [route, setRoute] = useState<NavigationRouteResult | null>(initialRoute);
   const [userPos, setUserPos] = useState<LatLng>(origin);
   const [heading, setHeading] = useState(0);
   const [speedMph, setSpeedMph] = useState<string | null>(null);
@@ -543,14 +508,17 @@ export default function MapNavigationView({
   const [mapStyle, setMapStyle] = useState<NavMapStyle>(() => (theme === 'light' ? 'light' : 'dark'));
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [voicePhrase, setVoicePhrase] = useState('');
-  const [showHeading, setShowHeading] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
   destinationRef.current = destination;
   destinationLabelRef.current = destinationLabel;
   routeRef.current = route;
   voiceOnRef.current = voiceOn;
 
+  const [showHeading, setShowHeading] = useState(false);
+
   const initialOriginRef = useRef(origin);
+  const initialRouteRef = useRef(initialRoute);
   const mapBootstrappedRef = useRef(false);
 
   const currentStep: NavigationStep | undefined = route?.steps[stepIndex];
@@ -572,9 +540,6 @@ export default function MapNavigationView({
     if (!cueStep) return 0;
     return haversineMeters(userPos, cueStep.location);
   }, [route, stepIndex, userPos]);
-
-  const speedLimitMph = useMemo(() => estimateSpeedLimitMph(currentStep), [currentStep]);
-  const laneCount = useMemo(() => estimateLaneCount(currentStep), [currentStep]);
 
   const bannerScale = useMemo(() => {
     if (arrived) return 1;
@@ -600,7 +565,6 @@ export default function MapNavigationView({
     if (isReroute) {
       voiceRef.current.clearSpokenKeys();
       voiceRef.current.speak('Route updated', 'reroute-done');
-      if (routeLayerRef.current) drawRouteOnLayer(routeLayerRef.current, result.coords);
     }
 
     return result;
@@ -651,26 +615,47 @@ export default function MapNavigationView({
   }, []);
 
   useEffect(() => {
+    if (initialRouteRef.current) {
+      setLoading(false);
+      setLoadingStage('ready');
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
+    setLoadingStage('locating');
     setError(null);
     routeAnnouncedRef.current = false;
     arrivedRef.current = false;
     setArrived(false);
 
+    const locateTimer = window.setTimeout(() => {
+      if (!cancelled) setLoadingStage('routing');
+    }, 450);
+
     const from = userPosRef.current;
     void loadRoute(from, destination, false).then((result) => {
       if (cancelled) return;
+      window.clearTimeout(locateTimer);
       if (!result) {
-        setError('Could not load driving directions. Try again in a moment.');
+        const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+        setError(
+          offline
+            ? 'You appear to be offline. Check your connection and try again.'
+            : 'Could not load driving directions. Our routing service may be busy — try again shortly.',
+        );
         setLoading(false);
         return;
       }
-      setLoading(false);
+      setLoadingStage('ready');
+      window.setTimeout(() => {
+        if (!cancelled) setLoading(false);
+      }, 280);
     });
 
     return () => {
       cancelled = true;
+      window.clearTimeout(locateTimer);
     };
   }, [destination.lat, destination.lng, loadRoute]);
 
@@ -785,9 +770,6 @@ export default function MapNavigationView({
     if (!route || !mapRef.current || !routeLayerRef.current) return;
 
     const map = mapRef.current;
-    const routeLayer = routeLayerRef.current;
-
-    drawRouteOnLayer(routeLayer, route.coords);
 
     if (destMarkerRef.current) {
       destMarkerRef.current.setLatLng([destination.lat, destination.lng]);
@@ -869,9 +851,21 @@ export default function MapNavigationView({
     });
   }, []);
 
+  useEffect(() => {
+    if (!route || !routeLayerRef.current || loading) return;
+    const split = splitRouteProgress(route.coords, userPos);
+    drawRouteWithProgress(routeLayerRef.current, split.traveled, split.remaining);
+  }, [route, userPos, loading]);
+
   const handleGpsUpdate = useCallback(
     (position: GeolocationPosition) => {
-      const next: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude };
+      setGpsError(null);
+      const raw: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude };
+      const activeRoute = routeRef.current;
+      const next =
+        activeRoute && !arrivedRef.current
+          ? snapPositionToRoute(activeRoute.coords, raw)
+          : raw;
       userPosRef.current = next;
 
       const now = Date.now();
@@ -884,7 +878,6 @@ export default function MapNavigationView({
         touchActiveNavSession();
       }
 
-      const activeRoute = routeRef.current;
       const dest = destinationRef.current;
       const destLabel = destinationLabelRef.current;
 
@@ -981,9 +974,18 @@ export default function MapNavigationView({
   handleGpsUpdateRef.current = handleGpsUpdate;
 
   useEffect(() => {
-    const unsubscribe = subscribeLiveGeolocation((position) => {
-      handleGpsUpdateRef.current(position);
-    });
+    const unsubscribe = subscribeLiveGeolocation(
+      (position) => {
+        handleGpsUpdateRef.current(position);
+      },
+      (error) => {
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? 'Location access is required for turn-by-turn navigation.'
+            : 'GPS signal lost. Check that location services are enabled.';
+        setGpsError(message);
+      },
+    );
 
     return () => {
       unsubscribe();
@@ -1068,6 +1070,7 @@ export default function MapNavigationView({
 
   const handleRetryRoute = () => {
     setLoading(true);
+    setLoadingStage('routing');
     setError(null);
     routeAnnouncedRef.current = false;
     void loadRoute(userPosRef.current, destination, false).then((result) => {
@@ -1133,30 +1136,35 @@ export default function MapNavigationView({
       <div className="relative flex-1 min-h-0">
         <div ref={mapContainerRef} className="absolute inset-0 z-0" />
 
-        {loading && (
-          <div className="absolute inset-0 z-10 bg-black/50 flex flex-col items-center justify-center gap-3 text-white pointer-events-none">
-            <Navigation className="w-10 h-10 text-accent animate-pulse" />
-            <p className="text-sm font-semibold">Loading your route…</p>
+        {loading && <NavLoadingOverlay stage={loadingStage} destinationLabel={destinationLabel} />}
+
+        {showFatalError && (
+          <div className="sbn-nav-error-overlay safe-area-pb">
+            <div className="sbn-nav-error-card sbn-nav-glass pointer-events-auto">
+              <div className="sbn-nav-error-icon" aria-hidden>
+                {typeof navigator !== 'undefined' && !navigator.onLine ? <WifiOff className="w-7 h-7" /> : <Navigation className="w-7 h-7" />}
+              </div>
+              <h2 className="text-lg font-display font-bold text-[var(--sbn-nav-text)] mt-4">Couldn&apos;t start navigation</h2>
+              <p className="text-sm text-[var(--sbn-nav-text-secondary)] mt-2 leading-relaxed">{error}</p>
+              <div className="flex flex-col gap-2 w-full mt-6">
+                <button type="button" onClick={handleRetryRoute} className="sbn-nav-primary-btn">
+                  Try again
+                </button>
+                <button type="button" onClick={() => openDrivingDirections(destination, origin)} className="sbn-nav-secondary-btn">
+                  Open in Apple / Google Maps
+                </button>
+                <button type="button" onClick={handleExit} className="sbn-nav-tertiary-btn">
+                  Back to map
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {showFatalError && (
-          <div className="absolute inset-0 z-20 bg-black/88 flex flex-col items-center justify-center gap-4 p-6 text-center text-white safe-area-pb">
-            <p className="text-sm text-zinc-300">{error}</p>
-            <div className="flex flex-col gap-2 w-full max-w-xs pointer-events-auto">
-              <button type="button" onClick={handleRetryRoute} className="px-5 py-3 rounded-full bg-accent text-on-accent font-bold text-sm">
-                Retry route
-              </button>
-              <button
-                type="button"
-                onClick={() => openDrivingDirections(destination, origin)}
-                className="px-5 py-3 rounded-full bg-white text-zinc-900 font-bold text-sm"
-              >
-                Open in Maps
-              </button>
-              <button type="button" onClick={handleExit} className="sbn-nav-exit-btn px-5 py-3">
-                Back to map
-              </button>
+        {gpsError && !showFatalError && (
+          <div className="absolute inset-x-3 top-[calc(env(safe-area-inset-top,0px)+5.5rem)] z-30 pointer-events-none">
+            <div className="sbn-nav-glass rounded-2xl px-4 py-3 text-xs font-semibold text-[var(--sbn-nav-warning)] text-center">
+              {gpsError}
             </div>
           </div>
         )}
@@ -1168,15 +1176,15 @@ export default function MapNavigationView({
               className="sbn-nav-banner sbn-nav-glass sbn-nav-banner-accent"
               animate={{ scale: bannerScale }}
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              aria-live="assertive"
+              aria-atomic="true"
             >
               <div className="flex items-start gap-3 min-h-[4rem]">
-                <div className="shrink-0 w-[4.5rem] flex flex-col items-center justify-center">
+                <div className="shrink-0 w-[4.75rem] flex flex-col items-center justify-center">
                   {loading ? (
-                    <Navigation className="w-10 h-10 text-accent animate-pulse" />
+                    <div className="sbn-nav-banner-shimmer" aria-hidden />
                   ) : (
-                    <div className="rounded-2xl bg-[var(--sbn-nav-surface)] p-2 border border-[var(--sbn-nav-glass-border)]">
-                      <ManeuverIcon kind={maneuverKind} className="w-9 h-9 text-accent" />
-                    </div>
+                    <NavManeuverShield kind={maneuverKind} className="w-14 h-14" />
                   )}
                   {!loading && !arrived && (
                     <p className="text-sm font-black mt-2 tabular-nums leading-none tracking-tight text-accent">
@@ -1209,10 +1217,6 @@ export default function MapNavigationView({
                 </div>
               </div>
 
-              {!loading && !arrived && maneuverKind !== 'arrive' && (
-                <LaneGuidanceStrip kind={maneuverKind} laneCount={laneCount} />
-              )}
-
               {!loading && route && (rerouting || offRouteMeters > 55) && !arrived && (
                 <p className="mt-2 text-center text-xs font-semibold text-[var(--sbn-nav-warning)]">
                   {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
@@ -1226,7 +1230,7 @@ export default function MapNavigationView({
           {!loading && route && (
             <div className="relative flex-1 min-h-0">
               <div className="absolute left-3 bottom-3 pointer-events-auto">
-                <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} />
+                <NavSpeedPuck currentMph={speedMph} />
               </div>
 
               <div className="absolute right-3 top-2 flex flex-col gap-2.5 pointer-events-auto">

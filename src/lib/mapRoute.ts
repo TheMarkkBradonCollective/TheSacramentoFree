@@ -191,11 +191,11 @@ export async function fetchDrivingRoute(from: LatLng, to: LatLng): Promise<Drivi
   const timeoutId = window.setTimeout(() => controller.abort(), 14_000);
 
   try {
-    const viaOsrm = await fetchOsrmDirect(from, to, controller.signal);
-    if (viaOsrm) return viaOsrm;
-
     const viaApi = await fetchRouteFromApi(from, to, controller.signal);
     if (viaApi) return viaApi;
+
+    const viaOsrm = await fetchOsrmDirect(from, to, controller.signal);
+    if (viaOsrm) return viaOsrm;
 
     return buildStatsFallback(from, to);
   } catch {

@@ -16,6 +16,7 @@ import {
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
+import { fetchNavigationRoute, type NavigationRouteResult } from '../lib/navigationRoute';
 import { subscribeLiveGeolocation, getLastLiveLatLng, retainLiveGeolocation } from '../lib/liveGeolocation';
 import {
   clearActiveNavSession,
@@ -452,6 +453,7 @@ export default function SacramentoMapView({
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [routeDistanceMeters, setRouteDistanceMeters] = useState<number | null>(null);
   const [routeDurationSeconds, setRouteDurationSeconds] = useState<number | null>(null);
+  const [prefetchedNavRoute, setPrefetchedNavRoute] = useState<NavigationRouteResult | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const routeFetchIdRef = useRef(0);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
@@ -1146,6 +1148,7 @@ export default function SacramentoMapView({
             origin={lockedNavOrigin}
             destination={routeDestination}
             destinationLabel={selectedPost.title}
+            initialRoute={prefetchedNavRoute}
             onExit={handleExitNavigation}
           />,
           document.body,
@@ -1173,6 +1176,7 @@ export default function SacramentoMapView({
       setRouteCoords(null);
       setRouteDistanceMeters(null);
       setRouteDurationSeconds(null);
+      setPrefetchedNavRoute(null);
       setRouteLoading(false);
       routeLayerRef.current?.clearLayers();
       return;
@@ -1188,14 +1192,28 @@ export default function SacramentoMapView({
     setRouteCoords(null);
     setRouteDistanceMeters(null);
     setRouteDurationSeconds(null);
+    setPrefetchedNavRoute(null);
     setRouteLoading(true);
 
-    fetchDrivingRoute(start, routeDestination).then((result) => {
+    fetchNavigationRoute(start, routeDestination).then(async (navResult) => {
       if (fetchId !== routeFetchIdRef.current) return;
 
-      setRouteCoords(result.onRoads && isRoadGeometry(result.coords) ? result.coords : null);
-      setRouteDistanceMeters(result.distanceMeters);
-      setRouteDurationSeconds(result.durationSeconds);
+      if (navResult) {
+        setPrefetchedNavRoute(navResult);
+        setRouteCoords(navResult.coords.length >= 2 ? navResult.coords : null);
+        setRouteDistanceMeters(navResult.distanceMeters);
+        setRouteDurationSeconds(navResult.durationSeconds);
+        setRouteLoading(false);
+        return;
+      }
+
+      const fallback = await fetchDrivingRoute(start, routeDestination);
+      if (fetchId !== routeFetchIdRef.current) return;
+
+      setPrefetchedNavRoute(null);
+      setRouteCoords(fallback.onRoads && isRoadGeometry(fallback.coords) ? fallback.coords : null);
+      setRouteDistanceMeters(fallback.distanceMeters);
+      setRouteDurationSeconds(fallback.durationSeconds);
       setRouteLoading(false);
     });
   }, [selectedPost?.id, routeDestination, showingEvents, hasGpsFix]);
