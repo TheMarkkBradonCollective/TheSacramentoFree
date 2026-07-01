@@ -149,8 +149,9 @@ const MAP_TILE_OPTIONS = {
     '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
 } as const;
 
-const GPS_FOLLOW_PAN_METERS = 50;
+const GPS_FOLLOW_PAN_METERS = 30;
 const GPS_STATE_UPDATE_METERS = 45;
+const GPS_MARKER_UPDATE_METERS = 8;
 const MAP_INIT_OPTIONS: L.MapOptions = {
   zoomControl: false,
   attributionControl: true,
@@ -416,6 +417,11 @@ export default function SacramentoMapView({
   const userMarkerRef = useRef<L.Marker | null>(null);
   const userLocationRef = useRef<LatLng | null>(null);
   const lastGpsStateUpdateRef = useRef<LatLng | null>(null);
+  const lastMarkerPositionRef = useRef<LatLng | null>(null);
+  const hasGpsFixRef = useRef(false);
+  const isLocatingRef = useRef(true);
+  const locationErrorRef = useRef<string | null>(null);
+  const userLocationIconRef = useRef<L.DivIcon | null>(null);
   const geoWatchIdRef = useRef<number | null>(null);
   const followUserRef = useRef(true);
   const mapVisibleRef = useRef(mapVisible);
@@ -469,6 +475,21 @@ export default function SacramentoMapView({
     followUserRef.current = followUser;
   }, [followUser]);
 
+  // One GPS watch for the community map — pause while turn-by-turn nav is active.
+  useEffect(() => {
+    if (!mapReady) return;
+
+    if (immersiveNavActive) {
+      stopLiveLocationWatch();
+      return;
+    }
+
+    startLiveLocationWatch();
+    return () => {
+      stopLiveLocationWatch();
+    };
+  }, [immersiveNavActive, mapReady]);
+
   useEffect(() => {
     mapVisibleRef.current = mapVisible;
     if (!mapVisible) return;
@@ -486,9 +507,10 @@ export default function SacramentoMapView({
     };
   }, [mapVisible]);
 
-  const createUserLocationIcon = () =>
-    L.divIcon({
-      html: `
+  const createUserLocationIcon = () => {
+    if (!userLocationIconRef.current) {
+      userLocationIconRef.current = L.divIcon({
+        html: `
         <div class="relative flex items-center justify-center">
           <span class="absolute inline-flex h-8 w-8 rounded-full bg-blue-500/20"></span>
           <div class="h-4 w-4 rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center">
@@ -496,10 +518,13 @@ export default function SacramentoMapView({
           </div>
         </div>
       `,
-      className: 'custom-user-avatar-marker',
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-    });
+        className: 'custom-user-avatar-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+    }
+    return userLocationIconRef.current;
+  };
 
   const applyLiveUserPosition = (latitude: number, longitude: number) => {
     const nextPos = { lat: latitude, lng: longitude };
@@ -508,10 +533,20 @@ export default function SacramentoMapView({
     const shouldUpdateState =
       !lastGpsStateUpdateRef.current ||
       haversineMeters(lastGpsStateUpdateRef.current, nextPos) >= GPS_STATE_UPDATE_METERS;
-    setIsLocating(false);
-    setLocationError(null);
 
-    if (shouldUpdateState) {
+    if (!hasGpsFixRef.current) {
+      hasGpsFixRef.current = true;
+      lastGpsStateUpdateRef.current = nextPos;
+      if (isLocatingRef.current) {
+        isLocatingRef.current = false;
+        setIsLocating(false);
+      }
+      if (locationErrorRef.current) {
+        locationErrorRef.current = null;
+        setLocationError(null);
+      }
+      setUserLocation(nextPos);
+    } else if (shouldUpdateState) {
       lastGpsStateUpdateRef.current = nextPos;
       setUserLocation(nextPos);
     }
@@ -521,21 +556,36 @@ export default function SacramentoMapView({
     const map = mapRef.current;
     if (!map) return;
 
-    if (userMarkerRef.current) {
-      userMarkerRef.current.setLatLng([latitude, longitude]);
-    } else {
-      userMarkerRef.current = L.marker([latitude, longitude], {
-        icon: createUserLocationIcon(),
-        zIndexOffset: 500,
-      }).addTo(map);
+    const shouldMoveMarker =
+      !lastMarkerPositionRef.current ||
+      haversineMeters(lastMarkerPositionRef.current, nextPos) >= GPS_MARKER_UPDATE_METERS;
+
+    if (shouldMoveMarker) {
+      lastMarkerPositionRef.current = nextPos;
+      try {
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLatLng([latitude, longitude]);
+        } else {
+          userMarkerRef.current = L.marker([latitude, longitude], {
+            icon: createUserLocationIcon(),
+            zIndexOffset: 500,
+          }).addTo(map);
+        }
+      } catch (error) {
+        console.warn('Could not update user location marker:', error);
+      }
     }
 
-    if (!followUserRef.current || selectedPostRef.current || navigationOpenRef.current || navigateNotifyOpenRef.current) return;
+    if (!followUserRef.current || selectedPostRef.current) return;
 
     if (!hasInitialMapCenterRef.current) {
-      map.setView([latitude, longitude], 14, { animate: false });
-      hasInitialMapCenterRef.current = true;
-      lastFollowPanRef.current = nextPos;
+      try {
+        map.setView([latitude, longitude], 14, { animate: false });
+        hasInitialMapCenterRef.current = true;
+        lastFollowPanRef.current = nextPos;
+      } catch (error) {
+        console.warn('Could not center map on first GPS fix:', error);
+      }
       return;
     }
 
@@ -543,34 +593,66 @@ export default function SacramentoMapView({
     if (lastPan && haversineMeters(lastPan, nextPos) < GPS_FOLLOW_PAN_METERS) return;
 
     lastFollowPanRef.current = nextPos;
-    map.panTo([latitude, longitude], { animate: false, noMoveStart: true });
+    try {
+      map.panTo([latitude, longitude], { animate: false, noMoveStart: true });
+    } catch (error) {
+      console.warn('Could not follow user on map:', error);
+    }
   };
 
   const handleGeolocationError = (error: GeolocationPositionError) => {
     console.warn('Geolocation failed:', error);
-    setIsLocating(false);
-    if (error.code === error.PERMISSION_DENIED) {
-      setLocationError('Location permission denied. Enable GPS in your browser to follow the map.');
-    } else {
-      setLocationError('Could not get GPS. Check permissions and try again.');
+    if (hasGpsFixRef.current) return;
+
+    if (isLocatingRef.current) {
+      isLocatingRef.current = false;
+      setIsLocating(false);
+    }
+
+    const message =
+      error.code === error.PERMISSION_DENIED
+        ? 'Location permission denied. Enable GPS in your browser to follow the map.'
+        : 'Could not get GPS. Check permissions and try again.';
+
+    if (locationErrorRef.current !== message) {
+      locationErrorRef.current = message;
+      setLocationError(message);
     }
   };
 
   const startLiveLocationWatch = () => {
     if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported on this device.');
-      setIsLocating(false);
+      const message = 'Geolocation is not supported on this device.';
+      if (locationErrorRef.current !== message) {
+        locationErrorRef.current = message;
+        setLocationError(message);
+      }
+      if (isLocatingRef.current) {
+        isLocatingRef.current = false;
+        setIsLocating(false);
+      }
       return;
     }
     if (geoWatchIdRef.current != null) return;
 
-    setIsLocating(true);
-    setLocationError(null);
+    if (!hasGpsFixRef.current && isLocatingRef.current) {
+      setIsLocating(true);
+    }
+    if (locationErrorRef.current) {
+      locationErrorRef.current = null;
+      setLocationError(null);
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
+      () => undefined,
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 12000 },
+    );
 
     geoWatchIdRef.current = navigator.geolocation.watchPosition(
       (position) => applyLiveUserPosition(position.coords.latitude, position.coords.longitude),
       handleGeolocationError,
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 },
     );
   };
 
@@ -586,11 +668,12 @@ export default function SacramentoMapView({
     setFollowUser(true);
     followUserRef.current = true;
 
-    if (userLocation && mapRef.current) {
-      mapRef.current.setView([userLocation.lat, userLocation.lng], Math.max(mapRef.current.getZoom(), 14), {
+    if (userLocationRef.current && mapRef.current) {
+      const pos = userLocationRef.current;
+      mapRef.current.setView([pos.lat, pos.lng], Math.max(mapRef.current.getZoom(), 14), {
         animate: false,
       });
-      lastFollowPanRef.current = userLocation;
+      lastFollowPanRef.current = pos;
       return;
     }
 
@@ -797,8 +880,6 @@ export default function SacramentoMapView({
     };
     map.on('dragstart', onUserPanMap);
 
-    startLiveLocationWatch();
-
     const refreshMapSize = () => {
       if (!mapVisibleRef.current) return;
       map.invalidateSize({ animate: false, pan: false });
@@ -821,7 +902,11 @@ export default function SacramentoMapView({
       stopLiveLocationWatch();
       hasInitialMapCenterRef.current = false;
       lastFollowPanRef.current = null;
+      lastMarkerPositionRef.current = null;
       lastGpsStateUpdateRef.current = null;
+      hasGpsFixRef.current = false;
+      isLocatingRef.current = true;
+      locationErrorRef.current = null;
       userLocationRef.current = null;
       itemMarkersRef.current.clear();
       eventMarkersRef.current.clear();
@@ -858,7 +943,6 @@ export default function SacramentoMapView({
         const existing = registry.get(id);
         if (existing) {
           existing.setLatLng([lat, lng]);
-          existing.setIcon(createIcon(data));
           return;
         }
 

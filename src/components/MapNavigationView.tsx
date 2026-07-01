@@ -25,6 +25,7 @@ import {
   formatNavDistance,
   formatNavDuration,
   formatSpeedMph,
+  getActiveVoiceCueStep,
   isOffRoute,
   maneuverIconKind,
   remainingRouteMeters,
@@ -383,9 +384,11 @@ export default function MapNavigationView({
   }, [route, remainingMeters]);
 
   const distanceToManeuver = useMemo(() => {
-    if (!currentStep) return 0;
-    return haversineMeters(userPos, currentStep.location);
-  }, [currentStep, userPos]);
+    if (!route) return 0;
+    const cueStep = getActiveVoiceCueStep(route.steps, stepIndex);
+    if (!cueStep) return 0;
+    return haversineMeters(userPos, cueStep.location);
+  }, [route, stepIndex, userPos]);
 
   const loadRoute = useCallback(async (from: LatLng, to: LatLng, isReroute = false) => {
     const result = await fetchNavigationRoute(from, to);
@@ -470,7 +473,11 @@ export default function MapNavigationView({
   useEffect(() => {
     if (!route || routeAnnouncedRef.current || !voiceOn) return;
     routeAnnouncedRef.current = true;
-    voiceRef.current.speak(buildStepVoiceCue(route.steps[0], 0, 'start', destinationLabel), 'nav-start');
+    const departStep = route.steps.find((step) => step.maneuverType === 'depart') ?? route.steps[0];
+    voiceRef.current.speak(`Starting navigation to ${destinationLabel}`, 'nav-start');
+    if (departStep) {
+      voiceRef.current.speak(departStep.instruction, 'nav-depart');
+    }
     voiceRef.current.speak(
       buildRouteSummaryVoice(destinationLabel, route.distanceMeters, route.durationSeconds),
       'nav-summary',
@@ -674,12 +681,13 @@ export default function MapNavigationView({
         }
 
         const step = activeRoute.steps[stepIndexRef.current];
-        if (voiceOnRef.current && step && step.maneuverType !== 'arrive') {
-          const dist = haversineMeters(next, step.location);
+        const cueStep = getActiveVoiceCueStep(activeRoute.steps, stepIndexRef.current);
+        if (voiceOnRef.current && cueStep && cueStep.maneuverType !== 'arrive') {
+          const dist = haversineMeters(next, cueStep.location);
           for (const kind of ['far', 'medium', 'near', 'now'] as const) {
-            if (shouldFireVoiceCue(step.distanceMeters, dist, kind, VOICE_CUE_THRESHOLDS)) {
+            if (shouldFireVoiceCue(cueStep.distanceMeters, dist, kind, VOICE_CUE_THRESHOLDS)) {
               voiceRef.current.speak(
-                buildStepVoiceCue(step, VOICE_CUE_THRESHOLDS[kind], kind, destLabel),
+                buildStepVoiceCue(cueStep, VOICE_CUE_THRESHOLDS[kind], kind, destLabel),
                 `cue-${stepIndexRef.current}-${kind}`,
               );
               break;
@@ -789,10 +797,25 @@ export default function MapNavigationView({
   };
 
   const showFatalError = Boolean(error && !route);
-  const maneuverKind = route ? (arrived ? 'arrive' : maneuverIconKind(currentStep)) : 'arrive';
+  const maneuverKind = route
+    ? arrived
+      ? 'arrive'
+      : maneuverIconKind(
+          currentStep?.maneuverType === 'depart'
+            ? getActiveVoiceCueStep(route.steps, stepIndex) ?? currentStep
+            : currentStep,
+        )
+    : 'arrive';
   const bannerStreet = arrived
     ? destinationLabel
-    : currentStep?.name?.trim() || (maneuverKind === 'arrive' ? destinationLabel : 'Continue on route');
+    : currentStep?.maneuverType === 'depart'
+      ? currentStep.name?.trim() || currentStep.instruction
+      : currentStep?.name?.trim() || (maneuverKind === 'arrive' ? destinationLabel : 'Continue on route');
+  const bannerInstruction = arrived
+    ? undefined
+    : currentStep?.maneuverType === 'depart'
+      ? currentStep.instruction
+      : currentStep?.instruction;
   const offRouteMeters = route ? distanceToRouteMeters(route.coords, userPos) : 0;
 
   return (
@@ -824,7 +847,7 @@ export default function MapNavigationView({
             ) : (
               <>
                 <p className="text-[1.65rem] sm:text-[1.85rem] font-bold leading-tight truncate">{bannerStreet}</p>
-                <p className="text-sm font-medium mt-1 truncate opacity-90">{currentStep?.instruction}</p>
+                <p className="text-sm font-medium mt-1 truncate opacity-90">{bannerInstruction}</p>
               </>
             )}
           </div>
