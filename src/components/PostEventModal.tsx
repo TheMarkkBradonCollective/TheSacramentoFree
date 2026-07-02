@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { X, Calendar, MapPin, Sparkles, Camera, Trash2 } from 'lucide-react';
-import { SACRAMENTO_NEIGHBORHOODS, CommunityEvent, UserProfile } from '../types';
+import { SACRAMENTO_NEIGHBORHOODS, CommunityEvent, UserProfile, findClosestNeighborhoodByLatLng } from '../types';
 import { createSupabaseEvent, updateSupabaseEvent, uploadItemImage } from '../supabase';
+import EventLocationMapPicker from './EventLocationMapPicker';
 
 interface PostEventModalProps {
   userProfile: UserProfile;
@@ -28,6 +29,8 @@ export default function PostEventModal({
   const [location, setLocation] = useState('');
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [hostedBy, setHostedBy] = useState('');
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
   const [eventStartAt, setEventStartAt] = useState('');
   const [eventEndAt, setEventEndAt] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -42,6 +45,16 @@ export default function PostEventModal({
     setLocation(editEvent.location);
     setNeighborhood(editEvent.neighborhood);
     setHostedBy(editEvent.hostedBy || '');
+    setLocationLat(
+      typeof editEvent.locationLat === 'number' && Number.isFinite(editEvent.locationLat)
+        ? editEvent.locationLat
+        : null,
+    );
+    setLocationLng(
+      typeof editEvent.locationLng === 'number' && Number.isFinite(editEvent.locationLng)
+        ? editEvent.locationLng
+        : null,
+    );
     setEventStartAt(toDatetimeLocalValue(editEvent.eventStartAt));
     setEventEndAt(editEvent.eventEndAt ? toDatetimeLocalValue(editEvent.eventEndAt) : '');
     setImageUrl(editEvent.imageUrl || null);
@@ -108,6 +121,8 @@ export default function PostEventModal({
       userDisplayName: userProfile.displayName,
       userPhotoURL: userProfile.photoURL,
       hostedBy: hostedBy.trim() || null,
+      locationLat,
+      locationLng,
       isFree: true,
       status: editEvent?.status || 'active',
       imageUrl: finalImageUrl || undefined,
@@ -200,6 +215,23 @@ export default function PostEventModal({
               maxLength={200}
             />
           </label>
+
+          <div className="rounded-xl border border-app bg-inset/40 p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide">Map pin (GPS)</p>
+            <p className="text-[11px] text-muted">
+              Uses the same Leaflet + OpenStreetMap view as the site map. Tap the exact park spot so neighbors find it.
+            </p>
+            <EventLocationMapPicker
+              neighborhood={neighborhood}
+              latitude={locationLat}
+              longitude={locationLng}
+              onCoordinatesChange={(lat, lng) => {
+                setLocationLat(lat);
+                setLocationLng(lng);
+                setNeighborhood(findClosestNeighborhoodByLatLng(lat, lng));
+              }}
+            />
+          </div>
 
           <label className="block space-y-1.5">
             <span className="text-xs font-semibold text-muted uppercase tracking-wide">Neighborhood</span>

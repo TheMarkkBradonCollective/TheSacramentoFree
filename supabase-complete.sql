@@ -2190,10 +2190,7 @@ CREATE POLICY "community_events_insert" ON public.community_events
 
 CREATE POLICY "community_events_update" ON public.community_events
   FOR UPDATE USING (auth.uid()::text = "userId")
-  WITH CHECK (
-    auth.uid()::text = "userId"
-    AND (public.events_unlocked() OR public.is_staff())
-  );
+  WITH CHECK (auth.uid()::text = "userId");
 
 CREATE POLICY "community_events_delete" ON public.community_events
   FOR DELETE USING (

@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { ArrowLeft, Calendar, MapPin, Pencil, Sparkles, XCircle } from 'lucide-react';
 import { CommunityEvent, EventComment, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
+import EventPinAdjustModal from './EventPinAdjustModal';
 
 interface EventDetailViewProps {
   event: CommunityEvent;
@@ -16,6 +18,7 @@ interface EventDetailViewProps {
   onEdit?: () => void;
   onCancel?: () => void;
   onViewProfile: (userId: string) => void;
+  onEventUpdated?: (event: CommunityEvent) => void;
   updating?: boolean;
   commentsLocked?: boolean;
 }
@@ -49,9 +52,11 @@ export default function EventDetailView({
   onEdit,
   onCancel,
   onViewProfile,
+  onEventUpdated,
   updating = false,
   commentsLocked = false,
 }: EventDetailViewProps) {
+  const [showPinModal, setShowPinModal] = useState(false);
   const isOwner = event.userId === currentUserId;
   const isCancelled = event.status === 'cancelled';
 
@@ -135,6 +140,15 @@ export default function EventDetailView({
                       Open in Maps ({event.locationLat.toFixed(6)}, {event.locationLng.toFixed(6)})
                     </a>
                   )}
+                {isOwner && !isCancelled && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPinModal(true)}
+                    className="block text-xs text-accent font-semibold mt-2 hover:underline"
+                  >
+                    {typeof event.locationLat === 'number' ? 'Fix pin on map' : 'Set pin on map'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -192,6 +206,17 @@ export default function EventDetailView({
           />
         </div>
       </div>
+
+      {showPinModal && (
+        <EventPinAdjustModal
+          event={event}
+          onClose={() => setShowPinModal(false)}
+          onSaved={(updatedEvent) => {
+            setShowPinModal(false);
+            onEventUpdated?.(updatedEvent);
+          }}
+        />
+      )}
     </div>
   );
 }
