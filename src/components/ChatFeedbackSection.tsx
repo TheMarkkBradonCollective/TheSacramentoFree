@@ -15,14 +15,23 @@ interface ChatFeedbackSectionProps {
   userProfile: UserProfile;
   initialPanel?: ChatFeedbackPanel;
   onClearInitialPanel?: () => void;
+  /** Hide sidebar links — panels open from inbox header menu instead */
+  showList?: boolean;
+  panel?: ChatFeedbackPanel;
+  onPanelChange?: (panel: ChatFeedbackPanel) => void;
 }
 
 export default function ChatFeedbackSection({
   userProfile,
   initialPanel = null,
   onClearInitialPanel,
+  showList = true,
+  panel: controlledPanel,
+  onPanelChange,
 }: ChatFeedbackSectionProps) {
-  const [panel, setPanel] = useState<ChatFeedbackPanel>(null);
+  const [internalPanel, setInternalPanel] = useState<ChatFeedbackPanel>(null);
+  const panel = controlledPanel !== undefined ? controlledPanel : internalPanel;
+  const setPanel = onPanelChange ?? setInternalPanel;
   const canStaffReports = canViewStaffReports(userProfile.role);
   const { reports } = useStaffUserReports(canStaffReports, userProfile);
 
@@ -38,6 +47,7 @@ export default function ChatFeedbackSection({
 
   return (
     <>
+      {showList ? (
       <div className="pb-3">
         <div className="px-4 pt-3 pb-1 text-xs font-semibold text-muted uppercase tracking-wide">
           Reviews & reports
@@ -88,6 +98,7 @@ export default function ChatFeedbackSection({
         ) : null}
         </div>
       </div>
+      ) : null}
 
       {panel === 'reviews' ? (
         <FullScreenPanel

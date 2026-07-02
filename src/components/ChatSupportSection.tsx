@@ -171,7 +171,7 @@ export default function ChatSupportSection({
         setActiveTicket(ticket);
         onViewChange('thread');
       } else {
-        onViewChange('list');
+        onViewChange(null);
       }
     } else {
       setErr(result.errorMessage || 'Could not open ticket.');
@@ -250,7 +250,7 @@ export default function ChatSupportSection({
         <header className="shrink-0 px-3 py-3 border-b border-app bg-surface flex items-center gap-2">
           <button
             type="button"
-            onClick={() => onViewChange('list')}
+            onClick={() => onViewChange(null)}
             className="p-2 rounded-full text-muted hover:text-app hover:bg-inset shrink-0"
             aria-label="Back"
           >
@@ -320,7 +320,7 @@ export default function ChatSupportSection({
             type="button"
             onClick={() => {
               setActiveTicket(null);
-              onViewChange('list');
+              onViewChange(null);
               void reloadTickets();
             }}
             className="p-2 rounded-full text-muted hover:text-app hover:bg-inset shrink-0"
@@ -346,7 +346,7 @@ export default function ChatSupportSection({
             }}
             onDeleted={() => {
               setActiveTicket(null);
-              onViewChange('list');
+              onViewChange(null);
               void reloadTickets();
             }}
             onUpdated={() => {

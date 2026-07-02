@@ -23,17 +23,16 @@ import {
   isStaffCommunityChat,
   communityChatTitle,
   communityChatSubtitle,
-  GROUP_CHATS_SECTION_LABEL,
 } from '../lib/communityChats';
-import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
-import SupportTicketRow from './SupportTicketRow';
+import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffReports, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
+import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
-import ChatSectionEmptyState from './ChatSectionEmptyState';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
-import ChatSidebarRow, { chatSidebarRowClass } from './ChatSidebarRow';
-import ChatConversationStrip, { type ConversationStripItem } from './ChatConversationStrip';
+import ChatInboxHeader from './ChatInboxHeader';
+import ChatInboxList from './ChatInboxList';
+import { buildInboxEntries } from '../lib/chatInbox';
 import {
   getMessageGroupMeta,
   messageBubbleClass,
@@ -49,18 +48,14 @@ import {
   AlertCircle,
   MapPin,
   Gift,
-  Box,
   ChevronLeft,
   Navigation,
   CheckCircle,
-  UserPlus,
   Globe,
   Shield,
-  LifeBuoy,
   Trash2,
   Undo2,
 } from 'lucide-react';
-import { IN_APP } from '../siteContent';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
 import { formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import {
@@ -125,9 +120,8 @@ export default function ChatSystem({
   const [supportPreviews, setSupportPreviews] = useState<Record<string, SupportTicketLastMessage>>({});
   const [supportTicketsLoading, setSupportTicketsLoading] = useState(false);
   const [supportOpenTicketId, setSupportOpenTicketId] = useState<string | null>(null);
-  const [showAllDirectMessages, setShowAllDirectMessages] = useState(false);
+  const [feedbackPanel, setFeedbackPanel] = useState<ChatFeedbackPanel>(null);
   const isStaffSupportInbox = canViewStaffTicketInbox(userProfile.role);
-  const CHAT_SIDEBAR_PREVIEW = 3;
   const [messages, setMessages] = useState<Message[]>([]);
   const [senderNames, setSenderNames] = useState<Record<string, { displayName: string; photoURL?: string }>>({});
   const [inputText, setInputText] = useState('');
@@ -137,6 +131,9 @@ export default function ChatSystem({
   const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
   const userIsStaff = isStaffRole(userProfile.role);
+  const canStaffReports = canViewStaffReports(userProfile.role);
+  const { reports: staffReports } = useStaffUserReports(canStaffReports, userProfile);
+  const newStaffReportCount = staffReports.filter((report) => report.status === 'new').length;
   const { confirm } = useConfirm();
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -144,10 +141,20 @@ export default function ChatSystem({
 
   useEffect(() => {
     if (!initialChatSupportView) return;
+    if (initialChatSupportView === 'list') {
+      onClearInitialChatSupportView?.();
+      return;
+    }
     setSupportView(initialChatSupportView);
     setSelectedChat(null);
     onClearInitialChatSupportView?.();
   }, [initialChatSupportView, onClearInitialChatSupportView]);
+
+  useEffect(() => {
+    if (!initialChatFeedbackPanel) return;
+    setFeedbackPanel(initialChatFeedbackPanel);
+    onClearInitialChatFeedbackPanel?.();
+  }, [initialChatFeedbackPanel, onClearInitialChatFeedbackPanel]);
 
   useEffect(() => {
     if (!initialSupportTicketId) return;
@@ -795,11 +802,12 @@ export default function ChatSystem({
   }, [userProfile.uid, isStaffSupportInbox, reloadSupportTickets]);
 
   const openSupport = (view: ChatSupportView) => {
-    setSupportView(view);
+    const nextView = view === 'list' ? null : view;
+    setSupportView(nextView);
     setSelectedChat(null);
     onClearInitialChat();
     onClearPendingChatCompose?.();
-    if (!view) {
+    if (!nextView) {
       setSupportOpenTicketId(null);
     }
   };
@@ -809,14 +817,18 @@ export default function ChatSystem({
     openSupport('thread');
   };
 
-  const communityChats = chats.filter((c) => isCommunityChat(c.id));
   const directChats = chats.filter((c) => !isCommunityChat(c.id));
-  const previewSupportTickets = supportTickets.slice(0, CHAT_SIDEBAR_PREVIEW);
-  const hasMoreSupportTickets = supportTickets.length > CHAT_SIDEBAR_PREVIEW;
-  const visibleDirectChats = showAllDirectMessages
-    ? directChats
-    : directChats.slice(0, CHAT_SIDEBAR_PREVIEW);
-  const hasMoreDirectChats = directChats.length > CHAT_SIDEBAR_PREVIEW && !showAllDirectMessages;
+
+  const inboxEntries = useMemo(
+    () =>
+      buildInboxEntries({
+        chats,
+        supportTickets,
+        supportPreviews,
+        incomingRequests,
+      }),
+    [chats, supportTickets, supportPreviews, incomingRequests],
+  );
 
   const getFormattedChatTitle = (chat: Chat) => {
     if (isCommunityChat(chat.id)) return communityChatTitle(chat.id);
@@ -834,79 +846,6 @@ export default function ChatSystem({
     const messengerName = chat.participantNames[finalMessengerId] || 'Neighbor';
     return `${chat.itemTitle} · ${messengerName}`;
   };
-
-  const conversationStripItems = useMemo((): ConversationStripItem[] => {
-    const items: ConversationStripItem[] = [];
-
-    for (const chat of directChats.slice(0, 10)) {
-      const { otherId, otherPhoto, otherName } = getRecipientInfo(chat);
-      const title = getFormattedChatTitle(chat);
-      const shortLabel = title.includes(' · ') ? title.split(' · ').pop() || otherName : otherName;
-      items.push({
-        id: chat.id,
-        label: shortLabel,
-        avatarUid: otherId,
-        avatarSrc: otherPhoto,
-        selected: selectedChat?.id === chat.id && !supportView,
-        onClick: () => selectChat(chat),
-      });
-    }
-
-    for (const chat of communityChats) {
-      const isGlobal = isGlobalCommunityChat(chat.id);
-      items.push({
-        id: chat.id,
-        label: isGlobal ? 'All neighbors' : 'Staff lounge',
-        icon: isGlobal ? Globe : Shield,
-        iconClassName: isGlobal
-          ? 'bg-emerald-500/10 text-emerald-500'
-          : 'bg-violet-500/10 text-violet-500',
-        selected: selectedChat?.id === chat.id && !supportView,
-        onClick: () => selectChat(chat),
-      });
-    }
-
-    for (const ticket of supportTickets.slice(0, 6)) {
-      const label = isStaffSupportInbox
-        ? ticket.openerName.split(' ')[0] || 'Support'
-        : ticket.subject.slice(0, 12) || 'Support';
-      items.push({
-        id: `support-${ticket.id}`,
-        label,
-        avatarUid: isStaffSupportInbox ? ticket.openerUserId : userProfile.uid,
-        selected: !!supportView && supportOpenTicketId === ticket.id,
-        onClick: () => openSupportTicket(ticket.id),
-      });
-    }
-
-    if (incomingRequests.length > 0) {
-      items.unshift({
-        id: 'message-requests',
-        label: 'Requests',
-        icon: UserPlus,
-        iconClassName: 'bg-accent-soft text-accent',
-        badge: incomingRequests.length,
-        selected: false,
-        onClick: () => {
-          setSelectedChat(null);
-          setSupportView(null);
-        },
-      });
-    }
-
-    return items;
-  }, [
-    directChats,
-    communityChats,
-    supportTickets,
-    selectedChat?.id,
-    supportView,
-    supportOpenTicketId,
-    incomingRequests.length,
-    isStaffSupportInbox,
-    userProfile.uid,
-    items,
-  ]);
 
   const handleAcceptRequest = async (request: MessageRequest) => {
     setRequestBusyId(request.id);
@@ -962,296 +901,36 @@ export default function ChatSystem({
       {/* Conversation list */}
       <div
         id="chats_sidebar"
-        className={`flex flex-col min-h-0 shrink-0 border-r border-app w-full md:w-72 lg:w-80 ${
+        className={`flex flex-col min-h-0 shrink-0 border-r border-app w-full md:w-80 lg:w-[22rem] ${
           fullBleed ? 'bg-app' : 'bg-surface'
         } ${
           selectedChat || supportView ? 'hidden md:flex' : 'flex'
         }`}
       >
-        <ChatConversationStrip
-          items={conversationStripItems}
+        <ChatInboxHeader
+          userProfile={userProfile}
           onStartConversation={onStartDirectMessage}
+          onNewSupport={!isStaffSupportInbox ? () => openSupport('new') : undefined}
+          onOpenFeedbackPanel={setFeedbackPanel}
+          staffReportCount={newStaffReportCount}
         />
         <div className="flex-1 min-h-0 overflow-y-auto" id="chat_rooms_scrollable">
-          {incomingRequests.length > 0 && (
-            <div className="pb-2">
-              <div className="px-4 pt-3 pb-1 flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wide">
-                <UserPlus className="w-3.5 h-3.5" />
-                Message requests
-              </div>
-              <div className="px-2 space-y-2">
-              {incomingRequests.map((request) => {
-                const busy = requestBusyId === request.id;
-                const photo =
-                  request.fromUserPhoto ||
-                  `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(request.fromUserName)}`;
-                return (
-                  <div
-                    key={request.id}
-                    className="w-full p-3 flex flex-col gap-2 rounded-xl border border-app/60 bg-surface shadow-sm"
-                  >
-                    <div className="flex items-start gap-3">
-                      <button
-                        type="button"
-                        onClick={() => onViewProfile?.(request.fromUserId)}
-                        className="shrink-0 rounded-full"
-                      >
-                        <PresenceUserAvatar
-                          uid={request.fromUserId}
-                          src={photo}
-                          name={request.fromUserName}
-                          size="md"
-                        />
-                      </button>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-sm text-app truncate">{request.fromUserName}</p>
-                        {request.message ? (
-                          <p className="text-xs text-muted mt-0.5 line-clamp-2">{request.message}</p>
-                        ) : (
-                          <p className="text-xs text-muted mt-0.5 italic">Wants to message you</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void handleAcceptRequest(request)}
-                        className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void handleDeclineRequest(request)}
-                        className="sbn-btn sbn-btn-secondary sbn-btn-sm flex-1"
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
-            </div>
-          )}
-
-          <div className="pb-3">
-            <div className="px-4 pt-3 pb-1 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
-              <MessageSquare className="w-3.5 h-3.5" />
-              Direct messages
-            </div>
-
-            <div className="space-y-0.5 px-1">
-            <ChatSidebarRow
-              id="chat_row_start_dm"
-              icon={UserPlus}
-              iconClassName="bg-accent-soft text-accent"
-              title="Start conversation"
-              subtitle="Message a neighbor"
-              preview="Browse Stuff and tap Message on a listing, or message from a neighbor profile."
-              onClick={() => onStartDirectMessage?.()}
-            />
-
-            {isChatsLoading ? (
-              <p className="text-xs text-muted text-center px-4 py-6">Loading conversations…</p>
-            ) : directChats.length === 0 && incomingRequests.length === 0 ? (
-              <ChatSectionEmptyState
-                icon={MessageSquare}
-                title="No direct messages yet"
-                description="Start conversation above, or message a neighbor from a listing."
-              />
-            ) : (
-              <>
-                {visibleDirectChats.map((chat) => {
-                  const { otherId, otherPhoto } = getRecipientInfo(chat);
-                  const isSelected = selectedChat?.id === chat.id && !supportView;
-                  const displayTitle = getFormattedChatTitle(chat);
-
-                  return (
-                    <button
-                      key={chat.id}
-                      type="button"
-                      id={`chat_row_${chat.id}`}
-                      onClick={() => selectChat(chat)}
-                      className={chatSidebarRowClass(isSelected)}
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewProfile?.(otherId);
-                        }}
-                        className="shrink-0 rounded-full"
-                      >
-                        <PresenceUserAvatar
-                          uid={otherId}
-                          src={otherPhoto}
-                          name={displayTitle}
-                          size="md"
-                          imgClassName="hover:ring-2 hover:ring-accent/40"
-                        />
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-app truncate" title={displayTitle}>
-                            {displayTitle}
-                          </p>
-                          {chat.lastMessageAt && (
-                            <span className="text-[10px] text-subtle shrink-0">
-                              {formatTime(chat.lastMessageAt)}
-                            </span>
-                          )}
-                        </div>
-
-                        {chat.itemTitle && (
-                          <span className="inline-flex mt-1 items-center gap-1 text-[10px] font-medium text-accent bg-accent-soft border border-accent/20 px-2 py-0.5 rounded-full truncate max-w-full">
-                            <Box className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{chat.itemTitle}</span>
-                          </span>
-                        )}
-
-                        <p className="text-xs text-muted mt-1 line-clamp-2">
-                          {chat.lastMessageText || 'Start the conversation'}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-                {hasMoreDirectChats ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllDirectMessages(true)}
-                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-accent hover:bg-inset text-left rounded-lg mx-1.5"
-                  >
-                    View all {directChats.length} direct messages
-                  </button>
-                ) : showAllDirectMessages && directChats.length > CHAT_SIDEBAR_PREVIEW ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllDirectMessages(false)}
-                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-muted hover:bg-inset text-left rounded-lg mx-1.5"
-                  >
-                    Show fewer
-                  </button>
-                ) : null}
-              </>
-            )}
-            </div>
-          </div>
-
-          {communityChats.length > 0 && (
-            <div className="pb-3">
-              <div className="px-4 pt-1 pb-1 text-xs font-semibold text-muted uppercase tracking-wide">
-                {GROUP_CHATS_SECTION_LABEL}
-              </div>
-              <div className="space-y-0.5 px-1">
-              {communityChats.map((chat) => {
-                const isSelected = selectedChat?.id === chat.id && !supportView;
-                const isGlobal = isGlobalCommunityChat(chat.id);
-                return (
-                  <button
-                    key={chat.id}
-                    type="button"
-                    id={`chat_row_${chat.id}`}
-                    onClick={() => selectChat(chat)}
-                    className={chatSidebarRowClass(isSelected)}
-                  >
-                    <span
-                      className={`shrink-0 w-10 h-10 rounded-full border border-app flex items-center justify-center ${
-                        isGlobal ? 'bg-emerald-500/10 text-emerald-500' : 'bg-violet-500/10 text-violet-500'
-                      }`}
-                    >
-                      {isGlobal ? <Globe className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-app truncate">
-                          {communityChatTitle(chat.id)}
-                        </p>
-                        {chat.lastMessageAt && (
-                          <span className="text-[10px] text-subtle shrink-0">
-                            {formatTime(chat.lastMessageAt)}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-muted mt-0.5">{communityChatSubtitle(chat.id)}</p>
-                      <p className="text-xs text-muted mt-1 line-clamp-2">
-                        {chat.lastMessageText || 'Say hello'}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-              </div>
-            </div>
-          )}
-
-          <div className="pb-3">
-            <div className="px-4 pt-1 pb-1 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
-              <LifeBuoy className="w-3.5 h-3.5" />
-              {isStaffSupportInbox ? 'Support inbox' : 'Support'}
-            </div>
-            <div className="space-y-0.5 px-1">
-            {!isStaffSupportInbox ? (
-              <ChatSidebarRow
-                id="chat_row_new_support"
-                icon={LifeBuoy}
-                iconClassName="bg-sky-500/10 text-sky-400"
-                title="Open new support chat"
-                subtitle="Two-way chat with staff"
-                preview="Ask for help — staff will reply in this thread."
-                selected={supportView === 'new'}
-                onClick={() => openSupport('new')}
-              />
-            ) : null}
-            {supportTicketsLoading ? (
-              <p className="text-xs text-muted text-center px-4 py-6">Loading…</p>
-            ) : supportTickets.length === 0 ? (
-              <ChatSectionEmptyState
-                icon={LifeBuoy}
-                title={isStaffSupportInbox ? 'Inbox is clear' : 'No conversations yet'}
-                description={
-                  isStaffSupportInbox
-                    ? 'When neighbors open tickets, they will appear here.'
-                    : 'Open new support chat above to talk with staff.'
-                }
-              />
-            ) : (
-              <>
-                <ul>
-                  {previewSupportTickets.map((ticket) => (
-                    <li key={ticket.id}>
-                      <SupportTicketRow
-                        ticket={ticket}
-                        preview={supportPreviews[ticket.id]}
-                        selected={!!supportView && supportOpenTicketId === ticket.id}
-                        showOpener={isStaffSupportInbox}
-                        onClick={() => openSupportTicket(ticket.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-                {hasMoreSupportTickets ? (
-                  <button
-                    type="button"
-                    onClick={() => openSupport('list')}
-                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-accent hover:bg-inset text-left rounded-lg mx-1.5"
-                  >
-                    View all {supportTickets.length}{' '}
-                    {isStaffSupportInbox ? 'support conversations' : 'support tickets'}
-                  </button>
-                ) : null}
-              </>
-            )}
-            </div>
-          </div>
-
-          <ChatFeedbackSection
-            userProfile={userProfile}
-            initialPanel={initialChatFeedbackPanel}
-            onClearInitialPanel={onClearInitialChatFeedbackPanel}
+          <ChatInboxList
+            entries={inboxEntries}
+            loading={isChatsLoading || supportTicketsLoading}
+            isStaffSupportInbox={isStaffSupportInbox}
+            selectedChatId={selectedChat?.id ?? null}
+            supportOpenTicketId={supportOpenTicketId}
+            supportActive={!!supportView}
+            requestBusyId={requestBusyId}
+            getFormattedChatTitle={getFormattedChatTitle}
+            getRecipientInfo={getRecipientInfo}
+            formatTime={formatTime}
+            onViewProfile={onViewProfile}
+            onSelectChat={selectChat}
+            onOpenSupportTicket={openSupportTicket}
+            onAcceptRequest={handleAcceptRequest}
+            onDeclineRequest={handleDeclineRequest}
           />
           {fullBleed && !selectedChat && !supportView && (
             <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
@@ -1425,13 +1104,6 @@ export default function ChatSystem({
                     </button>
                   ) : null}
                 </header>
-
-                <ChatConversationStrip
-                  items={conversationStripItems}
-                  onStartConversation={onStartDirectMessage}
-                  className="md:hidden"
-                  id="chat_thread_conversation_strip"
-                />
 
                 <div
                   className="chat-thread-bg flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4"
@@ -1704,11 +1376,20 @@ export default function ChatSystem({
             id="messages_not_selected_state"
           >
             <MessageSquare className="w-12 h-12 text-muted mb-3" />
-            <h3 className="font-display font-semibold text-app">Select a conversation</h3>
-            <p className="text-sm text-muted max-w-xs mt-2 leading-relaxed">{IN_APP.chatsDescription}</p>
+            <h3 className="font-display font-semibold text-app">Your messages</h3>
+            <p className="text-sm text-muted max-w-xs mt-2 leading-relaxed">
+              Choose a conversation from the list to start chatting.
+            </p>
           </div>
         )}
       </div>
+
+      <ChatFeedbackSection
+        userProfile={userProfile}
+        showList={false}
+        panel={feedbackPanel}
+        onPanelChange={setFeedbackPanel}
+      />
     </div>
   );
 }
