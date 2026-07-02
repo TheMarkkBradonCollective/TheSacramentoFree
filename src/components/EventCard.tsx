@@ -9,7 +9,7 @@ interface EventCardProps {
   engagement: EventsEngagementApi;
   onViewEvent: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
-  interactionsLocked?: boolean;
+  commentsLocked?: boolean;
 }
 
 function formatEventDate(iso: string): string {
@@ -23,13 +23,18 @@ function formatEventDate(iso: string): string {
   });
 }
 
+function hostLabel(hostedBy?: string | null): string {
+  const trimmed = hostedBy?.trim();
+  return trimmed || 'Unknown';
+}
+
 export default function EventCard({
   event,
   currentUserId,
   engagement,
   onViewEvent,
   onViewProfile,
-  interactionsLocked = false,
+  commentsLocked = false,
 }: EventCardProps) {
   const isCancelled = event.status === 'cancelled';
   const rsvpState = engagement.getRsvpsForEvent(event.id);
@@ -83,28 +88,33 @@ export default function EventCard({
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewProfile(event.userId);
-          }}
-          className="flex items-center gap-2 text-xs text-muted hover:text-app"
-        >
-          <img
-            src={
-              event.userPhotoURL ||
-              `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(event.userDisplayName)}`
-            }
-            alt=""
-            className="w-5 h-5 rounded-full border border-app"
-            referrerPolicy="no-referrer"
-          />
-          Hosted by <span className="font-semibold text-app">{event.userDisplayName}</span>
-        </button>
+        <div className="space-y-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewProfile(event.userId);
+            }}
+            className="flex items-center gap-2 text-xs text-muted hover:text-app"
+          >
+            <img
+              src={
+                event.userPhotoURL ||
+                `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(event.userDisplayName)}`
+              }
+              alt=""
+              className="w-5 h-5 rounded-full border border-app"
+              referrerPolicy="no-referrer"
+            />
+            Posted by <span className="font-semibold text-app">{event.userDisplayName}</span>
+          </button>
+          <p className="text-xs text-muted pl-7">
+            Hosted by <span className="font-semibold text-app">{hostLabel(event.hostedBy)}</span>
+          </p>
+        </div>
       </button>
 
-      {!isCancelled && !interactionsLocked && (
+      {!isCancelled && (
         <div className="px-4 pb-4">
           <EventEngagement
             hostUserId={event.userId}
@@ -114,6 +124,7 @@ export default function EventCard({
             onRsvp={(status) => engagement.handleRsvp(event.id, event.userId, status)}
             onAddComment={() => {}}
             variant="card"
+            commentsLocked={commentsLocked}
           />
         </div>
       )}

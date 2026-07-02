@@ -442,5 +442,5 @@ export const EVENTS = {
     'Always free — no tickets or fees allowed',
   ],
   staffPreviewNote:
-    'Our team may post gatherings early — browse below. RSVP and posting open for everyone once we hit 1,000 neighbors.',
+    'Our team may post gatherings early — browse below. RSVP is open now; comments open for everyone once we hit 1,000 neighbors.',
 } as const;

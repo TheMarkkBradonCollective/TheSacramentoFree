@@ -1364,8 +1364,12 @@ export default function App() {
                     }
                   }}
                   onViewProfile={handleViewProfile}
+                  onEventUpdated={(updatedEvent) => {
+                    setDetailEvent(updatedEvent);
+                    void loadEvents(true);
+                  }}
                   updating={detailEventUpdating}
-                  interactionsLocked={!canAccessEvents}
+                  commentsLocked={!canAccessEvents}
                 />
               )}
 
@@ -1386,7 +1390,7 @@ export default function App() {
                 />
               )}
 
-              {(showPostEventModal || editingEvent) && canAccessEvents && (
+              {((showPostEventModal && canAccessEvents) || editingEvent) && (
                 <PostEventModal
                   userProfile={userProfile}
                   editEvent={editingEvent}

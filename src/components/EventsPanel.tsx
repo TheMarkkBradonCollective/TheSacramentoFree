@@ -100,7 +100,7 @@ export default function EventsPanel({
             onViewProfile={onViewProfile}
             onRefresh={onRefresh}
             isLoading={isLoading}
-            interactionsLocked={!canAccessEvents}
+            commentsLocked={!canAccessEvents}
           />
         </div>
       )}

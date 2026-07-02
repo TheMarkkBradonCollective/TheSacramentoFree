@@ -187,12 +187,19 @@ CREATE TABLE IF NOT EXISTS public.community_events (
   "userId" TEXT NOT NULL,
   "userDisplayName" TEXT NOT NULL,
   "userPhotoURL" TEXT,
+  "hostedBy" TEXT,
+  "locationLat" DOUBLE PRECISION,
+  "locationLng" DOUBLE PRECISION,
   "isFree" BOOLEAN NOT NULL DEFAULT true,
   status TEXT NOT NULL DEFAULT 'active',
   "imageUrl" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "hostedBy" TEXT;
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLat" DOUBLE PRECISION;
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION;
 
 ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_free_only;
 ALTER TABLE public.community_events ADD CONSTRAINT community_events_free_only CHECK ("isFree" = true);
@@ -2533,6 +2540,11 @@ export async function deleteSupabaseItemComment(
 export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
   return {
     ...row,
+    hostedBy: row.hostedBy?.trim() || null,
+    locationLat:
+      typeof row.locationLat === 'number' && Number.isFinite(row.locationLat) ? row.locationLat : null,
+    locationLng:
+      typeof row.locationLng === 'number' && Number.isFinite(row.locationLng) ? row.locationLng : null,
     isFree: true as const,
     status: row.status || 'active',
     eventStartAt: coerceToIsoDate(row.eventStartAt),
@@ -2636,6 +2648,9 @@ export async function updateSupabaseEvent(
         eventStartAt: new Date(event.eventStartAt).toISOString(),
         eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
         status: event.status,
+        hostedBy: event.hostedBy?.trim() || null,
+        locationLat: event.locationLat ?? null,
+        locationLng: event.locationLng ?? null,
         imageUrl:
           event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
             ? event.imageUrl

@@ -29,6 +29,8 @@ import { notifyPosterEnRoute } from '../lib/navigationNotify';
 import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
+import EventEngagement from './EventEngagement';
+import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
@@ -59,6 +61,8 @@ interface SacramentoMapViewProps {
   onImmersiveModeChange?: (active: boolean) => void;
   /** When false, defer nav session restore until listings have finished loading. */
   itemsHydrated?: boolean;
+  eventsEngagement?: EventsEngagementApi;
+  commentsLocked?: boolean;
 }
 
 const EVENT_MAP_COLOR = '#9333EA';
@@ -178,6 +182,9 @@ function MapSelectedEventCard({
   onPrev,
   onNext,
   onViewEvent,
+  userProfile,
+  eventsEngagement,
+  commentsLocked = false,
 }: {
   event: CommunityEvent;
   currentIndex: number;
@@ -188,7 +195,19 @@ function MapSelectedEventCard({
   onPrev: () => void;
   onNext: () => void;
   onViewEvent?: (event: CommunityEvent) => void;
+  userProfile: UserProfile;
+  eventsEngagement?: EventsEngagementApi;
+  commentsLocked?: boolean;
 }) {
+  const isCancelled = event.status === 'cancelled';
+  const rsvpState = eventsEngagement?.getRsvpsForEvent(event.id) ?? {
+    userRsvp: null,
+    going: 0,
+    maybe: 0,
+    notGoing: 0,
+  };
+  const comments = eventsEngagement?.getCommentsForEvent(event.id) ?? [];
+
   return (
     <motion.div
       key={event.id}
@@ -255,15 +274,30 @@ function MapSelectedEventCard({
             </p>
           </div>
 
+          {!isCancelled && eventsEngagement && (
+            <div className={compact ? 'mt-2 pt-2 border-t border-app' : 'mt-3 pt-3 border-t border-app'}>
+              <EventEngagement
+                hostUserId={event.userId}
+                currentUserId={userProfile.uid}
+                rsvpState={rsvpState}
+                comments={comments}
+                onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status)}
+                onAddComment={() => {}}
+                variant="card"
+                commentsLocked={commentsLocked}
+              />
+            </div>
+          )}
+
           {onViewEvent && (
-            <div className={`flex gap-1 shrink-0 ${compact ? 'mt-2 pt-2 border-t border-app' : 'mt-3 pt-3 border-t border-app'}`}>
+            <div className={`flex gap-1 shrink-0 ${compact ? 'mt-2' : 'mt-3'}`}>
               <button
                 type="button"
                 onClick={() => onViewEvent(event)}
-                className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                className="sbn-btn sbn-btn-primary sbn-btn-sm w-full"
               >
                 <Eye className="w-3.5 h-3.5" />
-                View event
+                View full event
               </button>
             </div>
           )}
@@ -381,6 +415,8 @@ export default function SacramentoMapView({
   onOpenNewPost,
   onImmersiveModeChange,
   itemsHydrated = true,
+  eventsEngagement,
+  commentsLocked = false,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -409,14 +445,16 @@ export default function SacramentoMapView({
   const sCat = selectedCategory !== undefined ? selectedCategory : localCategory;
   const sNeigh = selectedNeighborhood !== undefined ? selectedNeighborhood : localNeighborhood;
   const showingEvents = isEventsMapFilter(sType);
+  const showEventsOnMap = showingEvents || sType === 'all';
+  const showItemsOnMap = !showingEvents;
 
   useEffect(() => {
     if (showingEvents) {
       setSelectedPost(null);
-    } else {
+    } else if (sType !== 'all') {
       setSelectedEvent(null);
     }
-  }, [showingEvents]);
+  }, [showingEvents, sType]);
 
   // React Leaflet Refs
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -712,7 +750,7 @@ export default function SacramentoMapView({
   }, [items, sType, sCat, sNeigh, sTerm, showingEvents]);
 
   const activeEvents = useMemo(() => {
-    if (!showingEvents) return [];
+    if (!showEventsOnMap) return [];
 
     return events.filter((event) => {
       if (event.status !== 'active') return false;
@@ -723,7 +761,7 @@ export default function SacramentoMapView({
 
       return matchesSearch && matchesNeighborhood;
     });
-  }, [events, showingEvents, sNeigh, sTerm]);
+  }, [events, showEventsOnMap, sNeigh, sTerm]);
 
   // Find current listing index in filtered list for pagination
   const currentIndex = useMemo(() => {
@@ -817,6 +855,15 @@ export default function SacramentoMapView({
     const neighborhoodCounts: Record<string, number> = {};
 
     return activeEvents.map((event) => {
+      if (
+        typeof event.locationLat === 'number' &&
+        typeof event.locationLng === 'number' &&
+        Number.isFinite(event.locationLat) &&
+        Number.isFinite(event.locationLng)
+      ) {
+        return { event, lat: event.locationLat, lng: event.locationLng };
+      }
+
       const parentCoord = NEIGHBORHOOD_COORDS[event.neighborhood] || { x: 50, y: 50 };
       const currentCount = neighborhoodCounts[event.neighborhood] || 0;
       neighborhoodCounts[event.neighborhood] = currentCount + 1;
@@ -952,10 +999,29 @@ export default function SacramentoMapView({
       });
     };
 
-    if (showingEvents) {
+    if (showItemsOnMap) {
+      syncMarkers(
+        blipPositions.map(({ item, lat, lng, color }) => ({
+          id: item.id,
+          lat,
+          lng,
+          data: { item, color },
+        })),
+        itemMarkersRef.current,
+        ({ item, color }) => createItemBlipIcon(item, color, false),
+        ({ item }, lat, lng) => {
+          setSlideDirection('right');
+          setSelectedPost(item);
+          setSelectedEvent(null);
+          map.setView([lat, lng], map.getZoom(), { animate: false });
+        },
+      );
+    } else {
       itemMarkersRef.current.forEach((marker) => markersGroup.removeLayer(marker));
       itemMarkersRef.current.clear();
+    }
 
+    if (showEventsOnMap) {
       syncMarkers(
         eventBlipPositions.map(({ event, lat, lng }) => ({
           id: event.id,
@@ -964,52 +1030,36 @@ export default function SacramentoMapView({
           data: event,
         })),
         eventMarkersRef.current,
-        (event) => createEventBlipIcon(false),
+        () => createEventBlipIcon(false),
         (event, lat, lng) => {
           setSlideDirection('right');
           setSelectedEvent(event);
+          setSelectedPost(null);
           map.setView([lat, lng], map.getZoom(), { animate: false });
         },
       );
-      return;
+    } else {
+      eventMarkersRef.current.forEach((marker) => markersGroup.removeLayer(marker));
+      eventMarkersRef.current.clear();
     }
-
-    eventMarkersRef.current.forEach((marker) => markersGroup.removeLayer(marker));
-    eventMarkersRef.current.clear();
-
-    syncMarkers(
-      blipPositions.map(({ item, lat, lng, color }) => ({
-        id: item.id,
-        lat,
-        lng,
-        data: { item, color },
-      })),
-      itemMarkersRef.current,
-      ({ item, color }) => createItemBlipIcon(item, color, false),
-      ({ item }, lat, lng) => {
-        setSlideDirection('right');
-        setSelectedPost(item);
-        setSelectedEvent(null);
-        map.setView([lat, lng], map.getZoom(), { animate: false });
-      },
-    );
-  }, [blipPositions, eventBlipPositions, showingEvents, mapReady]);
+  }, [blipPositions, eventBlipPositions, showItemsOnMap, showEventsOnMap, mapReady]);
 
   // Highlight selected pin without rebuilding every marker.
   useEffect(() => {
-    if (showingEvents) {
+    if (showEventsOnMap) {
       eventMarkersRef.current.forEach((marker, eventId) => {
         marker.setIcon(createEventBlipIcon(selectedEvent?.id === eventId));
       });
-      return;
     }
 
-    itemMarkersRef.current.forEach((marker, itemId) => {
-      const blip = blipPositions.find((entry) => entry.item.id === itemId);
-      if (!blip) return;
-      marker.setIcon(createItemBlipIcon(blip.item, blip.color, selectedPost?.id === itemId));
-    });
-  }, [selectedPost?.id, selectedEvent?.id, showingEvents, blipPositions, eventBlipPositions]);
+    if (showItemsOnMap) {
+      itemMarkersRef.current.forEach((marker, itemId) => {
+        const blip = blipPositions.find((entry) => entry.item.id === itemId);
+        if (!blip) return;
+        marker.setIcon(createItemBlipIcon(blip.item, blip.color, selectedPost?.id === itemId));
+      });
+    }
+  }, [selectedPost?.id, selectedEvent?.id, showItemsOnMap, showEventsOnMap, blipPositions, eventBlipPositions]);
 
   const routeDestination = useMemo(() => {
     if (!selectedPost) return null;
@@ -1434,6 +1484,9 @@ export default function SacramentoMapView({
                 onPrev={handlePrevEvent}
                 onNext={handleNextEvent}
                 onViewEvent={onViewEvent}
+                userProfile={userProfile}
+                eventsEngagement={eventsEngagement}
+                commentsLocked={commentsLocked}
               />
             )}
             {selectedPost && (
@@ -1934,7 +1987,8 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Fallback Empty Guide - Beautiful, non-blocking friendly popup overlay */}
-        {((showingEvents && activeEvents.length === 0) || (!showingEvents && activeItems.length === 0)) && (
+        {((showingEvents && activeEvents.length === 0) ||
+          (showItemsOnMap && activeItems.length === 0 && (!showEventsOnMap || activeEvents.length === 0))) && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md border border-[#FF4500]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
             <div className="flex items-start space-x-3 text-left">
               <div className="p-2 bg-[#FF4500]/10 text-accent rounded-xl shrink-0 mt-0.5">
@@ -1967,6 +2021,9 @@ export default function SacramentoMapView({
             onPrev={handlePrevEvent}
             onNext={handleNextEvent}
             onViewEvent={onViewEvent}
+            userProfile={userProfile}
+            eventsEngagement={eventsEngagement}
+            commentsLocked={commentsLocked}
           />
         )}
         {selectedPost && (

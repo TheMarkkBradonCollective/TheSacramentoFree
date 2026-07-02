@@ -174,6 +174,8 @@ export default function MobileView({
             onOpenNewPost={onOpenNewPost}
             onImmersiveModeChange={setMapImmersiveNav}
             itemsHydrated={itemsHydrated}
+            eventsEngagement={eventsEngagement}
+            commentsLocked={!canAccessEvents}
           />
           {!mapImmersiveNav && (
           <div className="absolute top-3 left-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
