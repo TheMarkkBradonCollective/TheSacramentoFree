@@ -5,13 +5,46 @@ const ACTIVE_NAV_STORAGE_KEY = 'sbn_active_nav_session_v1';
 /** Max age before an unstopped session is treated as stale (12 hours). */
 const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
+export type NavTargetType = 'post' | 'event';
+
 export interface ActiveNavSession {
   userId: string;
-  postId: string;
+  targetType: NavTargetType;
+  targetId: string;
+  /** Legacy field — kept for older saved sessions. */
+  postId?: string;
   destination: LatLng;
   destinationLabel: string;
   startedAt: number;
   updatedAt: number;
+}
+
+function normalizeSession(parsed: Partial<ActiveNavSession> | null): ActiveNavSession | null {
+  if (!parsed?.userId || !parsed.destinationLabel) return null;
+  if (typeof parsed.destination?.lat !== 'number' || typeof parsed.destination?.lng !== 'number') {
+    return null;
+  }
+
+  const targetType: NavTargetType =
+    parsed.targetType === 'event' ? 'event' : parsed.targetType === 'post' ? 'post' : 'post';
+  const targetId = parsed.targetId || parsed.postId;
+  if (!targetId) return null;
+
+  const startedAt = parsed.startedAt ?? Date.now();
+  const updatedAt = parsed.updatedAt ?? startedAt;
+  const age = Date.now() - updatedAt;
+  if (age > SESSION_MAX_AGE_MS) return null;
+
+  return {
+    userId: parsed.userId,
+    targetType,
+    targetId,
+    postId: targetType === 'post' ? targetId : parsed.postId,
+    destination: parsed.destination,
+    destinationLabel: parsed.destinationLabel,
+    startedAt,
+    updatedAt,
+  };
 }
 
 function readRawSession(): ActiveNavSession | null {
@@ -19,19 +52,7 @@ function readRawSession(): ActiveNavSession | null {
   try {
     const raw = window.localStorage.getItem(ACTIVE_NAV_STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as ActiveNavSession;
-    if (
-      !parsed?.userId ||
-      !parsed?.postId ||
-      typeof parsed.destination?.lat !== 'number' ||
-      typeof parsed.destination?.lng !== 'number' ||
-      !parsed.destinationLabel
-    ) {
-      return null;
-    }
-    const age = Date.now() - (parsed.updatedAt ?? parsed.startedAt ?? 0);
-    if (age > SESSION_MAX_AGE_MS) return null;
-    return parsed;
+    return normalizeSession(JSON.parse(raw) as Partial<ActiveNavSession>);
   } catch {
     return null;
   }
@@ -52,6 +73,7 @@ export function saveActiveNavSession(session: Omit<ActiveNavSession, 'updatedAt'
   if (typeof window === 'undefined') return;
   const payload: ActiveNavSession = {
     ...session,
+    postId: session.targetType === 'post' ? session.targetId : session.postId,
     updatedAt: Date.now(),
   };
   try {

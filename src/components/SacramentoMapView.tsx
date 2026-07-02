@@ -9,8 +9,6 @@ import {
 import { extractListingImageUrls } from '../lib/listingContent';
 import {
   fetchDrivingRoute,
-  formatRouteDistance,
-  formatRouteDuration,
   haversineMeters,
   isRoadGeometry,
   openDrivingDirections,
@@ -25,6 +23,7 @@ import {
 } from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
 import NavigateNotifyDialog from './NavigateNotifyDialog';
+import MapSelectionRouteRow from './MapSelectionRouteRow';
 import { notifyPosterEnRoute } from '../lib/navigationNotify';
 import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
@@ -66,6 +65,12 @@ interface SacramentoMapViewProps {
 }
 
 const EVENT_MAP_COLOR = '#9333EA';
+
+function listingLocationHint(post: ItemPost, viewerUserId: string): string {
+  return canViewerSeeExactLocation(post, viewerUserId)
+    ? 'Exact pickup pin on map'
+    : `Approx. area · ${post.neighborhood}`;
+}
 
 function formatEventMapDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -185,6 +190,15 @@ function MapSelectedEventCard({
   userProfile,
   eventsEngagement,
   commentsLocked = false,
+  routeEndpoints,
+  routeLoading,
+  distanceMeters,
+  durationSeconds,
+  routeOnMap,
+  hasLiveGps,
+  canNavigate,
+  onStartNavigation,
+  onOpenExternalMaps,
 }: {
   event: CommunityEvent;
   currentIndex: number;
@@ -198,6 +212,15 @@ function MapSelectedEventCard({
   userProfile: UserProfile;
   eventsEngagement?: EventsEngagementApi;
   commentsLocked?: boolean;
+  routeEndpoints?: { start: LatLng; end: LatLng } | null;
+  routeLoading?: boolean;
+  distanceMeters?: number | null;
+  durationSeconds?: number | null;
+  routeOnMap?: boolean;
+  hasLiveGps?: boolean;
+  canNavigate?: boolean;
+  onStartNavigation?: () => void;
+  onOpenExternalMaps?: () => void;
 }) {
   const isCancelled = event.status === 'cancelled';
   const rsvpState = eventsEngagement?.getRsvpsForEvent(event.id) ?? {
@@ -289,6 +312,19 @@ function MapSelectedEventCard({
             </div>
           )}
 
+          <MapSelectionRouteRow
+            locationHint={event.location?.trim() || `Event pin · ${event.neighborhood}`}
+            routeEndpoints={routeEndpoints ?? null}
+            routeLoading={routeLoading ?? false}
+            distanceMeters={distanceMeters ?? null}
+            durationSeconds={durationSeconds ?? null}
+            routeOnMap={routeOnMap ?? false}
+            hasLiveGps={hasLiveGps ?? false}
+            canNavigate={canNavigate}
+            onStartNavigation={onStartNavigation}
+            onOpenExternalMaps={onOpenExternalMaps}
+          />
+
           {onViewEvent && (
             <div className={`flex gap-1 shrink-0 ${compact ? 'mt-2' : 'mt-3'}`}>
               <button
@@ -304,93 +340,6 @@ function MapSelectedEventCard({
         </div>
       </div>
     </motion.div>
-  );
-}
-
-interface MapSelectionRouteRowProps {
-  selectedPost: ItemPost;
-  routeEndpoints: { start: LatLng; end: LatLng } | null;
-  routeLoading: boolean;
-  distanceMeters: number | null;
-  durationSeconds: number | null;
-  routeOnMap: boolean;
-  hasLiveGps: boolean;
-  viewerUserId: string;
-  onStartNavigation?: () => void;
-  onOpenExternalMaps?: () => void;
-  canNavigate?: boolean;
-}
-
-function MapSelectionRouteRow({
-  selectedPost,
-  routeEndpoints,
-  routeLoading,
-  distanceMeters,
-  durationSeconds,
-  routeOnMap,
-  hasLiveGps,
-  viewerUserId,
-  onStartNavigation,
-  onOpenExternalMaps,
-  canNavigate = false,
-}: MapSelectionRouteRowProps) {
-  if (!routeEndpoints) return null;
-
-  const exactPin = canViewerSeeExactLocation(selectedPost, viewerUserId);
-  const locationHint = exactPin
-    ? 'Exact pickup pin on map'
-    : `Approx. area · ${selectedPost.neighborhood}`;
-
-  return (
-    <div className="mt-2 pt-2 border-t border-app flex items-center gap-2">
-      <div className="flex-1 min-w-0">
-        {routeLoading ? (
-          <p className="text-[9px] font-medium text-muted animate-pulse">Calculating route…</p>
-        ) : distanceMeters != null ? (
-          <>
-            <p className="text-[10px] font-bold text-app leading-snug">
-              <span className="text-accent">{formatRouteDistance(distanceMeters)}</span>
-              <span className="text-muted font-semibold"> away</span>
-              {durationSeconds != null && durationSeconds > 0 && (
-                <span className="text-muted font-semibold">
-                  {' '}
-                  · {formatRouteDuration(durationSeconds)} drive
-                </span>
-              )}
-            </p>
-            <p className="text-[8px] text-muted mt-0.5 truncate">{locationHint}</p>
-            {!hasLiveGps && (
-              <p className="text-[7.5px] text-subtle mt-0.5">Enable GPS for distance from you</p>
-            )}
-            {!routeOnMap && distanceMeters != null && (
-              <p className="text-[7.5px] text-subtle mt-0.5">Road route loading…</p>
-            )}
-          </>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 gap-1">
-        <button
-          type="button"
-          onClick={() => onStartNavigation?.()}
-          disabled={!canNavigate || !onStartNavigation}
-          className="sbn-btn sbn-btn-primary sbn-btn-sm disabled:opacity-40"
-          title={canNavigate ? 'Start in-app turn-by-turn navigation' : 'Enable GPS to navigate'}
-        >
-          <Navigation className="w-3.5 h-3.5" />
-          Navigate
-        </button>
-        {onOpenExternalMaps && hasLiveGps && (
-          <button
-            type="button"
-            onClick={onOpenExternalMaps}
-            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-            title="Open directions in Google or Apple Maps"
-          >
-            <MapIcon className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -482,6 +431,7 @@ export default function SacramentoMapView({
   const hasInitialMapCenterRef = useRef(false);
   const navRestoreDoneRef = useRef(false);
   const prevSelectedPostIdRef = useRef<string | undefined>(undefined);
+  const prevSelectedEventIdRef = useRef<string | undefined>(undefined);
   const [mapReady, setMapReady] = useState(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -496,7 +446,7 @@ export default function SacramentoMapView({
   const routeFetchIdRef = useRef(0);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const routeEndpointsRef = useRef<{ start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null>(null);
-  const routeFitForPostIdRef = useRef<string | null>(null);
+  const routeFitForTargetIdRef = useRef<string | null>(null);
 
   // Default coordinate centered around the user's neighborhood
   const userNeighborhood = userProfile?.neighborhood || 'Midtown';
@@ -1062,13 +1012,37 @@ export default function SacramentoMapView({
   }, [selectedPost?.id, selectedEvent?.id, showItemsOnMap, showEventsOnMap, blipPositions, eventBlipPositions]);
 
   const routeDestination = useMemo(() => {
-    if (!selectedPost) return null;
-    const selectedBlip = blipPositions.find((b) => b.item.id === selectedPost.id);
-    if (selectedBlip) return { lat: selectedBlip.lat, lng: selectedBlip.lng } as LatLng;
-    const session = readActiveNavSession(userProfile.uid);
-    if (session?.postId === selectedPost.id) return session.destination;
+    if (selectedPost) {
+      const selectedBlip = blipPositions.find((b) => b.item.id === selectedPost.id);
+      if (selectedBlip) return { lat: selectedBlip.lat, lng: selectedBlip.lng } as LatLng;
+      const session = readActiveNavSession(userProfile.uid);
+      if (session?.targetId === selectedPost.id && session.targetType === 'post') {
+        return session.destination;
+      }
+      if (session?.postId === selectedPost.id) return session.destination;
+      return null;
+    }
+
+    if (selectedEvent) {
+      const selectedBlip = eventBlipPositions.find((b) => b.event.id === selectedEvent.id);
+      if (selectedBlip) return { lat: selectedBlip.lat, lng: selectedBlip.lng } as LatLng;
+      if (
+        typeof selectedEvent.locationLat === 'number' &&
+        typeof selectedEvent.locationLng === 'number'
+      ) {
+        return { lat: selectedEvent.locationLat, lng: selectedEvent.locationLng };
+      }
+      const session = readActiveNavSession(userProfile.uid);
+      if (session?.targetId === selectedEvent.id && session.targetType === 'event') {
+        return session.destination;
+      }
+    }
+
     return null;
-  }, [selectedPost?.id, blipPositions, userProfile.uid]);
+  }, [selectedPost?.id, selectedEvent?.id, blipPositions, eventBlipPositions, userProfile.uid]);
+
+  const navTargetLabel = selectedPost?.title ?? selectedEvent?.title ?? '';
+  const navTargetId = selectedPost?.id ?? selectedEvent?.id ?? null;
 
   const hasGpsFix = userLocation != null;
 
@@ -1080,7 +1054,7 @@ export default function SacramentoMapView({
   }, [routeDestination, hasGpsFix]);
 
   useEffect(() => {
-    if (navRestoreDoneRef.current || !itemsHydrated) return;
+    if (navRestoreDoneRef.current) return;
 
     const session = readActiveNavSession(userProfile.uid);
     if (!session) {
@@ -1088,10 +1062,29 @@ export default function SacramentoMapView({
       return;
     }
 
-    // Wait until listings have loaded — avoid clearing a valid session on an empty first fetch.
+    if (session.targetType === 'event') {
+      if (events.length === 0) return;
+
+      const event = events.find((entry) => entry.id === session.targetId);
+      if (!event) {
+        clearActiveNavSession();
+        navRestoreDoneRef.current = true;
+        return;
+      }
+
+      navRestoreDoneRef.current = true;
+      prevSelectedEventIdRef.current = event.id;
+      lockNavOrigin();
+      setSelectedEvent(event);
+      setSelectedPost(null);
+      setNavigationOpen(true);
+      return;
+    }
+
+    if (!itemsHydrated) return;
     if (items.length === 0) return;
 
-    const post = items.find((item) => item.id === session.postId);
+    const post = items.find((item) => item.id === (session.targetId || session.postId));
     if (!post) {
       clearActiveNavSession();
       navRestoreDoneRef.current = true;
@@ -1104,14 +1097,13 @@ export default function SacramentoMapView({
     setSelectedPost(post);
     setSelectedEvent(null);
     setNavigationOpen(true);
-  }, [items, itemsHydrated, userProfile.uid, lockNavOrigin]);
+  }, [items, events, itemsHydrated, userProfile.uid, lockNavOrigin]);
 
   useEffect(() => {
     const currentId = selectedPost?.id;
     const previousId = prevSelectedPostIdRef.current;
     prevSelectedPostIdRef.current = currentId;
 
-    // Skip mount and first selection (null/undefined -> post id), including nav session restore.
     if (previousId === undefined || previousId === currentId) return;
 
     setNavigateNotifyOpen(false);
@@ -1121,16 +1113,47 @@ export default function SacramentoMapView({
     clearActiveNavSession();
   }, [selectedPost?.id]);
 
+  useEffect(() => {
+    const currentId = selectedEvent?.id;
+    const previousId = prevSelectedEventIdRef.current;
+    prevSelectedEventIdRef.current = currentId;
+
+    if (previousId === undefined || previousId === currentId) return;
+
+    setNavigateNotifyOpen(false);
+    if (!navigationOpenRef.current) return;
+    setNavigationOpen(false);
+    setLockedNavOrigin(null);
+    clearActiveNavSession();
+  }, [selectedEvent?.id]);
+
   const persistNavigationSession = useCallback(() => {
-    if (!selectedPost || !routeDestination) return;
-    saveActiveNavSession({
-      userId: userProfile.uid,
-      postId: selectedPost.id,
-      destination: routeDestination,
-      destinationLabel: selectedPost.title,
-      startedAt: Date.now(),
-    });
-  }, [selectedPost, routeDestination, userProfile.uid]);
+    if (!routeDestination) return;
+
+    if (selectedPost) {
+      saveActiveNavSession({
+        userId: userProfile.uid,
+        targetType: 'post',
+        targetId: selectedPost.id,
+        postId: selectedPost.id,
+        destination: routeDestination,
+        destinationLabel: selectedPost.title,
+        startedAt: Date.now(),
+      });
+      return;
+    }
+
+    if (selectedEvent) {
+      saveActiveNavSession({
+        userId: userProfile.uid,
+        targetType: 'event',
+        targetId: selectedEvent.id,
+        destination: routeDestination,
+        destinationLabel: selectedEvent.title,
+        startedAt: Date.now(),
+      });
+    }
+  }, [selectedPost, selectedEvent, routeDestination, userProfile.uid]);
 
   const openNavigation = useCallback(() => {
     lockNavOrigin();
@@ -1145,18 +1168,23 @@ export default function SacramentoMapView({
   }, []);
 
   useEffect(() => {
-    if (!navigationOpen || !selectedPost || !routeDestination) return;
+    if (!navigationOpen || !routeDestination || (!selectedPost && !selectedEvent)) return;
     persistNavigationSession();
-  }, [navigationOpen, selectedPost, routeDestination, persistNavigationSession]);
+  }, [navigationOpen, selectedPost, selectedEvent, routeDestination, persistNavigationSession]);
 
   const handleNavigateRequest = useCallback(() => {
+    if (selectedEvent) {
+      openNavigation();
+      return;
+    }
+
     if (!selectedPost) return;
     if (selectedPost.userId === userProfile.uid) {
       openNavigation();
       return;
     }
     setNavigateNotifyOpen(true);
-  }, [selectedPost, userProfile.uid, openNavigation]);
+  }, [selectedEvent, selectedPost, userProfile.uid, openNavigation]);
 
   const handleOpenExternalMaps = useCallback(() => {
     if (!routeEndpoints) return;
@@ -1199,13 +1227,13 @@ export default function SacramentoMapView({
   ]);
 
   const navigationOverlay =
-    navigationOpen && routeDestination && selectedPost && lockedNavOrigin
+    navigationOpen && routeDestination && lockedNavOrigin && navTargetId
       ? createPortal(
           <MapNavigationView
-            key={selectedPost.id}
+            key={navTargetId}
             origin={lockedNavOrigin}
             destination={routeDestination}
-            destinationLabel={selectedPost.title}
+            destinationLabel={navTargetLabel}
             initialRoute={prefetchedNavRoute}
             onExit={handleExitNavigation}
           />,
@@ -1228,9 +1256,9 @@ export default function SacramentoMapView({
     ) : null;
 
   useEffect(() => {
-    if (!selectedPost || showingEvents || !routeDestination) {
+    if ((!selectedPost && !selectedEvent) || !routeDestination) {
       routeEndpointsRef.current = null;
-      routeFitForPostIdRef.current = null;
+      routeFitForTargetIdRef.current = null;
       setRouteCoords(null);
       setRouteDistanceMeters(null);
       setRouteDurationSeconds(null);
@@ -1246,7 +1274,7 @@ export default function SacramentoMapView({
     routeEndpointsRef.current = { start, end: routeDestination };
 
     const fetchId = ++routeFetchIdRef.current;
-    routeFitForPostIdRef.current = null;
+    routeFitForTargetIdRef.current = null;
     setRouteCoords(null);
     setRouteDistanceMeters(null);
     setRouteDurationSeconds(null);
@@ -1274,7 +1302,7 @@ export default function SacramentoMapView({
       setRouteDurationSeconds(fallback.durationSeconds);
       setRouteLoading(false);
     });
-  }, [selectedPost?.id, routeDestination, showingEvents, hasGpsFix]);
+  }, [selectedPost?.id, selectedEvent?.id, routeDestination, hasGpsFix]);
 
   // Route layer — separate from blips so marker refreshes don't wipe the line.
   useEffect(() => {
@@ -1285,7 +1313,8 @@ export default function SacramentoMapView({
     routeLayer.clearLayers();
 
     const endpoints = routeEndpointsRef.current;
-    if (!selectedPost || !endpoints || !routeCoords || routeCoords.length < 2) return;
+    const activeTargetId = selectedPost?.id ?? selectedEvent?.id ?? null;
+    if (!activeTargetId || !endpoints || !routeCoords || routeCoords.length < 2) return;
 
     L.polyline(routeCoords, {
       color: '#FF4500',
@@ -1303,8 +1332,8 @@ export default function SacramentoMapView({
       lineJoin: 'round',
     }).addTo(routeLayer);
 
-    if (routeFitForPostIdRef.current !== selectedPost.id) {
-      routeFitForPostIdRef.current = selectedPost.id;
+    if (routeFitForTargetIdRef.current !== activeTargetId) {
+      routeFitForTargetIdRef.current = activeTargetId;
       const bottomPad = isFullScreenMobile ? 220 : 60;
       map.fitBounds(routeCoords, {
         paddingTopLeft: [60, 60],
@@ -1313,7 +1342,7 @@ export default function SacramentoMapView({
         animate: false,
       });
     }
-  }, [selectedPost, routeCoords, isFullScreenMobile]);
+  }, [selectedPost?.id, selectedEvent?.id, routeCoords, isFullScreenMobile]);
 
   // Handle programmatically panning/zooming to a selected neighborhood
   useEffect(() => {
@@ -1487,6 +1516,15 @@ export default function SacramentoMapView({
                 userProfile={userProfile}
                 eventsEngagement={eventsEngagement}
                 commentsLocked={commentsLocked}
+                routeEndpoints={routeEndpoints}
+                routeLoading={routeLoading}
+                distanceMeters={routeDistanceMeters}
+                durationSeconds={routeDurationSeconds}
+                routeOnMap={isRoadGeometry(routeCoords)}
+                hasLiveGps={!!userLocation}
+                canNavigate={hasGpsFix && !!routeDestination}
+                onStartNavigation={handleNavigateRequest}
+                onOpenExternalMaps={handleOpenExternalMaps}
               />
             )}
             {selectedPost && (
@@ -1580,14 +1618,13 @@ export default function SacramentoMapView({
                       </p>
 
                       <MapSelectionRouteRow
-                        selectedPost={selectedPost}
+                        locationHint={listingLocationHint(selectedPost, userProfile.uid)}
                         routeEndpoints={routeEndpoints}
                         routeLoading={routeLoading}
                         distanceMeters={routeDistanceMeters}
                         durationSeconds={routeDurationSeconds}
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
-                        viewerUserId={userProfile.uid}
                         canNavigate={hasGpsFix && !!routeDestination}
                         onStartNavigation={handleNavigateRequest}
                         onOpenExternalMaps={handleOpenExternalMaps}
@@ -2024,6 +2061,15 @@ export default function SacramentoMapView({
             userProfile={userProfile}
             eventsEngagement={eventsEngagement}
             commentsLocked={commentsLocked}
+            routeEndpoints={routeEndpoints}
+            routeLoading={routeLoading}
+            distanceMeters={routeDistanceMeters}
+            durationSeconds={routeDurationSeconds}
+            routeOnMap={isRoadGeometry(routeCoords)}
+            hasLiveGps={!!userLocation}
+            canNavigate={hasGpsFix && !!routeDestination}
+            onStartNavigation={handleNavigateRequest}
+            onOpenExternalMaps={handleOpenExternalMaps}
           />
         )}
         {selectedPost && (
@@ -2124,14 +2170,13 @@ export default function SacramentoMapView({
                   </p>
 
                   <MapSelectionRouteRow
-                    selectedPost={selectedPost}
+                    locationHint={listingLocationHint(selectedPost, userProfile.uid)}
                     routeEndpoints={routeEndpoints}
                     routeLoading={routeLoading}
                     distanceMeters={routeDistanceMeters}
                     durationSeconds={routeDurationSeconds}
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
-                    viewerUserId={userProfile.uid}
                     canNavigate={hasGpsFix && !!routeDestination}
                     onStartNavigation={handleNavigateRequest}
                     onOpenExternalMaps={handleOpenExternalMaps}
