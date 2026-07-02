@@ -10,8 +10,8 @@ interface EventsViewProps {
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
-  /** When true, neighbors can browse but not RSVP or comment until unlock. */
-  interactionsLocked?: boolean;
+  /** When true, neighbors can browse and RSVP but not comment until unlock. */
+  commentsLocked?: boolean;
 }
 
 export default function EventsView({
@@ -22,7 +22,7 @@ export default function EventsView({
   onViewProfile,
   onRefresh,
   isLoading = false,
-  interactionsLocked = false,
+  commentsLocked = false,
 }: EventsViewProps) {
   const now = Date.now();
   const upcoming = events.filter(
@@ -68,7 +68,7 @@ export default function EventsView({
                   engagement={engagement}
                   onViewEvent={onViewEvent}
                   onViewProfile={onViewProfile}
-                  interactionsLocked={interactionsLocked}
+                  commentsLocked={commentsLocked}
                 />
               </div>
             ))}
@@ -90,7 +90,7 @@ export default function EventsView({
                   engagement={engagement}
                   onViewEvent={onViewEvent}
                   onViewProfile={onViewProfile}
-                  interactionsLocked={interactionsLocked}
+                  commentsLocked={commentsLocked}
                 />
               </div>
             ))}

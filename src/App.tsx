@@ -1325,7 +1325,7 @@ export default function App() {
                   }}
                   onViewProfile={handleViewProfile}
                   updating={detailEventUpdating}
-                  interactionsLocked={!canAccessEvents}
+                  commentsLocked={!canAccessEvents}
                 />
               )}
 

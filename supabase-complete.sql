@@ -391,12 +391,15 @@ CREATE TABLE IF NOT EXISTS public.community_events (
   "userId" TEXT NOT NULL,
   "userDisplayName" TEXT NOT NULL,
   "userPhotoURL" TEXT,
+  "hostedBy" TEXT,
   "isFree" BOOLEAN NOT NULL DEFAULT true,
   status TEXT NOT NULL DEFAULT 'active',
   "imageUrl" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "hostedBy" TEXT;
 
 ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_status_check;
 ALTER TABLE public.community_events ADD CONSTRAINT community_events_status_check
@@ -2206,23 +2209,14 @@ CREATE POLICY "event_rsvps_select" ON public.event_rsvps
   FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "event_rsvps_insert" ON public.event_rsvps
-  FOR INSERT WITH CHECK (
-    auth.uid()::text = "userId"
-    AND (public.events_unlocked() OR public.is_staff())
-  );
+  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
 
 CREATE POLICY "event_rsvps_update" ON public.event_rsvps
   FOR UPDATE USING (auth.uid()::text = "userId")
-  WITH CHECK (
-    auth.uid()::text = "userId"
-    AND (public.events_unlocked() OR public.is_staff())
-  );
+  WITH CHECK (auth.uid()::text = "userId");
 
 CREATE POLICY "event_rsvps_delete" ON public.event_rsvps
-  FOR DELETE USING (
-    auth.uid()::text = "userId"
-    AND (public.events_unlocked() OR public.is_staff())
-  );
+  FOR DELETE USING (auth.uid()::text = "userId");
 
 DROP POLICY IF EXISTS "Allow read event comments" ON public.event_comments;
 DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;

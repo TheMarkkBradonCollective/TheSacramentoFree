@@ -17,7 +17,7 @@ interface EventDetailViewProps {
   onCancel?: () => void;
   onViewProfile: (userId: string) => void;
   updating?: boolean;
-  interactionsLocked?: boolean;
+  commentsLocked?: boolean;
 }
 
 function formatEventDate(iso: string): string {
@@ -29,6 +29,11 @@ function formatEventDate(iso: string): string {
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+function hostLabel(hostedBy?: string | null): string {
+  const trimmed = hostedBy?.trim();
+  return trimmed || 'Unknown';
 }
 
 export default function EventDetailView({
@@ -45,7 +50,7 @@ export default function EventDetailView({
   onCancel,
   onViewProfile,
   updating = false,
-  interactionsLocked = false,
+  commentsLocked = false,
 }: EventDetailViewProps) {
   const isOwner = event.userId === currentUserId;
   const isCancelled = event.status === 'cancelled';
@@ -123,25 +128,31 @@ export default function EventDetailView({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onViewProfile(event.userId)}
-            className="flex items-center gap-3 w-full text-left sbn-card p-3 hover:border-accent/40 transition-colors"
-          >
-            <img
-              src={
-                event.userPhotoURL ||
-                `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(event.userDisplayName)}`
-              }
-              alt=""
-              className="w-10 h-10 rounded-full border border-app"
-              referrerPolicy="no-referrer"
-            />
-            <div>
+          <div className="sbn-card p-3 space-y-3">
+            <button
+              type="button"
+              onClick={() => onViewProfile(event.userId)}
+              className="flex items-center gap-3 w-full text-left hover:opacity-90 transition-opacity"
+            >
+              <img
+                src={
+                  event.userPhotoURL ||
+                  `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(event.userDisplayName)}`
+                }
+                alt=""
+                className="w-10 h-10 rounded-full border border-app"
+                referrerPolicy="no-referrer"
+              />
+              <div>
+                <p className="text-xs text-muted">Posted by</p>
+                <p className="font-semibold text-app">{event.userDisplayName}</p>
+              </div>
+            </button>
+            <div className="border-t border-app pt-3">
               <p className="text-xs text-muted">Hosted by</p>
-              <p className="font-semibold text-app">{event.userDisplayName}</p>
+              <p className="font-semibold text-app">{hostLabel(event.hostedBy)}</p>
             </div>
-          </button>
+          </div>
 
           {isOwner && !isCancelled && onCancel && (
             <button
@@ -165,8 +176,8 @@ export default function EventDetailView({
             userProfile={userProfile}
             onViewProfile={onViewProfile}
             variant="detail"
-            rsvpDisabled={isCancelled || interactionsLocked}
-            interactionsLocked={interactionsLocked}
+            rsvpDisabled={isCancelled}
+            commentsLocked={commentsLocked}
           />
         </div>
       </div>

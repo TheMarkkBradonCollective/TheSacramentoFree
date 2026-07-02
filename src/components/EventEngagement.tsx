@@ -16,7 +16,7 @@ interface EventEngagementProps {
   onViewProfile?: (userId: string) => void;
   variant?: 'card' | 'detail';
   rsvpDisabled?: boolean;
-  interactionsLocked?: boolean;
+  commentsLocked?: boolean;
 }
 
 const RSVP_OPTIONS: { status: EventRsvpStatus; label: string; icon: typeof Check }[] = [
@@ -37,7 +37,7 @@ export default function EventEngagement({
   onViewProfile,
   variant = 'detail',
   rsvpDisabled = false,
-  interactionsLocked = false,
+  commentsLocked = false,
 }: EventEngagementProps) {
   const DETAIL_PREVIEW_COUNT = 5;
   const { userRsvp, going, maybe, notGoing } = rsvpState;
@@ -63,7 +63,9 @@ export default function EventEngagement({
   return (
     <section className={variant === 'detail' ? 'sbn-card p-4 space-y-3' : ''}>
       {variant === 'detail' && (
-        <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">RSVP &amp; discussion</h3>
+        <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
+          {commentsLocked ? 'RSVP' : 'RSVP & discussion'}
+        </h3>
       )}
 
       <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2' : ''}`}>
@@ -84,13 +86,8 @@ export default function EventEngagement({
             </button>
           );
         })}
-        {rsvpDisabled && variant === 'detail' && !interactionsLocked && (
+        {rsvpDisabled && variant === 'detail' && (
           <p className="text-xs text-muted italic">RSVPs are closed for cancelled events.</p>
-        )}
-        {interactionsLocked && variant === 'detail' && (
-          <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 w-full">
-            RSVP and comments open once we reach 1,000 neighbors — browse staff gatherings now.
-          </p>
         )}
         {variant === 'card' && (
           <span className="ml-auto text-xs text-muted flex items-center gap-1">
@@ -98,7 +95,7 @@ export default function EventEngagement({
             {comments.length}
           </span>
         )}
-        {variant === 'detail' && (
+        {variant === 'detail' && !commentsLocked && (
           <span className="ml-auto text-xs text-muted flex items-center gap-1">
             <MessageSquare className="w-3.5 h-3.5" />
             {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
@@ -108,11 +105,13 @@ export default function EventEngagement({
 
       {variant === 'detail' && (
         <div className="space-y-3 pt-1 border-t border-app">
-          {comments.length === 0 ? (
+          {commentsLocked ? (
+            <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2">
+              Comments open once we reach 1,000 neighbors. You can still RSVP Going, Maybe, or Can&apos;t go.
+            </p>
+          ) : comments.length === 0 ? (
             <p className="text-xs text-muted italic text-center py-2">
-              {interactionsLocked
-                ? 'No comments yet.'
-                : 'No comments yet — ask a question or say hi!'}
+              No comments yet — ask a question or say hi!
             </p>
           ) : (
             <>
@@ -184,7 +183,7 @@ export default function EventEngagement({
               )}
             </>
           )}
-          {!interactionsLocked && (
+          {!commentsLocked && (
           <form
             onSubmit={(e) => {
               e.preventDefault();

@@ -285,6 +285,8 @@ export interface CommunityEvent {
   userId: string;
   userDisplayName: string;
   userPhotoURL?: string;
+  /** Who is hosting the gathering (filled in by poster; may differ from poster). */
+  hostedBy?: string | null;
   /** Community events must always be free — enforced in DB and on create. */
   isFree: true;
   status: EventStatus;
