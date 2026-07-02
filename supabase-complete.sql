@@ -392,6 +392,8 @@ CREATE TABLE IF NOT EXISTS public.community_events (
   "userDisplayName" TEXT NOT NULL,
   "userPhotoURL" TEXT,
   "hostedBy" TEXT,
+  "locationLat" DOUBLE PRECISION,
+  "locationLng" DOUBLE PRECISION,
   "isFree" BOOLEAN NOT NULL DEFAULT true,
   status TEXT NOT NULL DEFAULT 'active',
   "imageUrl" TEXT,
@@ -400,6 +402,8 @@ CREATE TABLE IF NOT EXISTS public.community_events (
 );
 
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "hostedBy" TEXT;
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLat" DOUBLE PRECISION;
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION;
 
 ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_status_check;
 ALTER TABLE public.community_events ADD CONSTRAINT community_events_status_check

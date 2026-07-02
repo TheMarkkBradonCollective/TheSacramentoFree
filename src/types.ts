@@ -287,6 +287,9 @@ export interface CommunityEvent {
   userPhotoURL?: string;
   /** Who is hosting the gathering (filled in by poster; may differ from poster). */
   hostedBy?: string | null;
+  /** Optional GPS pin for map and directions (decimal degrees). */
+  locationLat?: number | null;
+  locationLng?: number | null;
   /** Community events must always be free — enforced in DB and on create. */
   isFree: true;
   status: EventStatus;

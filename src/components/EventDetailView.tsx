@@ -124,6 +124,17 @@ export default function EventDetailView({
               <div>
                 <p className="font-semibold">{event.location}</p>
                 <p className="text-muted text-xs">{event.neighborhood}</p>
+                {typeof event.locationLat === 'number' &&
+                  typeof event.locationLng === 'number' && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${event.locationLat},${event.locationLng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block text-xs text-accent font-semibold mt-1 hover:underline"
+                    >
+                      Open in Maps ({event.locationLat.toFixed(6)}, {event.locationLng.toFixed(6)})
+                    </a>
+                  )}
               </div>
             </div>
           </div>

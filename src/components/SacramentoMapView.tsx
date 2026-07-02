@@ -817,6 +817,15 @@ export default function SacramentoMapView({
     const neighborhoodCounts: Record<string, number> = {};
 
     return activeEvents.map((event) => {
+      if (
+        typeof event.locationLat === 'number' &&
+        typeof event.locationLng === 'number' &&
+        Number.isFinite(event.locationLat) &&
+        Number.isFinite(event.locationLng)
+      ) {
+        return { event, lat: event.locationLat, lng: event.locationLng };
+      }
+
       const parentCoord = NEIGHBORHOOD_COORDS[event.neighborhood] || { x: 50, y: 50 };
       const currentCount = neighborhoodCounts[event.neighborhood] || 0;
       neighborhoodCounts[event.neighborhood] = currentCount + 1;
