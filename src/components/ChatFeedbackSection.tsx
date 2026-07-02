@@ -38,10 +38,11 @@ export default function ChatFeedbackSection({
 
   return (
     <>
-      <div className="border-b border-app">
-        <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide">
+      <div className="pb-3">
+        <div className="px-4 pt-3 pb-1 text-xs font-semibold text-muted uppercase tracking-wide">
           Reviews & reports
         </div>
+        <div className="space-y-0.5 px-1">
         <ChatSidebarRow
           id="chat_row_reviews"
           icon={Star}
@@ -85,6 +86,7 @@ export default function ChatFeedbackSection({
             }
           />
         ) : null}
+        </div>
       </div>
 
       {panel === 'reviews' ? (

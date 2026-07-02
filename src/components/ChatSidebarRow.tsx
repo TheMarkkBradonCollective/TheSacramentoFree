@@ -3,11 +3,10 @@ import type { ReactNode } from 'react';
 
 export function chatSidebarRowClass(isSelected: boolean): string {
   return [
-    'w-full text-left p-3 flex items-start gap-3 transition-colors cursor-pointer',
-    'border-b border-app border-l-[3px]',
+    'w-full text-left p-3 mx-1.5 rounded-xl flex items-start gap-3 transition-colors cursor-pointer',
     isSelected
-      ? 'bg-accent-soft border-l-accent'
-      : 'border-l-transparent hover:bg-surface-hover',
+      ? 'bg-accent-soft ring-1 ring-accent/25 shadow-sm'
+      : 'hover:bg-surface-hover',
   ].join(' ');
 }
 

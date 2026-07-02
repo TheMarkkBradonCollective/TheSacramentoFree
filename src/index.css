@@ -718,6 +718,13 @@ option {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
 }
 
+.chat-thread-bg {
+  background-color: var(--color-bg-secondary);
+  background-image:
+    radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--color-accent) 6%, transparent) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, color-mix(in srgb, var(--color-inset) 80%, transparent) 0%, transparent 40%);
+}
+
 .sbn-btn {
   display: inline-flex;
   align-items: center;
