@@ -172,13 +172,11 @@ export default function DesktopView({
         )}
 
         {activeTab === 'chats' && (
-          <div className="space-y-4" id="desktop_chats_view_root">
-            <div className="sbn-page-header">
-              <h2>{IN_APP.chatsTitle}</h2>
-              <p>{IN_APP.chatsDescription}</p>
-            </div>
-            <div className="sbn-card-elevated overflow-hidden flex flex-col h-[min(32rem,calc(100dvh-13rem))] lg:h-[min(36rem,calc(100dvh-14rem))]">
-              <ChatSystem
+          <div
+            id="desktop_chats_view_root"
+            className="flex flex-col min-h-0 h-[min(42rem,calc(100dvh-6rem))] lg:h-[min(44rem,calc(100dvh-5.5rem))]"
+          >
+            <ChatSystem
                 userProfile={userProfile}
                 initialSelectedChatId={initialSelectedChatId}
                 onClearInitialChat={onClearInitialChat}
@@ -198,10 +196,8 @@ export default function DesktopView({
                 onOpenPrivacy={onOpenPrivacy}
                 onOpenTerms={onOpenTerms}
                 onStartDirectMessage={() => setActiveTab('feed')}
-                className="h-full min-h-0 border-0 rounded-none"
+                className="h-full min-h-0 flex-1 rounded-2xl border border-app overflow-hidden bg-surface"
               />
-            </div>
-            <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           </div>
         )}
 

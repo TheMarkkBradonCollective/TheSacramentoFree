@@ -228,13 +228,11 @@ export default function TabletView({
         )}
 
         {activeTab === 'chats' && (
-          <div className="space-y-4" id="tablet_chats_pane">
-            <div className="sbn-page-header">
-              <h2>{IN_APP.chatsTitle}</h2>
-              <p>{IN_APP.chatsDescription}</p>
-            </div>
-            <div className="sbn-card-elevated overflow-hidden flex flex-col h-[min(28rem,calc(100dvh-12rem))] md:h-[min(32rem,calc(100dvh-13rem))]">
-              <ChatSystem
+          <div
+            id="tablet_chats_pane"
+            className="flex flex-col min-h-0 h-[min(36rem,calc(100dvh-7rem))] md:h-[min(40rem,calc(100dvh-6.5rem))]"
+          >
+            <ChatSystem
                 userProfile={userProfile}
                 initialSelectedChatId={initialSelectedChatId}
                 onClearInitialChat={onClearInitialChat}
@@ -254,10 +252,8 @@ export default function TabletView({
                 onOpenPrivacy={onOpenPrivacy}
                 onOpenTerms={onOpenTerms}
                 onStartDirectMessage={() => setActiveTab('feed')}
-                className="h-full min-h-0 border-0 rounded-none"
+                className="h-full min-h-0 flex-1 rounded-2xl border border-app overflow-hidden bg-surface"
               />
-            </div>
-            <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           </div>
         )}
 
