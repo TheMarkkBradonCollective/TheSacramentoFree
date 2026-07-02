@@ -247,6 +247,8 @@ export default function DesktopView({
                 onViewEvent={onViewEvent}
                 onEditItem={onEditItem}
                 itemsHydrated={itemsHydrated}
+                eventsEngagement={eventsEngagement}
+                commentsLocked={!canAccessEvents}
               />
             </div>
           </div>

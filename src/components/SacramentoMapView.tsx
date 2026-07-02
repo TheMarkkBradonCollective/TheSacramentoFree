@@ -29,6 +29,8 @@ import { notifyPosterEnRoute } from '../lib/navigationNotify';
 import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
+import EventEngagement from './EventEngagement';
+import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
@@ -59,6 +61,8 @@ interface SacramentoMapViewProps {
   onImmersiveModeChange?: (active: boolean) => void;
   /** When false, defer nav session restore until listings have finished loading. */
   itemsHydrated?: boolean;
+  eventsEngagement?: EventsEngagementApi;
+  commentsLocked?: boolean;
 }
 
 const EVENT_MAP_COLOR = '#9333EA';
@@ -178,6 +182,9 @@ function MapSelectedEventCard({
   onPrev,
   onNext,
   onViewEvent,
+  userProfile,
+  eventsEngagement,
+  commentsLocked = false,
 }: {
   event: CommunityEvent;
   currentIndex: number;
@@ -188,7 +195,19 @@ function MapSelectedEventCard({
   onPrev: () => void;
   onNext: () => void;
   onViewEvent?: (event: CommunityEvent) => void;
+  userProfile: UserProfile;
+  eventsEngagement?: EventsEngagementApi;
+  commentsLocked?: boolean;
 }) {
+  const isCancelled = event.status === 'cancelled';
+  const rsvpState = eventsEngagement?.getRsvpsForEvent(event.id) ?? {
+    userRsvp: null,
+    going: 0,
+    maybe: 0,
+    notGoing: 0,
+  };
+  const comments = eventsEngagement?.getCommentsForEvent(event.id) ?? [];
+
   return (
     <motion.div
       key={event.id}
@@ -255,15 +274,30 @@ function MapSelectedEventCard({
             </p>
           </div>
 
+          {!isCancelled && eventsEngagement && (
+            <div className={compact ? 'mt-2 pt-2 border-t border-app' : 'mt-3 pt-3 border-t border-app'}>
+              <EventEngagement
+                hostUserId={event.userId}
+                currentUserId={userProfile.uid}
+                rsvpState={rsvpState}
+                comments={comments}
+                onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status)}
+                onAddComment={() => {}}
+                variant="card"
+                commentsLocked={commentsLocked}
+              />
+            </div>
+          )}
+
           {onViewEvent && (
-            <div className={`flex gap-1 shrink-0 ${compact ? 'mt-2 pt-2 border-t border-app' : 'mt-3 pt-3 border-t border-app'}`}>
+            <div className={`flex gap-1 shrink-0 ${compact ? 'mt-2' : 'mt-3'}`}>
               <button
                 type="button"
                 onClick={() => onViewEvent(event)}
-                className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                className="sbn-btn sbn-btn-primary sbn-btn-sm w-full"
               >
                 <Eye className="w-3.5 h-3.5" />
-                View event
+                View full event
               </button>
             </div>
           )}
@@ -381,6 +415,8 @@ export default function SacramentoMapView({
   onOpenNewPost,
   onImmersiveModeChange,
   itemsHydrated = true,
+  eventsEngagement,
+  commentsLocked = false,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -1440,6 +1476,9 @@ export default function SacramentoMapView({
                 onPrev={handlePrevEvent}
                 onNext={handleNextEvent}
                 onViewEvent={onViewEvent}
+                userProfile={userProfile}
+                eventsEngagement={eventsEngagement}
+                commentsLocked={commentsLocked}
               />
             )}
             {selectedPost && (
@@ -1974,6 +2013,9 @@ export default function SacramentoMapView({
             onPrev={handlePrevEvent}
             onNext={handleNextEvent}
             onViewEvent={onViewEvent}
+            userProfile={userProfile}
+            eventsEngagement={eventsEngagement}
+            commentsLocked={commentsLocked}
           />
         )}
         {selectedPost && (
