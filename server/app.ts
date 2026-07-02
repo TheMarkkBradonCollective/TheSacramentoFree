@@ -138,26 +138,20 @@ export function createPushApp() {
   });
 
   app.get('/api/map/route', async (req, res) => {
-    const parseCoord = (value: unknown): number | null => {
-      const n = typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;
-      return Number.isFinite(n) ? n : null;
-    };
+    const { parseRouteEndpoints, isInSacramentoServiceArea } = await import('../api/_lib/mapCoords');
+    const parsed = parseRouteEndpoints(req.query);
+    if ('error' in parsed) {
+      res.status(400).json({ error: parsed.error });
+      return;
+    }
 
-    const fromLat = parseCoord(req.query.fromLat);
-    const fromLng = parseCoord(req.query.fromLng);
-    const toLat = parseCoord(req.query.toLat);
-    const toLng = parseCoord(req.query.toLng);
-
-    if (fromLat === null || fromLng === null || toLat === null || toLng === null) {
-      res.status(400).json({ error: 'fromLat, fromLng, toLat, and toLng are required' });
+    if (!isInSacramentoServiceArea(parsed.from, parsed.to)) {
+      res.status(400).json({ error: 'Route must stay within the Sacramento service area' });
       return;
     }
 
     const { fetchOsrmDrivingRoute } = await import('../api/_lib/osrmRoute');
-    const route = await fetchOsrmDrivingRoute(
-      { lat: fromLat, lng: fromLng },
-      { lat: toLat, lng: toLng },
-    );
+    const route = await fetchOsrmDrivingRoute(parsed.from, parsed.to);
 
     if (!route) {
       res.status(502).json({ error: 'Could not calculate driving route' });
@@ -169,26 +163,20 @@ export function createPushApp() {
   });
 
   app.get('/api/map/navigation', async (req, res) => {
-    const parseCoord = (value: unknown): number | null => {
-      const n = typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;
-      return Number.isFinite(n) ? n : null;
-    };
+    const { parseRouteEndpoints, isInSacramentoServiceArea } = await import('../api/_lib/mapCoords');
+    const parsed = parseRouteEndpoints(req.query);
+    if ('error' in parsed) {
+      res.status(400).json({ error: parsed.error });
+      return;
+    }
 
-    const fromLat = parseCoord(req.query.fromLat);
-    const fromLng = parseCoord(req.query.fromLng);
-    const toLat = parseCoord(req.query.toLat);
-    const toLng = parseCoord(req.query.toLng);
-
-    if (fromLat === null || fromLng === null || toLat === null || toLng === null) {
-      res.status(400).json({ error: 'fromLat, fromLng, toLat, and toLng are required' });
+    if (!isInSacramentoServiceArea(parsed.from, parsed.to)) {
+      res.status(400).json({ error: 'Route must stay within the Sacramento service area' });
       return;
     }
 
     const { fetchOsrmNavigationRoute } = await import('../api/_lib/osrmNavigation');
-    const route = await fetchOsrmNavigationRoute(
-      { lat: fromLat, lng: fromLng },
-      { lat: toLat, lng: toLng },
-    );
+    const route = await fetchOsrmNavigationRoute(parsed.from, parsed.to);
 
     if (!route) {
       res.status(502).json({ error: 'Could not calculate navigation route' });

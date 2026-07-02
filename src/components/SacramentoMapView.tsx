@@ -443,7 +443,7 @@ export default function SacramentoMapView({
   const navigateNotifyOpenRef = useRef(false);
   const hasInitialMapCenterRef = useRef(false);
   const navRestoreDoneRef = useRef(false);
-  const skipNavResetForRestoreRef = useRef(false);
+  const prevSelectedPostIdRef = useRef<string | undefined>(undefined);
   const [mapReady, setMapReady] = useState(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -1038,6 +1038,9 @@ export default function SacramentoMapView({
       return;
     }
 
+    // Wait until listings have loaded — avoid clearing a valid session on an empty first fetch.
+    if (items.length === 0) return;
+
     const post = items.find((item) => item.id === session.postId);
     if (!post) {
       clearActiveNavSession();
@@ -1046,21 +1049,25 @@ export default function SacramentoMapView({
     }
 
     navRestoreDoneRef.current = true;
-    skipNavResetForRestoreRef.current = true;
+    prevSelectedPostIdRef.current = post.id;
     lockNavOrigin();
     setSelectedPost(post);
     setSelectedEvent(null);
     setNavigationOpen(true);
-    window.setTimeout(() => {
-      skipNavResetForRestoreRef.current = false;
-    }, 0);
   }, [items, itemsHydrated, userProfile.uid, lockNavOrigin]);
 
   useEffect(() => {
-    if (skipNavResetForRestoreRef.current) return;
+    const currentId = selectedPost?.id;
+    const previousId = prevSelectedPostIdRef.current;
+    prevSelectedPostIdRef.current = currentId;
+
+    // Skip mount and first selection (null/undefined -> post id), including nav session restore.
+    if (previousId === undefined || previousId === currentId) return;
+
     setNavigateNotifyOpen(false);
     if (!navigationOpenRef.current) return;
     setNavigationOpen(false);
+    setLockedNavOrigin(null);
     clearActiveNavSession();
   }, [selectedPost?.id]);
 
@@ -1145,6 +1152,7 @@ export default function SacramentoMapView({
     navigationOpen && routeDestination && selectedPost && lockedNavOrigin
       ? createPortal(
           <MapNavigationView
+            key={selectedPost.id}
             origin={lockedNavOrigin}
             destination={routeDestination}
             destinationLabel={selectedPost.title}

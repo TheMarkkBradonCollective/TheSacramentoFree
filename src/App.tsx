@@ -42,7 +42,17 @@ import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
 import TermsOfUseContent from './components/TermsOfUseContent';
 import AwardsPanel from './components/AwardsPanel';
-import { AppTab, parseAppTab } from './lib/appTabs';
+import { AppTab } from './lib/appTabs';
+import {
+  parseStoredTab,
+  parseTabFromHistoryState,
+  persistActiveTab,
+  pushActiveTabHistory,
+  readPersistedTab,
+  TAB_HISTORY_KEY,
+  TAB_STORAGE_KEY,
+  withTabInHistoryState,
+} from './lib/appNavigation';
 import {
   readCachedProfile,
   readCachedItems,
@@ -69,31 +79,41 @@ import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
-const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
-const TAB_HISTORY_KEY = 'sbnTab';
+const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
 
-function parseStoredTab(value: string | null): AppTab | null {
-  return parseAppTab(value);
+function readPendingDeepLinkPath(): string | null {
+  if (typeof window === 'undefined') return null;
+  const stored = window.sessionStorage.getItem(PENDING_DEEP_LINK_KEY);
+  if (stored) return stored;
+  const pathname = window.location.pathname;
+  return pathname && pathname !== '/' ? pathname : null;
 }
 
-function parseTabFromHistoryState(state: unknown): AppTab | null {
-  if (!state || typeof state !== 'object') return null;
-  const value = (state as Record<string, unknown>)[TAB_HISTORY_KEY];
-  return typeof value === 'string' ? parseStoredTab(value) : null;
-}
-
-function withTabInHistoryState(tab: AppTab) {
-  // Keep history state minimal/serializable to avoid DataCloneError crashes.
-  return { [TAB_HISTORY_KEY]: tab };
-}
-
-function persistActiveTab(tab: AppTab) {
+function rememberPendingDeepLinkPath(path: string) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(TAB_STORAGE_KEY, tab);
   try {
-    window.history.replaceState(withTabInHistoryState(tab), '', window.location.href);
-  } catch (err) {
-    console.warn('History replaceState unavailable, tab persistence fallback active:', err);
+    window.sessionStorage.setItem(PENDING_DEEP_LINK_KEY, path);
+  } catch {
+    // sessionStorage may be unavailable
+  }
+}
+
+function clearPendingDeepLinkPath() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(PENDING_DEEP_LINK_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function clearAppPathname() {
+  if (typeof window === 'undefined') return;
+  if (window.location.pathname === '/' && !window.location.search && !window.location.hash) return;
+  try {
+    window.history.replaceState(window.history.state, '', '/');
+  } catch {
+    // ignore
   }
 }
 
@@ -118,11 +138,7 @@ export default function App() {
   const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
   const logoutCleanupDoneRef = useRef(false);
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
-  const [activeTab, setActiveTab] = useState<AppTab>(() => {
-    if (typeof window === 'undefined') return 'map';
-    if (hasActiveNavSession(initialAuth.userProfile?.uid)) return 'map';
-    return parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
-  });
+  const [activeTab, setActiveTab] = useState<AppTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
   const [showPostModal, setShowPostModal] = useState(false);
   const [showPostEventModal, setShowPostEventModal] = useState(false);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
@@ -159,6 +175,15 @@ export default function App() {
     setActiveTab('map');
     persistActiveTab('map');
   }, []);
+
+  const navigateToTab = useCallback((tab: AppTab) => {
+    setActiveTab(tab);
+    persistActiveTab(tab);
+  }, []);
+
+  const pendingDeepLinkPathRef = useRef<string | null>(
+    typeof window !== 'undefined' ? readPendingDeepLinkPath() : null,
+  );
 
   const refreshLegalGates = useCallback(() => {
     if (!sessionUser?.id) {
@@ -310,7 +335,11 @@ export default function App() {
 
   useEffect(() => {
     if (sessionUser && !hadSessionOnMountRef.current) {
-      goHomeTab();
+      const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
+      const hasDeepLink = Boolean(pendingPath && parsePushDeepLink(pendingPath));
+      if (!hasDeepLink) {
+        goHomeTab();
+      }
     }
     hadSessionOnMountRef.current = !!sessionUser;
   }, [sessionUser, goHomeTab]);
@@ -318,10 +347,7 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const historyTab = parseTabFromHistoryState(window.history.state);
-    const storedTab = parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY));
-    const initialTab = historyTab || storedTab || 'map';
-
+    const initialTab = readPersistedTab(initialAuth.userProfile?.uid);
     if (initialTab !== activeTab) {
       setActiveTab(initialTab);
     }
@@ -367,11 +393,7 @@ export default function App() {
 
     const currentHistoryTab = parseTabFromHistoryState(window.history.state);
     if (currentHistoryTab === activeTab) return;
-    try {
-      window.history.pushState(withTabInHistoryState(activeTab), '', window.location.href);
-    } catch (err) {
-      console.warn('History pushState unavailable, continuing without tab back-stack:', err);
-    }
+    pushActiveTabHistory(activeTab);
   }, [activeTab]);
 
 
@@ -473,7 +495,11 @@ export default function App() {
           }
         }, 0);
         if (event === 'SIGNED_IN') {
-          goHomeTab();
+          const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
+          const hasDeepLink = Boolean(pendingPath && parsePushDeepLink(pendingPath));
+          if (!hasDeepLink) {
+            goHomeTab();
+          }
         }
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
           setTimeout(() => {
@@ -896,10 +922,10 @@ export default function App() {
 
   const handlePushDeepLink = useCallback(
     (target: PushDeepLinkTarget) => {
-      if (target.tab) setActiveTab(target.tab);
+      if (target.tab) navigateToTab(target.tab);
       if (target.conversationId) {
         setInitialSelectedChatId(target.conversationId);
-        setActiveTab('chats');
+        navigateToTab('chats');
       }
       if (target.listingId) {
         const existing = items.find((item) => item.id === target.listingId);
@@ -913,16 +939,16 @@ export default function App() {
         }
       }
       if (target.requestId) {
-        setActiveTab('chats');
+        navigateToTab('chats');
       }
       if (target.chatFeedbackPanel) {
         setInitialChatFeedbackPanel(target.chatFeedbackPanel);
-        setActiveTab('chats');
+        navigateToTab('chats');
       } else if (target.staffPanel === 'reports') {
         setInitialChatFeedbackPanel('staffReports');
-        setActiveTab('chats');
+        navigateToTab('chats');
       } else if (target.staffPanel === 'tickets') {
-        setActiveTab('chats');
+        navigateToTab('chats');
         setInitialChatSupportView('list');
       }
       if (target.notificationsTab) {
@@ -932,26 +958,40 @@ export default function App() {
       }
       if (target.directorOverview) {
         setScrollToDirectorOverview(true);
-        setActiveTab('profile');
+        navigateToTab('profile');
       }
       if (target.supportTicketId) {
         setInitialSupportTicketId(target.supportTicketId);
-        setActiveTab('chats');
+        navigateToTab('chats');
       }
       if (target.chatSupportView) {
         setInitialChatSupportView(target.chatSupportView);
-        setActiveTab('chats');
+        navigateToTab('chats');
       }
+      clearPendingDeepLinkPath();
+      clearAppPathname();
     },
-    [items],
+    [items, navigateToTab],
   );
 
   usePushDeepLinkNavigation(handlePushDeepLink);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const path = readPendingDeepLinkPath();
+    if (path) {
+      pendingDeepLinkPathRef.current = path;
+      rememberPendingDeepLinkPath(path);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!userProfile) return;
-    const target = parsePushDeepLink(window.location.pathname);
-    if (target) handlePushDeepLink(target);
+    const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
+    const target = pendingPath ? parsePushDeepLink(pendingPath) : parsePushDeepLink(window.location.pathname);
+    if (!target) return;
+    pendingDeepLinkPathRef.current = null;
+    handlePushDeepLink(target);
   }, [userProfile, handlePushDeepLink]);
 
   useEffect(() => {

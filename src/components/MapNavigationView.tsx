@@ -521,6 +521,15 @@ export default function MapNavigationView({
   const initialRouteRef = useRef(initialRoute);
   const mapBootstrappedRef = useRef(false);
 
+  useEffect(() => {
+    initialRouteRef.current = initialRoute;
+    if (!initialRoute || route) return;
+    setRoute(initialRoute);
+    setLoading(false);
+    setLoadingStage('ready');
+    routeAnnouncedRef.current = false;
+  }, [initialRoute, route]);
+
   const currentStep: NavigationStep | undefined = route?.steps[stepIndex];
 
   const remainingMeters = useMemo(() => {

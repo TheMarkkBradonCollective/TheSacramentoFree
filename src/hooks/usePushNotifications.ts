@@ -307,7 +307,16 @@ export function usePushDeepLinkNavigation(onNavigate: (target: import('../lib/pu
     return listenForNotificationClicks((url) => {
       import('../lib/pushDeepLink').then(({ parsePushDeepLink }) => {
         const target = parsePushDeepLink(url);
-        if (target) onNavigate(target);
+        if (!target) return;
+        try {
+          const path = new URL(url, window.location.origin).pathname;
+          if (path && path !== '/') {
+            window.sessionStorage.setItem('sbn_pending_deep_link_v1', path);
+          }
+        } catch {
+          // ignore malformed notification URLs
+        }
+        onNavigate(target);
       });
     });
   }, [onNavigate]);
