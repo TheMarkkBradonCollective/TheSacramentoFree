@@ -33,6 +33,12 @@ import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatSectionEmptyState from './ChatSectionEmptyState';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
 import ChatSidebarRow, { chatSidebarRowClass } from './ChatSidebarRow';
+import ChatConversationStrip, { type ConversationStripItem } from './ChatConversationStrip';
+import {
+  getMessageGroupMeta,
+  messageBubbleClass,
+  messageGroupSpacing,
+} from '../lib/chatMessageLayout';
 import PageScrollFooter from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { PresenceUserAvatar } from './UserAvatar';
@@ -829,6 +835,79 @@ export default function ChatSystem({
     return `${chat.itemTitle} · ${messengerName}`;
   };
 
+  const conversationStripItems = useMemo((): ConversationStripItem[] => {
+    const items: ConversationStripItem[] = [];
+
+    for (const chat of directChats.slice(0, 10)) {
+      const { otherId, otherPhoto, otherName } = getRecipientInfo(chat);
+      const title = getFormattedChatTitle(chat);
+      const shortLabel = title.includes(' · ') ? title.split(' · ').pop() || otherName : otherName;
+      items.push({
+        id: chat.id,
+        label: shortLabel,
+        avatarUid: otherId,
+        avatarSrc: otherPhoto,
+        selected: selectedChat?.id === chat.id && !supportView,
+        onClick: () => selectChat(chat),
+      });
+    }
+
+    for (const chat of communityChats) {
+      const isGlobal = isGlobalCommunityChat(chat.id);
+      items.push({
+        id: chat.id,
+        label: isGlobal ? 'All neighbors' : 'Staff lounge',
+        icon: isGlobal ? Globe : Shield,
+        iconClassName: isGlobal
+          ? 'bg-emerald-500/10 text-emerald-500'
+          : 'bg-violet-500/10 text-violet-500',
+        selected: selectedChat?.id === chat.id && !supportView,
+        onClick: () => selectChat(chat),
+      });
+    }
+
+    for (const ticket of supportTickets.slice(0, 6)) {
+      const label = isStaffSupportInbox
+        ? ticket.openerName.split(' ')[0] || 'Support'
+        : ticket.subject.slice(0, 12) || 'Support';
+      items.push({
+        id: `support-${ticket.id}`,
+        label,
+        avatarUid: isStaffSupportInbox ? ticket.openerUserId : userProfile.uid,
+        selected: !!supportView && supportOpenTicketId === ticket.id,
+        onClick: () => openSupportTicket(ticket.id),
+      });
+    }
+
+    if (incomingRequests.length > 0) {
+      items.unshift({
+        id: 'message-requests',
+        label: 'Requests',
+        icon: UserPlus,
+        iconClassName: 'bg-accent-soft text-accent',
+        badge: incomingRequests.length,
+        selected: false,
+        onClick: () => {
+          setSelectedChat(null);
+          setSupportView(null);
+        },
+      });
+    }
+
+    return items;
+  }, [
+    directChats,
+    communityChats,
+    supportTickets,
+    selectedChat?.id,
+    supportView,
+    supportOpenTicketId,
+    incomingRequests.length,
+    isStaffSupportInbox,
+    userProfile.uid,
+    items,
+  ]);
+
   const handleAcceptRequest = async (request: MessageRequest) => {
     setRequestBusyId(request.id);
     setErrorMsg('');
@@ -871,14 +950,6 @@ export default function ChatSystem({
     }
   };
 
-  const messageBubbleClass = (isUser: boolean) =>
-    [
-      'max-w-[min(85%,20rem)] sm:max-w-[min(75%,24rem)] px-3.5 py-2 text-sm rounded-2xl shadow-sm',
-      isUser
-        ? 'bg-accent text-on-accent rounded-br-md'
-        : 'bg-surface border border-app text-app rounded-bl-md',
-    ].join(' ');
-
   return (
     <div
       id="chat_app_viewport"
@@ -897,13 +968,18 @@ export default function ChatSystem({
           selectedChat || supportView ? 'hidden md:flex' : 'flex'
         }`}
       >
+        <ChatConversationStrip
+          items={conversationStripItems}
+          onStartConversation={onStartDirectMessage}
+        />
         <div className="flex-1 min-h-0 overflow-y-auto" id="chat_rooms_scrollable">
           {incomingRequests.length > 0 && (
-            <div className="border-b border-app">
-              <div className="px-4 py-2 flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wide">
+            <div className="pb-2">
+              <div className="px-4 pt-3 pb-1 flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wide">
                 <UserPlus className="w-3.5 h-3.5" />
                 Message requests
               </div>
+              <div className="px-2 space-y-2">
               {incomingRequests.map((request) => {
                 const busy = requestBusyId === request.id;
                 const photo =
@@ -912,7 +988,7 @@ export default function ChatSystem({
                 return (
                   <div
                     key={request.id}
-                    className="w-full p-3 flex flex-col gap-2 border-b border-app bg-surface/50"
+                    className="w-full p-3 flex flex-col gap-2 rounded-xl border border-app/60 bg-surface shadow-sm"
                   >
                     <div className="flex items-start gap-3">
                       <button
@@ -957,15 +1033,17 @@ export default function ChatSystem({
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
 
-          <div className="border-b border-app">
-            <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
+          <div className="pb-3">
+            <div className="px-4 pt-3 pb-1 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
               <MessageSquare className="w-3.5 h-3.5" />
               Direct messages
             </div>
 
+            <div className="space-y-0.5 px-1">
             <ChatSidebarRow
               id="chat_row_start_dm"
               icon={UserPlus}
@@ -1045,7 +1123,7 @@ export default function ChatSystem({
                   <button
                     type="button"
                     onClick={() => setShowAllDirectMessages(true)}
-                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-accent hover:bg-inset text-left border-t border-app/60"
+                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-accent hover:bg-inset text-left rounded-lg mx-1.5"
                   >
                     View all {directChats.length} direct messages
                   </button>
@@ -1053,20 +1131,22 @@ export default function ChatSystem({
                   <button
                     type="button"
                     onClick={() => setShowAllDirectMessages(false)}
-                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-muted hover:bg-inset text-left border-t border-app/60"
+                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-muted hover:bg-inset text-left rounded-lg mx-1.5"
                   >
                     Show fewer
                   </button>
                 ) : null}
               </>
             )}
+            </div>
           </div>
 
           {communityChats.length > 0 && (
-            <div className="border-b border-app">
-              <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide">
+            <div className="pb-3">
+              <div className="px-4 pt-1 pb-1 text-xs font-semibold text-muted uppercase tracking-wide">
                 {GROUP_CHATS_SECTION_LABEL}
               </div>
+              <div className="space-y-0.5 px-1">
               {communityChats.map((chat) => {
                 const isSelected = selectedChat?.id === chat.id && !supportView;
                 const isGlobal = isGlobalCommunityChat(chat.id);
@@ -1104,14 +1184,16 @@ export default function ChatSystem({
                   </button>
                 );
               })}
+              </div>
             </div>
           )}
 
-          <div className="border-b border-app">
-            <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
+          <div className="pb-3">
+            <div className="px-4 pt-1 pb-1 text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-2">
               <LifeBuoy className="w-3.5 h-3.5" />
               {isStaffSupportInbox ? 'Support inbox' : 'Support'}
             </div>
+            <div className="space-y-0.5 px-1">
             {!isStaffSupportInbox ? (
               <ChatSidebarRow
                 id="chat_row_new_support"
@@ -1155,7 +1237,7 @@ export default function ChatSystem({
                   <button
                     type="button"
                     onClick={() => openSupport('list')}
-                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-accent hover:bg-inset text-left border-t border-app/60"
+                    className="w-full px-4 py-2.5 text-[11px] font-semibold text-accent hover:bg-inset text-left rounded-lg mx-1.5"
                   >
                     View all {supportTickets.length}{' '}
                     {isStaffSupportInbox ? 'support conversations' : 'support tickets'}
@@ -1163,6 +1245,7 @@ export default function ChatSystem({
                 ) : null}
               </>
             )}
+            </div>
           </div>
 
           <ChatFeedbackSection
@@ -1343,8 +1426,15 @@ export default function ChatSystem({
                   ) : null}
                 </header>
 
+                <ChatConversationStrip
+                  items={conversationStripItems}
+                  onStartConversation={onStartDirectMessage}
+                  className="md:hidden"
+                  id="chat_thread_conversation_strip"
+                />
+
                 <div
-                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 space-y-2"
+                  className="chat-thread-bg flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4"
                   id="messages_scroller"
                 >
                   {errorMsg && (
@@ -1363,7 +1453,7 @@ export default function ChatSystem({
                       <p className="text-sm text-muted">Say hello to coordinate pickup.</p>
                     </div>
                   ) : (
-                    messages.map((msg) => {
+                    messages.map((msg, index) => {
                       const isUser = msg.senderId === userProfile.uid;
                       const senderInfo = senderNames[msg.senderId];
                       const senderLabel = senderInfo?.displayName || 'Neighbor';
@@ -1371,58 +1461,104 @@ export default function ChatSystem({
                       const isUnsending = unsendingMessageId === msg.id;
                       const showUnsend = isUser && canDelete;
                       const showStaffRemove = !isUser && canDelete;
+                      const groupMeta = getMessageGroupMeta(messages, index, userProfile.uid, {
+                        showNames: isCommunity,
+                      });
+                      const { otherId, otherPhoto } = isCommunity
+                        ? { otherId: msg.senderId, otherPhoto: senderInfo?.photoURL }
+                        : getRecipientInfo(selectedChat);
 
                       return (
                         <div
                           key={msg.id}
-                          className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
+                          className={`flex ${messageGroupSpacing(groupMeta)} ${
+                            isUser ? 'justify-end' : 'justify-start'
+                          }`}
                           id={`message_item_${msg.id}`}
                         >
-                          {isCommunity && !isUser && (
-                            <button
-                              type="button"
-                              onClick={() => onViewProfile?.(msg.senderId)}
-                              className="text-[10px] font-semibold text-muted mb-0.5 px-1 hover:text-accent"
-                            >
-                              {senderLabel}
-                            </button>
-                          )}
-                          <div className={messageBubbleClass(isUser)}>
-                            <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
-                            <div
-                              className={`flex items-center gap-1 mt-1 ${
-                                isUser ? 'justify-end' : 'justify-between'
-                              }`}
-                            >
-                              {showUnsend && (
+                          {!isUser ? (
+                            <div className="mr-2 flex w-8 shrink-0 flex-col justify-end pb-0.5">
+                              {groupMeta.showAvatar ? (
                                 <button
                                   type="button"
-                                  onClick={() => void handleUnsendMessage(msg)}
-                                  disabled={isUnsending}
-                                  className="p-1 rounded-full shrink-0 disabled:opacity-50 text-white/75 hover:text-white hover:bg-white/15"
-                                  title="Unsend and edit"
-                                  aria-label="Unsend and edit"
+                                  onClick={() => onViewProfile?.(msg.senderId)}
+                                  className="rounded-full"
                                 >
-                                  <Undo2 className="w-3 h-3" />
+                                  {isCommunity ? (
+                                    <PresenceUserAvatar
+                                      uid={msg.senderId}
+                                      src={senderInfo?.photoURL}
+                                      name={senderLabel}
+                                      size="sm"
+                                    />
+                                  ) : (
+                                    <PresenceUserAvatar
+                                      uid={otherId}
+                                      src={otherPhoto}
+                                      name={senderLabel}
+                                      size="sm"
+                                    />
+                                  )}
                                 </button>
+                              ) : (
+                                <span className="w-8" aria-hidden />
                               )}
-                              {showStaffRemove && (
-                                <button
-                                  type="button"
-                                  onClick={() => void handleRemoveMessage(msg)}
-                                  disabled={isUnsending}
-                                  className="p-1 rounded-full shrink-0 disabled:opacity-50 text-subtle hover:text-red-400 hover:bg-red-500/10"
-                                  title="Remove message"
-                                  aria-label="Remove message"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              )}
-                              <span
-                                className={`text-[10px] ${isUser ? 'text-white/75' : 'text-subtle'}`}
+                            </div>
+                          ) : null}
+
+                          <div
+                            className={`flex min-w-0 max-w-[min(85%,24rem)] flex-col ${
+                              isUser ? 'items-end' : 'items-start'
+                            }`}
+                          >
+                            {groupMeta.showSenderName && (
+                              <button
+                                type="button"
+                                onClick={() => onViewProfile?.(msg.senderId)}
+                                className="mb-0.5 px-1 text-[10px] font-semibold text-muted hover:text-accent"
                               >
-                                {formatTime(msg.createdAt) || 'Sending…'}
-                              </span>
+                                {senderLabel}
+                              </button>
+                            )}
+                            <div className={messageBubbleClass(isUser, groupMeta)}>
+                              <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                              {groupMeta.isLastInGroup && (
+                                <div
+                                  className={`mt-1 flex items-center gap-1 ${
+                                    isUser ? 'justify-end' : 'justify-between'
+                                  }`}
+                                >
+                                  {showUnsend && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleUnsendMessage(msg)}
+                                      disabled={isUnsending}
+                                      className="shrink-0 rounded-full p-1 text-white/75 hover:bg-white/15 hover:text-white disabled:opacity-50"
+                                      title="Unsend and edit"
+                                      aria-label="Unsend and edit"
+                                    >
+                                      <Undo2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                  {showStaffRemove && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleRemoveMessage(msg)}
+                                      disabled={isUnsending}
+                                      className="shrink-0 rounded-full p-1 text-subtle hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                                      title="Remove message"
+                                      aria-label="Remove message"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                  <span
+                                    className={`text-[10px] ${isUser ? 'text-white/75' : 'text-subtle'}`}
+                                  >
+                                    {formatTime(msg.createdAt) || 'Sending…'}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1518,7 +1654,7 @@ export default function ChatSystem({
                       <span>This listing is closed — chat is read-only.</span>
                     </div>
                   )}
-                  <div className="flex items-end gap-2 w-full">
+                  <div className="flex w-full items-end gap-2 rounded-full border border-app bg-inset/60 px-3 py-1.5 shadow-sm">
                     <input
                       type="text"
                       id="message_input_box"
@@ -1533,7 +1669,7 @@ export default function ChatSystem({
                             ? 'This chat is read-only'
                             : isCommunity
                               ? 'Message everyone…'
-                              : 'Type a message…'
+                              : 'Aa'
                       }
                       maxLength={2000}
                       required
@@ -1541,7 +1677,7 @@ export default function ChatSystem({
                         !!isChatDisabled ||
                         (isStaffCommunityChat(selectedChat.id) && !userIsStaff)
                       }
-                      className="sbn-input flex-1 min-w-0 text-sm py-2.5 disabled:opacity-60"
+                      className="min-w-0 flex-1 border-0 bg-transparent text-sm py-2 focus:outline-none focus:ring-0 disabled:opacity-60"
                     />
                     <button
                       type="submit"
@@ -1552,7 +1688,7 @@ export default function ChatSystem({
                         !!isChatDisabled ||
                         (isStaffCommunityChat(selectedChat.id) && !userIsStaff)
                       }
-                      className="sbn-btn sbn-btn-primary shrink-0 px-4 py-2.5 disabled:opacity-40"
+                      className="sbn-btn sbn-btn-primary shrink-0 rounded-full px-3 py-2 disabled:opacity-40"
                       aria-label="Send message"
                     >
                       <Send className="w-4 h-4" />

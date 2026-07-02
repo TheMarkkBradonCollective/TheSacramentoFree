@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Undo2 } from 'lucide-react';
 import { UserProfile, SupportTicket, SupportTicketMessage } from '../types';
 import {
@@ -16,6 +16,11 @@ import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useConfirm } from '../contexts/ConfirmContext';
+import {
+  getMessageGroupMeta,
+  messageBubbleClass,
+  messageGroupSpacing,
+} from '../lib/chatMessageLayout';
 
 interface SupportTicketThreadProps {
   ticket: SupportTicket;
@@ -50,6 +55,10 @@ export default function SupportTicketThread({
 
   const canAccess = canViewerAccessTicket(viewer, ticket);
   const isOpen = ticket.status === 'open';
+  const messageSenders = useMemo(
+    () => messages.map((m) => ({ senderId: m.senderUserId })),
+    [messages],
+  );
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -234,32 +243,37 @@ export default function SupportTicketThread({
 
       {err && <p className="px-4 py-2 text-xs font-semibold text-red-400">{err}</p>}
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
+      <div className="chat-thread-bg flex-1 min-h-0 overflow-y-auto p-4">
         {loading ? (
           <p className="text-sm text-muted text-center py-6">Loading messages…</p>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, index) => {
             const isMine = msg.senderUserId === viewer.uid;
             const showText = msg.text && msg.text !== '📷 Photo';
             const showUnsend = isOpen && isMine && canUnsendSupportTicketMessage(viewer, msg);
             const isUnsending = unsendingMessageId === msg.id;
+            const groupMeta = getMessageGroupMeta(messageSenders, index, viewer.uid, {
+              showNames: true,
+            });
+
             return (
               <div
                 key={msg.id}
-                className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${messageGroupSpacing(groupMeta)} ${
+                  isMine ? 'justify-end' : 'justify-start'
+                }`}
               >
                 <div
-                  className={`max-w-[min(85%,20rem)] sm:max-w-[min(75%,24rem)] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
-                    isMine
-                      ? 'bg-accent text-on-accent rounded-br-md'
-                      : 'bg-surface border border-app text-app rounded-bl-md'
+                  className={`flex min-w-0 max-w-[min(85%,24rem)] flex-col ${
+                    isMine ? 'items-end' : 'items-start'
                   }`}
                 >
-                  {!isMine && (
-                    <p className="text-[10px] font-bold uppercase tracking-wide opacity-70 mb-0.5">
+                  {groupMeta.showSenderName && (
+                    <p className="mb-0.5 px-1 text-[10px] font-bold uppercase tracking-wide text-muted">
                       {msg.senderName}
                     </p>
                   )}
+                  <div className={messageBubbleClass(isMine, groupMeta)}>
                   {msg.imageUrl && (
                     (() => {
                       const safeHref = safeHttpUrl(msg.imageUrl);
@@ -295,26 +309,29 @@ export default function SupportTicketThread({
                   {showText && (
                     <p className="leading-snug whitespace-pre-wrap">{msg.text}</p>
                   )}
-                  <div
-                    className={`flex items-center gap-1 mt-1 ${
-                      isMine ? 'justify-end' : 'justify-between'
-                    }`}
-                  >
-                    {showUnsend && (
-                      <button
-                        type="button"
-                        onClick={() => void handleUnsendMessage(msg)}
-                        disabled={isUnsending}
-                        className="p-1 rounded-full shrink-0 disabled:opacity-50 text-white/75 hover:text-white hover:bg-white/15"
-                        title="Unsend and edit"
-                        aria-label="Unsend and edit"
-                      >
-                        <Undo2 className="w-3 h-3" />
-                      </button>
-                    )}
-                    <p className={`text-[9px] ${isMine ? 'text-white/70' : 'text-muted'}`}>
-                      {new Date(msg.createdAt).toLocaleString()}
-                    </p>
+                  {groupMeta.isLastInGroup && (
+                    <div
+                      className={`mt-1 flex items-center gap-1 ${
+                        isMine ? 'justify-end' : 'justify-between'
+                      }`}
+                    >
+                      {showUnsend && (
+                        <button
+                          type="button"
+                          onClick={() => void handleUnsendMessage(msg)}
+                          disabled={isUnsending}
+                          className="shrink-0 rounded-full p-1 text-white/75 hover:bg-white/15 hover:text-white disabled:opacity-50"
+                          title="Unsend and edit"
+                          aria-label="Unsend and edit"
+                        >
+                          <Undo2 className="w-3 h-3" />
+                        </button>
+                      )}
+                      <p className={`text-[9px] ${isMine ? 'text-white/70' : 'text-muted'}`}>
+                        {new Date(msg.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
                   </div>
                 </div>
               </div>
