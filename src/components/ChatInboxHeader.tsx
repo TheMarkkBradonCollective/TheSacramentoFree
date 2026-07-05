@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ClipboardList, Edit, Flag, LifeBuoy, MoreHorizontal, Star } from 'lucide-react';
+import { IN_APP } from '../siteContent';
 import type { UserProfile } from '../types';
 import { canViewStaffReports } from '../lib/roles';
 import type { ChatFeedbackPanel } from './ChatFeedbackSection';
@@ -40,7 +41,7 @@ export default function ChatInboxHeader({
       className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-app bg-surface"
     >
       <div className="min-w-0">
-        <h2 className="font-display font-semibold text-lg text-app">Messages</h2>
+        <h2 className="font-display font-semibold text-lg text-app">{IN_APP.chatsTitle}</h2>
         <p className="text-xs text-muted">Chats with neighbors and support</p>
       </div>
       <div className="flex items-center gap-1 shrink-0">

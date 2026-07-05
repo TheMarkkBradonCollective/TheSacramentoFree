@@ -71,7 +71,7 @@ const MOBILE_NAV_LEFT = [
 const MOBILE_NAV_MAP = { id: 'map' as const, label: 'Map', icon: Map };
 
 const MOBILE_NAV_RIGHT = [
-  { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
+  { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ] as const;
 

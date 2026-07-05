@@ -29,6 +29,7 @@ import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight,
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import EventEngagement from './EventEngagement';
+import EventStatusBadge from './EventStatusBadge';
 import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
@@ -243,7 +244,7 @@ function MapSelectedEventCard({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: slideDirection === 'right' ? -(compact ? 70 : 80) : compact ? 70 : 80 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}
+      className={`${compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}${isCancelled ? ' opacity-60' : ''}`}
       id={compact ? 'mobile_map_event_detail_card' : 'map_event_detail_card'}
     >
       <div className={`absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg ${compact ? '' : 'top-2.5 py-0.5'}`}>
@@ -278,7 +279,7 @@ function MapSelectedEventCard({
 
       <div className={`flex gap-3 ${compact ? 'mt-2' : 'gap-4 text-left'}`}>
         <div
-          className={`shrink-0 rounded-xl border border-app flex items-center justify-center ${compact ? 'w-16 h-16' : 'w-18 h-18 sm:w-24 sm:h-24'}`}
+          className={`shrink-0 rounded-xl border border-app flex items-center justify-center ${compact ? 'w-16 h-16' : 'w-20 h-20 sm:w-24 sm:h-24'}`}
           style={{ backgroundColor: `${EVENT_MAP_COLOR}22` }}
         >
           <CalendarDays className={compact ? 'w-7 h-7' : 'w-9 h-9'} style={{ color: EVENT_MAP_COLOR }} />
@@ -286,12 +287,15 @@ function MapSelectedEventCard({
 
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
-            <span
-              className="inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider text-white"
-              style={{ backgroundColor: EVENT_MAP_COLOR }}
-            >
-              📅 EVENT
-            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span
+                className="inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider text-white"
+                style={{ backgroundColor: EVENT_MAP_COLOR }}
+              >
+                📅 EVENT
+              </span>
+              <EventStatusBadge status={eventStatus} />
+            </div>
             <h4 className={`font-semibold text-app mt-1 truncate ${compact ? 'text-xs' : 'text-sm'}`}>{event.title}</h4>
             <p className={`text-muted mt-0.5 line-clamp-2 ${compact ? 'text-[9.5px]' : 'text-xs'}`}>{event.description}</p>
             <p className={`text-accent font-semibold mt-1 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
@@ -1934,7 +1938,7 @@ export default function SacramentoMapView({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-[#000]/80 backdrop-blur-xs z-40 flex flex-col p-4 overflow-hidden font-sans"
+              className="absolute inset-0 bg-[#000]/80 backdrop-blur-sm z-40 flex flex-col p-4 overflow-hidden font-sans"
               id="map_category_color_guide_overlay"
             >
               <div className="bg-surface border border-app rounded-2xl flex-1 flex flex-col p-4 overflow-hidden max-h-full text-app">
@@ -1954,7 +1958,7 @@ export default function SacramentoMapView({
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin scrollbar-thumb-zinc-650">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                   <div>
                     <h5 className="text-[9px] font-extrabold text-accent uppercase tracking-wider mb-2 font-mono">Gives / Offers Colors</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
@@ -2130,7 +2134,7 @@ export default function SacramentoMapView({
                   : extractListingImageUrls(selectedPost);
                 const thumb = photos[0];
                 return thumb ? (
-                <div className="relative w-18 h-18 sm:w-24 sm:h-24 border border-app shrink-0 bg-app rounded-xl overflow-hidden">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 border border-app shrink-0 bg-app rounded-xl overflow-hidden">
                   <ListingImage
                     src={thumb}
                     alt={selectedPost.title}
@@ -2144,7 +2148,7 @@ export default function SacramentoMapView({
                   )}
                 </div>
               ) : (
-                <div className="w-18 h-18 sm:w-24 sm:h-24 bg-app border border-app shrink-0 flex flex-col items-center justify-center text-center rounded-xl">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-app border border-app shrink-0 flex flex-col items-center justify-center text-center rounded-xl">
                   <Tag className="w-5 h-5 text-subtle" />
                   <span className="text-[6.5px] text-subtle font-bold tracking-widest mt-1 block">NO IMAGE</span>
                 </div>

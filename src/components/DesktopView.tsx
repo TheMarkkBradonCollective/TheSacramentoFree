@@ -123,7 +123,7 @@ export default function DesktopView({
                 <div>
                   <h2>{IN_APP.feedTitle}</h2>
                   <p>
-                    {IN_APP.feedDescription} · <span className="text-accent font-semibold">{userProfile.neighborhood}</span>
+                    {IN_APP.feedDescription} · {items.length} listings
                   </p>
                 </div>
                 <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary shrink-0">

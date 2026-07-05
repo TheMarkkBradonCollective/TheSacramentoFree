@@ -66,7 +66,7 @@ const TABS = [
   { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: List },
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'map' as const, label: 'Map', icon: Map },
-  { id: 'chats' as const, label: 'Messages', icon: MessageSquare },
+  { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ];
 
