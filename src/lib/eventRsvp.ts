@@ -57,6 +57,18 @@ export function eventStatusLabel(status: EventStatus): string {
   }
 }
 
+/** Match listing status pill styles from `sbn-badge` in index.css. */
+export function getEventStatusBadgeClass(status: EventStatus): string {
+  switch (status) {
+    case 'upcoming':
+      return '';
+    case 'past':
+      return 'sbn-badge-done';
+    case 'cancelled':
+      return 'sbn-badge-withdrawn';
+  }
+}
+
 export function isUpcomingRsvpStatus(status: EventRsvpStatus): boolean {
   return UPCOMING_STATUSES.has(status);
 }

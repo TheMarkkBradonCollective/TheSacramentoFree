@@ -1,4 +1,4 @@
-import { Calendar, Eye, MapPin, Sparkles } from 'lucide-react';
+import { Calendar, Eye, MapPin } from 'lucide-react';
 import { CommunityEvent } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
@@ -78,8 +78,7 @@ export default function EventCard({
 
       <div className="flex-1 min-w-0 flex flex-col p-2.5 sm:p-4">
         <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-          <span className="sbn-badge sbn-badge-give text-[10px] sm:text-xs py-0.5 inline-flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
+          <span className="sbn-badge sbn-badge-give text-[10px] sm:text-xs py-0.5">
             Free event
           </span>
           <EventStatusBadge status={eventStatus} />
