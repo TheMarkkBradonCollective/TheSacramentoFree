@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { ArrowLeft, Calendar, MapPin, Pencil, Sparkles, XCircle } from 'lucide-react';
-import { CommunityEvent, EventComment, UserProfile } from '../types';
+import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
+import { isEventPast } from '../lib/eventRsvp';
 import EventDetailNavigation from './EventDetailNavigation';
 
 interface EventDetailViewProps {
@@ -12,7 +13,7 @@ interface EventDetailViewProps {
   userProfile?: UserProfile;
   rsvpState: EventRsvpState;
   comments: EventComment[];
-  onRsvp: (status: 'going' | 'maybe' | 'not_going') => void;
+  onRsvp: (status: EventRsvpStatus) => void;
   onAddComment: (text: string) => void;
   onDeleteComment?: (commentId: string) => void;
   onClose: () => void;
@@ -60,6 +61,7 @@ export default function EventDetailView({
   const [showPinModal, setShowPinModal] = useState(false);
   const isOwner = event.userId === currentUserId;
   const isCancelled = event.status === 'cancelled';
+  const isPast = isEventPast(event);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-app">
@@ -195,6 +197,7 @@ export default function EventDetailView({
             variant="detail"
             rsvpDisabled={isCancelled}
             commentsLocked={commentsLocked}
+            isPast={isPast}
           />
         </div>
       </div>

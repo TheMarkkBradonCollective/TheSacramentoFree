@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Check, Flag, HelpCircle, MessageSquare, Trash2, X } from 'lucide-react';
+import { Check, Flag, HelpCircle, MessageSquare, Trash2, UserCheck, UserX, X } from 'lucide-react';
 import { EventComment, EventRsvpStatus, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
+import { effectivePastRsvp } from '../lib/eventRsvp';
 
 interface EventEngagementProps {
   hostUserId: string;
@@ -17,12 +18,18 @@ interface EventEngagementProps {
   variant?: 'card' | 'detail';
   rsvpDisabled?: boolean;
   commentsLocked?: boolean;
+  isPast?: boolean;
 }
 
-const RSVP_OPTIONS: { status: EventRsvpStatus; label: string; icon: typeof Check }[] = [
+const UPCOMING_RSVP_OPTIONS: { status: EventRsvpStatus; label: string; icon: typeof Check }[] = [
   { status: 'going', label: 'Going', icon: Check },
   { status: 'maybe', label: 'Maybe', icon: HelpCircle },
   { status: 'not_going', label: "Can't go", icon: X },
+];
+
+const PAST_RSVP_OPTIONS: { status: EventRsvpStatus; label: string; icon: typeof Check }[] = [
+  { status: 'gone', label: 'Gone', icon: UserCheck },
+  { status: 'missed', label: 'Missed', icon: UserX },
 ];
 
 export default function EventEngagement({
@@ -38,11 +45,15 @@ export default function EventEngagement({
   variant = 'detail',
   rsvpDisabled = false,
   commentsLocked = false,
+  isPast = false,
 }: EventEngagementProps) {
   const DETAIL_PREVIEW_COUNT = 5;
-  const { userRsvp, going, maybe, notGoing } = rsvpState;
+  const { userRsvp, going, maybe, notGoing, gone, missed } = rsvpState;
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
+
+  const rsvpOptions = isPast ? PAST_RSVP_OPTIONS : UPCOMING_RSVP_OPTIONS;
+  const activeRsvp = isPast ? effectivePastRsvp(userRsvp) : userRsvp;
 
   const visibleComments = useMemo(() => {
     if (variant !== 'detail') return comments;
@@ -60,24 +71,33 @@ export default function EventEngagement({
         : 'border-app text-muted hover:border-accent'
     }`;
 
+  const countForStatus = (status: EventRsvpStatus): number => {
+    if (status === 'going') return going;
+    if (status === 'maybe') return maybe;
+    if (status === 'not_going') return notGoing;
+    if (status === 'gone') return gone;
+    if (status === 'missed') return missed;
+    return 0;
+  };
+
   return (
     <section className={variant === 'detail' ? 'sbn-card p-4 space-y-3' : ''}>
       {variant === 'detail' && (
         <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
-          {commentsLocked ? 'RSVP' : 'RSVP & discussion'}
+          {commentsLocked ? (isPast ? 'Attendance' : 'RSVP') : isPast ? 'Attendance & discussion' : 'RSVP & discussion'}
         </h3>
       )}
 
       <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2' : ''}`}>
         {!rsvpDisabled &&
-          RSVP_OPTIONS.map(({ status, label, icon: Icon }) => {
-          const count = status === 'going' ? going : status === 'maybe' ? maybe : notGoing;
+          rsvpOptions.map(({ status, label, icon: Icon }) => {
+          const count = countForStatus(status);
           return (
             <button
               key={status}
               type="button"
               onClick={() => onRsvp(status)}
-              className={rsvpBtnClass(userRsvp === status)}
+              className={rsvpBtnClass(activeRsvp === status)}
               title={label}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -107,7 +127,9 @@ export default function EventEngagement({
         <div className="space-y-3 pt-1 border-t border-app">
           {commentsLocked ? (
             <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2">
-              Comments open once we reach 1,000 neighbors. You can still RSVP Going, Maybe, or Can&apos;t go.
+              {isPast
+                ? 'Comments open once we reach 1,000 neighbors. You can still mark whether you went or missed it.'
+                : 'Comments open once we reach 1,000 neighbors. You can still RSVP Going, Maybe, or Can\u2019t go.'}
             </p>
           ) : comments.length === 0 ? (
             <p className="text-xs text-muted italic text-center py-2">
