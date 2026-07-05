@@ -66,7 +66,7 @@ const TABS = [
   { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: List },
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'map' as const, label: 'Map', icon: Map },
-  { id: 'chats' as const, label: 'Messages', icon: MessageSquare },
+  { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ];
 
@@ -184,7 +184,9 @@ export default function TabletView({
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2>{IN_APP.eventsTitle}</h2>
-                  <p>{IN_APP.eventsDescription}</p>
+                  <p>
+                    {IN_APP.eventsDescription} · {events.length} events
+                  </p>
                 </div>
                 {canAccessEvents && (
                 <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary shrink-0">
@@ -193,6 +195,7 @@ export default function TabletView({
                 )}
               </div>
             </div>
+            <CommunityStatsBar items={items} variant="full" />
             <EventsPanel
               events={events}
               userProfile={userProfile}

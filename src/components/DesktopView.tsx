@@ -123,7 +123,7 @@ export default function DesktopView({
                 <div>
                   <h2>{IN_APP.feedTitle}</h2>
                   <p>
-                    {IN_APP.feedDescription} · <span className="text-accent font-semibold">{userProfile.neighborhood}</span>
+                    {IN_APP.feedDescription} · {items.length} listings
                   </p>
                 </div>
                 <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary shrink-0">
@@ -150,7 +150,9 @@ export default function DesktopView({
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2>{IN_APP.eventsTitle}</h2>
-                  <p>{IN_APP.eventsDescription}</p>
+                  <p>
+                    {IN_APP.eventsDescription} · {events.length} events
+                  </p>
                 </div>
                 {canAccessEvents && (
                 <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary shrink-0">
@@ -159,6 +161,7 @@ export default function DesktopView({
                 )}
               </div>
             </div>
+            <CommunityStatsBar items={items} variant="full" />
             <EventsPanel
               events={events}
               userProfile={userProfile}

@@ -1,7 +1,7 @@
-/** Community logo (public/Logo.jpeg). */
-export const APP_LOGO_SRC = '/Logo.jpeg';
-export const PUSH_ICON_SRC = '/Logo.jpeg';
-export const PUSH_BADGE_SRC = '/Logo.jpeg';
+/** Community logo (public/icon.svg). */
+export const APP_LOGO_SRC = '/icon.svg';
+export const PUSH_ICON_SRC = '/icon.svg';
+export const PUSH_BADGE_SRC = '/icon.svg';
 
 export const SITE = {
   name: 'Sacramento Buy Nothing',
@@ -214,7 +214,8 @@ export const IN_APP = {
     'Neighborhood potlucks, swaps, and meetups — always 100% free. Unlocks for everyone when we reach 1,000 neighbors.',
   eventsTabLabel: 'Events',
   postEventButton: 'Post Event',
-  chatsTitle: 'Chat',
+  chatsTabLabel: 'Messages',
+  chatsTitle: 'Messages',
   chatsDescription:
     'Group chats, reviews, support, and direct messages — coordinate pickups and get help from staff.',
   profileTitle: 'Your Community Profile',

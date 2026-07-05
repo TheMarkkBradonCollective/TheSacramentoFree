@@ -1,8 +1,6 @@
-import { CalendarDays, Heart, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
+import { CalendarDays, Sparkles } from 'lucide-react';
 import { CommunityEvent, UserProfile } from '../types';
 import { useEventsUnlock } from '../hooks/useEventsUnlock';
-import { EVENTS } from '../siteContent';
 import EventsSharePrompt from './EventsSharePrompt';
 import EventsView from './EventsView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
@@ -26,84 +24,49 @@ export default function EventsPanel({
   onRefresh,
   isLoading = false,
 }: EventsPanelProps) {
-  const { unlockStatus, loading, isCommunityUnlocked, canAccessEvents, canManage } =
-    useEventsUnlock(userProfile);
+  const { unlockStatus, loading, isCommunityUnlocked, canAccessEvents } = useEventsUnlock(userProfile);
 
   if (loading) {
     return (
-      <div className="py-12 text-center space-y-3">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent-soft border border-accent/30 sbn-award-icon-pop">
-          <Sparkles className="w-7 h-7 text-accent animate-pulse" />
+      <div className="sbn-card text-center py-16 px-8 border-dashed">
+        <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-accent-soft border border-accent/30 mx-auto mb-3">
+          <Sparkles className="w-5 h-5 text-accent animate-pulse" />
         </div>
-        <p className="text-sm font-semibold text-muted">Checking events unlock…</p>
+        <p className="text-sm text-muted">Checking events unlock…</p>
       </div>
     );
   }
 
-  const showSneakPeek = !canAccessEvents && events.length === 0;
-  const showEventsList = events.length > 0 || canAccessEvents;
+  const sneakPeek = !canAccessEvents && events.length === 0;
 
   return (
     <div className="space-y-6">
-      {!isCommunityUnlocked && unlockStatus && !canManage && (
-        <EventsSharePrompt unlockStatus={unlockStatus} />
-      )}
-
-      {!isCommunityUnlocked && unlockStatus && canManage && (
+      {!isCommunityUnlocked && unlockStatus && (
         <EventsSharePrompt unlockStatus={unlockStatus} variant="compact" />
       )}
 
       {isCommunityUnlocked && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="sbn-card p-5 text-center space-y-2 border-accent/20 bg-gradient-to-b from-accent-soft/15 to-transparent"
-        >
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft border border-accent/25">
-            <CalendarDays className="w-6 h-6 text-accent" />
-          </div>
-          <p className="text-sm text-muted leading-relaxed max-w-md mx-auto">{EVENTS.unlockedIntro}</p>
-        </motion.div>
-      )}
-
-      {showSneakPeek && (
-        <div className="sbn-card p-5 text-left space-y-4 rounded-2xl border-accent/15 bg-gradient-to-b from-accent-soft/15 to-transparent">
-          <p className="text-sm font-display font-bold text-app flex items-center gap-2">
-            <Heart className="w-4 h-4 text-accent fill-accent/30" />
-            Sneak peek at what&apos;s coming
+        <div className="sbn-card p-4 sm:p-5 flex items-start gap-3">
+          <span className="sbn-stat-icon bg-accent/15 text-accent shrink-0">
+            <CalendarDays className="w-4 h-4" strokeWidth={2.5} />
+          </span>
+          <p className="text-sm text-muted leading-relaxed">
+            Free neighborhood gatherings are live — potlucks, swaps, park meetups, and more.
           </p>
-          <ul className="space-y-2.5 text-sm text-muted">
-            {EVENTS.previewBullets.map((line) => (
-              <li key={line} className="flex items-start gap-2.5">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-accent-soft flex items-center justify-center text-xs">
-                  ✓
-                </span>
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 
-      {showEventsList && (
-        <div className="space-y-4">
-          {!isCommunityUnlocked && events.length > 0 && (
-            <p className="text-sm text-muted leading-relaxed border-l-2 border-l-accent pl-3">
-              {EVENTS.staffPreviewNote}
-            </p>
-          )}
-          <EventsView
-            events={events}
-            userProfile={userProfile}
-            engagement={engagement}
-            onViewEvent={onViewEvent}
-            onViewProfile={onViewProfile}
-            onRefresh={onRefresh}
-            isLoading={isLoading}
-            commentsLocked={!canAccessEvents}
-          />
-        </div>
-      )}
+      <EventsView
+        events={events}
+        userProfile={userProfile}
+        engagement={engagement}
+        onViewEvent={onViewEvent}
+        onViewProfile={onViewProfile}
+        onRefresh={onRefresh}
+        isLoading={isLoading}
+        commentsLocked={!canAccessEvents}
+        sneakPeek={sneakPeek}
+      />
     </div>
   );
 }

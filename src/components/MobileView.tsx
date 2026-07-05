@@ -71,7 +71,7 @@ const MOBILE_NAV_LEFT = [
 const MOBILE_NAV_MAP = { id: 'map' as const, label: 'Map', icon: Map };
 
 const MOBILE_NAV_RIGHT = [
-  { id: 'chats' as const, label: 'Chat', icon: MessageSquare },
+  { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
   { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ] as const;
 
@@ -246,8 +246,11 @@ export default function MobileView({
           <div className="max-w-2xl mx-auto">
             <div className="sbn-page-header">
               <h2>{IN_APP.eventsTitle}</h2>
-              <p>{IN_APP.eventsDescription}</p>
+              <p>
+                {IN_APP.eventsDescription} · {events.length} events
+              </p>
             </div>
+            <CommunityStatsBar items={items} variant="compact" />
             <EventsPanel
               events={events}
               userProfile={userProfile}
