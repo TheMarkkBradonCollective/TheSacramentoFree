@@ -76,14 +76,20 @@ export default function CommunityStatsBar({ items = [], variant = 'full' }: Comm
     getCommunityStats().then(setDbStats);
   }, []);
 
-  // Derive live counts from the already-loaded items array for instant display,
-  // overriding with DB counts once they arrive.
-  const activeListings = dbStats?.activeListings ?? items.filter((i) => i.status === 'active').length;
+  // Prefer counts from already-loaded items when we have them; DB counts can be 0 for guests
+  // or when RLS blocks aggregate queries even though listings loaded successfully.
+  const derivedActiveListings = items.filter((i) => i.status === 'active').length;
+  const derivedItemsGiven = items.filter((i) => i.type === 'giveaway' && i.status === 'completed').length;
+  const derivedRequestsFulfilled = items.filter((i) => i.type === 'looking' && i.status === 'completed').length;
+
+  const activeListings =
+    items.length > 0 ? derivedActiveListings : (dbStats?.activeListings ?? derivedActiveListings);
   const itemsGiven =
-    dbStats?.itemsGiven ?? items.filter((i) => i.type === 'giveaway' && i.status === 'completed').length;
+    items.length > 0 ? derivedItemsGiven : (dbStats?.itemsGiven ?? derivedItemsGiven);
   const requestsFulfilled =
-    dbStats?.requestsFulfilled ??
-    items.filter((i) => i.type === 'looking' && i.status === 'completed').length;
+    items.length > 0
+      ? derivedRequestsFulfilled
+      : (dbStats?.requestsFulfilled ?? derivedRequestsFulfilled);
   const memberCount = dbStats?.memberCount ?? null;
 
   if (variant === 'compact') {

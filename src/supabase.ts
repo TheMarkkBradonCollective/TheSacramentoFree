@@ -213,7 +213,7 @@ CREATE POLICY "Allow write community events" ON public.community_events FOR ALL 
 CREATE TABLE IF NOT EXISTS public.event_rsvps (
   "eventId" TEXT NOT NULL,
   "userId" TEXT NOT NULL,
-  "rsvpStatus" TEXT NOT NULL CHECK ("rsvpStatus" IN ('going', 'maybe', 'not_going')),
+  "rsvpStatus" TEXT NOT NULL CHECK ("rsvpStatus" IN ('going', 'maybe', 'not_going', 'gone', 'missed')),
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY ("eventId", "userId")

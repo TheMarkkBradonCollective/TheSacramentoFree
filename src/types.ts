@@ -272,7 +272,12 @@ export interface UserBlock {
 }
 
 export type EventStatus = 'active' | 'cancelled';
-export type EventRsvpStatus = 'going' | 'maybe' | 'not_going';
+export type EventRsvpStatus =
+  | 'going'
+  | 'maybe'
+  | 'not_going'
+  | 'gone'
+  | 'missed';
 
 export interface CommunityEvent {
   id: string;

@@ -9,12 +9,70 @@ import {
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { countPastRsvps, effectivePastRsvp } from '../lib/eventRsvp';
 
 export interface EventRsvpState {
   userRsvp: EventRsvpStatus | null;
   going: number;
   maybe: number;
   notGoing: number;
+  gone: number;
+  missed: number;
+}
+
+const EMPTY_RSVP_STATE: EventRsvpState = {
+  userRsvp: null,
+  going: 0,
+  maybe: 0,
+  notGoing: 0,
+  gone: 0,
+  missed: 0,
+};
+
+function buildRsvpState(rsvpsForEvent: EventRsvp[], uid: string): EventRsvpState {
+  const rawUserRsvp = (rsvpsForEvent.find((rsvp) => rsvp.userId === uid)?.rsvpStatus || null) as
+    | EventRsvpStatus
+    | null;
+  const statuses = rsvpsForEvent.map((rsvp) => rsvp.rsvpStatus);
+  const pastCounts = countPastRsvps(statuses);
+
+  return {
+    userRsvp: rawUserRsvp,
+    going: rsvpsForEvent.filter((rsvp) => rsvp.rsvpStatus === 'going').length,
+    maybe: rsvpsForEvent.filter((rsvp) => rsvp.rsvpStatus === 'maybe').length,
+    notGoing: rsvpsForEvent.filter((rsvp) => rsvp.rsvpStatus === 'not_going').length,
+    gone: pastCounts.gone,
+    missed: pastCounts.missed,
+  };
+}
+
+function adjustRsvpCounts(
+  current: EventRsvpState,
+  previousStatus: EventRsvpStatus | null,
+  nextStatus: EventRsvpStatus | null,
+): EventRsvpState {
+  const next = { ...current, userRsvp: nextStatus };
+
+  const decrement = (status: EventRsvpStatus) => {
+    if (status === 'going') next.going = Math.max(0, next.going - 1);
+    else if (status === 'maybe') next.maybe = Math.max(0, next.maybe - 1);
+    else if (status === 'not_going') next.notGoing = Math.max(0, next.notGoing - 1);
+    else if (status === 'gone') next.gone = Math.max(0, next.gone - 1);
+    else if (status === 'missed') next.missed = Math.max(0, next.missed - 1);
+  };
+
+  const increment = (status: EventRsvpStatus) => {
+    if (status === 'going') next.going += 1;
+    else if (status === 'maybe') next.maybe += 1;
+    else if (status === 'not_going') next.notGoing += 1;
+    else if (status === 'gone') next.gone += 1;
+    else if (status === 'missed') next.missed += 1;
+  };
+
+  if (previousStatus) decrement(previousStatus);
+  if (nextStatus) increment(nextStatus);
+
+  return next;
 }
 
 export function useEventsEngagement(
@@ -30,8 +88,7 @@ export function useEventsEngagement(
   const eventIdSetRef = useRef(new Set<string>());
 
   const getRsvpsForEvent = useCallback(
-    (eventId: string): EventRsvpState =>
-      eventRsvps[eventId] ?? { userRsvp: null, going: 0, maybe: 0, notGoing: 0 },
+    (eventId: string): EventRsvpState => eventRsvps[eventId] ?? EMPTY_RSVP_STATE,
     [eventRsvps],
   );
 
@@ -60,14 +117,7 @@ export function useEventsEngagement(
       const nextRsvps: Record<string, EventRsvpState> = {};
       for (const eventId of eventIds) {
         const rsvpsForEvent = rsvps.filter((rsvp) => rsvp.eventId === eventId);
-        nextRsvps[eventId] = {
-          userRsvp: (rsvpsForEvent.find((rsvp) => rsvp.userId === uid)?.rsvpStatus || null) as
-            | EventRsvpStatus
-            | null,
-          going: rsvpsForEvent.filter((rsvp) => rsvp.rsvpStatus === 'going').length,
-          maybe: rsvpsForEvent.filter((rsvp) => rsvp.rsvpStatus === 'maybe').length,
-          notGoing: rsvpsForEvent.filter((rsvp) => rsvp.rsvpStatus === 'not_going').length,
-        };
+        nextRsvps[eventId] = buildRsvpState(rsvpsForEvent, uid);
       }
       setEventRsvps(nextRsvps);
 
@@ -103,14 +153,7 @@ export function useEventsEngagement(
         const next = { ...prev };
         for (const eventId of tracked) {
           const rsvpsForEvent = rsvps.filter((r) => r.eventId === eventId);
-          next[eventId] = {
-            userRsvp: (rsvpsForEvent.find((r) => r.userId === uid)?.rsvpStatus || null) as
-              | EventRsvpStatus
-              | null,
-            going: rsvpsForEvent.filter((r) => r.rsvpStatus === 'going').length,
-            maybe: rsvpsForEvent.filter((r) => r.rsvpStatus === 'maybe').length,
-            notGoing: rsvpsForEvent.filter((r) => r.rsvpStatus === 'not_going').length,
-          };
+          next[eventId] = buildRsvpState(rsvpsForEvent, uid);
         }
         return next;
       });
@@ -155,42 +198,33 @@ export function useEventsEngagement(
     };
   }, [uid, eventIds.join('|'), reloadEngagementForEvents]);
 
-  const handleRsvp = (eventId: string, _hostUserId: string, status: EventRsvpStatus) => {
+  const handleRsvp = (
+    eventId: string,
+    _hostUserId: string,
+    status: EventRsvpStatus,
+    isPast = false,
+  ) => {
     if (!uid) return;
 
     const current = getRsvpsForEvent(eventId);
+    const displayStatus = isPast ? effectivePastRsvp(current.userRsvp) : current.userRsvp;
 
     let newUserRsvp: EventRsvpStatus | null = null;
-    let newGoing = current.going;
-    let newMaybe = current.maybe;
-    let newNotGoing = current.notGoing;
-
-    if (current.userRsvp === status) {
+    if (displayStatus === status) {
       newUserRsvp = null;
-      if (status === 'going') newGoing = Math.max(0, newGoing - 1);
-      else if (status === 'maybe') newMaybe = Math.max(0, newMaybe - 1);
-      else newNotGoing = Math.max(0, newNotGoing - 1);
     } else {
-      if (current.userRsvp === 'going') newGoing = Math.max(0, newGoing - 1);
-      if (current.userRsvp === 'maybe') newMaybe = Math.max(0, newMaybe - 1);
-      if (current.userRsvp === 'not_going') newNotGoing = Math.max(0, newNotGoing - 1);
       newUserRsvp = status;
-      if (status === 'going') newGoing += 1;
-      else if (status === 'maybe') newMaybe += 1;
-      else newNotGoing += 1;
     }
+
+    const persistStatus = newUserRsvp;
+    const optimisticState = adjustRsvpCounts(current, displayStatus, newUserRsvp);
 
     setEventRsvps((prev) => ({
       ...prev,
-      [eventId]: {
-        userRsvp: newUserRsvp,
-        going: newGoing,
-        maybe: newMaybe,
-        notGoing: newNotGoing,
-      },
+      [eventId]: optimisticState,
     }));
 
-    setSupabaseEventRsvp(eventId, uid, newUserRsvp).catch((err) => {
+    setSupabaseEventRsvp(eventId, uid, persistStatus).catch((err) => {
       console.warn('Failed to persist RSVP:', err);
       setEventRsvps((prev) => ({ ...prev, [eventId]: current }));
     });

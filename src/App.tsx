@@ -77,6 +77,7 @@ import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
+import { isEventPast } from './lib/eventRsvp';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -1334,7 +1335,12 @@ export default function App() {
                   rsvpState={eventsEngagement.getRsvpsForEvent(detailEvent.id)}
                   comments={eventsEngagement.getCommentsForEvent(detailEvent.id)}
                   onRsvp={(status) =>
-                    eventsEngagement.handleRsvp(detailEvent.id, detailEvent.userId, status)
+                    eventsEngagement.handleRsvp(
+                      detailEvent.id,
+                      detailEvent.userId,
+                      status,
+                      isEventPast(detailEvent),
+                    )
                   }
                   onAddComment={(text) => eventsEngagement.handleAddComment(detailEvent.id, text)}
                   onDeleteComment={(commentId) =>

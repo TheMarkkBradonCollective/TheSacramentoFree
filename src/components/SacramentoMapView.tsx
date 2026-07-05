@@ -29,6 +29,7 @@ import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight,
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import EventEngagement from './EventEngagement';
+import { isEventPast } from '../lib/eventRsvp';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
@@ -223,11 +224,14 @@ function MapSelectedEventCard({
   onOpenExternalMaps?: () => void;
 }) {
   const isCancelled = event.status === 'cancelled';
+  const isPast = isEventPast(event);
   const rsvpState = eventsEngagement?.getRsvpsForEvent(event.id) ?? {
     userRsvp: null,
     going: 0,
     maybe: 0,
     notGoing: 0,
+    gone: 0,
+    missed: 0,
   };
   const comments = eventsEngagement?.getCommentsForEvent(event.id) ?? [];
 
@@ -304,10 +308,11 @@ function MapSelectedEventCard({
                 currentUserId={userProfile.uid}
                 rsvpState={rsvpState}
                 comments={comments}
-                onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status)}
+                onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status, isPast)}
                 onAddComment={() => {}}
                 variant="card"
                 commentsLocked={commentsLocked}
+                isPast={isPast}
               />
             </div>
           )}

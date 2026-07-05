@@ -2,6 +2,7 @@ import { Calendar, MapPin, Sparkles } from 'lucide-react';
 import { CommunityEvent } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
+import { isEventPast } from '../lib/eventRsvp';
 
 interface EventCardProps {
   event: CommunityEvent;
@@ -37,6 +38,7 @@ export default function EventCard({
   commentsLocked = false,
 }: EventCardProps) {
   const isCancelled = event.status === 'cancelled';
+  const isPast = isEventPast(event);
   const rsvpState = engagement.getRsvpsForEvent(event.id);
   const comments = engagement.getCommentsForEvent(event.id);
 
@@ -121,10 +123,11 @@ export default function EventCard({
             currentUserId={currentUserId}
             rsvpState={rsvpState}
             comments={comments}
-            onRsvp={(status) => engagement.handleRsvp(event.id, event.userId, status)}
+            onRsvp={(status) => engagement.handleRsvp(event.id, event.userId, status, isPast)}
             onAddComment={() => {}}
             variant="card"
             commentsLocked={commentsLocked}
+            isPast={isPast}
           />
         </div>
       )}

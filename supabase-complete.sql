@@ -428,7 +428,7 @@ CREATE TABLE IF NOT EXISTS public.event_rsvps (
 
 ALTER TABLE public.event_rsvps DROP CONSTRAINT IF EXISTS event_rsvps_status_check;
 ALTER TABLE public.event_rsvps ADD CONSTRAINT event_rsvps_status_check
-  CHECK ("rsvpStatus" IN ('going', 'maybe', 'not_going'));
+  CHECK ("rsvpStatus" IN ('going', 'maybe', 'not_going', 'gone', 'missed'));
 
 ALTER TABLE public.event_rsvps ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS event_rsvps_event_idx ON public.event_rsvps ("eventId");
@@ -1879,6 +1879,7 @@ CREATE POLICY "users_director_role" ON public.users
 
 DROP POLICY IF EXISTS "Allow public read items" ON public.items;
 DROP POLICY IF EXISTS "Allow write operations" ON public.items;
+DROP POLICY IF EXISTS "items_select_public_active" ON public.items;
 DROP POLICY IF EXISTS "items_select_authenticated" ON public.items;
 DROP POLICY IF EXISTS "items_insert_own" ON public.items;
 DROP POLICY IF EXISTS "items_update_own" ON public.items;
@@ -1886,6 +1887,9 @@ DROP POLICY IF EXISTS "items_delete_own" ON public.items;
 
 CREATE POLICY "items_select_authenticated" ON public.items
   FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "items_select_public_active" ON public.items
+  FOR SELECT USING (status = 'active');
 
 CREATE POLICY "items_insert_own" ON public.items
   FOR INSERT WITH CHECK (auth.uid()::text = "userId");
