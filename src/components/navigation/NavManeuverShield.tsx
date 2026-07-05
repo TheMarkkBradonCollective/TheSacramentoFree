@@ -1,4 +1,4 @@
-import type { ManeuverIconKind } from '../lib/navigationRoute';
+import type { ManeuverIconKind } from '../../lib/navigationRoute';
 
 interface NavManeuverShieldProps {
   kind: ManeuverIconKind;

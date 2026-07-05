@@ -119,7 +119,7 @@ function NavLoadingOverlay({ stage, destinationLabel }: { stage: NavLoadingStage
         <p className="text-sm font-bold text-[var(--sbn-nav-text)] mt-4">{label}</p>
         <p className="text-xs text-[var(--sbn-nav-text-secondary)] mt-1 truncate max-w-[16rem]">To {destinationLabel}</p>
         <div className="sbn-nav-loading-steps" aria-hidden>
-          <span className={stage === 'locating' ? 'active' : stage !== 'locating' ? 'done' : ''} />
+          <span className={stage === 'locating' ? 'active' : 'done'} />
           <span className={stage === 'routing' ? 'active' : stage === 'ready' ? 'done' : ''} />
           <span className={stage === 'ready' ? 'active' : ''} />
         </div>

@@ -1234,14 +1234,15 @@ export default function SacramentoMapView({
   const navigationOverlay =
     navigationOpen && routeDestination && lockedNavOrigin && navTargetId
       ? createPortal(
-          <MapNavigationView
-            key={navTargetId}
-            origin={lockedNavOrigin}
-            destination={routeDestination}
-            destinationLabel={navTargetLabel}
-            initialRoute={prefetchedNavRoute}
-            onExit={handleExitNavigation}
-          />,
+          <React.Fragment key={navTargetId}>
+            <MapNavigationView
+              origin={lockedNavOrigin}
+              destination={routeDestination}
+              destinationLabel={navTargetLabel}
+              initialRoute={prefetchedNavRoute}
+              onExit={handleExitNavigation}
+            />
+          </React.Fragment>,
           document.body,
         )
       : null;

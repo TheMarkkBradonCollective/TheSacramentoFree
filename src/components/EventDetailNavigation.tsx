@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CommunityEvent } from '../types';
 import {
@@ -133,16 +133,17 @@ export default function EventDetailNavigation({ event }: EventDetailNavigationPr
 
       {navigationOpen && lockedOrigin && destination && (
         createPortal(
-          <MapNavigationView
-            key={event.id}
-            origin={lockedOrigin}
-            destination={destination}
-            destinationLabel={event.title}
-            onExit={() => {
-              setNavigationOpen(false);
-              setLockedOrigin(null);
-            }}
-          />,
+          <Fragment key={event.id}>
+            <MapNavigationView
+              origin={lockedOrigin}
+              destination={destination}
+              destinationLabel={event.title}
+              onExit={() => {
+                setNavigationOpen(false);
+                setLockedOrigin(null);
+              }}
+            />
+          </Fragment>,
           document.body,
         )
       )}
