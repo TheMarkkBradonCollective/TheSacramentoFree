@@ -1,7 +1,7 @@
-/** Community logo (public/icon.svg). */
-export const APP_LOGO_SRC = '/icon.svg';
-export const PUSH_ICON_SRC = '/icon.svg';
-export const PUSH_BADGE_SRC = '/icon.svg';
+/** Community logo (public/Logo.jpeg). */
+export const APP_LOGO_SRC = '/Logo.jpeg';
+export const PUSH_ICON_SRC = '/Logo.jpeg';
+export const PUSH_BADGE_SRC = '/Logo.jpeg';
 
 export const SITE = {
   name: 'Sacramento Buy Nothing',
