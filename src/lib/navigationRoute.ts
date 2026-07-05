@@ -468,6 +468,33 @@ export function estimateLaneCount(step?: NavigationStep | null): number {
   }
 }
 
+/** Which lane slots to highlight for the upcoming maneuver (heuristic). */
+export function activeLaneIndices(laneCount: number, kind: ManeuverIconKind): number[] {
+  if (laneCount <= 0) return [];
+  if (laneCount === 1) return [0];
+
+  switch (kind) {
+    case 'left':
+    case 'slight-left':
+    case 'uturn':
+      return laneCount === 2 ? [0] : [0, 1].filter((index) => index < laneCount);
+    case 'right':
+    case 'slight-right':
+    case 'roundabout':
+      return laneCount === 2 ? [1] : [laneCount - 2, laneCount - 1].filter((index) => index >= 0);
+    case 'arrive':
+      return [Math.floor(laneCount / 2)];
+    default:
+      if (laneCount === 2) return [0, 1];
+      const mid = Math.floor(laneCount / 2);
+      return [mid - 1, mid].filter((index) => index >= 0 && index < laneCount);
+  }
+}
+
+export function shouldShowLaneGuidance(kind: ManeuverIconKind): boolean {
+  return kind !== 'straight' && kind !== 'arrive';
+}
+
 export function formatSpeedMph(speedMetersPerSecond: number | null | undefined): string | null {
   if (speedMetersPerSecond == null || Number.isNaN(speedMetersPerSecond) || speedMetersPerSecond < 0) {
     return null;

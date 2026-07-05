@@ -28,9 +28,12 @@ import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { touchActiveNavSession } from '../lib/navigationSession';
 import { useTheme } from '../theme/ThemeContext';
 import {
+  activeLaneIndices,
   bearingAlongRoute,
   bearingDegrees,
   distanceToRouteMeters,
+  estimateLaneCount,
+  estimateSpeedLimitMph,
   fetchNavigationRoute,
   findCurrentStepIndex,
   formatArrivalTime,
@@ -42,6 +45,7 @@ import {
   maneuverIconKind,
   remainingRouteMeters,
   shouldFireVoiceCue,
+  shouldShowLaneGuidance,
   smoothHeadingDegrees,
   type ManeuverIconKind,
   type NavigationRouteResult,
@@ -97,12 +101,70 @@ function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean 
   );
 }
 
-function NavSpeedPuck({ currentMph }: { currentMph: string | null }) {
-  if (!currentMph) return null;
+function laneArrowForKind(kind: ManeuverIconKind): string {
+  switch (kind) {
+    case 'left':
+    case 'slight-left':
+    case 'uturn':
+      return '↰';
+    case 'right':
+    case 'slight-right':
+    case 'roundabout':
+      return '↱';
+    default:
+      return '↑';
+  }
+}
+
+function NavLaneGuidance({ laneCount, maneuverKind }: { laneCount: number; maneuverKind: ManeuverIconKind }) {
+  if (laneCount < 2 || !shouldShowLaneGuidance(maneuverKind)) return null;
+
+  const active = new Set(activeLaneIndices(laneCount, maneuverKind));
+  const arrow = laneArrowForKind(maneuverKind);
+
   return (
-    <div className="sbn-nav-speed-puck sbn-nav-glass pointer-events-auto" aria-label={`Current speed ${currentMph} miles per hour`}>
-      <p className="sbn-nav-speed-puck-value">{currentMph}</p>
-      <p className="sbn-nav-speed-puck-unit">mph</p>
+    <div className="sbn-nav-lane" aria-label={`Use lane ${[...active].map((i) => i + 1).join(' or ')}`}>
+      {Array.from({ length: laneCount }, (_, index) => (
+        <div
+          key={index}
+          className={`sbn-nav-lane-slot text-sm font-black ${active.has(index) ? 'sbn-nav-lane-slot-active' : ''}`}
+          aria-hidden={!active.has(index)}
+        >
+          {active.has(index) ? arrow : ''}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NavSpeedCard({ currentMph, limitMph }: { currentMph: string | null; limitMph: number }) {
+  const current = currentMph != null ? Number.parseInt(currentMph, 10) : null;
+  const speedClass =
+    current == null || Number.isNaN(current)
+      ? 'sbn-nav-speed-current--ok'
+      : current > limitMph + 5
+        ? 'sbn-nav-speed-current--over'
+        : current > limitMph
+          ? 'sbn-nav-speed-current--warn'
+          : 'sbn-nav-speed-current--ok';
+
+  return (
+    <div
+      className="sbn-nav-speed-card sbn-nav-glass pointer-events-auto"
+      aria-label={
+        currentMph
+          ? `Speed limit ${limitMph} miles per hour, current speed ${currentMph}`
+          : `Speed limit ${limitMph} miles per hour`
+      }
+    >
+      <div className="sbn-nav-speed-limit">
+        <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--sbn-nav-text-secondary)]">Limit</p>
+        <p className="text-lg font-black tabular-nums leading-none text-[var(--sbn-nav-text)]">{limitMph}</p>
+      </div>
+      <div className={`sbn-nav-speed-current ${speedClass}`}>
+        <p className="text-[9px] font-bold uppercase tracking-wider opacity-70">Now</p>
+        <p className="text-xl font-black tabular-nums leading-none">{currentMph ?? '—'}</p>
+      </div>
     </div>
   );
 }
@@ -1124,6 +1186,10 @@ export default function MapNavigationView({
       ? currentStep?.name?.trim() || navigationCueStep?.name?.trim() || bannerStreet
       : navigationCueStep?.name?.trim() || currentStep?.name?.trim() || bannerStreet;
 
+  const laneGuidanceStep = navigationCueStep ?? currentStep;
+  const laneCount = estimateLaneCount(laneGuidanceStep);
+  const speedLimitMph = estimateSpeedLimitMph(currentStep ?? navigationCueStep);
+
   useEffect(() => {
     const map = mapRef.current;
     const pos = userPosRef.current;
@@ -1231,6 +1297,10 @@ export default function MapNavigationView({
                   {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
                 </p>
               )}
+
+              {!loading && !arrived && (
+                <NavLaneGuidance laneCount={laneCount} maneuverKind={maneuverKind} />
+              )}
             </motion.div>
 
             <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
@@ -1239,7 +1309,7 @@ export default function MapNavigationView({
           {!loading && route && (
             <div className="relative flex-1 min-h-0">
               <div className="absolute left-3 bottom-3 pointer-events-auto">
-                <NavSpeedPuck currentMph={speedMph} />
+                <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} />
               </div>
 
               <div className="absolute right-3 top-2 flex flex-col gap-2.5 pointer-events-auto">

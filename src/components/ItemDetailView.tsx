@@ -23,6 +23,7 @@ import {
 } from '../lib/listingContent';
 import ListingPhotoGallery from './ListingPhotoGallery';
 import ListingEngagement from './ListingEngagement';
+import ItemDetailNavigation from './ItemDetailNavigation';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
@@ -230,11 +231,14 @@ export default function ItemDetailView({
           <section className="sbn-card p-4 space-y-3">
             <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">Pickup location</h3>
             {showExact && mapsUrl ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-sm text-app">
                   Exact pickup spot is shared for this listing.
                   {address ? ` Address: ${address}` : ''}
                 </p>
+                {userProfile && (
+                  <ItemDetailNavigation item={item} currentUserId={currentUserId} userProfile={userProfile} />
+                )}
                 <a
                   href={mapsUrl}
                   target="_blank"

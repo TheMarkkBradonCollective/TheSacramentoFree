@@ -13,6 +13,7 @@ import ReviewsPage from './pages/ReviewsPage';
 import GoFundMePage from './pages/GoFundMePage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import NotFoundPage from './pages/NotFoundPage';
 import AuthPage from './AuthPage';
 import { ItemPost } from '../../types';
 
@@ -82,6 +83,8 @@ export default function PublicSite({
             isAuthLoading={isAuthLoading}
           />
         );
+      case 'not-found':
+        return <NotFoundPage onNavigate={navigate} />;
       case 'home':
       default:
         return (
