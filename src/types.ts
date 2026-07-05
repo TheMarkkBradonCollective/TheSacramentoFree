@@ -271,7 +271,7 @@ export interface UserBlock {
   createdAt?: any;
 }
 
-export type EventStatus = 'active' | 'cancelled';
+export type EventStatus = 'upcoming' | 'past' | 'cancelled';
 export type EventRsvpStatus =
   | 'going'
   | 'maybe'

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Calendar, MapPin, Sparkles, Camera, Trash2 } from 'lucide-react';
 import { SACRAMENTO_NEIGHBORHOODS, CommunityEvent, UserProfile, findClosestNeighborhoodByLatLng } from '../types';
 import { createSupabaseEvent, updateSupabaseEvent, uploadItemImage } from '../supabase';
+import { isEventEditable } from '../lib/eventRsvp';
 import EventLocationMapPicker from './EventLocationMapPicker';
 
 interface PostEventModalProps {
@@ -24,6 +25,7 @@ export default function PostEventModal({
   onSuccess,
 }: PostEventModalProps) {
   const isEditing = !!editEvent;
+  const editBlocked = isEditing && editEvent ? !isEventEditable(editEvent) : false;
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -97,6 +99,11 @@ export default function PostEventModal({
       endIso = endDate.toISOString();
     }
 
+    if (editBlocked) {
+      setErrorMsg('Past and cancelled events cannot be edited.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const eventId = editEvent?.id || `event_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -124,7 +131,7 @@ export default function PostEventModal({
       locationLat,
       locationLng,
       isFree: true,
-      status: editEvent?.status || 'active',
+      status: editEvent?.status === 'cancelled' ? 'cancelled' : 'upcoming',
       imageUrl: finalImageUrl || undefined,
       createdAt: editEvent?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -170,6 +177,12 @@ export default function PostEventModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {editBlocked && (
+            <p className="text-sm text-muted bg-inset border border-app rounded-lg px-3 py-2">
+              This event is {editEvent?.status === 'cancelled' ? 'cancelled' : 'in the past'} and can no longer be edited.
+            </p>
+          )}
+
           {errorMsg && (
             <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
               {errorMsg}
@@ -326,7 +339,7 @@ export default function PostEventModal({
             <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
               Cancel
             </button>
-            <button type="submit" disabled={isSubmitting} className="sbn-btn sbn-btn-primary flex-1">
+            <button type="submit" disabled={isSubmitting || editBlocked} className="sbn-btn sbn-btn-primary flex-1">
               {isSubmitting ? 'Saving…' : isEditing ? 'Save changes' : 'Post event'}
             </button>
           </div>

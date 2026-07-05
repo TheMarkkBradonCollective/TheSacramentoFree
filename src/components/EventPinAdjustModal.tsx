@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, MapPin } from 'lucide-react';
 import { CommunityEvent, findClosestNeighborhoodByLatLng } from '../types';
 import { updateSupabaseEvent } from '../supabase';
+import { isEventEditable } from '../lib/eventRsvp';
 import EventLocationMapPicker from './EventLocationMapPicker';
 
 interface EventPinAdjustModalProps {
@@ -11,12 +12,18 @@ interface EventPinAdjustModalProps {
 }
 
 export default function EventPinAdjustModal({ event, onClose, onSaved }: EventPinAdjustModalProps) {
+  const editBlocked = !isEventEditable(event);
   const [latitude, setLatitude] = useState<number | null>(event.locationLat ?? null);
   const [longitude, setLongitude] = useState<number | null>(event.locationLng ?? null);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSave = async () => {
+    if (editBlocked) {
+      setErrorMsg('Past and cancelled events cannot be edited.');
+      return;
+    }
+
     if (latitude === null || longitude === null) {
       setErrorMsg('Tap the map to place a pin before saving.');
       return;
@@ -66,6 +73,12 @@ export default function EventPinAdjustModal({ event, onClose, onSaved }: EventPi
         </div>
 
         <div className="p-4 space-y-4">
+          {editBlocked && (
+            <p className="text-sm text-muted bg-inset border border-app rounded-lg px-3 py-2">
+              This event can no longer be edited.
+            </p>
+          )}
+
           {errorMsg && (
             <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
               {errorMsg}
@@ -90,7 +103,7 @@ export default function EventPinAdjustModal({ event, onClose, onSaved }: EventPi
             <button
               type="button"
               onClick={() => void handleSave()}
-              disabled={saving}
+              disabled={saving || editBlocked}
               className="sbn-btn sbn-btn-primary flex-1"
             >
               {saving ? 'Saving…' : 'Save pin'}
