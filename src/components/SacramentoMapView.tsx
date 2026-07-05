@@ -29,7 +29,7 @@ import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight,
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import EventEngagement from './EventEngagement';
-import { isEventPast } from '../lib/eventRsvp';
+import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
@@ -223,7 +223,8 @@ function MapSelectedEventCard({
   onStartNavigation?: () => void;
   onOpenExternalMaps?: () => void;
 }) {
-  const isCancelled = event.status === 'cancelled';
+  const eventStatus = resolveEventStatus(event);
+  const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
   const rsvpState = eventsEngagement?.getRsvpsForEvent(event.id) ?? {
     userRsvp: null,
@@ -708,7 +709,7 @@ export default function SacramentoMapView({
     if (!showEventsOnMap) return [];
 
     return events.filter((event) => {
-      if (event.status !== 'active') return false;
+      if (!isEventUpcoming(event)) return false;
 
       const searchString = `${event.title} ${event.description} ${event.location} ${event.neighborhood}`.toLowerCase();
       const matchesSearch = searchString.includes(sTerm.toLowerCase());

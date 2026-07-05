@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ArrowLeft, Calendar, MapPin, Pencil, Sparkles, XCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Pencil, Sparkles } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
-import { isEventPast } from '../lib/eventRsvp';
+import { isEventEditable, isEventPast, resolveEventStatus } from '../lib/eventRsvp';
+import EventStatusBadge from './EventStatusBadge';
 import EventDetailNavigation from './EventDetailNavigation';
 
 interface EventDetailViewProps {
@@ -59,9 +60,11 @@ export default function EventDetailView({
   commentsLocked = false,
 }: EventDetailViewProps) {
   const [showPinModal, setShowPinModal] = useState(false);
+  const eventStatus = resolveEventStatus(event);
   const isOwner = event.userId === currentUserId;
-  const isCancelled = event.status === 'cancelled';
+  const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
+  const canEdit = isOwner && isEventEditable(event);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-app">
@@ -75,7 +78,7 @@ export default function EventDetailView({
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="font-display font-bold text-app flex-1 truncate">Event details</h1>
-        {isOwner && !isCancelled && onEdit && (
+        {canEdit && onEdit && (
           <button
             type="button"
             onClick={onEdit}
@@ -105,12 +108,7 @@ export default function EventDetailView({
                 <Sparkles className="w-3 h-3" />
                 Free event
               </span>
-              {isCancelled && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
-                  <XCircle className="w-3 h-3" />
-                  Cancelled
-                </span>
-              )}
+              <EventStatusBadge status={eventStatus} />
             </div>
             <h2 className="font-display text-2xl font-bold text-app leading-tight">{event.title}</h2>
           </div>
@@ -132,7 +130,7 @@ export default function EventDetailView({
               <div>
                 <p className="font-semibold">{event.location}</p>
                 <p className="text-muted text-xs">{event.neighborhood}</p>
-                {isOwner && !isCancelled && (
+                {canEdit && (
                   <button
                     type="button"
                     onClick={() => setShowPinModal(true)}
@@ -173,7 +171,7 @@ export default function EventDetailView({
             </div>
           </div>
 
-          {isOwner && !isCancelled && onCancel && (
+          {canEdit && onCancel && (
             <button
               type="button"
               onClick={onCancel}

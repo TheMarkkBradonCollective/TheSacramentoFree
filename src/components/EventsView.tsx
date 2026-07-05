@@ -1,5 +1,6 @@
 import { CommunityEvent, UserProfile } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
+import { isEventUpcoming } from '../lib/eventRsvp';
 import EventCard from './EventCard';
 
 interface EventsViewProps {
@@ -24,13 +25,8 @@ export default function EventsView({
   isLoading = false,
   commentsLocked = false,
 }: EventsViewProps) {
-  const now = Date.now();
-  const upcoming = events.filter(
-    (e) => e.status === 'active' && new Date(e.eventStartAt).getTime() >= now - 3 * 60 * 60 * 1000,
-  );
-  const past = events.filter(
-    (e) => e.status !== 'active' || new Date(e.eventStartAt).getTime() < now - 3 * 60 * 60 * 1000,
-  );
+  const upcoming = events.filter((e) => isEventUpcoming(e));
+  const past = events.filter((e) => !isEventUpcoming(e));
 
   if (isLoading && events.length === 0) {
     return (

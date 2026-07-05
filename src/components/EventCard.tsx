@@ -2,7 +2,8 @@ import { Calendar, MapPin, Sparkles } from 'lucide-react';
 import { CommunityEvent } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
-import { isEventPast } from '../lib/eventRsvp';
+import { isEventPast, resolveEventStatus } from '../lib/eventRsvp';
+import EventStatusBadge from './EventStatusBadge';
 
 interface EventCardProps {
   event: CommunityEvent;
@@ -37,7 +38,8 @@ export default function EventCard({
   onViewProfile,
   commentsLocked = false,
 }: EventCardProps) {
-  const isCancelled = event.status === 'cancelled';
+  const eventStatus = resolveEventStatus(event);
+  const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
   const rsvpState = engagement.getRsvpsForEvent(event.id);
   const comments = engagement.getCommentsForEvent(event.id);
@@ -67,11 +69,7 @@ export default function EventCard({
                 <Sparkles className="w-3 h-3" />
                 Free event
               </span>
-              {isCancelled && (
-                <span className="text-[10px] font-bold uppercase tracking-wide text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
-                  Cancelled
-                </span>
-              )}
+              <EventStatusBadge status={eventStatus} />
             </div>
             <h3 className="font-display font-bold text-app text-lg mt-1.5 leading-snug">{event.title}</h3>
           </div>

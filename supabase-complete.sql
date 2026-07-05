@@ -395,7 +395,7 @@ CREATE TABLE IF NOT EXISTS public.community_events (
   "locationLat" DOUBLE PRECISION,
   "locationLng" DOUBLE PRECISION,
   "isFree" BOOLEAN NOT NULL DEFAULT true,
-  status TEXT NOT NULL DEFAULT 'active',
+  status TEXT NOT NULL DEFAULT 'upcoming',
   "imageUrl" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
@@ -406,8 +406,13 @@ ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLat" DOUBL
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION;
 
 ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_status_check;
+UPDATE public.community_events SET status = 'upcoming' WHERE status = 'active';
+UPDATE public.community_events
+  SET status = 'past'
+  WHERE status IN ('active', 'upcoming')
+    AND "eventStartAt" < NOW() - INTERVAL '3 hours';
 ALTER TABLE public.community_events ADD CONSTRAINT community_events_status_check
-  CHECK (status IN ('active', 'cancelled'));
+  CHECK (status IN ('upcoming', 'past', 'cancelled'));
 
 ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_free_only;
 ALTER TABLE public.community_events ADD CONSTRAINT community_events_free_only

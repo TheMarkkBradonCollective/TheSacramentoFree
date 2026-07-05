@@ -78,7 +78,7 @@ import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
-import { isEventPast } from './lib/eventRsvp';
+import { isEventEditable, isEventPast } from './lib/eventRsvp';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -1374,6 +1374,7 @@ export default function App() {
                   }
                   onClose={() => setDetailEvent(null)}
                   onEdit={() => {
+                    if (!isEventEditable(detailEvent)) return;
                     setEditingEvent(detailEvent);
                     setDetailEvent(null);
                   }}

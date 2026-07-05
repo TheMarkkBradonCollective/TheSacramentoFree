@@ -9,6 +9,12 @@ import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import { getEventsUnlockStatus } from './lib/eventsApi';
 import {
+  EVENT_PAST_GRACE_MS,
+  isEventEditable,
+  normalizeStoredEventStatus,
+  resolveEventStatus,
+} from './lib/eventRsvp';
+import {
   VOTE_COOLDOWN_MAX_NEW_VOTES,
   VOTE_COOLDOWN_WINDOW_MS,
 } from './lib/voteCooldown';
@@ -2546,12 +2552,34 @@ export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
     locationLng:
       typeof row.locationLng === 'number' && Number.isFinite(row.locationLng) ? row.locationLng : null,
     isFree: true as const,
-    status: row.status || 'active',
+    status: resolveEventStatus(row),
     eventStartAt: coerceToIsoDate(row.eventStartAt),
     eventEndAt: row.eventEndAt ? coerceToIsoDate(row.eventEndAt) : null,
     createdAt: coerceToIsoDate(row.createdAt),
     updatedAt: coerceToIsoDate(row.updatedAt),
   };
+}
+
+async function syncPastEventStatuses(rows: CommunityEvent[]): Promise<void> {
+  const cutoff = Date.now() - EVENT_PAST_GRACE_MS;
+  const ids = rows
+    .filter((row) => {
+      const stored = normalizeStoredEventStatus(row.status);
+      return (stored === 'active' || stored === 'upcoming') && new Date(row.eventStartAt).getTime() < cutoff;
+    })
+    .map((row) => row.id);
+
+  if (ids.length === 0) return;
+
+  try {
+    await supabase
+      .from('community_events')
+      .update({ status: 'past', updatedAt: new Date().toISOString() })
+      .in('id', ids)
+      .in('status', ['active', 'upcoming']);
+  } catch (err: unknown) {
+    console.warn('[community_events] Could not sync past event statuses:', err);
+  }
 }
 
 export async function getSupabaseEvents(): Promise<CommunityEvent[]> {
@@ -2567,7 +2595,9 @@ export async function getSupabaseEvents(): Promise<CommunityEvent[]> {
     }
 
     setSupabaseConfigurationState(true);
-    return (data || []).map((row) => normalizeSupabaseEvent(row as CommunityEvent));
+    const rows = (data || []) as CommunityEvent[];
+    void syncPastEventStatuses(rows);
+    return rows.map((row) => normalizeSupabaseEvent(row));
   } catch (err: unknown) {
     handleSupabaseError(err, 'community_events');
     return [];
@@ -2601,7 +2631,7 @@ export async function createSupabaseEvent(
     const payload = {
       ...event,
       isFree: true,
-      status: event.status || 'active',
+      status: 'upcoming' as const,
       eventStartAt: new Date(event.eventStartAt).toISOString(),
       eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
       createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
@@ -2638,6 +2668,10 @@ export async function updateSupabaseEvent(
       return { ok: false, errorMessage: 'Only free community events are allowed.' };
     }
 
+    if (!isEventEditable(event)) {
+      return { ok: false, errorMessage: 'Past and cancelled events cannot be edited.' };
+    }
+
     const { error } = await supabase
       .from('community_events')
       .update({
@@ -2647,7 +2681,7 @@ export async function updateSupabaseEvent(
         neighborhood: event.neighborhood,
         eventStartAt: new Date(event.eventStartAt).toISOString(),
         eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
-        status: event.status,
+        status: 'upcoming',
         hostedBy: event.hostedBy?.trim() || null,
         locationLat: event.locationLat ?? null,
         locationLng: event.locationLng ?? null,
@@ -2680,11 +2714,27 @@ export async function cancelSupabaseEvent(
   userId: string,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
+    const { data, error: fetchError } = await supabase
+      .from('community_events')
+      .select('status, eventStartAt')
+      .eq('id', eventId)
+      .eq('userId', userId)
+      .maybeSingle();
+
+    if (fetchError || !data) {
+      return { ok: false, errorMessage: fetchError?.message || 'Event not found.' };
+    }
+
+    if (!isEventEditable(data as CommunityEvent)) {
+      return { ok: false, errorMessage: 'Only upcoming events can be cancelled.' };
+    }
+
     const { error } = await supabase
       .from('community_events')
       .update({ status: 'cancelled', updatedAt: new Date().toISOString() })
       .eq('id', eventId)
-      .eq('userId', userId);
+      .eq('userId', userId)
+      .in('status', ['active', 'upcoming']);
 
     if (error) {
       handleSupabaseError(error, 'community_events');
