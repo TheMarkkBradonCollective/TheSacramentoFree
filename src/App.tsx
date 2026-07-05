@@ -44,6 +44,7 @@ import TermsOfUseContent from './components/TermsOfUseContent';
 import AwardsPanel from './components/AwardsPanel';
 import { AppTab } from './lib/appTabs';
 import {
+  appTabPath,
   parseStoredTab,
   parseTabFromHistoryState,
   persistActiveTab,
@@ -108,11 +109,12 @@ function clearPendingDeepLinkPath() {
   }
 }
 
-function clearAppPathname() {
+function clearAppPathname(tab: AppTab = 'map') {
   if (typeof window === 'undefined') return;
-  if (window.location.pathname === '/' && !window.location.search && !window.location.hash) return;
+  const nextPath = appTabPath(tab);
+  if (window.location.pathname === nextPath && !window.location.search && !window.location.hash) return;
   try {
-    window.history.replaceState(window.history.state, '', '/');
+    window.history.replaceState(window.history.state, '', nextPath);
   } catch {
     // ignore
   }
@@ -353,7 +355,7 @@ export default function App() {
       setActiveTab(initialTab);
     }
     try {
-      window.history.replaceState(withTabInHistoryState(initialTab), '', window.location.href);
+      window.history.replaceState(withTabInHistoryState(initialTab), '', appTabPath(initialTab));
     } catch (err) {
       console.warn('History replaceState unavailable, tab persistence fallback active:', err);
     }
@@ -375,7 +377,7 @@ export default function App() {
       handlingPopStateRef.current = true;
       setActiveTab(fallbackTab);
       try {
-        window.history.pushState(withTabInHistoryState(fallbackTab), '', window.location.href);
+        window.history.pushState(withTabInHistoryState(fallbackTab), '', appTabPath(fallbackTab));
       } catch (err) {
         console.warn('History pushState fallback failed:', err);
       }
@@ -923,10 +925,12 @@ export default function App() {
 
   const handlePushDeepLink = useCallback(
     (target: PushDeepLinkTarget) => {
+      let tabForUrl: AppTab = target.tab ?? 'map';
       if (target.tab) navigateToTab(target.tab);
       if (target.conversationId) {
         setInitialSelectedChatId(target.conversationId);
         navigateToTab('chats');
+        tabForUrl = 'chats';
       }
       if (target.listingId) {
         const existing = items.find((item) => item.id === target.listingId);
@@ -938,19 +942,38 @@ export default function App() {
             if (match) setDetailItem(match);
           });
         }
+        tabForUrl = 'feed';
+        navigateToTab('feed');
+      }
+      if (target.eventId) {
+        const existing = events.find((event) => event.id === target.eventId);
+        if (existing) {
+          setDetailEvent(existing);
+        } else {
+          void getSupabaseEvents().then((loaded) => {
+            const match = loaded.find((event) => event.id === target.eventId);
+            if (match) setDetailEvent(match);
+          });
+        }
+        tabForUrl = 'events';
+        navigateToTab('events');
       }
       if (target.requestId) {
         navigateToTab('chats');
+        tabForUrl = 'chats';
       }
       if (target.chatFeedbackPanel) {
         setInitialChatFeedbackPanel(target.chatFeedbackPanel);
         navigateToTab('chats');
+        tabForUrl = 'chats';
       } else if (target.staffPanel === 'reports') {
         setInitialChatFeedbackPanel('staffReports');
         navigateToTab('chats');
+        tabForUrl = 'chats';
       } else if (target.staffPanel === 'tickets') {
         navigateToTab('chats');
         setInitialChatSupportView('list');
+        tabForUrl = 'chats';
       }
       if (target.notificationsTab) {
         openNotificationsHub(target.notificationsTab);
@@ -960,19 +983,22 @@ export default function App() {
       if (target.directorOverview) {
         setScrollToDirectorOverview(true);
         navigateToTab('profile');
+        tabForUrl = 'profile';
       }
       if (target.supportTicketId) {
         setInitialSupportTicketId(target.supportTicketId);
         navigateToTab('chats');
+        tabForUrl = 'chats';
       }
       if (target.chatSupportView) {
         setInitialChatSupportView(target.chatSupportView);
         navigateToTab('chats');
+        tabForUrl = 'chats';
       }
       clearPendingDeepLinkPath();
-      clearAppPathname();
+      clearAppPathname(tabForUrl);
     },
-    [items, navigateToTab],
+    [items, events, navigateToTab],
   );
 
   usePushDeepLinkNavigation(handlePushDeepLink);

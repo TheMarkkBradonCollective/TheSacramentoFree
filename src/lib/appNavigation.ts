@@ -4,6 +4,18 @@ import { hasActiveNavSession } from './navigationSession';
 export const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
 export const TAB_HISTORY_KEY = 'sbnTab';
 
+const APP_TAB_PATHS = new Set(['feed', 'events', 'map', 'chats', 'profile']);
+
+export function appTabPath(tab: AppTab): string {
+  return `/${tab}`;
+}
+
+export function parseTabFromPathname(pathname: string): AppTab | null {
+  const segment = pathname.replace(/^\/+/, '').split('/')[0]?.toLowerCase() ?? '';
+  if (!APP_TAB_PATHS.has(segment)) return null;
+  return parseAppTab(segment);
+}
+
 export function parseStoredTab(value: string | null): AppTab | null {
   return parseAppTab(value);
 }
@@ -22,16 +34,21 @@ export function readPersistedTab(userId?: string): AppTab {
   if (typeof window === 'undefined') return 'map';
   if (hasActiveNavSession(userId)) return 'map';
 
+  const pathTab = parseTabFromPathname(window.location.pathname);
   const historyTab = parseTabFromHistoryState(window.history.state);
   const storedTab = parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY));
-  return historyTab || storedTab || 'map';
+  return pathTab || historyTab || storedTab || 'map';
+}
+
+function tabUrl(tab: AppTab): string {
+  return appTabPath(tab);
 }
 
 export function persistActiveTab(tab: AppTab) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(TAB_STORAGE_KEY, tab);
   try {
-    window.history.replaceState(withTabInHistoryState(tab), '', window.location.href);
+    window.history.replaceState(withTabInHistoryState(tab), '', tabUrl(tab));
   } catch (err) {
     console.warn('History replaceState unavailable, tab persistence fallback active:', err);
   }
@@ -41,8 +58,17 @@ export function pushActiveTabHistory(tab: AppTab) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(TAB_STORAGE_KEY, tab);
   try {
-    window.history.pushState(withTabInHistoryState(tab), '', window.location.href);
+    window.history.pushState(withTabInHistoryState(tab), '', tabUrl(tab));
   } catch (err) {
     console.warn('History pushState unavailable, continuing without tab back-stack:', err);
+  }
+}
+
+export function replaceAppTabUrl(tab: AppTab) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.history.replaceState(withTabInHistoryState(tab), '', tabUrl(tab));
+  } catch {
+    // ignore
   }
 }

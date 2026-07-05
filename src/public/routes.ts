@@ -11,6 +11,7 @@ export const PUBLIC_ROUTES = {
   privacy: 'privacy',
   terms: 'terms',
   login: 'login',
+  'not-found': 'not-found',
 } as const;
 
 export type PublicRoute = keyof typeof PUBLIC_ROUTES;
@@ -28,6 +29,7 @@ export const PUBLIC_ROUTE_LIST: PublicRoute[] = [
   'privacy',
   'terms',
   'login',
+  'not-found',
 ];
 
 export const PUBLIC_NAV: { route: PublicRoute; label: string }[] = [
@@ -45,7 +47,13 @@ export function parsePublicRoute(hash: string): PublicRoute {
   if (PUBLIC_ROUTE_LIST.includes(path as PublicRoute)) {
     return path as PublicRoute;
   }
-  return 'home';
+  return 'not-found';
+}
+
+export function isKnownPublicRoute(hash: string): boolean {
+  const path = hash.replace(/^#\/?/, '').split('?')[0].trim().toLowerCase();
+  if (path === '' || path === 'home') return true;
+  return PUBLIC_ROUTE_LIST.includes(path as PublicRoute);
 }
 
 export function publicRouteHref(route: PublicRoute): string {

@@ -3,6 +3,7 @@ import type { AppTab } from './appTabs';
 export interface PushDeepLinkTarget {
   tab?: AppTab;
   listingId?: string;
+  eventId?: string;
   conversationId?: string;
   requestId?: string;
   profile?: boolean;
@@ -29,6 +30,10 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
 
   path = path.replace(/^\/+/, '');
 
+  if (path === 'feed' || path === 'events' || path === 'map' || path === 'chats' || path === 'profile') {
+    return { tab: path as AppTab };
+  }
+
   if (path === 'notifications' || path === 'notifications/listings') return { notificationsTab: 'notifications' };
   if (path === 'notifications/alerts' || path === 'alerts') return { notificationsTab: 'alerts' };
   if (path === 'updates') return { notificationsTab: 'updates' };
@@ -40,6 +45,9 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
 
   const listingMatch = path.match(/^listing\/([^/]+)/);
   if (listingMatch) return { tab: 'feed', listingId: listingMatch[1] };
+
+  const eventMatch = path.match(/^events\/([^/]+)/);
+  if (eventMatch) return { tab: 'events', eventId: eventMatch[1] };
 
   if (path === 'messages') return { tab: 'chats' };
   if (path === 'support' || path === 'support/tickets') return { tab: 'chats', chatSupportView: 'list' };
@@ -68,6 +76,10 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
 
 export function pushUrlForListing(listingId: string): string {
   return `/listing/${listingId}`;
+}
+
+export function pushUrlForEvent(eventId: string): string {
+  return `/events/${eventId}`;
 }
 
 export function pushUrlForConversation(conversationId: string): string {
