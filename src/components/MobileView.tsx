@@ -246,8 +246,11 @@ export default function MobileView({
           <div className="max-w-2xl mx-auto">
             <div className="sbn-page-header">
               <h2>{IN_APP.eventsTitle}</h2>
-              <p>{IN_APP.eventsDescription}</p>
+              <p>
+                {IN_APP.eventsDescription} · {events.length} events
+              </p>
             </div>
+            <CommunityStatsBar items={items} variant="compact" />
             <EventsPanel
               events={events}
               userProfile={userProfile}
