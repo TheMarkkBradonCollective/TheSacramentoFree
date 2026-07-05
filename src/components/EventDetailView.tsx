@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Calendar, MapPin, Pencil, Sparkles } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Pencil } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
@@ -104,10 +104,7 @@ export default function EventDetailView({
 
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-accent bg-accent-soft px-2 py-0.5 rounded-full">
-                <Sparkles className="w-3 h-3" />
-                Free event
-              </span>
+              <span className="sbn-badge sbn-badge-give">Free event</span>
               <EventStatusBadge status={eventStatus} />
             </div>
             <h2 className="font-display text-2xl font-bold text-app leading-tight">{event.title}</h2>
