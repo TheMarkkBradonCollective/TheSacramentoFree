@@ -26,8 +26,11 @@ function isCommunityRoute(route: PublicRoute): boolean {
   return route === 'community' || route === 'updates' || route === 'reviews';
 }
 
+// Reviews/Updates are grouped under "Community" for active-state purposes, so only
+// Privacy/Terms should light up the desktop "More" trigger — otherwise both "Community"
+// and "More" appear active at once when viewing Reviews or Updates.
 function isMoreRoute(route: PublicRoute): boolean {
-  return route === 'updates' || route === 'reviews' || route === 'privacy' || route === 'terms';
+  return route === 'privacy' || route === 'terms';
 }
 
 export default function PublicNav({ route, onNavigate }: PublicNavProps) {
@@ -47,7 +50,7 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
   }, [moreOpen]);
 
   const linkClass = (r: PublicRoute) =>
-    `sbn-nav-tab ${route === r ? 'sbn-nav-tab-active' : ''}`;
+    `sbn-nav-tab ${(r === 'community' ? isCommunityRoute(route) : route === r) ? 'sbn-nav-tab-active' : ''}`;
 
   const mobileLinkClass = (r: PublicRoute) =>
     `w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
