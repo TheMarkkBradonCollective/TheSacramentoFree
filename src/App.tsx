@@ -179,6 +179,18 @@ export default function App() {
     persistActiveTab('map');
   }, []);
 
+  /** Reset in-app tab state on sign-out without leaving an authenticated `/map` URL for the now-signed-out guest. */
+  const resetTabStateForSignOut = useCallback(() => {
+    setActiveTab('map');
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(TAB_STORAGE_KEY, 'map');
+    try {
+      window.history.replaceState(null, '', '/');
+    } catch (err) {
+      console.warn('History replaceState unavailable during sign-out cleanup:', err);
+    }
+  }, []);
+
   const navigateToTab = useCallback((tab: AppTab) => {
     setActiveTab(tab);
     persistActiveTab(tab);
@@ -347,8 +359,27 @@ export default function App() {
     hadSessionOnMountRef.current = !!sessionUser;
   }, [sessionUser, goHomeTab]);
 
+  // Guests browse the public marketing site on hash routes (see usePublicRoute).
+  // Everything below manages the AUTHENTICATED app's tab <-> URL sync, and must
+  // never touch window.history for a signed-out visitor — doing so used to wipe
+  // the public site's `#/...` hash on every load, corrupting shareable links and
+  // sending guests back to the homepage on refresh.
+  //
+  // sessionUserRef is updated synchronously during render (not in a useEffect):
+  // a same-document hash navigation (PublicSite redirecting to `#/` on mount)
+  // fires a native `popstate` event as part of a CHILD component's effect,
+  // which runs before this component's own effects in the same commit — an
+  // effect-based ref sync would still read the previous (stale) sessionUser
+  // value at that point and let a signed-out popstate slip through.
+  const sessionUserRef = useRef(sessionUser);
+  sessionUserRef.current = sessionUser;
+
+  const pathnameSeededRef = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (pathnameSeededRef.current) return;
+    if (!sessionUser) return;
+    pathnameSeededRef.current = true;
 
     const initialTab = readPersistedTab(initialAuth.userProfile?.uid);
     if (initialTab !== activeTab) {
@@ -359,12 +390,14 @@ export default function App() {
     } catch (err) {
       console.warn('History replaceState unavailable, tab persistence fallback active:', err);
     }
-  }, []);
+  }, [sessionUser, activeTab]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const onPopState = (event: PopStateEvent) => {
+      if (!sessionUserRef.current) return;
+
       const nextTab = parseTabFromHistoryState(event.state);
       if (nextTab) {
         handlingPopStateRef.current = true;
@@ -389,15 +422,15 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (handlingPopStateRef.current) {
-      handlingPopStateRef.current = false;
-      return;
-    }
+    const wasHandlingPopState = handlingPopStateRef.current;
+    handlingPopStateRef.current = false;
+    if (!sessionUser) return;
+    if (wasHandlingPopState) return;
 
     const currentHistoryTab = parseTabFromHistoryState(window.history.state);
     if (currentHistoryTab === activeTab) return;
     pushActiveTabHistory(activeTab);
-  }, [activeTab]);
+  }, [activeTab, sessionUser]);
 
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
@@ -763,7 +796,7 @@ export default function App() {
     setSessionUser(null);
     setUserProfile(null);
     setItems([]);
-    goHomeTab();
+    resetTabStateForSignOut();
   };
 
   // Onboarding Complete Handler

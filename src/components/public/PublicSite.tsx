@@ -47,8 +47,14 @@ export default function PublicSite({
   const { route, navigate } = usePublicRoute();
 
   useEffect(() => {
-    if (!window.location.hash) {
-      window.location.replace('#/');
+    if (window.location.hash) return;
+    // Use the History API rather than location.replace/hash= — those trigger a
+    // same-document navigation that dispatches a native `popstate` event, which
+    // can race with other app-level popstate handling during auth transitions.
+    try {
+      window.history.replaceState(window.history.state, '', '#/');
+    } catch {
+      window.location.hash = '#/';
     }
   }, []);
 
