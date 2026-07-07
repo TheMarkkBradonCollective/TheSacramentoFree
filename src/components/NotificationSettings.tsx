@@ -95,7 +95,7 @@ const LISTING_PREF_SECTION = {
       label: 'Listing status',
       description: 'Expiring soon, gifted, withdrawn, and other status changes',
     },
-    { key: 'pickupReminders' as const, label: 'Pickup reminders', description: 'Scheduled pickups and nudges' },
+    { key: 'pickupReminders' as const, label: 'Pickup reminders', description: 'Pending pickup, on-the-way alerts, and nudges' },
     { key: 'accountUpdates' as const, label: 'Account updates', description: 'Profile and account notices' },
   ],
 };

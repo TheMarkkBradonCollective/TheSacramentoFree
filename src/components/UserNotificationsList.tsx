@@ -2,6 +2,8 @@ import {
   ArrowDown,
   ArrowUp,
   Bell,
+  Car,
+  Clock,
   Gift,
   Heart,
   MapPin,
@@ -9,6 +11,7 @@ import {
   MessageSquare,
   Package,
   Sparkles,
+  Tag,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -57,6 +60,12 @@ function kindIcon(kind: UserNotificationKind) {
     case 'claim':
     case 'gift':
       return Gift;
+    case 'pickup_reminder':
+      return Clock;
+    case 'on_the_way':
+      return Car;
+    case 'listing_status':
+      return Tag;
     case 'claim_request':
       return UserPlus;
     case 'account_update':
@@ -76,6 +85,8 @@ function kindColor(kind: UserNotificationKind): string {
     case 'claim':
     case 'claim_request':
     case 'gift':
+    case 'pickup_reminder':
+    case 'on_the_way':
       return 'text-accent bg-accent/10';
     case 'message':
     case 'message_request':

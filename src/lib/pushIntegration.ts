@@ -1,5 +1,3 @@
-import { supabase } from '../supabase';
-import type { DirectorAlertCategory, ItemPost } from '../types';
 import {
   notifyAccountUpdate,
   notifyCommunityAnnouncement,
@@ -23,6 +21,10 @@ import {
   notifySavedListingActivity,
   notifyDirectorAlert,
 } from './pushEvents';
+import { supabase } from '../supabase';
+import type { DirectorAlertCategory, ItemPost } from '../types';
+import { listingStatusLabel } from '../../shared/listingStatusLabel';
+import { isVoteNotifyBurst, VOTE_NOTIFY_BURST_WINDOW_MS } from '../../shared/voteNotifyCooldown';
 
 export async function pushDirectorAlert(params: {
   category: DirectorAlertCategory;
@@ -228,6 +230,15 @@ export async function pushAfterItemVote(params: {
   const item = await getItemById(params.itemId);
   if (!item || item.userId === params.voterUserId) return;
 
+  const cutoff = new Date(Date.now() - VOTE_NOTIFY_BURST_WINDOW_MS).toISOString();
+  const { count } = await supabase
+    .from('item_votes')
+    .select('itemId', { count: 'exact', head: true })
+    .eq('userId', params.voterUserId)
+    .gte('createdAt', cutoff);
+
+  if (isVoteNotifyBurst(count)) return;
+
   if (params.voteType === 'up') {
     await notifyListingUpvote({ item, voterUserId: params.voterUserId });
   } else {
@@ -279,21 +290,8 @@ export async function pushAfterItemUpdated(item: ItemPost) {
   });
 }
 
-function listingStatusLabel(status: string): string {
-  switch (status) {
-    case 'pending_pickup':
-      return 'Pending pickup';
-    case 'on_hold':
-      return 'On hold';
-    case 'completed':
-      return 'Gifted';
-    case 'withdrawn':
-      return 'Withdrawn';
-    case 'active':
-      return 'Active again';
-    default:
-      return 'Updated';
-  }
+function listingStatusLabelForItem(status: string, itemType?: string): string {
+  return listingStatusLabel(status, itemType);
 }
 
 export async function pushAfterItemStatusChange(
@@ -306,10 +304,13 @@ export async function pushAfterItemStatusChange(
   const item = await getItemById(itemId);
   if (!item) return;
 
-  await notifyListingStatus({
-    item: { ...item, status: newStatus as ItemPost['status'] },
-    statusLabel: listingStatusLabel(newStatus),
-  });
+  // pending_pickup uses the dedicated pickup_scheduled alert (pushAfterPendingPickup).
+  if (newStatus !== 'pending_pickup') {
+    await notifyListingStatus({
+      item: { ...item, status: newStatus as ItemPost['status'] },
+      statusLabel: listingStatusLabelForItem(newStatus, item.type),
+    });
+  }
 
   if (newStatus === 'completed') {
     const { data: claim } = await supabase

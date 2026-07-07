@@ -91,19 +91,23 @@ async function handleItemStatusUpdate(
     status,
   };
 
-  const results = [
-    await runListingStatusNotify(callerId, item, previousStatus),
-    await runSavedItemsStatusNotify(callerId, item, previousStatus),
-  ];
+  const pending: Promise<{ status: number; body: Record<string, unknown> }>[] = [];
+
+  // pending_pickup uses pickup_scheduled; skip generic listing_status noise.
+  if (status !== 'pending_pickup') {
+    pending.push(runListingStatusNotify(callerId, item, previousStatus));
+  }
+  pending.push(runSavedItemsStatusNotify(callerId, item, previousStatus));
 
   if (status === 'completed') {
-    results.push(await runItemCompletedNotify(callerId, item));
+    pending.push(runItemCompletedNotify(callerId, item));
   }
 
   if (status === 'pending_pickup') {
-    results.push(await runNeighborPickupScheduledNotify(callerId, item));
+    pending.push(runNeighborPickupScheduledNotify(callerId, item));
   }
 
+  const results = await Promise.all(pending);
   return mergeResults(results);
 }
 
