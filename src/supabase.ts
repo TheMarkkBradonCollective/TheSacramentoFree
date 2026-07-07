@@ -350,7 +350,12 @@ function normalizeAccountStatus(
     }
   }
 
-  if (accountStatus !== 'active' && accountStatus !== 'suspended' && accountStatus !== 'banned') {
+  if (
+    accountStatus !== 'active' &&
+    accountStatus !== 'suspended' &&
+    accountStatus !== 'banned' &&
+    accountStatus !== 'locked'
+  ) {
     accountStatus = 'active';
   }
 
@@ -4299,12 +4304,15 @@ export function filterChatsByBlocked(chats: Chat[], userId: string, hiddenIds: S
 
 export function isAccountRestricted(profile: UserProfile | null | undefined): {
   restricted: boolean;
-  reason: 'banned' | 'suspended' | null;
+  reason: 'banned' | 'suspended' | 'locked' | null;
   suspendedUntil?: string | null;
 } {
   if (!profile) return { restricted: false, reason: null };
   if (profile.accountStatus === 'banned') {
     return { restricted: true, reason: 'banned' };
+  }
+  if (profile.accountStatus === 'locked') {
+    return { restricted: true, reason: 'locked' };
   }
   if (profile.accountStatus === 'suspended') {
     if (profile.suspendedUntil && new Date(profile.suspendedUntil).getTime() > Date.now()) {
