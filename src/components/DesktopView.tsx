@@ -229,29 +229,30 @@ export default function DesktopView({
           </div>
         )}
 
-        {activeTab === 'map' && (
-          <div className="space-y-6" id="desktop_map_view_root">
-            <div className="sbn-page-header">
-              <h2>{IN_APP.mapTitle}</h2>
-              <p>{IN_APP.mapDescription}</p>
-            </div>
-            <div className="sbn-card-elevated overflow-hidden p-2">
-              <SacramentoMapView
-                items={items}
-                events={events}
-                userProfile={userProfile}
-                onInitiateChat={onInitiateChat}
-                onClaimSubmitted={onClaimSubmitted}
-                onViewItem={onViewItem}
-                onViewEvent={onViewEvent}
-                onEditItem={onEditItem}
-                itemsHydrated={itemsHydrated}
-                eventsEngagement={eventsEngagement}
-                commentsLocked={!canAccessEvents}
-              />
-            </div>
+        {/* Keep the map mounted across tab switches so GPS, Leaflet state, and any
+            active turn-by-turn navigation session survive — matches MobileView. */}
+        <div className={`space-y-6 ${activeTab === 'map' ? '' : 'hidden'}`} id="desktop_map_view_root">
+          <div className="sbn-page-header">
+            <h2>{IN_APP.mapTitle}</h2>
+            <p>{IN_APP.mapDescription}</p>
           </div>
-        )}
+          <div className="sbn-card-elevated overflow-hidden p-2">
+            <SacramentoMapView
+              items={items}
+              events={events}
+              userProfile={userProfile}
+              onInitiateChat={onInitiateChat}
+              onClaimSubmitted={onClaimSubmitted}
+              onViewItem={onViewItem}
+              onViewEvent={onViewEvent}
+              onEditItem={onEditItem}
+              mapVisible={activeTab === 'map'}
+              itemsHydrated={itemsHydrated}
+              eventsEngagement={eventsEngagement}
+              commentsLocked={!canAccessEvents}
+            />
+          </div>
+        </div>
 
         {activeTab !== 'map' && activeTab !== 'chats' && (
           <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
