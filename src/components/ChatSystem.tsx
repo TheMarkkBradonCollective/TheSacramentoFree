@@ -63,6 +63,7 @@ import {
 } from '../supabase';
 import ChatClaimActions from './ChatClaimActions';
 import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
+import { confirmGoGetAsFulfiller } from './goget/goGetSafetyConfirm';
 import type { GoGetSession } from '../types';
 import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
@@ -166,6 +167,8 @@ export default function ChatSystem({
         setErrorMsg('Enable location so the neighbor can navigate to you.');
         return;
       }
+      const confirmed = await confirmGoGetAsFulfiller(confirm, otherUserName, linkedItem.title);
+      if (!confirmed) return;
       setStartingGoGet(true);
       setErrorMsg('');
       const isLooking = linkedItem.type === 'looking';
@@ -195,7 +198,7 @@ export default function ChatSystem({
       );
       void getSupabaseMessages(selectedChat!.id).then(setMessages);
     },
-    [userProfile, selectedChat],
+    [confirm, userProfile, selectedChat],
   );
 
   useEffect(() => {

@@ -44,6 +44,7 @@ import GoGetAvailabilityPrompt from './goget/GoGetAvailabilityPrompt';
 import GoGetTimePicker from './goget/GoGetTimePicker';
 import GoGetLiveTrackingCard from './goget/GoGetLiveTrackingCard';
 import ReportGoGetViolationDialog from './goget/ReportGoGetViolationDialog';
+import { confirmGoGetAsRequester, confirmGoGetTripStart } from './goget/goGetSafetyConfirm';
 import { useConfirm } from '../contexts/ConfirmContext';
 
 interface ItemDetailNavigationProps {
@@ -212,6 +213,8 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
 
   const handleStartGoGet = useCallback(async () => {
     if (!destination || !userLocation || !userProfile) return;
+    const confirmed = await confirmGoGetAsRequester(confirm, item.userDisplayName, item.title);
+    if (!confirmed) return;
     setBusy(true);
     setErr('');
     const result = await createGoGetSession({
@@ -232,7 +235,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     if (result.session.status === 'active') {
       openNavigation();
     }
-  }, [destination, userLocation, userProfile, item, openNavigation]);
+  }, [confirm, destination, userLocation, userProfile, item, openNavigation]);
 
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
@@ -479,8 +482,10 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
           <button
             type="button"
             disabled={busy || !userLocation}
-            onClick={() => {
-              void run(() => startGoGetTrip(session, item));
+            onClick={async () => {
+              const confirmed = await confirmGoGetTripStart(confirm, otherUserName);
+              if (!confirmed) return;
+              await run(() => startGoGetTrip(session, item));
               openNavigation();
             }}
             className="sbn-btn sbn-btn-primary w-full justify-center disabled:opacity-60"
