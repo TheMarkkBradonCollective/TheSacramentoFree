@@ -4,6 +4,7 @@ import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_C
 import {
   canViewerSeeExactLocation,
   hasStoredGps,
+  isLocationPrivate,
   stripListingMetadata,
 } from '../lib/itemLocation';
 import { extractListingImageUrls } from '../lib/listingContent';
@@ -69,9 +70,13 @@ interface SacramentoMapViewProps {
 const EVENT_MAP_COLOR = '#9333EA';
 
 function listingLocationHint(post: ItemPost, viewerUserId: string): string {
-  return canViewerSeeExactLocation(post, viewerUserId)
-    ? 'Exact pickup pin on map'
-    : `Approx. area · ${post.neighborhood}`;
+  if (canViewerSeeExactLocation(post, viewerUserId)) {
+    return 'Exact pickup pin on map';
+  }
+  if (hasStoredGps(post.description) && isLocationPrivate(post.description)) {
+    return `Private location · ${post.neighborhood}`;
+  }
+  return `No map pin · ${post.neighborhood}`;
 }
 
 function formatEventMapDate(iso: string): string {
@@ -762,87 +767,41 @@ export default function SacramentoMapView({
     setSelectedEvent(activeEvents[prevIdx]);
   };
 
-  // Distribute points deterministically
+  // Only items with a saved, viewer-visible GPS pin appear on the map (list shows all activeItems).
   const blipPositions = useMemo(() => {
-    const neighborhoodCounts: Record<string, number> = {};
-    
-    return activeItems.map((item) => {
+    return activeItems.flatMap((item) => {
       const customCoords = extractGPSCoordinates(item.description);
-      const hasPin = hasStoredGps(item.description);
-      const showExactPin = hasPin && customCoords && canViewerSeeExactLocation(item, userProfile?.uid);
+      if (
+        !customCoords ||
+        !hasStoredGps(item.description) ||
+        !canViewerSeeExactLocation(item, userProfile?.uid)
+      ) {
+        return [];
+      }
 
-      // Use the pickup pin the poster saved — never scatter when GPS exists and is visible
-      if (showExactPin && customCoords) {
-        const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
-        return {
+      const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
+      return [
+        {
           item,
           lat,
           lng,
           color: getCategoryColor(item.category),
-        };
-      }
-
-      // No GPS pin (or hidden from this viewer): approximate by neighborhood sector
-      const parentCoord = NEIGHBORHOOD_COORDS[item.neighborhood] || { x: 50, y: 50 };
-      const currentCount = neighborhoodCounts[item.neighborhood] || 0;
-      neighborhoodCounts[item.neighborhood] = currentCount + 1;
-
-      let hash = 0;
-      for (let i = 0; i < item.id.length; i++) {
-        hash = (hash * 13 + item.id.charCodeAt(i)) % 360;
-      }
-      
-      const angle = (hash + currentCount * 73) * (Math.PI / 180);
-      const radius = currentCount === 0 ? 0 : 3.2 + Math.min(currentCount * 1.5, 7.5); 
-      
-      const dx = Math.cos(angle) * radius;
-      const dy = Math.sin(angle) * radius;
-
-      const px = Math.max(8, Math.min(92, parentCoord.x + dx));
-      const py = Math.max(8, Math.min(92, parentCoord.y + dy));
-      const { lat, lng } = convertPercentToLatLng(px, py);
-
-      return {
-        item,
-        lat,
-        lng,
-        color: getCategoryColor(item.category)
-      };
+        },
+      ];
     });
   }, [activeItems, userProfile?.uid]);
 
   const eventBlipPositions = useMemo(() => {
-    const neighborhoodCounts: Record<string, number> = {};
-
-    return activeEvents.map((event) => {
+    return activeEvents.flatMap((event) => {
       if (
         typeof event.locationLat === 'number' &&
         typeof event.locationLng === 'number' &&
         Number.isFinite(event.locationLat) &&
         Number.isFinite(event.locationLng)
       ) {
-        return { event, lat: event.locationLat, lng: event.locationLng };
+        return [{ event, lat: event.locationLat, lng: event.locationLng }];
       }
-
-      const parentCoord = NEIGHBORHOOD_COORDS[event.neighborhood] || { x: 50, y: 50 };
-      const currentCount = neighborhoodCounts[event.neighborhood] || 0;
-      neighborhoodCounts[event.neighborhood] = currentCount + 1;
-
-      let hash = 0;
-      for (let i = 0; i < event.id.length; i++) {
-        hash = (hash * 17 + event.id.charCodeAt(i)) % 360;
-      }
-
-      const angle = (hash + currentCount * 61) * (Math.PI / 180);
-      const radius = currentCount === 0 ? 0 : 3.5 + Math.min(currentCount * 1.6, 8);
-
-      const dx = Math.cos(angle) * radius;
-      const dy = Math.sin(angle) * radius;
-      const px = Math.max(8, Math.min(92, parentCoord.x + dx));
-      const py = Math.max(8, Math.min(92, parentCoord.y + dy));
-      const { lat, lng } = convertPercentToLatLng(px, py);
-
-      return { event, lat, lng };
+      return [];
     });
   }, [activeEvents]);
 
@@ -1859,7 +1818,9 @@ export default function SacramentoMapView({
             Sacramento Activity Map
           </h3>
           <p className="text-[10px] text-muted font-bold uppercase tracking-wider mt-0.5" id="active_pins_count_display">
-            Sacramento Neighborhoods • {activeItems.length} active listings
+            {showingEvents
+              ? `${activeEvents.length} events · ${eventBlipPositions.length} on map`
+              : `${activeItems.length} listings · ${blipPositions.length} on map`}
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -2035,8 +1996,8 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Fallback Empty Guide - Beautiful, non-blocking friendly popup overlay */}
-        {((showingEvents && activeEvents.length === 0) ||
-          (showItemsOnMap && activeItems.length === 0 && (!showEventsOnMap || activeEvents.length === 0))) && (
+        {((showingEvents && eventBlipPositions.length === 0) ||
+          (showItemsOnMap && blipPositions.length === 0 && (!showEventsOnMap || eventBlipPositions.length === 0))) && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md border border-[#FF4500]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
             <div className="flex items-start space-x-3 text-left">
               <div className="p-2 bg-[#FF4500]/10 text-accent rounded-xl shrink-0 mt-0.5">
@@ -2048,8 +2009,8 @@ export default function SacramentoMapView({
                 </h4>
                 <p className="text-[10px] text-muted font-semibold leading-relaxed">
                   {showingEvents
-                    ? 'No upcoming community events match your filters. Check the Events tab or post a free neighborhood gathering!'
-                    : 'No active listings or ISO request pins match your selected filters. Create a new post or modify your filtering to light up the map!'}
+                    ? 'No events with a map pin match your filters. Events without a set location still appear in the list.'
+                    : 'No listings with a map pin match your filters. List-only posts still appear in the feed — add a pickup pin when posting to show on the map!'}
                 </p>
               </div>
             </div>
