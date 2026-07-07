@@ -62,6 +62,10 @@ import {
   markItemFulfilledFromChat,
 } from '../supabase';
 import ChatClaimActions from './ChatClaimActions';
+import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
+import type { GoGetSession } from '../types';
+import { getLastLiveLatLng } from '../lib/liveGeolocation';
+import { Navigation2 } from 'lucide-react';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -115,6 +119,8 @@ export default function ChatSystem({
   const [incomingRequests, setIncomingRequests] = useState<MessageRequest[]>([]);
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [chatGoGetSession, setChatGoGetSession] = useState<GoGetSession | null>(null);
+  const [startingGoGet, setStartingGoGet] = useState(false);
   const [supportView, setSupportView] = useState<ChatSupportView>(null);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [supportPreviews, setSupportPreviews] = useState<Record<string, SupportTicketLastMessage>>({});
@@ -138,6 +144,59 @@ export default function ChatSystem({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setChatGoGetSession(null);
+    if (!selectedChat || isCommunityChat(selectedChat.id)) return;
+    const linkedItem = items.find((i) => i.id === selectedChat.itemId);
+    if (!linkedItem || (linkedItem.type !== 'looking' && linkedItem.type !== 'trade')) return;
+    let cancelled = false;
+    void getActiveGoGetSession(linkedItem.id, userProfile.uid).then((s) => {
+      if (!cancelled) setChatGoGetSession(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChat?.id, selectedChat?.itemId, items, userProfile.uid]);
+
+  const handleStartGoGetFromChat = useCallback(
+    async (linkedItem: ItemPost, otherUserId: string, otherUserName: string) => {
+      const myLocation = getLastLiveLatLng();
+      if (!myLocation) {
+        setErrorMsg('Enable location so the neighbor can navigate to you.');
+        return;
+      }
+      setStartingGoGet(true);
+      setErrorMsg('');
+      const isLooking = linkedItem.type === 'looking';
+      const result = await createGoGetSession({
+        item: linkedItem,
+        fulfillerUserId: userProfile.uid,
+        fulfillerName: userProfile.displayName,
+        requesterUserId: otherUserId,
+        requesterName: otherUserName,
+        destination: myLocation,
+        destinationLabel: `${userProfile.displayName}'s location`,
+      });
+      setStartingGoGet(false);
+      if (!result.ok || !result.session) {
+        setErrorMsg(result.errorMessage || 'Could not start Go Get.');
+        return;
+      }
+      setChatGoGetSession(result.session);
+      await createSupabaseMessage(
+        selectedChat!.id,
+        isLooking
+          ? `📦 ${userProfile.displayName} started a Go Get — ${otherUserName} can head over now. Open "${linkedItem.title}" to follow along.`
+          : `🔁 ${userProfile.displayName} started a Go Get for the trade — ${otherUserName} can head over now. Open "${linkedItem.title}" to follow along.`,
+        userProfile.uid,
+        `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        { skipPush: true },
+      );
+      void getSupabaseMessages(selectedChat!.id).then(setMessages);
+    },
+    [userProfile, selectedChat],
+  );
 
   useEffect(() => {
     if (!initialChatSupportView) return;
@@ -1007,6 +1066,16 @@ export default function ChatSystem({
               linkedItem.type === 'looking' &&
               linkedItem.status === 'active';
 
+            // Looking: the responder (not the original poster) has the item and becomes the
+            // fulfiller. Trade: whoever taps this becomes the fulfiller (their location is
+            // the meetup spot) and the other participant becomes the requester.
+            const showStartGoGetBtn =
+              !!linkedItem &&
+              !isChatDisabled &&
+              linkedItem.status === 'active' &&
+              ((linkedItem.type === 'looking' && !isListingOwner) || linkedItem.type === 'trade') &&
+              !chatGoGetSession;
+
             return (
               <>
                 <header
@@ -1316,6 +1385,24 @@ export default function ChatSystem({
                       <CheckCircle className="w-4 h-4" />
                       Mark request fulfilled
                     </button>
+                  )}
+                  {!isCommunity && showStartGoGetBtn && linkedItem && (
+                    <button
+                      type="button"
+                      onClick={() => void handleStartGoGetFromChat(linkedItem, claimerUserId ?? '', otherName)}
+                      disabled={isSending || startingGoGet || !claimerUserId}
+                      className="w-full sbn-btn sbn-btn-primary sbn-btn-sm justify-center disabled:opacity-60"
+                      id="chat_start_go_get_btn"
+                      title="Share your live location so they can Go Get it"
+                    >
+                      <Navigation2 className="w-4 h-4" />
+                      {startingGoGet ? 'Starting…' : 'Start Go Get — share my location'}
+                    </button>
+                  )}
+                  {!isCommunity && chatGoGetSession && !isChatDisabled && (
+                    <p className="text-[11px] text-muted text-center">
+                      Go Get in progress — open "{linkedItem?.title}" to follow along.
+                    </p>
                   )}
                   {isChatDisabled && (
                     <div

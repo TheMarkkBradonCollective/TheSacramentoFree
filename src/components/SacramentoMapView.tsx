@@ -22,9 +22,7 @@ import {
   saveActiveNavSession,
 } from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
-import NavigateNotifyDialog from './NavigateNotifyDialog';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
-import { notifyPosterEnRoute } from '../lib/navigationNotify';
 import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
@@ -382,8 +380,6 @@ export default function SacramentoMapView({
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [lockedNavOrigin, setLockedNavOrigin] = useState<LatLng | null>(null);
-  const [navigateNotifyOpen, setNavigateNotifyOpen] = useState(false);
-  const [notifyingPoster, setNotifyingPoster] = useState(false);
   const [colorGuideInternal, setColorGuideInternal] = useState(false);
   const showColorGuide =
     colorGuideOpenProp !== undefined ? colorGuideOpenProp : colorGuideInternal;
@@ -437,7 +433,6 @@ export default function SacramentoMapView({
   const lastFollowPanRef = useRef<LatLng | null>(null);
   const selectedPostRef = useRef<ItemPost | null>(null);
   const navigationOpenRef = useRef(false);
-  const navigateNotifyOpenRef = useRef(false);
   const hasInitialMapCenterRef = useRef(false);
   const navRestoreDoneRef = useRef(false);
   const prevSelectedPostIdRef = useRef<string | undefined>(undefined);
@@ -478,11 +473,7 @@ export default function SacramentoMapView({
     navigationOpenRef.current = navigationOpen;
   }, [navigationOpen]);
 
-  useEffect(() => {
-    navigateNotifyOpenRef.current = navigateNotifyOpen;
-  }, [navigateNotifyOpen]);
-
-  const immersiveNavActive = navigationOpen || navigateNotifyOpen;
+  const immersiveNavActive = navigationOpen;
 
   useEffect(() => {
     onImmersiveModeChange?.(immersiveNavActive);
@@ -512,7 +503,7 @@ export default function SacramentoMapView({
       try {
         if (userMarkerRef.current) {
           userMarkerRef.current.setLatLng([pos.lat, pos.lng]);
-        } else if (!navigationOpenRef.current && !navigateNotifyOpenRef.current) {
+        } else if (!navigationOpenRef.current) {
           userMarkerRef.current = L.marker([pos.lat, pos.lng], {
             icon: createUserLocationIcon(),
             zIndexOffset: 500,
@@ -577,7 +568,7 @@ export default function SacramentoMapView({
       setUserLocation(nextPos);
     }
 
-    if (navigationOpenRef.current || navigateNotifyOpenRef.current || !mapVisibleRef.current) return;
+    if (navigationOpenRef.current || !mapVisibleRef.current) return;
 
     const map = mapRef.current;
     if (!map) return;
@@ -1116,7 +1107,6 @@ export default function SacramentoMapView({
 
     if (previousId === undefined || previousId === currentId) return;
 
-    setNavigateNotifyOpen(false);
     if (!navigationOpenRef.current) return;
     setNavigationOpen(false);
     setLockedNavOrigin(null);
@@ -1130,7 +1120,6 @@ export default function SacramentoMapView({
 
     if (previousId === undefined || previousId === currentId) return;
 
-    setNavigateNotifyOpen(false);
     if (!navigationOpenRef.current) return;
     setNavigationOpen(false);
     setLockedNavOrigin(null);
@@ -1182,6 +1171,10 @@ export default function SacramentoMapView({
     persistNavigationSession();
   }, [navigationOpen, selectedPost, selectedEvent, routeDestination, persistNavigationSession]);
 
+  // Events still navigate straight from the map pin (no pickup handshake needed).
+  // Listings route through the full "Go Get" handshake in ItemDetailView/
+  // ItemDetailNavigation instead of navigating directly from this popup — opening
+  // the item detail here is what used to be the "notify poster" skip/notify choice.
   const handleNavigateRequest = useCallback(() => {
     if (selectedEvent) {
       openNavigation();
@@ -1193,48 +1186,13 @@ export default function SacramentoMapView({
       openNavigation();
       return;
     }
-    setNavigateNotifyOpen(true);
-  }, [selectedEvent, selectedPost, userProfile.uid, openNavigation]);
+    openItemDetail?.(selectedPost);
+  }, [selectedEvent, selectedPost, userProfile.uid, openNavigation, openItemDetail]);
 
   const handleOpenExternalMaps = useCallback(() => {
     if (!routeEndpoints) return;
     openDrivingDirections(routeEndpoints.end, routeEndpoints.start);
   }, [routeEndpoints]);
-
-  const handleNavigateSkipNotify = useCallback(() => {
-    setNavigateNotifyOpen(false);
-    openNavigation();
-  }, [openNavigation]);
-
-  const handleNavigateNotifyPoster = useCallback(async () => {
-    if (!selectedPost || routeDistanceMeters == null || routeDurationSeconds == null) {
-      setNavigateNotifyOpen(false);
-      openNavigation();
-      return;
-    }
-
-    setNotifyingPoster(true);
-    try {
-      await notifyPosterEnRoute({
-        item: selectedPost,
-        travelerUserId: userProfile.uid,
-        travelerName: userProfile.displayName,
-        distanceMeters: routeDistanceMeters,
-        durationSeconds: routeDurationSeconds,
-      });
-    } finally {
-      setNotifyingPoster(false);
-      setNavigateNotifyOpen(false);
-      openNavigation();
-    }
-  }, [
-    selectedPost,
-    routeDistanceMeters,
-    routeDurationSeconds,
-    userProfile.uid,
-    userProfile.displayName,
-    openNavigation,
-  ]);
 
   const navigationOverlay =
     navigationOpen && routeDestination && lockedNavOrigin && navTargetId
@@ -1251,20 +1209,6 @@ export default function SacramentoMapView({
           document.body,
         )
       : null;
-
-  const navigateNotifyDialog =
-    selectedPost && selectedPost.userId !== userProfile.uid ? (
-      <NavigateNotifyDialog
-        open={navigateNotifyOpen}
-        posterName={selectedPost.userDisplayName}
-        itemTitle={selectedPost.title}
-        distanceMeters={routeDistanceMeters}
-        durationSeconds={routeDurationSeconds}
-        notifying={notifyingPoster}
-        onNotify={() => void handleNavigateNotifyPoster()}
-        onSkip={handleNavigateSkipNotify}
-      />
-    ) : null;
 
   useEffect(() => {
     if ((!selectedPost && !selectedEvent) || !routeDestination) {
@@ -1376,7 +1320,6 @@ export default function SacramentoMapView({
     return (
       <div id="sacramento_interactive_map_view" className="relative w-full h-full overflow-hidden font-sans">
         {navigationOverlay}
-        {navigateNotifyDialog}
         {/* Immersive Leaflet Container */}
         <div 
           ref={mapContainerRef} 
@@ -1637,6 +1580,7 @@ export default function SacramentoMapView({
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
                         canNavigate={hasGpsFix && !!routeDestination}
+                        navigateLabel="Go Get"
                         onStartNavigation={handleNavigateRequest}
                         onOpenExternalMaps={handleOpenExternalMaps}
                       />
@@ -1715,7 +1659,6 @@ export default function SacramentoMapView({
   return (
     <div id="sacramento_interactive_map_view" className="bg-surface border border-app p-5 rounded-2xl font-sans flex flex-col space-y-4 text-app">
       {navigationOverlay}
-      {navigateNotifyDialog}
       {selectedType === undefined && (
         <div className="flex flex-col space-y-1 pb-2 border-b border-app">
           <span className="text-[9px] font-black text-accent uppercase tracking-widest font-mono flex items-center gap-1.5">
@@ -2189,6 +2132,7 @@ export default function SacramentoMapView({
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
                     canNavigate={hasGpsFix && !!routeDestination}
+                    navigateLabel="Go Get"
                     onStartNavigation={handleNavigateRequest}
                     onOpenExternalMaps={handleOpenExternalMaps}
                   />
