@@ -35,6 +35,7 @@ import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
+import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
 interface SacramentoMapViewProps {
   items: ItemPost[];
@@ -456,7 +457,10 @@ export default function SacramentoMapView({
   const routeFetchIdRef = useRef(0);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const routeEndpointsRef = useRef<{ start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null>(null);
-  const routeFitForTargetIdRef = useRef<string | null>(null);
+  const routeCoordsRef = useRef<[number, number][] | null>(null);
+  const selectionCardRef = useRef<HTMLDivElement | null>(null);
+  const routeAutoFitEnabledRef = useRef(true);
+  const isProgrammaticMapMoveRef = useRef(false);
 
   // Default coordinate centered around the user's neighborhood
   const userNeighborhood = userProfile?.neighborhood || 'Midtown';
@@ -465,6 +469,48 @@ export default function SacramentoMapView({
   const resolveNavOrigin = useCallback((): LatLng => {
     return userLocationRef.current ?? userLocation ?? getLastLiveLatLng() ?? fallbackLatLng;
   }, [userLocation, fallbackLatLng]);
+
+  useEffect(() => {
+    routeCoordsRef.current = routeCoords;
+  }, [routeCoords]);
+
+  useEffect(() => {
+    routeAutoFitEnabledRef.current = true;
+  }, [selectedPost?.id, selectedEvent?.id]);
+
+  const fitRouteToAvailableView = useCallback(
+    (options?: { force?: boolean }) => {
+      const map = mapRef.current;
+      const mapEl = mapContainerRef.current;
+      const coords = routeCoordsRef.current;
+      if (!map || !mapEl || !coords || coords.length < 2) return;
+      if (!options?.force && !routeAutoFitEnabledRef.current) return;
+
+      const padding = measureMapFitPadding({
+        mapElement: mapEl,
+        obstructingElements: [selectionCardRef.current],
+        defaults: {
+          top: isFullScreenMobile ? 72 : 48,
+          bottom: isFullScreenMobile ? 48 : 56,
+          left: 48,
+          right: 56,
+        },
+        margin: 20,
+      });
+
+      isProgrammaticMapMoveRef.current = true;
+      map.fitBounds(coords, {
+        paddingTopLeft: padding.topLeft,
+        paddingBottomRight: padding.bottomRight,
+        maxZoom: 14,
+        animate: false,
+      });
+      window.requestAnimationFrame(() => {
+        isProgrammaticMapMoveRef.current = false;
+      });
+    },
+    [isFullScreenMobile],
+  );
 
   const lockNavOrigin = useCallback(() => {
     setLockedNavOrigin(resolveNavOrigin());
@@ -875,11 +921,14 @@ export default function SacramentoMapView({
     );
     geoUnsubscribeRef.current = unsubscribeGeo;
 
-    const onUserPanMap = () => {
+    const onUserMapInteraction = () => {
+      if (isProgrammaticMapMoveRef.current) return;
+      routeAutoFitEnabledRef.current = false;
       setFollowUser(false);
       followUserRef.current = false;
     };
-    map.on('dragstart', onUserPanMap);
+    map.on('dragstart', onUserMapInteraction);
+    map.on('zoomstart', onUserMapInteraction);
 
     const refreshMapSize = () => {
       if (!mapVisibleRef.current) return;
@@ -899,7 +948,8 @@ export default function SacramentoMapView({
       window.clearTimeout(timer);
       if (resizeTimer) window.clearTimeout(resizeTimer);
       window.removeEventListener('resize', onWindowResize);
-      map.off('dragstart', onUserPanMap);
+      map.off('dragstart', onUserMapInteraction);
+      map.off('zoomstart', onUserMapInteraction);
       geoUnsubscribeRef.current?.();
       geoUnsubscribeRef.current = null;
       if (followPanRafRef.current != null) {
@@ -1269,7 +1319,6 @@ export default function SacramentoMapView({
   useEffect(() => {
     if ((!selectedPost && !selectedEvent) || !routeDestination) {
       routeEndpointsRef.current = null;
-      routeFitForTargetIdRef.current = null;
       setRouteCoords(null);
       setRouteDistanceMeters(null);
       setRouteDurationSeconds(null);
@@ -1285,7 +1334,6 @@ export default function SacramentoMapView({
     routeEndpointsRef.current = { start, end: routeDestination };
 
     const fetchId = ++routeFetchIdRef.current;
-    routeFitForTargetIdRef.current = null;
     setRouteCoords(null);
     setRouteDistanceMeters(null);
     setRouteDurationSeconds(null);
@@ -1343,17 +1391,24 @@ export default function SacramentoMapView({
       lineJoin: 'round',
     }).addTo(routeLayer);
 
-    if (routeFitForTargetIdRef.current !== activeTargetId) {
-      routeFitForTargetIdRef.current = activeTargetId;
-      const bottomPad = isFullScreenMobile ? 220 : 60;
-      map.fitBounds(routeCoords, {
-        paddingTopLeft: [60, 60],
-        paddingBottomRight: [bottomPad, 60],
-        maxZoom: 14,
-        animate: false,
-      });
-    }
-  }, [selectedPost?.id, selectedEvent?.id, routeCoords, isFullScreenMobile]);
+    fitRouteToAvailableView();
+  }, [selectedPost?.id, selectedEvent?.id, routeCoords, fitRouteToAvailableView]);
+
+  useEffect(() => {
+    const card = selectionCardRef.current;
+    if (!card || (!selectedPost && !selectedEvent)) return;
+
+    const refit = () => fitRouteToAvailableView({ force: true });
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refit) : null;
+    observer?.observe(card);
+    return () => observer?.disconnect();
+  }, [selectedPost?.id, selectedEvent?.id, fitRouteToAvailableView]);
+
+  useEffect(() => {
+    if (!routeCoords || routeCoords.length < 2 || routeLoading) return;
+    const timer = window.setTimeout(() => fitRouteToAvailableView({ force: true }), 80);
+    return () => window.clearTimeout(timer);
+  }, [routeLoading, routeCoords, fitRouteToAvailableView]);
 
   // Handle programmatically panning/zooming to a selected neighborhood
   useEffect(() => {
@@ -1511,7 +1566,7 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Selected listing/event floating panel */}
-        <div className="absolute bottom-4 left-4 right-4 z-30 pointer-events-none">
+        <div ref={selectionCardRef} className="absolute bottom-4 left-4 right-4 z-30 pointer-events-none">
           <AnimatePresence>
             {selectedEvent && currentEventIndex >= 0 && (
               <MapSelectedEventCard
