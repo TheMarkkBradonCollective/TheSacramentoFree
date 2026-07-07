@@ -37,11 +37,15 @@ import {
   markItemFulfilledFromChat,
   updateSupabaseItemStatus,
   createSupabaseMessage,
+  getListingSubitems,
 } from '../supabase';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
-import type { GoGetFulfillerLiveLocation, GoGetSession } from '../types';
+import type { GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
 import MapNavigationView, { type NavProgressUpdate } from './MapNavigationView';
-import { buildGoGetNavigationStartPhrase } from '../lib/navigationVoice';
+import {
+  buildGoGetNavigationFollowUpMessages,
+  buildGoGetNavigationStartPhrase,
+} from '../lib/goGetNavigationVoice';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 import GoGetAvailabilityPrompt from './goget/GoGetAvailabilityPrompt';
 import GoGetTimePicker from './goget/GoGetTimePicker';
@@ -130,6 +134,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   const [err, setErr] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
   const [fulfillerLiveLocation, setFulfillerLiveLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
+  const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const arrivalHandledRef = useRef(false);
 
   const isOwner = item.userId === currentUserId;
@@ -156,6 +161,16 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       cancelled = true;
     };
   }, [item.id, currentUserId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getListingSubitems(item.id).then((rows) => {
+      if (!cancelled) setSubitems(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [item.id]);
 
   useEffect(() => {
     if (!session) return;
@@ -237,7 +252,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
 
   const handleStartGoGet = useCallback(async () => {
     if (!destination || !userLocation || !userProfile) return;
-    const confirmed = await confirmGoGetAsRequester(confirm, item.userDisplayName, item.title);
+    const confirmed = await confirmGoGetAsRequester(confirm, item.userDisplayName, item.title, item.category);
     if (!confirmed) return;
     setBusy(true);
     setErr('');
@@ -264,14 +279,16 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
       if (!session) return;
-      void upsertLiveLocation(session.id, {
-        lat: update.lat,
-        lng: update.lng,
-        heading: update.heading,
-        speedMph: update.speedMph,
-        etaSeconds: update.etaSeconds,
-        distanceMeters: update.distanceMeters,
-      });
+      if (session.handshakeMode !== 'instant') {
+        void upsertLiveLocation(session.id, {
+          lat: update.lat,
+          lng: update.lng,
+          heading: update.heading,
+          speedMph: update.speedMph,
+          etaSeconds: update.etaSeconds,
+          distanceMeters: update.distanceMeters,
+        });
+      }
       if (update.arrived && !arrivalHandledRef.current && session.status === 'active') {
         arrivalHandledRef.current = true;
         void markGoGetArrived(session, item);
@@ -285,12 +302,38 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     setLockedOrigin(null);
   }, []);
 
+  const meetNameForVoice = session
+    ? session.fulfillerUserId === currentUserId
+      ? session.requesterName
+      : session.fulfillerName
+    : item.userDisplayName;
+
+  const goGetItemLabels = useMemo(() => {
+    const available = subitems.filter((sub) => sub.status === 'available').map((sub) => sub.label);
+    if (available.length > 0) return available;
+    if (subitems.length > 0) return subitems.map((sub) => sub.label);
+    return [item.title];
+  }, [subitems, item.title]);
+
+  const goGetNavigationVoice = useMemo(
+    () => ({
+      start: buildGoGetNavigationStartPhrase({
+        meetName: meetNameForVoice,
+        itemTitle: item.title,
+        category: item.category,
+        itemLabels: goGetItemLabels,
+      }),
+      followUp: buildGoGetNavigationFollowUpMessages(item.description),
+    }),
+    [meetNameForVoice, item.title, item.category, item.description, goGetItemLabels],
+  );
+
   if (!destination) return null;
 
   const isFulfiller = !!session && session.fulfillerUserId === currentUserId;
   const isRequester = !!session && session.requesterUserId === currentUserId;
   const otherUserId = session ? (isFulfiller ? session.requesterUserId : session.fulfillerUserId) : null;
-  const otherUserName = session ? (isFulfiller ? session.requesterName : session.fulfillerName) : '';
+  const otherUserName = session ? (isFulfiller ? session.requesterName : session.fulfillerName) : item.userDisplayName;
   const locationHint = item.neighborhood?.trim() || 'Pickup pin';
 
   const run = async (fn: () => Promise<{ ok: boolean; errorMessage?: string; session?: GoGetSession }>) => {
@@ -568,12 +611,22 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       }
       return (
         <div className="space-y-3">
-          <GoGetLiveTrackingCard
-            sessionId={session.id}
-            requesterName={session.requesterName}
-            destinationLabel={session.destinationLabel}
-            onOpenChat={() => onOpenChat?.(session.chatId)}
-          />
+          {session.handshakeMode === 'instant' ? (
+            <div className="sbn-card p-4 space-y-2">
+              {errorBanner}
+              <p className="text-sm text-app">
+                {session.requesterName} is heading to your {item.category.toLowerCase()}.
+              </p>
+              <p className="text-xs text-muted">No notification was sent — curb and porch pickups are first-come.</p>
+            </div>
+          ) : (
+            <GoGetLiveTrackingCard
+              sessionId={session.id}
+              requesterName={session.requesterName}
+              destinationLabel={session.destinationLabel}
+              onOpenChat={() => onOpenChat?.(session.chatId)}
+            />
+          )}
           {renderPosterShareToggle()}
         </div>
       );
@@ -723,9 +776,8 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
                   : null
               }
               otherPartyLabel={otherUserName}
-              navigationStartMessage={
-                session ? buildGoGetNavigationStartPhrase(otherUserName, item.title) : undefined
-              }
+              navigationStartMessage={session ? goGetNavigationVoice.start : undefined}
+              navigationFollowUpMessages={session ? goGetNavigationVoice.followUp : undefined}
               onExit={handleExitNavigation}
             />
           </Fragment>,

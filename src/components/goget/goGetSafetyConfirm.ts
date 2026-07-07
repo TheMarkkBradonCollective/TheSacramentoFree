@@ -1,13 +1,31 @@
 import type { ConfirmOptions } from '../../contexts/ConfirmContext';
 
+import { isInstantClaimCategory } from '../../lib/goGetSessions';
+
 type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
+
+function instantCategoryLabel(category: string): string {
+  return category.trim().toLowerCase() || 'pickup';
+}
 
 /** Requester taps Go Get on a giveaway listing — notifies the poster and begins the pickup flow. */
 export async function confirmGoGetAsRequester(
   confirm: ConfirmFn,
   posterName: string,
   itemTitle: string,
+  category: string,
 ): Promise<boolean> {
+  if (isInstantClaimCategory(category)) {
+    return confirm({
+      title: 'Start Go Get?',
+      message:
+        `Head to ${posterName}'s ${instantCategoryLabel(category)} for ${itemTitle}. The poster won't be notified — ` +
+        `just follow the pickup instructions when you arrive.`,
+      confirmLabel: 'Yes, go get it',
+      cancelLabel: 'Not now',
+    });
+  }
+
   return confirm({
     title: 'Start Go Get?',
     message:

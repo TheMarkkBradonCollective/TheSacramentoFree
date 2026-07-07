@@ -216,15 +216,15 @@ export async function createGoGetSession(
   const session = normalizeGoGetSession(payload);
 
   const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  await createSupabaseMessage(
-    chatId,
-    instant
-      ? `🚗 ${requesterName} is heading over to grab "${item.title}" — no need to do anything, just have it ready.`
-      : `📦 ${requesterName} wants to Go Get "${item.title}". Are you available for pickup right now?`,
-    requesterUserId,
-    messageId,
-    { skipPush: true },
-  );
+  if (!instant) {
+    await createSupabaseMessage(
+      chatId,
+      `📦 ${requesterName} wants to Go Get "${item.title}". Are you available for pickup right now?`,
+      requesterUserId,
+      messageId,
+      { skipPush: true },
+    );
+  }
 
   if (!instant) {
     await runGoGetPushTask(() =>

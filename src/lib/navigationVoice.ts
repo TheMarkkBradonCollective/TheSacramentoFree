@@ -51,13 +51,6 @@ export function buildRouteSummaryVoice(
   return `Drive ${formatNavDistance(distanceMeters)} to ${destinationLabel}. About ${formatNavDuration(durationSeconds)}.`;
 }
 
-/** Spoken when Go Get navigation begins — names the person and item being picked up. */
-export function buildGoGetNavigationStartPhrase(meetName: string, itemTitle: string): string {
-  const person = meetName.trim() || 'your neighbor';
-  const item = itemTitle.trim() || 'the listing';
-  return `Starting route to meet ${person} to pick up ${item}`;
-}
-
 export class NavigationVoice {
   private enabled = true;
   private spokenKeys = new Set<string>();

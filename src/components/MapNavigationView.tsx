@@ -81,6 +81,8 @@ interface MapNavigationViewProps {
   otherPartyLabel?: string;
   /** Optional spoken phrase when guidance begins (e.g. Go Get: meet neighbor + item). */
   navigationStartMessage?: string;
+  /** Extra phrases spoken after the start message (e.g. pickup instructions). */
+  navigationFollowUpMessages?: string[];
 }
 
 type NavLoadingStage = 'locating' | 'routing' | 'ready';
@@ -535,6 +537,7 @@ export default function MapNavigationView({
   otherPartyLocation = null,
   otherPartyLabel = 'Other party',
   navigationStartMessage,
+  navigationFollowUpMessages,
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -759,6 +762,9 @@ export default function MapNavigationView({
     routeAnnouncedRef.current = true;
     const departStep = route.steps.find((step) => step.maneuverType === 'depart') ?? route.steps[0];
     voiceRef.current.speak(navigationStartMessage ?? `Starting navigation to ${destinationLabel}`, 'nav-start');
+    for (const [index, message] of (navigationFollowUpMessages ?? []).entries()) {
+      voiceRef.current.speak(message, `nav-followup-${index}`);
+    }
     if (departStep) {
       voiceRef.current.speak(departStep.instruction, 'nav-depart');
     }
@@ -766,7 +772,7 @@ export default function MapNavigationView({
       buildRouteSummaryVoice(destinationLabel, route.distanceMeters, route.durationSeconds),
       'nav-summary',
     );
-  }, [route, destinationLabel, navigationStartMessage, voiceOn]);
+  }, [route, destinationLabel, navigationStartMessage, navigationFollowUpMessages, voiceOn]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || mapBootstrappedRef.current) return;
