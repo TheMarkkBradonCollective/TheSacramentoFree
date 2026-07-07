@@ -1,6 +1,7 @@
 export type PostStatus = 'active' | 'pending_pickup' | 'on_hold' | 'completed' | 'withdrawn';
 export type PostType = 'giveaway' | 'looking' | 'trade';
-export type AccountStatus = 'active' | 'suspended' | 'banned';
+/** 'locked' = automatic at 6 counted Go Get violation strikes; only city_administrator+ can lift it. */
+export type AccountStatus = 'active' | 'suspended' | 'banned' | 'locked';
 
 export type NearbyRadiusMiles = 0 | 5 | 10 | 25 | 50;
 
@@ -236,6 +237,107 @@ export interface ListingSubItem {
   sortOrder: number;
   status: SubItemStatus;
   claimedAt?: string | null;
+}
+
+// =========================================================
+// "Go Get" pickup sessions — Uber/DoorDash-style pickup coordination.
+// See supabase-complete.sql section 20/21 for the full lifecycle + strike rules.
+// =========================================================
+
+export type GoGetHandshakeMode = 'instant' | 'availability';
+
+/**
+ * Lifecycle: awaiting_availability -> (window_offered -> scheduled ->) active
+ *   -> arrived -> completed (or cancelled / expired / disputed at various points)
+ *
+ * "Ready" isn't its own status — once scheduledAt passes, the UI shows the
+ * fulfiller a Ready button while status stays 'scheduled'; tapping Ready sets
+ * fulfillerReadyAt, and only then can the requester start (-> 'active').
+ */
+export type GoGetSessionStatus =
+  | 'awaiting_availability'
+  | 'window_offered'
+  | 'scheduled'
+  | 'active'
+  | 'arrived'
+  | 'completed'
+  | 'cancelled'
+  | 'expired'
+  | 'disputed';
+
+export interface GoGetSession {
+  id: string;
+  itemId: string;
+  itemType: PostType;
+  /** Has the item / is the destination for pickup. */
+  fulfillerUserId: string;
+  fulfillerName: string;
+  /** Travels to get it. */
+  requesterUserId: string;
+  requesterName: string;
+  chatId: string;
+  handshakeMode: GoGetHandshakeMode;
+  status: GoGetSessionStatus;
+  destinationLat: number;
+  destinationLng: number;
+  destinationLabel: string;
+  availableFrom?: string | null;
+  availableUntil?: string | null;
+  scheduledAt?: string | null;
+  fulfillerReadyAt?: string | null;
+  startedAt?: string | null;
+  arrivedAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
+  cancelledByUserId?: string | null;
+  cancelReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoGetLiveLocation {
+  sessionId: string;
+  lat: number;
+  lng: number;
+  heading?: number | null;
+  speedMph?: number | null;
+  etaSeconds?: number | null;
+  distanceMeters?: number | null;
+  updatedAt: string;
+}
+
+export type ViolationCategory = 'no_show' | 'false_claim' | 'unsafe_behavior' | 'other';
+
+export type ViolationStatus =
+  | 'pending_review'
+  | 'confirmed'
+  | 'dismissed'
+  | 'appealed'
+  | 'appeal_upheld'
+  | 'appeal_denied';
+
+export interface UserViolation {
+  id: string;
+  userId: string;
+  sessionId?: string | null;
+  reportedByUserId: string;
+  reportedByName: string;
+  category: ViolationCategory;
+  description: string;
+  status: ViolationStatus;
+  countsTowardStrikes: boolean;
+  reviewedByUserId?: string | null;
+  reviewedByName?: string | null;
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
+  appealText?: string | null;
+  appealedAt?: string | null;
+  appealDecisionByUserId?: string | null;
+  appealDecisionByName?: string | null;
+  appealDecisionAt?: string | null;
+  appealDecisionNote?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type ClaimRequestStatus = 'pending' | 'confirmed' | 'rejected';
