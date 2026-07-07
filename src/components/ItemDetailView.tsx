@@ -40,6 +40,7 @@ interface ItemDetailViewProps {
   onClose: () => void;
   onMessage?: () => void;
   onClaimSubmitted?: (chatId: string) => void;
+  onOpenChat?: (chatId: string) => void;
   onEdit: () => void;
   onUpdateStatus: (status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold') => void;
   onViewProfile: (userId: string) => void;
@@ -61,6 +62,7 @@ export default function ItemDetailView({
   onClose,
   onMessage,
   onClaimSubmitted,
+  onOpenChat,
   onEdit,
   onUpdateStatus,
   onViewProfile,
@@ -236,9 +238,6 @@ export default function ItemDetailView({
                   Exact pickup spot is shared for this listing.
                   {address ? ` Address: ${address}` : ''}
                 </p>
-                {userProfile && (
-                  <ItemDetailNavigation item={item} currentUserId={currentUserId} userProfile={userProfile} />
-                )}
                 <a
                   href={mapsUrl}
                   target="_blank"
@@ -277,6 +276,18 @@ export default function ItemDetailView({
                 Showing general area: <strong className="text-app">{item.neighborhood}</strong>. Message the
                 poster if you need the exact address.
               </p>
+            )}
+
+            {/* Renders itself only when there's a pickup pin OR an already-active Go Get
+                session — the latter matters for Looking/Trade, where the destination is
+                wherever the fulfiller is, not the listing's own (often absent) pin. */}
+            {userProfile && (
+              <ItemDetailNavigation
+                item={item}
+                currentUserId={currentUserId}
+                userProfile={userProfile}
+                onOpenChat={onOpenChat}
+              />
             )}
           </section>
 

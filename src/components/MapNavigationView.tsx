@@ -58,12 +58,24 @@ import {
   VOICE_CUE_THRESHOLDS,
 } from '../lib/navigationVoice';
 
+export interface NavProgressUpdate {
+  lat: number;
+  lng: number;
+  heading: number;
+  speedMph: number | null;
+  etaSeconds: number;
+  distanceMeters: number;
+  arrived: boolean;
+}
+
 interface MapNavigationViewProps {
   origin: LatLng;
   destination: LatLng;
   destinationLabel: string;
   initialRoute?: NavigationRouteResult | null;
   onExit: () => void;
+  /** Fired on each UI tick (~1/sec) while navigating — e.g. to share live position for a Go Get session. */
+  onProgressUpdate?: (update: NavProgressUpdate) => void;
 }
 
 type NavLoadingStage = 'locating' | 'routing' | 'ready';
@@ -514,6 +526,7 @@ export default function MapNavigationView({
   destinationLabel,
   initialRoute = null,
   onExit,
+  onProgressUpdate,
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -544,6 +557,8 @@ export default function MapNavigationView({
   const uiTickRef = useRef(0);
   const lastGpsPosRef = useRef<LatLng | null>(null);
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
+  const onProgressUpdateRef = useRef(onProgressUpdate);
+  onProgressUpdateRef.current = onProgressUpdate;
 
   const NAV_GPS_FOLLOW_METERS = 18;
   const NAV_UI_TICK_MS = 900;
@@ -973,6 +988,22 @@ export default function MapNavigationView({
       syncNavigationMap(next, nextHeading);
 
       const distToDest = haversineMeters(next, dest);
+
+      if (shouldUpdateUi && onProgressUpdateRef.current) {
+        const remaining = activeRoute ? remainingRouteMeters(activeRoute.coords, next) : distToDest;
+        const ratio = activeRoute && activeRoute.distanceMeters > 0 ? Math.min(1, remaining / activeRoute.distanceMeters) : 1;
+        const etaSeconds = activeRoute ? Math.max(0, Math.round(activeRoute.durationSeconds * ratio)) : 0;
+        onProgressUpdateRef.current({
+          lat: next.lat,
+          lng: next.lng,
+          heading: nextHeading,
+          speedMph: speed != null ? Number(formatSpeedMph(speed)) || null : null,
+          etaSeconds,
+          distanceMeters: remaining,
+          arrived: distToDest < 35,
+        });
+      }
+
       if (distToDest < 35 && !arrivedRef.current) {
         arrivedRef.current = true;
         setArrived(true);
