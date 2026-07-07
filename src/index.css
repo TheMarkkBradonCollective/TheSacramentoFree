@@ -190,6 +190,14 @@ html.sbn-session-restore #root:empty {
   z-index: 25;
 }
 
+/* Landscape phones / short windows: free up vertical room so the floating
+   controls below never have to overlap the details sheet. */
+#map_navigation_view .sbn-nav-banner-compact {
+  border-radius: 1rem;
+  margin: 0.4rem 0.4rem 0;
+  padding: 0.55rem 0.75rem;
+}
+
 #map_navigation_view .sbn-nav-banner-shimmer {
   width: 3.5rem;
   height: 3.5rem;
@@ -446,11 +454,30 @@ html.sbn-session-restore #root:empty {
     0 0 20px var(--sbn-nav-accent-glow);
 }
 
+/* Landscape phones / short windows — see .sbn-nav-banner-compact */
+#map_navigation_view .sbn-nav-fab-compact {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
 #map_navigation_view .sbn-nav-speed-card {
   border-radius: 1rem;
   overflow: hidden;
   min-width: 3.5rem;
   text-align: center;
+}
+
+/* Landscape phones / short windows — see .sbn-nav-banner-compact */
+#map_navigation_view .sbn-nav-speed-card-compact {
+  min-width: 2.75rem;
+}
+
+#map_navigation_view .sbn-nav-speed-card-compact .sbn-nav-speed-limit {
+  padding: 0.2rem 0.4rem 0.15rem;
+}
+
+#map_navigation_view .sbn-nav-speed-card-compact .sbn-nav-speed-current {
+  padding: 0.2rem 0.4rem 0.25rem;
 }
 
 #map_navigation_view .sbn-nav-speed-limit {

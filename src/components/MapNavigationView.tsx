@@ -137,7 +137,15 @@ function NavLaneGuidance({ laneCount, maneuverKind }: { laneCount: number; maneu
   );
 }
 
-function NavSpeedCard({ currentMph, limitMph }: { currentMph: string | null; limitMph: number }) {
+function NavSpeedCard({
+  currentMph,
+  limitMph,
+  compact = false,
+}: {
+  currentMph: string | null;
+  limitMph: number;
+  compact?: boolean;
+}) {
   const current = currentMph != null ? Number.parseInt(currentMph, 10) : null;
   const speedClass =
     current == null || Number.isNaN(current)
@@ -150,7 +158,7 @@ function NavSpeedCard({ currentMph, limitMph }: { currentMph: string | null; lim
 
   return (
     <div
-      className="sbn-nav-speed-card sbn-nav-glass pointer-events-auto"
+      className={`sbn-nav-speed-card sbn-nav-glass pointer-events-auto ${compact ? 'sbn-nav-speed-card-compact' : ''}`}
       aria-label={
         currentMph
           ? `Speed limit ${limitMph} miles per hour, current speed ${currentMph}`
@@ -158,12 +166,12 @@ function NavSpeedCard({ currentMph, limitMph }: { currentMph: string | null; lim
       }
     >
       <div className="sbn-nav-speed-limit">
-        <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--sbn-nav-text-secondary)]">Limit</p>
-        <p className="text-lg font-black tabular-nums leading-none text-[var(--sbn-nav-text)]">{limitMph}</p>
+        {!compact && <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--sbn-nav-text-secondary)]">Limit</p>}
+        <p className={`font-black tabular-nums leading-none text-[var(--sbn-nav-text)] ${compact ? 'text-sm' : 'text-lg'}`}>{limitMph}</p>
       </div>
       <div className={`sbn-nav-speed-current ${speedClass}`}>
-        <p className="text-[9px] font-bold uppercase tracking-wider opacity-70">Now</p>
-        <p className="text-xl font-black tabular-nums leading-none">{currentMph ?? '—'}</p>
+        {!compact && <p className="text-[9px] font-bold uppercase tracking-wider opacity-70">Now</p>}
+        <p className={`font-black tabular-nums leading-none ${compact ? 'text-base' : 'text-xl'}`}>{currentMph ?? '—'}</p>
       </div>
     </div>
   );
@@ -468,7 +476,11 @@ function centerMapWithLookahead(map: L.Map, center: LatLng, zoom: number): void 
   try {
     const lookaheadPx = Math.round(mapSize.y * NAV_LOOKAHEAD_SCREEN_RATIO);
     const targetPoint = map.project([center.lat, center.lng], zoom);
-    const shiftedCenter = map.unproject(L.point(targetPoint.x, targetPoint.y + lookaheadPx), zoom);
+    // Shifting the *center* up (negative y) moves the user's own position DOWN on
+    // screen, which is what reveals more map area ahead of them — this was
+    // previously shifted the other way, pushing the user toward the top of the
+    // screen and leaving the actual route/destination rendered mostly off-screen.
+    const shiftedCenter = map.unproject(L.point(targetPoint.x, targetPoint.y - lookaheadPx), zoom);
 
     if (map.getZoom() !== zoom) {
       map.setView(shiftedCenter, zoom, { animate: false });
@@ -578,6 +590,26 @@ export default function MapNavigationView({
   voiceOnRef.current = voiceOn;
 
   const [showHeading, setShowHeading] = useState(false);
+
+  // Landscape phones (and any short window) leave very little vertical room between
+  // the instruction banner and the details sheet. Below this threshold we switch to a
+  // more compact banner and lay the floating controls out as a row instead of a
+  // column so nothing gets clipped by or overlaps the sheet.
+  const [isCompact, setIsCompact] = useState(
+    () => typeof window !== 'undefined' && window.innerHeight <= 500,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const update = () => setIsCompact(window.innerHeight <= 500);
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
 
   const initialOriginRef = useRef(origin);
   const initialRouteRef = useRef(initialRoute);
@@ -867,7 +899,26 @@ export default function MapNavigationView({
     if (!hasFittedRouteRef.current) {
       hasFittedRouteRef.current = true;
       const start = userPosRef.current;
+
+      // Before the device has moved, GPS gives us no heading, so the "look ahead"
+      // camera bias defaulted to north — if the road actually heads any other way,
+      // the route could render almost entirely off-screen on the very first frame.
+      // Orient using the route's own initial bearing instead so the road ahead is
+      // always visible from the moment navigation opens.
+      if (route.coords.length >= 2) {
+        const initialHeading = bearingAlongRoute(route.coords, start);
+        headingRef.current = initialHeading;
+        lastGpsPosRef.current = start;
+        setHeading(initialHeading);
+      }
+
       centerMapWithLookahead(map, start, 17);
+      applyMapBearing(map, start, headingRef.current, northUpRef.current);
+      if (userMarkerRef.current) {
+        const markerHeading = northUpRef.current ? headingRef.current : 0;
+        userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
+        lastMarkerHeadingRef.current = markerHeading;
+      }
     }
   }, [route, destination]);
 
@@ -1248,18 +1299,18 @@ export default function MapNavigationView({
           <div className="pointer-events-auto safe-area-pt shrink-0">
             <motion.div
               id="nav_instruction_banner"
-              className="sbn-nav-banner sbn-nav-glass sbn-nav-banner-accent"
+              className={`sbn-nav-banner sbn-nav-glass sbn-nav-banner-accent ${isCompact ? 'sbn-nav-banner-compact' : ''}`}
               animate={{ scale: bannerScale }}
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               aria-live="assertive"
               aria-atomic="true"
             >
-              <div className="flex items-start gap-3 min-h-[4rem]">
-                <div className="shrink-0 w-[4.75rem] flex flex-col items-center justify-center">
+              <div className={`flex items-start gap-3 ${isCompact ? '' : 'min-h-[4rem]'}`}>
+                <div className={`shrink-0 flex flex-col items-center justify-center ${isCompact ? 'w-12' : 'w-[4.75rem]'}`}>
                   {loading ? (
                     <div className="sbn-nav-banner-shimmer" aria-hidden />
                   ) : (
-                    <NavManeuverShield kind={maneuverKind} className="w-14 h-14" />
+                    <NavManeuverShield kind={maneuverKind} className={isCompact ? 'w-9 h-9' : 'w-14 h-14'} />
                   )}
                   {!loading && !arrived && (
                     <p className="text-sm font-black mt-2 tabular-nums leading-none tracking-tight text-accent">
@@ -1271,20 +1322,24 @@ export default function MapNavigationView({
                 <div className="min-w-0 flex-1">
                   {loading ? (
                     <>
-                      <p className="text-[1.65rem] font-display font-extrabold leading-tight">Loading route</p>
+                      <p className={`font-display font-extrabold leading-tight ${isCompact ? 'text-lg' : 'text-[1.65rem]'}`}>Loading route</p>
                       <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">To {destinationLabel}</p>
                     </>
                   ) : arrived ? (
                     <>
-                      <p className="text-[1.65rem] font-display font-extrabold leading-tight">You&apos;ve arrived</p>
+                      <p className={`font-display font-extrabold leading-tight ${isCompact ? 'text-lg' : 'text-[1.65rem]'}`}>You&apos;ve arrived</p>
                       <p className="text-base font-bold mt-1 truncate">{destinationLabel}</p>
                     </>
                   ) : (
                     <>
-                      <p className="text-[1.65rem] sm:text-[1.85rem] font-display font-extrabold leading-[1.05] tracking-tight truncate">
+                      <p
+                        className={`font-display font-extrabold leading-[1.05] tracking-tight truncate ${
+                          isCompact ? 'text-lg' : 'text-[1.65rem] sm:text-[1.85rem]'
+                        }`}
+                      >
                         {bannerStreet}
                       </p>
-                      {bannerInstruction ? (
+                      {bannerInstruction && !isCompact ? (
                         <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">{bannerInstruction}</p>
                       ) : null}
                     </>
@@ -1298,7 +1353,7 @@ export default function MapNavigationView({
                 </p>
               )}
 
-              {!loading && !arrived && (
+              {!loading && !arrived && !isCompact && (
                 <NavLaneGuidance laneCount={laneCount} maneuverKind={maneuverKind} />
               )}
             </motion.div>
@@ -1308,74 +1363,91 @@ export default function MapNavigationView({
 
           {!loading && route && (
             <div className="relative flex-1 min-h-0">
-              <div className="absolute left-3 bottom-3 pointer-events-auto">
-                <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} />
-              </div>
+              {/* These floating controls only fit — and are only needed — while the
+                  details sheet is collapsed. The sheet's own expanded view has its
+                  own overview/voice/recenter/share row, so hiding these here avoids
+                  both duplicate controls and the FAB stack visually spilling onto
+                  the sheet when there's little vertical room left for it. */}
+              {sheetSnap === 'collapsed' && (
+                <>
+                  <div className="absolute left-3 bottom-3 pointer-events-auto">
+                    <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} compact={isCompact} />
+                  </div>
 
-              <div className="absolute right-3 top-2 flex flex-col gap-2.5 pointer-events-auto">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNorthUp((value) => !value);
-                    setShowHeading(true);
-                  }}
-                  className={`sbn-nav-fab ${northUp ? '' : 'sbn-nav-fab-active'}`}
-                  title={northUp ? 'North up — tap for heading up' : 'Heading up — tap for north up'}
-                  aria-label={northUp ? 'Switch to heading up map' : 'Switch to north up map'}
-                  aria-pressed={!northUp}
-                >
-                  <Compass className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleVoiceToggle}
-                  className={`sbn-nav-fab ${voiceOn ? 'sbn-nav-fab-active' : ''}`}
-                  title={voiceOn ? 'Voice guidance on' : 'Voice guidance off'}
-                  aria-pressed={voiceOn}
-                  aria-label={voiceOn ? 'Mute voice guidance' : 'Enable voice guidance'}
-                >
-                  {voiceOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 opacity-80" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRecenter}
-                  className={`sbn-nav-fab ${followUser ? 'sbn-nav-fab-active' : ''}`}
-                  title="Recenter on you"
-                  aria-label="Recenter on you"
-                >
-                  <LocateFixed className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleMapStyleCycle}
-                  className="sbn-nav-fab"
-                  title={`Map style: ${mapStyle}`}
-                  aria-label="Change map style"
-                >
-                  <Layers className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleOverview}
-                  className="sbn-nav-fab"
-                  title="Route overview"
-                  aria-label="Route overview"
-                >
-                  <MapIcon className="w-5 h-5" />
-                </button>
-              </div>
+                  <div
+                    className={`absolute right-3 flex pointer-events-auto ${
+                      isCompact ? 'top-1 flex-row gap-1.5' : 'top-2 flex-col gap-2.5'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNorthUp((value) => !value);
+                        setShowHeading(true);
+                      }}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${northUp ? '' : 'sbn-nav-fab-active'}`}
+                      title={northUp ? 'North up — tap for heading up' : 'Heading up — tap for north up'}
+                      aria-label={northUp ? 'Switch to heading up map' : 'Switch to north up map'}
+                      aria-pressed={!northUp}
+                    >
+                      <Compass className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleVoiceToggle}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${voiceOn ? 'sbn-nav-fab-active' : ''}`}
+                      title={voiceOn ? 'Voice guidance on' : 'Voice guidance off'}
+                      aria-pressed={voiceOn}
+                      aria-label={voiceOn ? 'Mute voice guidance' : 'Enable voice guidance'}
+                    >
+                      {voiceOn ? (
+                        <Volume2 className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
+                      ) : (
+                        <VolumeX className={`opacity-80 ${isCompact ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRecenter}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${followUser ? 'sbn-nav-fab-active' : ''}`}
+                      title="Recenter on you"
+                      aria-label="Recenter on you"
+                    >
+                      <LocateFixed className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleMapStyleCycle}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''}`}
+                      title={`Map style: ${mapStyle}`}
+                      aria-label="Change map style"
+                    >
+                      <Layers className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOverview}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''}`}
+                      title="Route overview"
+                      aria-label="Route overview"
+                    >
+                      <MapIcon className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
+                    </button>
 
-              {showHeading && (
-                <div className="absolute right-3 top-[17.5rem] sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none text-center">
-                  <p>{northUp ? 'North up' : 'Heading up'}</p>
-                  <p className="mt-0.5 opacity-80">{Math.round(heading)}°</p>
-                </div>
-              )}
+                    {showHeading && !isCompact && (
+                      <div className="sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none text-center">
+                        <p>{northUp ? 'North up' : 'Heading up'}</p>
+                        <p className="mt-0.5 opacity-80">{Math.round(heading)}°</p>
+                      </div>
+                    )}
+                  </div>
 
-              {!arrived && currentRoadLabel && sheetSnap === 'collapsed' && (
-                <div className="absolute inset-x-0 bottom-3 flex justify-center px-20 pointer-events-none">
-                  <div className="sbn-nav-road-pill truncate">{currentRoadLabel}</div>
-                </div>
+                  {!arrived && currentRoadLabel && (
+                    <div className="absolute inset-x-0 bottom-3 flex justify-center px-20 pointer-events-none">
+                      <div className="sbn-nav-road-pill truncate">{currentRoadLabel}</div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
