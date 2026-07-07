@@ -431,48 +431,90 @@ function createNavUserIcon(heading: number): L.DivIcon {
   });
 }
 
-function drawRouteWithProgress(
+type RoutePolylineHandles = {
+  traveled: L.Polyline | null;
+  glow: L.Polyline | null;
+  mid: L.Polyline | null;
+  animated: L.Polyline | null;
+};
+
+function emptyRouteHandles(): RoutePolylineHandles {
+  return { traveled: null, glow: null, mid: null, animated: null };
+}
+
+function upsertRoutePolyline(
   layer: L.LayerGroup,
+  handles: RoutePolylineHandles,
+  key: keyof RoutePolylineHandles,
+  latlngs: [number, number][],
+  style: L.PolylineOptions,
+): void {
+  if (latlngs.length < 2) {
+    if (handles[key]) {
+      layer.removeLayer(handles[key]!);
+      handles[key] = null;
+    }
+    return;
+  }
+
+  if (handles[key]) {
+    handles[key]!.setLatLngs(latlngs);
+    return;
+  }
+
+  handles[key] = L.polyline(latlngs, style).addTo(layer);
+}
+
+/** Update route geometry in place so dash animations and tiles are not restarted every GPS tick. */
+function updateRoutePolylines(
+  layer: L.LayerGroup,
+  handles: RoutePolylineHandles,
   traveled: [number, number][],
   remaining: [number, number][],
 ): void {
-  layer.clearLayers();
+  upsertRoutePolyline(layer, handles, 'traveled', traveled, {
+    color: 'rgba(148, 163, 184, 0.55)',
+    weight: 8,
+    opacity: 0.85,
+    lineCap: 'round',
+    lineJoin: 'round',
+  });
 
-  if (traveled.length >= 2) {
-    L.polyline(traveled, {
-      color: 'rgba(148, 163, 184, 0.55)',
-      weight: 8,
-      opacity: 0.85,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(layer);
-  }
-
-  if (remaining.length < 2) return;
-
-  L.polyline(remaining, {
+  upsertRoutePolyline(layer, handles, 'glow', remaining, {
     className: 'sbn-nav-route-glow',
     color: NAV_ROUTE_GLOW,
     weight: 15,
     opacity: 0.9,
     lineCap: 'round',
     lineJoin: 'round',
-  }).addTo(layer);
-  L.polyline(remaining, {
+  });
+  upsertRoutePolyline(layer, handles, 'mid', remaining, {
     color: NAV_BRAND_LIGHT,
     weight: 9,
     opacity: 0.95,
     lineCap: 'round',
     lineJoin: 'round',
-  }).addTo(layer);
-  L.polyline(remaining, {
+  });
+  upsertRoutePolyline(layer, handles, 'animated', remaining, {
     className: 'sbn-nav-route-animated',
     color: NAV_BRAND,
     weight: 5,
     opacity: 1,
     lineCap: 'round',
     lineJoin: 'round',
-  }).addTo(layer);
+  });
+}
+
+function debounceMapInvalidate(map: L.Map, delayMs = 160): () => void {
+  let timer: number | null = null;
+  return () => {
+    if (timer != null) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      timer = null;
+      if (!map.getContainer()?.isConnected) return;
+      map.invalidateSize({ animate: false, pan: false });
+    }, delayMs);
+  };
 }
 
 function centerMapWithLookahead(map: L.Map, center: LatLng, zoom: number): void {
@@ -567,14 +609,24 @@ export default function MapNavigationView({
   const pendingNavPanRef = useRef<LatLng | null>(null);
   const hasFittedRouteRef = useRef(false);
   const uiTickRef = useRef(0);
+  const mapSyncTickRef = useRef(0);
   const lastGpsPosRef = useRef<LatLng | null>(null);
+  const displayedPosRef = useRef<LatLng | null>(null);
+  const routePolylineHandlesRef = useRef<RoutePolylineHandles>(emptyRouteHandles());
+  const lastRouteDrawRef = useRef<{ lat: number; lng: number; at: number } | null>(null);
+  const routeFetchedForDestRef = useRef<string | null>(null);
+  const lastBearingApplyRef = useRef(0);
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS = 18;
+  const NAV_GPS_FOLLOW_METERS = 28;
   const NAV_UI_TICK_MS = 900;
+  const NAV_MAP_SYNC_MS = 450;
+  const NAV_ROUTE_DRAW_MIN_METERS = 14;
+  const NAV_ROUTE_DRAW_MIN_MS = 1400;
   const NAV_HEADING_ICON_DEG = 12;
+  const NAV_DISPLAY_SMOOTH_ALPHA = 0.38;
 
   const [loading, setLoading] = useState(!initialRoute);
   const [loadingStage, setLoadingStage] = useState<NavLoadingStage>(initialRoute ? 'ready' : 'locating');
@@ -659,6 +711,7 @@ export default function MapNavigationView({
     stepIndexRef.current = 0;
     setStepIndex(0);
     offRouteTicksRef.current = 0;
+    lastRouteDrawRef.current = null;
 
     if (isReroute) {
       voiceRef.current.clearSpokenKeys();
@@ -718,6 +771,14 @@ export default function MapNavigationView({
       setLoadingStage('ready');
       return;
     }
+
+    const destKey = `${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`;
+    if (routeFetchedForDestRef.current === destKey && routeRef.current) {
+      setLoading(false);
+      setLoadingStage('ready');
+      return;
+    }
+    routeFetchedForDestRef.current = destKey;
 
     let cancelled = false;
     setLoading(true);
@@ -798,26 +859,24 @@ export default function MapNavigationView({
 
     const routeLayer = L.layerGroup().addTo(map);
     routeLayerRef.current = routeLayer;
+    routePolylineHandlesRef.current = emptyRouteHandles();
     mapRef.current = map;
 
-    const invalidate = () => {
-      if (!mapRef.current?.getContainer()?.isConnected) return;
-      mapRef.current.invalidateSize({ animate: false, pan: false });
-    };
+    const debouncedInvalidate = debounceMapInvalidate(map);
 
     const resizeObserver =
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(() => {
-            invalidate();
+            debouncedInvalidate();
           })
         : null;
     resizeObserver?.observe(mapContainerRef.current);
 
-    const onWindowResize = () => invalidate();
+    const onWindowResize = () => debouncedInvalidate();
     window.addEventListener('resize', onWindowResize);
     window.addEventListener('orientationchange', onWindowResize);
 
-    window.setTimeout(invalidate, 200);
+    window.setTimeout(debouncedInvalidate, 200);
 
     return () => {
       window.removeEventListener('resize', onWindowResize);
@@ -832,10 +891,13 @@ export default function MapNavigationView({
       mapRef.current = null;
       tileLayerRef.current = null;
       routeLayerRef.current = null;
+      routePolylineHandlesRef.current = emptyRouteHandles();
       destMarkerRef.current = null;
       userMarkerRef.current = null;
       hasFittedRouteRef.current = false;
       mapBootstrappedRef.current = false;
+      lastRouteDrawRef.current = null;
+      displayedPosRef.current = null;
     };
   }, []);
 
@@ -846,9 +908,8 @@ export default function MapNavigationView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    window.setTimeout(() => {
-      map.invalidateSize({ animate: false, pan: false });
-    }, 120);
+    const debouncedInvalidate = debounceMapInvalidate(map);
+    debouncedInvalidate();
   }, [sheetSnap]);
 
   useEffect(() => {
@@ -856,9 +917,12 @@ export default function MapNavigationView({
     const root = document.getElementById('map_navigation_view');
     if (!sheet || !root) return;
 
+    const map = mapRef.current;
+    const debouncedInvalidate = map ? debounceMapInvalidate(map) : null;
+
     const updateSheetOffset = () => {
       root.style.setProperty('--sbn-nav-sheet-height', `${sheet.offsetHeight}px`);
-      mapRef.current?.invalidateSize({ animate: false, pan: false });
+      debouncedInvalidate?.();
     };
 
     updateSheetOffset();
@@ -963,12 +1027,20 @@ export default function MapNavigationView({
     if (!followUserRef.current) return;
 
     const last = lastNavPanRef.current;
-    if (last && haversineMeters(last, next) < NAV_GPS_FOLLOW_METERS) {
-      applyMapBearing(map, next, nextHeading, northUpRef.current);
+    const movedEnough = !last || haversineMeters(last, next) >= NAV_GPS_FOLLOW_METERS;
+    const now = Date.now();
+    const bearingDue = now - lastBearingApplyRef.current >= NAV_MAP_SYNC_MS;
+
+    if (!movedEnough) {
+      if (!northUpRef.current && bearingDue) {
+        lastBearingApplyRef.current = now;
+        applyMapBearing(map, next, nextHeading, false);
+      }
       return;
     }
 
     lastNavPanRef.current = next;
+    lastBearingApplyRef.current = now;
     pendingNavPanRef.current = next;
     if (navPanRafRef.current != null) return;
 
@@ -984,8 +1056,17 @@ export default function MapNavigationView({
 
   useEffect(() => {
     if (!route || !routeLayerRef.current || loading) return;
+
+    const now = Date.now();
+    const lastDraw = lastRouteDrawRef.current;
+    const moved = lastDraw ? haversineMeters({ lat: lastDraw.lat, lng: lastDraw.lng }, userPos) : Infinity;
+    if (lastDraw && moved < NAV_ROUTE_DRAW_MIN_METERS && now - lastDraw.at < NAV_ROUTE_DRAW_MIN_MS) {
+      return;
+    }
+
+    lastRouteDrawRef.current = { lat: userPos.lat, lng: userPos.lng, at: now };
     const split = splitRouteProgress(route.coords, userPos);
-    drawRouteWithProgress(routeLayerRef.current, split.traveled, split.remaining);
+    updateRoutePolylines(routeLayerRef.current, routePolylineHandlesRef.current, split.traveled, split.remaining);
   }, [route, userPos, loading]);
 
   const handleGpsUpdate = useCallback(
@@ -993,21 +1074,20 @@ export default function MapNavigationView({
       setGpsError(null);
       const raw: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude };
       const activeRoute = routeRef.current;
-      const next =
-        activeRoute && !arrivedRef.current
-          ? snapPositionToRoute(activeRoute.coords, raw)
-          : raw;
-      userPosRef.current = next;
+      const snapped =
+        activeRoute && !arrivedRef.current ? snapPositionToRoute(activeRoute.coords, raw) : raw;
 
-      const now = Date.now();
-      const shouldUpdateUi = now - uiTickRef.current >= NAV_UI_TICK_MS;
-      if (shouldUpdateUi) {
-        uiTickRef.current = now;
-        setUserPos(next);
-        setGpsAccuracy(position.coords.accuracy ?? null);
-        setSpeedMph(formatSpeedMph(position.coords.speed));
-        touchActiveNavSession();
-      }
+      const prevDisplay = displayedPosRef.current;
+      const displayPos =
+        prevDisplay && activeRoute && !arrivedRef.current
+          ? {
+              lat: prevDisplay.lat + (snapped.lat - prevDisplay.lat) * NAV_DISPLAY_SMOOTH_ALPHA,
+              lng: prevDisplay.lng + (snapped.lng - prevDisplay.lng) * NAV_DISPLAY_SMOOTH_ALPHA,
+            }
+          : snapped;
+
+      userPosRef.current = snapped;
+      displayedPosRef.current = displayPos;
 
       const dest = destinationRef.current;
       const destLabel = destinationLabelRef.current;
@@ -1017,30 +1097,49 @@ export default function MapNavigationView({
       const speed = position.coords.speed;
 
       if (speed != null && speed >= 1.4 && lastGpsPosRef.current) {
-        nextHeading = bearingDegrees(lastGpsPosRef.current, next);
+        nextHeading = bearingDegrees(lastGpsPosRef.current, snapped);
       } else if (gpsHeading != null && !Number.isNaN(gpsHeading) && gpsHeading >= 0) {
         nextHeading = gpsHeading;
       } else if (activeRoute) {
-        nextHeading = bearingAlongRoute(activeRoute.coords, next);
+        nextHeading = bearingAlongRoute(activeRoute.coords, snapped);
       }
 
       nextHeading = smoothHeadingDegrees(headingRef.current, nextHeading);
-      lastGpsPosRef.current = next;
+      lastGpsPosRef.current = snapped;
+
+      const now = Date.now();
+      const shouldUpdateUi = now - uiTickRef.current >= NAV_UI_TICK_MS;
+      const shouldSyncMap = now - mapSyncTickRef.current >= NAV_MAP_SYNC_MS;
+
       if (shouldUpdateUi) {
+        uiTickRef.current = now;
+        setUserPos(displayPos);
+        setGpsAccuracy(position.coords.accuracy ?? null);
+        setSpeedMph(formatSpeedMph(position.coords.speed));
         setHeading(nextHeading);
+        touchActiveNavSession();
       }
 
-      syncNavigationMap(next, nextHeading);
+      if (shouldSyncMap) {
+        mapSyncTickRef.current = now;
+        syncNavigationMap(displayPos, nextHeading);
+      } else if (userMarkerRef.current) {
+        try {
+          userMarkerRef.current.setLatLng([displayPos.lat, displayPos.lng]);
+        } catch {
+          // Marker may be mid-teardown.
+        }
+      }
 
-      const distToDest = haversineMeters(next, dest);
+      const distToDest = haversineMeters(snapped, dest);
 
       if (shouldUpdateUi && onProgressUpdateRef.current) {
-        const remaining = activeRoute ? remainingRouteMeters(activeRoute.coords, next) : distToDest;
+        const remaining = activeRoute ? remainingRouteMeters(activeRoute.coords, snapped) : distToDest;
         const ratio = activeRoute && activeRoute.distanceMeters > 0 ? Math.min(1, remaining / activeRoute.distanceMeters) : 1;
         const etaSeconds = activeRoute ? Math.max(0, Math.round(activeRoute.durationSeconds * ratio)) : 0;
         onProgressUpdateRef.current({
-          lat: next.lat,
-          lng: next.lng,
+          lat: snapped.lat,
+          lng: snapped.lng,
           heading: nextHeading,
           speedMph: speed != null ? Number(formatSpeedMph(speed)) || null : null,
           etaSeconds,
@@ -1068,7 +1167,7 @@ export default function MapNavigationView({
       }
 
       if (activeRoute && !arrivedRef.current) {
-        const nextIdx = findCurrentStepIndex(activeRoute.steps, next, stepIndexRef.current, {
+        const nextIdx = findCurrentStepIndex(activeRoute.steps, snapped, stepIndexRef.current, {
           coords: activeRoute.coords,
           distanceMeters: activeRoute.distanceMeters,
         });
@@ -1084,7 +1183,7 @@ export default function MapNavigationView({
         const step = activeRoute.steps[stepIndexRef.current];
         const cueStep = getActiveVoiceCueStep(activeRoute.steps, stepIndexRef.current);
         if (voiceOnRef.current && cueStep && cueStep.maneuverType !== 'arrive') {
-          const dist = haversineMeters(next, cueStep.location);
+          const dist = haversineMeters(snapped, cueStep.location);
           for (const kind of ['far', 'medium', 'near', 'now'] as const) {
             if (shouldFireVoiceCue(cueStep.distanceMeters, dist, kind, VOICE_CUE_THRESHOLDS)) {
               voiceRef.current.speak(
@@ -1096,7 +1195,7 @@ export default function MapNavigationView({
           }
         }
 
-        if (!reroutingRef.current && isOffRoute(activeRoute.coords, next)) {
+        if (!reroutingRef.current && isOffRoute(activeRoute.coords, snapped)) {
           offRouteTicksRef.current += 1;
           if (offRouteTicksRef.current >= 4) {
             reroutingRef.current = true;
@@ -1104,13 +1203,14 @@ export default function MapNavigationView({
             if (voiceOnRef.current) {
               voiceRef.current.speak(buildStepVoiceCue(step!, 0, 'reroute'), 'reroute');
             }
-            void loadRoute(next, dest, true).finally(() => {
+            void loadRoute(snapped, dest, true).finally(() => {
               reroutingRef.current = false;
               setRerouting(false);
               offRouteTicksRef.current = 0;
+              lastRouteDrawRef.current = null;
             });
           }
-        } else if (!isOffRoute(activeRoute.coords, next)) {
+        } else if (!isOffRoute(activeRoute.coords, snapped)) {
           offRouteTicksRef.current = 0;
         }
       }
