@@ -27,7 +27,9 @@ import {
   respondAvailableNow,
   startGoGetTrip,
   subscribeToGoGetSession,
+  subscribeToFulfillerLiveLocationChanges,
   upsertLiveLocation,
+  getFulfillerLiveLocation,
 } from '../lib/goGetSessions';
 import { fileGoGetViolation } from '../lib/violations';
 import {
@@ -37,12 +39,14 @@ import {
   createSupabaseMessage,
 } from '../supabase';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
-import type { GoGetSession } from '../types';
+import type { GoGetFulfillerLiveLocation, GoGetSession } from '../types';
 import MapNavigationView, { type NavProgressUpdate } from './MapNavigationView';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 import GoGetAvailabilityPrompt from './goget/GoGetAvailabilityPrompt';
 import GoGetTimePicker from './goget/GoGetTimePicker';
 import GoGetLiveTrackingCard from './goget/GoGetLiveTrackingCard';
+import GoGetMeetingMap from './goget/GoGetMeetingMap';
+import GoGetShareLocationToggle from './goget/GoGetShareLocationToggle';
 import ReportGoGetViolationDialog from './goget/ReportGoGetViolationDialog';
 import { confirmGoGetAsRequester, confirmGoGetTripStart } from './goget/goGetSafetyConfirm';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -124,6 +128,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
+  const [fulfillerLiveLocation, setFulfillerLiveLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
   const arrivalHandledRef = useRef(false);
 
   const isOwner = item.userId === currentUserId;
@@ -160,6 +165,24 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       }
     });
   }, [session?.id]);
+
+  useEffect(() => {
+    if (!session?.fulfillerSharingLocation || !['active', 'arrived'].includes(session.status)) {
+      setFulfillerLiveLocation(null);
+      return;
+    }
+    let cancelled = false;
+    void getFulfillerLiveLocation(session.id).then((loc) => {
+      if (!cancelled) setFulfillerLiveLocation(loc);
+    });
+    const unsubscribe = subscribeToFulfillerLiveLocationChanges(session.id, (loc) => {
+      if (!cancelled) setFulfillerLiveLocation(loc);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [session?.id, session?.fulfillerSharingLocation, session?.status]);
 
   const routeEndpoints = useMemo(() => {
     if (!destination || !userLocation) return null;
@@ -355,6 +378,27 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     }
   };
 
+  const renderPosterShareToggle = () => (
+    <GoGetShareLocationToggle
+      session={session!}
+      pickerName={session!.requesterName}
+      onSessionChange={setSession}
+      onError={setErr}
+    />
+  );
+
+  const renderPickerMeetingMap = () =>
+    session?.fulfillerSharingLocation ? (
+      <GoGetMeetingMap
+        sessionId={session.id}
+        destinationLat={session.destinationLat}
+        destinationLng={session.destinationLng}
+        destinationLabel={session.destinationLabel}
+        posterName={otherUserName}
+        sharingEnabled
+      />
+    ) : null;
+
   const renderSessionCard = () => {
     if (!session) return null;
 
@@ -503,6 +547,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
           <div className="sbn-card p-4 space-y-3">
             {errorBanner}
             <p className="text-sm text-app">You're on the way to {otherUserName}'s pickup.</p>
+            {renderPickerMeetingMap()}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={openNavigation} className="sbn-btn sbn-btn-primary justify-center">
                 Resume navigation
@@ -521,12 +566,15 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
         );
       }
       return (
-        <GoGetLiveTrackingCard
-          sessionId={session.id}
-          requesterName={session.requesterName}
-          destinationLabel={session.destinationLabel}
-          onOpenChat={() => onOpenChat?.(session.chatId)}
-        />
+        <div className="space-y-3">
+          <GoGetLiveTrackingCard
+            sessionId={session.id}
+            requesterName={session.requesterName}
+            destinationLabel={session.destinationLabel}
+            onOpenChat={() => onOpenChat?.(session.chatId)}
+          />
+          {renderPosterShareToggle()}
+        </div>
       );
     }
 
@@ -537,6 +585,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
             {errorBanner}
             <p className="text-sm font-semibold text-app">{session.requesterName} has arrived.</p>
             <p className="text-xs text-muted">Confirm once the handoff is complete.</p>
+            {renderPosterShareToggle()}
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -561,12 +610,13 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
         );
       }
       return (
-        <div className="sbn-card p-4 space-y-2">
+        <div className="sbn-card p-4 space-y-3">
           {errorBanner}
           <p className="text-sm text-app flex items-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin text-accent" />
             Waiting for {otherUserName} to confirm the pickup…
           </p>
+          {renderPickerMeetingMap()}
         </div>
       );
     }
@@ -666,6 +716,12 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
               destination={destination}
               destinationLabel={item.title}
               onProgressUpdate={handleProgressUpdate}
+              otherPartyLocation={
+                session?.fulfillerSharingLocation && fulfillerLiveLocation
+                  ? { lat: fulfillerLiveLocation.lat, lng: fulfillerLiveLocation.lng }
+                  : null
+              }
+              otherPartyLabel={otherUserName}
               onExit={handleExitNavigation}
             />
           </Fragment>,

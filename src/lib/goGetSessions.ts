@@ -1,5 +1,5 @@
 import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage } from '../supabase';
-import type { GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost } from '../types';
+import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost } from '../types';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
 import { subscribePostgresChanges } from './supabaseRealtime';
 
@@ -72,7 +72,18 @@ function normalizeGoGetSession(row: Record<string, unknown>): GoGetSession {
     cancelledAt: nullableStr(row.cancelledAt),
     cancelledByUserId: nullableStr(row.cancelledByUserId),
     cancelReason: nullableStr(row.cancelReason),
+    fulfillerSharingLocation: row.fulfillerSharingLocation === true,
     createdAt: str(row.createdAt, new Date().toISOString()),
+    updatedAt: str(row.updatedAt, new Date().toISOString()),
+  };
+}
+
+function normalizeGoGetFulfillerLiveLocation(row: Record<string, unknown>): GoGetFulfillerLiveLocation {
+  return {
+    sessionId: str(row.sessionId),
+    lat: num(row.lat),
+    lng: num(row.lng),
+    heading: nullableNum(row.heading),
     updatedAt: str(row.updatedAt, new Date().toISOString()),
   };
 }
@@ -456,9 +467,14 @@ export async function confirmGoGetCompletion(session: GoGetSession): Promise<Res
   if (session.status !== 'arrived') {
     return { ok: false, errorMessage: 'Nothing to confirm yet.' };
   }
-  const result = await updateSession(session.id, { status: 'completed', completedAt: new Date().toISOString() });
+  const result = await updateSession(session.id, {
+    status: 'completed',
+    completedAt: new Date().toISOString(),
+    fulfillerSharingLocation: false,
+  });
   if (!result.ok || !result.session) return result;
   await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
   return { ok: true, session: result.session };
 }
 
@@ -470,9 +486,10 @@ export async function disputeGoGetCompletion(
   if (session.status !== 'arrived') {
     return { ok: false, errorMessage: 'Nothing to dispute yet.' };
   }
-  const result = await updateSession(session.id, { status: 'disputed', cancelReason: reason });
+  const result = await updateSession(session.id, { status: 'disputed', cancelReason: reason, fulfillerSharingLocation: false });
   if (!result.ok || !result.session) return result;
   await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
   return { ok: true, session: result.session };
 }
 
@@ -490,6 +507,7 @@ export async function cancelGoGetSession(
     cancelledAt: new Date().toISOString(),
     cancelledByUserId,
     cancelReason: reason ?? null,
+    fulfillerSharingLocation: false,
   });
   if (!result.ok || !result.session) return result;
 
@@ -511,6 +529,23 @@ export async function cancelGoGetSession(
     ),
   );
   await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Fulfiller opts in/out of sharing their live location with the picker during pickup. */
+export async function setFulfillerSharingLocation(
+  session: GoGetSession,
+  enabled: boolean,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!['active', 'arrived'].includes(session.status)) {
+    return { ok: false, errorMessage: 'Location sharing is only available during an active pickup.' };
+  }
+  const result = await updateSession(session.id, { fulfillerSharingLocation: enabled });
+  if (!result.ok || !result.session) return result;
+  if (!enabled) {
+    await clearFulfillerLiveLocation(session.id);
+  }
   return { ok: true, session: result.session };
 }
 
@@ -566,6 +601,68 @@ export async function clearLiveLocation(sessionId: string): Promise<void> {
   } catch {
     // best effort — RLS/missing table are both fine to ignore here
   }
+}
+
+// ---------------------------------------------------------------------------
+// Fulfiller live location — optional opt-in so the picker can see where the
+// poster actually is vs. the listed pickup pin.
+// ---------------------------------------------------------------------------
+
+export async function upsertFulfillerLiveLocation(
+  sessionId: string,
+  position: { lat: number; lng: number; heading?: number | null },
+): Promise<void> {
+  try {
+    await supabase.from('go_get_fulfiller_live_locations').upsert({
+      sessionId,
+      lat: position.lat,
+      lng: position.lng,
+      heading: position.heading ?? null,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('Could not update Go Get fulfiller live location:', err);
+  }
+}
+
+export async function getFulfillerLiveLocation(sessionId: string): Promise<GoGetFulfillerLiveLocation | null> {
+  try {
+    const { data, error } = await supabase
+      .from('go_get_fulfiller_live_locations')
+      .select('*')
+      .eq('sessionId', sessionId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return normalizeGoGetFulfillerLiveLocation(data as Record<string, unknown>);
+  } catch {
+    return null;
+  }
+}
+
+export async function clearFulfillerLiveLocation(sessionId: string): Promise<void> {
+  try {
+    await supabase.from('go_get_fulfiller_live_locations').delete().eq('sessionId', sessionId);
+  } catch {
+    // best effort
+  }
+}
+
+export function subscribeToFulfillerLiveLocationChanges(
+  sessionId: string,
+  onChange: (location: GoGetFulfillerLiveLocation) => void,
+): () => void {
+  return subscribePostgresChanges<Record<string, unknown>>(
+    {
+      channelName: `go-get-fulfiller-live-location-${sessionId}`,
+      table: 'go_get_fulfiller_live_locations',
+      event: '*',
+      filter: `sessionId=eq.${sessionId}`,
+    },
+    (payload) => {
+      const row = payload.new as Record<string, unknown> | undefined;
+      if (row && Object.keys(row).length > 0) onChange(normalizeGoGetFulfillerLiveLocation(row));
+    },
+  );
 }
 
 /** Live-updates for one session's status/fields (both participants see the same row). */

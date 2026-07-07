@@ -609,6 +609,10 @@ CREATE TABLE IF NOT EXISTS public.go_get_sessions (
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Poster may opt in to share their live device location during active/arrived pickup
+-- so the picker can see both the listed pickup pin and where they actually are.
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "fulfillerSharingLocation" BOOLEAN NOT NULL DEFAULT false;
+
 ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_item_type_check;
 ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_item_type_check
   CHECK ("itemType" IN ('giveaway', 'looking', 'trade'));
@@ -645,6 +649,17 @@ CREATE TABLE IF NOT EXISTS public.go_get_live_locations (
 );
 
 ALTER TABLE public.go_get_live_locations ENABLE ROW LEVEL SECURITY;
+
+-- Latest fulfiller/poster device position when they opt in to share during pickup.
+CREATE TABLE IF NOT EXISTS public.go_get_fulfiller_live_locations (
+  "sessionId" TEXT PRIMARY KEY REFERENCES public.go_get_sessions(id) ON DELETE CASCADE,
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  heading DOUBLE PRECISION,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.go_get_fulfiller_live_locations ENABLE ROW LEVEL SECURITY;
 
 -- =========================================================
 -- 21. "Go Get" violations — DoorDash-style two-tier moderation
@@ -2349,6 +2364,33 @@ CREATE POLICY "go_get_live_locations_write" ON public.go_get_live_locations
     )
   );
 
+DROP POLICY IF EXISTS "go_get_fulfiller_live_locations_select" ON public.go_get_fulfiller_live_locations;
+DROP POLICY IF EXISTS "go_get_fulfiller_live_locations_write" ON public.go_get_fulfiller_live_locations;
+
+CREATE POLICY "go_get_fulfiller_live_locations_select" ON public.go_get_fulfiller_live_locations
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId"
+        AND (auth.uid()::text IN (s."fulfillerUserId", s."requesterUserId") OR public.is_staff())
+    )
+  );
+
+-- Only the fulfiller/poster may write their own live position.
+CREATE POLICY "go_get_fulfiller_live_locations_write" ON public.go_get_fulfiller_live_locations
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId" AND s."fulfillerUserId" = auth.uid()::text
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId" AND s."fulfillerUserId" = auth.uid()::text
+    )
+  );
+
 DROP POLICY IF EXISTS "user_violations_select" ON public.user_violations;
 DROP POLICY IF EXISTS "user_violations_insert" ON public.user_violations;
 DROP POLICY IF EXISTS "user_violations_update" ON public.user_violations;
@@ -2855,6 +2897,7 @@ BEGIN
     'community_content_votes',
     'go_get_sessions',
     'go_get_live_locations',
+    'go_get_fulfiller_live_locations',
     'user_violations'
   ]
   LOOP

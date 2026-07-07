@@ -76,6 +76,9 @@ interface MapNavigationViewProps {
   onExit: () => void;
   /** Fired on each UI tick (~1/sec) while navigating — e.g. to share live position for a Go Get session. */
   onProgressUpdate?: (update: NavProgressUpdate) => void;
+  /** Optional live location of the other party (e.g. poster sharing during Go Get meetup). */
+  otherPartyLocation?: LatLng | null;
+  otherPartyLabel?: string;
 }
 
 type NavLoadingStage = 'locating' | 'routing' | 'ready';
@@ -527,6 +530,8 @@ export default function MapNavigationView({
   initialRoute = null,
   onExit,
   onProgressUpdate,
+  otherPartyLocation = null,
+  otherPartyLabel = 'Other party',
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -534,6 +539,7 @@ export default function MapNavigationView({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const destMarkerRef = useRef<L.Marker | null>(null);
+  const otherPartyMarkerRef = useRef<L.Marker | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const stepIndexRef = useRef(0);
   const voiceRef = useRef(new NavigationVoice());
@@ -885,6 +891,36 @@ export default function MapNavigationView({
       centerMapWithLookahead(map, start, 17);
     }
   }, [route, destination]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !route) return;
+
+    if (otherPartyLocation) {
+      if (otherPartyMarkerRef.current) {
+        otherPartyMarkerRef.current.setLatLng([otherPartyLocation.lat, otherPartyLocation.lng]);
+      } else {
+        const icon = L.divIcon({
+          html: `
+            <div class="relative flex items-center justify-center">
+              <span class="absolute inline-flex h-8 w-8 rounded-full bg-emerald-500 opacity-35 animate-ping"></span>
+              <span class="relative inline-flex h-8 w-8 rounded-full bg-emerald-500 border-2 border-white shadow-lg items-center justify-center text-white text-xs font-black">P</span>
+            </div>
+          `,
+          className: 'nav-other-party-marker',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+        });
+        otherPartyMarkerRef.current = L.marker([otherPartyLocation.lat, otherPartyLocation.lng], {
+          icon,
+          zIndexOffset: 350,
+        }).addTo(map);
+      }
+    } else if (otherPartyMarkerRef.current) {
+      otherPartyMarkerRef.current.remove();
+      otherPartyMarkerRef.current = null;
+    }
+  }, [route, otherPartyLocation]);
 
   const syncNavigationMap = useCallback((next: LatLng, nextHeading: number) => {
     const map = mapRef.current;

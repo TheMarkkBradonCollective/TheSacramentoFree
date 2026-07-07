@@ -291,7 +291,17 @@ export interface GoGetSession {
   cancelledAt?: string | null;
   cancelledByUserId?: string | null;
   cancelReason?: string | null;
+  /** Poster opted in to share live device location so the picker can find them at the meetup. */
+  fulfillerSharingLocation?: boolean;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoGetFulfillerLiveLocation {
+  sessionId: string;
+  lat: number;
+  lng: number;
+  heading?: number | null;
   updatedAt: string;
 }
 
