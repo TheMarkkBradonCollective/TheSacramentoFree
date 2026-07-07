@@ -450,3 +450,248 @@ export async function notifyRequestFulfilled(params: {
     tag: `fulfilled-${params.item.id}`,
   });
 }
+
+// =========================================================
+// "Go Get" pickup sessions
+// =========================================================
+
+export async function notifyGoGetAvailabilityRequest(params: {
+  item: ItemPost;
+  fulfillerUserId: string;
+  requesterName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_availability_request',
+    title: 'Ready for pickup?',
+    body: `${params.requesterName} wants to Go Get "${params.item.title}" — are you available now?`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.fulfillerUserId],
+    tag: `go-get-availability-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetAvailableNow(params: {
+  item: ItemPost;
+  requesterUserId: string;
+  fulfillerName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_available_now',
+    title: `${params.fulfillerName} is available now`,
+    body: `Tap Go Get to start heading to "${params.item.title}"`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.requesterUserId],
+    tag: `go-get-available-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetScheduleProposed(params: {
+  item: ItemPost;
+  requesterUserId: string;
+  fulfillerName: string;
+  windowLabel: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_schedule_proposed',
+    title: `${params.fulfillerName} isn't available right now`,
+    body: `Free ${params.windowLabel} for "${params.item.title}" — pick a pickup time`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.requesterUserId],
+    tag: `go-get-schedule-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetScheduleConfirmed(params: {
+  item: ItemPost;
+  fulfillerUserId: string;
+  requesterName: string;
+  whenLabel: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_schedule_confirmed',
+    title: 'Pickup time confirmed',
+    body: `${params.requesterName} will Go Get "${params.item.title}" ${params.whenLabel}`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.fulfillerUserId],
+    tag: `go-get-confirmed-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetReadyReminder(params: {
+  item: ItemPost;
+  fulfillerUserId: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_ready_reminder',
+    title: 'Pickup time is here',
+    body: `Tap Ready when you're set for "${params.item.title}" — the neighbor is waiting on you.`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.fulfillerUserId],
+    tag: `go-get-ready-reminder-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetFulfillerReady(params: {
+  item: ItemPost;
+  requesterUserId: string;
+  fulfillerName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_fulfiller_ready',
+    title: `${params.fulfillerName} is ready`,
+    body: `Tap Go Get to start heading to "${params.item.title}"`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.requesterUserId],
+    tag: `go-get-fulfiller-ready-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetStarted(params: {
+  item: ItemPost;
+  fulfillerUserId: string;
+  requesterName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_started',
+    title: `${params.requesterName} is on the way`,
+    body: `Heading to pick up "${params.item.title}" now`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.fulfillerUserId],
+    tag: `go-get-started-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetArrived(params: {
+  item: ItemPost;
+  fulfillerUserId: string;
+  requesterName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_arrived',
+    title: `${params.requesterName} has arrived`,
+    body: `Confirm the pickup for "${params.item.title}" once it's handed off`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.fulfillerUserId],
+    tag: `go-get-arrived-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetCompleted(params: {
+  item: ItemPost;
+  requesterUserId: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_completed',
+    title: 'Pickup confirmed',
+    body: `"${params.item.title}" pickup is complete — thanks for using Go Get!`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.requesterUserId],
+    tag: `go-get-completed-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetCancelled(params: {
+  item: ItemPost;
+  recipientUserId: string;
+  cancelledByName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_cancelled',
+    title: 'Go Get cancelled',
+    body: `${params.cancelledByName} cancelled the pickup for "${params.item.title}"`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.recipientUserId],
+    tag: `go-get-cancelled-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+// =========================================================
+// "Go Get" violations
+// =========================================================
+
+export async function notifyViolationFiled(params: { userId: string; violationId: string }) {
+  await sendPushNotification({
+    eventType: 'violation_filed',
+    title: 'A report was filed on your account',
+    body: 'A neighbor reported an issue with a recent Go Get pickup. Staff will review it shortly.',
+    url: '/profile',
+    recipientUserIds: [params.userId],
+    tag: `violation-filed-${params.violationId}`,
+  });
+}
+
+export async function notifyViolationDecision(params: {
+  userId: string;
+  violationId: string;
+  strikeCount: number;
+  confirmed: boolean;
+}) {
+  await sendPushNotification({
+    eventType: 'violation_decision',
+    title: params.confirmed ? 'Violation confirmed' : 'Report dismissed',
+    body: params.confirmed
+      ? `A Go Get violation on your account was confirmed (${params.strikeCount}/6 strikes). You can appeal from Messages → Support.`
+      : 'A report filed against you was reviewed and dismissed — no action needed.',
+    url: '/profile',
+    recipientUserIds: [params.userId],
+    tag: `violation-decision-${params.violationId}`,
+  });
+}
+
+export async function notifyAccountLockedForViolations(params: { userId: string }) {
+  await sendPushNotification({
+    eventType: 'account_locked',
+    title: 'Account locked',
+    body: 'Your account was automatically locked after 6 confirmed Go Get violations. Contact support to appeal.',
+    url: '/profile',
+    recipientUserIds: [params.userId],
+    tag: `account-locked-${params.userId}`,
+  });
+}
+
+export async function notifyAppealDecision(params: {
+  userId: string;
+  violationId: string;
+  upheld: boolean;
+}) {
+  await sendPushNotification({
+    eventType: 'appeal_decision',
+    title: params.upheld ? 'Appeal granted' : 'Appeal denied',
+    body: params.upheld
+      ? 'Your appeal was reviewed and the violation was overturned — it no longer counts as a strike.'
+      : 'Your appeal was reviewed and the original decision was upheld.',
+    url: '/profile',
+    recipientUserIds: [params.userId],
+    tag: `appeal-decision-${params.violationId}`,
+  });
+}
