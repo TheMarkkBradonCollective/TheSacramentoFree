@@ -47,7 +47,7 @@ export default function ChatInboxList({
 
   if (entries.length === 0) {
     return (
-      <div className="px-4 py-10">
+      <div className="px-3 py-8 flex justify-center">
         <ChatSectionEmptyState
           icon={MessageSquare}
           title="No messages yet"
@@ -58,7 +58,7 @@ export default function ChatInboxList({
   }
 
   return (
-    <div id="chat_inbox_list">
+    <div id="chat_inbox_list" className="chat-inbox-scroll">
       {entries.map((entry) => {
         if (entry.kind === 'request') {
           const request = entry.request;
@@ -68,11 +68,7 @@ export default function ChatInboxList({
             `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(request.fromUserName)}`;
 
           return (
-            <div
-              key={entry.id}
-              className="border-b border-app/25 px-4 py-3 bg-accent-soft/40"
-              id={`inbox_request_${request.id}`}
-            >
+            <div key={entry.id} className="chat-inbox-request" id={`inbox_request_${request.id}`}>
               <div className="flex items-start gap-3">
                 <button
                   type="button"

@@ -27,18 +27,16 @@ export function getMessageGroupMeta(
 }
 
 export function messageGroupSpacing(meta: MessageGroupMeta): string {
-  return meta.isFirstInGroup ? 'mt-3 first:mt-0' : 'mt-0.5';
+  return meta.isFirstInGroup ? 'mt-4 first:mt-0' : 'mt-1';
 }
 
 export function messageBubbleClass(isUser: boolean, meta: MessageGroupMeta): string {
   const base =
-    'max-w-[min(85%,20rem)] sm:max-w-[min(75%,24rem)] px-3.5 text-sm shadow-sm leading-relaxed';
+    'max-w-[min(85%,20rem)] sm:max-w-[min(75%,24rem)] px-3.5 text-sm leading-relaxed';
 
-  const padding = meta.isLastInGroup ? 'py-2' : 'py-1.5';
+  const padding = meta.isLastInGroup ? 'py-2.5' : 'py-1.5';
 
-  const colors = isUser
-    ? 'bg-accent text-on-accent'
-    : 'bg-surface border border-app text-app';
+  const colors = isUser ? 'chat-bubble-out text-on-accent' : 'chat-bubble-in text-app';
 
   let radius: string;
   if (isUser) {

@@ -68,10 +68,7 @@ export function buildInboxEntries(options: {
 }
 
 export function chatInboxRowClass(isSelected: boolean): string {
-  return [
-    'w-full text-left px-4 py-3 flex items-center gap-3 transition-colors cursor-pointer border-b border-app/25',
-    isSelected ? 'bg-accent-soft' : 'hover:bg-surface-hover active:bg-surface-hover',
-  ].join(' ');
+  return ['chat-inbox-row', isSelected ? 'chat-inbox-row--selected' : ''].filter(Boolean).join(' ');
 }
 
 export function isGroupChatEntry(chat: Chat): boolean {
