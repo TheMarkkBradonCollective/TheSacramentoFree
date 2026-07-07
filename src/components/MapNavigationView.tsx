@@ -79,6 +79,8 @@ interface MapNavigationViewProps {
   /** Optional live location of the other party (e.g. poster sharing during Go Get meetup). */
   otherPartyLocation?: LatLng | null;
   otherPartyLabel?: string;
+  /** Optional spoken phrase when guidance begins (e.g. Go Get: meet neighbor + item). */
+  navigationStartMessage?: string;
 }
 
 type NavLoadingStage = 'locating' | 'routing' | 'ready';
@@ -532,6 +534,7 @@ export default function MapNavigationView({
   onProgressUpdate,
   otherPartyLocation = null,
   otherPartyLabel = 'Other party',
+  navigationStartMessage,
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -755,7 +758,7 @@ export default function MapNavigationView({
     if (!route || routeAnnouncedRef.current || !voiceOn) return;
     routeAnnouncedRef.current = true;
     const departStep = route.steps.find((step) => step.maneuverType === 'depart') ?? route.steps[0];
-    voiceRef.current.speak(`Starting navigation to ${destinationLabel}`, 'nav-start');
+    voiceRef.current.speak(navigationStartMessage ?? `Starting navigation to ${destinationLabel}`, 'nav-start');
     if (departStep) {
       voiceRef.current.speak(departStep.instruction, 'nav-depart');
     }
@@ -763,7 +766,7 @@ export default function MapNavigationView({
       buildRouteSummaryVoice(destinationLabel, route.distanceMeters, route.durationSeconds),
       'nav-summary',
     );
-  }, [route, destinationLabel, voiceOn]);
+  }, [route, destinationLabel, navigationStartMessage, voiceOn]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || mapBootstrappedRef.current) return;

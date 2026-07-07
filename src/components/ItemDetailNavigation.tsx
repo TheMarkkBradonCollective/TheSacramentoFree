@@ -41,6 +41,7 @@ import {
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import type { GoGetFulfillerLiveLocation, GoGetSession } from '../types';
 import MapNavigationView, { type NavProgressUpdate } from './MapNavigationView';
+import { buildGoGetNavigationStartPhrase } from '../lib/navigationVoice';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 import GoGetAvailabilityPrompt from './goget/GoGetAvailabilityPrompt';
 import GoGetTimePicker from './goget/GoGetTimePicker';
@@ -722,6 +723,9 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
                   : null
               }
               otherPartyLabel={otherUserName}
+              navigationStartMessage={
+                session ? buildGoGetNavigationStartPhrase(otherUserName, item.title) : undefined
+              }
               onExit={handleExitNavigation}
             />
           </Fragment>,
