@@ -12,6 +12,7 @@ import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
 import ItemDetailView from './components/ItemDetailView';
+import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
 import PostEventModal from './components/PostEventModal';
 import NeighborProfileView from './components/NeighborProfileView';
@@ -79,6 +80,7 @@ import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
+import { completedActionNeedsAttribution } from './lib/pickupAttribution';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -155,6 +157,8 @@ export default function App() {
   const [detailEvent, setDetailEvent] = useState<CommunityEvent | null>(null);
   const [detailEventUpdating, setDetailEventUpdating] = useState(false);
   const [detailUpdating, setDetailUpdating] = useState(false);
+  const [pickupAttributionItem, setPickupAttributionItem] = useState<ItemPost | null>(null);
+  const [pickupAttributionMode, setPickupAttributionMode] = useState<'complete' | 'edit'>('complete');
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
     'reviews' | 'report' | 'staffReports' | null
@@ -647,7 +651,9 @@ export default function App() {
       updated.updatedAt !== detailItem.updatedAt ||
       updated.status !== detailItem.status ||
       updated.title !== detailItem.title ||
-      updated.description !== detailItem.description
+      updated.description !== detailItem.description ||
+      updated.pickupAttributionType !== detailItem.pickupAttributionType ||
+      updated.pickupAttributionLabel !== detailItem.pickupAttributionLabel
     ) {
       setDetailItem(updated);
     }
@@ -793,7 +799,12 @@ export default function App() {
   const handleDetailUpdateStatus = async (
     status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold',
   ) => {
-    if (!detailItem) return;
+    if (!detailItem || !userProfile) return;
+    if (status === 'completed' && completedActionNeedsAttribution(detailItem, userProfile)) {
+      setPickupAttributionMode('complete');
+      setPickupAttributionItem(detailItem);
+      return;
+    }
     setDetailUpdating(true);
     try {
       await updateSupabaseItemStatus(detailItem.id, status, userProfile?.uid);
@@ -1350,6 +1361,24 @@ export default function App() {
                   }
                   userProfile={userProfile}
                   onClaimSubmitted={handleClaimSubmitted}
+                  onEditPickupAttribution={() => {
+                    setPickupAttributionMode('edit');
+                    setPickupAttributionItem(detailItem);
+                  }}
+                />
+              )}
+
+              {pickupAttributionItem && userProfile && (
+                <PickupAttributionModal
+                  item={pickupAttributionItem}
+                  owner={userProfile}
+                  mode={pickupAttributionMode}
+                  onClose={() => setPickupAttributionItem(null)}
+                  onSaved={async () => {
+                    setPickupAttributionItem(null);
+                    await refreshDetailItem();
+                    await loadItems(false);
+                  }}
                 />
               )}
 

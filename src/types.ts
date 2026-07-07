@@ -179,7 +179,18 @@ export interface ItemPost {
   imageUrl?: string;
   /** All photos (first matches imageUrl). Parsed from description when not set. */
   imageUrls?: string[];
+  /** Who picked up when marked completed outside chat/GPS flow. */
+  pickupAttributionType?: PickupAttributionType | null;
+  pickupAttributionUserId?: string | null;
+  pickupAttributionLabel?: string | null;
 }
+
+export type PickupAttributionType =
+  | 'app_user'
+  | 'reddit'
+  | 'buynothing_project'
+  | 'facebook_group'
+  | 'other';
 
 export interface Chat {
   id: string;

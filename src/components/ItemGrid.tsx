@@ -17,7 +17,9 @@ import {
 } from 'lucide-react';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
+import PickupAttributionModal from './PickupAttributionModal';
 import { updateSupabaseItemStatus } from '../supabase';
+import { completedActionNeedsAttribution } from '../lib/pickupAttribution';
 import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
@@ -138,6 +140,7 @@ export default function ItemGrid({
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
+  const [attributionItem, setAttributionItem] = useState<ItemPost | null>(null);
 
   const { savedIds, toggleSaved, isSaved } = useSavedItems(userProfile.uid);
 
@@ -156,6 +159,12 @@ export default function ItemGrid({
     itemId: string,
     newStatus: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold',
   ) => {
+    const item = items.find((entry) => entry.id === itemId);
+    if (item && newStatus === 'completed' && completedActionNeedsAttribution(item, userProfile)) {
+      setAttributionItem(item);
+      return;
+    }
+
     setUpdatingItemId(itemId);
 
     try {
@@ -576,6 +585,19 @@ export default function ItemGrid({
         onClose={() => setEditingItem(null)}
         onSuccess={() => {
           setEditingItem(null);
+          onRefresh();
+        }}
+      />
+    )}
+
+    {attributionItem && (
+      <PickupAttributionModal
+        item={attributionItem}
+        owner={userProfile}
+        mode="complete"
+        onClose={() => setAttributionItem(null)}
+        onSaved={() => {
+          setAttributionItem(null);
           onRefresh();
         }}
       />
