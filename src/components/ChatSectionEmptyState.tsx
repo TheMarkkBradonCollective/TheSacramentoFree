@@ -15,11 +15,13 @@ export default function ChatSectionEmptyState({
   className = '',
 }: ChatSectionEmptyStateProps) {
   return (
-    <div className={`text-center px-4 py-6 ${className}`}>
-      <Icon className="w-8 h-8 text-muted mx-auto mb-2" aria-hidden />
-      <p className="font-semibold text-app text-sm">{title}</p>
+    <div className="text-center px-4 py-6 chat-empty-card">
+      <span className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft text-accent mb-3">
+        <Icon className="w-6 h-6" aria-hidden />
+      </span>
+      <p className="font-display font-semibold text-app text-sm">{title}</p>
       {description ? (
-        <p className="text-xs text-muted mt-1.5 leading-relaxed max-w-[16rem] mx-auto">{description}</p>
+        <p className="text-xs text-muted mt-1.5 leading-relaxed">{description}</p>
       ) : null}
     </div>
   );

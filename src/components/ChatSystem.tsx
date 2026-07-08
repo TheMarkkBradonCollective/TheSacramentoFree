@@ -955,19 +955,15 @@ export default function ChatSystem({
     <div
       id="chat_app_viewport"
       className={`flex h-full min-h-0 w-full overflow-hidden text-app ${className} ${
-        fullBleed
-          ? 'bg-app rounded-none border-0'
-          : 'bg-surface border border-app rounded-2xl'
+        fullBleed ? 'bg-app rounded-none border-0' : 'sbn-card overflow-hidden shadow-sm'
       }`}
     >
       {/* Conversation list */}
       <div
         id="chats_sidebar"
-        className={`flex flex-col min-h-0 shrink-0 border-r border-app w-full md:w-80 lg:w-[22rem] ${
-          fullBleed ? 'bg-app' : 'bg-surface'
-        } ${
-          selectedChat || supportView ? 'hidden md:flex' : 'flex'
-        }`}
+        className={`flex flex-col min-h-0 shrink-0 w-full md:w-80 lg:w-[22rem] md:border-r md:border-app/30 ${
+          fullBleed ? 'bg-app' : 'bg-surface/80'
+        } ${selectedChat || supportView ? 'hidden md:flex' : 'flex'}`}
       >
         <ChatInboxHeader
           userProfile={userProfile}
@@ -1082,7 +1078,7 @@ export default function ChatSystem({
             return (
               <>
                 <header
-                  className="shrink-0 px-3 sm:px-4 py-3 border-b border-app bg-surface flex items-center gap-3"
+                  className="shrink-0 px-3 sm:px-4 py-3 chat-thread-header flex items-center gap-3"
                   id="chat_panel_header"
                 >
                   <button
@@ -1192,9 +1188,14 @@ export default function ChatSystem({
                   )}
 
                   {messages.length === 0 ? (
-                    <div className="text-center py-12 px-4">
-                      <MessageSquare className="w-8 h-8 text-muted mx-auto mb-2" />
-                      <p className="text-sm text-muted">Say hello to coordinate pickup.</p>
+                    <div className="flex justify-center py-10 px-4">
+                      <div className="chat-empty-card">
+                        <MessageSquare className="w-8 h-8 text-accent mx-auto mb-2" />
+                        <p className="text-sm font-display font-semibold text-app">Start the conversation</p>
+                        <p className="text-xs text-muted mt-1.5 leading-relaxed">
+                          Say hello to coordinate pickup, ask a question, or share details.
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     messages.map((msg, index) => {
@@ -1314,45 +1315,94 @@ export default function ChatSystem({
 
                 <form
                   onSubmit={handleSendMessage}
-                  className="shrink-0 p-3 sm:p-4 bg-surface border-t border-app flex flex-col gap-2 sbn-input-tray"
+                  className="shrink-0 p-3 sm:px-4 sm:pb-4 chat-compose-tray flex flex-col gap-2.5 sbn-input-tray"
                   id="input_tray"
                 >
-                  {!isCommunity && showSendLocationBtn && (
-                    <button
-                      type="button"
-                      onClick={handleSendPickupLocation}
-                      disabled={isSending}
-                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
-                      id="chat_send_pickup_location_btn"
-                    >
-                      <Navigation className="w-4 h-4" />
-                      Send pickup location / address
-                    </button>
-                  )}
-                  {!isCommunity && showMarkPendingPickupBtn && (
-                    <button
-                      type="button"
-                      onClick={handleMarkPendingPickup}
-                      disabled={isSending}
-                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
-                      id="chat_mark_pending_pickup_btn"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Mark pending pickup
-                    </button>
-                  )}
-                  {!isCommunity && showRequestHoldBtn && (
-                    <button
-                      type="button"
-                      onClick={handleRequestHold}
-                      disabled={isSending}
-                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
-                      id="chat_request_hold_btn"
-                    >
-                      Request hold
-                    </button>
-                  )}
-                  {!isCommunity && showMarkClaimedBtn && claimerUserId && (
+                  {!isCommunity &&
+                  (showSendLocationBtn ||
+                    showMarkPendingPickupBtn ||
+                    showRequestHoldBtn ||
+                    showMarkTradedBtn ||
+                    showMarkFulfilledBtn ||
+                    showStartGoGetBtn) ? (
+                    <div className="chat-action-chips">
+                      {showSendLocationBtn ? (
+                        <button
+                          type="button"
+                          onClick={handleSendPickupLocation}
+                          disabled={isSending}
+                          className="chat-action-chip"
+                          id="chat_send_pickup_location_btn"
+                        >
+                          <Navigation className="w-3.5 h-3.5 shrink-0" />
+                          Send location
+                        </button>
+                      ) : null}
+                      {showMarkPendingPickupBtn ? (
+                        <button
+                          type="button"
+                          onClick={handleMarkPendingPickup}
+                          disabled={isSending}
+                          className="chat-action-chip"
+                          id="chat_mark_pending_pickup_btn"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                          Pending pickup
+                        </button>
+                      ) : null}
+                      {showRequestHoldBtn ? (
+                        <button
+                          type="button"
+                          onClick={handleRequestHold}
+                          disabled={isSending}
+                          className="chat-action-chip"
+                          id="chat_request_hold_btn"
+                        >
+                          Request hold
+                        </button>
+                      ) : null}
+                      {showMarkTradedBtn ? (
+                        <button
+                          type="button"
+                          onClick={handleMarkTraded}
+                          disabled={isSending}
+                          className="chat-action-chip"
+                          id="chat_mark_traded_btn"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                          Trade done
+                        </button>
+                      ) : null}
+                      {showMarkFulfilledBtn ? (
+                        <button
+                          type="button"
+                          onClick={handleMarkFulfilled}
+                          disabled={isSending}
+                          className="chat-action-chip"
+                          id="chat_mark_fulfilled_btn"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                          Fulfilled
+                        </button>
+                      ) : null}
+                      {showStartGoGetBtn && linkedItem ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void handleStartGoGetFromChat(linkedItem, claimerUserId ?? '', otherName)
+                          }
+                          disabled={isSending || startingGoGet || !claimerUserId}
+                          className="chat-action-chip chat-action-chip--primary"
+                          id="chat_start_go_get_btn"
+                          title="Share your live location so they can Go Get it"
+                        >
+                          <Navigation2 className="w-3.5 h-3.5 shrink-0" />
+                          {startingGoGet ? 'Starting…' : 'Go Get'}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {!isCommunity && showMarkClaimedBtn && claimerUserId ? (
                     <ChatClaimActions
                       chatId={selectedChat.id}
                       linkedItem={linkedItem}
@@ -1364,44 +1414,7 @@ export default function ChatSystem({
                         void getSupabaseMessages(selectedChat.id).then(setMessages);
                       }}
                     />
-                  )}
-                  {!isCommunity && showMarkTradedBtn && (
-                    <button
-                      type="button"
-                      onClick={handleMarkTraded}
-                      disabled={isSending}
-                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
-                      id="chat_mark_traded_btn"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Mark trade completed
-                    </button>
-                  )}
-                  {!isCommunity && showMarkFulfilledBtn && (
-                    <button
-                      type="button"
-                      onClick={handleMarkFulfilled}
-                      disabled={isSending}
-                      className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
-                      id="chat_mark_fulfilled_btn"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Mark request fulfilled
-                    </button>
-                  )}
-                  {!isCommunity && showStartGoGetBtn && linkedItem && (
-                    <button
-                      type="button"
-                      onClick={() => void handleStartGoGetFromChat(linkedItem, claimerUserId ?? '', otherName)}
-                      disabled={isSending || startingGoGet || !claimerUserId}
-                      className="w-full sbn-btn sbn-btn-primary sbn-btn-sm justify-center disabled:opacity-60"
-                      id="chat_start_go_get_btn"
-                      title="Share your live location so they can Go Get it"
-                    >
-                      <Navigation2 className="w-4 h-4" />
-                      {startingGoGet ? 'Starting…' : 'Start Go Get — share my location'}
-                    </button>
-                  )}
+                  ) : null}
                   {!isCommunity && chatGoGetSession && !isChatDisabled && (
                     <p className="text-[11px] text-muted text-center">
                       Go Get in progress — open "{linkedItem?.title}" to follow along.
@@ -1409,14 +1422,14 @@ export default function ChatSystem({
                   )}
                   {isChatDisabled && (
                     <div
-                      className="p-2.5 bg-inset border border-app text-muted text-xs rounded-xl flex items-center gap-2"
+                      className="p-2.5 bg-inset/80 border border-app/60 text-muted text-xs rounded-xl flex items-center gap-2"
                       id="chat_disabled_status_banner"
                     >
                       <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>This listing is closed — chat is read-only.</span>
                     </div>
                   )}
-                  <div className="flex w-full items-end gap-2 rounded-full border border-app bg-inset/60 px-3 py-1.5 shadow-sm">
+                  <div className="chat-compose-field">
                     <input
                       type="text"
                       id="message_input_box"
@@ -1431,7 +1444,7 @@ export default function ChatSystem({
                             ? 'This chat is read-only'
                             : isCommunity
                               ? 'Message everyone…'
-                              : 'Aa'
+                              : 'Message…'
                       }
                       maxLength={2000}
                       required
@@ -1465,11 +1478,13 @@ export default function ChatSystem({
             className="flex-1 flex flex-col items-center justify-center text-center px-6 py-12"
             id="messages_not_selected_state"
           >
-            <MessageSquare className="w-12 h-12 text-muted mb-3" />
-            <h3 className="font-display font-semibold text-app">Your messages</h3>
-            <p className="text-sm text-muted max-w-xs mt-2 leading-relaxed">
-              Choose a conversation from the list to start chatting.
-            </p>
+            <div className="chat-empty-card max-w-sm">
+              <MessageSquare className="w-10 h-10 text-accent mx-auto mb-3" />
+              <h3 className="font-display font-bold text-app">Your messages</h3>
+              <p className="text-sm text-muted mt-2 leading-relaxed">
+                Pick a conversation to chat with neighbors, coordinate pickups, or reach support.
+              </p>
+            </div>
           </div>
         )}
       </div>

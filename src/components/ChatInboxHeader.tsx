@@ -38,11 +38,11 @@ export default function ChatInboxHeader({
   return (
     <header
       id="chat_inbox_header"
-      className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-app bg-surface"
+      className="shrink-0 flex items-center justify-between gap-3 px-4 py-3.5 chat-thread-header"
     >
-      <div className="min-w-0">
-        <h2 className="font-display font-semibold text-lg text-app">{IN_APP.chatsTitle}</h2>
-        <p className="text-xs text-muted">Chats with neighbors and support</p>
+      <div className="min-w-0 sbn-page-header mb-0">
+        <h2 className="font-display font-bold text-lg text-app leading-tight">{IN_APP.chatsTitle}</h2>
+        <p className="text-xs text-muted mt-0.5">Chats with neighbors and support</p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {onStartConversation ? (
