@@ -574,6 +574,118 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO public.app_updates (
+  id, date, title, body, detail, "directorName", "directorTitle", "postedByUserId"
+)
+VALUES
+(
+  '2026-07-08_go-get-pickup',
+  '2026-07-08',
+  'Go Get — live pickup coordination',
+  'Navigate is now Go Get: confirm pickup intent, share live location, chat along the way, and report no-shows.',
+  'Tap Go Get on a giveaway, Looking, or Trade listing to start a pickup session. The poster gets notified and can share when they are available. Once you are both ready, live GPS tracking shows the route and ETA. Posters can optionally share their live location during active pickup so you see both the listed pin and where they actually are. A safety confirmation explains location sharing before any trip starts. Six confirmed violations can lock an account — staff review appeals in the moderation panel.
+
+— Mark',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-08_navigation-polish',
+  '2026-07-08',
+  'Smoother turn-by-turn navigation',
+  'Routes stop flashing, GPS twitches less, and voice reads your neighbor and item when a Go Get trip starts.',
+  'Navigation got a stability pass: the route line no longer flickers on each GPS update, map invalidation is debounced, and the overview fits the visible map area above the bottom sheet. When you start Go Get navigation, voice says who you are meeting and what you are picking up, then reads pickup instructions when available. Instant curb or porch pickups skip the poster notification step.
+
+— Mark',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-08_map-listings-without-location',
+  '2026-07-08',
+  'Listings without GPS stay in the list only',
+  'Items and events with no set location no longer appear as map pins — they remain in the feed and list views.',
+  'The map header now shows how many listings are in the area versus how many have an exact pin. Posts without coordinates still show up everywhere else; they just will not clutter the map with guessed positions.
+
+— Mark',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-08_pickup-attribution',
+  '2026-07-08',
+  'Who picked it up? — quick-claim credit',
+  'When you mark something claimed outside chat, we ask who picked it up: Reddit, Buy Nothing Project, Facebook group, a neighbor, or Other.',
+  'If you complete a listing without going through the in-app claim flow, a short prompt lets you credit Reddit, the Buy Nothing Project, a saved Facebook group, a neighbor on the app, or Other. You can skip and edit later on the completed post. Older completed listings were backfilled as Other.
+
+— Mark',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-08_messages-polish',
+  '2026-07-08',
+  'Messages UI matches the rest of the app',
+  'Chat inbox, thread headers, and action chips got softer styling to line up with the app design language.',
+  'The Messages tab uses the same rounded cards, chip-style action buttons, and compose tray as the rest of Sacramento Buy Nothing. Go Get actions live in the chip row when a Looking or Trade chat is active.
+
+— Mark',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-08_notifications-audit',
+  '2026-07-08',
+  'Notification delivery audit',
+  'Fewer duplicate pushes, clearer listing-status copy, and inbox icons for Go Get and trade events.',
+  'We audited every notification path: moderation actions no longer double-fire from client and webhook, trade completion copy matches giveaway wording, redundant listing_status alerts on pending pickup were removed, and vote notifications respect a short cooldown. The bell inbox shows clearer icons for new notification types.
+
+— Mark',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-08_map-route-fit',
+  '2026-07-08',
+  'Map route fits above the bottom card',
+  'When you select a listing on the map, the route zooms to the space above the detail card until you pan or zoom yourself.',
+  'Selecting a pin on the map auto-fits the route in the visible area above the bottom sheet. Resize the card or rotate your phone and the fit recalculates. Pan or zoom the map yourself to take over.
+
+— Mark',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.help_announcements (
+  id, date, title, body, detail, "authorName", "authorTitle", "postedByUserId"
+)
+VALUES (
+  '2026-07-08_go-get-safety',
+  '2026-07-08',
+  'Go Get is here — how live pickup works',
+  'Go Get replaces Navigate for coordinating pickups. You will be asked to confirm before sharing live location with the other person.',
+  'What to expect:
+• Before a trip starts, the app explains that the poster is notified and live location is shared during the pickup.
+• Posters can offer availability windows or use instant curb/porch pickup when that fits.
+• During an active pickup, the poster may optionally turn on live location so you see both the listed pin and where they are standing.
+• Use in-app chat to coordinate. Report no-shows or unsafe behavior from the Go Get screen — staff review every report.
+• Six confirmed violations can lock an account until an administrator reviews appeals.
+
+Meet in well-lit public spots when you can, and trust your instincts. Thank you for keeping Sacramento Buy Nothing kind and safe.',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+)
+ON CONFLICT (id) DO NOTHING;
+
 -- =========================================================
 -- 19. App reviews (0–5 stars, half-star steps, one per user)
 -- =========================================================
