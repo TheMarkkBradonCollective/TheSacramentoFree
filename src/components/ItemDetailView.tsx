@@ -109,8 +109,8 @@ export default function ItemDetailView({
 
   const partialClaimed =
     subitems.length > 0 &&
-    subitems.some((s) => s.status === 'claimed') &&
-    subitems.some((s) => s.status === 'available');
+    subitems.some((s) => s.status === 'claimed' || s.status === 'pending_pickup') &&
+    subitems.some((s) => s.status === 'available' || s.status === 'pending_pickup');
   const pickupAttributionLabel = getPickupAttributionLabel(item);
   const needsPickupAttribution =
     isOwner && listingNeedsPickupAttribution(item, hasAppClaim) && !!onEditPickupAttribution;

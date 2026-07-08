@@ -1631,12 +1631,15 @@ export function buildDmChatId(uidA: string, uidB: string): string {
 }
 
 function normalizeListingSubItem(row: Record<string, unknown>): ListingSubItem {
+  const raw = String(row.status ?? 'available');
+  const status: ListingSubItem['status'] =
+    raw === 'claimed' ? 'claimed' : raw === 'pending_pickup' ? 'pending_pickup' : 'available';
   return {
     id: String(row.id),
     itemId: String(row.itemId),
     label: String(row.label),
     sortOrder: Number(row.sortOrder ?? 0),
-    status: row.status === 'claimed' ? 'claimed' : 'available',
+    status,
     claimedAt: row.claimedAt ? String(row.claimedAt) : null,
   };
 }
@@ -1780,6 +1783,9 @@ async function recordPartialItemClaims(params: {
         if (sub.status === 'claimed') {
           return { ok: false, errorMessage: `"${sub.label}" was already claimed.` };
         }
+        if (sub.status !== 'available' && sub.status !== 'pending_pickup') {
+          return { ok: false, errorMessage: `"${sub.label}" is not available to confirm.` };
+        }
       }
 
       for (const subId of ids) {
@@ -1890,14 +1896,15 @@ export async function submitSelfClaimRequest(params: {
 
   if (subitems.length > 0) {
     const available = subitems.filter((s) => s.status === 'available');
-    if (targetIds.length === 0) {
-      return { ok: false, errorMessage: 'Select at least one item you picked up.' };
+    if (targetIds.length !== 1) {
+      return { ok: false, errorMessage: 'Pick exactly one item you picked up.' };
     }
-    for (const id of targetIds) {
-      if (!available.some((s) => s.id === id)) {
-        return { ok: false, errorMessage: 'One of the selected items is no longer available.' };
-      }
+    const subId = targetIds[0];
+    const sub = available.find((s) => s.id === subId);
+    if (!sub) {
+      return { ok: false, errorMessage: 'That item is no longer available to claim.' };
     }
+    targetIds = [subId];
   } else {
     targetIds = [];
   }
@@ -1944,6 +1951,18 @@ export async function submitSelfClaimRequest(params: {
       return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (item_claim_requests).' };
     }
     return { ok: false, errorMessage: reqError.message };
+  }
+
+  if (targetIds.length === 1) {
+    const { error: holdError } = await supabase
+      .from('listing_subitems')
+      .update({ status: 'pending_pickup' })
+      .eq('id', targetIds[0])
+      .eq('status', 'available');
+    if (holdError) {
+      await supabase.from('item_claim_requests').delete().eq('id', requestId);
+      return { ok: false, errorMessage: 'Could not reserve that item — someone else may have claimed it.' };
+    }
   }
 
   const labels =
@@ -2073,10 +2092,28 @@ export async function rejectClaimRequest(params: {
       .eq('id', params.requestId);
     if (updateError) return { ok: false, errorMessage: updateError.message };
 
+    const subitems = await getListingSubitems(request.itemId);
+    const releasedLabels =
+      subitems.length > 0 && request.subItemIds.length > 0
+        ? subitems.filter((s) => request.subItemIds.includes(s.id)).map((s) => s.label)
+        : [];
+
+    for (const subId of request.subItemIds) {
+      await supabase
+        .from('listing_subitems')
+        .update({ status: 'available', claimedAt: null })
+        .eq('id', subId)
+        .eq('status', 'pending_pickup');
+    }
+
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const releaseNote =
+      releasedLabels.length > 0
+        ? ` ${releasedLabels.join(', ')} ${releasedLabels.length === 1 ? 'is' : 'are'} available again.`
+        : '';
     await createSupabaseMessage(
       request.chatId,
-      `Pickup request was declined by the poster.`,
+      `That wasn't them — the poster marked the wrong neighbor.${releaseNote}`,
       params.actor.uid,
       messageId,
     );
@@ -2097,6 +2134,10 @@ export async function recordItemClaimInChat(params: {
   subItemIds?: string[];
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const subitems = await getListingSubitems(params.itemId);
+
+  if (subitems.length > 0 && (params.subItemIds?.length ?? 0) !== 1) {
+    return { ok: false, errorMessage: 'Select exactly one item they picked up.' };
+  }
 
   const ids = subitems.length > 0 ? params.subItemIds ?? [] : null;
   const labels =

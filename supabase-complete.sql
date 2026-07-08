@@ -342,7 +342,7 @@ CREATE TABLE IF NOT EXISTS public.listing_subitems (
 
 ALTER TABLE public.listing_subitems DROP CONSTRAINT IF EXISTS listing_subitems_status_check;
 ALTER TABLE public.listing_subitems ADD CONSTRAINT listing_subitems_status_check
-  CHECK (status IN ('available', 'claimed'));
+  CHECK (status IN ('available', 'pending_pickup', 'claimed'));
 
 ALTER TABLE public.listing_subitems ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS listing_subitems_item_idx ON public.listing_subitems ("itemId", "sortOrder");
