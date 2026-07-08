@@ -1,11 +1,29 @@
 -- =========================================================
 -- JULY 2026 RELEASE — incremental migration
--- Run once in Supabase SQL Editor on an existing database.
--- Safe to re-run: uses IF NOT EXISTS / ON CONFLICT DO NOTHING.
+-- Run once in Supabase SQL Editor on an EXISTING production database.
+-- Safe to re-run: uses IF NOT EXISTS / ON CONFLICT / DROP POLICY IF EXISTS.
 --
--- Covers: Go Get pickup, pickup attribution, violation strikes,
---         July 2026 app updates + help announcement seeds.
+-- What this adds:
+--   • Pickup attribution columns + facebook_pickup_groups
+--   • Go Get sessions + live location tables
+--   • user_violations + 6-strike account lock ('locked' status)
+--   • RLS policies, strike triggers, realtime publication
+--   • 7 app_updates changelog rows + 1 help_announcement
+--
+-- For a FULL schema re-apply (fresh DB or disaster recovery), use instead:
+--   supabase-complete.sql  (project root — entire site schema + seeds)
 -- =========================================================
+
+-- ---------------------------------------------------------
+-- 0. Account status — add 'locked' for Go Get violation lockout
+-- ---------------------------------------------------------
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "accountStatus" TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "suspendedUntil" TIMESTAMPTZ;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "moderationNote" TEXT;
+
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_account_status_check;
+ALTER TABLE public.users ADD CONSTRAINT users_account_status_check
+  CHECK ("accountStatus" IN ('active', 'suspended', 'banned', 'locked'));
 
 -- ---------------------------------------------------------
 -- 1. Pickup attribution (quick-claim credit)

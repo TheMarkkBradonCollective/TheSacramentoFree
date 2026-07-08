@@ -1,3 +1,12 @@
--- See supabase-complete.sql in the project root for the full, up-to-date script.
--- Paste the entire file into Supabase Dashboard → SQL Editor → New query → Run.
--- Safe to re-run whenever the app schema changes — keeps the whole site intact.
+-- Sacramento Buy Nothing — database SQL
+--
+-- EXISTING PRODUCTION DATABASE (run once after deploying July 2026 release):
+--   scripts/supabase-migration-july-2026.sql
+--   Adds Go Get tables, pickup attribution, violation lockout, updates + news.
+--   Safe to re-run.
+--
+-- FULL SCHEMA (fresh install, new Supabase project, or full re-apply):
+--   supabase-complete.sql  (this repo root)
+--   Entire site schema, RLS, triggers, seeds, realtime — safe to re-run.
+--
+-- Paste either file into Supabase Dashboard → SQL Editor → New query → Run.
