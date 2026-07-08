@@ -44,12 +44,19 @@ export default function ClaimAtPickupButton({
     isUserAtPickupLocation(userLat, userLng, item);
 
   useEffect(() => {
+    if (!isCurbAlert) return;
+    void getListingSubitems(item.id).then((rows) => {
+      setSubitems(rows);
+    });
+  }, [item.id, isCurbAlert]);
+
+  useEffect(() => {
     if (!showPicker || !isCurbAlert) return;
     setLoadingSubitems(true);
     void getListingSubitems(item.id).then((rows) => {
       setSubitems(rows);
-      const available = rows.filter((s) => s.status === 'available').map((s) => s.id);
-      setSelectedIds(available.length === 1 ? available : []);
+      const available = rows.filter((s) => s.status === 'available');
+      setSelectedIds(available.length === 1 ? [available[0].id] : []);
       setLoadingSubitems(false);
     });
   }, [showPicker, item.id, isCurbAlert]);
@@ -94,6 +101,10 @@ export default function ClaimAtPickupButton({
   };
 
   const handleSubmit = async () => {
+    if (subitems.length > 0 && selectedIds.length !== 1) {
+      setErr('Pick exactly one item you took.');
+      return;
+    }
     setSubmitting(true);
     setErr('');
     const result = await submitSelfClaimRequest({
@@ -126,11 +137,11 @@ export default function ClaimAtPickupButton({
       {showPicker && (
         <div className="fixed inset-0 z-[75] bg-black/60 flex items-end sm:items-center justify-center p-4">
           <div className="sbn-card w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h4 className="font-display font-bold text-app">Notify poster (optional)</h4>
+            <h4 className="font-display font-bold text-app">Which item did you take?</h4>
             <p className="text-xs text-muted leading-snug">
-              {subitems.length > 0
-                ? 'Select what you took. The poster will confirm in Messages.'
-                : `${item.userDisplayName} will get a message that you picked this up. You can skip this if you prefer.`}
+              {subitems.length > 1
+                ? 'Pick one item per trip. The poster can confirm or say it wasn\'t you — that item goes back up for others.'
+                : `${item.userDisplayName} will get a message that you picked this up. You can skip notifying them.`}
             </p>
 
             {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
@@ -141,7 +152,12 @@ export default function ClaimAtPickupButton({
                 Loading items…
               </p>
             ) : subitems.length > 0 ? (
-              <SubItemPicker subitems={subitems} selectedIds={selectedIds} onChange={setSelectedIds} />
+              <SubItemPicker
+                subitems={subitems}
+                selectedIds={selectedIds}
+                onChange={setSelectedIds}
+                selectionMode="single"
+              />
             ) : null}
 
             <div className="flex gap-2 pt-2">
@@ -154,11 +170,11 @@ export default function ClaimAtPickupButton({
               </button>
               <button
                 type="button"
-                disabled={submitting || (subitems.length > 0 && selectedIds.length === 0)}
+                disabled={submitting || (subitems.length > 0 && selectedIds.length !== 1)}
                 onClick={() => void handleSubmit()}
                 className="sbn-btn sbn-btn-primary flex-1"
               >
-                {submitting ? 'Sending…' : 'Notify poster'}
+                {submitting ? 'Sending…' : subitems.length > 0 ? 'Notify for this item' : 'Notify poster'}
               </button>
             </div>
           </div>

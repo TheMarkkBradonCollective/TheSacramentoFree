@@ -239,7 +239,7 @@ export interface ItemComment {
   createdAt: any;
 }
 
-export type SubItemStatus = 'available' | 'claimed';
+export type SubItemStatus = 'available' | 'pending_pickup' | 'claimed';
 
 export interface ListingSubItem {
   id: string;

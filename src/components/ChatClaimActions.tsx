@@ -45,7 +45,7 @@ export default function ChatClaimActions({
     setSubitems(subs);
     setPending(reqs);
     const available = subs.filter((s) => s.status === 'available').map((s) => s.id);
-    setManualSelected(available.length === 1 ? available : []);
+    setManualSelected(available.length === 1 ? [available[0]] : []);
   }, [linkedItem.id, chatId]);
 
   useEffect(() => {
@@ -84,8 +84,13 @@ export default function ChatClaimActions({
 
   const isMulti = subitems.length > 0;
   const availableCount = isMulti ? subitems.filter((s) => s.status === 'available').length : 1;
+  const hasPendingRequests = pending.length > 0;
 
-  if (linkedItem.userId !== viewer.uid || linkedItem.type !== 'giveaway' || availableCount === 0) {
+  if (
+    linkedItem.userId !== viewer.uid ||
+    linkedItem.type !== 'giveaway' ||
+    (availableCount === 0 && !hasPendingRequests)
+  ) {
     return null;
   }
 
@@ -112,9 +117,13 @@ export default function ChatClaimActions({
   };
 
   const handleRejectRequest = async (request: ItemClaimRequest) => {
+    const itemNote =
+      isMulti && request.subItemIds.length > 0
+        ? ` That item will go back up for others.`
+        : '';
     const confirmed = await confirm({
-      message: `Decline pickup request from ${request.claimerName}?`,
-      confirmLabel: 'Decline',
+      message: `Mark that ${request.claimerName} wasn't the one who picked up?${itemNote}`,
+      confirmLabel: 'Not them',
       variant: 'danger',
     });
     if (!confirmed) return;
@@ -134,8 +143,13 @@ export default function ChatClaimActions({
   };
 
   const handleManualConfirm = async () => {
+    if (isMulti && manualSelected.length !== 1) {
+      setErr('Select exactly one item they picked up.');
+      return;
+    }
+
     const labels =
-      isMulti && manualSelected.length > 0
+      isMulti && manualSelected.length === 1
         ? subitems.filter((s) => manualSelected.includes(s.id)).map((s) => s.label).join(', ')
         : linkedItem.title;
 
@@ -206,7 +220,7 @@ export default function ChatClaimActions({
               onClick={() => void handleRejectRequest(req)}
               className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
             >
-              Deny
+              Not them
             </button>
           </div>
         </div>
@@ -220,16 +234,17 @@ export default function ChatClaimActions({
           className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
         >
           <CheckCircle className="w-4 h-4" />
-          {isMulti ? 'Confirm items picked up…' : 'This neighbor claimed it'}
+          {isMulti ? 'Confirm item picked up…' : 'This neighbor claimed it'}
         </button>
       ) : (
         <div className="p-2.5 rounded-xl border border-app bg-inset/40 space-y-2">
-          <p className="text-[10px] font-bold uppercase text-muted tracking-wide">Select picked up</p>
+          <p className="text-[10px] font-bold uppercase text-muted tracking-wide">Which item did they take?</p>
           <SubItemPicker
             subitems={subitems}
             selectedIds={manualSelected}
             onChange={setManualSelected}
             disabled={busy}
+            selectionMode="single"
           />
           <div className="flex gap-2">
             <button
@@ -241,7 +256,7 @@ export default function ChatClaimActions({
             </button>
             <button
               type="button"
-              disabled={busy || manualSelected.length === 0}
+              disabled={busy || manualSelected.length !== 1}
               onClick={() => void handleManualConfirm()}
               className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
             >
