@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ItemPost, ListingSubItem, UserProfile } from '../types';
 import { getListingSubitems, submitSelfClaimRequest } from '../supabase';
 import { isUserAtPickupLocation, pickupHasGpsPin } from '../lib/pickupProximity';
+import { canOfferContactlessClaim, isContactlessClaimCategory } from '../lib/listingMapActions';
 import SubItemPicker from './SubItemPicker';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { CheckCircle, Loader2 } from 'lucide-react';
@@ -33,7 +34,8 @@ export default function ClaimAtPickupButton({
   const [err, setErr] = useState('');
 
   const isOwner = item.userId === user.uid;
-  const isGiveaway = item.type === 'giveaway' && item.status === 'active';
+  const isCurbAlert =
+    item.type === 'giveaway' && item.status === 'active' && isContactlessClaimCategory(item.category);
   const hasGps = pickupHasGpsPin(item);
   const atLocation =
     hasGps &&
@@ -42,7 +44,7 @@ export default function ClaimAtPickupButton({
     isUserAtPickupLocation(userLat, userLng, item);
 
   useEffect(() => {
-    if (!showPicker || !isGiveaway) return;
+    if (!showPicker || !isCurbAlert) return;
     setLoadingSubitems(true);
     void getListingSubitems(item.id).then((rows) => {
       setSubitems(rows);
@@ -50,7 +52,7 @@ export default function ClaimAtPickupButton({
       setSelectedIds(available.length === 1 ? available : []);
       setLoadingSubitems(false);
     });
-  }, [showPicker, item.id, isGiveaway]);
+  }, [showPicker, item.id, isCurbAlert]);
 
   useEffect(() => {
     if (!showPicker) return;
@@ -73,7 +75,9 @@ export default function ClaimAtPickupButton({
     );
   }, [showPicker, item.id]);
 
-  if (!isGiveaway || isOwner || !hasGps) return null;
+  if (!isCurbAlert || isOwner || !hasGps) return null;
+
+  if (!canOfferContactlessClaim(item, user.uid, userLat, userLng)) return null;
 
   const availableCount =
     subitems.length > 0 ? subitems.filter((s) => s.status === 'available').length : 1;
@@ -81,28 +85,8 @@ export default function ClaimAtPickupButton({
   if (availableCount === 0) return null;
 
   const handleOpen = () => {
-    if (userLat == null || userLng == null) {
-      if (!navigator.geolocation) {
-        setErr('Enable location in your browser to claim at pickup.');
-        return;
-      }
-      setErr('');
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          if (!isUserAtPickupLocation(latitude, longitude, item)) {
-            setErr('Move closer to the pickup pin to claim (contactless pickup).');
-            return;
-          }
-          setShowPicker(true);
-        },
-        () => setErr('Could not read your location. Check GPS permissions.'),
-        { enableHighAccuracy: true, timeout: 10000 },
-      );
-      return;
-    }
     if (!atLocation) {
-      setErr('Move closer to the pickup pin to claim (contactless pickup).');
+      setErr('Move closer to the curb alert pin.');
       return;
     }
     setErr('');
@@ -132,28 +116,21 @@ export default function ClaimAtPickupButton({
       <button
         type="button"
         onClick={handleOpen}
-        disabled={false}
-        title={
-          atLocation
-            ? 'Tell the poster you picked up (contactless)'
-            : userLat == null
-              ? 'Enable GPS to claim at pickup'
-              : 'Get closer to the pickup pin'
-        }
-        className={`sbn-btn ${atLocation ? 'sbn-btn-primary' : 'sbn-btn-secondary'} ${compact ? 'sbn-btn-sm' : ''} ${className}`}
+        title="Optional — let the poster know you picked this up"
+        className={`sbn-btn sbn-btn-primary ${compact ? 'sbn-btn-sm' : ''} ${className}`}
       >
         <CheckCircle className="w-4 h-4" />
-        {compact ? 'Claim' : 'I picked up'}
+        {compact ? 'Notify picked up' : 'Notify poster I picked up'}
       </button>
 
       {showPicker && (
         <div className="fixed inset-0 z-[75] bg-black/60 flex items-end sm:items-center justify-center p-4">
           <div className="sbn-card w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h4 className="font-display font-bold text-app">Contactless pickup claim</h4>
+            <h4 className="font-display font-bold text-app">Notify poster (optional)</h4>
             <p className="text-xs text-muted leading-snug">
               {subitems.length > 0
                 ? 'Select what you took. The poster will confirm in Messages.'
-                : `${item.userDisplayName} will get a message that you picked this up.`}
+                : `${item.userDisplayName} will get a message that you picked this up. You can skip this if you prefer.`}
             </p>
 
             {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
@@ -173,7 +150,7 @@ export default function ClaimAtPickupButton({
                 onClick={() => setShowPicker(false)}
                 className="sbn-btn sbn-btn-secondary flex-1"
               >
-                Cancel
+                Skip
               </button>
               <button
                 type="button"
@@ -181,7 +158,7 @@ export default function ClaimAtPickupButton({
                 onClick={() => void handleSubmit()}
                 className="sbn-btn sbn-btn-primary flex-1"
               >
-                {submitting ? 'Sending…' : 'Send claim'}
+                {submitting ? 'Sending…' : 'Notify poster'}
               </button>
             </div>
           </div>

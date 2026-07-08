@@ -1,12 +1,22 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng, CommunityEvent } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, NEIGHBORHOOD_LAT_LONGS, convertPercentToLatLng, CommunityEvent } from '../types';
 import {
   canViewerSeeExactLocation,
+  getItemMapDestination,
+  hasExactMapPin,
   hasStoredGps,
   isLocationPrivate,
   stripListingMetadata,
 } from '../lib/itemLocation';
+import {
+  canOfferContactlessClaim,
+  getListingNavigateLabel,
+  navigatesDirectlyToPin,
+} from '../lib/listingMapActions';
+import { createGoGetSession } from '../lib/goGetSessions';
+import { confirmDropOffAsFulfiller, confirmGoGetAsRequester, confirmMeetUp } from './goget/goGetSafetyConfirm';
+import { useConfirm } from '../contexts/ConfirmContext';
 import { extractListingImageUrls } from '../lib/listingContent';
 import {
   fetchDrivingRoute,
@@ -148,17 +158,23 @@ function createEventBlipIcon(isSelected: boolean): L.DivIcon {
   });
 }
 
-function createItemBlipIcon(item: ItemPost, color: string, isSelected: boolean): L.DivIcon {
+function createItemBlipIcon(item: ItemPost, color: string, isSelected: boolean, approximate = false): L.DivIcon {
+  const shape = approximate
+    ? `h-3 w-3 rounded-sm border border-dashed opacity-80 ${getMapPinBorderClass(item.type)}`
+    : `h-3.5 w-3.5 rounded-full border-2 shadow-md ${getMapPinBorderClass(item.type)}`;
+  const pulse = approximate
+    ? `border-color: ${color}; opacity: 0.25`
+    : `border-color: ${color}`;
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center cursor-pointer">
-        <span style="border-color: ${color}" class="absolute inline-flex h-6 w-6 rounded-full border opacity-40 block"></span>
-        <div style="background-color: ${color}" class="h-3.5 w-3.5 rounded-full border-2 shadow-md ${getMapPinBorderClass(item.type)} ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
-          <div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>
+        <span style="${pulse}" class="absolute inline-flex h-6 w-6 ${approximate ? 'rounded-sm border border-dashed' : 'rounded-full border'} opacity-40 block"></span>
+        <div style="background-color: ${approximate ? 'transparent' : color}" class="${shape} ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
+          ${approximate ? '' : '<div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>'}
         </div>
       </div>
     `,
-    className: 'custom-item-blip-marker',
+    className: approximate ? 'custom-item-blip-marker-approx' : 'custom-item-blip-marker',
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
@@ -382,6 +398,7 @@ export default function SacramentoMapView({
   commentsLocked = false,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
+  const { confirm } = useConfirm();
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -804,25 +821,34 @@ export default function SacramentoMapView({
     setSelectedEvent(activeEvents[prevIdx]);
   };
 
-  // Only items with a saved, viewer-visible GPS pin appear on the map (list shows all activeItems).
+  // Exact GPS pins when available; neighborhood-center fallback so feed listings still appear on the map.
   const blipPositions = useMemo(() => {
     return activeItems.flatMap((item) => {
-      const customCoords = extractGPSCoordinates(item.description);
-      if (
-        !customCoords ||
-        !hasStoredGps(item.description) ||
-        !canViewerSeeExactLocation(item, userProfile?.uid)
-      ) {
-        return [];
+      const exactPin = hasExactMapPin(item, userProfile?.uid);
+      if (exactPin) {
+        const customCoords = extractGPSCoordinates(item.description)!;
+        const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
+        return [
+          {
+            item,
+            lat,
+            lng,
+            color: getCategoryColor(item.category),
+            approximate: false,
+          },
+        ];
       }
 
-      const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
+      const neighborhood = NEIGHBORHOOD_LAT_LONGS[item.neighborhood];
+      if (!neighborhood) return [];
+
       return [
         {
           item,
-          lat,
-          lng,
+          lat: neighborhood.lat,
+          lng: neighborhood.lng,
           color: getCategoryColor(item.category),
+          approximate: true,
         },
       ];
     });
@@ -961,14 +987,14 @@ export default function SacramentoMapView({
 
     if (showItemsOnMap) {
       syncMarkers(
-        blipPositions.map(({ item, lat, lng, color }) => ({
+        blipPositions.map(({ item, lat, lng, color, approximate }) => ({
           id: item.id,
           lat,
           lng,
-          data: { item, color },
+          data: { item, color, approximate },
         })),
         itemMarkersRef.current,
-        ({ item, color }) => createItemBlipIcon(item, color, false),
+        ({ item, color, approximate }) => createItemBlipIcon(item, color, false, approximate),
         ({ item }, lat, lng) => {
           setSlideDirection('right');
           setSelectedPost(item);
@@ -1016,15 +1042,15 @@ export default function SacramentoMapView({
       itemMarkersRef.current.forEach((marker, itemId) => {
         const blip = blipPositions.find((entry) => entry.item.id === itemId);
         if (!blip) return;
-        marker.setIcon(createItemBlipIcon(blip.item, blip.color, selectedPost?.id === itemId));
+        marker.setIcon(createItemBlipIcon(blip.item, blip.color, selectedPost?.id === itemId, blip.approximate));
       });
     }
   }, [selectedPost?.id, selectedEvent?.id, showItemsOnMap, showEventsOnMap, blipPositions, eventBlipPositions]);
 
   const routeDestination = useMemo(() => {
     if (selectedPost) {
-      const selectedBlip = blipPositions.find((b) => b.item.id === selectedPost.id);
-      if (selectedBlip) return { lat: selectedBlip.lat, lng: selectedBlip.lng } as LatLng;
+      const dest = getItemMapDestination(selectedPost, userProfile.uid);
+      if (dest) return dest;
       const session = readActiveNavSession(userProfile.uid);
       if (session?.targetId === selectedPost.id && session.targetType === 'post') {
         return session.destination;
@@ -1180,11 +1206,9 @@ export default function SacramentoMapView({
     persistNavigationSession();
   }, [navigationOpen, selectedPost, selectedEvent, routeDestination, persistNavigationSession]);
 
-  // Events still navigate straight from the map pin (no pickup handshake needed).
-  // Listings route through the full "Go Get" handshake in ItemDetailView/
-  // ItemDetailNavigation instead of navigating directly from this popup — opening
-  // the item detail here is what used to be the "notify poster" skip/notify choice.
-  const handleNavigateRequest = useCallback(() => {
+  // Events navigate straight from the map pin. Curb alerts use "Go to" (direct nav).
+  // Other types start their coordination flow (Go Get / Drop off / Meet up).
+  const handleNavigateRequest = useCallback(async () => {
     if (selectedEvent) {
       openNavigation();
       return;
@@ -1195,8 +1219,71 @@ export default function SacramentoMapView({
       openNavigation();
       return;
     }
-    openItemDetail?.(selectedPost);
-  }, [selectedEvent, selectedPost, userProfile.uid, openNavigation, openItemDetail]);
+
+    const destination = getItemMapDestination(selectedPost, userProfile.uid);
+    if (!destination) {
+      openItemDetail?.(selectedPost);
+      return;
+    }
+
+    if (navigatesDirectlyToPin(selectedPost)) {
+      openNavigation();
+      return;
+    }
+
+    if (selectedPost.type === 'looking') {
+      const ok = await confirmDropOffAsFulfiller(confirm, selectedPost.userDisplayName, selectedPost.title);
+      if (!ok) return;
+      const result = await createGoGetSession({
+        item: selectedPost,
+        fulfillerUserId: userProfile.uid,
+        fulfillerName: userProfile.displayName,
+        requesterUserId: selectedPost.userId,
+        requesterName: selectedPost.userDisplayName,
+        destination,
+        destinationLabel: `${selectedPost.userDisplayName}'s area`,
+      });
+      if (result.ok && result.session?.status === 'active') openNavigation();
+      else if (!result.ok) openItemDetail?.(selectedPost);
+      return;
+    }
+
+    if (selectedPost.type === 'trade') {
+      const ok = await confirmMeetUp(confirm, selectedPost.userDisplayName, selectedPost.title);
+      if (!ok) return;
+      const result = await createGoGetSession({
+        item: selectedPost,
+        fulfillerUserId: selectedPost.userId,
+        fulfillerName: selectedPost.userDisplayName,
+        requesterUserId: userProfile.uid,
+        requesterName: userProfile.displayName,
+        destination,
+        destinationLabel: `Meetup: ${selectedPost.title}`,
+      });
+      if (result.ok && result.session?.status === 'active') openNavigation();
+      else if (!result.ok) openItemDetail?.(selectedPost);
+      return;
+    }
+
+    const ok = await confirmGoGetAsRequester(
+      confirm,
+      selectedPost.userDisplayName,
+      selectedPost.title,
+      selectedPost.category,
+    );
+    if (!ok) return;
+    const result = await createGoGetSession({
+      item: selectedPost,
+      fulfillerUserId: selectedPost.userId,
+      fulfillerName: selectedPost.userDisplayName,
+      requesterUserId: userProfile.uid,
+      requesterName: userProfile.displayName,
+      destination,
+      destinationLabel: selectedPost.title,
+    });
+    if (result.ok && result.session?.status === 'active') openNavigation();
+    else openItemDetail?.(selectedPost);
+  }, [selectedEvent, selectedPost, userProfile, openNavigation, openItemDetail, confirm]);
 
   const handleOpenExternalMaps = useCallback(() => {
     if (!routeEndpoints) return;
@@ -1594,7 +1681,7 @@ export default function SacramentoMapView({
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
                         canNavigate={hasGpsFix && !!routeDestination}
-                        navigateLabel="Go Get"
+                        navigateLabel={selectedPost ? getListingNavigateLabel(selectedPost) : 'Navigate'}
                         onStartNavigation={handleNavigateRequest}
                         onOpenExternalMaps={handleOpenExternalMaps}
                       />
@@ -1630,7 +1717,13 @@ export default function SacramentoMapView({
                           )
                         ) : (
                           <>
-                            {onClaimSubmitted && selectedPost.type === 'giveaway' && (
+                            {onClaimSubmitted &&
+                              canOfferContactlessClaim(
+                                selectedPost,
+                                userProfile.uid,
+                                userLocation?.lat ?? null,
+                                userLocation?.lng ?? null,
+                              ) && (
                               <ClaimAtPickupButton
                                 item={selectedPost}
                                 user={userProfile}
@@ -2008,7 +2101,7 @@ export default function SacramentoMapView({
                 <p className="text-[10px] text-muted font-semibold leading-relaxed">
                   {showingEvents
                     ? 'No events with a map pin match your filters. Events without a set location still appear in the list.'
-                    : 'No listings with a map pin match your filters. List-only posts still appear in the feed — add a pickup pin when posting to show on the map!'}
+                    : 'No listings match your filters. Posts without an exact pin show at their neighborhood center — add a pickup pin when posting for a precise location!'}
                 </p>
               </div>
             </div>
@@ -2148,7 +2241,7 @@ export default function SacramentoMapView({
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
                     canNavigate={hasGpsFix && !!routeDestination}
-                    navigateLabel="Go Get"
+                    navigateLabel={selectedPost ? getListingNavigateLabel(selectedPost) : 'Navigate'}
                     onStartNavigation={handleNavigateRequest}
                     onOpenExternalMaps={handleOpenExternalMaps}
                   />
@@ -2186,7 +2279,13 @@ export default function SacramentoMapView({
                       )
                     ) : (
                       <>
-                        {onClaimSubmitted && selectedPost.type === 'giveaway' && (
+                        {onClaimSubmitted &&
+                          canOfferContactlessClaim(
+                            selectedPost,
+                            userProfile.uid,
+                            userLocation?.lat ?? null,
+                            userLocation?.lng ?? null,
+                          ) && (
                           <ClaimAtPickupButton
                             item={selectedPost}
                             user={userProfile}

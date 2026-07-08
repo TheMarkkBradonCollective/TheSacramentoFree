@@ -505,7 +505,7 @@ export default function ItemDetailView({
                   </button>
                 )}
               </div>
-              {item.status === 'active' && userProfile && onClaimSubmitted && item.type === 'giveaway' && (
+              {item.status === 'active' && userProfile && onClaimSubmitted && (
                 <ClaimAtPickupButton
                   item={item}
                   user={userProfile}

@@ -64,6 +64,8 @@ import {
 import ChatClaimActions from './ChatClaimActions';
 import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
 import { confirmGoGetAsFulfiller } from './goget/goGetSafetyConfirm';
+import { getChatCoordinationLabel } from '../lib/listingMapActions';
+import { getItemMapDestination } from '../lib/itemLocation';
 import type { GoGetSession } from '../types';
 import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
@@ -164,34 +166,46 @@ export default function ChatSystem({
     async (linkedItem: ItemPost, otherUserId: string, otherUserName: string) => {
       const myLocation = getLastLiveLatLng();
       if (!myLocation) {
-        setErrorMsg('Enable location so the neighbor can navigate to you.');
+        setErrorMsg('Enable location to coordinate pickup.');
         return;
       }
-      const confirmed = await confirmGoGetAsFulfiller(confirm, otherUserName, linkedItem.title);
+      const isLooking = linkedItem.type === 'looking';
+      const isTrade = linkedItem.type === 'trade';
+      const dropOffDestination = getItemMapDestination(linkedItem, linkedItem.userId) ?? myLocation;
+      const confirmed = await confirmGoGetAsFulfiller(
+        confirm,
+        otherUserName,
+        linkedItem.title,
+        isTrade ? 'trade' : 'looking',
+      );
       if (!confirmed) return;
       setStartingGoGet(true);
       setErrorMsg('');
-      const isLooking = linkedItem.type === 'looking';
       const result = await createGoGetSession({
         item: linkedItem,
         fulfillerUserId: userProfile.uid,
         fulfillerName: userProfile.displayName,
         requesterUserId: otherUserId,
         requesterName: otherUserName,
-        destination: myLocation,
-        destinationLabel: `${userProfile.displayName}'s location`,
+        destination: isLooking ? dropOffDestination : dropOffDestination,
+        destinationLabel: isLooking
+          ? `${otherUserName}'s area`
+          : `Meetup: ${linkedItem.title}`,
       });
       setStartingGoGet(false);
       if (!result.ok || !result.session) {
-        setErrorMsg(result.errorMessage || 'Could not start Go Get.');
+        setErrorMsg(
+          result.errorMessage ||
+            (isLooking ? 'Could not start drop off.' : 'Could not start meet up.'),
+        );
         return;
       }
       setChatGoGetSession(result.session);
       await createSupabaseMessage(
         selectedChat!.id,
         isLooking
-          ? `📦 ${userProfile.displayName} started a Go Get — ${otherUserName} can head over now. Open "${linkedItem.title}" to follow along.`
-          : `🔁 ${userProfile.displayName} started a Go Get for the trade — ${otherUserName} can head over now. Open "${linkedItem.title}" to follow along.`,
+          ? `📦 ${userProfile.displayName} is dropping off "${linkedItem.title}" — heading to ${otherUserName}'s area. Open the listing to follow along.`
+          : `🔁 ${userProfile.displayName} is heading to the meetup spot for "${linkedItem.title}". Open the listing to follow along.`,
         userProfile.uid,
         `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         { skipPush: true },
@@ -1394,10 +1408,18 @@ export default function ChatSystem({
                           disabled={isSending || startingGoGet || !claimerUserId}
                           className="chat-action-chip chat-action-chip--primary"
                           id="chat_start_go_get_btn"
-                          title="Share your live location so they can Go Get it"
+                          title={
+                            linkedItem?.type === 'looking'
+                              ? 'Navigate to drop off at their area'
+                              : 'Navigate to the meetup spot'
+                          }
                         >
                           <Navigation2 className="w-3.5 h-3.5 shrink-0" />
-                          {startingGoGet ? 'Starting…' : 'Go Get'}
+                          {startingGoGet
+                            ? 'Starting…'
+                            : linkedItem
+                              ? getChatCoordinationLabel(linkedItem)
+                              : 'Go Get'}
                         </button>
                       ) : null}
                     </div>

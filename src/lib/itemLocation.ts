@@ -1,4 +1,5 @@
-import { ItemPost, PostType, extractGPSCoordinates, convertPercentToLatLng } from '../types';
+import { ItemPost, PostType, extractGPSCoordinates, convertPercentToLatLng, NEIGHBORHOOD_LAT_LONGS } from '../types';
+import type { LatLng } from './mapRoute';
 
 export { convertPercentToLatLng };
 import { getListingDetailsText, parseListingDetails, parsePickupNotes } from './listingContent';
@@ -25,6 +26,24 @@ export function canViewerSeeExactLocation(
   if (!hasStoredGps(item.description)) return false;
   if (item.userId === viewerUserId) return true;
   return !isLocationPrivate(item.description);
+}
+
+/** Exact pickup pin when visible; otherwise neighborhood center for map/navigation fallback. */
+export function getItemMapDestination(
+  item: ItemPost,
+  viewerUserId: string | undefined,
+): LatLng | null {
+  if (canViewerSeeExactLocation(item, viewerUserId)) {
+    const gps = extractGPSCoordinates(item.description);
+    if (gps) return convertPercentToLatLng(gps.x, gps.y);
+  }
+  const neighborhood = NEIGHBORHOOD_LAT_LONGS[item.neighborhood];
+  if (neighborhood) return { lat: neighborhood.lat, lng: neighborhood.lng };
+  return null;
+}
+
+export function hasExactMapPin(item: ItemPost, viewerUserId: string | undefined): boolean {
+  return canViewerSeeExactLocation(item, viewerUserId) && hasStoredGps(item.description);
 }
 
 export function stripListingMetadata(description: string): string {
