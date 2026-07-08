@@ -4,7 +4,7 @@ import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
 import CommunityReviews from '../../CommunityReviews';
 import CommunityStatsBar from '../../CommunityStatsBar';
 import GuestListingPreview from '../GuestListingPreview';
-import HomeScrollStage, { DepthPanel, DepthSection } from '../HomeScrollStage';
+import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
 import { SITE, SUPPORT } from '../../../siteContent';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
@@ -36,7 +36,7 @@ export default function HomePage({
 }: HomePageProps) {
   return (
     <HomeScrollStage>
-      <DepthSection depth={1} className="sbn-page-content sbn-hero-glow pb-4">
+      <section className="sbn-page-content sbn-hero-glow pb-4">
         <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl mb-6" />
 
         <span className="sbn-badge sbn-badge-give">
@@ -70,13 +70,13 @@ export default function HomePage({
         </div>
 
         <p className="mt-5 text-sm font-semibold text-accent">{SITE.freeRule}</p>
-      </DepthSection>
+      </section>
 
       <DepthSection depth={2} className="mt-6">
         <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">Community at a glance</p>
-        <DepthPanel className="sbn-card p-1">
+        <div className="sbn-card p-1">
           <CommunityStatsBar items={items} variant="full" />
-        </DepthPanel>
+        </div>
       </DepthSection>
 
       {onViewListing && onRequireSignIn && (
@@ -92,28 +92,27 @@ export default function HomePage({
       )}
 
       <DepthSection depth={2} className="mt-6">
-        <DepthPanel>
+        <div className="sbn-card p-1">
           <LeadershipMessagesCarousel onRequireSignIn={onRequireSignIn} />
-        </DepthPanel>
+        </div>
       </DepthSection>
 
       <DepthSection depth={2} className="mt-6">
-        <DepthPanel>
+        <div className="sbn-card p-1">
           <CommunityReviews
             preview
             onRequireSignIn={onRequireSignIn}
             onSeeAll={() => onNavigate('reviews')}
           />
-        </DepthPanel>
+        </div>
       </DepthSection>
 
       <DepthSection depth={2} className="mt-6" id="home_support_section">
-        <DepthPanel>
-          <button
-            type="button"
-            onClick={() => onNavigate('gofundme')}
-            className="sbn-card p-6 text-left w-full hover:border-accent/40 transition-colors group"
-          >
+        <button
+          type="button"
+          onClick={() => onNavigate('gofundme')}
+          className="sbn-card p-6 text-left w-full hover:border-accent/40 transition-colors group"
+        >
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
                 <HandHeart className="w-6 h-6 text-accent" />
@@ -129,7 +128,6 @@ export default function HomePage({
               </div>
             </div>
           </button>
-        </DepthPanel>
       </DepthSection>
 
       <DepthSection depth={2} className="mt-14">

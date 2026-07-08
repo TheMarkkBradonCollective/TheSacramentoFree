@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode, type RefObject } from 'react';
 import {
   motion,
   useMotionTemplate,
@@ -7,18 +7,27 @@ import {
   useSpring,
   useTransform,
 } from 'motion/react';
+import { usePublicScrollContainer } from '../../public/PublicScrollContext';
 
 interface HomeScrollStageProps {
   children: ReactNode;
 }
 
+function useHomeScroll(target: RefObject<HTMLElement | null>, offset: ScrollOffset) {
+  const scrollContainer = usePublicScrollContainer();
+  return useScroll({
+    target,
+    container: scrollContainer ?? undefined,
+    offset,
+  });
+}
+
+type ScrollOffset = NonNullable<Parameters<typeof useScroll>[0]>['offset'];
+
 /** Ambient orbs + perspective root for the public home scroll experience. */
 export default function HomeScrollStage({ children }: HomeScrollStageProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: rootRef,
-    offset: ['start start', 'end end'],
-  });
+  const { scrollYProgress } = useHomeScroll(rootRef, ['start start', 'end end']);
 
   const farY = useTransform(scrollYProgress, [0, 1], [0, 420]);
   const midY = useTransform(scrollYProgress, [0, 1], [0, 260]);
@@ -90,10 +99,7 @@ interface DepthSectionProps {
 /** Section that moves through Z-space as it crosses the viewport while scrolling. */
 export function DepthSection({ children, depth = 1, className = '', id }: DepthSectionProps) {
   const ref = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start 0.92', 'end 0.08'],
-  });
+  const { scrollYProgress } = useHomeScroll(ref, ['start 0.92', 'end 0.08']);
 
   const y = useTransform(scrollYProgress, [0, 0.45, 1], [depth * 36, 0, -depth * 28]);
   const z = useTransform(scrollYProgress, [0, 0.45, 1], [-depth * 90, 0, depth * 50]);
@@ -129,10 +135,7 @@ interface DepthPanelProps {
 /** Card/panel with scroll depth + subtle pointer tilt. */
 export function DepthPanel({ children, className = '', floatDelay = 0 }: DepthPanelProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start 0.95', 'end 0.05'],
-  });
+  const { scrollYProgress } = useHomeScroll(ref, ['start 0.95', 'end 0.05']);
 
   const y = useTransform(scrollYProgress, [0, 0.5, 1], [48 + floatDelay, 0, -24]);
   const z = useTransform(scrollYProgress, [0, 0.5, 1], [-60, 20, -30]);
