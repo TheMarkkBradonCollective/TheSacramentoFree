@@ -1331,17 +1331,26 @@ button {
   z-index: 1;
   transform-style: preserve-3d;
   will-change: transform;
+  pointer-events: none;
 }
 
 .home-scroll-stage__section {
   transform-style: preserve-3d;
   will-change: transform, opacity;
   margin-bottom: 0.25rem;
+  pointer-events: none;
 }
 
 .home-scroll-stage__panel {
   transform-style: preserve-3d;
   will-change: transform;
+  pointer-events: none;
+}
+
+.home-scroll-stage__content > *,
+.home-scroll-stage__section > *,
+.home-scroll-stage__panel > * {
+  pointer-events: auto;
 }
 
 .home-scroll-stage__orb {

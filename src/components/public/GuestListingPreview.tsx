@@ -6,7 +6,6 @@ import { getPostTypeBadgeClass, getPostTypeLabel } from '../../lib/postType';
 import { extractListingImageUrls } from '../../lib/listingContent';
 import ListingImage from '../ListingImage';
 import HorizontalSnapRow, { SnapSlide } from '../HorizontalSnapRow';
-import { DepthPanel } from './HomeScrollStage';
 import { SITE } from '../../siteContent';
 
 interface GuestListingPreviewProps {
@@ -51,27 +50,24 @@ export default function GuestListingPreview({
         </button>
       </div>
 
-      <DepthPanel className="mb-4">
-        <div className="sbn-card p-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search listings…"
-              className="sbn-input pl-11"
-              aria-label="Search listings"
-            />
-          </div>
+      <div className="sbn-card p-4 mb-4">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search listings…"
+            className="sbn-input pl-11"
+            aria-label="Search listings"
+          />
         </div>
-      </DepthPanel>
+      </div>
 
       {isLoading ? (
         <p className="text-sm text-muted text-center py-12">Loading listings…</p>
       ) : previewItems.length === 0 ? (
-        <DepthPanel>
-          <div className="sbn-card text-center py-12 px-6 border-dashed">
+        <div className="sbn-card text-center py-12 px-6 border-dashed">
             <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
             <p className="font-display font-bold text-app">No active listings right now</p>
             <p className="text-sm text-muted mt-2">{SITE.tagline}</p>
@@ -79,7 +75,6 @@ export default function GuestListingPreview({
               Sign in to post the first one
             </button>
           </div>
-        </DepthPanel>
       ) : (
         <HorizontalSnapRow label="Live neighborhood listings">
           {previewItems.map((item) => {
