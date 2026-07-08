@@ -3,7 +3,11 @@ import { createPortal } from 'react-dom';
 import { AlertTriangle, CheckCircle, Loader2, MessageCircle, XCircle } from 'lucide-react';
 import type { ItemPost, UserProfile } from '../types';
 import { extractGPSCoordinates } from '../types';
-import { canViewerSeeExactLocation, convertPercentToLatLng } from '../lib/itemLocation';
+import { canViewerSeeExactLocation, convertPercentToLatLng, getItemMapDestination } from '../lib/itemLocation';
+import {
+  getListingNavigateLabel,
+  navigatesDirectlyToPin,
+} from '../lib/listingMapActions';
 import {
   fetchDrivingRoute,
   isRoadGeometry,
@@ -53,7 +57,7 @@ import GoGetLiveTrackingCard from './goget/GoGetLiveTrackingCard';
 import GoGetMeetingMap from './goget/GoGetMeetingMap';
 import GoGetShareLocationToggle from './goget/GoGetShareLocationToggle';
 import ReportGoGetViolationDialog from './goget/ReportGoGetViolationDialog';
-import { confirmGoGetAsRequester, confirmGoGetTripStart } from './goget/goGetSafetyConfirm';
+import { confirmGoGetAsRequester, confirmGoGetTripStart, confirmDropOffAsFulfiller, confirmMeetUp } from './goget/goGetSafetyConfirm';
 import { useConfirm } from '../contexts/ConfirmContext';
 
 interface ItemDetailNavigationProps {
@@ -111,10 +115,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   // the fulfiller's location, not the item's own metadata pin — see createGoGetSession callers
   // in ChatSystem). Only fall back to the item's stored pickup pin before a session exists.
   const itemPinDestination = useMemo<LatLng | null>(() => {
-    if (!canViewerSeeExactLocation(item, currentUserId)) return null;
-    const gps = extractGPSCoordinates(item.description);
-    if (!gps) return null;
-    return convertPercentToLatLng(gps.x, gps.y);
+    return getItemMapDestination(item, currentUserId);
   }, [item, currentUserId]);
 
   const destination = useMemo<LatLng | null>(() => {
@@ -252,6 +253,10 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
 
   const handleStartGoGet = useCallback(async () => {
     if (!destination || !userLocation || !userProfile) return;
+    if (navigatesDirectlyToPin(item)) {
+      openNavigation();
+      return;
+    }
     const confirmed = await confirmGoGetAsRequester(confirm, item.userDisplayName, item.title, item.category);
     if (!confirmed) return;
     setBusy(true);
@@ -275,6 +280,74 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       openNavigation();
     }
   }, [confirm, destination, userLocation, userProfile, item, openNavigation]);
+
+  const handleStartDropOff = useCallback(async () => {
+    if (!destination || !userLocation || !userProfile) return;
+    const confirmed = await confirmDropOffAsFulfiller(confirm, item.userDisplayName, item.title);
+    if (!confirmed) return;
+    setBusy(true);
+    setErr('');
+    const result = await createGoGetSession({
+      item,
+      fulfillerUserId: userProfile.uid,
+      fulfillerName: userProfile.displayName,
+      requesterUserId: item.userId,
+      requesterName: item.userDisplayName,
+      destination,
+      destinationLabel: `${item.userDisplayName}'s area`,
+    });
+    setBusy(false);
+    if (!result.ok || !result.session) {
+      setErr(result.errorMessage || 'Could not start drop off.');
+      return;
+    }
+    setSession(result.session);
+    if (result.session.status === 'active') {
+      openNavigation();
+    }
+  }, [confirm, destination, userLocation, userProfile, item, openNavigation]);
+
+  const handleStartMeetUp = useCallback(async () => {
+    if (!destination || !userLocation || !userProfile) return;
+    const confirmed = await confirmMeetUp(confirm, item.userDisplayName, item.title);
+    if (!confirmed) return;
+    setBusy(true);
+    setErr('');
+    const result = await createGoGetSession({
+      item,
+      fulfillerUserId: item.userId,
+      fulfillerName: item.userDisplayName,
+      requesterUserId: userProfile.uid,
+      requesterName: userProfile.displayName,
+      destination,
+      destinationLabel: `Meetup: ${item.title}`,
+    });
+    setBusy(false);
+    if (!result.ok || !result.session) {
+      setErr(result.errorMessage || 'Could not start meet up.');
+      return;
+    }
+    setSession(result.session);
+    if (result.session.status === 'active') {
+      openNavigation();
+    }
+  }, [confirm, destination, userLocation, userProfile, item, openNavigation]);
+
+  const handleListingNavigation = useCallback(() => {
+    if (isOwner) {
+      openNavigation();
+      return;
+    }
+    if (item.type === 'looking') {
+      void handleStartDropOff();
+      return;
+    }
+    if (item.type === 'trade') {
+      void handleStartMeetUp();
+      return;
+    }
+    void handleStartGoGet();
+  }, [isOwner, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
 
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
@@ -716,10 +789,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       {!sessionLoaded ? null : session ? (
         renderSessionCard()
       ) : (
-        // Looking/Trade sessions must be started from chat (see ChatSystem "Start Go Get"),
-        // where the fulfiller's own location becomes the destination — this quick row only
-        // makes sense for Giveaway, where the item's own pin is always the destination.
-        !isOwner && item.type === 'giveaway' && (
+        destination && (
           <MapSelectionRouteRow
             locationHint={locationHint}
             routeEndpoints={routeEndpoints}
@@ -729,8 +799,8 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
             routeOnMap={isRoadGeometry(routeCoords)}
             hasLiveGps={!!userLocation}
             canNavigate={!!userLocation}
-            navigateLabel="Go Get"
-            onStartNavigation={() => void handleStartGoGet()}
+            navigateLabel={isOwner ? 'Navigate' : getListingNavigateLabel(item)}
+            onStartNavigation={() => (isOwner ? openNavigation() : void handleListingNavigation())}
             onOpenExternalMaps={() => {
               if (!routeEndpoints) {
                 openDrivingDirections(destination);
