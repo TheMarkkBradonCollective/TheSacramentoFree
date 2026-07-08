@@ -661,6 +661,26 @@ VALUES
   'Markeith White',
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-08_interactive-exchange',
+  '2026-07-08',
+  'Major interactive upgrades — the app comes on the exchange with you',
+  'I shipped major interactive changes so Sacramento Buy Nothing can walk with you through every neighborly exchange — map, pickup, and curb alerts included.',
+  'What is new:
+
+• **Homepage taps work again** — buttons and links on the public site respond reliably.
+• **More on the map** — exact GPS pins plus neighborhood markers when only an area is set, so more posts show up where you are browsing.
+• **The right action for each post type** — **Go to** for curb alerts, **Drop off** for Looking requests, **Meet up** for trades, and **Go Get** for other giveaways.
+• **Curb alert pickup at the pin** — when you are at the location, you can optionally notify the poster you picked up.
+• **One item per trip on multi-item posts** — pick the item you took; the poster confirms or taps **Not them** to put that item back up for others.
+
+The app and website are meant to stay with you from browsing to handoff. Try the map and let me know how it feels.
+
+— Mark',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
 )
 ON CONFLICT (id) DO NOTHING;
 
