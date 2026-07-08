@@ -1,9 +1,7 @@
 import { getSupabaseAdmin } from './supabaseAdmin';
+import { isVoteNotifyBurst, VOTE_NOTIFY_BURST_WINDOW_MS } from '../../../shared/voteNotifyCooldown';
 
 /** Skip vote push alerts when a voter is clearly mass-voting (backup to client cooldown). */
-const VOTE_NOTIFY_BURST_WINDOW_MS = 3 * 60 * 1000;
-const VOTE_NOTIFY_BURST_MAX = 10;
-
 export async function shouldThrottleVoteNotify(voterUserId: string): Promise<boolean> {
   const supabaseAdmin = await getSupabaseAdmin();
   const cutoff = new Date(Date.now() - VOTE_NOTIFY_BURST_WINDOW_MS).toISOString();
@@ -19,5 +17,5 @@ export async function shouldThrottleVoteNotify(voterUserId: string): Promise<boo
     return false;
   }
 
-  return (count ?? 0) > VOTE_NOTIFY_BURST_MAX;
+  return isVoteNotifyBurst(count);
 }

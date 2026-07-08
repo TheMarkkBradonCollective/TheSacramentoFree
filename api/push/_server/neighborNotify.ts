@@ -3,6 +3,7 @@ import { itemCoordsFromDescription } from './itemCoords';
 import { runPushSend, type PushSendBody } from './runPushSend';
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { shouldThrottleVoteNotify } from './voteNotifyCooldown';
+import { listingStatusLabel, newListingPushTitle } from '../../../shared/listingStatusLabel';
 
 type ItemRow = {
   id?: string;
@@ -20,21 +21,8 @@ function listingUrl(itemId: string): string {
   return `/listing/${itemId}`;
 }
 
-export function statusLabel(status: string): string {
-  switch (status) {
-    case 'pending_pickup':
-      return 'Pending pickup';
-    case 'on_hold':
-      return 'On hold';
-    case 'completed':
-      return 'Gifted';
-    case 'withdrawn':
-      return 'Withdrawn';
-    case 'active':
-      return 'Active again';
-    default:
-      return 'Updated';
-  }
+export function statusLabel(status: string, itemType?: string): string {
+  return listingStatusLabel(status, itemType);
 }
 
 async function getSavedItemUserIds(itemId: string, excludeUserId?: string): Promise<string[]> {
@@ -70,7 +58,7 @@ export async function runNeighborNewListingNotify(
 
   return sendNeighborPush(userId, {
     eventType,
-    title: isRequest ? 'New neighbor request' : 'New free item posted',
+    title: newListingPushTitle(item.type),
     body: `${displayName}: ${title}`,
     url: listingUrl(itemId),
     listingId: itemId,
@@ -539,7 +527,7 @@ export async function runListingStatusNotify(
   }
 
   const itemTitle = String(item.title || 'your listing');
-  const label = statusLabel(status);
+  const label = statusLabel(status, item.type);
 
   return sendNeighborPush(ownerId, {
     eventType: 'listing_status',
@@ -573,7 +561,7 @@ export async function runSavedItemsStatusNotify(
   }
 
   const itemTitle = String(item.title || 'Saved item');
-  const label = statusLabel(status);
+  const label = statusLabel(status, item.type);
 
   return sendNeighborPush(ownerId || callerId, {
     eventType: 'saved_item_update',
@@ -608,6 +596,7 @@ export async function runItemCompletedNotify(
   const claimerUserId = String((claim as { claimerUserId?: string } | null)?.claimerUserId || '');
   const itemTitle = String(item.title || 'your listing');
   const isRequest = item.type === 'looking';
+  const isTrade = item.type === 'trade';
 
   if (isRequest && claimerUserId) {
     const { data: owner } = await supabaseAdmin
@@ -625,6 +614,18 @@ export async function runItemCompletedNotify(
       listingId: itemId,
       recipientUserIds: [claimerUserId],
       tag: `fulfilled-${itemId}`,
+    });
+  }
+
+  if (isTrade) {
+    return sendNeighborPush(posterUserId, {
+      eventType: 'listing_status',
+      title: 'Listing status updated',
+      body: `"${itemTitle}" — marked as traded`,
+      url: listingUrl(itemId),
+      listingId: itemId,
+      recipientUserIds: [posterUserId],
+      tag: `status-${itemId}-completed`,
     });
   }
 

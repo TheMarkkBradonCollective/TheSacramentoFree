@@ -4968,25 +4968,7 @@ export async function staffSuspendUser(params: {
       action: 'suspend',
       detail: `${params.durationDays} day(s) until ${until.toLocaleString()}${params.note ? ` — ${params.note}` : ''}`,
     });
-
-    await runPushTask(() =>
-      import('./lib/pushIntegration').then((m) =>
-        Promise.all([
-          m.pushAccountStatusChange(
-            params.targetUserId,
-            'Account suspended',
-            `Your account is suspended for ${params.durationDays} day(s).`,
-          ),
-          m.pushDirectorAlert({
-            category: 'moderation',
-            title: 'Neighbor suspended',
-            body: `${params.actor.displayName} suspended ${params.targetName} for ${params.durationDays} day(s)`,
-            tag: `director-suspend-${params.targetUserId}`,
-            excludeUserIds: [params.actor.uid],
-          }),
-        ]),
-      ),
-    );
+    // Account + director alerts are dispatched by moderation_audit_log webhook.
 
     return { ok: true };
   } catch (err: unknown) {
@@ -5016,25 +4998,7 @@ export async function staffUnsuspendUser(params: {
       target: { uid: params.targetUserId, displayName: params.targetName },
       action: 'unsuspend',
     });
-
-    await runPushTask(() =>
-      import('./lib/pushIntegration').then((m) =>
-        Promise.all([
-          m.pushAccountStatusChange(
-            params.targetUserId,
-            'Account restored',
-            'Your account suspension has been lifted.',
-          ),
-          m.pushDirectorAlert({
-            category: 'moderation',
-            title: 'Suspension lifted',
-            body: `${params.actor.displayName} unsuspended ${params.targetName}`,
-            tag: `director-unsuspend-${params.targetUserId}`,
-            excludeUserIds: [params.actor.uid],
-          }),
-        ]),
-      ),
-    );
+    // Account + director alerts are dispatched by moderation_audit_log webhook.
 
     return { ok: true };
   } catch (err: unknown) {
@@ -5078,25 +5042,7 @@ export async function staffBanUser(params: {
       action: 'ban',
       detail: params.note?.trim() || 'Platform ban',
     });
-
-    await runPushTask(() =>
-      import('./lib/pushIntegration').then((m) =>
-        Promise.all([
-          m.pushAccountStatusChange(
-            params.targetUserId,
-            'Account disabled',
-            'Your account has been disabled by community staff.',
-          ),
-          m.pushDirectorAlert({
-            category: 'moderation',
-            title: 'Neighbor banned',
-            body: `${params.actor.displayName} banned ${params.targetName}`,
-            tag: `director-ban-${params.targetUserId}`,
-            excludeUserIds: [params.actor.uid],
-          }),
-        ]),
-      ),
-    );
+    // Account + director alerts are dispatched by moderation_audit_log webhook.
 
     return { ok: true };
   } catch (err: unknown) {
@@ -5126,21 +5072,7 @@ export async function staffUnbanUser(params: {
       target: { uid: params.targetUserId, displayName: params.targetName },
       action: 'unban',
     });
-
-    await runPushTask(() =>
-      import('./lib/pushIntegration').then((m) =>
-        Promise.all([
-          m.pushAccountStatusChange(params.targetUserId, 'Account restored', 'Your account has been re-enabled.'),
-          m.pushDirectorAlert({
-            category: 'moderation',
-            title: 'Ban lifted',
-            body: `${params.actor.displayName} unbanned ${params.targetName}`,
-            tag: `director-unban-${params.targetUserId}`,
-            excludeUserIds: [params.actor.uid],
-          }),
-        ]),
-      ),
-    );
+    // Account + director alerts are dispatched by moderation_audit_log webhook.
 
     return { ok: true };
   } catch (err: unknown) {
