@@ -57,6 +57,7 @@ import {
   NavigationVoice,
   VOICE_CUE_THRESHOLDS,
 } from '../lib/navigationVoice';
+import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
 export interface NavProgressUpdate {
   lat: number;
@@ -620,6 +621,8 @@ export default function MapNavigationView({
   const navPanRafRef = useRef<number | null>(null);
   const pendingNavPanRef = useRef<LatLng | null>(null);
   const hasFittedRouteRef = useRef(false);
+  const routeOverviewLockedRef = useRef(false);
+  const isProgrammaticMapMoveRef = useRef(false);
   const uiTickRef = useRef(0);
   const mapSyncTickRef = useRef(0);
   const lastGpsPosRef = useRef<LatLng | null>(null);
@@ -751,6 +754,35 @@ export default function MapNavigationView({
     }
 
     return result;
+  }, []);
+
+  const fitRouteOverview = useCallback((options?: { force?: boolean }) => {
+    const map = mapRef.current;
+    const mapEl = mapContainerRef.current;
+    const activeRoute = routeRef.current;
+    if (!map || !mapEl || !activeRoute?.coords || activeRoute.coords.length < 2) return;
+    if (!options?.force && routeOverviewLockedRef.current) return;
+    if (!options?.force && followUserRef.current) return;
+
+    const sheet = document.getElementById('nav_details_sheet');
+    const banner = document.getElementById('nav_instruction_banner');
+    const padding = measureMapFitPadding({
+      mapElement: mapEl,
+      obstructingElements: [sheet, banner],
+      defaults: { top: 112, bottom: 136, left: 48, right: 56 },
+      margin: 20,
+    });
+
+    isProgrammaticMapMoveRef.current = true;
+    map.fitBounds(activeRoute.coords, {
+      paddingTopLeft: padding.topLeft,
+      paddingBottomRight: padding.bottomRight,
+      maxZoom: 15,
+      animate: false,
+    });
+    window.requestAnimationFrame(() => {
+      isProgrammaticMapMoveRef.current = false;
+    });
   }, []);
 
   useEffect(() => {
@@ -896,6 +928,13 @@ export default function MapNavigationView({
 
     const debouncedInvalidate = debounceMapInvalidate(map);
 
+    const onUserMapInteraction = () => {
+      if (isProgrammaticMapMoveRef.current) return;
+      routeOverviewLockedRef.current = true;
+    };
+    map.on('dragstart', onUserMapInteraction);
+    map.on('zoomstart', onUserMapInteraction);
+
     const resizeObserver =
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(() => {
@@ -911,6 +950,8 @@ export default function MapNavigationView({
     window.setTimeout(debouncedInvalidate, 200);
 
     return () => {
+      map.off('dragstart', onUserMapInteraction);
+      map.off('zoomstart', onUserMapInteraction);
       window.removeEventListener('resize', onWindowResize);
       window.removeEventListener('orientationchange', onWindowResize);
       resizeObserver?.disconnect();
@@ -927,6 +968,7 @@ export default function MapNavigationView({
       destMarkerRef.current = null;
       userMarkerRef.current = null;
       hasFittedRouteRef.current = false;
+      routeOverviewLockedRef.current = false;
       mapBootstrappedRef.current = false;
       lastRouteDrawRef.current = null;
       displayedPosRef.current = null;
@@ -955,13 +997,16 @@ export default function MapNavigationView({
     const updateSheetOffset = () => {
       root.style.setProperty('--sbn-nav-sheet-height', `${sheet.offsetHeight}px`);
       debouncedInvalidate?.();
+      if (!followUserRef.current) {
+        fitRouteOverview({ force: true });
+      }
     };
 
     updateSheetOffset();
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateSheetOffset) : null;
     observer?.observe(sheet);
     return () => observer?.disconnect();
-  }, [sheetSnap, route, loading, arrived]);
+  }, [sheetSnap, route, loading, arrived, fitRouteOverview]);
 
   useEffect(() => {
     if (!route || !mapRef.current || !routeLayerRef.current) return;
@@ -1329,9 +1374,8 @@ export default function MapNavigationView({
       userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
       lastMarkerHeadingRef.current = headingRef.current;
     }
-    if (route) {
-      map.fitBounds(route.coords, { padding: [90, 90], maxZoom: 15, animate: false });
-    }
+    routeOverviewLockedRef.current = false;
+    fitRouteOverview({ force: true });
   };
 
   const handleMapStyleCycle = () => {
