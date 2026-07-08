@@ -7,6 +7,7 @@ import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
+import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
 import { getEventsUnlockStatus } from './lib/eventsApi';
 import {
   EVENT_PAST_GRACE_MS,
@@ -2115,6 +2116,351 @@ export async function recordItemClaimInChat(params: {
   });
 
   return result;
+}
+
+function buildPickupAttributionPayload(input: PickupAttributionInput | null): Record<string, unknown> {
+  if (!input) {
+    return {
+      pickupAttributionType: null,
+      pickupAttributionUserId: null,
+      pickupAttributionLabel: null,
+    };
+  }
+
+  let label: string | null = null;
+  if (input.type === 'facebook_group' || input.type === 'other') {
+    label = input.label?.trim() || (input.type === 'other' ? 'Other' : null);
+  } else if (input.type === 'reddit') {
+    label = 'r/SacramentoBuyNothing';
+  } else if (input.type === 'buynothing_project') {
+    label = 'BuyNothing Project';
+  } else if (input.type === 'app_user') {
+    label = input.userDisplayName?.trim() || null;
+  }
+
+  return {
+    pickupAttributionType: input.type,
+    pickupAttributionUserId: input.type === 'app_user' ? input.userId || null : null,
+    pickupAttributionLabel: label,
+  };
+}
+
+async function markAllSubitemsClaimed(itemId: string): Promise<void> {
+  const now = new Date().toISOString();
+  await supabase
+    .from('listing_subitems')
+    .update({ status: 'claimed', claimedAt: now })
+    .eq('itemId', itemId)
+    .eq('status', 'available');
+}
+
+export async function itemHasRecordedAppClaim(itemId: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from('item_claims')
+    .select('id', { count: 'exact', head: true })
+    .eq('itemId', itemId);
+
+  if (error) {
+    handleSupabaseError(error, 'item_claims');
+    return false;
+  }
+  return (count ?? 0) > 0;
+}
+
+export async function getFacebookPickupGroups(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('facebook_pickup_groups')
+      .select('name')
+      .order('useCount', { ascending: false })
+      .order('lastUsedAt', { ascending: false })
+      .limit(40);
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      handleSupabaseError(error, 'facebook_pickup_groups');
+      return [];
+    }
+
+    return (data || []).map((row) => String((row as { name: string }).name));
+  } catch {
+    return [];
+  }
+}
+
+export async function rememberFacebookPickupGroup(name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+
+  try {
+    const { data: existing } = await supabase
+      .from('facebook_pickup_groups')
+      .select('id, useCount')
+      .eq('name', trimmed)
+      .maybeSingle();
+
+    const now = new Date().toISOString();
+    if (existing) {
+      await supabase
+        .from('facebook_pickup_groups')
+        .update({
+          useCount: Number((existing as { useCount?: number }).useCount ?? 0) + 1,
+          lastUsedAt: now,
+        })
+        .eq('id', String((existing as { id: string }).id));
+      return;
+    }
+
+    await supabase.from('facebook_pickup_groups').insert({
+      name: trimmed,
+      useCount: 1,
+      lastUsedAt: now,
+      createdAt: now,
+    });
+  } catch (err) {
+    console.warn('Could not remember Facebook pickup group:', err);
+  }
+}
+
+function mergePickupCandidates(
+  lists: PickupNeighborCandidate[][],
+): PickupNeighborCandidate[] {
+  const seen = new Set<string>();
+  const merged: PickupNeighborCandidate[] = [];
+  for (const list of lists) {
+    for (const candidate of list) {
+      if (seen.has(candidate.userId)) continue;
+      seen.add(candidate.userId);
+      merged.push(candidate);
+    }
+  }
+  return merged;
+}
+
+export async function getPickupNeighborCandidates(
+  itemId: string,
+  ownerUserId: string,
+): Promise<PickupNeighborCandidate[]> {
+  const chatCandidates: PickupNeighborCandidate[] = [];
+  const voteCandidates: PickupNeighborCandidate[] = [];
+
+  try {
+    const { data: chats } = await supabase.from('chats').select('participantIds, participantNames, participantPhotos').eq('itemId', itemId);
+    for (const chat of chats || []) {
+      const ids = Array.isArray((chat as { participantIds?: unknown }).participantIds)
+        ? ((chat as { participantIds: string[] }).participantIds)
+        : [];
+      const names = ((chat as { participantNames?: Record<string, string> }).participantNames) || {};
+      const photos = ((chat as { participantPhotos?: Record<string, string> }).participantPhotos) || {};
+      for (const uid of ids) {
+        if (!uid || uid === ownerUserId) continue;
+        chatCandidates.push({
+          userId: uid,
+          displayName: names[uid] || 'Neighbor',
+          photoURL: photos[uid] || undefined,
+          source: 'chat',
+        });
+      }
+    }
+
+    const { data: votes } = await supabase
+      .from('item_votes')
+      .select('userId')
+      .eq('itemId', itemId)
+      .eq('voteType', 'up');
+
+    const voterIds = [...new Set((votes || []).map((row) => String((row as { userId: string }).userId)).filter((uid) => uid && uid !== ownerUserId))];
+    if (voterIds.length > 0) {
+      const { data: users } = await supabase
+        .from('users_public')
+        .select('uid, displayName, photoURL, neighborhood')
+        .in('uid', voterIds);
+
+      for (const row of users || []) {
+        voteCandidates.push({
+          userId: String((row as { uid: string }).uid),
+          displayName: String((row as { displayName?: string }).displayName || 'Neighbor'),
+          photoURL: (row as { photoURL?: string }).photoURL || undefined,
+          neighborhood: (row as { neighborhood?: string }).neighborhood || undefined,
+          source: 'interest',
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load pickup neighbor candidates:', err);
+  }
+
+  return mergePickupCandidates([chatCandidates, voteCandidates]);
+}
+
+export async function searchPickupNeighbors(
+  query: string,
+  ownerUserId: string,
+  limit = 12,
+): Promise<PickupNeighborCandidate[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('users_public')
+      .select('uid, displayName, photoURL, neighborhood')
+      .neq('uid', ownerUserId)
+      .ilike('displayName', `%${trimmed}%`)
+      .limit(limit);
+
+    if (error) {
+      handleSupabaseError(error, 'users_public');
+      return [];
+    }
+
+    return (data || []).map((row) => ({
+      userId: String((row as { uid: string }).uid),
+      displayName: String((row as { displayName?: string }).displayName || 'Neighbor'),
+      photoURL: (row as { photoURL?: string }).photoURL || undefined,
+      neighborhood: (row as { neighborhood?: string }).neighborhood || undefined,
+      source: 'search' as const,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function recordAppUserPickupClaim(params: {
+  item: ItemPost;
+  owner: UserProfile;
+  claimerUserId: string;
+  claimerDisplayName: string;
+  claimerPhotoURL?: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const chatId = buildDmChatId(params.claimerUserId, params.owner.uid);
+  const chatPayload = {
+    id: chatId,
+    participantIds: [params.claimerUserId, params.owner.uid].sort(),
+    participantNames: {
+      [params.claimerUserId]: params.claimerDisplayName,
+      [params.owner.uid]: params.owner.displayName,
+    },
+    participantPhotos: {
+      [params.claimerUserId]: params.claimerPhotoURL || '',
+      [params.owner.uid]: params.owner.photoURL || '',
+    },
+    lastMessageAt: new Date().toISOString(),
+    lastMessageText: '',
+    lastMessageSenderId: params.owner.uid,
+    itemId: params.item.id,
+    itemTitle: params.item.title,
+  };
+
+  const chatOk = await getOrCreateSupabaseChat(chatId, chatPayload);
+  if (!chatOk) {
+    return { ok: false, errorMessage: 'Could not open chat with that neighbor.' };
+  }
+
+  const subitems = await getListingSubitems(params.item.id);
+  const subItemIds =
+    subitems.length > 0 ? subitems.filter((s) => s.status === 'available').map((s) => s.id) : undefined;
+
+  if (subitems.length > 0 && (!subItemIds || subItemIds.length === 0)) {
+    const hasClaim = await itemHasRecordedAppClaim(params.item.id);
+    if (hasClaim) {
+      return { ok: true };
+    }
+    return { ok: false, errorMessage: 'All items on this listing are already marked claimed.' };
+  }
+
+  const result = await recordPartialItemClaims({
+    itemId: params.item.id,
+    itemTitle: params.item.title,
+    giverUserId: params.owner.uid,
+    claimerUserId: params.claimerUserId,
+    chatId,
+    subItemIds: subitems.length > 0 ? subItemIds ?? [] : null,
+    claimMessage: formatItemClaimedChatMessage(
+      params.item.title,
+      subitems.length > 0
+        ? subitems.filter((s) => (subItemIds ?? []).includes(s.id)).map((s) => s.label)
+        : [params.item.title],
+    ),
+    actorUserId: params.owner.uid,
+  });
+
+  return result;
+}
+
+export async function completeItemWithPickupAttribution(params: {
+  item: ItemPost;
+  owner: UserProfile;
+  attribution: PickupAttributionInput | null;
+  markCompleted: boolean;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const { item, owner, attribution, markCompleted } = params;
+
+  if (item.userId !== owner.uid) {
+    return { ok: false, errorMessage: 'Only the listing owner can update pickup attribution.' };
+  }
+
+  try {
+    if (attribution?.type === 'app_user' && attribution.userId) {
+      const claimResult = await recordAppUserPickupClaim({
+        item,
+        owner,
+        claimerUserId: attribution.userId,
+        claimerDisplayName: attribution.userDisplayName || 'Neighbor',
+      });
+      if (!claimResult.ok) return claimResult;
+
+      const { error } = await supabase
+        .from('items')
+        .update({
+          ...buildPickupAttributionPayload(attribution),
+          updatedAt: new Date().toISOString(),
+        })
+        .eq('id', item.id);
+
+      if (error) {
+        handleSupabaseError(error, 'items');
+        return { ok: false, errorMessage: error.message };
+      }
+
+      return { ok: true };
+    }
+
+    const itemUpdate: Record<string, unknown> = {
+      ...buildPickupAttributionPayload(attribution),
+      updatedAt: new Date().toISOString(),
+    };
+    if (markCompleted) {
+      itemUpdate.status = 'completed';
+    }
+
+    const { error: itemError } = await supabase.from('items').update(itemUpdate).eq('id', item.id);
+    if (itemError) {
+      handleSupabaseError(itemError, 'items');
+      return { ok: false, errorMessage: itemError.message };
+    }
+
+    if (markCompleted) {
+      await markAllSubitemsClaimed(item.id);
+      await runPushTask(() =>
+        import('./lib/pushIntegration').then((m) =>
+          m.pushAfterItemStatusChange(item.id, 'completed', item.status),
+        ),
+      );
+    }
+
+    if (attribution?.type === 'facebook_group' && attribution.label) {
+      await rememberFacebookPickupGroup(attribution.label);
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not save pickup attribution.',
+    };
+  }
 }
 
 export async function markItemFulfilledFromChat(params: {

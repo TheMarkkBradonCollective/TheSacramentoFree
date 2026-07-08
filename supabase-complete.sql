@@ -367,6 +367,39 @@ ALTER TABLE public.item_claim_requests ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS item_claim_requests_chat_idx ON public.item_claim_requests ("chatId", status);
 CREATE INDEX IF NOT EXISTS item_claim_requests_item_idx ON public.item_claim_requests ("itemId", status);
 
+-- Pickup attribution for quick-claim (off-app channels + optional neighbor credit)
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionType" TEXT;
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionUserId" TEXT;
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionLabel" TEXT;
+ALTER TABLE public.items DROP CONSTRAINT IF EXISTS items_pickup_attribution_type_check;
+ALTER TABLE public.items ADD CONSTRAINT items_pickup_attribution_type_check
+  CHECK (
+    "pickupAttributionType" IS NULL
+    OR "pickupAttributionType" IN ('app_user', 'reddit', 'buynothing_project', 'facebook_group', 'other')
+  );
+
+CREATE TABLE IF NOT EXISTS public.facebook_pickup_groups (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL UNIQUE,
+  "useCount" INTEGER NOT NULL DEFAULT 1,
+  "lastUsedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.facebook_pickup_groups ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS facebook_pickup_groups_use_idx
+  ON public.facebook_pickup_groups ("useCount" DESC, "lastUsedAt" DESC);
+
+-- Backfill quick-completed listings with no app claim record
+UPDATE public.items i
+SET
+  "pickupAttributionType" = 'other',
+  "pickupAttributionLabel" = 'Other',
+  "updatedAt" = NOW()
+WHERE i.status = 'completed'
+  AND i."pickupAttributionType" IS NULL
+  AND NOT EXISTS (SELECT 1 FROM public.item_claims c WHERE c."itemId" = i.id);
+
 -- =========================================================
 -- 16. Block reason + proof + staff auto-report fields
 -- =========================================================
@@ -2177,6 +2210,16 @@ CREATE POLICY "claim_requests_write" ON public.item_claim_requests
   WITH CHECK (
     auth.uid()::text IN ("giverUserId", "claimerUserId")
   );
+
+DROP POLICY IF EXISTS "facebook_pickup_groups_select" ON public.facebook_pickup_groups;
+DROP POLICY IF EXISTS "facebook_pickup_groups_write" ON public.facebook_pickup_groups;
+
+CREATE POLICY "facebook_pickup_groups_select" ON public.facebook_pickup_groups
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "facebook_pickup_groups_write" ON public.facebook_pickup_groups
+  FOR ALL USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- ---------------------------------------------------------
 -- 7. USER BLOCKS & MESSAGE REQUESTS

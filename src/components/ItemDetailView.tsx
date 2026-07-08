@@ -27,7 +27,8 @@ import ItemDetailNavigation from './ItemDetailNavigation';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
-import { getListingSubitems } from '../supabase';
+import { getListingSubitems, itemHasRecordedAppClaim } from '../supabase';
+import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useSavedItems } from '../hooks/useSavedItems';
 
@@ -51,6 +52,7 @@ interface ItemDetailViewProps {
   onDeleteComment?: (commentId: string) => void;
   onDelete?: () => void;
   updating?: boolean;
+  onEditPickupAttribution?: () => void;
 }
 
 export default function ItemDetailView({
@@ -73,8 +75,10 @@ export default function ItemDetailView({
   onDeleteComment,
   onDelete,
   updating = false,
+  onEditPickupAttribution,
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
+  const [hasAppClaim, setHasAppClaim] = useState(false);
   const isOwner = item.userId === currentUserId;
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
@@ -84,6 +88,7 @@ export default function ItemDetailView({
 
   useEffect(() => {
     void getListingSubitems(item.id).then(setSubitems);
+    void itemHasRecordedAppClaim(item.id).then(setHasAppClaim);
   }, [item.id]);
 
   useEffect(() => {
@@ -106,6 +111,9 @@ export default function ItemDetailView({
     subitems.length > 0 &&
     subitems.some((s) => s.status === 'claimed') &&
     subitems.some((s) => s.status === 'available');
+  const pickupAttributionLabel = getPickupAttributionLabel(item);
+  const needsPickupAttribution =
+    isOwner && listingNeedsPickupAttribution(item, hasAppClaim) && !!onEditPickupAttribution;
   const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
   const detailsText = getListingDetailsText(item.description);
   const pickupNotesText = parsePickupNotes(item.description);
@@ -291,6 +299,28 @@ export default function ItemDetailView({
             )}
           </section>
 
+          {isOwner && item.status === 'completed' && !hasAppClaim && onEditPickupAttribution && (
+            <section className="rounded-2xl border border-app bg-inset p-4 space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-subtle">Pickup record</p>
+              {pickupAttributionLabel ? (
+                <p className="text-sm text-app">
+                  Recorded as <strong>{pickupAttributionLabel}</strong>
+                </p>
+              ) : (
+                <p className="text-sm text-muted">
+                  No pickup source recorded yet. Add who picked this up for your records.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={onEditPickupAttribution}
+                className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+              >
+                {needsPickupAttribution ? 'Who picked this up?' : 'Update who picked up'}
+              </button>
+            </section>
+          )}
+
           <SubItemAvailabilityList subitems={subitems} />
 
           <ListingEngagement
@@ -413,6 +443,18 @@ export default function ItemDetailView({
                   >
                     Pending pickup
                   </button>
+                </div>
+              ) : item.status === 'completed' ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {onEditPickupAttribution && !hasAppClaim && (
+                    <button
+                      type="button"
+                      onClick={onEditPickupAttribution}
+                      className="sbn-btn sbn-btn-secondary"
+                    >
+                      {needsPickupAttribution ? 'Who picked this up?' : 'Update who picked up'}
+                    </button>
+                  )}
                 </div>
               ) : item.status === 'withdrawn' ? (
                 <div className="grid grid-cols-2 gap-2">
