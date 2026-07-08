@@ -1120,14 +1120,18 @@ export default function App() {
               <h1 className="font-display text-xl font-bold text-app">
                 {accountRestriction.reason === 'banned'
                   ? 'Account disabled'
-                  : 'Account suspended'}
+                  : accountRestriction.reason === 'locked'
+                    ? 'Account locked'
+                    : 'Account suspended'}
               </h1>
               <p className="text-sm text-muted max-w-md leading-relaxed">
                 {accountRestriction.reason === 'banned'
                   ? 'Your account has been disabled by community staff. Contact the Buy Nothing team if you believe this is a mistake.'
-                  : accountRestriction.suspendedUntil
-                    ? `Your account is suspended until ${new Date(accountRestriction.suspendedUntil).toLocaleString()}. You cannot use the app until then.`
-                    : 'Your account is temporarily suspended.'}
+                  : accountRestriction.reason === 'locked'
+                    ? 'Your account was automatically locked after repeated Go Get pickup violations. A city administrator must review your record before you can use the app again — check Messages → Support for updates or to appeal.'
+                    : accountRestriction.suspendedUntil
+                      ? `Your account is suspended until ${new Date(accountRestriction.suspendedUntil).toLocaleString()}. You cannot use the app until then.`
+                      : 'Your account is temporarily suspended.'}
               </p>
               <button type="button" onClick={handleLogOut} className="sbn-btn sbn-btn-secondary">
                 Sign out
@@ -1383,6 +1387,11 @@ export default function App() {
                   }
                   userProfile={userProfile}
                   onClaimSubmitted={handleClaimSubmitted}
+                  onOpenChat={(chatId) => {
+                    setDetailItem(null);
+                    setInitialSelectedChatId(chatId);
+                    setActiveTab('chats');
+                  }}
                 />
               )}
 

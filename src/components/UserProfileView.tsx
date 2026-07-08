@@ -41,6 +41,7 @@ import { isPrivacyAccepted } from '../lib/privacyPolicyPrompt';
 import { isTermsAccepted } from '../lib/termsPolicyPrompt';
 import { getNeighborAwardClaims } from '../supabase';
 import { buildNeighborAwardSummary, type NeighborAwardSummary } from '../lib/neighborAwards';
+import GoGetRecordSection from './goget/GoGetRecordSection';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -716,6 +717,8 @@ export default function UserProfileView({
           fullBleed={fullBleed}
         />
       ) : null}
+
+      <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
 
       {onLogout ? (
         <div

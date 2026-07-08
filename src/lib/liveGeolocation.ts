@@ -10,7 +10,7 @@ const errorListeners = new Set<ErrorListener>();
 
 const WATCH_OPTIONS: PositionOptions = {
   enableHighAccuracy: true,
-  maximumAge: 4000,
+  maximumAge: 6000,
   timeout: 30000,
 };
 

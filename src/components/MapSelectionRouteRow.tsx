@@ -12,6 +12,8 @@ export interface MapSelectionRouteRowProps {
   canNavigate?: boolean;
   onStartNavigation?: () => void;
   onOpenExternalMaps?: () => void;
+  /** "Go Get" for eligible listings (giveaway/looking/trade); plain "Navigate" for events. */
+  navigateLabel?: string;
 }
 
 export default function MapSelectionRouteRow({
@@ -25,6 +27,7 @@ export default function MapSelectionRouteRow({
   canNavigate = false,
   onStartNavigation,
   onOpenExternalMaps,
+  navigateLabel = 'Navigate',
 }: MapSelectionRouteRowProps) {
   if (!routeEndpoints) {
     return (
@@ -67,10 +70,10 @@ export default function MapSelectionRouteRow({
           onClick={() => onStartNavigation?.()}
           disabled={!canNavigate || !onStartNavigation}
           className="sbn-btn sbn-btn-primary sbn-btn-sm disabled:opacity-40"
-          title={canNavigate ? 'Start in-app turn-by-turn navigation' : 'Enable GPS to navigate'}
+          title={canNavigate ? `Start: ${navigateLabel}` : `Enable GPS to ${navigateLabel.toLowerCase()}`}
         >
           <Navigation className="w-3.5 h-3.5" />
-          Navigate
+          {navigateLabel}
         </button>
         {onOpenExternalMaps && hasLiveGps && (
           <button

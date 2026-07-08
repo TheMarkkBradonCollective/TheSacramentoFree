@@ -230,7 +230,10 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "moderationNote" TEXT;
 
 ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_account_status_check;
 ALTER TABLE public.users ADD CONSTRAINT users_account_status_check
-  CHECK ("accountStatus" IN ('active', 'suspended', 'banned'));
+  CHECK ("accountStatus" IN ('active', 'suspended', 'banned', 'locked'));
+-- 'locked' = automatic at 6 counted "Go Get" violation strikes. Unlike 'suspended'
+-- (time-based, auto-lifts) this always requires a city_administrator+ to review and
+-- lift manually — see staffUnlockUser() and the Violations section below.
 
 -- =========================================================
 -- 11. Moderation audit log (director + city manager review)
@@ -559,6 +562,160 @@ ALTER TABLE public.app_reviews ADD CONSTRAINT app_reviews_rating_range
 
 ALTER TABLE public.app_reviews ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS app_reviews_created_idx ON public.app_reviews ("createdAt" DESC);
+
+-- =========================================================
+-- 20. "Go Get" pickup sessions — Uber/DoorDash-style pickup coordination
+--
+-- Generic roles so the same session works for every post type:
+--   fulfillerUserId = has the item / is the destination (giveaway: the poster;
+--                     looking: whoever offered to fulfill the request;
+--                     trade: whoever the other party is meeting to swap with)
+--   requesterUserId = travels to get it (giveaway: the claimer; looking: the
+--                     original poster who wanted the item; trade: whoever
+--                     initiated the "Go Get")
+--
+-- Lifecycle: awaiting_availability -> (window_offered -> scheduled ->) active
+--   -> arrived -> completed
+--   (or cancelled / expired / disputed at various points)
+-- "Ready" isn't its own DB status — once scheduledAt passes, the UI shows the
+-- fulfiller a Ready button while status stays 'scheduled'; tapping Ready sets
+-- fulfillerReadyAt and only then can the requester start (-> 'active').
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.go_get_sessions (
+  id TEXT PRIMARY KEY,
+  "itemId" TEXT NOT NULL,
+  "itemType" TEXT NOT NULL,
+  "fulfillerUserId" TEXT NOT NULL,
+  "fulfillerName" TEXT NOT NULL,
+  "requesterUserId" TEXT NOT NULL,
+  "requesterName" TEXT NOT NULL,
+  "chatId" TEXT NOT NULL,
+  "handshakeMode" TEXT NOT NULL DEFAULT 'availability',
+  status TEXT NOT NULL DEFAULT 'awaiting_availability',
+  "destinationLat" DOUBLE PRECISION NOT NULL,
+  "destinationLng" DOUBLE PRECISION NOT NULL,
+  "destinationLabel" TEXT NOT NULL,
+  "availableFrom" TIMESTAMPTZ,
+  "availableUntil" TIMESTAMPTZ,
+  "scheduledAt" TIMESTAMPTZ,
+  "fulfillerReadyAt" TIMESTAMPTZ,
+  "startedAt" TIMESTAMPTZ,
+  "arrivedAt" TIMESTAMPTZ,
+  "completedAt" TIMESTAMPTZ,
+  "cancelledAt" TIMESTAMPTZ,
+  "cancelledByUserId" TEXT,
+  "cancelReason" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Poster may opt in to share their live device location during active/arrived pickup
+-- so the picker can see both the listed pickup pin and where they actually are.
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "fulfillerSharingLocation" BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_item_type_check;
+ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_item_type_check
+  CHECK ("itemType" IN ('giveaway', 'looking', 'trade'));
+
+ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_handshake_check;
+ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_handshake_check
+  CHECK ("handshakeMode" IN ('instant', 'availability'));
+
+ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_status_check;
+ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_status_check
+  CHECK (status IN (
+    'awaiting_availability', 'window_offered', 'scheduled', 'active', 'arrived',
+    'completed', 'cancelled', 'expired', 'disputed'
+  ));
+
+ALTER TABLE public.go_get_sessions ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS go_get_sessions_item_idx ON public.go_get_sessions ("itemId", status);
+CREATE INDEX IF NOT EXISTS go_get_sessions_fulfiller_idx ON public.go_get_sessions ("fulfillerUserId", status);
+CREATE INDEX IF NOT EXISTS go_get_sessions_requester_idx ON public.go_get_sessions ("requesterUserId", status);
+CREATE INDEX IF NOT EXISTS go_get_sessions_chat_idx ON public.go_get_sessions ("chatId");
+
+-- One row per session holding only the LATEST position (overwritten repeatedly,
+-- not a history log) — nothing about a picker's live location is kept once a
+-- trip ends; see cleanup in cancel/complete session functions below.
+CREATE TABLE IF NOT EXISTS public.go_get_live_locations (
+  "sessionId" TEXT PRIMARY KEY REFERENCES public.go_get_sessions(id) ON DELETE CASCADE,
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  heading DOUBLE PRECISION,
+  "speedMph" DOUBLE PRECISION,
+  "etaSeconds" INTEGER,
+  "distanceMeters" DOUBLE PRECISION,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.go_get_live_locations ENABLE ROW LEVEL SECURITY;
+
+-- Latest fulfiller/poster device position when they opt in to share during pickup.
+CREATE TABLE IF NOT EXISTS public.go_get_fulfiller_live_locations (
+  "sessionId" TEXT PRIMARY KEY REFERENCES public.go_get_sessions(id) ON DELETE CASCADE,
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  heading DOUBLE PRECISION,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.go_get_fulfiller_live_locations ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================
+-- 21. "Go Get" violations — DoorDash-style two-tier moderation
+--
+-- Strike counting (see countsTowardStrikes):
+--   pending_review    -> false (not yet confirmed by a moderator)
+--   confirmed          -> true  (moderator confirmed, no appeal filed)
+--   dismissed          -> false (moderator dismissed the report — terminal)
+--   appealed           -> false (accused appealed a confirmed violation —
+--                                 paused while an administrator+ reviews it)
+--   appeal_upheld      -> false (administrator overturned it — stays visible
+--                                 on the record permanently, never counts)
+--   appeal_denied      -> true  (administrator denied the appeal — the
+--                                 original violation counts again)
+--
+-- Accounts auto-lock at 6 counted strikes (see staffLockUserForViolations());
+-- only a city_administrator+ can unlock (staffUnlockViolationLockedUser()).
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.user_violations (
+  id TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL,
+  "sessionId" TEXT,
+  "reportedByUserId" TEXT NOT NULL,
+  "reportedByName" TEXT NOT NULL,
+  category TEXT NOT NULL,
+  description TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending_review',
+  "countsTowardStrikes" BOOLEAN NOT NULL DEFAULT false,
+  "reviewedByUserId" TEXT,
+  "reviewedByName" TEXT,
+  "reviewedAt" TIMESTAMPTZ,
+  "reviewNote" TEXT,
+  "appealText" TEXT,
+  "appealedAt" TIMESTAMPTZ,
+  "appealDecisionByUserId" TEXT,
+  "appealDecisionByName" TEXT,
+  "appealDecisionAt" TIMESTAMPTZ,
+  "appealDecisionNote" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.user_violations DROP CONSTRAINT IF EXISTS user_violations_category_check;
+ALTER TABLE public.user_violations ADD CONSTRAINT user_violations_category_check
+  CHECK (category IN ('no_show', 'false_claim', 'unsafe_behavior', 'other'));
+
+ALTER TABLE public.user_violations DROP CONSTRAINT IF EXISTS user_violations_status_check;
+ALTER TABLE public.user_violations ADD CONSTRAINT user_violations_status_check
+  CHECK (status IN (
+    'pending_review', 'confirmed', 'dismissed', 'appealed', 'appeal_upheld', 'appeal_denied'
+  ));
+
+ALTER TABLE public.user_violations ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS user_violations_user_idx ON public.user_violations ("userId", status);
+CREATE INDEX IF NOT EXISTS user_violations_status_idx ON public.user_violations (status, "createdAt" DESC);
+CREATE INDEX IF NOT EXISTS user_violations_session_idx ON public.user_violations ("sessionId");
 
 
 -- =========================================================
@@ -2155,6 +2312,113 @@ CREATE POLICY "ticket_messages_write" ON public.support_ticket_messages
   );
 
 -- ---------------------------------------------------------
+-- 8b. GO GET SESSIONS, LIVE LOCATION & VIOLATIONS
+-- ---------------------------------------------------------
+
+DROP POLICY IF EXISTS "go_get_sessions_select" ON public.go_get_sessions;
+DROP POLICY IF EXISTS "go_get_sessions_write" ON public.go_get_sessions;
+
+CREATE POLICY "go_get_sessions_select" ON public.go_get_sessions
+  FOR SELECT USING (
+    auth.uid()::text IN ("fulfillerUserId", "requesterUserId")
+    OR public.is_staff()
+  );
+
+-- Both sides can advance their own session (accept/decline availability, mark
+-- ready, start the trip, cancel); the app enforces exactly which transitions
+-- each role may make, matching how item_claim_requests/claim writes work above.
+CREATE POLICY "go_get_sessions_write" ON public.go_get_sessions
+  FOR ALL USING (
+    auth.uid()::text IN ("fulfillerUserId", "requesterUserId")
+    OR public.is_staff()
+  )
+  WITH CHECK (
+    auth.uid()::text IN ("fulfillerUserId", "requesterUserId")
+    OR public.is_staff()
+  );
+
+DROP POLICY IF EXISTS "go_get_live_locations_select" ON public.go_get_live_locations;
+DROP POLICY IF EXISTS "go_get_live_locations_write" ON public.go_get_live_locations;
+
+CREATE POLICY "go_get_live_locations_select" ON public.go_get_live_locations
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId"
+        AND (auth.uid()::text IN (s."fulfillerUserId", s."requesterUserId") OR public.is_staff())
+    )
+  );
+
+-- Only the traveling requester's device ever writes its own live position.
+CREATE POLICY "go_get_live_locations_write" ON public.go_get_live_locations
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId" AND s."requesterUserId" = auth.uid()::text
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId" AND s."requesterUserId" = auth.uid()::text
+    )
+  );
+
+DROP POLICY IF EXISTS "go_get_fulfiller_live_locations_select" ON public.go_get_fulfiller_live_locations;
+DROP POLICY IF EXISTS "go_get_fulfiller_live_locations_write" ON public.go_get_fulfiller_live_locations;
+
+CREATE POLICY "go_get_fulfiller_live_locations_select" ON public.go_get_fulfiller_live_locations
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId"
+        AND (auth.uid()::text IN (s."fulfillerUserId", s."requesterUserId") OR public.is_staff())
+    )
+  );
+
+-- Only the fulfiller/poster may write their own live position.
+CREATE POLICY "go_get_fulfiller_live_locations_write" ON public.go_get_fulfiller_live_locations
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId" AND s."fulfillerUserId" = auth.uid()::text
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId" AND s."fulfillerUserId" = auth.uid()::text
+    )
+  );
+
+DROP POLICY IF EXISTS "user_violations_select" ON public.user_violations;
+DROP POLICY IF EXISTS "user_violations_insert" ON public.user_violations;
+DROP POLICY IF EXISTS "user_violations_update" ON public.user_violations;
+
+CREATE POLICY "user_violations_select" ON public.user_violations
+  FOR SELECT USING (
+    auth.uid()::text IN ("userId", "reportedByUserId")
+    OR public.is_staff()
+  );
+
+CREATE POLICY "user_violations_insert" ON public.user_violations
+  FOR INSERT WITH CHECK (auth.uid()::text = "reportedByUserId");
+
+-- Staff confirm/dismiss and decide appeals; the accused may only file an appeal
+-- on their own record. Rank-specific actions (appeal decisions require
+-- city_administrator+) are enforced client-side, the same pattern already used
+-- for canStaffBan/canStaffEditUser elsewhere — RLS here just checks is_staff().
+CREATE POLICY "user_violations_update" ON public.user_violations
+  FOR UPDATE USING (
+    auth.uid()::text = "userId"
+    OR public.is_staff()
+  )
+  WITH CHECK (
+    auth.uid()::text = "userId"
+    OR public.is_staff()
+  );
+
+-- ---------------------------------------------------------
 -- 9. LISTING SUBITEMS, EVENTS, REVIEWS
 -- ---------------------------------------------------------
 
@@ -2504,6 +2768,91 @@ $$;
 REVOKE ALL ON FUNCTION public.set_user_role(text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.set_user_role(text, text) TO authenticated;
 
+-- =========================================================
+-- GO GET VIOLATIONS: strike counting + auto-lock at 6
+--
+-- Runs as a DB trigger (not client-side) so the 6-strike lockout is atomic and
+-- can't be missed/raced by two moderators reviewing at once. See status/
+-- countsTowardStrikes semantics documented above user_violations.
+-- =========================================================
+CREATE OR REPLACE FUNCTION public.user_violation_strike_count(target_uid text)
+RETURNS integer
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COUNT(*)::int FROM public.user_violations
+  WHERE "userId" = target_uid AND "countsTowardStrikes" = true;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.user_violation_strike_count(text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.on_user_violation_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  strikes INT;
+  current_status TEXT;
+BEGIN
+  strikes := public.user_violation_strike_count(NEW."userId");
+
+  IF strikes >= 6 THEN
+    SELECT "accountStatus" INTO current_status FROM public.users WHERE uid = NEW."userId";
+    IF current_status IS DISTINCT FROM 'banned' AND current_status IS DISTINCT FROM 'locked' THEN
+      UPDATE public.users SET "accountStatus" = 'locked' WHERE uid = NEW."userId";
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_user_violation_change ON public.user_violations;
+CREATE TRIGGER on_user_violation_change
+  AFTER INSERT OR UPDATE OF status, "countsTowardStrikes" ON public.user_violations
+  FOR EACH ROW EXECUTE FUNCTION public.on_user_violation_change();
+
+-- Only a city_administrator+ may lift a violation-triggered lock (unlike
+-- suspensions, this is never time-based / auto-lifted).
+CREATE OR REPLACE FUNCTION public.staff_unlock_violation_account(target_uid text, note text DEFAULT NULL)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  actor_uid text := auth.uid()::text;
+  actor_role text;
+BEGIN
+  SELECT role INTO actor_role FROM public.users WHERE uid = actor_uid;
+  IF public.role_rank(actor_role) < public.role_rank('city_administrator') THEN
+    RAISE EXCEPTION 'city_administrator+ required to unlock a violation-locked account';
+  END IF;
+
+  UPDATE public.users SET "accountStatus" = 'active' WHERE uid = target_uid AND "accountStatus" = 'locked';
+
+  INSERT INTO public.moderation_audit_log (id, "actorUserId", "actorName", "targetUserId", "targetName", action, detail, "createdAt")
+  SELECT
+    'modaudit_' || target_uid || '_' || extract(epoch FROM now())::text,
+    actor_uid,
+    COALESCE((SELECT "displayName" FROM public.users WHERE uid = actor_uid), 'Staff'),
+    target_uid,
+    COALESCE((SELECT "displayName" FROM public.users WHERE uid = target_uid), 'Neighbor'),
+    'unlock_violations',
+    note,
+    NOW();
+
+  RETURN true;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.staff_unlock_violation_account(text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.staff_unlock_violation_account(text, text) TO authenticated;
+
 
 
 -- =========================================================
@@ -2545,7 +2894,11 @@ BEGIN
     'help_announcements',
     'help_announcement_comments',
     'app_update_comments',
-    'community_content_votes'
+    'community_content_votes',
+    'go_get_sessions',
+    'go_get_live_locations',
+    'go_get_fulfiller_live_locations',
+    'user_violations'
   ]
   LOOP
     IF NOT EXISTS (

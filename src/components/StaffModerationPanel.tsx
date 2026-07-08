@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { UserProfile, StaffUserRow, ModerationAuditEntry, SACRAMENTO_NEIGHBORHOODS } from '../types';
+import { UserProfile, StaffUserRow, ModerationAuditEntry, UserViolation, SACRAMENTO_NEIGHBORHOODS } from '../types';
 import {
   getStaffUserDirectory,
   getModerationAuditLog,
@@ -19,8 +19,15 @@ import {
   canStaffSuspend,
   canViewAuditLog,
   canViewDirectorOverview,
+  roleRank,
   ASSIGNABLE_ROLE_OPTIONS,
 } from '../lib/roles';
+import {
+  decideGoGetViolationAppeal,
+  getAllViolationsForStaff,
+  reviewGoGetViolation,
+  unlockViolationLockedAccount,
+} from '../lib/violations';
 import LeaderMessageEditModal from './LeaderMessageEditModal';
 import { useDirectorMessage } from '../hooks/useDirectorMessage';
 import { useStaffMessage } from '../hooks/useStaffMessage';
@@ -30,7 +37,17 @@ import FullScreenPanel from './FullScreenPanel';
 import ListingImage from './ListingImage';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { avatarImageUrl } from '../lib/imageUrl';
-import { ClipboardList, ChevronRight, Megaphone, MessageSquareQuote, Search, Shield, Users } from 'lucide-react';
+import {
+  AlertTriangle,
+  ChevronRight,
+  ClipboardList,
+  Megaphone,
+  MessageSquareQuote,
+  Search,
+  Shield,
+  ShieldAlert,
+  Users,
+} from 'lucide-react';
 
 const SUSPEND_DURATIONS = [
   { label: '1 day', days: 1 },
@@ -39,7 +56,7 @@ const SUSPEND_DURATIONS = [
   { label: '30 days', days: 30 },
 ];
 
-type StaffPanel = 'directory' | 'audit' | null;
+type StaffPanel = 'directory' | 'audit' | 'violations' | null;
 
 interface StaffModerationPanelProps {
   viewer: UserProfile;
@@ -52,6 +69,7 @@ function neighborAvatarUrl(user: StaffUserRow): string {
 
 function statusLabel(user: StaffUserRow): string {
   if (user.accountStatus === 'banned') return 'Banned';
+  if (user.accountStatus === 'locked') return 'Locked (Go Get violations)';
   if (user.accountStatus === 'suspended') {
     if (user.suspendedUntil) {
       return `Suspended until ${new Date(user.suspendedUntil).toLocaleDateString()}`;
@@ -61,6 +79,13 @@ function statusLabel(user: StaffUserRow): string {
   return 'Active';
 }
 
+const VIOLATION_CATEGORY_LABEL: Record<UserViolation['category'], string> = {
+  no_show: 'No-show',
+  false_claim: 'False claim',
+  unsafe_behavior: 'Unsafe behavior',
+  other: 'Other',
+};
+
 export default function StaffModerationPanel({
   viewer,
   onViewProfile,
@@ -68,6 +93,8 @@ export default function StaffModerationPanel({
   const [panel, setPanel] = useState<StaffPanel>(null);
   const [users, setUsers] = useState<StaffUserRow[]>([]);
   const [audit, setAudit] = useState<ModerationAuditEntry[]>([]);
+  const [violations, setViolations] = useState<UserViolation[]>([]);
+  const [violationBusyId, setViolationBusyId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -96,6 +123,7 @@ export default function StaffModerationPanel({
   const canBan = canStaffBan(viewer.role);
   const canEdit = canStaffEditUser(viewer.role);
   const canDeleteAccount = canStaffDeleteAccount(viewer.role);
+  const canDecideAppeals = roleRank(viewer.role) >= roleRank('city_administrator');
 
   const reloadDirectory = useCallback(async () => {
     setLoading(true);
@@ -111,10 +139,23 @@ export default function StaffModerationPanel({
     setLoading(false);
   }, []);
 
+  const reloadViolations = useCallback(async () => {
+    setLoading(true);
+    const rows = await getAllViolationsForStaff();
+    setViolations(rows);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
     if (panel === 'directory') void reloadDirectory();
     if (panel === 'audit') void reloadAudit();
-  }, [panel, reloadDirectory, reloadAudit]);
+    if (panel === 'violations') void reloadViolations();
+  }, [panel, reloadDirectory, reloadAudit, reloadViolations]);
+
+  // Keep the "open reports" count on the tools grid fresh even before the panel is opened.
+  useEffect(() => {
+    void reloadViolations();
+  }, [reloadViolations]);
 
   useEffect(() => {
     if (!panel) return;
@@ -122,6 +163,7 @@ export default function StaffModerationPanel({
     const refresh = debounceRealtime(() => {
       if (panel === 'directory') void reloadDirectory();
       else if (panel === 'audit') void reloadAudit();
+      else if (panel === 'violations') void reloadViolations();
     }, 100);
 
     const unsubs: (() => void)[] = [];
@@ -139,8 +181,55 @@ export default function StaffModerationPanel({
         ),
       );
     }
+    if (panel === 'violations') {
+      unsubs.push(
+        subscribePostgresChanges({ channelName: 'staff-live-violations', table: 'user_violations', event: '*' }, refresh),
+      );
+    }
     return () => unsubs.forEach((u) => u());
-  }, [panel, reloadDirectory, reloadAudit]);
+  }, [panel, reloadDirectory, reloadAudit, reloadViolations]);
+
+  const handleReviewViolation = async (violation: UserViolation, decision: 'confirm' | 'dismiss') => {
+    setViolationBusyId(violation.id);
+    setErr('');
+    const result = await reviewGoGetViolation({ violation, actor: viewer, decision });
+    setViolationBusyId(null);
+    if (result.ok) {
+      setMsg(decision === 'confirm' ? 'Violation confirmed.' : 'Report dismissed.');
+      await reloadViolations();
+    } else {
+      setErr(result.errorMessage || 'Could not review this report.');
+    }
+  };
+
+  const handleDecideAppeal = async (violation: UserViolation, decision: 'uphold' | 'deny') => {
+    setViolationBusyId(violation.id);
+    setErr('');
+    const result = await decideGoGetViolationAppeal({ violation, actor: viewer, decision });
+    setViolationBusyId(null);
+    if (result.ok) {
+      setMsg(decision === 'uphold' ? 'Appeal granted — overturned.' : 'Appeal denied.');
+      await reloadViolations();
+    } else {
+      setErr(result.errorMessage || 'Could not decide this appeal.');
+    }
+  };
+
+  const handleUnlockAccount = async (user: StaffUserRow) => {
+    const confirmed = await confirm({
+      title: 'Unlock account',
+      message: `Unlock ${user.displayName}'s account after their Go Get violations review?`,
+      confirmLabel: 'Unlock account',
+    });
+    if (!confirmed) return;
+    const result = await unlockViolationLockedAccount({ actor: viewer, targetUserId: user.uid });
+    if (result.ok) {
+      setMsg(`${user.displayName}'s account unlocked.`);
+      await reloadDirectory();
+    } else {
+      setErr(result.errorMessage || 'Could not unlock this account.');
+    }
+  };
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -341,6 +430,23 @@ export default function StaffModerationPanel({
           </span>
           <ChevronRight className="w-4 h-4 text-muted shrink-0" />
         </button>
+        <button
+          type="button"
+          onClick={() => setPanel('violations')}
+          className="sbn-help-list-item"
+        >
+          <span className="p-2 rounded-lg bg-red-500/10 text-red-400 shrink-0">
+            <ShieldAlert className="w-4 h-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-app block">Go Get violations</span>
+            <span className="text-[11px] text-muted">
+              {violations.filter((v) => v.status === 'pending_review' || v.status === 'appealed').length || 'No'}{' '}
+              open reports
+            </span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+        </button>
         {canAudit && (
           <button
             type="button"
@@ -421,6 +527,7 @@ export default function StaffModerationPanel({
                 {filteredUsers.map((user) => {
                   const isSuspended = user.accountStatus === 'suspended';
                   const isBanned = user.accountStatus === 'banned';
+                  const isLocked = user.accountStatus === 'locked';
 
                   return (
                     <li
@@ -441,7 +548,7 @@ export default function StaffModerationPanel({
                             {user.role && user.role !== 'user' && <RoleBadge role={user.role} />}
                             <span
                               className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                                isBanned
+                                isBanned || isLocked
                                   ? 'bg-red-500/15 text-red-400'
                                   : isSuspended
                                     ? 'bg-amber-500/15 text-amber-500'
@@ -458,7 +565,11 @@ export default function StaffModerationPanel({
                         defaultValue=""
                         onChange={(e) => {
                           const v = e.target.value;
-                          if (v) void runAction(user, v);
+                          if (v === 'unlock_violations') {
+                            void handleUnlockAccount(user);
+                          } else if (v) {
+                            void runAction(user, v);
+                          }
                           e.target.value = '';
                         }}
                         className="sbn-input text-xs py-2 min-w-[9rem] shrink-0"
@@ -483,6 +594,9 @@ export default function StaffModerationPanel({
                         )}
                         {canBan && user.uid !== viewer.uid && isBanned && (
                           <option value="unban">Unban / unblock</option>
+                        )}
+                        {canDecideAppeals && user.uid !== viewer.uid && isLocked && (
+                          <option value="unlock_violations">Unlock account (Go Get violations)</option>
                         )}
                         {canDeleteAccount && user.uid !== viewer.uid && (
                           <option value="delete_account">Delete account permanently</option>
@@ -527,6 +641,101 @@ export default function StaffModerationPanel({
                 ))}
               </ul>
             )}
+        </FullScreenPanel>
+      )}
+
+      {panel === 'violations' && (
+        <FullScreenPanel
+          wide
+          title="Go Get violations"
+          subtitle={canDecideAppeals ? 'Moderators review reports; you also decide appeals' : 'City Moderator review queue'}
+          onClose={closePanel}
+        >
+          {statusBanner}
+          {loading ? (
+            <p className="text-sm text-muted sbn-help-empty">Loading violations…</p>
+          ) : violations.length === 0 ? (
+            <div className="sbn-help-empty">
+              <p className="text-sm text-muted">No Go Get violation reports yet.</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {violations.map((v) => {
+                const busy = violationBusyId === v.id;
+                return (
+                  <li key={v.id} className="sbn-help-card space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-sm text-app">{VIOLATION_CATEGORY_LABEL[v.category]}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-inset text-muted">
+                        {v.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted">
+                      Reported by <span className="text-app font-medium">{v.reportedByName}</span> ·{' '}
+                      {new Date(v.createdAt).toLocaleString()}
+                    </p>
+                    <p className="text-sm text-app leading-snug">{v.description}</p>
+
+                    {v.status === 'pending_review' && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleReviewViolation(v, 'confirm')}
+                          className="sbn-btn sbn-btn-primary sbn-btn-sm justify-center disabled:opacity-60"
+                        >
+                          Confirm violation
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleReviewViolation(v, 'dismiss')}
+                          className="sbn-btn sbn-btn-secondary sbn-btn-sm justify-center disabled:opacity-60"
+                        >
+                          Dismiss report
+                        </button>
+                      </div>
+                    )}
+
+                    {v.status === 'appealed' && (
+                      <div className="space-y-2 pt-1 border-t border-app">
+                        {v.appealText && (
+                          <p className="text-xs text-app leading-snug">
+                            <span className="font-semibold">Appeal:</span> {v.appealText}
+                          </p>
+                        )}
+                        {canDecideAppeals ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void handleDecideAppeal(v, 'uphold')}
+                              className="sbn-btn sbn-btn-primary sbn-btn-sm justify-center disabled:opacity-60"
+                            >
+                              Grant appeal
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void handleDecideAppeal(v, 'deny')}
+                              className="sbn-btn sbn-btn-secondary sbn-btn-sm justify-center disabled:opacity-60"
+                            >
+                              Deny appeal
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-amber-500 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Only a city administrator or higher can decide this appeal.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </FullScreenPanel>
       )}
 

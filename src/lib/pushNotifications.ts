@@ -391,7 +391,21 @@ export type PushEventType =
   | 'staff_report'
   | 'director_alert'
   | 'saved_item_update'
-  | 'listing_status';
+  | 'listing_status'
+  | 'go_get_availability_request'
+  | 'go_get_available_now'
+  | 'go_get_schedule_proposed'
+  | 'go_get_schedule_confirmed'
+  | 'go_get_ready_reminder'
+  | 'go_get_fulfiller_ready'
+  | 'go_get_started'
+  | 'go_get_arrived'
+  | 'go_get_completed'
+  | 'go_get_cancelled'
+  | 'violation_filed'
+  | 'violation_decision'
+  | 'account_locked'
+  | 'appeal_decision';
 
 export interface SendPushOptions {
   eventType: PushEventType;
