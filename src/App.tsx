@@ -78,6 +78,8 @@ import { NotificationsHubProvider, openNotificationsHub } from './contexts/Notif
 import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
+import { useReviewPrompt } from './hooks/useReviewPrompt';
+import ReviewPromptModal from './components/ReviewPromptModal';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
@@ -1093,6 +1095,24 @@ export default function App() {
 
   const accountRestriction = isAccountRestricted(userProfile);
 
+  const reviewPromptEnabled =
+    Boolean(userProfile) &&
+    !privacyGateOpen &&
+    !termsGateOpen &&
+    !accountRestriction.restricted;
+
+  const {
+    promptKind: reviewPromptKind,
+    myReview: reviewPromptMyReview,
+    submitting: reviewPromptSubmitting,
+    error: reviewPromptError,
+    dismissPrompt,
+    submitPromptReview,
+  } = useReviewPrompt({
+    userProfile: userProfile ?? null,
+    enabled: reviewPromptEnabled,
+  });
+
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {authBootstrapping && !sessionUser ? (
@@ -1595,6 +1615,18 @@ export default function App() {
           required
           userId={sessionUser.id}
           onAccepted={() => setTermsGateOpen(false)}
+        />
+      )}
+
+      {reviewPromptKind && userProfile && (
+        <ReviewPromptModal
+          kind={reviewPromptKind}
+          initialRating={reviewPromptMyReview?.rating ?? 5}
+          initialText={reviewPromptMyReview?.text || ''}
+          submitting={reviewPromptSubmitting}
+          error={reviewPromptError}
+          onSubmit={submitPromptReview}
+          onDismiss={dismissPrompt}
         />
       )}
     </div>

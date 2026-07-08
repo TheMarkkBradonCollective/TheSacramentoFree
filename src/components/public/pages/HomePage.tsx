@@ -1,4 +1,3 @@
-import { Fragment } from 'react';
 import { ArrowRight, FileText, HandHeart, Heart, MapPin, Shield, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
@@ -138,38 +137,33 @@ export default function HomePage({
         <p className="mt-1 text-sm text-muted">Learn how we keep gifting local and free.</p>
 
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {EXPLORE_LINKS.map(({ route, title, blurb, icon: Icon }, index) => (
-            <Fragment key={route}>
-              <DepthPanel floatDelay={index * 6}>
-              <button
-                type="button"
-                onClick={() => onNavigate(route)}
-                className="sbn-card p-5 text-left hover:shadow-app transition-shadow group w-full h-full"
-              >
-                <div className="w-10 h-10 rounded-2xl bg-accent-soft flex items-center justify-center mb-3">
-                  <Icon className="w-5 h-5 text-accent" />
-                </div>
-                <p className="font-display font-bold text-app">{title}</p>
-                <p className="mt-1 text-sm text-muted leading-relaxed">{blurb}</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
-                  Read more <ArrowRight className="w-4 h-4" />
-                </span>
-              </button>
-            </DepthPanel>
-            </Fragment>
+          {EXPLORE_LINKS.map(({ route, title, blurb, icon: Icon }) => (
+            <button
+              key={route}
+              type="button"
+              onClick={() => onNavigate(route)}
+              className="sbn-card p-5 text-left hover:shadow-app hover:border-accent/30 transition-all group w-full h-full"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-accent-soft flex items-center justify-center mb-3">
+                <Icon className="w-5 h-5 text-accent" />
+              </div>
+              <p className="font-display font-bold text-app">{title}</p>
+              <p className="mt-1 text-sm text-muted leading-relaxed">{blurb}</p>
+              <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
+                Read more <ArrowRight className="w-4 h-4" />
+              </span>
+            </button>
           ))}
         </div>
 
-        <DepthPanel className="mt-4" floatDelay={12}>
-          <button
-            type="button"
-            onClick={() => onNavigate('community')}
-            className="w-full sbn-card p-5 text-left hover:border-accent/40 transition-colors"
-          >
+        <button
+          type="button"
+          onClick={() => onNavigate('community')}
+          className="mt-4 w-full sbn-card p-5 text-left hover:border-accent/40 transition-colors"
+        >
             <p className="font-display font-bold text-app">Why community matters</p>
             <p className="mt-1 text-sm text-muted">Trust, mutual aid, and less waste in Sacramento.</p>
-          </button>
-        </DepthPanel>
+        </button>
       </DepthSection>
     </HomeScrollStage>
   );
