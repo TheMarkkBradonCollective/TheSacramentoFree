@@ -117,6 +117,7 @@ interface ItemGridProps {
   onViewItem: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
+  isLoading?: boolean;
 }
 
 export default function ItemGrid({
@@ -127,6 +128,7 @@ export default function ItemGrid({
   onViewItem,
   onViewProfile,
   onRefresh,
+  isLoading = false,
 }: ItemGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<ListingTypeFilter>('all');
@@ -525,7 +527,11 @@ export default function ItemGrid({
         </div>
       </div>
 
-      {filteredItems.length === 0 ? (
+      {isLoading ? (
+        <div className="sbn-card text-center py-16 px-8 border-dashed" id="feed_loading_state">
+          <p className="text-sm text-muted">Loading community listings…</p>
+        </div>
+      ) : filteredItems.length === 0 ? (
         <div className="sbn-card text-center py-16 px-8 border-dashed" id="empty_feed_state">
           <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
           <h3 className="font-display text-lg font-bold text-app">No listings found</h3>

@@ -127,7 +127,7 @@ export default function DesktopView({
                   </p>
                 </div>
                 <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary shrink-0">
-                  <Plus className="w-4 h-4" /> Post
+                  <Plus className="w-4 h-4" /> {IN_APP.postButton}
                 </button>
               </div>
             </div>
@@ -140,6 +140,7 @@ export default function DesktopView({
               onViewItem={onViewItem}
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
+              isLoading={!itemsHydrated}
             />
           </div>
         )}

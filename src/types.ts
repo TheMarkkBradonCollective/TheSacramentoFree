@@ -89,6 +89,7 @@ export interface UserNotificationItem {
   itemId?: string;
   itemTitle?: string;
   actorName?: string;
+  url?: string;
 }
 
 export interface DirectorSiteOverview {

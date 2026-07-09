@@ -38,7 +38,6 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (path === 'notifications/alerts' || path === 'alerts') return { notificationsTab: 'alerts' };
   if (path === 'updates') return { notificationsTab: 'updates' };
   if (path === 'help/announcements') return { notificationsTab: 'announcements' };
-  if (path === 'profile') return { tab: 'profile', profile: true };
   if (path === 'staff/tickets') return { tab: 'chats', chatSupportView: 'list' };
   if (path === 'staff/reports') return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
   if (path === 'director/overview') return { tab: 'profile', directorOverview: true };
@@ -69,7 +68,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (messageMatch) return { tab: 'chats', conversationId: messageMatch[1] };
 
   const requestMatch = path.match(/^requests\/([^/]+)/);
-  if (requestMatch) return { tab: 'feed', requestId: requestMatch[1] };
+  if (requestMatch) return { tab: 'chats', requestId: requestMatch[1] };
 
   return null;
 }

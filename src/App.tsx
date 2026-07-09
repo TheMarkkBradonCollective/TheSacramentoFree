@@ -7,7 +7,6 @@ import { useEventsRealtime } from './hooks/useEventsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
 import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent } from './types';
-import Navbar from './components/Navbar';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
@@ -36,6 +35,7 @@ import {
   deleteOwnAccount,
   isAccountRestricted,
   migrateLocalSavedItemsToDb,
+  getClaimRequestById,
 } from './supabase';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
@@ -51,8 +51,8 @@ import {
   persistActiveTab,
   pushActiveTabHistory,
   readPersistedTab,
+  clearPersistedTab,
   TAB_HISTORY_KEY,
-  TAB_STORAGE_KEY,
   withTabInHistoryState,
 } from './lib/appNavigation';
 import {
@@ -145,6 +145,7 @@ export default function App() {
   const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
   const logoutCleanupDoneRef = useRef(false);
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
+  const pathnameSeededRef = useRef(false);
   const [activeTab, setActiveTab] = useState<AppTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
   const [showPostModal, setShowPostModal] = useState(false);
   const [showPostEventModal, setShowPostEventModal] = useState(false);
@@ -182,14 +183,39 @@ export default function App() {
 
   const goHomeTab = useCallback(() => {
     setActiveTab('map');
-    persistActiveTab('map');
+    persistActiveTab('map', userProfile?.uid);
+  }, [userProfile?.uid]);
+
+  const clearAuthenticatedUiState = useCallback(() => {
+    setEvents([]);
+    setDetailItem(null);
+    setDetailEvent(null);
+    setViewProfileUid(null);
+    setShowPostModal(false);
+    setShowPostEventModal(false);
+    setShowGoFundMeDetail(false);
+    setLegalPanel(null);
+    setShowAwardsPanel(false);
+    setEditingItem(null);
+    setEditingEvent(null);
+    setPickupAttributionItem(null);
+    setInitialSelectedChatId(null);
+    setPendingChatCompose(null);
+    setInitialChatFeedbackPanel(null);
+    setInitialSupportTicketId(null);
+    setInitialChatSupportView(null);
+    setScrollToDirectorOverview(false);
+    setGuestDetailItem(null);
+    setErrorMsg('');
+    pathnameSeededRef.current = false;
   }, []);
 
   /** Reset in-app tab state on sign-out without leaving an authenticated `/map` URL for the now-signed-out guest. */
   const resetTabStateForSignOut = useCallback(() => {
+    const signedOutUserId = lastSignedInUserIdRef.current ?? undefined;
     setActiveTab('map');
+    clearPersistedTab(signedOutUserId);
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(TAB_STORAGE_KEY, 'map');
     try {
       window.history.replaceState(null, '', '/');
     } catch (err) {
@@ -199,8 +225,8 @@ export default function App() {
 
   const navigateToTab = useCallback((tab: AppTab) => {
     setActiveTab(tab);
-    persistActiveTab(tab);
-  }, []);
+    persistActiveTab(tab, userProfile?.uid);
+  }, [userProfile?.uid]);
 
   const pendingDeepLinkPathRef = useRef<string | null>(
     typeof window !== 'undefined' ? readPendingDeepLinkPath() : null,
@@ -224,7 +250,7 @@ export default function App() {
   useEffect(() => {
     if (!userProfile?.uid || !hasActiveNavSession(userProfile.uid)) return;
     setActiveTab('map');
-    persistActiveTab('map');
+    persistActiveTab('map', userProfile.uid);
   }, [userProfile?.uid]);
 
   const visibleItems = useMemo(
@@ -243,6 +269,13 @@ export default function App() {
   const [isEventsLoading, setIsEventsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [guestDetailItem, setGuestDetailItem] = useState<ItemPost | null>(null);
+
+  useEffect(() => {
+    if (!sessionUser || !errorMsg) return;
+    const message = errorMsg;
+    setErrorMsg('');
+    void alert({ message });
+  }, [errorMsg, sessionUser, alert]);
 
   // Open existing chat thread (e.g. after claim)
   const [initialSelectedChatId, setInitialSelectedChatId] = useState<string | null>(null);
@@ -351,8 +384,9 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(TAB_STORAGE_KEY, activeTab);
-  }, [activeTab]);
+    if (!sessionUser?.id) return;
+    persistActiveTab(activeTab, sessionUser.id);
+  }, [activeTab, sessionUser?.id]);
 
   useEffect(() => {
     if (sessionUser && !hadSessionOnMountRef.current) {
@@ -380,7 +414,6 @@ export default function App() {
   const sessionUserRef = useRef(sessionUser);
   sessionUserRef.current = sessionUser;
 
-  const pathnameSeededRef = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (pathnameSeededRef.current) return;
@@ -412,7 +445,10 @@ export default function App() {
       }
 
       // If browser history has no app-tab state, keep users in-app by restoring last tab.
-      const fallbackTab = parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY)) || 'map';
+      const fallbackTab =
+        parseStoredTab(window.localStorage.getItem(`sbn_active_tab_v1_${sessionUserRef.current?.id ?? ''}`)) ||
+        parseTabFromHistoryState(window.history.state) ||
+        'map';
       handlingPopStateRef.current = true;
       setActiveTab(fallbackTab);
       try {
@@ -435,8 +471,8 @@ export default function App() {
 
     const currentHistoryTab = parseTabFromHistoryState(window.history.state);
     if (currentHistoryTab === activeTab) return;
-    pushActiveTabHistory(activeTab);
-  }, [activeTab, sessionUser]);
+    pushActiveTabHistory(activeTab, sessionUser?.id);
+  }, [activeTab, sessionUser?.id]);
 
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
@@ -447,6 +483,9 @@ export default function App() {
 
   /** Enter the app immediately from auth metadata — DB sync runs in background. */
   const applySession = useCallback((user: any) => {
+    if (user?.id && lastSignedInUserIdRef.current && lastSignedInUserIdRef.current !== user.id) {
+      clearAuthenticatedUiState();
+    }
     if (user?.id) lastSignedInUserIdRef.current = user.id;
     setSessionUser(user);
     setUserProfile((prev) => {
@@ -455,7 +494,7 @@ export default function App() {
     });
     setIsAuthLoading(false);
     setAuthBootstrapping(false);
-  }, []);
+  }, [clearAuthenticatedUiState]);
 
   const syncProfileFromDb = useCallback(async (user: any) => {
     if (!user?.id) return;
@@ -506,12 +545,12 @@ export default function App() {
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
         void syncProfileFromDb(session.user);
-      } else if (!readCachedProfile()) {
-          // Only clear when there is no cached session hint — avoids wiping UI on slow refresh.
-          setSessionUser(null);
-          setUserProfile(null);
-          clearSessionCache();
-        }
+      } else {
+        setSessionUser(null);
+        setUserProfile(null);
+        clearSessionCache();
+        clearAuthenticatedUiState();
+      }
       } catch (err) {
         if (!cancelled) {
           console.warn('Error checking supabase session:', err);
@@ -548,7 +587,7 @@ export default function App() {
             if (!cancelled) void loadItemsRef.current(true);
           }, 100);
         }
-      } else if (event === 'SIGNED_OUT') {
+      } else {
         const signedOutUserId = lastSignedInUserIdRef.current;
         lastSignedInUserIdRef.current = null;
         profileSyncRef.current = null;
@@ -557,10 +596,14 @@ export default function App() {
           void clearNotificationDataOnLogout(signedOutUserId);
         }
         clearSessionCache();
+        clearAuthenticatedUiState();
         setSessionUser(null);
         setUserProfile(null);
         setItems([]);
         setIsAuthLoading(false);
+        if (event === 'SIGNED_OUT') {
+          resetTabStateForSignOut();
+        }
       }
     });
 
@@ -569,7 +612,7 @@ export default function App() {
       clearTimeout(bootFailsafe);
       subscription.unsubscribe();
     };
-  }, [applySession, syncProfileFromDb, goHomeTab]);
+  }, [applySession, syncProfileFromDb, goHomeTab, clearAuthenticatedUiState, resetTabStateForSignOut]);
 
   const loadItems = useCallback(
     async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
@@ -804,6 +847,7 @@ export default function App() {
     lastSignedInUserIdRef.current = null;
     clearActiveNavSession();
     clearSessionCache();
+    clearAuthenticatedUiState();
     setSessionUser(null);
     setUserProfile(null);
     setItems([]);
@@ -982,32 +1026,59 @@ export default function App() {
         tabForUrl = 'chats';
       }
       if (target.listingId) {
+        const openListing = (item: ItemPost | undefined) => {
+          if (!item) {
+            void alert({ message: 'This listing is no longer available.' });
+            return;
+          }
+          if (blockedUserIds.has(item.userId)) {
+            void alert({ message: 'This listing is unavailable.' });
+            return;
+          }
+          setDetailItem(item);
+        };
         const existing = items.find((item) => item.id === target.listingId);
         if (existing) {
-          setDetailItem(existing);
+          openListing(existing);
         } else {
           void getSupabaseItems().then((loaded) => {
-            const match = loaded.find((item) => item.id === target.listingId);
-            if (match) setDetailItem(match);
+            openListing(loaded.find((item) => item.id === target.listingId));
           });
         }
         tabForUrl = 'feed';
         navigateToTab('feed');
       }
       if (target.eventId) {
+        const openEvent = (event: CommunityEvent | undefined) => {
+          if (!event) {
+            void alert({ message: 'This event is no longer available.' });
+            return;
+          }
+          if (blockedUserIds.has(event.userId)) {
+            void alert({ message: 'This event is unavailable.' });
+            return;
+          }
+          setDetailEvent(event);
+        };
         const existing = events.find((event) => event.id === target.eventId);
         if (existing) {
-          setDetailEvent(existing);
+          openEvent(existing);
         } else {
           void getSupabaseEvents().then((loaded) => {
-            const match = loaded.find((event) => event.id === target.eventId);
-            if (match) setDetailEvent(match);
+            openEvent(loaded.find((event) => event.id === target.eventId));
           });
         }
         tabForUrl = 'events';
         navigateToTab('events');
       }
       if (target.requestId) {
+        void getClaimRequestById(target.requestId).then((request) => {
+          if (request?.chatId) {
+            setInitialSelectedChatId(request.chatId);
+          } else {
+            void alert({ message: 'That claim request is no longer available.' });
+          }
+        });
         navigateToTab('chats');
         tabForUrl = 'chats';
       }
@@ -1047,7 +1118,7 @@ export default function App() {
       clearPendingDeepLinkPath();
       clearAppPathname(tabForUrl);
     },
-    [items, events, navigateToTab],
+    [items, events, navigateToTab, blockedUserIds, alert],
   );
 
   usePushDeepLinkNavigation(handlePushDeepLink);
@@ -1172,7 +1243,7 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <NotificationsHubProvider userProfile={userProfile}>
+            <NotificationsHubProvider userProfile={userProfile} onDeepLink={handlePushDeepLink}>
             <PresenceProvider userId={userProfile.uid}>
                {deviceType === 'mobile' ? (
                 <MobileView

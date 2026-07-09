@@ -6,6 +6,10 @@ export const TAB_HISTORY_KEY = 'sbnTab';
 
 const APP_TAB_PATHS = new Set(['feed', 'events', 'map', 'chats', 'profile']);
 
+function tabStorageKey(userId?: string): string {
+  return userId ? `${TAB_STORAGE_KEY}_${userId}` : TAB_STORAGE_KEY;
+}
+
 export function appTabPath(tab: AppTab): string {
   return `/${tab}`;
 }
@@ -36,7 +40,7 @@ export function readPersistedTab(userId?: string): AppTab {
 
   const pathTab = parseTabFromPathname(window.location.pathname);
   const historyTab = parseTabFromHistoryState(window.history.state);
-  const storedTab = parseStoredTab(window.localStorage.getItem(TAB_STORAGE_KEY));
+  const storedTab = parseStoredTab(window.localStorage.getItem(tabStorageKey(userId)));
   return pathTab || historyTab || storedTab || 'map';
 }
 
@@ -44,9 +48,9 @@ function tabUrl(tab: AppTab): string {
   return appTabPath(tab);
 }
 
-export function persistActiveTab(tab: AppTab) {
+export function persistActiveTab(tab: AppTab, userId?: string) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(TAB_STORAGE_KEY, tab);
+  window.localStorage.setItem(tabStorageKey(userId), tab);
   try {
     window.history.replaceState(withTabInHistoryState(tab), '', tabUrl(tab));
   } catch (err) {
@@ -54,9 +58,9 @@ export function persistActiveTab(tab: AppTab) {
   }
 }
 
-export function pushActiveTabHistory(tab: AppTab) {
+export function pushActiveTabHistory(tab: AppTab, userId?: string) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(TAB_STORAGE_KEY, tab);
+  window.localStorage.setItem(tabStorageKey(userId), tab);
   try {
     window.history.pushState(withTabInHistoryState(tab), '', tabUrl(tab));
   } catch (err) {
@@ -71,4 +75,9 @@ export function replaceAppTabUrl(tab: AppTab) {
   } catch {
     // ignore
   }
+}
+
+export function clearPersistedTab(userId?: string) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(tabStorageKey(userId));
 }

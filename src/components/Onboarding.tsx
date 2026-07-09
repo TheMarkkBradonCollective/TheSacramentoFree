@@ -57,7 +57,6 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to save your profile.';
       setErrorMsg(message);
-      onComplete(newProfile);
     } finally {
       setIsSubmitting(false);
     }

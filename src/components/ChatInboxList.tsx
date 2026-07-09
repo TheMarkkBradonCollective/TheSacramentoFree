@@ -51,7 +51,7 @@ export default function ChatInboxList({
         <ChatSectionEmptyState
           icon={MessageSquare}
           title="No messages yet"
-          description="Tap the compose button to message a neighbor from a listing, or contact support if you need help."
+          description="Browse Stuff and message a neighbor from any listing, or contact support if you need help."
         />
       </div>
     );
