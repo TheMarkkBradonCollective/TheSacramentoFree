@@ -11,14 +11,16 @@ import {
 } from '../lib/mapRoute';
 import { fetchNavigationRoute } from '../lib/navigationRoute';
 import { getLastLiveLatLng, subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { clearActiveNavSession, saveActiveNavSession } from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 
 interface EventDetailNavigationProps {
   event: CommunityEvent;
+  currentUserId: string;
 }
 
-export default function EventDetailNavigation({ event }: EventDetailNavigationProps) {
+export default function EventDetailNavigation({ event, currentUserId }: EventDetailNavigationProps) {
   const destination = useMemo<LatLng | null>(() => {
     if (
       typeof event.locationLat !== 'number' ||
@@ -94,9 +96,29 @@ export default function EventDetailNavigation({ event }: EventDetailNavigationPr
 
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
+    saveActiveNavSession({
+      userId: currentUserId,
+      targetType: 'event',
+      targetId: event.id,
+      destination,
+      destinationLabel: event.title,
+      startedAt: Date.now(),
+    });
     setLockedOrigin(userLocation);
     setNavigationOpen(true);
-  }, [destination, userLocation]);
+  }, [destination, userLocation, currentUserId, event.id, event.title]);
+
+  useEffect(() => {
+    if (!navigationOpen || !destination) return;
+    saveActiveNavSession({
+      userId: currentUserId,
+      targetType: 'event',
+      targetId: event.id,
+      destination,
+      destinationLabel: event.title,
+      startedAt: Date.now(),
+    });
+  }, [navigationOpen, destination, currentUserId, event.id, event.title]);
 
   if (!destination) {
     return (
@@ -139,6 +161,7 @@ export default function EventDetailNavigation({ event }: EventDetailNavigationPr
               destination={destination}
               destinationLabel={event.title}
               onExit={() => {
+                clearActiveNavSession();
                 setNavigationOpen(false);
                 setLockedOrigin(null);
               }}
