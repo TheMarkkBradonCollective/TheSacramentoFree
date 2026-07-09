@@ -636,6 +636,41 @@ export async function notifyGoGetCancelled(params: {
 }
 
 // =========================================================
+// Contactless pickup notifications (Curb Alert / Porch Pickup)
+// No GPS tracking — picker chooses if/when to notify poster.
+// =========================================================
+
+export async function notifyContactlessPickupArrived(params: {
+  item: ItemPost;
+  pickerName: string;
+}) {
+  await sendPushNotification({
+    eventType: 'contactless_pickup_arrived',
+    title: `${params.pickerName} is at your ${params.item.category.toLowerCase()}`,
+    body: `They're picking up "${params.item.title}" now`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.item.userId],
+    tag: `contactless-arrived-${params.item.id}`,
+  });
+}
+
+export async function notifyContactlessPickupLeft(params: {
+  item: ItemPost;
+  pickerName: string;
+}) {
+  await sendPushNotification({
+    eventType: 'contactless_pickup_left',
+    title: `${params.pickerName} picked up from your ${params.item.category.toLowerCase()}`,
+    body: `"${params.item.title}" — mark it as claimed if it's gone`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.item.userId],
+    tag: `contactless-left-${params.item.id}`,
+  });
+}
+
+// =========================================================
 // "Go Get" violations
 // =========================================================
 

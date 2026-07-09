@@ -1223,7 +1223,7 @@ export default function SacramentoMapView({
     persistNavigationSession();
   }, [navigationOpen, selectedPost, selectedEvent, routeDestination, persistNavigationSession]);
 
-  // Events navigate straight from the map pin. Curb alerts use "Go to" (direct nav).
+  // Events navigate straight from the map pin. Curb alerts use "Pick Up" (direct nav, no poster notification).
   // Other types start their coordination flow (Go Get / Drop off / Meet up).
   const handleNavigateRequest = useCallback(async () => {
     if (selectedEvent) {

@@ -405,7 +405,9 @@ export type PushEventType =
   | 'violation_filed'
   | 'violation_decision'
   | 'account_locked'
-  | 'appeal_decision';
+  | 'appeal_decision'
+  | 'contactless_pickup_arrived'
+  | 'contactless_pickup_left';
 
 export interface SendPushOptions {
   eventType: PushEventType;

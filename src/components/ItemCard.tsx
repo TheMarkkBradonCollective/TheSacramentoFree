@@ -1,8 +1,10 @@
-import { Bookmark, Calendar, Eye, MapPin, MessageSquare, Pencil, Tag } from 'lucide-react';
+import { Bookmark, Calendar, Eye, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
 import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
 import { getPostTypeBadgeClass, getPostTypeLabel, getPostTypeCompletedLabel } from '../lib/postType';
 import { extractListingImageUrls } from '../lib/listingContent';
+import { getListingNavigateLabel } from '../lib/listingMapActions';
+import { formatRouteDistance } from '../lib/mapRoute';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
 import UserAvatar from './UserAvatar';
@@ -30,6 +32,10 @@ interface ItemCardProps {
   onViewDetail: () => void;
   onMessage: () => void;
   onViewProfile: (userId: string) => void;
+  /** Straight-line distance from user to item pin, in meters. Shown as a badge when provided. */
+  distanceMeters?: number | null;
+  /** Open navigation directly from the card (map-view parity). */
+  onNavigate?: () => void;
 }
 
 export default function ItemCard({
@@ -51,6 +57,8 @@ export default function ItemCard({
   onViewDetail,
   onMessage,
   onViewProfile,
+  distanceMeters,
+  onNavigate,
 }: ItemCardProps) {
   const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;
@@ -187,10 +195,17 @@ export default function ItemCard({
         <Eye className="w-3.5 h-3.5" />
         <span className="hidden sm:inline ml-1">View</span>
       </button>
-      <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-        <MessageSquare className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline ml-1">Message</span>
-      </button>
+      {onNavigate && item.status === 'active' ? (
+        <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+          <Navigation className="w-3.5 h-3.5" />
+          <span className="ml-1">{getListingNavigateLabel(item)}</span>
+        </button>
+      ) : (
+        <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline ml-1">Message</span>
+        </button>
+      )}
     </div>
   ) : (
     <span className="text-[10px] font-medium text-muted">Archived</span>
@@ -254,6 +269,12 @@ export default function ItemCard({
             <MapPin className="w-3 h-3 text-accent shrink-0" />
             <span className="truncate">{item.neighborhood}</span>
           </span>
+          {distanceMeters != null && (
+            <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
+              <Navigation className="w-3 h-3 shrink-0" />
+              {formatRouteDistance(distanceMeters)}
+            </span>
+          )}
           <span className="inline-flex items-center gap-0.5 shrink-0">
             <Calendar className="w-3 h-3 shrink-0" />
             {dateLabel}

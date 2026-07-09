@@ -13,11 +13,11 @@ export async function confirmGoGetAsRequester(
 ): Promise<boolean> {
   if (isInstantClaimCategory(category)) {
     return confirm({
-      title: 'Go to curb alert?',
+      title: 'Pick up this item?',
       message:
-        `Head straight to ${posterName}'s curb alert for ${itemTitle}. The poster won't be notified — ` +
-        `you can optionally let them know after you arrive.`,
-      confirmLabel: 'Go to',
+        `Navigate straight to ${posterName}'s ${itemTitle}. The poster won't be notified you're coming — ` +
+        `you can optionally let them know once you arrive or after you've picked up.`,
+      confirmLabel: 'Pick Up',
       cancelLabel: 'Not now',
     });
   }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
@@ -34,6 +34,9 @@ import {
   type FeedSortMode,
 } from '../lib/feedSort';
 import { useTrackPresence } from '../contexts/PresenceContext';
+import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { haversineMeters, type LatLng } from '../lib/mapRoute';
+import { getItemMapDestination } from '../lib/itemLocation';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
@@ -145,6 +148,27 @@ export default function ItemGrid({
   const [attributionItem, setAttributionItem] = useState<ItemPost | null>(null);
 
   const { savedIds, toggleSaved, isSaved } = useSavedItems(userProfile.uid);
+
+  // Subscribe to live GPS so we can show distance badges on cards.
+  const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const locationMountedRef = useRef(false);
+  useEffect(() => {
+    locationMountedRef.current = true;
+    const unsub = subscribeLiveGeolocation((pos) => {
+      setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    });
+    return () => {
+      locationMountedRef.current = false;
+      unsub();
+    };
+  }, []);
+
+  const getItemDistance = (item: ItemPost): number | null => {
+    if (!userLocation) return null;
+    const dest = getItemMapDestination(item, userProfile.uid);
+    if (!dest) return null;
+    return haversineMeters(userLocation, dest);
+  };
 
   const {
     getVotesForPost,
@@ -558,26 +582,28 @@ export default function ItemGrid({
             <div key={item.id}>
               <ItemCard
                 item={item}
-              currentUserId={userProfile.uid}
-              voteState={getVotesForPost(item.id)}
-              comments={getCommentsForPost(item.id)}
-              commentsExpanded={!!expandedPostComments[item.id]}
-              updating={updatingItemId === item.id}
-              isSaved={isSaved(item.id)}
-              onSave={toggleSaved}
-              onVote={(dir) => handleVote(item.id, item.userId, dir)}
-              onToggleComments={() => toggleComments(item.id)}
-              onAddComment={(text) => handleAddComment(item.id, text)}
-              onDeleteComment={(commentId) => void handleDeleteComment(item.id, commentId)}
-              userProfile={userProfile}
-              onUpdateStatus={(status) => handleUpdateStatus(item.id, status)}
-              onEdit={() => setEditingItem(item)}
-              onViewDetail={() => onViewItem(item)}
-              onMessage={() =>
-                onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)
-              }
-              onViewProfile={onViewProfile}
-            />
+                currentUserId={userProfile.uid}
+                voteState={getVotesForPost(item.id)}
+                comments={getCommentsForPost(item.id)}
+                commentsExpanded={!!expandedPostComments[item.id]}
+                updating={updatingItemId === item.id}
+                isSaved={isSaved(item.id)}
+                onSave={toggleSaved}
+                onVote={(dir) => handleVote(item.id, item.userId, dir)}
+                onToggleComments={() => toggleComments(item.id)}
+                onAddComment={(text) => handleAddComment(item.id, text)}
+                onDeleteComment={(commentId) => void handleDeleteComment(item.id, commentId)}
+                userProfile={userProfile}
+                onUpdateStatus={(status) => handleUpdateStatus(item.id, status)}
+                onEdit={() => setEditingItem(item)}
+                onViewDetail={() => onViewItem(item)}
+                onMessage={() =>
+                  onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)
+                }
+                onViewProfile={onViewProfile}
+                distanceMeters={getItemDistance(item)}
+                onNavigate={item.userId !== userProfile.uid ? () => onViewItem(item) : undefined}
+              />
             </div>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { Calendar, Eye, MapPin } from 'lucide-react';
+import { Calendar, Eye, MapPin, Navigation } from 'lucide-react';
 import { CommunityEvent } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
@@ -6,6 +6,7 @@ import EventStatusBadge from './EventStatusBadge';
 import UserAvatar from './UserAvatar';
 import ListingImage from './ListingImage';
 import { isEventPast, resolveEventStatus } from '../lib/eventRsvp';
+import { formatRouteDistance } from '../lib/mapRoute';
 
 interface EventCardProps {
   event: CommunityEvent;
@@ -14,6 +15,10 @@ interface EventCardProps {
   onViewEvent: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
   commentsLocked?: boolean;
+  /** Straight-line distance from user to event location, in meters. */
+  distanceMeters?: number | null;
+  /** Open navigation to this event (map-view parity). */
+  onNavigate?: () => void;
 }
 
 function formatEventDate(iso: string): string {
@@ -43,6 +48,8 @@ export default function EventCard({
   onViewEvent,
   onViewProfile,
   commentsLocked = false,
+  distanceMeters,
+  onNavigate,
 }: EventCardProps) {
   const eventStatus = resolveEventStatus(event);
   const isCancelled = eventStatus === 'cancelled';
@@ -104,6 +111,12 @@ export default function EventCard({
             <Calendar className="w-3 h-3 shrink-0" />
             {formatEventDate(event.eventStartAt)}
           </span>
+          {distanceMeters != null && (
+            <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
+              <Navigation className="w-3 h-3 shrink-0" />
+              {formatRouteDistance(distanceMeters)}
+            </span>
+          )}
           <span className="inline-flex items-center gap-0.5 shrink-0">
             Posted {formatPostedDate(event.createdAt)}
           </span>
@@ -141,10 +154,18 @@ export default function EventCard({
             </div>
           </button>
 
-          <button type="button" onClick={() => onViewEvent(event)} className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
-            <Eye className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline ml-1">View</span>
-          </button>
+          <div className="flex gap-1 shrink-0">
+            <button type="button" onClick={() => onViewEvent(event)} className="sbn-btn sbn-btn-secondary sbn-btn-sm">
+              <Eye className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline ml-1">View</span>
+            </button>
+            {onNavigate && !isCancelled && !isPast && (
+              <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+                <Navigation className="w-3.5 h-3.5" />
+                <span className="ml-1">Navigate</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </article>

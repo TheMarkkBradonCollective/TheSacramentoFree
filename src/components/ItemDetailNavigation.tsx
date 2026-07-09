@@ -1,11 +1,12 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, CheckCircle, Loader2, MessageCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, Bell, BellOff, CheckCircle, Loader2, LogOut, MessageCircle, XCircle } from 'lucide-react';
 import type { ItemPost, UserProfile } from '../types';
 import { extractGPSCoordinates } from '../types';
 import { canViewerSeeExactLocation, convertPercentToLatLng, getItemMapDestination } from '../lib/itemLocation';
 import {
   getListingNavigateLabel,
+  isContactlessClaimCategory,
   navigatesDirectlyToPin,
 } from '../lib/listingMapActions';
 import {
@@ -21,6 +22,10 @@ import {
   readActiveNavSession,
   saveActiveNavSession,
 } from '../lib/navigationSession';
+import {
+  notifyContactlessPickupArrived,
+  notifyContactlessPickupLeft,
+} from '../lib/pushEvents';
 import {
   cancelGoGetSession,
   confirmGoGetCompletion,
@@ -115,6 +120,14 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
 
   const [session, setSession] = useState<GoGetSession | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  // Contactless pickup state (curb alerts) — no Go Get session, no GPS to poster.
+  const isContactless = isContactlessClaimCategory(item.category) && item.type === 'giveaway';
+  const [contactlessNavActive, setContactlessNavActive] = useState(false);
+  const [contactlessArrived, setContactlessArrived] = useState(false);
+  const [contactlessNotifiedArrived, setContactlessNotifiedArrived] = useState(false);
+  const [contactlessNotifiedLeft, setContactlessNotifiedLeft] = useState(false);
+  const [contactlessBusy, setContactlessBusy] = useState(false);
 
   // Once a session exists, its own destination is authoritative. Before that:
   // Looking/Trade navigate to the poster's pin (fulfiller) — resolve with the
@@ -257,6 +270,10 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
     arrivalHandledRef.current = false;
+    if (isContactless) {
+      setContactlessNavActive(true);
+      setContactlessArrived(false);
+    }
     saveActiveNavSession({
       userId: currentUserId,
       targetType: 'post',
@@ -408,7 +425,14 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
 
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
-      if (!session) return;
+      // Contactless pickups: no session, no GPS to poster — just detect arrival for the UI.
+      if (!session) {
+        if (update.arrived && !arrivalHandledRef.current && isContactless) {
+          arrivalHandledRef.current = true;
+          setContactlessArrived(true);
+        }
+        return;
+      }
       if (session.handshakeMode !== 'instant') {
         void upsertLiveLocation(session.id, {
           lat: update.lat,
@@ -424,14 +448,17 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
         void markGoGetArrived(session, item);
       }
     },
-    [session, item],
+    [session, item, isContactless],
   );
 
   const handleExitNavigation = useCallback(() => {
     clearActiveNavSession();
     setNavigationOpen(false);
     setLockedOrigin(null);
-  }, []);
+    if (isContactless) {
+      setContactlessNavActive(false);
+    }
+  }, [isContactless]);
 
   useEffect(() => {
     if (!navigationOpen || !destination) return;
@@ -855,31 +882,110 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     return null;
   };
 
+  const handleContactlessNotifyArrived = async () => {
+    if (!userProfile) return;
+    setContactlessBusy(true);
+    await notifyContactlessPickupArrived({ item, pickerName: userProfile.displayName });
+    setContactlessNotifiedArrived(true);
+    setContactlessBusy(false);
+  };
+
+  const handleContactlessNotifyLeft = async () => {
+    if (!userProfile) return;
+    setContactlessBusy(true);
+    await notifyContactlessPickupLeft({ item, pickerName: userProfile.displayName });
+    setContactlessNotifiedLeft(true);
+    setContactlessBusy(false);
+  };
+
   return (
     <>
       {!sessionLoaded ? null : session ? (
         renderSessionCard()
       ) : (
         destination && (
-          <MapSelectionRouteRow
-            locationHint={locationHint}
-            routeEndpoints={routeEndpoints}
-            routeLoading={routeLoading}
-            distanceMeters={distanceMeters}
-            durationSeconds={durationSeconds}
-            routeOnMap={isRoadGeometry(routeCoords)}
-            hasLiveGps={!!userLocation}
-            canNavigate={!!userLocation}
-            navigateLabel={isOwner ? 'Navigate' : getListingNavigateLabel(item)}
-            onStartNavigation={() => (isOwner ? openNavigation() : void handleListingNavigation())}
-            onOpenExternalMaps={() => {
-              if (!routeEndpoints) {
-                openDrivingDirections(destination);
-                return;
-              }
-              openDrivingDirections(routeEndpoints.end, routeEndpoints.start);
-            }}
-          />
+          <>
+            <MapSelectionRouteRow
+              locationHint={locationHint}
+              routeEndpoints={routeEndpoints}
+              routeLoading={routeLoading}
+              distanceMeters={distanceMeters}
+              durationSeconds={durationSeconds}
+              routeOnMap={isRoadGeometry(routeCoords)}
+              hasLiveGps={!!userLocation}
+              canNavigate={!!userLocation}
+              navigateLabel={isOwner ? 'Navigate' : getListingNavigateLabel(item)}
+              onStartNavigation={() => (isOwner ? openNavigation() : void handleListingNavigation())}
+              onOpenExternalMaps={() => {
+                if (!routeEndpoints) {
+                  openDrivingDirections(destination);
+                  return;
+                }
+                openDrivingDirections(routeEndpoints.end, routeEndpoints.start);
+              }}
+            />
+
+            {/* Contactless pickup: optional arrived / left notifications — no GPS to poster */}
+            {isContactless && !isOwner && contactlessNavActive && (
+              <div className="mt-3 sbn-card p-4 space-y-3">
+                {contactlessArrived ? (
+                  <>
+                    <p className="text-sm font-semibold text-app">You're at the pickup spot</p>
+                    <p className="text-xs text-muted">
+                      Optionally let {item.userDisplayName} know you're here or that you've picked up.
+                      No location is shared with them — these are one-way notifications only.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        disabled={contactlessBusy || contactlessNotifiedArrived}
+                        onClick={() => void handleContactlessNotifyArrived()}
+                        className="sbn-btn sbn-btn-secondary sbn-btn-sm justify-center disabled:opacity-50"
+                        title={contactlessNotifiedArrived ? 'Already sent' : "Let poster know you're here"}
+                      >
+                        {contactlessNotifiedArrived ? (
+                          <><BellOff className="w-3.5 h-3.5" /> Notified</>
+                        ) : (
+                          <><Bell className="w-3.5 h-3.5" /> I'm here</>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={contactlessBusy || contactlessNotifiedLeft}
+                        onClick={() => void handleContactlessNotifyLeft()}
+                        className="sbn-btn sbn-btn-primary sbn-btn-sm justify-center disabled:opacity-50"
+                        title={contactlessNotifiedLeft ? 'Already sent' : 'Let poster know you picked up and left'}
+                      >
+                        {contactlessNotifiedLeft ? (
+                          <><CheckCircle className="w-3.5 h-3.5" /> Sent</>
+                        ) : (
+                          <><LogOut className="w-3.5 h-3.5" /> I picked up</>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-app flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                      Navigating to pickup
+                    </p>
+                    <p className="text-xs text-muted">
+                      {item.userDisplayName} won't be notified you're coming.
+                      Once you arrive, you can optionally let them know.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleExitNavigation}
+                      className="text-xs text-muted hover:text-app underline underline-offset-2"
+                    >
+                      Cancel pickup
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </>
         )
       )}
 

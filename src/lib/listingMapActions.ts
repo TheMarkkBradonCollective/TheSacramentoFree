@@ -12,7 +12,7 @@ export function isContactlessClaimCategory(category: string): boolean {
 export function getListingNavigateLabel(item: Pick<ItemPost, 'type' | 'category'>): string {
   if (item.type === 'looking') return 'Drop off';
   if (item.type === 'trade') return 'Meet up';
-  if (item.type === 'giveaway' && isContactlessClaimCategory(item.category)) return 'Go to';
+  if (item.type === 'giveaway' && isContactlessClaimCategory(item.category)) return 'Pick Up';
   return 'Go Get';
 }
 

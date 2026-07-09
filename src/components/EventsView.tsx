@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowDownUp,
@@ -13,6 +13,8 @@ import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { isEventUpcoming } from '../lib/eventRsvp';
 import { EVENTS } from '../siteContent';
 import EventCard from './EventCard';
+import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { haversineMeters, type LatLng } from '../lib/mapRoute';
 
 interface EventsViewProps {
   events: CommunityEvent[];
@@ -102,6 +104,25 @@ export default function EventsView({
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [myAreaOnly, setMyAreaOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Subscribe to live GPS so we can show distance badges on event cards.
+  const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const locationMountedRef = useRef(false);
+  useEffect(() => {
+    locationMountedRef.current = true;
+    const unsub = subscribeLiveGeolocation((pos) => {
+      setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    });
+    return () => {
+      locationMountedRef.current = false;
+      unsub();
+    };
+  }, []);
+
+  const getEventDistance = (event: CommunityEvent): number | null => {
+    if (!userLocation || event.locationLat == null || event.locationLng == null) return null;
+    return haversineMeters(userLocation, { lat: event.locationLat, lng: event.locationLng });
+  };
 
   const hasExtraFilters =
     timeFilter !== 'all' ||
@@ -363,6 +384,8 @@ export default function EventsView({
                 onViewEvent={onViewEvent}
                 onViewProfile={onViewProfile}
                 commentsLocked={commentsLocked}
+                distanceMeters={getEventDistance(event)}
+                onNavigate={() => onViewEvent(event)}
               />
             </div>
           ))}
