@@ -141,8 +141,15 @@ export function NotificationsHubProvider({
 
   useEffect(() => {
     if (!open || !userProfile) return;
+    // Notify (user_notifications) is marked read when its list mounts — not on hub open —
+    // so opening the bell on Alerts/Updates does not clear unread glow early.
+    if (tab === 'notifications') return;
     void markTabSeen(tab);
   }, [open, tab, userProfile, markTabSeen]);
+
+  const handleNotificationsViewed = useCallback(() => {
+    void markTabSeen('notifications');
+  }, [markTabSeen]);
 
   const value = useMemo(
     () => ({ openHub, shouldGlow }),
@@ -197,7 +204,12 @@ export function NotificationsHubProvider({
               <AnnouncementsList userProfile={userProfile} showVotes showComments />
             ) : null}
             {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes showComments /> : null}
-            {tab === 'notifications' ? <UserNotificationsList userId={userProfile.uid} /> : null}
+            {tab === 'notifications' ? (
+              <UserNotificationsList
+                userId={userProfile.uid}
+                onViewed={handleNotificationsViewed}
+              />
+            ) : null}
             {tab === 'alerts' ? (
               <NotificationSettings
                 userId={userProfile.uid}

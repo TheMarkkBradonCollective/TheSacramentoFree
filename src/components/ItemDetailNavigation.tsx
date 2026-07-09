@@ -83,7 +83,7 @@ async function applyCompletionForItemType(
     });
   }
   if (item.type === 'looking') {
-    // For a Looking post, the original poster (fulfiller role here) is marking the helper's contribution fulfilled.
+    // Looking sessions: fulfiller = looking poster (owner), requester = helper who dropped off.
     return markItemFulfilledFromChat({
       itemId: item.id,
       ownerUserId: session.fulfillerUserId,
@@ -287,12 +287,13 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     if (!confirmed) return;
     setBusy(true);
     setErr('');
+    // Looking: poster waits at their area (fulfiller); responder navigates with the item (requester).
     const result = await createGoGetSession({
       item,
-      fulfillerUserId: userProfile.uid,
-      fulfillerName: userProfile.displayName,
-      requesterUserId: item.userId,
-      requesterName: item.userDisplayName,
+      fulfillerUserId: item.userId,
+      fulfillerName: item.userDisplayName,
+      requesterUserId: userProfile.uid,
+      requesterName: userProfile.displayName,
       destination,
       destinationLabel: `${item.userDisplayName}'s area`,
     });

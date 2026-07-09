@@ -392,7 +392,16 @@ export default function UserProfileView({
           />
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
-            Joined our sharing circle: {new Date(userProfile.createdAt?.seconds ? userProfile.createdAt.seconds * 1000 : userProfile.createdAt).toLocaleDateString()}
+            Joined our sharing circle:{' '}
+            {(() => {
+              const raw = userProfile.createdAt;
+              const ms =
+                raw && typeof raw === 'object' && 'seconds' in raw
+                  ? Number((raw as { seconds: number }).seconds) * 1000
+                  : new Date(raw as string | number | Date).getTime();
+              const date = new Date(ms);
+              return Number.isNaN(date.getTime()) ? 'recently' : date.toLocaleDateString();
+            })()}
           </p>
           
           {userProfile.bio ? (

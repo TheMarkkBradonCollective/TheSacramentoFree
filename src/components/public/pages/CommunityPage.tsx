@@ -76,6 +76,13 @@ export default function CommunityPage() {
             {line}
           </p>
         ))}
+        <button
+          type="button"
+          onClick={() => navigate('login')}
+          className="sbn-btn sbn-btn-primary sbn-btn-sm mt-4"
+        >
+          Sign in or join
+        </button>
       </PublicCard>
     </PublicPageShell>
   );
