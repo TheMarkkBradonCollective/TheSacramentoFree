@@ -67,7 +67,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (messageMatch) return { tab: 'chats', conversationId: messageMatch[1] };
 
   const requestMatch = path.match(/^requests\/([^/]+)/);
-  if (requestMatch) return { tab: 'feed', requestId: requestMatch[1] };
+  if (requestMatch) return { tab: 'chats', requestId: requestMatch[1] };
 
   return null;
 }

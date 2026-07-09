@@ -45,13 +45,22 @@ export default function CommunityPage() {
         <p className="mt-2 text-sm text-muted">
           See everything we&apos;ve shipped — features, fixes, and improvements — with dates.
         </p>
-        <button
-          type="button"
-          onClick={() => navigate('updates')}
-          className="sbn-btn sbn-btn-secondary sbn-btn-sm mt-4"
-        >
-          View updates
-        </button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('updates')}
+            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+          >
+            View updates
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('reviews')}
+            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+          >
+            Read reviews
+          </button>
+        </div>
       </PublicCard>
 
       <PublicCard>

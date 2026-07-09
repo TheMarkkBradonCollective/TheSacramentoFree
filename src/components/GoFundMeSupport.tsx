@@ -1,14 +1,16 @@
 import { ExternalLink, HeartHandshake } from 'lucide-react';
 import { SUPPORT } from '../siteContent';
 
-export default function GoFundMeSupport() {
+export default function GoFundMeSupport({ showTitle = true }: { showTitle?: boolean }) {
   return (
     <div className="rounded-2xl border border-app bg-inset p-4 sm:p-6 text-center space-y-5">
       <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-accent-soft border border-accent/20 text-accent mx-auto">
         <HeartHandshake className="w-5 h-5" aria-hidden />
       </div>
       <div className="space-y-2 max-w-xl mx-auto">
-        <h3 className="font-display font-bold text-app text-base">{SUPPORT.gofundmeTitle}</h3>
+        {showTitle && (
+          <h3 className="font-display font-bold text-app text-base">{SUPPORT.gofundmeTitle}</h3>
+        )}
         <p className="text-sm text-muted leading-relaxed">{SUPPORT.gofundmeBlurb}</p>
         <p className="text-sm text-muted leading-relaxed">{SUPPORT.gofundmeDetail}</p>
       </div>

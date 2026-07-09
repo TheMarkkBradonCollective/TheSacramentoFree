@@ -232,7 +232,7 @@ export const IN_APP = {
 export const PRIVACY = {
   title: 'Privacy & data',
   shortTitle: 'Privacy policy',
-  lastUpdated: 'June 2025',
+  lastUpdated: 'July 2026',
   summary:
     'Sacramento Buy Nothing is run by Markeith White. I do not sell your information. Your account data is stored by Supabase — not on this website’s own servers.',
   sections: [
@@ -297,7 +297,7 @@ export const PRIVACY = {
 export const TERMS = {
   title: 'Terms of use',
   shortTitle: 'Terms & user agreement',
-  lastUpdated: 'June 2025',
+  lastUpdated: 'July 2026',
   summary:
     'By using Sacramento Buy Nothing, you agree to these terms. The app is run by Markeith White for local, free neighbor-to-neighbor gifting only — no selling, no flipping, no harassment.',
   sections: [

@@ -162,6 +162,23 @@ export default function ChatSystem({
     };
   }, [selectedChat?.id, selectedChat?.itemId, items, userProfile.uid]);
 
+  useEffect(() => {
+    if (!selectedChat || isCommunityChat(selectedChat.id)) return;
+    const otherId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
+    if (otherId && blockedUserIds.has(otherId)) {
+      setSelectedChat(null);
+      setMessages([]);
+    }
+  }, [blockedUserIds, selectedChat, userProfile.uid]);
+
+  useEffect(() => {
+    if (!pendingChatCompose) return;
+    if (blockedUserIds.has(pendingChatCompose.otherUserId)) {
+      onClearPendingChatCompose?.();
+      setSelectedChat(null);
+    }
+  }, [blockedUserIds, pendingChatCompose, onClearPendingChatCompose]);
+
   const handleStartGoGetFromChat = useCallback(
     async (linkedItem: ItemPost, otherUserId: string, otherUserName: string) => {
       const myLocation = getLastLiveLatLng();
@@ -246,7 +263,8 @@ export default function ChatSystem({
     setSupportOpenTicketId(initialSupportTicketId);
     setSupportView('thread');
     setSelectedChat(null);
-  }, [initialSupportTicketId]);
+    onClearInitialSupportTicket?.();
+  }, [initialSupportTicketId, onClearInitialSupportTicket]);
 
   const formatTime = (value: unknown) => {
     if (!value) return '';

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { ArrowLeft, MapPin, MessageSquare } from 'lucide-react';
 import { ItemPost } from '../../types';
 import { canViewerSeeExactLocation, parseTradeSeeking } from '../../lib/itemLocation';
@@ -12,20 +13,32 @@ interface GuestItemDetailViewProps {
 }
 
 export default function GuestItemDetailView({ item, onClose, onRequireSignIn }: GuestItemDetailViewProps) {
+  const backButtonRef = useRef<HTMLButtonElement>(null);
   const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
   const detailsText = getListingDetailsText(item.description);
   const showExact = canViewerSeeExactLocation(item, undefined);
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
+
+  useEffect(() => {
+    backButtonRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   return (
     <div
       className="fixed inset-0 z-[90] bg-app overflow-y-auto"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="guest_item_detail_title"
       id="guest_item_detail"
     >
       <header className="sticky top-0 z-10 sbn-glass-nav sbn-safe-top px-4 min-h-14 flex items-center gap-3">
         <button
+          ref={backButtonRef}
           type="button"
           onClick={onClose}
           className="p-2 rounded-full hover:bg-inset text-app"
@@ -33,7 +46,9 @@ export default function GuestItemDetailView({ item, onClose, onRequireSignIn }: 
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="font-display font-bold text-base text-app truncate flex-1">Listing preview</h1>
+        <h1 id="guest_item_detail_title" className="font-display font-bold text-base text-app truncate flex-1">
+          Listing preview
+        </h1>
       </header>
 
       <div className="sbn-page-content pb-32">

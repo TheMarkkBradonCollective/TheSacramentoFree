@@ -17,7 +17,7 @@ export default function RulesPage() {
           </h2>
           <ul className="mt-3 space-y-2 text-sm text-muted font-semibold">
             {RULES.allowed.map((item) => (
-              <li key={item}>✅ {item}</li>
+              <li key={item}>{item}</li>
             ))}
           </ul>
         </PublicCard>
@@ -28,7 +28,7 @@ export default function RulesPage() {
           </h2>
           <ul className="mt-3 space-y-2 text-sm text-muted font-semibold">
             {RULES.notAllowed.map((item) => (
-              <li key={item}>❌ {item}</li>
+              <li key={item}>{item}</li>
             ))}
           </ul>
         </PublicCard>

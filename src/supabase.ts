@@ -1995,6 +1995,20 @@ export async function submitSelfClaimRequest(params: {
   return { ok: true, chatId };
 }
 
+export async function getClaimRequestById(requestId: string): Promise<ItemClaimRequest | null> {
+  try {
+    const { data, error } = await supabase
+      .from('item_claim_requests')
+      .select('*')
+      .eq('id', requestId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return normalizeClaimRequest(data as Record<string, unknown>);
+  } catch {
+    return null;
+  }
+}
+
 export async function getPendingClaimRequestsForChat(chatId: string): Promise<ItemClaimRequest[]> {
   try {
     const { data, error } = await supabase
@@ -3781,6 +3795,7 @@ function normalizeUserNotificationRow(row: Record<string, unknown>): UserNotific
     itemId: row.itemId ? String(row.itemId) : undefined,
     itemTitle: row.itemTitle ? String(row.itemTitle) : undefined,
     actorName: row.actorName ? String(row.actorName) : undefined,
+    url: row.url ? String(row.url) : undefined,
   };
 }
 

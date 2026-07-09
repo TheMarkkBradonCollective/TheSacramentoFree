@@ -5,7 +5,7 @@ import { SUPPORT } from '../../../siteContent';
 export default function GoFundMePage() {
   return (
     <PublicPageShell title={SUPPORT.gofundmeTitle} subtitle={SUPPORT.gofundmeBlurb}>
-      <GoFundMeSupport />
+      <GoFundMeSupport showTitle={false} />
     </PublicPageShell>
   );
 }

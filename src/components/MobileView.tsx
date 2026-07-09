@@ -224,6 +224,7 @@ export default function MobileView({
               onViewItem={onViewItem}
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
+              isLoading={!itemsHydrated}
             />
             <PageScrollFooter className="-mx-4" onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
           </div>
@@ -346,6 +347,8 @@ export default function MobileView({
                   type="button"
                   id={`mobile_nav_${id}`}
                   onClick={() => setActiveTab(id)}
+                  aria-label={label}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
                 >
                   <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
@@ -375,6 +378,8 @@ export default function MobileView({
                   type="button"
                   id={`mobile_nav_${id}`}
                   onClick={() => setActiveTab(id)}
+                  aria-label={label}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
                 >
                   <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />

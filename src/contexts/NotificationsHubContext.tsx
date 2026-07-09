@@ -8,6 +8,7 @@ import AnnouncementsList from '../components/AnnouncementsList';
 import UserNotificationsList from '../components/UserNotificationsList';
 import { useNotificationsHubUnread } from '../hooks/useNotificationsHubUnread';
 import HeaderActionButton from '../components/HeaderActionButton';
+import type { PushDeepLinkTarget } from '../lib/pushDeepLink';
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts';
 
@@ -108,9 +109,11 @@ function tabUnreadCount(
 
 export function NotificationsHubProvider({
   userProfile,
+  onDeepLink,
   children,
 }: {
   userProfile: UserProfile | null;
+  onDeepLink?: (target: PushDeepLinkTarget) => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -208,6 +211,10 @@ export function NotificationsHubProvider({
               <UserNotificationsList
                 userId={userProfile.uid}
                 onViewed={handleNotificationsViewed}
+                onNavigate={(target) => {
+                  setOpen(false);
+                  onDeepLink?.(target);
+                }}
               />
             ) : null}
             {tab === 'alerts' ? (

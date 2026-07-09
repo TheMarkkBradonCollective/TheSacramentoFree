@@ -7,10 +7,10 @@ export default function PrivacyPage() {
   return (
     <PublicPageShell
       title={PRIVACY.title}
-      subtitle="How your information is handled — and where your data actually lives."
+      subtitle={`How your information is handled — last updated ${PRIVACY.lastUpdated}.`}
     >
       <PublicCard>
-        <PrivacyPolicyContent />
+        <PrivacyPolicyContent showHeader={false} />
       </PublicCard>
     </PublicPageShell>
   );
