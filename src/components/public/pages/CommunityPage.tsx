@@ -45,18 +45,27 @@ export default function CommunityPage() {
         <p className="mt-2 text-sm text-muted">
           See everything we&apos;ve shipped — features, fixes, and improvements — with dates.
         </p>
-        <button
-          type="button"
-          onClick={() => navigate('updates')}
-          className="sbn-btn sbn-btn-secondary sbn-btn-sm mt-4"
-        >
-          View updates
-        </button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('updates')}
+            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+          >
+            View updates
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('reviews')}
+            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+          >
+            Read reviews
+          </button>
+        </div>
       </PublicCard>
 
       <PublicCard>
         <h2 className="text-lg font-black text-app">On the roadmap</h2>
-        <p className="mt-2 text-sm text-muted">Features we may add over time:</p>
+        <p className="mt-2 text-sm text-muted">Ideas we are exploring next — many core features are already live today.</p>
         <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
           {FUTURE_FEATURES.map((feature) => (
             <li

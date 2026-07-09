@@ -14,11 +14,19 @@ export default function PublicPageShell({ title, subtitle, children, showBack = 
   const { route, navigate } = usePublicRoute();
   const canGoBack = showBack && route !== 'home';
 
+  const goBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    navigate('home');
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 md:py-12">
       <div className="sbn-page-content">
         {canGoBack && (
-          <button type="button" onClick={() => navigate('home')} className="sbn-back-btn" aria-label="Back to home">
+          <button type="button" onClick={goBack} className="sbn-back-btn" aria-label="Go back">
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>

@@ -7,10 +7,10 @@ export default function TermsPage() {
   return (
     <PublicPageShell
       title={TERMS.title}
-      subtitle="Rules for using Sacramento Buy Nothing — free local gifting by Markeith White."
+      subtitle={`Rules for using Sacramento Buy Nothing — last updated ${TERMS.lastUpdated}.`}
     >
       <PublicCard>
-        <TermsOfUseContent />
+        <TermsOfUseContent showHeader={false} />
       </PublicCard>
     </PublicPageShell>
   );

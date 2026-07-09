@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { AlertCircle, FileText, Info, Lock, Mail, Shield, User } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, Info, Lock, Mail, Shield, User } from 'lucide-react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../../types';
 import { PRIVACY, RULES, SITE } from '../../siteContent';
-import { publicRouteHref } from '../../public/routes';
+import { usePublicRoute } from '../../public/usePublicRoute';
+import { supabase } from '../../supabase';
 import PublicPageShell from './PublicPageShell';
 
 interface AuthPageProps {
@@ -18,24 +19,38 @@ interface AuthPageProps {
   isAuthLoading?: boolean;
 }
 
+type AuthMode = 'signin' | 'signup' | 'forgot';
+
 export default function AuthPage({
   onEmailSignIn,
   onEmailSignUp,
   errorMsg,
   isAuthLoading,
 }: AuthPageProps) {
-  const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signin');
+  const { navigate } = usePublicRoute();
+  const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [neighborhood, setNeighborhood] = useState('Midtown');
   const [bio, setBio] = useState('');
-  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
 
   const busy = localLoading || isAuthLoading;
   const displayError = localError || errorMsg;
+
+  const resetLocalState = () => {
+    setLocalError('');
+    setForgotSent(false);
+  };
+
+  const switchMode = (mode: AuthMode) => {
+    setAuthMode(mode);
+    resetLocalState();
+  };
 
   const handleSignInSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -66,8 +81,8 @@ export default function AuthPage({
       setLocalError('Password must be at least 6 characters.');
       return;
     }
-    if (!privacyAccepted) {
-      setLocalError('Please read and accept the privacy policy to join.');
+    if (!legalAccepted) {
+      setLocalError('Please read and accept the privacy policy and terms of use to join.');
       return;
     }
     setLocalLoading(true);
@@ -89,39 +104,61 @@ export default function AuthPage({
     }
   };
 
+  const handleForgotSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setLocalError('Enter the email address on your account.');
+      return;
+    }
+    setLocalLoading(true);
+    setLocalError('');
+    setForgotSent(false);
+    try {
+      const redirectTo = `${window.location.origin}${window.location.pathname}#/login`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+      if (error) throw error;
+      setForgotSent(true);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not send reset email. Please try again.';
+      setLocalError(message);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
   return (
     <PublicPageShell
-      title="Sign in or join"
-      subtitle={`${SITE.freeRule} Create an account to post, message neighbors, and browse free stuff.`}
+      title={authMode === 'forgot' ? 'Reset your password' : 'Sign in or join'}
+      subtitle={
+        authMode === 'forgot'
+          ? 'We will email you a link to choose a new password.'
+          : `${SITE.freeRule} Create an account to post, message neighbors, and browse free stuff.`
+      }
       showBack={false}
     >
       <div className="bg-surface border border-app rounded-2xl overflow-hidden max-w-md">
-        <div className="flex border-b border-app">
-          <button
-            type="button"
-            onClick={() => {
-              setAuthTab('signin');
-              setLocalError('');
-            }}
-            className={`flex-1 py-3 text-xs font-black uppercase tracking-wider ${
-              authTab === 'signin' ? 'bg-inset text-accent' : 'text-muted hover:text-app'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setAuthTab('signup');
-              setLocalError('');
-            }}
-            className={`flex-1 py-3 text-xs font-black uppercase tracking-wider ${
-              authTab === 'signup' ? 'bg-inset text-accent' : 'text-muted hover:text-app'
-            }`}
-          >
-            Join
-          </button>
-        </div>
+        {authMode !== 'forgot' && (
+          <div className="flex border-b border-app">
+            <button
+              type="button"
+              onClick={() => switchMode('signin')}
+              className={`flex-1 py-3 text-xs font-black uppercase tracking-wider ${
+                authMode === 'signin' ? 'bg-inset text-accent' : 'text-muted hover:text-app'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('signup')}
+              className={`flex-1 py-3 text-xs font-black uppercase tracking-wider ${
+                authMode === 'signup' ? 'bg-inset text-accent' : 'text-muted hover:text-app'
+              }`}
+            >
+              Join
+            </button>
+          </div>
+        )}
 
         <div className="p-5 space-y-4">
           {displayError && (
@@ -131,12 +168,24 @@ export default function AuthPage({
             </div>
           )}
 
-          {authTab === 'signin' ? (
-            <form onSubmit={handleSignInSubmit} className="space-y-3">
-              <label className="block text-[11px] font-bold text-muted uppercase tracking-wide">Email</label>
+          {forgotSent && (
+            <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-900/40 text-emerald-400 text-xs font-semibold flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>
+                If an account exists for that email, a reset link is on its way. Check your inbox and spam folder.
+              </span>
+            </div>
+          )}
+
+          {authMode === 'forgot' ? (
+            <form onSubmit={handleForgotSubmit} className="space-y-3">
+              <label htmlFor="auth-forgot-email" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+                Email
+              </label>
               <div className="relative">
                 <Mail className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-forgot-email"
                   type="email"
                   required
                   autoComplete="email"
@@ -146,10 +195,46 @@ export default function AuthPage({
                   placeholder="name@email.com"
                 />
               </div>
-              <label className="block text-[11px] font-bold text-muted uppercase tracking-wide">Password</label>
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full py-3 rounded-xl bg-accent hover:bg-accent-hover text-on-accent text-xs font-black uppercase tracking-wider disabled:opacity-60"
+              >
+                {busy ? 'Sending…' : 'Send reset link'}
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="w-full text-xs font-semibold text-accent hover:underline"
+              >
+                Back to sign in
+              </button>
+            </form>
+          ) : authMode === 'signin' ? (
+            <form onSubmit={handleSignInSubmit} className="space-y-3">
+              <label htmlFor="auth-signin-email" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  id="auth-signin-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 bg-inset border border-app rounded-xl text-sm text-app"
+                  placeholder="name@email.com"
+                />
+              </div>
+              <label htmlFor="auth-signin-password" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-signin-password"
                   type="password"
                   required
                   autoComplete="current-password"
@@ -160,6 +245,13 @@ export default function AuthPage({
                 />
               </div>
               <button
+                type="button"
+                onClick={() => switchMode('forgot')}
+                className="text-[11px] font-semibold text-accent hover:underline"
+              >
+                Forgot password?
+              </button>
+              <button
                 type="submit"
                 disabled={busy}
                 className="w-full py-3 rounded-xl bg-accent hover:bg-accent-hover text-on-accent text-xs font-black uppercase tracking-wider disabled:opacity-60"
@@ -169,10 +261,13 @@ export default function AuthPage({
             </form>
           ) : (
             <form onSubmit={handleSignUpSubmit} className="space-y-3">
-              <label className="block text-[11px] font-bold text-muted uppercase tracking-wide">Email</label>
+              <label htmlFor="auth-signup-email" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+                Email
+              </label>
               <div className="relative">
                 <Mail className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-signup-email"
                   type="email"
                   required
                   autoComplete="email"
@@ -182,10 +277,13 @@ export default function AuthPage({
                   placeholder="name@email.com"
                 />
               </div>
-              <label className="block text-[11px] font-bold text-muted uppercase tracking-wide">Password</label>
+              <label htmlFor="auth-signup-password" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-signup-password"
                   type="password"
                   required
                   autoComplete="new-password"
@@ -195,10 +293,13 @@ export default function AuthPage({
                   placeholder="Min 6 characters"
                 />
               </div>
-              <label className="block text-[11px] font-bold text-muted uppercase tracking-wide">Name / nickname</label>
+              <label htmlFor="auth-signup-name" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+                Name / nickname
+              </label>
               <div className="relative">
                 <User className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-signup-name"
                   type="text"
                   required
                   autoComplete="name"
@@ -208,8 +309,11 @@ export default function AuthPage({
                   placeholder="Friendly display name"
                 />
               </div>
-              <label className="block text-[11px] font-bold text-muted uppercase tracking-wide">Neighborhood</label>
+              <label htmlFor="auth-signup-neighborhood" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+                Neighborhood
+              </label>
               <select
+                id="auth-signup-neighborhood"
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
                 className="w-full px-3 py-2.5 bg-inset border border-app rounded-xl text-sm text-app font-semibold"
@@ -220,8 +324,11 @@ export default function AuthPage({
                   </option>
                 ))}
               </select>
-              <label className="block text-[11px] font-bold text-muted uppercase tracking-wide">Bio (optional)</label>
+              <label htmlFor="auth-signup-bio" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+                Bio (optional)
+              </label>
               <textarea
+                id="auth-signup-bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 maxLength={180}
@@ -231,19 +338,27 @@ export default function AuthPage({
               <label className="flex items-start gap-3 p-3 rounded-xl bg-inset border border-app cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={privacyAccepted}
-                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  checked={legalAccepted}
+                  onChange={(e) => setLegalAccepted(e.target.checked)}
                   className="mt-0.5 w-4 h-4 rounded border-app accent-accent"
                 />
                 <span className="text-[11px] text-muted font-semibold leading-relaxed">
                   I have read the{' '}
-                  <a href={publicRouteHref('privacy')} className="text-accent font-bold hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => navigate('privacy')}
+                    className="text-accent font-bold hover:underline"
+                  >
                     privacy policy
-                  </a>{' '}
+                  </button>{' '}
                   and{' '}
-                  <a href={publicRouteHref('terms')} className="text-accent font-bold hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => navigate('terms')}
+                    className="text-accent font-bold hover:underline"
+                  >
                     terms of use
-                  </a>{' '}
+                  </button>{' '}
                   and agree to follow community rules. My data is stored by Supabase and is never sold.
                 </span>
               </label>
@@ -263,20 +378,22 @@ export default function AuthPage({
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
-            <a
-              href={publicRouteHref('privacy')}
+            <button
+              type="button"
+              onClick={() => navigate('privacy')}
               className="flex items-center justify-center gap-2 text-[11px] font-semibold text-accent hover:underline"
             >
               <Shield className="w-3.5 h-3.5" />
               {PRIVACY.shortTitle}
-            </a>
-            <a
-              href={publicRouteHref('terms')}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('terms')}
               className="flex items-center justify-center gap-2 text-[11px] font-semibold text-accent hover:underline"
             >
               <FileText className="w-3.5 h-3.5" />
               Terms of use
-            </a>
+            </button>
           </div>
         </div>
       </div>

@@ -3,20 +3,23 @@ import { SITE, TERMS } from '../siteContent';
 
 interface TermsOfUseContentProps {
   compact?: boolean;
+  showHeader?: boolean;
 }
 
-export default function TermsOfUseContent({ compact = false }: TermsOfUseContentProps) {
+export default function TermsOfUseContent({ compact = false, showHeader = true }: TermsOfUseContentProps) {
   return (
     <div className={compact ? 'space-y-4' : 'space-y-6'}>
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
-          <FileText className="w-5 h-5 text-accent" />
+      {showHeader && (
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
+            <FileText className="w-5 h-5 text-accent" />
+          </div>
+          <div>
+            <h2 className="font-display font-bold text-app text-lg">{TERMS.title}</h2>
+            <p className="text-xs text-muted mt-1">Last updated {TERMS.lastUpdated}</p>
+          </div>
         </div>
-        <div>
-          <h2 className="font-display font-bold text-app text-lg">{TERMS.title}</h2>
-          <p className="text-xs text-muted mt-1">Last updated {TERMS.lastUpdated}</p>
-        </div>
-      </div>
+      )}
 
       <p className="text-sm text-muted font-semibold leading-relaxed">{TERMS.summary}</p>
 

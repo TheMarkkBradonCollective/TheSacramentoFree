@@ -121,14 +121,14 @@ export const COMMUNITY_FIRST = {
 } as const;
 
 export const FUTURE_FEATURES = [
-  'User profiles',
-  'Reputation system',
-  'Pickup scheduling',
-  'Neighborhood filtering',
-  'Item categories',
-  'Mobile app support',
-  'Donation streak badges',
-  'Local alerts'
+  'Wishlist matching — get notified when neighbors post what you need',
+  'Carbon impact tracker for items kept out of landfills',
+  'Bilingual support (Spanish)',
+  'Seasonal community swap drives',
+  'Enhanced map heat layers by neighborhood',
+  'Recurring pickup reminders in chat',
+  'Volunteer moderator tools',
+  'Community swap meet planner',
 ] as const;
 
 export const SUPPORT = {
@@ -173,7 +173,7 @@ export const SUPPORT = {
 
 export const DIRECTOR_MESSAGE = {
   /** Fallback until the director profile loads from the database. */
-  name: 'Markk White',
+  name: 'Markeith White',
   title: 'Buy Nothing Director',
   headline: 'A note from your director',
   goal:
@@ -230,7 +230,7 @@ export const IN_APP = {
 export const PRIVACY = {
   title: 'Privacy & data',
   shortTitle: 'Privacy policy',
-  lastUpdated: 'June 2025',
+  lastUpdated: 'July 2026',
   summary:
     'Sacramento Buy Nothing is run by Markeith White. I do not sell your information. Your account data is stored by Supabase — not on this website’s own servers.',
   sections: [
@@ -295,7 +295,7 @@ export const PRIVACY = {
 export const TERMS = {
   title: 'Terms of use',
   shortTitle: 'Terms & user agreement',
-  lastUpdated: 'June 2025',
+  lastUpdated: 'July 2026',
   summary:
     'By using Sacramento Buy Nothing, you agree to these terms. The app is run by Markeith White for local, free neighbor-to-neighbor gifting only — no selling, no flipping, no harassment.',
   sections: [

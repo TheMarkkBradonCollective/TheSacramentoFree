@@ -1,4 +1,4 @@
-import { ArrowRight, FileText, HandHeart, Heart, MapPin, Shield, Users } from 'lucide-react';
+import { ArrowRight, FileText, HandHeart, Heart, MapPin, MessageSquare, Shield, Sparkles, Star, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
 import CommunityReviews from '../../CommunityReviews';
@@ -21,10 +21,13 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
   { route: 'about', title: 'What we are', blurb: 'Local free gifting — no money, just neighbors.', icon: Heart },
   { route: 'how-it-works', title: 'How it works', blurb: 'Post, connect, porch pickup — four simple steps.', icon: Users },
   { route: 'rules', title: 'Community rules', blurb: "What's allowed and what isn't.", icon: Shield },
+  { route: 'community', title: 'Why community matters', blurb: 'Trust, mutual aid, and less waste in Sacramento.', icon: Users },
+  { route: 'reviews', title: 'Neighbor reviews', blurb: 'See what members think of the app and our team.', icon: Star },
+  { route: 'updates', title: 'App updates', blurb: 'Features, fixes, and improvements — with dates.', icon: Sparkles },
   { route: 'privacy', title: 'Privacy & data', blurb: 'Your data is stored by Supabase — never sold.', icon: Shield },
   { route: 'terms', title: 'Terms of use', blurb: 'User agreement for free local gifting in Sacramento.', icon: FileText },
   { route: 'gofundme', title: 'Support the app', blurb: 'Help keep Sacramento Buy Nothing free — no ads, ever.', icon: HandHeart },
-  { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 34+ areas.', icon: MapPin },
+  { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 39 areas.', icon: MapPin },
 ];
 
 export default function HomePage({
@@ -156,11 +159,21 @@ export default function HomePage({
 
         <button
           type="button"
-          onClick={() => onNavigate('community')}
-          className="mt-4 w-full sbn-card p-5 text-left hover:border-accent/40 transition-colors"
+          onClick={() => onNavigate('login')}
+          className="mt-4 w-full sbn-card p-5 text-left hover:border-accent/40 transition-colors group"
         >
-            <p className="font-display font-bold text-app">Why community matters</p>
-            <p className="mt-1 text-sm text-muted">Trust, mutual aid, and less waste in Sacramento.</p>
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
+              <MessageSquare className="w-5 h-5 text-accent" />
+            </div>
+            <div>
+              <p className="font-display font-bold text-app">Ready to join?</p>
+              <p className="mt-1 text-sm text-muted">Sign in or create a free account to post, message, and claim items.</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
+                Get started <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </div>
         </button>
       </DepthSection>
     </HomeScrollStage>

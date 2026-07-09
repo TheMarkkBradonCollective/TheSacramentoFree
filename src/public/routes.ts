@@ -37,7 +37,7 @@ export const PUBLIC_NAV: { route: PublicRoute; label: string }[] = [
   { route: 'about', label: 'About' },
   { route: 'how-it-works', label: 'How It Works' },
   { route: 'rules', label: 'Rules' },
-  { route: 'neighborhoods', label: 'Areas' },
+  { route: 'neighborhoods', label: 'Neighborhoods' },
   { route: 'community', label: 'Community' },
 ];
 

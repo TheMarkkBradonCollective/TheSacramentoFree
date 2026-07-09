@@ -71,8 +71,8 @@ import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hook
 import PushNotificationCelebration from './components/PushNotificationCelebration';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 import TermsOfUseModal from './components/TermsOfUseModal';
-import { isPrivacyAccepted } from './lib/privacyPolicyPrompt';
-import { isTermsAccepted } from './lib/termsPolicyPrompt';
+import { isPrivacyAccepted, acceptPrivacy } from './lib/privacyPolicyPrompt';
+import { isTermsAccepted, acceptTerms } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
 import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
@@ -767,6 +767,9 @@ export default function App() {
         };
 
         await upsertSupabaseProfile(newProfile);
+
+        acceptPrivacy(data.user.id);
+        acceptTerms(data.user.id);
         
         if (!data.session) {
           setIsAuthLoading(false);
