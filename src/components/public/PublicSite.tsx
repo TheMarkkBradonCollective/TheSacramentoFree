@@ -26,6 +26,7 @@ interface PublicSiteProps {
     displayName: string,
     neighborhood: string,
     bio: string,
+    acceptedLegal?: boolean,
   ) => Promise<boolean>;
   errorMsg?: string;
   isAuthLoading?: boolean;

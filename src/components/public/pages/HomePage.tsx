@@ -24,7 +24,7 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
   { route: 'privacy', title: 'Privacy & data', blurb: 'Your data is stored by Supabase — never sold.', icon: Shield },
   { route: 'terms', title: 'Terms of use', blurb: 'User agreement for free local gifting in Sacramento.', icon: FileText },
   { route: 'gofundme', title: 'Support the app', blurb: 'Help keep Sacramento Buy Nothing free — no ads, ever.', icon: HandHeart },
-  { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 34+ areas.', icon: MapPin },
+  { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 39 areas.', icon: MapPin },
 ];
 
 export default function HomePage({

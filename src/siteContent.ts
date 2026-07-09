@@ -118,16 +118,20 @@ export const COMMUNITY_FIRST = {
   closing: 'Sometimes one free item can make a huge difference.'
 } as const;
 
-export const FUTURE_FEATURES = [
-  'User profiles',
-  'Reputation system',
-  'Pickup scheduling',
+/** Shipped capabilities highlighted on the public Community page. */
+export const COMMUNITY_HIGHLIGHTS = [
+  'Neighbor profiles & messaging',
+  'Map with turn-by-turn pickup',
   'Neighborhood filtering',
-  'Item categories',
-  'Mobile app support',
-  'Donation streak badges',
-  'Local alerts'
+  'Item categories & curb alerts',
+  'Installable app (PWA)',
+  'Push alerts for saved items',
+  'Neighbor awards & badges',
+  'Community events (unlocking as we grow)',
 ] as const;
+
+/** @deprecated Use COMMUNITY_HIGHLIGHTS — kept for older imports. */
+export const FUTURE_FEATURES = COMMUNITY_HIGHLIGHTS;
 
 export const SUPPORT = {
   gofundmeUrl: 'https://gofund.me/bc824e51b',
@@ -172,7 +176,7 @@ export const SUPPORT = {
 export const DIRECTOR_MESSAGE = {
   /** Fallback until the director profile loads from the database. */
   name: 'Markeith White',
-  title: 'Buy Nothing Director',
+  title: 'Sacramento Buy Nothing Director',
   headline: 'A note from your director',
   goal:
     'Sacramento Buy Nothing exists so neighbors can give freely, ask kindly, and keep good things out of the landfill — with no money involved. That is the goal, plain and simple.',
@@ -409,11 +413,11 @@ export const AWARDS = {
     'Shout-outs for events, chat, upvotes, and being an awesome neighbor',
     'Special staff picks for neighbors who go above and beyond',
   ],
-  comingSoonTitle: 'Awards are on the way',
+  comingSoonTitle: 'Awards celebrate neighbors',
   comingSoonBody:
-    'I am building a way to celebrate neighbors who give, help, trade fairly, and keep the community strong — with no money involved.',
+    'Badges recognize neighbors who give, help, trade fairly, and keep the community strong — with no money involved.',
   comingSoonBullets: [
-    'Donation and giving streak badges',
+    'Founding neighbor and giving streak badges',
     'Milestones for items shared and requests fulfilled',
     'Recognition for kind, reliable neighbors',
   ],
