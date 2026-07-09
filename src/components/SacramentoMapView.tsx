@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, NEIGHBORHOOD_LAT_LONGS, convertPercentToLatLng, CommunityEvent } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng, CommunityEvent } from '../types';
 import {
   canViewerSeeExactLocation,
   getItemMapDestination,
-  hasExactMapPin,
   hasStoredGps,
   isLocationPrivate,
   stripListingMetadata,
@@ -160,23 +159,17 @@ function createEventBlipIcon(isSelected: boolean): L.DivIcon {
   });
 }
 
-function createItemBlipIcon(item: ItemPost, color: string, isSelected: boolean, approximate = false): L.DivIcon {
-  const shape = approximate
-    ? `h-3 w-3 rounded-sm border border-dashed opacity-80 ${getMapPinBorderClass(item.type)}`
-    : `h-3.5 w-3.5 rounded-full border-2 shadow-md ${getMapPinBorderClass(item.type)}`;
-  const pulse = approximate
-    ? `border-color: ${color}; opacity: 0.25`
-    : `border-color: ${color}`;
+function createItemBlipIcon(item: ItemPost, color: string, isSelected: boolean): L.DivIcon {
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center cursor-pointer">
-        <span style="${pulse}" class="absolute inline-flex h-6 w-6 ${approximate ? 'rounded-sm border border-dashed' : 'rounded-full border'} opacity-40 block"></span>
-        <div style="background-color: ${approximate ? 'transparent' : color}" class="${shape} ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
-          ${approximate ? '' : '<div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>'}
+        <span style="border-color: ${color}" class="absolute inline-flex h-6 w-6 rounded-full border opacity-40 block"></span>
+        <div style="background-color: ${color}" class="h-3.5 w-3.5 rounded-full border-2 shadow-md ${getMapPinBorderClass(item.type)} ${isSelected ? 'ring-2 ring-zinc-950 ring-offset-1 scale-125 z-50' : ''}">
+          <div class="w-1 h-1 rounded-full bg-white opacity-80 mx-auto mt-[2.5px]"></div>
         </div>
       </div>
     `,
-    className: approximate ? 'custom-item-blip-marker-approx' : 'custom-item-blip-marker',
+    className: 'custom-item-blip-marker',
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
@@ -824,34 +817,25 @@ export default function SacramentoMapView({
     setSelectedEvent(activeEvents[prevIdx]);
   };
 
-  // Exact GPS pins when available; neighborhood-center fallback so feed listings still appear on the map.
+  // Only items with a saved, viewer-visible GPS pin appear on the map (list shows all activeItems).
   const blipPositions = useMemo(() => {
     return activeItems.flatMap((item) => {
-      const exactPin = hasExactMapPin(item, userProfile?.uid);
-      if (exactPin) {
-        const customCoords = extractGPSCoordinates(item.description)!;
-        const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
-        return [
-          {
-            item,
-            lat,
-            lng,
-            color: getCategoryColor(item.category),
-            approximate: false,
-          },
-        ];
+      const customCoords = extractGPSCoordinates(item.description);
+      if (
+        !customCoords ||
+        !hasStoredGps(item.description) ||
+        !canViewerSeeExactLocation(item, userProfile?.uid)
+      ) {
+        return [];
       }
 
-      const neighborhood = NEIGHBORHOOD_LAT_LONGS[item.neighborhood];
-      if (!neighborhood) return [];
-
+      const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
       return [
         {
           item,
-          lat: neighborhood.lat,
-          lng: neighborhood.lng,
+          lat,
+          lng,
           color: getCategoryColor(item.category),
-          approximate: true,
         },
       ];
     });
@@ -990,14 +974,14 @@ export default function SacramentoMapView({
 
     if (showItemsOnMap) {
       syncMarkers(
-        blipPositions.map(({ item, lat, lng, color, approximate }) => ({
+        blipPositions.map(({ item, lat, lng, color }) => ({
           id: item.id,
           lat,
           lng,
-          data: { item, color, approximate },
+          data: { item, color },
         })),
         itemMarkersRef.current,
-        ({ item, color, approximate }) => createItemBlipIcon(item, color, false, approximate),
+        ({ item, color }) => createItemBlipIcon(item, color, false),
         ({ item }, lat, lng) => {
           setSlideDirection('right');
           setSelectedPost(item);
@@ -1045,7 +1029,7 @@ export default function SacramentoMapView({
       itemMarkersRef.current.forEach((marker, itemId) => {
         const blip = blipPositions.find((entry) => entry.item.id === itemId);
         if (!blip) return;
-        marker.setIcon(createItemBlipIcon(blip.item, blip.color, selectedPost?.id === itemId, blip.approximate));
+        marker.setIcon(createItemBlipIcon(blip.item, blip.color, selectedPost?.id === itemId));
       });
     }
   }, [selectedPost?.id, selectedEvent?.id, showItemsOnMap, showEventsOnMap, blipPositions, eventBlipPositions]);
@@ -2130,7 +2114,7 @@ export default function SacramentoMapView({
                 <p className="text-[10px] text-muted font-semibold leading-relaxed">
                   {showingEvents
                     ? 'No events with a map pin match your filters. Events without a set location still appear in the list.'
-                    : 'No listings match your filters. Posts without an exact pin show at their neighborhood center — add a pickup pin when posting for a precise location!'}
+                    : 'No listings with a map pin match your filters. List-only posts still appear in the feed — add a pickup pin when posting to show on the map!'}
                 </p>
               </div>
             </div>
