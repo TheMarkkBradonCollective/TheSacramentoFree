@@ -1,5 +1,5 @@
 import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage } from '../supabase';
-import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost } from '../types';
+import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost, UserProfile } from '../types';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
 import { subscribePostgresChanges } from './supabaseRealtime';
 
@@ -554,6 +554,43 @@ export async function setFulfillerSharingLocation(
 // the requester's own device may write it; both participants may read it.
 // ---------------------------------------------------------------------------
 
+// Throttle trail recording: one point every 30 s OR if moved > 30 m from last point.
+const _trailLastTime = new Map<string, number>();
+const _trailLastCoord = new Map<string, [number, number]>();
+const TRAIL_MIN_INTERVAL_MS = 30_000;
+const TRAIL_MIN_DISTANCE_M = 30;
+
+function haversineMetersSimple(a: [number, number], b: [number, number]): number {
+  const R = 6371000;
+  const dLat = ((b[0] - a[0]) * Math.PI) / 180;
+  const dLng = ((b[1] - a[1]) * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const x = sinDLat * sinDLat + Math.cos((a[0] * Math.PI) / 180) * Math.cos((b[0] * Math.PI) / 180) * sinDLng * sinDLng;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+async function appendLocationTrailPoint(
+  sessionId: string,
+  position: { lat: number; lng: number; heading?: number | null; speedMph?: number | null; etaSeconds?: number | null; distanceMeters?: number | null },
+): Promise<void> {
+  try {
+    await supabase.from('go_get_location_trail').insert({
+      id: `trail_${sessionId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sessionId,
+      lat: position.lat,
+      lng: position.lng,
+      heading: position.heading ?? null,
+      speedMph: position.speedMph ?? null,
+      etaSeconds: position.etaSeconds ?? null,
+      distanceMeters: position.distanceMeters ?? null,
+      recordedAt: new Date().toISOString(),
+    });
+  } catch {
+    // best-effort; trail table may not exist yet
+  }
+}
+
 export async function upsertLiveLocation(
   sessionId: string,
   position: {
@@ -578,6 +615,19 @@ export async function upsertLiveLocation(
     });
   } catch (err) {
     console.warn('Could not update Go Get live location:', err);
+  }
+
+  // Append to location trail (throttled by time + distance).
+  const now = Date.now();
+  const lastTime = _trailLastTime.get(sessionId) ?? 0;
+  const lastCoord = _trailLastCoord.get(sessionId);
+  const elapsed = now - lastTime;
+  const dist = lastCoord ? haversineMetersSimple(lastCoord, [position.lat, position.lng]) : Infinity;
+
+  if (elapsed >= TRAIL_MIN_INTERVAL_MS || dist >= TRAIL_MIN_DISTANCE_M) {
+    _trailLastTime.set(sessionId, now);
+    _trailLastCoord.set(sessionId, [position.lat, position.lng]);
+    void appendLocationTrailPoint(sessionId, position);
   }
 }
 
@@ -700,4 +750,83 @@ export function subscribeToLiveLocationChanges(
       if (row && Object.keys(row).length > 0) onChange(normalizeGoGetLiveLocation(row));
     },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Staff-only: bulk session access + location trail
+// ---------------------------------------------------------------------------
+
+export interface LocationTrailPoint {
+  id: string;
+  sessionId: string;
+  lat: number;
+  lng: number;
+  heading?: number | null;
+  speedMph?: number | null;
+  etaSeconds?: number | null;
+  distanceMeters?: number | null;
+  recordedAt: string;
+}
+
+export async function staffGetAllSessions(
+  options: {
+    statusFilter?: GoGetSessionStatus | 'all';
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<GoGetSession[]> {
+  const { statusFilter = 'all', limit = 200, offset = 0 } = options;
+  try {
+    let q = supabase
+      .from('go_get_sessions')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (statusFilter !== 'all') {
+      q = q.eq('status', statusFilter);
+    }
+
+    const { data, error } = await q;
+    if (error || !data) return [];
+    return data.map((r) => normalizeGoGetSession(r as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+export async function getSessionLocationTrail(sessionId: string): Promise<LocationTrailPoint[]> {
+  try {
+    const { data, error } = await supabase
+      .from('go_get_location_trail')
+      .select('*')
+      .eq('sessionId', sessionId)
+      .order('recordedAt', { ascending: true });
+
+    if (error || !data) return [];
+    return (data as Record<string, unknown>[]).map((r) => ({
+      id: String(r.id ?? ''),
+      sessionId: String(r.sessionId ?? ''),
+      lat: Number(r.lat ?? 0),
+      lng: Number(r.lng ?? 0),
+      heading: r.heading != null ? Number(r.heading) : null,
+      speedMph: r.speedMph != null ? Number(r.speedMph) : null,
+      etaSeconds: r.etaSeconds != null ? Number(r.etaSeconds) : null,
+      distanceMeters: r.distanceMeters != null ? Number(r.distanceMeters) : null,
+      recordedAt: String(r.recordedAt ?? ''),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getLiveLocationForStaff(sessionId: string): Promise<GoGetLiveLocation | null> {
+  return getLiveLocation(sessionId);
+}
+
+export function subscribeToSessionForStaff(
+  sessionId: string,
+  onChange: (session: GoGetSession) => void,
+): () => void {
+  return subscribeToGoGetSession(sessionId, onChange);
 }

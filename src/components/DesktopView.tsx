@@ -19,6 +19,7 @@ import StaffTeamView from './staff/StaffTeamView';
 import StaffOverviewView from './staff/StaffOverviewView';
 import StaffModerationView from './staff/StaffModerationView';
 import StaffMessagesView from './staff/StaffMessagesView';
+import StaffMeetsView from './staff/StaffMeetsView';
 import PageScrollFooter from './PageScrollFooter';
 
 interface DesktopViewProps {
@@ -129,9 +130,10 @@ export default function DesktopView({
           {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
           {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
           {activeTab === 'staff_messages' && <StaffMessagesView actor={userProfile} onViewProfile={onViewProfile} onOpenChat={() => setActiveTab('chats')} />}
+          {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
           {activeTab === 'staff_moderation' && <StaffModerationView actor={userProfile} onViewProfile={onViewProfile} />}
           {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
-          {!['staff_overview', 'staff_users', 'staff_posts', 'staff_messages', 'staff_moderation', 'staff_team'].includes(activeTab) && (
+          {!['staff_overview', 'staff_users', 'staff_posts', 'staff_messages', 'staff_meets', 'staff_moderation', 'staff_team'].includes(activeTab) && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <Navbar userProfile={userProfile} activeTab={communityTab} setActiveTab={(t) => setActiveTab(t)} onOpenNewPost={onOpenNewPost} onOpenAwards={onOpenAwards ?? (() => {})} awardsButtonGlow={awardsButtonGlow} />
               <main className="flex-1 min-h-0 overflow-hidden">

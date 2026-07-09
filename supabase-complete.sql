@@ -829,6 +829,47 @@ CREATE TABLE IF NOT EXISTS public.go_get_fulfiller_live_locations (
 ALTER TABLE public.go_get_fulfiller_live_locations ENABLE ROW LEVEL SECURITY;
 
 -- =========================================================
+-- GPS location trail — one row per recorded point for staff meet oversight
+-- Points are appended (throttled, ~30s intervals) while a session is active.
+-- Staff can query the full route history; participants only see their own sessions.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS public.go_get_location_trail (
+  id TEXT PRIMARY KEY,
+  "sessionId" TEXT NOT NULL REFERENCES public.go_get_sessions(id) ON DELETE CASCADE,
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  heading DOUBLE PRECISION,
+  "speedMph" DOUBLE PRECISION,
+  "etaSeconds" INTEGER,
+  "distanceMeters" DOUBLE PRECISION,
+  "recordedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.go_get_location_trail ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS location_trail_session_idx ON public.go_get_location_trail ("sessionId", "recordedAt" ASC);
+
+CREATE POLICY "location_trail_select" ON public.go_get_location_trail
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId"
+        AND auth.uid()::text IN (s."fulfillerUserId", s."requesterUserId")
+    )
+    OR public.is_staff()
+  );
+
+CREATE POLICY "location_trail_insert" ON public.go_get_location_trail
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.go_get_sessions s
+      WHERE s.id = "sessionId"
+        AND auth.uid()::text = s."requesterUserId"
+    )
+  );
+
+-- =========================================================
 -- 21. "Go Get" violations — DoorDash-style two-tier moderation
 --
 -- Strike counting (see countsTowardStrikes):
