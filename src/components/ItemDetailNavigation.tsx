@@ -111,11 +111,14 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   const [session, setSession] = useState<GoGetSession | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
 
-  // Once a session exists, its own destination is authoritative (for Looking/Trade this is
-  // the fulfiller's location, not the item's own metadata pin — see createGoGetSession callers
-  // in ChatSystem). Only fall back to the item's stored pickup pin before a session exists.
+  // Once a session exists, its own destination is authoritative. Before that:
+  // Looking/Trade navigate to the poster's pin (fulfiller) — resolve with the
+  // poster's uid so private pins still become the drop-off/meetup destination
+  // (same as ChatSystem). Giveaways use the viewer uid for privacy rules.
   const itemPinDestination = useMemo<LatLng | null>(() => {
-    return getItemMapDestination(item, currentUserId);
+    const locationOwnerId =
+      item.type === 'looking' || item.type === 'trade' ? item.userId : currentUserId;
+    return getItemMapDestination(item, locationOwnerId);
   }, [item, currentUserId]);
 
   const destination = useMemo<LatLng | null>(() => {

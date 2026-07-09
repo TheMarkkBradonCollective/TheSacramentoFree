@@ -1049,7 +1049,12 @@ export default function SacramentoMapView({
 
   const routeDestination = useMemo(() => {
     if (selectedPost) {
-      const dest = getItemMapDestination(selectedPost, userProfile.uid);
+      // Looking/Trade: navigate to the poster's pin (even if marked private for map display).
+      const locationOwnerId =
+        selectedPost.type === 'looking' || selectedPost.type === 'trade'
+          ? selectedPost.userId
+          : userProfile.uid;
+      const dest = getItemMapDestination(selectedPost, locationOwnerId);
       if (dest) return dest;
       const session = readActiveNavSession(userProfile.uid);
       if (session?.targetId === selectedPost.id && session.targetType === 'post') {
@@ -1225,7 +1230,10 @@ export default function SacramentoMapView({
       return;
     }
 
-    const destination = getItemMapDestination(selectedPost, userProfile.uid);
+    const destination =
+      selectedPost.type === 'looking' || selectedPost.type === 'trade'
+        ? getItemMapDestination(selectedPost, selectedPost.userId)
+        : getItemMapDestination(selectedPost, userProfile.uid);
     if (!destination) {
       openItemDetail?.(selectedPost);
       return;
