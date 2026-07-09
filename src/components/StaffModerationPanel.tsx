@@ -19,6 +19,7 @@ import {
   canStaffSuspend,
   canViewAuditLog,
   canViewDirectorOverview,
+  roleLabel,
   roleRank,
   ASSIGNABLE_ROLE_OPTIONS,
 } from '../lib/roles';
@@ -621,24 +622,29 @@ export default function StaffModerationPanel({
               </div>
             ) : (
               <ul className="space-y-2">
-                {audit.map((entry) => (
-                  <li key={entry.id} className="sbn-help-card text-sm">
-                    <div className="flex flex-wrap justify-between gap-1">
-                      <span className="font-semibold text-app capitalize">{entry.action.replace(/_/g, ' ')}</span>
-                      <span className="text-[10px] text-muted">
-                        {new Date(entry.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted mt-1">
-                      <span className="text-app font-medium">{entry.actorName}</span>
-                      {' → '}
-                      <span className="text-app font-medium">{entry.targetName}</span>
-                    </p>
-                    {entry.detail && (
-                      <p className="text-xs text-subtle mt-1 leading-snug">{entry.detail}</p>
-                    )}
-                  </li>
-                ))}
+                {audit.map((entry) => {
+                  const actorLabel = entry.actorRole
+                    ? `${roleLabel(entry.actorRole as UserProfile['role'])} ${entry.actorName}`
+                    : entry.actorName;
+                  return (
+                    <li key={entry.id} className="sbn-help-card text-sm">
+                      <div className="flex flex-wrap justify-between gap-1">
+                        <span className="font-semibold text-app capitalize">{entry.action.replace(/_/g, ' ')}</span>
+                        <span className="text-[10px] text-muted">
+                          {new Date(entry.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted mt-1">
+                        <span className="text-app font-medium">{actorLabel}</span>
+                        {' → '}
+                        <span className="text-app font-medium">{entry.targetName}</span>
+                      </p>
+                      {entry.detail && (
+                        <p className="text-xs text-subtle mt-1 leading-snug">{entry.detail}</p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
         </FullScreenPanel>

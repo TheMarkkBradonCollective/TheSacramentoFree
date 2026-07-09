@@ -242,12 +242,14 @@ CREATE TABLE IF NOT EXISTS public.moderation_audit_log (
   id TEXT PRIMARY KEY,
   "actorUserId" TEXT NOT NULL,
   "actorName" TEXT NOT NULL,
+  "actorRole" TEXT,
   "targetUserId" TEXT NOT NULL,
   "targetName" TEXT NOT NULL,
   action TEXT NOT NULL,
   detail TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE public.moderation_audit_log ADD COLUMN IF NOT EXISTS "actorRole" TEXT;
 
 ALTER TABLE public.moderation_audit_log ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS moderation_audit_created_idx ON public.moderation_audit_log ("createdAt" DESC);

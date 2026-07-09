@@ -124,14 +124,12 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
 
   const handleWithdraw = (post: ItemPost) => {
     if (!perm.checkModeratePost()) return;
-    void run(post.id, () => staffWithdrawListing(post.id, actor));
+    void run(post.id, () => staffWithdrawListing(post, actor));
   };
 
   const handleDelete = (post: ItemPost) => {
-    if (!perm.check(
-      true, // checkModeratePost passes for all staff; delete is gated inside staffDeleteListing
-    )) return;
-    void run(post.id, () => staffDeleteListing(post.id, actor));
+    if (!perm.checkModeratePost()) return;
+    void run(post.id, () => staffDeleteListing(post, actor));
   };
 
   const formatDate = (createdAt: unknown) => {

@@ -35,6 +35,18 @@ export function roleRank(role: unknown): number {
   return ROLE_RANK[normalizeUserRole(role)] ?? 0;
 }
 
+export const ROLE_LABELS: Record<string, string> = {
+  user: 'Neighbor',
+  city_moderator: 'City Moderator',
+  city_administrator: 'City Administrator',
+  city_manager: 'City Manager',
+  director: 'Director',
+};
+
+export function roleLabelFor(role: unknown): string {
+  return ROLE_LABELS[normalizeUserRole(role)] ?? 'Staff';
+}
+
 export async function getUserRole(userId: string): Promise<string> {
   const supabaseAdmin = await getSupabaseAdmin();
   const { data } = await supabaseAdmin.from('users').select('role').eq('uid', userId).maybeSingle();

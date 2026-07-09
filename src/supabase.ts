@@ -4739,6 +4739,7 @@ async function writeModerationAudit(params: {
       id: `mod_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       actorUserId: params.actor.uid,
       actorName: params.actor.displayName,
+      actorRole: params.actor.role ?? 'user',
       targetUserId: params.target.uid,
       targetName: params.target.displayName,
       action: params.action,
@@ -4819,20 +4820,21 @@ export async function staffGetAllListings(): Promise<ItemPost[]> {
 
 /** Staff: withdraw (soft-delete) any listing. */
 export async function staffWithdrawListing(
-  itemId: string,
+  item: Pick<ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>,
   actor: Pick<import('./types').UserProfile, 'uid' | 'displayName' | 'role'>,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   const { isStaffRole } = await import('./lib/roles');
   if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
 
-  const ok = await updateSupabaseItemStatus(itemId, 'withdrawn', actor.uid);
+  const ok = await updateSupabaseItemStatus(item.id, 'withdrawn', actor.uid);
   if (!ok) return { ok: false, errorMessage: 'Could not withdraw listing.' };
 
+  // Audit log with listing owner as target so the webhook notifies them.
   await writeModerationAudit({
     actor: actor as import('./types').UserProfile,
-    target: { uid: itemId, displayName: `Listing ${itemId}` },
+    target: { uid: item.userId, displayName: item.userDisplayName },
     action: 'withdraw_listing',
-    detail: `Staff withdrew listing ${itemId}`,
+    detail: `"${item.title}"`,
   });
 
   return { ok: true };
@@ -4840,20 +4842,21 @@ export async function staffWithdrawListing(
 
 /** Staff: delete a listing permanently (manager+). */
 export async function staffDeleteListing(
-  itemId: string,
+  item: Pick<ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>,
   actor: Pick<import('./types').UserProfile, 'uid' | 'displayName' | 'role'>,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   const { canStaffDeleteAccount } = await import('./lib/roles');
   if (!canStaffDeleteAccount(actor.role)) return { ok: false, errorMessage: 'City Manager+ only.' };
 
-  const deleted = await deleteSupabaseItem(itemId);
+  const deleted = await deleteSupabaseItem(item.id);
   if (!deleted) return { ok: false, errorMessage: 'Could not delete listing.' };
 
+  // Audit log with listing owner as target so the webhook notifies them.
   await writeModerationAudit({
     actor: actor as import('./types').UserProfile,
-    target: { uid: itemId, displayName: `Listing ${itemId}` },
+    target: { uid: item.userId, displayName: item.userDisplayName },
     action: 'delete_listing',
-    detail: `Staff permanently deleted listing ${itemId}`,
+    detail: `"${item.title}"`,
   });
 
   return { ok: true };
@@ -5061,6 +5064,7 @@ export async function getModerationAuditLog(limit = 100): Promise<ModerationAudi
       id: String(row.id),
       actorUserId: String(row.actorUserId),
       actorName: String(row.actorName),
+      actorRole: row.actorRole ? String(row.actorRole) : null,
       targetUserId: String(row.targetUserId),
       targetName: String(row.targetName),
       action: String(row.action),

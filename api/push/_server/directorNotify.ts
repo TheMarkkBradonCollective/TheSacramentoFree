@@ -1,6 +1,7 @@
 import type { PushSendBody } from './runPushSend';
 import { isDirectorRole } from './directorIdentity';
 import { runPushSend } from './runPushSend';
+import { getUserRole, roleLabelFor } from './staffRoles';
 
 export type DirectorAlertCategory =
   | 'join'
@@ -198,69 +199,100 @@ export async function runDirectorModerationNotify(
   const action = String(audit.action || 'moderation');
   const detail = audit.detail ? String(audit.detail) : '';
 
-  let title = 'Moderation action';
-  let body = `${actorName} took action on ${targetName}`;
+  // Look up actor's role so we can show "[City Moderator] Jane did X" in notifications.
+  const actorRole = await getUserRole(actorUserId).catch(() => 'user');
+  const actorRoleLabel = roleLabelFor(actorRole);
+  const byLine = `${actorRoleLabel} ${actorName}`;
+
+  // --- Director alert body ------------------------------------------------
+  let directorTitle = 'Moderation action';
+  let directorBody = `${byLine} took action on ${targetName}`;
 
   switch (action) {
     case 'suspend':
-      title = 'Neighbor suspended';
-      body = `${actorName} suspended ${targetName}`;
+      directorTitle = 'Neighbor suspended';
+      directorBody = `${byLine} suspended ${targetName}${detail ? ` — ${detail}` : ''}`;
       break;
     case 'unsuspend':
-      title = 'Suspension lifted';
-      body = `${actorName} unsuspended ${targetName}`;
+      directorTitle = 'Suspension lifted';
+      directorBody = `${byLine} unsuspended ${targetName}`;
       break;
     case 'ban':
-      title = 'Neighbor banned';
-      body = `${actorName} banned ${targetName}`;
+      directorTitle = 'Neighbor banned';
+      directorBody = `${byLine} banned ${targetName}${detail ? ` — ${detail}` : ''}`;
       break;
     case 'unban':
-      title = 'Ban lifted';
-      body = `${actorName} unbanned ${targetName}`;
+      directorTitle = 'Ban lifted';
+      directorBody = `${byLine} unbanned ${targetName}`;
       break;
     case 'delete_account':
       return { status: 200, body: { ok: true, skipped: 'departure alert handles account deletion' } };
     case 'edit_profile':
-      title = 'Profile updated by staff';
-      body = `${actorName} updated ${targetName}'s profile`;
+      directorTitle = 'Profile updated';
+      directorBody = `${byLine} updated ${targetName}'s profile${detail ? ` — ${detail}` : ''}`;
       break;
     case 'set_role':
-      title = 'Role changed';
-      body = detail || `${actorName} updated ${targetName}'s role`;
+      directorTitle = 'Role changed';
+      directorBody = detail || `${byLine} updated ${targetName}'s role`;
+      break;
+    case 'withdraw_listing':
+      directorTitle = 'Listing withdrawn';
+      directorBody = `${byLine} withdrew a listing by ${targetName}${detail ? ` — ${detail}` : ''}`;
+      break;
+    case 'delete_listing':
+      directorTitle = 'Listing deleted';
+      directorBody = `${byLine} permanently deleted a listing by ${targetName}${detail ? ` — ${detail}` : ''}`;
       break;
     default:
-      body = `${actorName}: ${action} on ${targetName}`;
+      directorBody = `${byLine}: ${action} on ${targetName}${detail ? ` — ${detail}` : ''}`;
   }
-
-  if (detail && action !== 'set_role') body = `${body} — ${detail}`.slice(0, 200);
 
   const auditId = audit.id || `${action}-${audit.targetUserId || 'unknown'}`;
   const directorResult = await runDirectorCategoryAlert(actorUserId, {
     category: 'moderation',
-    title,
-    body,
+    title: directorTitle,
+    body: directorBody.slice(0, 200),
     excludeUserIds: [actorUserId],
     tag: `director-mod-${auditId}`,
     data: audit.targetUserId ? { targetUserId: String(audit.targetUserId) } : undefined,
   });
 
+  // --- User-facing notification: "[Role] [Name] [did action]" --------------
   const targetUserId = String(audit.targetUserId || '');
-  const accountMessages: Record<string, { title: string; body: string }> = {
+
+  type AccountMsg = { title: string; body: string };
+  const accountMessages: Record<string, AccountMsg> = {
     suspend: {
-      title: 'Account suspended',
-      body: detail ? `Your account is suspended. ${detail}` : 'Your account has been suspended.',
+      title: 'Your account has been suspended',
+      body: `${byLine} suspended your account${detail ? ` — ${detail}` : ''}`,
     },
     unsuspend: {
-      title: 'Account restored',
-      body: 'Your account suspension has been lifted.',
+      title: 'Your account suspension has been lifted',
+      body: `${byLine} restored your account`,
     },
     ban: {
-      title: 'Account disabled',
-      body: 'Your account has been disabled by community staff.',
+      title: 'Your account has been banned',
+      body: `${byLine} banned your account from the community${detail ? ` — ${detail}` : ''}`,
     },
     unban: {
-      title: 'Account restored',
-      body: 'Your account has been re-enabled.',
+      title: 'Your account ban has been removed',
+      body: `${byLine} removed your ban and re-enabled your account`,
+    },
+    edit_profile: {
+      title: 'Your profile was updated by staff',
+      body: `${byLine} made changes to your profile${detail ? ` — ${detail}` : ''}`,
+    },
+    set_role: {
+      title: 'Your role has been updated',
+      body: detail || `${byLine} changed your role`,
+    },
+    withdraw_listing: {
+      title: 'Your listing was withdrawn by staff',
+      body: `${byLine} withdrew your listing${detail ? ` — ${detail}` : ''}`,
+    },
+    delete_listing: {
+      title: 'Your listing was removed by staff',
+      body: `${byLine} permanently removed your listing${detail ? ` — ${detail}` : ''}`,
     },
   };
 

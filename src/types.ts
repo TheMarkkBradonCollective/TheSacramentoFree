@@ -117,6 +117,7 @@ export interface ModerationAuditEntry {
   id: string;
   actorUserId: string;
   actorName: string;
+  actorRole?: string | null;
   targetUserId: string;
   targetName: string;
   action: string;
