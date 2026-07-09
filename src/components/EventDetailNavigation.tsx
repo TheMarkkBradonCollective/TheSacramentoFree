@@ -10,8 +10,12 @@ import {
   type LatLng,
 } from '../lib/mapRoute';
 import { fetchNavigationRoute } from '../lib/navigationRoute';
-import { getLastLiveLatLng, subscribeLiveGeolocation } from '../lib/liveGeolocation';
-import { clearActiveNavSession, saveActiveNavSession } from '../lib/navigationSession';
+import { getLastLiveLatLng, retainLiveGeolocation, subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import {
+  clearActiveNavSession,
+  readActiveNavSession,
+  saveActiveNavSession,
+} from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 
@@ -105,18 +109,41 @@ export default function EventDetailNavigation({ event, currentUserId }: EventDet
       startedAt: Date.now(),
     });
     setLockedOrigin(userLocation);
+
+    if (currentUserId) {
+      const existing = readActiveNavSession(currentUserId);
+      const sameTarget =
+        existing?.targetType === 'event' && existing.targetId === event.id ? existing : null;
+      saveActiveNavSession({
+        userId: currentUserId,
+        targetType: 'event',
+        targetId: event.id,
+        destination,
+        destinationLabel: event.title,
+        startedAt: sameTarget?.startedAt ?? Date.now(),
+      });
+    }
+
     setNavigationOpen(true);
   }, [destination, userLocation, currentUserId, event.id, event.title]);
 
   useEffect(() => {
-    if (!navigationOpen || !destination) return;
+    if (!navigationOpen || !currentUserId) return;
+    return retainLiveGeolocation();
+  }, [navigationOpen, currentUserId]);
+
+  useEffect(() => {
+    if (!navigationOpen || !destination || !currentUserId) return;
+    const existing = readActiveNavSession(currentUserId);
+    const sameTarget =
+      existing?.targetType === 'event' && existing.targetId === event.id ? existing : null;
     saveActiveNavSession({
       userId: currentUserId,
       targetType: 'event',
       targetId: event.id,
       destination,
       destinationLabel: event.title,
-      startedAt: Date.now(),
+      startedAt: sameTarget?.startedAt ?? Date.now(),
     });
   }, [navigationOpen, destination, currentUserId, event.id, event.title]);
 

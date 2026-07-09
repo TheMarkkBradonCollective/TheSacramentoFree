@@ -80,7 +80,14 @@ export function projectOntoRoute(coords: [number, number][], user: LatLng): Rout
   return best;
 }
 
-export function snapPositionToRoute(coords: [number, number][], user: LatLng, maxSnapMeters = 80): LatLng {
+/** Default snap radius — must stay below the off-route threshold (55 m). */
+export const NAV_SNAP_MAX_METERS = 35;
+
+export function snapPositionToRoute(
+  coords: [number, number][],
+  user: LatLng,
+  maxSnapMeters = NAV_SNAP_MAX_METERS,
+): LatLng {
   const projection = projectOntoRoute(coords, user);
   return projection.distanceMeters <= maxSnapMeters ? projection.snapped : user;
 }
@@ -102,16 +109,14 @@ export function splitRouteProgress(coords: [number, number][], user: LatLng): Ro
   }
 
   const projection = projectOntoRoute(coords, user);
-  const { segmentIndex, along, snapped } = projection;
+  const { segmentIndex, snapped } = projection;
   const traveled: [number, number][] = coords.slice(0, segmentIndex + 1);
   traveled.push([snapped.lat, snapped.lng]);
 
   const remaining: [number, number][] = [[snapped.lat, snapped.lng]];
-  if (along < 0.995) {
-    remaining.push(...coords.slice(segmentIndex + 1));
-  } else {
-    remaining.push(...coords.slice(segmentIndex + 2));
-  }
+  // Always include the current segment end so we never drop a bend at the
+  // projection point (along ≈ 1 previously skipped segmentIndex + 1).
+  remaining.push(...coords.slice(segmentIndex + 1));
 
   if (remaining.length < 2 && coords.length >= 2) {
     const end = coords[coords.length - 1];

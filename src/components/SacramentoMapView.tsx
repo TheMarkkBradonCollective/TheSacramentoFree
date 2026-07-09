@@ -72,6 +72,8 @@ interface SacramentoMapViewProps {
   onImmersiveModeChange?: (active: boolean) => void;
   /** When false, defer nav session restore until listings have finished loading. */
   itemsHydrated?: boolean;
+  /** When false, defer event nav session restore until events have finished loading. */
+  eventsHydrated?: boolean;
   eventsEngagement?: EventsEngagementApi;
   commentsLocked?: boolean;
 }
@@ -394,6 +396,7 @@ export default function SacramentoMapView({
   onOpenNewPost,
   onImmersiveModeChange,
   itemsHydrated = true,
+  eventsHydrated = true,
   eventsEngagement,
   commentsLocked = false,
 }: SacramentoMapViewProps) {
@@ -1095,6 +1098,11 @@ export default function SacramentoMapView({
   }, [routeDestination, hasGpsFix]);
 
   useEffect(() => {
+    // Allow restore again when the signed-in user changes.
+    navRestoreDoneRef.current = false;
+  }, [userProfile.uid]);
+
+  useEffect(() => {
     if (navRestoreDoneRef.current) return;
 
     const session = readActiveNavSession(userProfile.uid);
@@ -1104,10 +1112,11 @@ export default function SacramentoMapView({
     }
 
     if (session.targetType === 'event') {
-      if (events.length === 0) return;
+      if (!eventsHydrated) return;
 
       const event = events.find((entry) => entry.id === session.targetId);
       if (!event) {
+        // Only clear once the events feed has finished loading and the target is missing.
         clearActiveNavSession();
         navRestoreDoneRef.current = true;
         return;
@@ -1123,12 +1132,10 @@ export default function SacramentoMapView({
     }
 
     if (!itemsHydrated) return;
-    if (items.length === 0) {
-      // Feed loaded empty — clear stale nav so restore cannot hang forever.
-      clearActiveNavSession();
-      navRestoreDoneRef.current = true;
-      return;
-    }
+
+    // Wait for a non-empty feed before treating a missing post as gone — a
+    // transient empty load must not wipe an in-progress navigation session.
+    if (items.length === 0) return;
 
     const post = items.find((item) => item.id === (session.targetId || session.postId));
     if (!post) {
@@ -1143,7 +1150,7 @@ export default function SacramentoMapView({
     setSelectedPost(post);
     setSelectedEvent(null);
     setNavigationOpen(true);
-  }, [items, events, itemsHydrated, userProfile.uid, lockNavOrigin]);
+  }, [items, events, itemsHydrated, eventsHydrated, userProfile.uid, lockNavOrigin]);
 
   useEffect(() => {
     const currentId = selectedPost?.id;
@@ -1174,6 +1181,14 @@ export default function SacramentoMapView({
   const persistNavigationSession = useCallback(() => {
     if (!routeDestination) return;
 
+    const existing = readActiveNavSession(userProfile.uid);
+    const startedAt =
+      existing &&
+      ((selectedPost && existing.targetId === selectedPost.id && existing.targetType === 'post') ||
+        (selectedEvent && existing.targetId === selectedEvent.id && existing.targetType === 'event'))
+        ? existing.startedAt
+        : Date.now();
+
     if (selectedPost) {
       saveActiveNavSession({
         userId: userProfile.uid,
@@ -1182,7 +1197,7 @@ export default function SacramentoMapView({
         postId: selectedPost.id,
         destination: routeDestination,
         destinationLabel: selectedPost.title,
-        startedAt: Date.now(),
+        startedAt,
       });
       return;
     }
@@ -1194,7 +1209,7 @@ export default function SacramentoMapView({
         targetId: selectedEvent.id,
         destination: routeDestination,
         destinationLabel: selectedEvent.title,
-        startedAt: Date.now(),
+        startedAt,
       });
     }
   }, [selectedPost, selectedEvent, routeDestination, userProfile.uid]);

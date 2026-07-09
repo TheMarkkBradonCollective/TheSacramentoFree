@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
 import { haversineMeters, openDrivingDirections } from '../lib/mapRoute';
-import { splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
+import { projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
 import NavManeuverShield from './navigation/NavManeuverShield';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { touchActiveNavSession } from '../lib/navigationSession';
@@ -31,7 +31,6 @@ import {
   activeLaneIndices,
   bearingAlongRoute,
   bearingDegrees,
-  distanceToRouteMeters,
   estimateLaneCount,
   estimateSpeedLimitMph,
   fetchNavigationRoute,
@@ -41,7 +40,6 @@ import {
   formatNavDuration,
   formatSpeedMph,
   getActiveVoiceCueStep,
-  isOffRoute,
   maneuverIconKind,
   remainingRouteMeters,
   shouldFireVoiceCue,
@@ -609,12 +607,14 @@ export default function MapNavigationView({
   const destinationRef = useRef(destination);
   const destinationLabelRef = useRef(destinationLabel);
   const offRouteTicksRef = useRef(0);
+  const offRouteEvalAtRef = useRef(0);
   const reroutingRef = useRef(false);
   const arrivedRef = useRef(false);
   const routeAnnouncedRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const followUserRef = useRef(true);
   const userPosRef = useRef<LatLng>(origin);
+  const logicPosRef = useRef<LatLng>(origin);
   const headingRef = useRef(0);
   const lastMarkerHeadingRef = useRef(0);
   const lastNavPanRef = useRef<LatLng | null>(null);
@@ -630,7 +630,9 @@ export default function MapNavigationView({
   const routePolylineHandlesRef = useRef<RoutePolylineHandles>(emptyRouteHandles());
   const lastRouteDrawRef = useRef<{ lat: number; lng: number; at: number } | null>(null);
   const routeFetchedForDestRef = useRef<string | null>(null);
+  const routeRequestIdRef = useRef(0);
   const lastBearingApplyRef = useRef(0);
+  const hasFreshGpsRef = useRef(false);
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
@@ -642,6 +644,13 @@ export default function MapNavigationView({
   const NAV_ROUTE_DRAW_MIN_MS = 1400;
   const NAV_HEADING_ICON_DEG = 12;
   const NAV_DISPLAY_SMOOTH_ALPHA = 0.38;
+  const NAV_OFF_ROUTE_THRESHOLD_M = 55;
+  const NAV_OFF_ROUTE_EVAL_MS = 900;
+  const NAV_OFF_ROUTE_TICKS = 4;
+  const NAV_ARRIVE_DEST_M = 40;
+  const NAV_ARRIVE_REMAINING_M = 40;
+  const NAV_STALE_GPS_MS = 5000;
+  const NAV_INITIAL_ROUTE_FRESH_M = 50;
 
   const [loading, setLoading] = useState(!initialRoute);
   const [loadingStage, setLoadingStage] = useState<NavLoadingStage>(initialRoute ? 'ready' : 'locating');
@@ -665,6 +674,7 @@ export default function MapNavigationView({
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [voicePhrase, setVoicePhrase] = useState('');
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const [offRouteMeters, setOffRouteMeters] = useState(0);
 
   destinationRef.current = destination;
   destinationLabelRef.current = destinationLabel;
@@ -710,8 +720,8 @@ export default function MapNavigationView({
 
   const remainingMeters = useMemo(() => {
     if (!route) return 0;
-    return remainingRouteMeters(route.coords, userPos);
-  }, [route, userPos]);
+    return remainingRouteMeters(route.coords, logicPosRef.current);
+  }, [route, userPos, stepIndex, arrived]);
 
   const remainingSeconds = useMemo(() => {
     if (!route || route.distanceMeters <= 0 || arrived) return 0;
@@ -723,7 +733,7 @@ export default function MapNavigationView({
     if (!route) return 0;
     const cueStep = getActiveVoiceCueStep(route.steps, stepIndex);
     if (!cueStep) return 0;
-    return haversineMeters(userPos, cueStep.location);
+    return haversineMeters(logicPosRef.current, cueStep.location);
   }, [route, stepIndex, userPos]);
 
   const bannerScale = useMemo(() => {
@@ -734,10 +744,16 @@ export default function MapNavigationView({
   }, [distanceToManeuver, arrived]);
 
   const loadRoute = useCallback(async (from: LatLng, to: LatLng, isReroute = false) => {
+    const requestId = ++routeRequestIdRef.current;
     const result = await fetchNavigationRoute(from, to);
+    if (requestId !== routeRequestIdRef.current) return null;
+
     if (!result) {
       if (isReroute) {
-        voiceRef.current.speak('Unable to recalculate route. Continue toward your destination.', 'reroute-fail');
+        voiceRef.current.speak(
+          'Unable to recalculate route. Continue toward your destination.',
+          `reroute-fail-${requestId}`,
+        );
       }
       return null;
     }
@@ -747,10 +763,11 @@ export default function MapNavigationView({
     setStepIndex(0);
     offRouteTicksRef.current = 0;
     lastRouteDrawRef.current = null;
+    hasFittedRouteRef.current = false;
 
     if (isReroute) {
       voiceRef.current.clearSpokenKeys();
-      voiceRef.current.speak('Route updated', 'reroute-done');
+      voiceRef.current.speak('Route updated', `reroute-done-${requestId}`);
     }
 
     return result;
@@ -794,10 +811,20 @@ export default function MapNavigationView({
       setVoicePhrase(phrase);
     });
 
+    const attachWakeLockRelease = (sentinel: WakeLockSentinel) => {
+      sentinel.addEventListener('release', () => {
+        if (wakeLockRef.current === sentinel) {
+          wakeLockRef.current = null;
+        }
+      });
+    };
+
     const requestWakeLock = async () => {
       try {
         if ('wakeLock' in navigator) {
-          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          const sentinel = await navigator.wakeLock.request('screen');
+          wakeLockRef.current = sentinel;
+          attachWakeLockRelease(sentinel);
         }
       } catch {
         // Wake lock may be denied; navigation still works.
@@ -806,10 +833,9 @@ export default function MapNavigationView({
     void requestWakeLock();
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && !wakeLockRef.current) {
-        void requestWakeLock();
-      }
       if (document.visibilityState === 'visible') {
+        // Always re-request — OS may have released the lock without clearing our ref.
+        void requestWakeLock();
         touchActiveNavSession();
       }
     };
@@ -830,12 +856,6 @@ export default function MapNavigationView({
   }, []);
 
   useEffect(() => {
-    if (initialRouteRef.current) {
-      setLoading(false);
-      setLoadingStage('ready');
-      return;
-    }
-
     const destKey = `${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`;
     if (routeFetchedForDestRef.current === destKey && routeRef.current) {
       setLoading(false);
@@ -845,22 +865,43 @@ export default function MapNavigationView({
     routeFetchedForDestRef.current = destKey;
 
     let cancelled = false;
-    setLoading(true);
-    setLoadingStage('locating');
     setError(null);
     routeAnnouncedRef.current = false;
     arrivedRef.current = false;
     setArrived(false);
 
+    const from = userPosRef.current;
+    const prefetch = initialRouteRef.current;
+    const prefetchOrigin = prefetch?.coords?.[0];
+    const prefetchStillFresh =
+      !!prefetch &&
+      !!prefetchOrigin &&
+      haversineMeters(from, { lat: prefetchOrigin[0], lng: prefetchOrigin[1] }) <= NAV_INITIAL_ROUTE_FRESH_M;
+
+    // Use a fresh prefetch as a fast placeholder, but always refetch from the
+    // current GPS fix so session restore / backgrounding don't keep a stale path.
+    if (prefetchStillFresh) {
+      setRoute(prefetch);
+      setLoading(false);
+      setLoadingStage('ready');
+    } else {
+      setLoading(true);
+      setLoadingStage('locating');
+    }
+
     const locateTimer = window.setTimeout(() => {
-      if (!cancelled) setLoadingStage('routing');
+      if (!cancelled && !prefetchStillFresh) setLoadingStage('routing');
     }, 450);
 
-    const from = userPosRef.current;
     void loadRoute(from, destination, false).then((result) => {
       if (cancelled) return;
       window.clearTimeout(locateTimer);
       if (!result) {
+        if (prefetchStillFresh && routeRef.current) {
+          setLoading(false);
+          setLoadingStage('ready');
+          return;
+        }
         const offline = typeof navigator !== 'undefined' && !navigator.onLine;
         setError(
           offline
@@ -873,12 +914,13 @@ export default function MapNavigationView({
       setLoadingStage('ready');
       window.setTimeout(() => {
         if (!cancelled) setLoading(false);
-      }, 280);
+      }, prefetchStillFresh ? 0 : 280);
     });
 
     return () => {
       cancelled = true;
       window.clearTimeout(locateTimer);
+      routeRequestIdRef.current += 1;
     };
   }, [destination.lat, destination.lng, loadRoute]);
 
@@ -931,6 +973,9 @@ export default function MapNavigationView({
     const onUserMapInteraction = () => {
       if (isProgrammaticMapMoveRef.current) return;
       routeOverviewLockedRef.current = true;
+      // Stop camera follow so the user can pan/zoom without GPS yanking them back.
+      followUserRef.current = false;
+      setFollowUser(false);
     };
     map.on('dragstart', onUserMapInteraction);
     map.on('zoomstart', onUserMapInteraction);
@@ -1155,23 +1200,35 @@ export default function MapNavigationView({
 
     const now = Date.now();
     const lastDraw = lastRouteDrawRef.current;
-    const moved = lastDraw ? haversineMeters({ lat: lastDraw.lat, lng: lastDraw.lng }, userPos) : Infinity;
+    const logicPos = logicPosRef.current;
+    const moved = lastDraw ? haversineMeters({ lat: lastDraw.lat, lng: lastDraw.lng }, logicPos) : Infinity;
     if (lastDraw && moved < NAV_ROUTE_DRAW_MIN_METERS && now - lastDraw.at < NAV_ROUTE_DRAW_MIN_MS) {
       return;
     }
 
-    lastRouteDrawRef.current = { lat: userPos.lat, lng: userPos.lng, at: now };
-    const split = splitRouteProgress(route.coords, userPos);
+    lastRouteDrawRef.current = { lat: logicPos.lat, lng: logicPos.lng, at: now };
+    const split = splitRouteProgress(route.coords, logicPos);
     updateRoutePolylines(routeLayerRef.current, routePolylineHandlesRef.current, split.traveled, split.remaining);
   }, [route, userPos, loading]);
 
   const handleGpsUpdate = useCallback(
     (position: GeolocationPosition) => {
       setGpsError(null);
+
+      // Ignore stale cached GPS replayed on subscribe (can be up to ~20s old).
+      const ageMs = Math.max(0, Date.now() - position.timestamp);
+      if (ageMs > NAV_STALE_GPS_MS && !hasFreshGpsRef.current) {
+        return;
+      }
+      hasFreshGpsRef.current = true;
+
       const raw: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude };
       const activeRoute = routeRef.current;
+      const projection =
+        activeRoute && !arrivedRef.current ? projectOntoRoute(activeRoute.coords, raw) : null;
       const snapped =
         activeRoute && !arrivedRef.current ? snapPositionToRoute(activeRoute.coords, raw) : raw;
+      const offRouteDistance = projection?.distanceMeters ?? 0;
 
       const prevDisplay = displayedPosRef.current;
       const displayPos =
@@ -1183,6 +1240,7 @@ export default function MapNavigationView({
           : snapped;
 
       userPosRef.current = snapped;
+      logicPosRef.current = snapped;
       displayedPosRef.current = displayPos;
 
       const dest = destinationRef.current;
@@ -1213,6 +1271,7 @@ export default function MapNavigationView({
         setGpsAccuracy(position.coords.accuracy ?? null);
         setSpeedMph(formatSpeedMph(position.coords.speed));
         setHeading(nextHeading);
+        setOffRouteMeters(offRouteDistance);
         touchActiveNavSession();
       }
 
@@ -1228,30 +1287,48 @@ export default function MapNavigationView({
       }
 
       const distToDest = haversineMeters(snapped, dest);
+      const remainingAlongRoute = activeRoute
+        ? remainingRouteMeters(activeRoute.coords, snapped)
+        : distToDest;
+      const hasArrived =
+        distToDest < NAV_ARRIVE_DEST_M ||
+        (activeRoute != null && remainingAlongRoute < NAV_ARRIVE_REMAINING_M && distToDest < 80);
 
       if (shouldUpdateUi && onProgressUpdateRef.current) {
-        const remaining = activeRoute ? remainingRouteMeters(activeRoute.coords, snapped) : distToDest;
-        const ratio = activeRoute && activeRoute.distanceMeters > 0 ? Math.min(1, remaining / activeRoute.distanceMeters) : 1;
-        const etaSeconds = activeRoute ? Math.max(0, Math.round(activeRoute.durationSeconds * ratio)) : 0;
+        const ratio =
+          activeRoute && activeRoute.distanceMeters > 0
+            ? Math.min(1, remainingAlongRoute / activeRoute.distanceMeters)
+            : 1;
+        const etaSeconds = activeRoute
+          ? Math.max(0, Math.round(activeRoute.durationSeconds * ratio))
+          : 0;
         onProgressUpdateRef.current({
           lat: snapped.lat,
           lng: snapped.lng,
           heading: nextHeading,
           speedMph: speed != null ? Number(formatSpeedMph(speed)) || null : null,
           etaSeconds,
-          distanceMeters: remaining,
-          arrived: distToDest < 35,
+          distanceMeters: remainingAlongRoute,
+          arrived: hasArrived,
         });
       }
 
-      if (distToDest < 35 && !arrivedRef.current) {
+      if (hasArrived && !arrivedRef.current) {
         arrivedRef.current = true;
         setArrived(true);
         if (voiceOnRef.current) {
           const arriveStep = activeRoute?.steps.at(-1);
           voiceRef.current.speak(
             buildStepVoiceCue(
-              arriveStep ?? { id: 'arrive', distanceMeters: 0, durationSeconds: 0, name: '', instruction: 'Arrive at pickup', maneuverType: 'arrive', location: dest },
+              arriveStep ?? {
+                id: 'arrive',
+                distanceMeters: 0,
+                durationSeconds: 0,
+                name: '',
+                instruction: 'Arrive at pickup',
+                maneuverType: 'arrive',
+                location: dest,
+              },
               0,
               'arrival',
               destLabel,
@@ -1291,23 +1368,36 @@ export default function MapNavigationView({
           }
         }
 
-        if (!reroutingRef.current && isOffRoute(activeRoute.coords, snapped)) {
-          offRouteTicksRef.current += 1;
-          if (offRouteTicksRef.current >= 4) {
-            reroutingRef.current = true;
-            setRerouting(true);
-            if (voiceOnRef.current) {
-              voiceRef.current.speak(buildStepVoiceCue(step!, 0, 'reroute'), 'reroute');
+        // Off-route must use RAW GPS distance — snapped position is always on-route
+        // within the snap radius and would permanently disable rerouting.
+        const shouldEvalOffRoute = now - offRouteEvalAtRef.current >= NAV_OFF_ROUTE_EVAL_MS;
+        if (shouldEvalOffRoute) {
+          offRouteEvalAtRef.current = now;
+          const currentlyOffRoute = offRouteDistance > NAV_OFF_ROUTE_THRESHOLD_M;
+
+          if (!reroutingRef.current && currentlyOffRoute) {
+            offRouteTicksRef.current += 1;
+            if (offRouteTicksRef.current >= NAV_OFF_ROUTE_TICKS) {
+              reroutingRef.current = true;
+              setRerouting(true);
+              const rerouteKey = `reroute-${Date.now()}`;
+              if (voiceOnRef.current) {
+                voiceRef.current.speak(buildStepVoiceCue(step!, 0, 'reroute'), rerouteKey);
+              }
+              void loadRoute(raw, dest, true).then((result) => {
+                if (!result) {
+                  // Keep pressure on so we retry soon; don't reset to zero.
+                  offRouteTicksRef.current = Math.max(1, NAV_OFF_ROUTE_TICKS - 1);
+                }
+              }).finally(() => {
+                reroutingRef.current = false;
+                setRerouting(false);
+                lastRouteDrawRef.current = null;
+              });
             }
-            void loadRoute(snapped, dest, true).finally(() => {
-              reroutingRef.current = false;
-              setRerouting(false);
-              offRouteTicksRef.current = 0;
-              lastRouteDrawRef.current = null;
-            });
+          } else if (!currentlyOffRoute) {
+            offRouteTicksRef.current = 0;
           }
-        } else if (!isOffRoute(activeRoute.coords, snapped)) {
-          offRouteTicksRef.current = 0;
         }
       }
     },
@@ -1450,7 +1540,6 @@ export default function MapNavigationView({
     : onConnectorStep
       ? navigationCueStep?.instruction
       : navigationCueStep?.instruction || currentStep?.instruction;
-  const offRouteMeters = route ? distanceToRouteMeters(route.coords, userPos) : 0;
   const currentRoadLabel = arrived
     ? destinationLabel
     : onConnectorStep
@@ -1567,7 +1656,7 @@ export default function MapNavigationView({
                 </div>
               </div>
 
-              {!loading && route && (rerouting || offRouteMeters > 55) && !arrived && (
+              {!loading && route && (rerouting || offRouteMeters > NAV_OFF_ROUTE_THRESHOLD_M) && !arrived && (
                 <p className="mt-2 text-center text-xs font-semibold text-[var(--sbn-nav-warning)]">
                   {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
                 </p>

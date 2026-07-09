@@ -112,3 +112,9 @@ export function subscribeLiveGeolocation(
 export function getLastLivePosition(): GeolocationPosition | null {
   return lastPosition;
 }
+
+/** Age of the last cached GPS fix in milliseconds, or null if none. */
+export function getLastLivePositionAgeMs(): number | null {
+  if (!lastPosition) return null;
+  return Math.max(0, Date.now() - lastPosition.timestamp);
+}

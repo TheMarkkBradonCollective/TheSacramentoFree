@@ -249,6 +249,7 @@ export default function DesktopView({
               onEditItem={onEditItem}
               mapVisible={activeTab === 'map'}
               itemsHydrated={itemsHydrated}
+              eventsHydrated={!isEventsLoading}
               eventsEngagement={eventsEngagement}
               commentsLocked={!canAccessEvents}
             />

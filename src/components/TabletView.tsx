@@ -228,6 +228,7 @@ export default function TabletView({
               onEditItem={onEditItem}
               mapVisible={activeTab === 'map'}
               itemsHydrated={itemsHydrated}
+              eventsHydrated={!isEventsLoading}
               eventsEngagement={eventsEngagement}
               commentsLocked={!canAccessEvents}
             />
