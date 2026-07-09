@@ -14,6 +14,7 @@ interface AuthPageProps {
     displayName: string,
     neighborhood: string,
     bio: string,
+    acceptedLegal?: boolean,
   ) => Promise<boolean>;
   errorMsg?: string;
   isAuthLoading?: boolean;
@@ -94,6 +95,7 @@ export default function AuthPage({
         displayName.trim(),
         neighborhood,
         bio.trim(),
+        true,
       );
       if (!success) setLocalError('Registration failed. Please try again.');
     } catch (err: unknown) {
@@ -331,10 +333,11 @@ export default function AuthPage({
                 id="auth-signup-bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                maxLength={180}
+                maxLength={500}
                 className="w-full px-3 py-2.5 h-20 resize-none bg-inset border border-app rounded-xl text-sm text-app"
                 placeholder="Tell neighbors a little about yourself"
               />
+              <div className="text-right text-[10px] text-subtle font-mono font-medium">{bio.length}/500</div>
               <label className="flex items-start gap-3 p-3 rounded-xl bg-inset border border-app cursor-pointer">
                 <input
                   type="checkbox"

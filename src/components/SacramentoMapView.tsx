@@ -1049,7 +1049,12 @@ export default function SacramentoMapView({
 
   const routeDestination = useMemo(() => {
     if (selectedPost) {
-      const dest = getItemMapDestination(selectedPost, userProfile.uid);
+      // Looking/Trade: navigate to the poster's pin (even if marked private for map display).
+      const locationOwnerId =
+        selectedPost.type === 'looking' || selectedPost.type === 'trade'
+          ? selectedPost.userId
+          : userProfile.uid;
+      const dest = getItemMapDestination(selectedPost, locationOwnerId);
       if (dest) return dest;
       const session = readActiveNavSession(userProfile.uid);
       if (session?.targetId === selectedPost.id && session.targetType === 'post') {
@@ -1118,7 +1123,12 @@ export default function SacramentoMapView({
     }
 
     if (!itemsHydrated) return;
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      // Feed loaded empty — clear stale nav so restore cannot hang forever.
+      clearActiveNavSession();
+      navRestoreDoneRef.current = true;
+      return;
+    }
 
     const post = items.find((item) => item.id === (session.targetId || session.postId));
     if (!post) {
@@ -1220,7 +1230,10 @@ export default function SacramentoMapView({
       return;
     }
 
-    const destination = getItemMapDestination(selectedPost, userProfile.uid);
+    const destination =
+      selectedPost.type === 'looking' || selectedPost.type === 'trade'
+        ? getItemMapDestination(selectedPost, selectedPost.userId)
+        : getItemMapDestination(selectedPost, userProfile.uid);
     if (!destination) {
       openItemDetail?.(selectedPost);
       return;
@@ -1234,17 +1247,18 @@ export default function SacramentoMapView({
     if (selectedPost.type === 'looking') {
       const ok = await confirmDropOffAsFulfiller(confirm, selectedPost.userDisplayName, selectedPost.title);
       if (!ok) return;
+      // Poster waits (fulfiller); map user navigates with the item (requester).
       const result = await createGoGetSession({
         item: selectedPost,
-        fulfillerUserId: userProfile.uid,
-        fulfillerName: userProfile.displayName,
-        requesterUserId: selectedPost.userId,
-        requesterName: selectedPost.userDisplayName,
+        fulfillerUserId: selectedPost.userId,
+        fulfillerName: selectedPost.userDisplayName,
+        requesterUserId: userProfile.uid,
+        requesterName: userProfile.displayName,
         destination,
         destinationLabel: `${selectedPost.userDisplayName}'s area`,
       });
       if (result.ok && result.session?.status === 'active') openNavigation();
-      else if (!result.ok) openItemDetail?.(selectedPost);
+      else openItemDetail?.(selectedPost);
       return;
     }
 
@@ -1261,7 +1275,7 @@ export default function SacramentoMapView({
         destinationLabel: `Meetup: ${selectedPost.title}`,
       });
       if (result.ok && result.session?.status === 'active') openNavigation();
-      else if (!result.ok) openItemDetail?.(selectedPost);
+      else openItemDetail?.(selectedPost);
       return;
     }
 

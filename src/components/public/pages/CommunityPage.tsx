@@ -1,7 +1,7 @@
 import {
   COMMUNITY_FIRST,
+  COMMUNITY_HIGHLIGHTS,
   COMMUNITY_VALUES,
-  FUTURE_FEATURES,
   SITE,
   WHY_IT_MATTERS,
 } from '../../../siteContent';
@@ -14,7 +14,7 @@ export default function CommunityPage() {
   return (
     <PublicPageShell title="Community" subtitle={SITE.tagline}>
       <PublicCard>
-        <h2 className="text-lg font-black text-app">♻️ {WHY_IT_MATTERS.title}</h2>
+        <h2 className="text-lg font-black text-app">{WHY_IT_MATTERS.title}</h2>
         <p className="mt-2 text-sm text-muted font-semibold">{WHY_IT_MATTERS.intro}</p>
         <ul className="mt-3 text-sm text-muted space-y-1.5 font-semibold">
           {WHY_IT_MATTERS.points.map((point) => (
@@ -25,7 +25,7 @@ export default function CommunityPage() {
       </PublicCard>
 
       <PublicCard>
-        <h2 className="text-lg font-black text-app">💚 {COMMUNITY_FIRST.title}</h2>
+        <h2 className="text-lg font-black text-app">{COMMUNITY_FIRST.title}</h2>
         <p className="mt-2 text-sm text-muted">{COMMUNITY_FIRST.intro}</p>
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
           {COMMUNITY_VALUES.map((value) => (
@@ -64,10 +64,10 @@ export default function CommunityPage() {
       </PublicCard>
 
       <PublicCard>
-        <h2 className="text-lg font-black text-app">On the roadmap</h2>
-        <p className="mt-2 text-sm text-muted">Ideas we are exploring next — many core features are already live today.</p>
+        <h2 className="text-lg font-black text-app">What neighbors get</h2>
+        <p className="mt-2 text-sm text-muted">Tools already in the app for free local gifting:</p>
         <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {FUTURE_FEATURES.map((feature) => (
+          {COMMUNITY_HIGHLIGHTS.map((feature) => (
             <li
               key={feature}
               className="px-3 py-2 rounded-xl bg-inset border border-app text-xs font-semibold text-muted list-none"
@@ -79,12 +79,19 @@ export default function CommunityPage() {
       </PublicCard>
 
       <PublicCard>
-        <h2 className="text-lg font-black text-app">📬 {SITE.joinCta.title}</h2>
+        <h2 className="text-lg font-black text-app">{SITE.joinCta.title}</h2>
         {SITE.joinCta.lines.map((line) => (
           <p key={line} className="mt-2 text-sm text-muted font-semibold">
             {line}
           </p>
         ))}
+        <button
+          type="button"
+          onClick={() => navigate('login')}
+          className="sbn-btn sbn-btn-primary sbn-btn-sm mt-4"
+        >
+          Sign in or join
+        </button>
       </PublicCard>
     </PublicPageShell>
   );

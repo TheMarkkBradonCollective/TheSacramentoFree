@@ -198,15 +198,23 @@ export default function ChatSystem({
       if (!confirmed) return;
       setStartingGoGet(true);
       setErrorMsg('');
+      // Keep roles aligned with listing/map: listing poster = fulfiller (waits),
+      // the other neighbor = requester (navigates). Looking responders and trade
+      // claimers are always the navigator.
+      const posterIsMe = linkedItem.userId === userProfile.uid;
+      const fulfillerUserId = linkedItem.userId;
+      const fulfillerName = posterIsMe ? userProfile.displayName : otherUserName;
+      const requesterUserId = posterIsMe ? otherUserId : userProfile.uid;
+      const requesterName = posterIsMe ? otherUserName : userProfile.displayName;
       const result = await createGoGetSession({
         item: linkedItem,
-        fulfillerUserId: userProfile.uid,
-        fulfillerName: userProfile.displayName,
-        requesterUserId: otherUserId,
-        requesterName: otherUserName,
-        destination: isLooking ? dropOffDestination : dropOffDestination,
+        fulfillerUserId,
+        fulfillerName,
+        requesterUserId,
+        requesterName,
+        destination: dropOffDestination,
         destinationLabel: isLooking
-          ? `${otherUserName}'s area`
+          ? `${fulfillerName}'s area`
           : `Meetup: ${linkedItem.title}`,
       });
       setStartingGoGet(false);
@@ -218,11 +226,12 @@ export default function ChatSystem({
         return;
       }
       setChatGoGetSession(result.session);
+      const navigatorName = requesterName;
       await createSupabaseMessage(
         selectedChat!.id,
         isLooking
-          ? `📦 ${userProfile.displayName} is dropping off "${linkedItem.title}" — heading to ${otherUserName}'s area. Open the listing to follow along.`
-          : `🔁 ${userProfile.displayName} is heading to the meetup spot for "${linkedItem.title}". Open the listing to follow along.`,
+          ? `📦 ${navigatorName} is dropping off "${linkedItem.title}" — heading to ${fulfillerName}'s area. Open the listing to follow along.`
+          : `🔁 ${navigatorName} is heading to the meetup spot for "${linkedItem.title}". Open the listing to follow along.`,
         userProfile.uid,
         `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         { skipPush: true },
@@ -1097,14 +1106,14 @@ export default function ChatSystem({
               linkedItem.type === 'looking' &&
               linkedItem.status === 'active';
 
-            // Looking: the responder (not the original poster) has the item and becomes the
-            // fulfiller. Trade: whoever taps this becomes the fulfiller (their location is
-            // the meetup spot) and the other participant becomes the requester.
+            // Looking/Trade: only the non-poster starts coordination so they become the
+            // navigator (requester). Poster waits as fulfiller — same as listing/map.
             const showStartGoGetBtn =
               !!linkedItem &&
               !isChatDisabled &&
               linkedItem.status === 'active' &&
-              ((linkedItem.type === 'looking' && !isListingOwner) || linkedItem.type === 'trade') &&
+              !isListingOwner &&
+              (linkedItem.type === 'looking' || linkedItem.type === 'trade') &&
               !chatGoGetSession;
 
             return (

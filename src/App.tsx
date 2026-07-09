@@ -15,10 +15,6 @@ import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
 import PostEventModal from './components/PostEventModal';
 import NeighborProfileView from './components/NeighborProfileView';
-import ItemGrid from './components/ItemGrid';
-import ChatSystem from './components/ChatSystem';
-import UserProfileView from './components/UserProfileView';
-import SacramentoMapView from './components/SacramentoMapView';
 import MobileView from './components/MobileView';
 import TabletView from './components/TabletView';
 import DesktopView from './components/DesktopView';
@@ -71,8 +67,8 @@ import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hook
 import PushNotificationCelebration from './components/PushNotificationCelebration';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 import TermsOfUseModal from './components/TermsOfUseModal';
-import { isPrivacyAccepted, acceptPrivacy } from './lib/privacyPolicyPrompt';
-import { isTermsAccepted, acceptTerms } from './lib/termsPolicyPrompt';
+import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
+import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
 import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
@@ -83,6 +79,7 @@ import ReviewPromptModal from './components/ReviewPromptModal';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
+import { parsePublicRoute, publicRouteFromPathname } from './public/routes';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -420,6 +417,26 @@ export default function App() {
     if (!sessionUser) return;
     pathnameSeededRef.current = true;
 
+    // Capture public marketing destinations before tab URL seeding replaces them.
+    const hashRoute = window.location.hash ? parsePublicRoute(window.location.hash) : null;
+    const pathRoute = publicRouteFromPathname(window.location.pathname);
+    const publicDest =
+      hashRoute && hashRoute !== 'home' && hashRoute !== 'not-found' && hashRoute !== 'login'
+        ? hashRoute
+        : pathRoute && pathRoute !== 'home' && pathRoute !== 'login'
+          ? pathRoute
+          : null;
+    if (publicDest === 'privacy') {
+      setLegalPanel('privacy');
+      setShowGoFundMeDetail(false);
+    } else if (publicDest === 'terms') {
+      setLegalPanel('terms');
+      setShowGoFundMeDetail(false);
+    } else if (publicDest === 'gofundme') {
+      setShowGoFundMeDetail(true);
+      setLegalPanel(null);
+    }
+
     const initialTab = readPersistedTab(initialAuth.userProfile?.uid);
     if (initialTab !== activeTab) {
       setActiveTab(initialTab);
@@ -474,6 +491,28 @@ export default function App() {
     pushActiveTabHistory(activeTab, sessionUser?.id);
   }, [activeTab, sessionUser?.id]);
 
+  // Keep listening for in-session hash changes (e.g. footer links that set #/privacy).
+  useEffect(() => {
+    if (!sessionUser || typeof window === 'undefined') return;
+
+    const openPublicDestination = () => {
+      if (!window.location.hash) return;
+      const route = parsePublicRoute(window.location.hash);
+      if (route === 'privacy') {
+        setLegalPanel('privacy');
+        setShowGoFundMeDetail(false);
+      } else if (route === 'terms') {
+        setLegalPanel('terms');
+        setShowGoFundMeDetail(false);
+      } else if (route === 'gofundme') {
+        setShowGoFundMeDetail(true);
+        setLegalPanel(null);
+      }
+    };
+
+    window.addEventListener('hashchange', openPublicDestination);
+    return () => window.removeEventListener('hashchange', openPublicDestination);
+  }, [sessionUser]);
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
     Promise.race([
@@ -766,7 +805,7 @@ export default function App() {
       if (friendlyErr.toLowerCase().includes('failed to fetch') || friendlyErr.toLowerCase().includes('fetch')) {
         setErrorMsg('Connection failed. The database is unreachable. Please check your network and try again.');
       } else {
-        setErrorMsg(friendlyErr || 'Signature detour error.');
+        setErrorMsg(friendlyErr || 'Unable to sign in right now. Please try again.');
       }
       throw err;
     }
@@ -777,7 +816,8 @@ export default function App() {
     password: string, 
     displayName: string, 
     neighborhood: string, 
-    bio: string
+    bio: string,
+    acceptedLegal = false,
   ): Promise<boolean> => {
     setIsAuthLoading(true);
     setErrorMsg('');
@@ -811,8 +851,11 @@ export default function App() {
 
         await upsertSupabaseProfile(newProfile);
 
-        acceptPrivacy(data.user.id);
-        acceptTerms(data.user.id);
+        // Signup checkbox already covered privacy + terms — persist so gates don't re-prompt.
+        if (acceptedLegal) {
+          acceptPrivacy(data.user.id);
+          acceptTerms(data.user.id);
+        }
         
         if (!data.session) {
           setIsAuthLoading(false);
@@ -821,6 +864,10 @@ export default function App() {
 
         applySession(data.user);
         setUserProfile(newProfile);
+        if (acceptedLegal) {
+          setPrivacyGateOpen(false);
+          setTermsGateOpen(false);
+        }
         goHomeTab();
         return true;
       }
@@ -1231,7 +1278,7 @@ export default function App() {
               </h1>
               <p className="text-sm text-muted max-w-md leading-relaxed">
                 {accountRestriction.reason === 'banned'
-                  ? 'Your account has been disabled by community staff. Contact the Buy Nothing team if you believe this is a mistake.'
+                  ? 'Your account has been disabled by community staff. Contact the Sacramento Buy Nothing team if you believe this is a mistake.'
                   : accountRestriction.reason === 'locked'
                     ? 'Your account was automatically locked after repeated Go Get pickup violations. A city administrator must review your record before you can use the app again — check Messages → Support for updates or to appeal.'
                     : accountRestriction.suspendedUntil
@@ -1657,7 +1704,7 @@ export default function App() {
           </div>
           
           {!isIOS && (
-            <div className="mt-3 flex items-center justify-end space-x-3 pt-2.5 border-t border-[#1A1A1B]">
+            <div className="mt-3 flex items-center justify-end space-x-3 pt-2.5 border-t border-app">
               <button
                 onClick={handleDismissPrompt}
                 className="px-3.5 py-1.5 text-[11px] font-extrabold text-muted hover:text-app rounded-lg transition-all cursor-pointer"

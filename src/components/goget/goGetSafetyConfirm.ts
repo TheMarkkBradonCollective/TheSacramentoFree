@@ -32,16 +32,20 @@ export async function confirmGoGetAsRequester(
   });
 }
 
-/** Responder offers to drop off for a Looking / ISO post — navigates to the requester's area. */
+/**
+ * Responder offers to drop off for a Looking / ISO post.
+ * Session roles: looking poster = fulfiller (waits); responder = requester (navigates).
+ * `posterName` is the looking poster who will be notified.
+ */
 export async function confirmDropOffAsFulfiller(
   confirm: ConfirmFn,
-  requesterName: string,
+  posterName: string,
   itemTitle: string,
 ): Promise<boolean> {
   return confirm({
     title: 'Start drop off?',
     message:
-      `This will notify ${requesterName} that you're heading over with "${itemTitle}". ` +
+      `This will notify ${posterName} that you're heading over with "${itemTitle}". ` +
       `You'll navigate to their area and can share your live location while en route.`,
     confirmLabel: 'Start drop off',
     cancelLabel: 'Not now',
@@ -75,15 +79,15 @@ export async function confirmGoGetTripStart(confirm: ConfirmFn, posterName: stri
   });
 }
 
-/** Responder starts drop-off from chat (Looking / ISO) — navigates to the requester's area. */
+/** Chat entry for Looking drop-off or Trade meet-up — caller becomes the navigator (requester). */
 export async function confirmGoGetAsFulfiller(
   confirm: ConfirmFn,
-  requesterName: string,
+  otherName: string,
   itemTitle: string,
   itemType: 'looking' | 'trade' = 'looking',
 ): Promise<boolean> {
   if (itemType === 'trade') {
-    return confirmMeetUp(confirm, requesterName, itemTitle);
+    return confirmMeetUp(confirm, otherName, itemTitle);
   }
-  return confirmDropOffAsFulfiller(confirm, requesterName, itemTitle);
+  return confirmDropOffAsFulfiller(confirm, otherName, itemTitle);
 }

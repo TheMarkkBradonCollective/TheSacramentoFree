@@ -88,7 +88,7 @@ export default function UserProfileView({
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [bio, setBio] = useState(userProfile.bio || '');
   const [photoURL, setPhotoURL] = useState(
-    userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`,
+    userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.uid)}`,
   );
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -132,9 +132,9 @@ export default function UserProfileView({
     if (isPhotoUploading) return;
     setPhotoURL(
       userProfile.photoURL ||
-        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`,
+        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.uid)}`,
     );
-  }, [userProfile.photoURL, userProfile.displayName, isPhotoUploading]);
+  }, [userProfile.photoURL, userProfile.uid, isPhotoUploading]);
 
   // PWA Prompt status
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -392,7 +392,16 @@ export default function UserProfileView({
           />
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
-            Joined our sharing circle: {new Date(userProfile.createdAt?.seconds ? userProfile.createdAt.seconds * 1000 : userProfile.createdAt).toLocaleDateString()}
+            Joined our sharing circle:{' '}
+            {(() => {
+              const raw = userProfile.createdAt;
+              const ms =
+                raw && typeof raw === 'object' && 'seconds' in raw
+                  ? Number((raw as { seconds: number }).seconds) * 1000
+                  : new Date(raw as string | number | Date).getTime();
+              const date = new Date(ms);
+              return Number.isNaN(date.getTime()) ? 'recently' : date.toLocaleDateString();
+            })()}
           </p>
           
           {userProfile.bio ? (

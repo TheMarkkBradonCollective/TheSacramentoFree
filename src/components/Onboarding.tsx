@@ -36,7 +36,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     const newProfile: UserProfile = {
       uid: user.id,
       displayName: displayName.trim(),
-      photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(displayName)}`,
+      photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.id)}`,
       email: user.email || '',
       neighborhood,
       bio: bio.trim(),

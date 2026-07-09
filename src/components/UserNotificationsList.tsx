@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -15,7 +16,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
-import type { UserNotificationItem, UserNotificationKind } from '../types';
+import type { UserNotificationKind } from '../types';
 import { useUserNotifications } from '../hooks/useUserNotifications';
 import { parsePushDeepLink, type PushDeepLinkTarget } from '../lib/pushDeepLink';
 import PublicCard from './public/PublicCard';
@@ -145,10 +146,17 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
 interface UserNotificationsListProps {
   userId: string;
   onNavigate?: (target: PushDeepLinkTarget) => void;
+  /** Called when the Notify list is shown so the hub can clear unread state. */
+  onViewed?: () => void;
 }
 
-export default function UserNotificationsList({ userId, onNavigate }: UserNotificationsListProps) {
+export default function UserNotificationsList({ userId, onNavigate, onViewed }: UserNotificationsListProps) {
   const { items, loading } = useUserNotifications(userId);
+
+  // Mark read only once the Notify list is actually shown.
+  useEffect(() => {
+    onViewed?.();
+  }, [userId, onViewed]);
 
   if (loading) {
     return <p className="text-sm text-muted">Loading your notifications…</p>;

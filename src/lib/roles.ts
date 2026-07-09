@@ -16,7 +16,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   city_moderator: 'City Moderator',
   city_administrator: 'City Administrator',
   city_manager: 'City Manager',
-  director: 'Buy Nothing Director',
+  director: 'Sacramento Buy Nothing Director',
 };
 
 export function staffRoleSlotMessage(role: UserRole, limit: number): string {
@@ -52,7 +52,7 @@ export const ASSIGNABLE_ROLE_OPTIONS: {
   {
     value: 'director',
     label: ROLE_LABELS.director,
-    description: 'Buy Nothing Director — full owner-level access',
+    description: 'Sacramento Buy Nothing Director — full owner-level access',
   },
 ];
 
@@ -119,7 +119,7 @@ export function canStaffDeleteAccount(role?: UserProfile['role']): boolean {
   return r === 'city_manager' || r === 'director';
 }
 
-/** Buy Nothing Director — full platform oversight. */
+/** Sacramento Buy Nothing Director — full platform oversight. */
 export function isDirectorRole(role?: UserProfile['role']): boolean {
   return normalizeUserRole(role) === 'director';
 }

@@ -1391,7 +1391,7 @@ export default function MapNavigationView({
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'Buy Nothing navigation', text: summary, url: mapsUrl });
+        await navigator.share({ title: 'Sacramento Buy Nothing navigation', text: summary, url: mapsUrl });
         return;
       }
     } catch {
