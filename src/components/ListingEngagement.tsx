@@ -3,6 +3,8 @@ import { ChevronDown, ChevronUp, Flag, MessageSquare, Trash2 } from 'lucide-reac
 import { ItemComment, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
 import { PostVoteState } from '../hooks/useItemsEngagement';
+import RoleBadge from './RoleBadge';
+import { isStaffRole } from '../lib/roles';
 
 interface ListingEngagementProps {
   posterUserId: string;
@@ -18,6 +20,8 @@ interface ListingEngagementProps {
   onViewProfile?: (userId: string) => void;
   /** card = compact with toggle; detail = full section always open */
   variant?: 'card' | 'detail';
+  /** Optional role map for commenters: userId → role. Used to show staff badges. */
+  commenterRoles?: Record<string, UserProfile['role']>;
 }
 
 export default function ListingEngagement({
@@ -33,6 +37,7 @@ export default function ListingEngagement({
   userProfile,
   onViewProfile,
   variant = 'card',
+  commenterRoles,
 }: ListingEngagementProps) {
   const DETAIL_PREVIEW_COUNT = 5;
   const isOwner = posterUserId === currentUserId;
@@ -133,13 +138,15 @@ export default function ListingEngagement({
                 {visibleComments.map((comment) => {
                   const isOwnComment = comment.userId === currentUserId;
                   const canReport = userProfile && !isOwnComment && comment.userId !== posterUserId;
+                  const commenterRole = commenterRoles?.[comment.userId];
+                  const commenterIsStaff = isStaffRole(commenterRole);
                   return (
-                    <li key={comment.id} className="bg-inset rounded-xl p-3 border border-app">
+                    <li key={comment.id} className={`rounded-xl p-3 border ${commenterIsStaff ? 'bg-accent/5 border-accent/20' : 'bg-inset border-app'}`}>
                       <div className="flex items-start gap-2">
                         <button
                           type="button"
                           onClick={() => onViewProfile?.(comment.userId)}
-                          className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-90 cursor-pointer"
+                          className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-90 cursor-pointer flex-wrap"
                           disabled={!onViewProfile}
                         >
                           <img
@@ -152,7 +159,13 @@ export default function ListingEngagement({
                             referrerPolicy="no-referrer"
                           />
                           <span className="text-xs font-bold text-app">{comment.userName}</span>
-                          <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
+                          {commenterIsStaff && commenterRole ? (
+                            <span className="scale-[0.8] origin-left">
+                              <RoleBadge role={commenterRole} />
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
+                          )}
                         </button>
                         <div className="flex items-center gap-1 shrink-0">
                           {isOwnComment && onDeleteComment && (

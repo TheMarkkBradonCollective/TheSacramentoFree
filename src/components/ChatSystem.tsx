@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+
 import { Chat, Message, UserProfile, ItemPost, MessageRequest, PendingChatCompose, SupportTicket } from '../types';
 import {
   getSupabaseChats,
@@ -69,6 +70,8 @@ import { getItemMapDestination } from '../lib/itemLocation';
 import type { GoGetSession } from '../types';
 import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
+import RoleBadge from './RoleBadge';
+import { isStaffRole as isSenderStaff } from '../lib/roles';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -132,7 +135,7 @@ export default function ChatSystem({
   const [feedbackPanel, setFeedbackPanel] = useState<ChatFeedbackPanel>(null);
   const isStaffSupportInbox = canViewStaffTicketInbox(userProfile.role);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [senderNames, setSenderNames] = useState<Record<string, { displayName: string; photoURL?: string }>>({});
+  const [senderNames, setSenderNames] = useState<Record<string, { displayName: string; photoURL?: string; role?: import('../types').UserProfile['role'] }>>({});
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isChatsLoading, setIsChatsLoading] = useState(true);
@@ -1298,13 +1301,20 @@ export default function ChatSystem({
                             }`}
                           >
                             {groupMeta.showSenderName && (
-                              <button
-                                type="button"
-                                onClick={() => onViewProfile?.(msg.senderId)}
-                                className="mb-0.5 px-1 text-[10px] font-semibold text-muted hover:text-accent"
-                              >
-                                {senderLabel}
-                              </button>
+                              <div className="flex items-center gap-1.5 mb-0.5 px-1 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => onViewProfile?.(msg.senderId)}
+                                  className="text-[10px] font-semibold text-muted hover:text-accent"
+                                >
+                                  {senderLabel}
+                                </button>
+                                {isCommunity && isSenderStaff(senderInfo?.role) && (
+                                  <span className="scale-[0.75] origin-left">
+                                    <RoleBadge role={senderInfo?.role} />
+                                  </span>
+                                )}
+                              </div>
                             )}
                             <div className={messageBubbleClass(isUser, groupMeta)}>
                               <p className="whitespace-pre-wrap break-words">{msg.text}</p>

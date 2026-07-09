@@ -3,6 +3,7 @@ import {
   CalendarDays,
   FileText,
   GaugeCircle,
+  Inbox,
   List,
   Map,
   MessageSquare,
@@ -37,6 +38,7 @@ const NAV_ITEMS: SidebarItem[] = [
   { id: 'staff_overview', label: 'Overview', icon: GaugeCircle, section: 'staff', minRank: 1 },
   { id: 'staff_users', label: 'Users', icon: Users, section: 'staff', minRank: 1 },
   { id: 'staff_posts', label: 'Posts', icon: FileText, section: 'staff', minRank: 1 },
+  { id: 'staff_messages', label: 'Messages', icon: Inbox, section: 'staff', minRank: 1 },
   { id: 'staff_moderation', label: 'Moderation', icon: ActivitySquare, section: 'staff', minRank: 1 },
   { id: 'staff_team', label: 'Team', icon: Shield, section: 'staff', minRank: 2 },
 ];

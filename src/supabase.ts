@@ -1314,18 +1314,22 @@ export async function getSupabaseChats(
 
 export async function getUserDisplayInfoByIds(
   userIds: string[],
-): Promise<Record<string, { displayName: string; photoURL?: string }>> {
+): Promise<Record<string, { displayName: string; photoURL?: string; role?: UserProfile['role'] }>> {
   const unique = [...new Set(userIds.filter(Boolean))];
   if (unique.length === 0) return {};
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('uid, displayName, photoURL')
+      .select('uid, displayName, photoURL, role')
       .in('uid', unique);
     if (error || !data) return {};
-    const map: Record<string, { displayName: string; photoURL?: string }> = {};
-    for (const row of data as { uid: string; displayName: string; photoURL?: string }[]) {
-      map[row.uid] = { displayName: row.displayName, photoURL: row.photoURL };
+    const map: Record<string, { displayName: string; photoURL?: string; role?: UserProfile['role'] }> = {};
+    for (const row of data as { uid: string; displayName: string; photoURL?: string; role?: string }[]) {
+      map[row.uid] = {
+        displayName: row.displayName,
+        photoURL: row.photoURL,
+        role: (row.role as UserProfile['role']) ?? 'user',
+      };
     }
     return map;
   } catch {
@@ -4766,6 +4770,26 @@ export async function getStaffUserDirectory(): Promise<StaffUserRow[]> {
         ...p,
         accountStatus: p.accountStatus ?? 'active',
       }));
+  } catch {
+    return [];
+  }
+}
+
+/** Staff: fetch recent comments across all listings (newest first, up to limit). */
+export async function staffGetRecentComments(limit = 200): Promise<ItemComment[]> {
+  try {
+    const { data, error } = await supabase
+      .from('item_comments')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      handleSupabaseError(error, 'item_comments');
+      return [];
+    }
+
+    return (data ?? []) as ItemComment[];
   } catch {
     return [];
   }
