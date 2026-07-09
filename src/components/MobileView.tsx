@@ -141,7 +141,7 @@ export default function MobileView({
   const [selectedMobileType, setSelectedMobileType] = useState<MapContentFilter>('all');
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
   const [mapImmersiveNav, setMapImmersiveNav] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   useKeyboardInset();
   useScrollInputOnFocus();
@@ -165,8 +165,15 @@ export default function MobileView({
           onTabChange={setActiveTab}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+          onCollapse={() => setSidebarCollapsed(true)}
+          autoCollapseOnNavigate
         />
-        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+        <div
+          className="flex-1 min-w-0 flex flex-col h-full overflow-hidden"
+          onClick={() => {
+            if (!sidebarCollapsed) setSidebarCollapsed(true);
+          }}
+        >
           {/* Staff panel views */}
           {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
           {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}

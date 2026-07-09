@@ -134,7 +134,7 @@ export default function TabletView({
 }: TabletViewProps) {
   useScrollInputOnFocus();
   const isStaff = isStaffRole(userProfile.role);
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(true);
   const communityTab = isStaff
     ? (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
       ? (activeTab as AppTab)
@@ -144,8 +144,13 @@ export default function TabletView({
   if (isStaff) {
     return (
       <div id="tablet_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
-        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />
-        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} onCollapse={() => setSidebarCollapsed(true)} autoCollapseOnNavigate />
+        <div
+          className="flex-1 min-w-0 flex flex-col h-full overflow-hidden"
+          onClick={() => {
+            if (!sidebarCollapsed) setSidebarCollapsed(true);
+          }}
+        >
           {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
           {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
           {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}

@@ -55,6 +55,9 @@ interface StaffSidebarProps {
   onTabChange: (tab: AnyTab) => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  /** Collapse the sidebar after a nav item is selected (e.g. mobile/tablet). */
+  onCollapse?: () => void;
+  autoCollapseOnNavigate?: boolean;
 }
 
 export default function StaffSidebar({
@@ -63,8 +66,17 @@ export default function StaffSidebar({
   onTabChange,
   collapsed = false,
   onToggleCollapse,
+  onCollapse,
+  autoCollapseOnNavigate = false,
 }: StaffSidebarProps) {
   const actorRank = roleRank(userProfile.role);
+
+  const selectTab = (id: AnyTab) => {
+    onTabChange(id);
+    if (autoCollapseOnNavigate && onCollapse && !collapsed) {
+      onCollapse();
+    }
+  };
 
   const communityItems = NAV_ITEMS.filter((i) => i.section === 'community');
   const staffItems = NAV_ITEMS.filter(
@@ -113,7 +125,7 @@ export default function StaffSidebar({
               key={id}
               type="button"
               id={`staff_sidebar_${id}`}
-              onClick={() => onTabChange(id)}
+              onClick={() => selectTab(id)}
               aria-current={isActive ? 'page' : undefined}
               title={collapsed ? label : undefined}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mx-1 transition-colors text-sm font-medium ${
@@ -145,7 +157,7 @@ export default function StaffSidebar({
                   key={id}
                   type="button"
                   id={`staff_sidebar_${id}`}
-                  onClick={() => onTabChange(id)}
+                  onClick={() => selectTab(id)}
                   aria-current={isActive ? 'page' : undefined}
                   title={collapsed ? label : undefined}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mx-1 transition-colors text-sm font-medium ${

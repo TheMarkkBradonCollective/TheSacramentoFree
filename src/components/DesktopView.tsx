@@ -132,7 +132,7 @@ export default function DesktopView({
   if (isStaff) {
     return (
       <div id="desktop_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
-        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />
+        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} onCollapse={() => setSidebarCollapsed(true)} autoCollapseOnNavigate />
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
           {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
           {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
