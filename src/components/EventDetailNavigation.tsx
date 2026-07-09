@@ -10,15 +10,21 @@ import {
   type LatLng,
 } from '../lib/mapRoute';
 import { fetchNavigationRoute } from '../lib/navigationRoute';
-import { getLastLiveLatLng, subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { getLastLiveLatLng, retainLiveGeolocation, subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import {
+  clearActiveNavSession,
+  readActiveNavSession,
+  saveActiveNavSession,
+} from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 
 interface EventDetailNavigationProps {
   event: CommunityEvent;
+  currentUserId?: string;
 }
 
-export default function EventDetailNavigation({ event }: EventDetailNavigationProps) {
+export default function EventDetailNavigation({ event, currentUserId }: EventDetailNavigationProps) {
   const destination = useMemo<LatLng | null>(() => {
     if (
       typeof event.locationLat !== 'number' ||
@@ -95,8 +101,43 @@ export default function EventDetailNavigation({ event }: EventDetailNavigationPr
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
     setLockedOrigin(userLocation);
+
+    if (currentUserId) {
+      const existing = readActiveNavSession(currentUserId);
+      const sameTarget =
+        existing?.targetType === 'event' && existing.targetId === event.id ? existing : null;
+      saveActiveNavSession({
+        userId: currentUserId,
+        targetType: 'event',
+        targetId: event.id,
+        destination,
+        destinationLabel: event.title,
+        startedAt: sameTarget?.startedAt ?? Date.now(),
+      });
+    }
+
     setNavigationOpen(true);
-  }, [destination, userLocation]);
+  }, [destination, userLocation, currentUserId, event.id, event.title]);
+
+  useEffect(() => {
+    if (!navigationOpen || !currentUserId) return;
+    return retainLiveGeolocation();
+  }, [navigationOpen, currentUserId]);
+
+  useEffect(() => {
+    if (!navigationOpen || !destination || !currentUserId) return;
+    const existing = readActiveNavSession(currentUserId);
+    const sameTarget =
+      existing?.targetType === 'event' && existing.targetId === event.id ? existing : null;
+    saveActiveNavSession({
+      userId: currentUserId,
+      targetType: 'event',
+      targetId: event.id,
+      destination,
+      destinationLabel: event.title,
+      startedAt: sameTarget?.startedAt ?? Date.now(),
+    });
+  }, [navigationOpen, destination, currentUserId, event.id, event.title]);
 
   if (!destination) {
     return (
@@ -139,6 +180,7 @@ export default function EventDetailNavigation({ event }: EventDetailNavigationPr
               destination={destination}
               destinationLabel={event.title}
               onExit={() => {
+                clearActiveNavSession();
                 setNavigationOpen(false);
                 setLockedOrigin(null);
               }}

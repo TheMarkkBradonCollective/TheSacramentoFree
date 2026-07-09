@@ -15,7 +15,12 @@ import {
   type LatLng,
 } from '../lib/mapRoute';
 import { fetchNavigationRoute } from '../lib/navigationRoute';
-import { getLastLiveLatLng, subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { getLastLiveLatLng, retainLiveGeolocation, subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import {
+  clearActiveNavSession,
+  readActiveNavSession,
+  saveActiveNavSession,
+} from '../lib/navigationSession';
 import {
   cancelGoGetSession,
   confirmGoGetCompletion,
@@ -181,7 +186,9 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     return subscribeToGoGetSession(session.id, (updated) => {
       setSession(updated);
       if (isTerminalGoGetStatus(updated.status)) {
+        clearActiveNavSession();
         setNavigationOpen(false);
+        setLockedOrigin(null);
       }
     });
   }, [session?.id]);
@@ -251,8 +258,45 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     if (!destination || !userLocation) return;
     arrivalHandledRef.current = false;
     setLockedOrigin(userLocation);
+
+    if (userProfile?.uid) {
+      const existing = readActiveNavSession(userProfile.uid);
+      const sameTarget =
+        existing?.targetType === 'post' && existing.targetId === item.id ? existing : null;
+      saveActiveNavSession({
+        userId: userProfile.uid,
+        targetType: 'post',
+        targetId: item.id,
+        postId: item.id,
+        destination,
+        destinationLabel: session?.destinationLabel || item.title,
+        startedAt: sameTarget?.startedAt ?? Date.now(),
+      });
+    }
+
     setNavigationOpen(true);
-  }, [destination, userLocation]);
+  }, [destination, userLocation, userProfile?.uid, item.id, item.title, session?.destinationLabel]);
+
+  useEffect(() => {
+    if (!navigationOpen || !userProfile?.uid) return;
+    return retainLiveGeolocation();
+  }, [navigationOpen, userProfile?.uid]);
+
+  useEffect(() => {
+    if (!navigationOpen || !destination || !userProfile?.uid) return;
+    const existing = readActiveNavSession(userProfile.uid);
+    const sameTarget =
+      existing?.targetType === 'post' && existing.targetId === item.id ? existing : null;
+    saveActiveNavSession({
+      userId: userProfile.uid,
+      targetType: 'post',
+      targetId: item.id,
+      postId: item.id,
+      destination,
+      destinationLabel: session?.destinationLabel || item.title,
+      startedAt: sameTarget?.startedAt ?? Date.now(),
+    });
+  }, [navigationOpen, destination, userProfile?.uid, item.id, item.title, session?.destinationLabel]);
 
   const handleStartGoGet = useCallback(async () => {
     if (!destination || !userLocation || !userProfile) return;
@@ -375,6 +419,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   );
 
   const handleExitNavigation = useCallback(() => {
+    clearActiveNavSession();
     setNavigationOpen(false);
     setLockedOrigin(null);
   }, []);
@@ -842,7 +887,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
             <MapNavigationView
               origin={lockedOrigin}
               destination={destination}
-              destinationLabel={item.title}
+              destinationLabel={session?.destinationLabel || item.title}
               onProgressUpdate={handleProgressUpdate}
               otherPartyLocation={
                 session?.fulfillerSharingLocation && fulfillerLiveLocation

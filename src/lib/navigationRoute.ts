@@ -253,7 +253,7 @@ export function getActiveVoiceCueStep(steps: NavigationStep[], index: number): N
   return current;
 }
 
-/** Find the next step index based on user position. */
+/** Find the next step index based on user position. Advances at most one step per call. */
 export function findCurrentStepIndex(
   steps: NavigationStep[],
   user: LatLng,
@@ -262,55 +262,37 @@ export function findCurrentStepIndex(
 ): number {
   if (steps.length === 0) return 0;
 
+  const index = Math.max(0, Math.min(startIndex, steps.length - 1));
+  if (index >= steps.length - 1) return index;
+
   if (route && route.coords.length >= 2 && route.distanceMeters > 0) {
     const traveled = Math.max(0, route.distanceMeters - remainingRouteMeters(route.coords, user));
     let cumulative = 0;
-    let index = Math.max(0, Math.min(startIndex, steps.length - 1));
-
     for (let i = 0; i < index; i++) {
       cumulative += Math.max(steps[i].distanceMeters, 0);
     }
 
-    for (let i = index; i < steps.length - 1; i++) {
-      const segmentLen = Math.max(steps[i].distanceMeters, 0);
-      if (segmentLen <= 0) {
-        index = i + 1;
-        continue;
-      }
-      const advanceAt = cumulative + Math.max(segmentLen - 40, segmentLen * 0.82);
-      if (traveled >= advanceAt) {
-        index = i + 1;
-        cumulative += segmentLen;
-      } else {
-        break;
-      }
-    }
+    const segmentLen = Math.max(steps[index].distanceMeters, 0);
+    if (segmentLen <= 0) return index + 1;
 
+    const advanceAt = cumulative + Math.max(segmentLen - 40, segmentLen * 0.82);
+    return traveled >= advanceAt ? index + 1 : index;
+  }
+
+  const current = steps[index];
+  const next = steps[index + 1];
+  const toCurrent = haversineMeters(user, current.location);
+  const toNext = haversineMeters(user, next.location);
+
+  if (current.maneuverType === 'depart') {
+    const segmentMeters = Math.max(next.distanceMeters, 1);
+    const remainThreshold = Math.min(50, Math.max(28, segmentMeters * 0.22));
+    if (toNext <= remainThreshold) return index + 1;
     return index;
   }
 
-  let index = Math.max(0, Math.min(startIndex, steps.length - 1));
-
-  while (index < steps.length - 1) {
-    const current = steps[index];
-    const next = steps[index + 1];
-    const toCurrent = haversineMeters(user, current.location);
-    const toNext = haversineMeters(user, next.location);
-
-    if (current.maneuverType === 'depart') {
-      const segmentMeters = Math.max(next.distanceMeters, 1);
-      const remainThreshold = Math.min(50, Math.max(28, segmentMeters * 0.22));
-      if (toNext > remainThreshold) break;
-      index++;
-      continue;
-    }
-
-    if (toCurrent < 45 && toNext + 15 < toCurrent) {
-      index++;
-      continue;
-    }
-
-    break;
+  if (toCurrent < 45 && toNext + 15 < toCurrent) {
+    return index + 1;
   }
 
   return index;
@@ -387,7 +369,7 @@ function distanceToSegmentMeters(user: LatLng, a: LatLng, b: LatLng): number {
   return haversineMeters(user, point);
 }
 
-/** Remaining distance along route polyline from nearest point to end. */
+/** Remaining distance along route polyline from nearest projection point to end. */
 export function remainingRouteMeters(coords: [number, number][], user: LatLng): number {
   if (coords.length < 2) return 0;
 
@@ -407,9 +389,9 @@ export function remainingRouteMeters(coords: [number, number][], user: LatLng): 
     }
   }
 
-  let total = haversineMeters(user, nearestPoint);
-  const segmentEnd = latLngFromCoord(coords[nearestSegment + 1]);
-  total += haversineMeters(nearestPoint, segmentEnd);
+  // Distance along the polyline only — do not add the perpendicular off-route
+  // offset, which inflated ETA while the user was briefly off the road.
+  let total = haversineMeters(nearestPoint, latLngFromCoord(coords[nearestSegment + 1]));
 
   for (let i = nearestSegment + 1; i < coords.length - 1; i++) {
     total += haversineMeters(latLngFromCoord(coords[i]), latLngFromCoord(coords[i + 1]));
@@ -511,8 +493,16 @@ export function shouldFireVoiceCue(
   kind: 'far' | 'medium' | 'near' | 'now',
   thresholds: { far: number; medium: number; near: number; now: number },
 ): boolean {
+  // Short city turns still need a "now" cue; only skip far/medium when the
+  // step itself is shorter than the cue distance plus a small buffer.
   const minStepForCue =
-    kind === 'far' ? thresholds.far + 120 : kind === 'medium' ? thresholds.medium + 80 : thresholds.near + 30;
+    kind === 'far'
+      ? thresholds.far + 80
+      : kind === 'medium'
+        ? thresholds.medium + 40
+        : kind === 'near'
+          ? thresholds.near + 20
+          : 0;
   if (stepDistanceMeters < minStepForCue) return false;
 
   switch (kind) {

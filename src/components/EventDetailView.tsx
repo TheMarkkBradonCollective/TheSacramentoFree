@@ -140,7 +140,7 @@ export default function EventDetailView({
             </div>
           </div>
 
-          <EventDetailNavigation event={event} />
+          <EventDetailNavigation event={event} currentUserId={currentUserId} />
 
           <div className="sbn-card p-3 space-y-3">
             <button

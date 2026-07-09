@@ -174,6 +174,7 @@ export default function MobileView({
             onOpenNewPost={onOpenNewPost}
             onImmersiveModeChange={setMapImmersiveNav}
             itemsHydrated={itemsHydrated}
+            eventsHydrated={!isEventsLoading}
             eventsEngagement={eventsEngagement}
             commentsLocked={!canAccessEvents}
           />
