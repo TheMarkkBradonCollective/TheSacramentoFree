@@ -1632,7 +1632,7 @@ export default function App() {
           </div>
           
           {!isIOS && (
-            <div className="mt-3 flex items-center justify-end space-x-3 pt-2.5 border-t border-[#1A1A1B]">
+            <div className="mt-3 flex items-center justify-end space-x-3 pt-2.5 border-t border-app">
               <button
                 onClick={handleDismissPrompt}
                 className="px-3.5 py-1.5 text-[11px] font-extrabold text-muted hover:text-app rounded-lg transition-all cursor-pointer"

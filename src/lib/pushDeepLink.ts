@@ -6,7 +6,6 @@ export interface PushDeepLinkTarget {
   eventId?: string;
   conversationId?: string;
   requestId?: string;
-  profile?: boolean;
   notifications?: boolean;
   notificationsTab?: 'announcements' | 'updates' | 'notifications' | 'alerts' | 'listings';
   staffPanel?: 'tickets' | 'reports';

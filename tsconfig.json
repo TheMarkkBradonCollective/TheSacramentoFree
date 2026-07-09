@@ -23,5 +23,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["src", "api", "server", "lib", "vite.config.ts"]
+  "include": ["src", "api", "server", "lib", "shared", "vite.config.ts"]
 }
