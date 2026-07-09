@@ -71,6 +71,7 @@ interface MobileViewProps {
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
   onOpenChatById?: (chatId: string) => void;
+  onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
 }
 
@@ -131,6 +132,7 @@ export default function MobileView({
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
   onOpenChatById,
+  onOpenTicketById,
   onViewListingId,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
@@ -172,6 +174,7 @@ export default function MobileView({
               actor={userProfile}
               onViewProfile={onViewProfile}
               onOpenChat={onOpenChatById}
+              onOpenTicket={onOpenTicketById}
               onViewListing={onViewListingId}
             />
           )}

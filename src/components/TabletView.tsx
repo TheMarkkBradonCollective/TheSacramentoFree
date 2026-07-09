@@ -70,6 +70,7 @@ interface TabletViewProps {
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
   onOpenChatById?: (chatId: string) => void;
+  onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
 }
 
@@ -126,6 +127,7 @@ export default function TabletView({
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
   onOpenChatById,
+  onOpenTicketById,
   onViewListingId,
 }: TabletViewProps) {
   useScrollInputOnFocus();
@@ -150,6 +152,7 @@ export default function TabletView({
               actor={userProfile}
               onViewProfile={onViewProfile}
               onOpenChat={onOpenChatById}
+              onOpenTicket={onOpenTicketById}
               onViewListing={onViewListingId}
             />
           )}
