@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
 import path from 'path';
 import type {Connect, Plugin} from 'vite';
 import {defineConfig, loadEnv} from 'vite';
@@ -57,9 +58,39 @@ function pushApiPlugin(): Plugin {
   };
 }
 
+/**
+ * Injects a build timestamp into service-worker.js (and the legacy sw.js) so
+ * the browser always detects a byte change on every deploy and triggers the
+ * SW update chain automatically. Also writes /dist/version.json so the client
+ * can poll for new deploys as a fallback (e.g. iOS Safari).
+ */
+function swVersionPlugin(): Plugin {
+  return {
+    name: 'sw-version',
+    apply: 'build',
+    closeBundle() {
+      const timestamp = String(Date.now());
+      const distDir = path.resolve(__dirname, 'dist');
+
+      for (const swFile of ['service-worker.js', 'sw.js']) {
+        const swPath = path.join(distDir, swFile);
+        if (fs.existsSync(swPath)) {
+          const src = fs.readFileSync(swPath, 'utf-8');
+          fs.writeFileSync(swPath, src.replaceAll('__BUILD_TIMESTAMP__', timestamp));
+        }
+      }
+
+      fs.writeFileSync(
+        path.join(distDir, 'version.json'),
+        JSON.stringify({ v: timestamp, t: new Date().toISOString() }),
+      );
+    },
+  };
+}
+
 export default defineConfig(({mode}) => {
   return {
-    plugins: [react(), tailwindcss(), pushApiPlugin()],
+    plugins: [react(), tailwindcss(), pushApiPlugin(), swVersionPlugin()],
     define: clientEnvDefines(mode),
     resolve: {
       alias: {

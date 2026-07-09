@@ -1,4 +1,7 @@
-const CACHE_NAME = 'sac-buy-nothing-v12';
+// BUILD_TIMESTAMP is replaced at build time by the Vite swVersionPlugin.
+// Every deploy produces a unique value so the browser always detects a new SW.
+const BUILD_TIMESTAMP = '__BUILD_TIMESTAMP__';
+const CACHE_NAME = 'sac-buy-nothing-' + BUILD_TIMESTAMP;
 
 const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
 
@@ -77,6 +80,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.pathname === '/sw.js' || url.pathname === '/service-worker.js') {
+    return;
+  }
+
+  // Never cache the version manifest — always fetch live so clients detect new deploys.
+  if (url.pathname === '/version.json') {
     return;
   }
 

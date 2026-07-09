@@ -1,6 +1,7 @@
 // Legacy service worker — the app registers /service-worker.js instead.
 // This file remains for browsers that cached an older registration.
-const CACHE_NAME = 'sac-buy-nothing-v3';
+const BUILD_TIMESTAMP = '__BUILD_TIMESTAMP__';
+const CACHE_NAME = 'sac-buy-nothing-legacy-' + BUILD_TIMESTAMP;
 
 const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
 
@@ -78,8 +79,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Never cache the service worker itself.
+  // Never cache the service worker itself or the version manifest.
   if (url.pathname === '/sw.js' || url.pathname === '/service-worker.js') {
+    return;
+  }
+
+  if (url.pathname === '/version.json') {
     return;
   }
 
