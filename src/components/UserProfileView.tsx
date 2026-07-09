@@ -88,7 +88,7 @@ export default function UserProfileView({
   const [neighborhood, setNeighborhood] = useState(userProfile.neighborhood);
   const [bio, setBio] = useState(userProfile.bio || '');
   const [photoURL, setPhotoURL] = useState(
-    userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`,
+    userProfile.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.uid)}`,
   );
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -132,9 +132,9 @@ export default function UserProfileView({
     if (isPhotoUploading) return;
     setPhotoURL(
       userProfile.photoURL ||
-        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`,
+        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.uid)}`,
     );
-  }, [userProfile.photoURL, userProfile.displayName, isPhotoUploading]);
+  }, [userProfile.photoURL, userProfile.uid, isPhotoUploading]);
 
   // PWA Prompt status
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);

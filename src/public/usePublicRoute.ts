@@ -1,15 +1,32 @@
 import { useCallback, useEffect, useState } from 'react';
-import { parsePublicRoute, publicRouteHref, type PublicRoute } from './routes';
+import {
+  bridgePathnameToPublicHash,
+  parsePublicRoute,
+  publicRouteHref,
+  type PublicRoute,
+} from './routes';
+
+function readCurrentPublicRoute(): PublicRoute {
+  if (typeof window === 'undefined') return 'home';
+  bridgePathnameToPublicHash();
+  return parsePublicRoute(window.location.hash);
+}
 
 export function usePublicRoute() {
-  const [route, setRoute] = useState<PublicRoute>(() =>
-    parsePublicRoute(typeof window !== 'undefined' ? window.location.hash : ''),
-  );
+  const [route, setRoute] = useState<PublicRoute>(readCurrentPublicRoute);
 
   useEffect(() => {
-    const sync = () => setRoute(parsePublicRoute(window.location.hash));
+    const sync = () => {
+      bridgePathnameToPublicHash();
+      setRoute(parsePublicRoute(window.location.hash));
+    };
+    sync();
     window.addEventListener('hashchange', sync);
-    return () => window.removeEventListener('hashchange', sync);
+    window.addEventListener('popstate', sync);
+    return () => {
+      window.removeEventListener('hashchange', sync);
+      window.removeEventListener('popstate', sync);
+    };
   }, []);
 
   const navigate = useCallback((next: PublicRoute) => {
