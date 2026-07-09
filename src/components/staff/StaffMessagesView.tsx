@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
   Flag,
   Globe,
   Inbox,
@@ -9,26 +12,28 @@ import {
   Loader2,
   MessageSquare,
   Shield,
-  X,
+  Users,
 } from 'lucide-react';
-import type { ItemComment, SupportTicket, UserProfile, UserReport } from '../../types';
+import type { Chat, ItemComment, Message, SupportTicket, UserProfile, UserReport } from '../../types';
 import {
   getStaffUserReports,
-  markUserReportReviewed,
   getSupportTicketsForStaff,
+  getSupabaseMessages,
+  markUserReportReviewed,
+  staffGetAllDirectChats,
   staffGetRecentComments,
   getUserDisplayInfoByIds,
 } from '../../supabase';
 import { isStaffRole } from '../../lib/roles';
 import RoleBadge from '../RoleBadge';
 
-type MessagesSection = 'community' | 'reports' | 'tickets' | 'comments';
+type MessagesSection = 'community' | 'reports' | 'tickets' | 'comments' | 'dms';
 
 interface StaffMessagesViewProps {
   actor: UserProfile;
   onViewProfile: (userId: string) => void;
   onOpenChat?: (chatId: string) => void;
-  onViewItem?: (itemId: string) => void;
+  onViewListing?: (itemId: string) => void | Promise<void>;
 }
 
 function SectionTab({
@@ -68,15 +73,32 @@ function SectionTab({
   );
 }
 
-export default function StaffMessagesView({ actor, onViewProfile, onOpenChat }: StaffMessagesViewProps) {
+function chatParticipantLabel(chat: Chat): string {
+  const names = Object.values(chat.participantNames ?? {}).filter(Boolean);
+  if (names.length >= 2) return names.join(' ↔ ');
+  if (names.length === 1) return names[0];
+  return chat.participantIds.join(' ↔ ');
+}
+
+export default function StaffMessagesView({
+  actor,
+  onViewProfile,
+  onOpenChat,
+  onViewListing,
+}: StaffMessagesViewProps) {
   const [section, setSection] = useState<MessagesSection>('reports');
   const [reports, setReports] = useState<UserReport[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [recentComments, setRecentComments] = useState<ItemComment[]>([]);
+  const [directChats, setDirectChats] = useState<Chat[]>([]);
   const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  const [expandedChatId, setExpandedChatId] = useState<string | null>(null);
+  const [expandedMessages, setExpandedMessages] = useState<Message[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [listingBusyId, setListingBusyId] = useState<string | null>(null);
 
   const loadSection = async (s: MessagesSection) => {
     setLoading(true);
@@ -98,6 +120,9 @@ export default function StaffMessagesView({ actor, onViewProfile, onOpenChat }: 
           if (d.role) roles[uid] = d.role;
         }
         setCommenterRoles(roles);
+      } else if (s === 'dms') {
+        const rows = await staffGetAllDirectChats(500);
+        setDirectChats(rows);
       }
     } catch {
       setErr('Could not load data.');
@@ -118,6 +143,33 @@ export default function StaffMessagesView({ actor, onViewProfile, onOpenChat }: 
     setReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, status: 'reviewed' } : r)),
     );
+  };
+
+  const handleViewCommentListing = async (itemId: string) => {
+    if (!onViewListing) return;
+    setListingBusyId(itemId);
+    setErr('');
+    try {
+      await onViewListing(itemId);
+    } catch {
+      setErr('Could not open that listing.');
+    } finally {
+      setListingBusyId(null);
+    }
+  };
+
+  const toggleChatMessages = async (chat: Chat) => {
+    if (expandedChatId === chat.id) {
+      setExpandedChatId(null);
+      setExpandedMessages([]);
+      return;
+    }
+
+    setExpandedChatId(chat.id);
+    setMessagesLoading(true);
+    const messages = await getSupabaseMessages(chat.id);
+    setExpandedMessages(messages);
+    setMessagesLoading(false);
   };
 
   const formatDate = (iso: unknown) => {
@@ -141,8 +193,7 @@ export default function StaffMessagesView({ actor, onViewProfile, onOpenChat }: 
         <p className="text-[10px] font-black uppercase tracking-widest text-accent font-mono pb-0.5">Staff Panel</p>
         <h2 className="font-display font-bold text-app text-lg">Message Management</h2>
         <p className="text-xs text-muted mt-0.5 pb-3">
-          Oversight of reports, support tickets, public comments, and community channels.
-          Private direct messages are not monitored to protect neighbor privacy.
+          Oversight of reports, support tickets, listing comments, community channels, and neighbor DMs.
         </p>
 
         {/* Section tabs */}
@@ -150,6 +201,7 @@ export default function StaffMessagesView({ actor, onViewProfile, onOpenChat }: 
           <SectionTab id="reports" active={section === 'reports'} icon={Flag} label="Reports" badge={newReportCount} onClick={() => setSection('reports')} />
           <SectionTab id="tickets" active={section === 'tickets'} icon={LifeBuoy} label="Support" badge={openTicketCount} onClick={() => setSection('tickets')} />
           <SectionTab id="comments" active={section === 'comments'} icon={MessageSquare} label="Comments" onClick={() => setSection('comments')} />
+          <SectionTab id="dms" active={section === 'dms'} icon={Users} label="DMs" badge={directChats.length || undefined} onClick={() => setSection('dms')} />
           <SectionTab id="community" active={section === 'community'} icon={Globe} label="Community Chats" onClick={() => setSection('community')} />
         </div>
       </div>
@@ -249,16 +301,26 @@ export default function StaffMessagesView({ actor, onViewProfile, onOpenChat }: 
               {recentComments.map((comment) => {
                 const commenterRole = commenterRoles[comment.userId];
                 const commenterIsStaff = isStaffRole(commenterRole);
+                const openingListing = listingBusyId === comment.itemId;
                 return (
-                  <div key={comment.id} className={`p-4 space-y-1 ${commenterIsStaff ? 'bg-accent/5' : ''}`}>
+                  <button
+                    key={comment.id}
+                    type="button"
+                    onClick={() => void handleViewCommentListing(comment.itemId)}
+                    disabled={openingListing || !onViewListing}
+                    className={`w-full text-left p-4 space-y-1 transition-colors hover:bg-inset/80 ${commenterIsStaff ? 'bg-accent/5' : ''}`}
+                  >
                     <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => onViewProfile(comment.userId)}
+                      <span
+                        role="presentation"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewProfile(comment.userId);
+                        }}
                         className="text-xs font-bold text-app hover:text-accent"
                       >
                         {comment.userName}
-                      </button>
+                      </span>
                       {commenterIsStaff && commenterRole && (
                         <span className="scale-[0.8] origin-left inline-block">
                           <RoleBadge role={commenterRole} />
@@ -267,9 +329,100 @@ export default function StaffMessagesView({ actor, onViewProfile, onOpenChat }: 
                       {!commenterIsStaff && (
                         <span className="text-[10px] text-accent">{comment.userNeighborhood}</span>
                       )}
+                      {openingListing && <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />}
                     </div>
                     <p className="text-sm text-muted leading-relaxed">{comment.text}</p>
-                    <p className="text-[10px] text-subtle">{formatDate(comment.createdAt)}</p>
+                    <p className="text-[10px] text-subtle">
+                      {formatDate(comment.createdAt)}
+                      {onViewListing ? ' · Tap to open listing and view in context' : ''}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Direct messages & listing chats ─────────────────── */}
+          {section === 'dms' && (
+            <div className="divide-y divide-app">
+              {directChats.length === 0 && (
+                <div className="p-8 text-center text-sm text-muted">
+                  <Users className="w-8 h-8 mx-auto mb-2 text-subtle" />
+                  No direct or listing chats yet.
+                </div>
+              )}
+              {directChats.map((chat) => {
+                const isExpanded = expandedChatId === chat.id;
+                const linkedListing = chat.itemTitle?.trim();
+                return (
+                  <div key={chat.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void toggleChatMessages(chat)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <p className="text-sm font-semibold text-app">{chatParticipantLabel(chat)}</p>
+                        {linkedListing && (
+                          <p className="text-[10px] text-accent mt-0.5 truncate">Re: {linkedListing}</p>
+                        )}
+                        {chat.lastMessageText && (
+                          <p className="text-xs text-muted mt-1 line-clamp-2">{chat.lastMessageText}</p>
+                        )}
+                        <p className="text-[10px] text-subtle mt-1">{formatDate(chat.lastMessageAt)}</p>
+                      </button>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => void toggleChatMessages(chat)}
+                          className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                        >
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          {isExpanded ? 'Hide' : 'Read'}
+                        </button>
+                        {onOpenChat && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenChat(chat.id)}
+                            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            Open
+                          </button>
+                        )}
+                        {chat.itemId && onViewListing && (
+                          <button
+                            type="button"
+                            onClick={() => void handleViewCommentListing(chat.itemId!)}
+                            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                          >
+                            Listing
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="mt-2 rounded-xl border border-app bg-inset/60 p-3 space-y-2 max-h-64 overflow-y-auto">
+                        {messagesLoading ? (
+                          <div className="flex justify-center py-4">
+                            <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                          </div>
+                        ) : expandedMessages.length === 0 ? (
+                          <p className="text-xs text-muted text-center py-2">No messages in this thread.</p>
+                        ) : (
+                          expandedMessages.map((msg) => (
+                            <div key={msg.id} className="text-xs">
+                              <p className="font-semibold text-app">
+                                {chat.participantNames?.[msg.senderId] ?? 'Neighbor'}
+                                <span className="text-subtle font-normal"> · {formatDate(msg.createdAt)}</span>
+                              </p>
+                              <p className="text-muted mt-0.5 whitespace-pre-wrap break-words">{msg.text}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -315,8 +468,8 @@ export default function StaffMessagesView({ actor, onViewProfile, onOpenChat }: 
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-400 leading-relaxed">
-                    <strong>Privacy notice:</strong> Private direct messages between neighbors are not accessible to staff.
-                    Community channels and support tickets are monitored for safety and moderation purposes.
+                    <strong>Staff oversight:</strong> Use the DMs tab to review neighbor direct messages and listing-linked chats.
+                    Open any thread in Chats to respond or moderate when needed.
                   </p>
                 </div>
               </div>

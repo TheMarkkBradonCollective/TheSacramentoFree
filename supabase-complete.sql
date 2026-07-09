@@ -2163,6 +2163,7 @@ AS $$
   SELECT
     chat_id = 'community-global'
     OR (chat_id = 'community-staff' AND public.is_staff())
+    OR public.is_staff()
     OR public.is_chat_participant(chat_id);
 $$;
 

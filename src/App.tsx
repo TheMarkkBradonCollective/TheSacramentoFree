@@ -32,6 +32,7 @@ import {
   isAccountRestricted,
   migrateLocalSavedItemsToDb,
   getClaimRequestById,
+  staffGetListingById,
 } from './supabase';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
@@ -1065,6 +1066,21 @@ export default function App() {
     setActiveTab('chats');
   }, []);
 
+  const handleViewListingId = useCallback(
+    async (itemId: string) => {
+      const fromFeed = items.find((i) => i.id === itemId);
+      const item = fromFeed ?? (await staffGetListingById(itemId));
+      if (!item) {
+        setErrorMsg('That listing is no longer available.');
+        return;
+      }
+      setDetailItem(item);
+      await engagement.ensureEngagementForPost(item.id);
+      engagement.setCommentsExpanded(item.id, true);
+    },
+    [items, engagement],
+  );
+
   const handleClaimSubmitted = useCallback((chatId: string) => {
     setDetailItem(null);
     setInitialSelectedChatId(chatId);
@@ -1353,6 +1369,8 @@ export default function App() {
                   onClearInitialChatSupportView={() => setInitialChatSupportView(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
+                  onOpenChatById={handleOpenChatFromProfile}
+                  onViewListingId={handleViewListingId}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -1402,6 +1420,8 @@ export default function App() {
                   onClearInitialChatSupportView={() => setInitialChatSupportView(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
+                  onOpenChatById={handleOpenChatFromProfile}
+                  onViewListingId={handleViewListingId}
                 />
               ) : (
                 <DesktopView
@@ -1451,6 +1471,8 @@ export default function App() {
                   onClearInitialChatSupportView={() => setInitialChatSupportView(null)}
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
+                  onOpenChatById={handleOpenChatFromProfile}
+                  onViewListingId={handleViewListingId}
                 />
               )}
 

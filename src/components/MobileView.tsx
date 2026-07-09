@@ -70,6 +70,8 @@ interface MobileViewProps {
   onClearInitialChatSupportView?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
+  onOpenChatById?: (chatId: string) => void;
+  onViewListingId?: (itemId: string) => void | Promise<void>;
 }
 
 const MOBILE_NAV_LEFT = [
@@ -128,6 +130,8 @@ export default function MobileView({
   onClearInitialChatSupportView,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
+  onOpenChatById,
+  onViewListingId,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<MapContentFilter>('all');
@@ -163,7 +167,14 @@ export default function MobileView({
           {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
           {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
           {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
-          {activeTab === 'staff_messages' && <StaffMessagesView actor={userProfile} onViewProfile={onViewProfile} onOpenChat={() => setActiveTab('chats')} />}
+          {activeTab === 'staff_messages' && (
+            <StaffMessagesView
+              actor={userProfile}
+              onViewProfile={onViewProfile}
+              onOpenChat={onOpenChatById}
+              onViewListing={onViewListingId}
+            />
+          )}
           {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
           {activeTab === 'staff_moderation' && <StaffModerationView actor={userProfile} onViewProfile={onViewProfile} />}
           {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}

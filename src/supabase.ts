@@ -4796,6 +4796,55 @@ export async function staffGetRecentComments(limit = 200): Promise<ItemComment[]
   }
 }
 
+/** Staff: fetch a single listing by id (any status). */
+export async function staffGetListingById(itemId: string): Promise<ItemPost | null> {
+  try {
+    const { data, error } = await supabase.from('items').select('*').eq('id', itemId).maybeSingle();
+    if (error) {
+      handleSupabaseError(error, 'items');
+      return null;
+    }
+    if (!data) return null;
+    return normalizeItemFromRow(data as ItemPost);
+  } catch {
+    return null;
+  }
+}
+
+/** Staff: all direct and listing-linked chats (excludes community channels). */
+export async function staffGetAllDirectChats(limit = 500): Promise<Chat[]> {
+  try {
+    const { data, error } = await supabase
+      .from('chats')
+      .select('*')
+      .order('lastMessageAt', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      handleSupabaseError(error, 'chats');
+      return [];
+    }
+
+    return ((data ?? []) as Chat[]).filter((chat) => !isCommunityChat(chat.id));
+  } catch {
+    return [];
+  }
+}
+
+/** Staff: fetch a chat row by id (for opening oversight threads). */
+export async function getSupabaseChatById(chatId: string): Promise<Chat | null> {
+  try {
+    const { data, error } = await supabase.from('chats').select('*').eq('id', chatId).maybeSingle();
+    if (error) {
+      handleSupabaseError(error, 'chats');
+      return null;
+    }
+    return (data as Chat) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Staff: fetch all listings (any status except physically deleted) ordered by newest first. */
 export async function staffGetAllListings(): Promise<ItemPost[]> {
   try {
