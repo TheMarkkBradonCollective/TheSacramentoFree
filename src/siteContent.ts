@@ -1,7 +1,5 @@
-/** Community logo (public/Logo.jpeg). */
+/** Community logo shown in the app UI and PWA install banner. */
 export const APP_LOGO_SRC = '/Logo.jpeg';
-export const PUSH_ICON_SRC = '/Logo.jpeg';
-export const PUSH_BADGE_SRC = '/Logo.jpeg';
 
 export const SITE = {
   name: 'Sacramento Buy Nothing',
@@ -173,7 +171,7 @@ export const SUPPORT = {
 
 export const DIRECTOR_MESSAGE = {
   /** Fallback until the director profile loads from the database. */
-  name: 'Markk White',
+  name: 'Markeith White',
   title: 'Buy Nothing Director',
   headline: 'A note from your director',
   goal:
