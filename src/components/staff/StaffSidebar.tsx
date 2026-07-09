@@ -18,7 +18,6 @@ import {
 import type { UserProfile } from '../../types';
 import type { AnyTab } from '../../lib/appTabs';
 import { normalizeUserRole, roleLabel, roleRank } from '../../lib/roles';
-import { NotificationsHubButton } from '../../contexts/NotificationsHubContext';
 import BrandLogo from '../BrandLogo';
 
 interface SidebarItem {
@@ -180,9 +179,8 @@ export default function StaffSidebar({
       </nav>
 
       {/* Footer */}
-      <div className={`border-t border-app p-2 flex items-center gap-2 ${collapsed ? 'flex-col' : 'justify-between'}`}>
-        <NotificationsHubButton />
-        {onToggleCollapse && (
+      {onToggleCollapse && (
+        <div className={`border-t border-app p-2 flex items-center ${collapsed ? 'justify-center' : 'justify-end'}`}>
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -204,8 +202,8 @@ export default function StaffSidebar({
               <path d="m15 18-6-6 6-6" />
             </svg>
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   );
 }
