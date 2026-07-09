@@ -1,22 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   AlertCircle,
   CheckCircle,
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Eye,
   Flag,
   Globe,
-  Inbox,
   LifeBuoy,
   Loader2,
   MessageSquare,
   Shield,
   Users,
 } from 'lucide-react';
-import type { Chat, ItemComment, Message, SupportTicket, UserProfile, UserReport } from '../../types';
+import type { Chat, ItemComment, Message, SupportTicket, SupportTicketMessage, UserProfile, UserReport } from '../../types';
 import {
   getStaffUserReports,
+  getSupportTicketMessages,
   getSupportTicketsForStaff,
   getSupabaseMessages,
   markUserReportReviewed,
@@ -26,6 +27,7 @@ import {
 } from '../../supabase';
 import { isStaffRole } from '../../lib/roles';
 import RoleBadge from '../RoleBadge';
+import ListingImage from '../ListingImage';
 
 type MessagesSection = 'community' | 'reports' | 'tickets' | 'comments' | 'dms';
 
@@ -33,6 +35,7 @@ interface StaffMessagesViewProps {
   actor: UserProfile;
   onViewProfile: (userId: string) => void;
   onOpenChat?: (chatId: string) => void;
+  onOpenTicket?: (ticketId: string) => void;
   onViewListing?: (itemId: string) => void | Promise<void>;
 }
 
@@ -73,6 +76,31 @@ function SectionTab({
   );
 }
 
+function ExpandPanel({ children }: { children: ReactNode }) {
+  return (
+    <div className="mt-2 rounded-xl border border-app bg-inset/60 p-3 space-y-2 max-h-72 overflow-y-auto">
+      {children}
+    </div>
+  );
+}
+
+function ExpandButton({
+  expanded,
+  onClick,
+  label = 'Read',
+}: {
+  expanded: boolean;
+  onClick: () => void;
+  label?: string;
+}) {
+  return (
+    <button type="button" onClick={onClick} className="sbn-btn sbn-btn-secondary sbn-btn-sm">
+      {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+      {expanded ? 'Hide' : label}
+    </button>
+  );
+}
+
 function chatParticipantLabel(chat: Chat): string {
   const names = Object.values(chat.participantNames ?? {}).filter(Boolean);
   if (names.length >= 2) return names.join(' ↔ ');
@@ -84,6 +112,7 @@ export default function StaffMessagesView({
   actor,
   onViewProfile,
   onOpenChat,
+  onOpenTicket,
   onViewListing,
 }: StaffMessagesViewProps) {
   const [section, setSection] = useState<MessagesSection>('reports');
@@ -95,9 +124,10 @@ export default function StaffMessagesView({
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState('');
-  const [expandedChatId, setExpandedChatId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<Message[]>([]);
-  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [expandedTicketMessages, setExpandedTicketMessages] = useState<SupportTicketMessage[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [listingBusyId, setListingBusyId] = useState<string | null>(null);
 
   const loadSection = async (s: MessagesSection) => {
@@ -131,7 +161,12 @@ export default function StaffMessagesView({
     }
   };
 
-  useEffect(() => { void loadSection(section); }, [section]);
+  useEffect(() => {
+    setExpandedId(null);
+    setExpandedMessages([]);
+    setExpandedTicketMessages([]);
+    void loadSection(section);
+  }, [section]);
 
   const newReportCount = reports.filter((r) => r.status === 'new').length;
   const openTicketCount = tickets.filter((t) => t.status === 'open').length;
@@ -158,18 +193,54 @@ export default function StaffMessagesView({
     }
   };
 
-  const toggleChatMessages = async (chat: Chat) => {
-    if (expandedChatId === chat.id) {
-      setExpandedChatId(null);
-      setExpandedMessages([]);
+  const collapseExpanded = () => {
+    setExpandedId(null);
+    setExpandedMessages([]);
+    setExpandedTicketMessages([]);
+  };
+
+  const toggleExpanded = async (id: string, loader?: () => Promise<void>) => {
+    if (expandedId === id) {
+      collapseExpanded();
       return;
     }
 
-    setExpandedChatId(chat.id);
-    setMessagesLoading(true);
-    const messages = await getSupabaseMessages(chat.id);
-    setExpandedMessages(messages);
-    setMessagesLoading(false);
+    setExpandedId(id);
+    setExpandedMessages([]);
+    setExpandedTicketMessages([]);
+
+    if (!loader) return;
+
+    setDetailLoading(true);
+    try {
+      await loader();
+    } catch {
+      setErr('Could not load details.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const toggleReport = (reportId: string) => {
+    void toggleExpanded(`report:${reportId}`);
+  };
+
+  const toggleTicket = (ticket: SupportTicket) => {
+    void toggleExpanded(`ticket:${ticket.id}`, async () => {
+      const messages = await getSupportTicketMessages(ticket.id);
+      setExpandedTicketMessages(messages);
+    });
+  };
+
+  const toggleComment = (commentId: string) => {
+    void toggleExpanded(`comment:${commentId}`);
+  };
+
+  const toggleChatMessages = (chat: Chat) => {
+    void toggleExpanded(`chat:${chat.id}`, async () => {
+      const messages = await getSupabaseMessages(chat.id);
+      setExpandedMessages(messages);
+    });
   };
 
   const formatDate = (iso: unknown) => {
@@ -186,9 +257,10 @@ export default function StaffMessagesView({
     }
   };
 
+  const isExpanded = (id: string) => expandedId === id;
+
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden">
-      {/* Header */}
       <div className="px-4 pt-4 pb-0 border-b border-app shrink-0">
         <p className="text-[10px] font-black uppercase tracking-widest text-accent font-mono pb-0.5">Staff Panel</p>
         <h2 className="font-display font-bold text-app text-lg">Message Management</h2>
@@ -196,7 +268,6 @@ export default function StaffMessagesView({
           Oversight of reports, support tickets, listing comments, community channels, and neighbor DMs.
         </p>
 
-        {/* Section tabs */}
         <div className="flex overflow-x-auto -mx-0 gap-0 border-t border-app">
           <SectionTab id="reports" active={section === 'reports'} icon={Flag} label="Reports" badge={newReportCount} onClick={() => setSection('reports')} />
           <SectionTab id="tickets" active={section === 'tickets'} icon={LifeBuoy} label="Support" badge={openTicketCount} onClick={() => setSection('tickets')} />
@@ -208,7 +279,6 @@ export default function StaffMessagesView({
 
       {err && <p className="px-4 py-2 text-xs font-semibold text-red-400 shrink-0">{err}</p>}
 
-      {/* Content */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-5 h-5 animate-spin text-accent" />
@@ -216,7 +286,6 @@ export default function StaffMessagesView({
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0">
 
-          {/* ── User Reports ───────────────────────────────────── */}
           {section === 'reports' && (
             <div className="divide-y divide-app">
               {reports.length === 0 && (
@@ -225,41 +294,84 @@ export default function StaffMessagesView({
                   No user reports.
                 </div>
               )}
-              {reports.map((report) => (
-                <div key={report.id} className={`p-4 space-y-2 ${report.status === 'new' ? 'bg-accent/5' : ''}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${report.status === 'new' ? 'bg-amber-500/15 text-amber-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
-                          {report.status === 'new' ? 'New' : 'Reviewed'}
-                        </span>
-                        <span className="text-xs font-semibold text-app">{report.subject || 'User report'}</span>
-                      </div>
-                      <p className="text-[10px] text-muted mt-1">
-                        From <button type="button" onClick={() => onViewProfile(report.reporterUserId)} className="font-semibold text-accent hover:underline">{report.reporterName}</button>
-                        {' '}about <button type="button" onClick={() => onViewProfile(report.reportedUserId)} className="font-semibold text-accent hover:underline">{report.reportedUserName}</button>
-                        {' · '}{formatDate(report.createdAt)}
-                      </p>
-                      {report.body && <p className="text-xs text-muted mt-1 line-clamp-3 leading-relaxed">{report.body}</p>}
-                    </div>
-                    {report.status === 'new' && (
+              {reports.map((report) => {
+                const expanded = isExpanded(`report:${report.id}`);
+                return (
+                  <div key={report.id} className={`p-4 space-y-2 ${report.status === 'new' ? 'bg-accent/5' : ''}`}>
+                    <div className="flex items-start justify-between gap-2">
                       <button
                         type="button"
-                        disabled={busyId === report.id}
-                        onClick={() => void handleMarkReviewed(report.id)}
-                        className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0"
+                        onClick={() => toggleReport(report.id)}
+                        className="min-w-0 flex-1 text-left"
                       >
-                        {busyId === report.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                        Mark reviewed
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${report.status === 'new' ? 'bg-amber-500/15 text-amber-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
+                            {report.status === 'new' ? 'New' : 'Reviewed'}
+                          </span>
+                          <span className="text-xs font-semibold text-app">{report.subject || 'User report'}</span>
+                        </div>
+                        <p className="text-[10px] text-muted mt-1">
+                          From {report.reporterName}
+                          {report.reportedUserName ? ` about ${report.reportedUserName}` : ''}
+                          {' · '}{formatDate(report.createdAt)}
+                        </p>
+                        {report.body && !expanded && (
+                          <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">{report.body}</p>
+                        )}
                       </button>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <ExpandButton expanded={expanded} onClick={() => toggleReport(report.id)} />
+                        {report.status === 'new' && (
+                          <button
+                            type="button"
+                            disabled={busyId === report.id}
+                            onClick={() => void handleMarkReviewed(report.id)}
+                            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                          >
+                            {busyId === report.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                            Reviewed
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {expanded && (
+                      <ExpandPanel>
+                        <p className="text-xs text-muted leading-relaxed whitespace-pre-wrap">{report.body || 'No details provided.'}</p>
+                        <div className="text-[10px] text-subtle space-y-1 pt-1">
+                          <p>
+                            Reporter:{' '}
+                            <button type="button" onClick={() => onViewProfile(report.reporterUserId)} className="font-semibold text-accent hover:underline">
+                              {report.reporterName}
+                            </button>
+                          </p>
+                          {report.reportedUserId && report.reportedUserName && (
+                            <p>
+                              Reported neighbor:{' '}
+                              <button type="button" onClick={() => onViewProfile(report.reportedUserId!)} className="font-semibold text-accent hover:underline">
+                                {report.reportedUserName}
+                              </button>
+                            </p>
+                          )}
+                          {report.source && <p>Source: {report.source}</p>}
+                          <p>Submitted: {formatDate(report.createdAt)}</p>
+                        </div>
+                        {report.proofImageUrl && (
+                          <ListingImage
+                            src={report.proofImageUrl}
+                            alt="Report proof"
+                            width={320}
+                            className="max-w-xs rounded-lg border border-app"
+                          />
+                        )}
+                      </ExpandPanel>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
-          {/* ── Support Tickets ─────────────────────────────────── */}
           {section === 'tickets' && (
             <div className="divide-y divide-app">
               {tickets.length === 0 && (
@@ -268,28 +380,76 @@ export default function StaffMessagesView({
                   No support tickets.
                 </div>
               )}
-              {tickets.map((ticket) => (
-                <div key={ticket.id} className={`p-4 space-y-1 ${ticket.status === 'open' ? 'bg-accent/5' : ''}`}>
-                  <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ticket.status === 'open' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
-                          {ticket.status}
-                        </span>
-                        <span className="text-xs font-semibold text-app truncate">{ticket.subject}</span>
+              {tickets.map((ticket) => {
+                const expanded = isExpanded(`ticket:${ticket.id}`);
+                return (
+                  <div key={ticket.id} className={`p-4 space-y-2 ${ticket.status === 'open' ? 'bg-accent/5' : ''}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleTicket(ticket)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ticket.status === 'open' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
+                            {ticket.status}
+                          </span>
+                          <span className="text-xs font-semibold text-app truncate">{ticket.subject}</span>
+                        </div>
+                        <p className="text-[10px] text-muted mt-0.5">
+                          From {ticket.openerName} · {formatDate(ticket.updatedAt)}
+                        </p>
+                      </button>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <ExpandButton expanded={expanded} onClick={() => toggleTicket(ticket)} />
+                        {onOpenTicket && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenTicket(ticket.id)}
+                            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            Open
+                          </button>
+                        )}
                       </div>
-                      <p className="text-[10px] text-muted mt-0.5">
-                        From <button type="button" onClick={() => onViewProfile(ticket.openerUserId)} className="font-semibold text-accent hover:underline">{ticket.openerName}</button>
-                        {' · '}{formatDate(ticket.updatedAt)}
-                      </p>
                     </div>
+
+                    {expanded && (
+                      <ExpandPanel>
+                        {detailLoading ? (
+                          <div className="flex justify-center py-4">
+                            <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                          </div>
+                        ) : expandedTicketMessages.length === 0 ? (
+                          <p className="text-xs text-muted text-center py-2">No messages in this ticket.</p>
+                        ) : (
+                          expandedTicketMessages.map((msg) => (
+                            <div key={msg.id} className="text-xs">
+                              <p className="font-semibold text-app">
+                                {msg.senderName}
+                                <span className="text-subtle font-normal"> · {formatDate(msg.createdAt)}</span>
+                              </p>
+                              <p className="text-muted mt-0.5 whitespace-pre-wrap break-words">{msg.text}</p>
+                              {msg.imageUrl && (
+                                <ListingImage
+                                  src={msg.imageUrl}
+                                  alt="Attachment"
+                                  width={240}
+                                  className="mt-2 max-w-xs rounded-lg border border-app"
+                                />
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </ExpandPanel>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
-          {/* ── Recent Comments ─────────────────────────────────── */}
           {section === 'comments' && (
             <div className="divide-y divide-app">
               {recentComments.length === 0 && (
@@ -301,48 +461,80 @@ export default function StaffMessagesView({
               {recentComments.map((comment) => {
                 const commenterRole = commenterRoles[comment.userId];
                 const commenterIsStaff = isStaffRole(commenterRole);
+                const expanded = isExpanded(`comment:${comment.id}`);
                 const openingListing = listingBusyId === comment.itemId;
+
                 return (
-                  <button
-                    key={comment.id}
-                    type="button"
-                    onClick={() => void handleViewCommentListing(comment.itemId)}
-                    disabled={openingListing || !onViewListing}
-                    className={`w-full text-left p-4 space-y-1 transition-colors hover:bg-inset/80 ${commenterIsStaff ? 'bg-accent/5' : ''}`}
-                  >
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        role="presentation"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewProfile(comment.userId);
-                        }}
-                        className="text-xs font-bold text-app hover:text-accent"
+                  <div key={comment.id} className={`p-4 space-y-2 ${commenterIsStaff ? 'bg-accent/5' : ''}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleComment(comment.id)}
+                        className="min-w-0 flex-1 text-left"
                       >
-                        {comment.userName}
-                      </span>
-                      {commenterIsStaff && commenterRole && (
-                        <span className="scale-[0.8] origin-left inline-block">
-                          <RoleBadge role={commenterRole} />
-                        </span>
-                      )}
-                      {!commenterIsStaff && (
-                        <span className="text-[10px] text-accent">{comment.userNeighborhood}</span>
-                      )}
-                      {openingListing && <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-app">{comment.userName}</span>
+                          {commenterIsStaff && commenterRole && (
+                            <span className="scale-[0.8] origin-left inline-block">
+                              <RoleBadge role={commenterRole} />
+                            </span>
+                          )}
+                          {!commenterIsStaff && (
+                            <span className="text-[10px] text-accent">{comment.userNeighborhood}</span>
+                          )}
+                        </div>
+                        <p className={`text-sm text-muted leading-relaxed mt-1 ${expanded ? '' : 'line-clamp-2'}`}>
+                          {comment.text}
+                        </p>
+                        <p className="text-[10px] text-subtle mt-1">{formatDate(comment.createdAt)}</p>
+                      </button>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <ExpandButton expanded={expanded} onClick={() => toggleComment(comment.id)} />
+                        {onViewListing && (
+                          <button
+                            type="button"
+                            disabled={openingListing}
+                            onClick={() => void handleViewCommentListing(comment.itemId)}
+                            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                          >
+                            {openingListing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                            Listing
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-muted leading-relaxed">{comment.text}</p>
-                    <p className="text-[10px] text-subtle">
-                      {formatDate(comment.createdAt)}
-                      {onViewListing ? ' · Tap to open listing and view in context' : ''}
-                    </p>
-                  </button>
+
+                    {expanded && (
+                      <ExpandPanel>
+                        <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap">{comment.text}</p>
+                        <div className="text-[10px] text-subtle space-y-1">
+                          <p>
+                            Author:{' '}
+                            <button type="button" onClick={() => onViewProfile(comment.userId)} className="font-semibold text-accent hover:underline">
+                              {comment.userName}
+                            </button>
+                          </p>
+                          <p>Posted: {formatDate(comment.createdAt)}</p>
+                        </div>
+                        {onViewListing && (
+                          <button
+                            type="button"
+                            disabled={openingListing}
+                            onClick={() => void handleViewCommentListing(comment.itemId)}
+                            className="sbn-btn sbn-btn-secondary sbn-btn-sm w-fit"
+                          >
+                            {openingListing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                            View on listing
+                          </button>
+                        )}
+                      </ExpandPanel>
+                    )}
+                  </div>
                 );
               })}
             </div>
           )}
 
-          {/* ── Direct messages & listing chats ─────────────────── */}
           {section === 'dms' && (
             <div className="divide-y divide-app">
               {directChats.length === 0 && (
@@ -352,14 +544,14 @@ export default function StaffMessagesView({
                 </div>
               )}
               {directChats.map((chat) => {
-                const isExpanded = expandedChatId === chat.id;
+                const expanded = isExpanded(`chat:${chat.id}`);
                 const linkedListing = chat.itemTitle?.trim();
                 return (
                   <div key={chat.id} className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => void toggleChatMessages(chat)}
+                        onClick={() => toggleChatMessages(chat)}
                         className="min-w-0 flex-1 text-left"
                       >
                         <p className="text-sm font-semibold text-app">{chatParticipantLabel(chat)}</p>
@@ -372,14 +564,7 @@ export default function StaffMessagesView({
                         <p className="text-[10px] text-subtle mt-1">{formatDate(chat.lastMessageAt)}</p>
                       </button>
                       <div className="flex flex-col gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => void toggleChatMessages(chat)}
-                          className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-                        >
-                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                          {isExpanded ? 'Hide' : 'Read'}
-                        </button>
+                        <ExpandButton expanded={expanded} onClick={() => toggleChatMessages(chat)} />
                         {onOpenChat && (
                           <button
                             type="button"
@@ -402,9 +587,9 @@ export default function StaffMessagesView({
                       </div>
                     </div>
 
-                    {isExpanded && (
-                      <div className="mt-2 rounded-xl border border-app bg-inset/60 p-3 space-y-2 max-h-64 overflow-y-auto">
-                        {messagesLoading ? (
+                    {expanded && (
+                      <ExpandPanel>
+                        {detailLoading ? (
                           <div className="flex justify-center py-4">
                             <Loader2 className="w-4 h-4 animate-spin text-accent" />
                           </div>
@@ -421,7 +606,7 @@ export default function StaffMessagesView({
                             </div>
                           ))
                         )}
-                      </div>
+                      </ExpandPanel>
                     )}
                   </div>
                 );
@@ -429,7 +614,6 @@ export default function StaffMessagesView({
             </div>
           )}
 
-          {/* ── Community Chat Monitor ──────────────────────────── */}
           {section === 'community' && (
             <div className="p-4 space-y-3">
               <p className="text-xs text-muted leading-relaxed">

@@ -1066,6 +1066,11 @@ export default function App() {
     setActiveTab('chats');
   }, []);
 
+  const handleOpenSupportTicket = useCallback((ticketId: string) => {
+    setInitialSupportTicketId(ticketId);
+    setActiveTab('chats');
+  }, []);
+
   const handleViewListingId = useCallback(
     async (itemId: string) => {
       const fromFeed = items.find((i) => i.id === itemId);
@@ -1370,6 +1375,7 @@ export default function App() {
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                   onOpenChatById={handleOpenChatFromProfile}
+                  onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
                 />
               ) : deviceType === 'tablet' ? (
@@ -1421,6 +1427,7 @@ export default function App() {
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                   onOpenChatById={handleOpenChatFromProfile}
+                  onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
                 />
               ) : (
@@ -1472,6 +1479,7 @@ export default function App() {
                   scrollToDirectorOverview={scrollToDirectorOverview}
                   onClearScrollToDirectorOverview={() => setScrollToDirectorOverview(false)}
                   onOpenChatById={handleOpenChatFromProfile}
+                  onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
                 />
               )}
