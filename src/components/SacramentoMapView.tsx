@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng, CommunityEvent } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, NEIGHBORHOOD_LAT_LONGS, convertPercentToLatLng, CommunityEvent } from '../types';
 import {
   canViewerSeeExactLocation,
   getItemMapDestination,
+  hasExactMapPin,
   hasStoredGps,
   isLocationPrivate,
   stripListingMetadata,
@@ -817,24 +818,31 @@ export default function SacramentoMapView({
     setSelectedEvent(activeEvents[prevIdx]);
   };
 
-  // Only items with a saved, viewer-visible GPS pin appear on the map (list shows all activeItems).
+  // Every active listing gets a map pin: exact GPS when set, otherwise neighborhood center.
+  // All pins use the same solid circle style (no dashed approximate markers).
   const blipPositions = useMemo(() => {
     return activeItems.flatMap((item) => {
-      const customCoords = extractGPSCoordinates(item.description);
-      if (
-        !customCoords ||
-        !hasStoredGps(item.description) ||
-        !canViewerSeeExactLocation(item, userProfile?.uid)
-      ) {
-        return [];
+      if (hasExactMapPin(item, userProfile?.uid)) {
+        const customCoords = extractGPSCoordinates(item.description)!;
+        const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
+        return [
+          {
+            item,
+            lat,
+            lng,
+            color: getCategoryColor(item.category),
+          },
+        ];
       }
 
-      const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
+      const neighborhood = NEIGHBORHOOD_LAT_LONGS[item.neighborhood];
+      if (!neighborhood) return [];
+
       return [
         {
           item,
-          lat,
-          lng,
+          lat: neighborhood.lat,
+          lng: neighborhood.lng,
           color: getCategoryColor(item.category),
         },
       ];
@@ -2114,7 +2122,7 @@ export default function SacramentoMapView({
                 <p className="text-[10px] text-muted font-semibold leading-relaxed">
                   {showingEvents
                     ? 'No events with a map pin match your filters. Events without a set location still appear in the list.'
-                    : 'No listings with a map pin match your filters. List-only posts still appear in the feed — add a pickup pin when posting to show on the map!'}
+                    : 'No listings match your filters. Every listing appears at its neighborhood center until a pickup pin is added.'}
                 </p>
               </div>
             </div>
