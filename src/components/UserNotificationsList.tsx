@@ -16,7 +16,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
-import type { UserNotificationKind } from '../types';
+import type { UserNotificationItem, UserNotificationKind } from '../types';
 import { useUserNotifications } from '../hooks/useUserNotifications';
 import { parsePushDeepLink, type PushDeepLinkTarget } from '../lib/pushDeepLink';
 import PublicCard from './public/PublicCard';
