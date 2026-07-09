@@ -1656,7 +1656,7 @@ export default function MapNavigationView({
                 </div>
               </div>
 
-              {!loading && route && (rerouting || offRouteMeters > 55) && !arrived && (
+              {!loading && route && (rerouting || offRouteMeters > NAV_OFF_ROUTE_THRESHOLD_M) && !arrived && (
                 <p className="mt-2 text-center text-xs font-semibold text-[var(--sbn-nav-warning)]">
                   {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
                 </p>
