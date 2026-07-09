@@ -21,7 +21,7 @@ import MapSelectionRouteRow from './MapSelectionRouteRow';
 
 interface EventDetailNavigationProps {
   event: CommunityEvent;
-  currentUserId?: string;
+  currentUserId: string;
 }
 
 export default function EventDetailNavigation({ event, currentUserId }: EventDetailNavigationProps) {
@@ -100,6 +100,14 @@ export default function EventDetailNavigation({ event, currentUserId }: EventDet
 
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
+    saveActiveNavSession({
+      userId: currentUserId,
+      targetType: 'event',
+      targetId: event.id,
+      destination,
+      destinationLabel: event.title,
+      startedAt: Date.now(),
+    });
     setLockedOrigin(userLocation);
 
     if (currentUserId) {

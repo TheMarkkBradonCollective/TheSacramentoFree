@@ -257,6 +257,15 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
     arrivalHandledRef.current = false;
+    saveActiveNavSession({
+      userId: currentUserId,
+      targetType: 'post',
+      targetId: item.id,
+      postId: item.id,
+      destination,
+      destinationLabel: item.title,
+      startedAt: Date.now(),
+    });
     setLockedOrigin(userLocation);
 
     if (userProfile?.uid) {
@@ -275,7 +284,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     }
 
     setNavigationOpen(true);
-  }, [destination, userLocation, userProfile?.uid, item.id, item.title, session?.destinationLabel]);
+  }, [currentUserId, destination, userLocation, userProfile?.uid, item.id, item.title, session?.destinationLabel]);
 
   useEffect(() => {
     if (!navigationOpen || !userProfile?.uid) return;
@@ -423,6 +432,19 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     setNavigationOpen(false);
     setLockedOrigin(null);
   }, []);
+
+  useEffect(() => {
+    if (!navigationOpen || !destination) return;
+    saveActiveNavSession({
+      userId: currentUserId,
+      targetType: 'post',
+      targetId: item.id,
+      postId: item.id,
+      destination,
+      destinationLabel: item.title,
+      startedAt: Date.now(),
+    });
+  }, [navigationOpen, currentUserId, item.id, item.title, destination]);
 
   const meetNameForVoice = session
     ? session.fulfillerUserId === currentUserId
