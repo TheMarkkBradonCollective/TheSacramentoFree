@@ -10,14 +10,16 @@ import CommunityStatsBar from './CommunityStatsBar';
 import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
-import { type AnyTab, type AppTab } from '../lib/appTabs';
+import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import { isStaffRole } from '../lib/roles';
 import StaffSidebar from './staff/StaffSidebar';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
 import StaffOverviewView from './staff/StaffOverviewView';
-import StaffModerationView from './staff/StaffModerationView';
+import StaffViolationsView from './staff/StaffViolationsView';
+import StaffAuditView from './staff/StaffAuditView';
+import StaffWelcomeView from './staff/StaffWelcomeView';
 import StaffMessagesView from './staff/StaffMessagesView';
 import StaffMeetsView from './staff/StaffMeetsView';
 import PageScrollFooter from './PageScrollFooter';
@@ -130,7 +132,7 @@ export default function DesktopView({
   if (isStaff) {
     return (
       <div id="desktop_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
-        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />
+        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} onCollapse={() => setSidebarCollapsed(true)} autoCollapseOnNavigate />
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
           {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
           {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
@@ -145,9 +147,11 @@ export default function DesktopView({
             />
           )}
           {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_moderation' && <StaffModerationView actor={userProfile} onViewProfile={onViewProfile} />}
+          {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
+          {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
+          {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
           {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
-          {!['staff_overview', 'staff_users', 'staff_posts', 'staff_messages', 'staff_meets', 'staff_moderation', 'staff_team'].includes(activeTab) && (
+          {!isStaffTab(activeTab) && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <Navbar userProfile={userProfile} activeTab={communityTab} setActiveTab={(t) => setActiveTab(t)} onOpenNewPost={onOpenNewPost} onOpenAwards={onOpenAwards ?? (() => {})} awardsButtonGlow={awardsButtonGlow} />
               <main className="flex-1 min-h-0 overflow-hidden">

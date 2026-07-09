@@ -26,7 +26,9 @@ import {
   isStaffRole,
   ROLE_LABELS,
 } from '../../lib/roles';
+import { unlockViolationLockedAccount } from '../../lib/violations';
 import { useStaffPermission } from '../../hooks/useStaffPermission';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import NoPermissionModal from './NoPermissionModal';
 import UserAvatar from '../UserAvatar';
 
@@ -59,6 +61,8 @@ export default function StaffUsersView({ actor, onViewProfile }: StaffUsersViewP
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const perm = useStaffPermission(actor);
+  const { confirm } = useConfirm();
+  const canUnlockViolations = roleRank(actor.role) >= roleRank('city_administrator');
 
   const load = async () => {
     setLoading(true);
@@ -153,6 +157,17 @@ export default function StaffUsersView({ actor, onViewProfile }: StaffUsersViewP
     void run(user.uid, () =>
       staffUnbanUser({ actor, targetUserId: user.uid, targetName: user.displayName }),
     );
+  };
+
+  const handleUnlockViolations = async (user: StaffUserRow) => {
+    if (!canUnlockViolations) return;
+    const confirmed = await confirm({
+      title: 'Unlock account',
+      message: `Unlock ${user.displayName}'s account after their Go Get violations review?`,
+      confirmLabel: 'Unlock account',
+    });
+    if (!confirmed) return;
+    void run(user.uid, () => unlockViolationLockedAccount({ actor, targetUserId: user.uid }));
   };
 
   const formatDate = (createdAt: unknown) => {
@@ -347,6 +362,14 @@ export default function StaffUsersView({ actor, onViewProfile }: StaffUsersViewP
                                 className="sbn-btn sbn-btn-secondary sbn-btn-sm"
                               >
                                 <UserCheck className="w-3.5 h-3.5" /> Unsuspend
+                              </button>
+                            ) : user.accountStatus === 'locked' && canUnlockViolations ? (
+                              <button
+                                type="button"
+                                onClick={() => void handleUnlockViolations(user)}
+                                className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" /> Unlock (Go Get)
                               </button>
                             ) : user.accountStatus === 'active' || user.accountStatus === 'locked' ? (
                               <div className="flex items-center gap-1">

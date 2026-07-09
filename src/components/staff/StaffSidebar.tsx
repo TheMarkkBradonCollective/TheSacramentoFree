@@ -1,14 +1,16 @@
 import {
-  ActivitySquare,
   CalendarDays,
+  ClipboardList,
   FileText,
   GaugeCircle,
   Inbox,
   List,
   Map,
   MapPin,
+  Megaphone,
   MessageSquare,
   Shield,
+  ShieldAlert,
   ShieldCheck,
   User,
   Users,
@@ -16,7 +18,6 @@ import {
 import type { UserProfile } from '../../types';
 import type { AnyTab } from '../../lib/appTabs';
 import { normalizeUserRole, roleLabel, roleRank } from '../../lib/roles';
-import { NotificationsHubButton } from '../../contexts/NotificationsHubContext';
 import BrandLogo from '../BrandLogo';
 
 interface SidebarItem {
@@ -41,7 +42,9 @@ const NAV_ITEMS: SidebarItem[] = [
   { id: 'staff_posts', label: 'Listings', icon: FileText, section: 'staff', minRank: 1 },
   { id: 'staff_messages', label: 'Messages', icon: Inbox, section: 'staff', minRank: 1 },
   { id: 'staff_meets', label: 'Meet Records', icon: MapPin, section: 'staff', minRank: 1 },
-  { id: 'staff_moderation', label: 'Moderation', icon: ActivitySquare, section: 'staff', minRank: 1 },
+  { id: 'staff_violations', label: 'Go Get Violations', icon: ShieldAlert, section: 'staff', minRank: 1 },
+  { id: 'staff_audit', label: 'Audit Log', icon: ClipboardList, section: 'staff', minRank: 3 },
+  { id: 'staff_welcome', label: 'Welcome Message', icon: Megaphone, section: 'staff', minRank: 4 },
   { id: 'staff_team', label: 'Team', icon: Shield, section: 'staff', minRank: 2 },
 ];
 
@@ -51,6 +54,9 @@ interface StaffSidebarProps {
   onTabChange: (tab: AnyTab) => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  /** Collapse the sidebar after a nav item is selected (e.g. mobile/tablet). */
+  onCollapse?: () => void;
+  autoCollapseOnNavigate?: boolean;
 }
 
 export default function StaffSidebar({
@@ -59,8 +65,17 @@ export default function StaffSidebar({
   onTabChange,
   collapsed = false,
   onToggleCollapse,
+  onCollapse,
+  autoCollapseOnNavigate = false,
 }: StaffSidebarProps) {
   const actorRank = roleRank(userProfile.role);
+
+  const selectTab = (id: AnyTab) => {
+    onTabChange(id);
+    if (autoCollapseOnNavigate && onCollapse && !collapsed) {
+      onCollapse();
+    }
+  };
 
   const communityItems = NAV_ITEMS.filter((i) => i.section === 'community');
   const staffItems = NAV_ITEMS.filter(
@@ -109,7 +124,7 @@ export default function StaffSidebar({
               key={id}
               type="button"
               id={`staff_sidebar_${id}`}
-              onClick={() => onTabChange(id)}
+              onClick={() => selectTab(id)}
               aria-current={isActive ? 'page' : undefined}
               title={collapsed ? label : undefined}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mx-1 transition-colors text-sm font-medium ${
@@ -129,7 +144,7 @@ export default function StaffSidebar({
           <>
             {!collapsed && (
               <p className="px-3 pt-4 pb-1 text-[9px] font-black uppercase tracking-widest text-accent font-mono">
-                Staff Tools
+                Staff
               </p>
             )}
             {collapsed && <div className="mx-2 my-2 border-t border-app" />}
@@ -141,7 +156,7 @@ export default function StaffSidebar({
                   key={id}
                   type="button"
                   id={`staff_sidebar_${id}`}
-                  onClick={() => onTabChange(id)}
+                  onClick={() => selectTab(id)}
                   aria-current={isActive ? 'page' : undefined}
                   title={collapsed ? label : undefined}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mx-1 transition-colors text-sm font-medium ${
@@ -164,9 +179,8 @@ export default function StaffSidebar({
       </nav>
 
       {/* Footer */}
-      <div className={`border-t border-app p-2 flex items-center gap-2 ${collapsed ? 'flex-col' : 'justify-between'}`}>
-        <NotificationsHubButton />
-        {onToggleCollapse && (
+      {onToggleCollapse && (
+        <div className={`border-t border-app p-2 flex items-center ${collapsed ? 'justify-center' : 'justify-end'}`}>
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -188,8 +202,8 @@ export default function StaffSidebar({
               <path d="m15 18-6-6 6-6" />
             </svg>
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   );
 }

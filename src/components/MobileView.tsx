@@ -14,7 +14,7 @@ import AwardsButton from './AwardsButton';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
-import { type AnyTab, type AppTab } from '../lib/appTabs';
+import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import PageScrollFooter from './PageScrollFooter';
 import { isStaffRole } from '../lib/roles';
 import StaffSidebar from './staff/StaffSidebar';
@@ -22,7 +22,9 @@ import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
 import StaffOverviewView from './staff/StaffOverviewView';
-import StaffModerationView from './staff/StaffModerationView';
+import StaffViolationsView from './staff/StaffViolationsView';
+import StaffAuditView from './staff/StaffAuditView';
+import StaffWelcomeView from './staff/StaffWelcomeView';
 import StaffMessagesView from './staff/StaffMessagesView';
 import StaffMeetsView from './staff/StaffMeetsView';
 
@@ -139,7 +141,7 @@ export default function MobileView({
   const [selectedMobileType, setSelectedMobileType] = useState<MapContentFilter>('all');
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
   const [mapImmersiveNav, setMapImmersiveNav] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   useKeyboardInset();
   useScrollInputOnFocus();
@@ -163,8 +165,15 @@ export default function MobileView({
           onTabChange={setActiveTab}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+          onCollapse={() => setSidebarCollapsed(true)}
+          autoCollapseOnNavigate
         />
-        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+        <div
+          className="flex-1 min-w-0 flex flex-col h-full overflow-hidden"
+          onClick={() => {
+            if (!sidebarCollapsed) setSidebarCollapsed(true);
+          }}
+        >
           {/* Staff panel views */}
           {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
           {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
@@ -179,11 +188,13 @@ export default function MobileView({
             />
           )}
           {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_moderation' && <StaffModerationView actor={userProfile} onViewProfile={onViewProfile} />}
+          {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
+          {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
+          {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
           {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
 
           {/* Community tab content within the sidebar layout */}
-          {!['staff_overview', 'staff_users', 'staff_posts', 'staff_messages', 'staff_meets', 'staff_moderation', 'staff_team'].includes(activeTab) && (
+          {!isStaffTab(activeTab) && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <header className="sbn-glass-nav px-4 py-2 border-b border-app flex items-center justify-between shrink-0">
                 <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />
