@@ -21,6 +21,8 @@ import StaffSidebar from './staff/StaffSidebar';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
+import StaffOverviewView from './staff/StaffOverviewView';
+import StaffModerationView from './staff/StaffModerationView';
 
 interface MobileViewProps {
   items: ItemPost[];
@@ -156,18 +158,14 @@ export default function MobileView({
         />
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
           {/* Staff panel views */}
-          {activeTab === 'staff_users' && (
-            <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />
-          )}
-          {activeTab === 'staff_posts' && (
-            <StaffPostsView actor={userProfile} onViewItem={onViewItem} />
-          )}
-          {activeTab === 'staff_team' && (
-            <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />
-          )}
+          {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
+          {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
+          {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
+          {activeTab === 'staff_moderation' && <StaffModerationView actor={userProfile} onViewProfile={onViewProfile} />}
+          {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
 
           {/* Community tab content within the sidebar layout */}
-          {!['staff_users', 'staff_posts', 'staff_team'].includes(activeTab) && (
+          {!['staff_overview', 'staff_users', 'staff_posts', 'staff_moderation', 'staff_team'].includes(activeTab) && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <header className="sbn-glass-nav px-4 py-2 border-b border-app flex items-center justify-between shrink-0">
                 <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />

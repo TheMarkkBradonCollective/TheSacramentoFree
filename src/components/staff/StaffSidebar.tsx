@@ -1,6 +1,8 @@
 import {
+  ActivitySquare,
   CalendarDays,
   FileText,
+  GaugeCircle,
   List,
   Map,
   MessageSquare,
@@ -32,8 +34,10 @@ const NAV_ITEMS: SidebarItem[] = [
   { id: 'chats', label: 'Chats', icon: MessageSquare, section: 'community' },
   { id: 'profile', label: 'Account', icon: User, section: 'community' },
   // Staff
-  { id: 'staff_users', label: 'User Management', icon: Users, section: 'staff', minRank: 1 },
-  { id: 'staff_posts', label: 'Post Management', icon: FileText, section: 'staff', minRank: 1 },
+  { id: 'staff_overview', label: 'Overview', icon: GaugeCircle, section: 'staff', minRank: 1 },
+  { id: 'staff_users', label: 'Users', icon: Users, section: 'staff', minRank: 1 },
+  { id: 'staff_posts', label: 'Posts', icon: FileText, section: 'staff', minRank: 1 },
+  { id: 'staff_moderation', label: 'Moderation', icon: ActivitySquare, section: 'staff', minRank: 1 },
   { id: 'staff_team', label: 'Team', icon: Shield, section: 'staff', minRank: 2 },
 ];
 

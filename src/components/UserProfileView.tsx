@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, SACRAMENTO_NEIGHBORHOODS, ItemPost } from '../types';
+import { isStaffRole } from '../lib/roles';
 import {
   getNeighborStats,
   NeighborStats,
@@ -513,49 +514,118 @@ export default function UserProfileView({
         </div>
       </div>
 
-      <div
-        className={fullBleed ? sectionShell : 'sbn-section'}
-        id="account_privacy_section"
-      >
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-accent-soft flex items-center justify-center shrink-0">
-            <Shield className="w-5 h-5 text-accent" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-bold text-app uppercase tracking-wider">Privacy & legal</h3>
-            <p className="text-xs text-muted mt-2 leading-relaxed">{PRIVACY.summary}</p>
-            <div className="mt-2 space-y-1">
-              <p className="text-[10px] text-subtle font-semibold">
-                {isPrivacyAccepted(userProfile.uid)
-                  ? `Privacy policy accepted (${PRIVACY.lastUpdated}).`
-                  : 'Privacy policy needs your review and acceptance.'}
-              </p>
-              <p className="text-[10px] text-subtle font-semibold">
-                {isTermsAccepted(userProfile.uid)
-                  ? `Terms of use accepted (${TERMS.lastUpdated}).`
-                  : 'Terms of use needs your review and acceptance.'}
-              </p>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPrivacyModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-app text-xs font-bold uppercase tracking-wider text-accent hover:bg-inset transition-colors"
-              >
-                <Shield className="w-3.5 h-3.5" />
-                {PRIVACY.shortTitle}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowTermsModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-app text-xs font-bold uppercase tracking-wider text-accent hover:bg-inset transition-colors"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                {TERMS.shortTitle}
-              </button>
-            </div>
-          </div>
+      {/* ── Activity ─────────────────────────────────────────── */}
+      <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
+
+      {/* ── Awards ───────────────────────────────────────────── */}
+      {onOpenAwards && (
+        <div className={fullBleed ? sectionShell : ''}>
+          <ProfileAwardsSection
+            summary={awardSummary}
+            loading={awardsLoading}
+            onOpenAwards={onOpenAwards}
+          />
         </div>
+      )}
+
+      {/* ── Your posts ───────────────────────────────────────── */}
+      <div className={fullBleed ? sectionShell : 'sbn-section'}>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h3 className="text-sm font-bold text-app uppercase tracking-wider">Your posts</h3>
+          <span className="text-xs text-muted">{userPosts.length}</span>
+        </div>
+        <ProfilePostList
+          posts={userPosts
+            .slice()
+            .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime())}
+          emptyMessage="You have not posted anything yet."
+          onViewPost={onViewPost}
+          onRepostPost={onRepostPost}
+          onDeletePost={onDeletePost}
+        />
+      </div>
+
+      {/* ── Staff tools — only shown on account page for non-staff users or
+           when the sidebar is unavailable. Staff with the sidebar see all
+           moderation tools there instead. ────────────────────────────── */}
+      {onViewProfile && !isStaffRole(userProfile.role) ? (
+        <CommunityMenuView
+          userProfile={userProfile}
+          onViewProfile={onViewProfile}
+          scrollToDirectorOverview={scrollToDirectorOverview}
+          onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+          fullBleed={fullBleed}
+        />
+      ) : null}
+
+      {/* ── Install app ──────────────────────────────────────── */}
+      <div
+        className={`${fullBleed ? `${sectionShell} shadow-none` : 'sbn-section'} animate-fade-in min-w-0 overflow-hidden`}
+        id="pwa_installs_section"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Smartphone className="w-4 h-4 text-accent" />
+          <h3 className="text-sm font-bold text-app uppercase tracking-wider">Install app</h3>
+        </div>
+        <p className="text-xs text-muted mb-4 leading-relaxed">
+          Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience — no App Store required.
+        </p>
+
+        {isAppInstalled ? (
+          <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl" id="pwa_installed_badge">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-xs font-bold text-emerald-400">App installed on this device</span>
+          </div>
+        ) : deferredPrompt ? (
+          <button
+            onClick={triggerDirectPWAInstall}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+            id="pwa_install_direct_trigger"
+          >
+            <Download className="w-4 h-4" />
+            <span>Install app</span>
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex border-b border-app overflow-x-auto gap-0">
+              {(['ios', 'android', 'chrome'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setActiveManualPlatform(p)}
+                  className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+                    activeManualPlatform === p
+                      ? 'border-accent text-accent'
+                      : 'border-transparent text-subtle hover:text-muted'
+                  }`}
+                >
+                  {p === 'ios' ? 'iPhone' : p === 'android' ? 'Android' : 'Desktop'}
+                </button>
+              ))}
+            </div>
+            <div className="bg-inset border border-app p-4 rounded-xl text-xs text-muted space-y-2 leading-relaxed">
+              {activeManualPlatform === 'ios' && (
+                <ol className="list-decimal list-inside space-y-2 pl-1">
+                  <li>Open in <strong className="text-app">Safari</strong>.</li>
+                  <li>Tap the <strong className="text-app">Share</strong> button <Share2 className="inline w-3.5 h-3.5 mx-1" />.</li>
+                  <li>Tap <strong className="text-app">Add to Home Screen</strong>, then <strong className="text-app">Add</strong>.</li>
+                </ol>
+              )}
+              {activeManualPlatform === 'android' && (
+                <ol className="list-decimal list-inside space-y-2 pl-1">
+                  <li>Open in <strong className="text-app">Google Chrome</strong>.</li>
+                  <li>Tap the three-dot menu <strong className="text-app">(⋮)</strong>.</li>
+                  <li>Tap <strong className="text-app">Install app</strong> or <strong className="text-app">Add to Home Screen</strong>.</li>
+                </ol>
+              )}
+              {activeManualPlatform === 'chrome' && (
+                <ol className="list-decimal list-inside space-y-2 pl-1">
+                  <li>Look for the install icon in your browser's address bar.</li>
+                  <li>Click it and select <strong className="text-app">Install</strong>.</li>
+                </ol>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {showPrivacyModal && (
@@ -576,168 +646,47 @@ export default function UserProfileView({
         />
       )}
 
-      {/* Modern PWA App Installation Widget */}
-      <div
-        className={`${fullBleed ? `${sectionShell} shadow-none` : 'sbn-section'} animate-fade-in min-w-0 overflow-hidden`}
-        id="pwa_installs_section"
-      >
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-app/70 pb-6 mb-6 min-w-0">
-          <div className="max-w-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <Smartphone className="w-4 h-4 text-accent" />
-              <span className="text-[10px] text-accent font-black uppercase tracking-widest font-mono">Mobile App Download Hub</span>
-            </div>
-            <h3 className="text-base font-bold text-app tracking-tight">Run Sacramento Buy Nothing on your Phone</h3>
-            <p className="text-xs text-muted mt-1 leading-relaxed">
-              Install our Progressive Web App (PWA) directly from your browser. Enjoy full-screen viewing, faster loads with local storage caches, and easier neighborhood-level sharing.
-            </p>
-          </div>
-
-          <div className="flex-shrink-0">
-            {isAppInstalled ? (
-              <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl max-w-full" id="pwa_installed_badge">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                <span className="text-xs font-black text-emerald-400 uppercase tracking-wider font-mono break-words">
-                  App installed on this device
-                </span>
-              </div>
-            ) : deferredPrompt ? (
-              <button
-                onClick={triggerDirectPWAInstall}
-                className="inline-flex items-center space-x-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-lg text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
-                id="pwa_install_direct_trigger"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download PWA App Directly</span>
-              </button>
-            ) : (
-              <div className="text-[10px] text-subtle font-bold uppercase tracking-wider bg-surface p-2.5 border border-app rounded-xl text-center select-none" id="pwa_installed_manual_warn">
-                📱 Install manually directly via your browser instructions below
-              </div>
-            )}
-          </div>
+      {/* ── Privacy & legal ──────────────────────────────────── */}
+      <div className={fullBleed ? sectionShell : 'sbn-section'} id="account_privacy_section">
+        <div className="flex items-center gap-2 mb-3">
+          <Shield className="w-4 h-4 text-accent" />
+          <h3 className="text-sm font-bold text-app uppercase tracking-wider">Privacy & legal</h3>
         </div>
-
-        {/* Dynamic Mobile Guide Tabs */}
-        {!isAppInstalled && (
-          <div className="space-y-4">
-            <div className="flex border-b border-app overflow-x-auto max-w-full -mx-1 px-1">
-              <button
-                onClick={() => setActiveManualPlatform('ios')}
-                className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
-                  activeManualPlatform === 'ios'
-                    ? 'bg-accent border-accent text-on-accent'
-                    : 'border-transparent text-subtle hover:text-muted'
-                }`}
-              >
-                iPhone
-              </button>
-              <button
-                onClick={() => setActiveManualPlatform('android')}
-                className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
-                  activeManualPlatform === 'android'
-                    ? 'bg-accent border-accent text-on-accent'
-                    : 'border-transparent text-subtle hover:text-muted'
-                }`}
-              >
-                Android
-              </button>
-              <button
-                onClick={() => setActiveManualPlatform('chrome')}
-                className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
-                  activeManualPlatform === 'chrome'
-                    ? 'bg-accent border-accent text-on-accent'
-                    : 'border-transparent text-subtle hover:text-muted'
-                }`}
-              >
-                Desktop
-              </button>
-            </div>
-
-            {/* Platform Guides */}
-            <div className="bg-inset border border-app p-4 rounded-xl text-muted space-y-3">
-              {activeManualPlatform === 'ios' && (
-                <div className="space-y-3" id="guide_ios_list">
-                  <p className="text-xs text-muted font-semibold uppercase tracking-wider">How to Install on Apple Safari (iPhone/iPad):</p>
-                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-muted leading-relaxed pl-1.5">
-                    <li>Open this web-app in your premium <strong className="text-app font-bold">Safari</strong> browser.</li>
-                    <li>
-                      Tap the <strong className="text-app font-bold">Share</strong> button at the bottom navigation drawer
-                      <span className="inline-flex mx-1.5 p-1 bg-zinc-800 rounded text-muted align-middle"><Share2 className="w-3.5 h-3.5" /></span>
-                    </li>
-                    <li>Scroll down and tap <strong className="text-app font-bold">Add to Home Screen</strong>.</li>
-                    <li>Tap <strong className="text-app font-bold">Add</strong> in the upper right. Now launch the app directly from your standard home screen! No App Store required!</li>
-                  </ol>
-                </div>
-              )}
-
-              {activeManualPlatform === 'android' && (
-                <div className="space-y-3" id="guide_android_list">
-                  <p className="text-xs text-muted font-semibold uppercase tracking-wider">How to Install on Google Chrome/Samsung Internet for Android:</p>
-                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-muted leading-relaxed pl-1.5">
-                    <li>Open this web-app in <strong className="text-app font-bold">Google Chrome</strong>.</li>
-                    <li>Tap the standard three-dot menu icon <strong className="text-app font-bold">(⋮)</strong> in Chrome's top right corner.</li>
-                    <li>Select <strong className="text-app font-bold">Install app</strong> or <strong className="text-app font-bold">Add to Home Screen</strong>.</li>
-                    <li>Confirm the dialog prompt. The Sacramento Buy Nothing icon will be set up instantly on your app drawer!</li>
-                  </ol>
-                </div>
-              )}
-
-              {activeManualPlatform === 'chrome' && (
-                <div className="space-y-3" id="guide_desktop_list">
-                  <p className="text-xs text-muted font-semibold uppercase tracking-wider">How to install as a Native Desktop App (Chrome / Edge):</p>
-                  <ol className="list-decimal list-inside space-y-2.5 text-xs text-muted leading-relaxed pl-1.5">
-                    <li>Look at your browser's horizontal address bar (URL bar).</li>
-                    <li>
-                      Inside the right-side of the bar, click on the <strong className="text-app font-bold">PWA Install Monitor icon</strong>
-                      (resembles a monitor with a downward arrow or an overlapped square with plus symbol).
-                    </li>
-                    <li>Click <strong className="text-app font-bold">Install</strong>. It creates a taskbar shortcut and opens in its own lightweight window!</li>
-                  </ol>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Feature benefits highlight */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-          <div className="p-3.5 bg-inset border border-app/50 rounded-xl">
-            <h4 className="text-[11px] font-black text-app uppercase tracking-widest mb-1">⚡ Instant Launch</h4>
-            <p className="text-[10px] text-muted">Loads immediately from standard device caches, loading your active neighborhood grid in an instant.</p>
-          </div>
-          <div className="p-3.5 bg-inset border border-app/50 rounded-xl">
-            <h4 className="text-[11px] font-black text-app uppercase tracking-widest mb-1">📦 Porch Syncing</h4>
-            <p className="text-[10px] text-muted">Stores chats and active coordinate locations offline so you never drop your pickup coordinates.</p>
-          </div>
-          <div className="p-3.5 bg-inset border border-app/50 rounded-xl">
-            <h4 className="text-[11px] font-black text-app uppercase tracking-widest mb-1">🎨 Borderless View</h4>
-            <p className="text-[10px] text-muted">Hides browser tab clutter and URL headers to let you focus entirely on friendly neighborly exchanges.</p>
-          </div>
+        <div className="space-y-1 mb-4">
+          <p className="text-[10px] text-subtle font-semibold">
+            {isPrivacyAccepted(userProfile.uid)
+              ? `Privacy policy accepted (${PRIVACY.lastUpdated}).`
+              : 'Privacy policy not yet accepted — please review.'}
+          </p>
+          <p className="text-[10px] text-subtle font-semibold">
+            {isTermsAccepted(userProfile.uid)
+              ? `Terms of use accepted (${TERMS.lastUpdated}).`
+              : 'Terms of use not yet accepted — please review.'}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPrivacyModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-app text-xs font-bold text-accent hover:bg-inset transition-colors"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            {PRIVACY.shortTitle}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowTermsModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-app text-xs font-bold text-accent hover:bg-inset transition-colors"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            {TERMS.shortTitle}
+          </button>
         </div>
       </div>
 
-      {onViewProfile ? (
-        <CommunityMenuView
-          userProfile={userProfile}
-          onViewProfile={onViewProfile}
-          scrollToDirectorOverview={scrollToDirectorOverview}
-          onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
-          fullBleed={fullBleed}
-        />
-      ) : null}
-
-      <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
-
+      {/* ── Sign out ─────────────────────────────── (near bottom) */}
       {onLogout ? (
-        <div
-          className={
-            fullBleed
-              ? sectionShell
-              : 'sbn-section'
-          }
-          id="account_sign_out_section"
-        >
+        <div className={fullBleed ? sectionShell : 'sbn-section'} id="account_sign_out_section">
           <h3 className="text-sm font-bold text-app uppercase tracking-wider mb-2">Sign out</h3>
           <p className="text-xs text-muted leading-relaxed mb-4">
             Sign out of Sacramento Buy Nothing on this device. You can sign back in anytime.
@@ -753,18 +702,16 @@ export default function UserProfileView({
         </div>
       ) : null}
 
+      {/* ── Delete account ──────────────────────── (absolute bottom) */}
       {onDeleteAccount && (
         <div
-          className={
-            fullBleed
-              ? sectionShell
-              : 'sbn-section border-red-900/40'
-          }
+          className={fullBleed ? sectionShell : 'sbn-section border-red-900/40'}
           id="account_delete_section"
         >
           <h3 className="text-sm font-bold text-red-500 uppercase tracking-wider mb-2">Delete account</h3>
           <p className="text-xs text-muted leading-relaxed mb-4">
             Permanently remove your profile, listings, comments, messages, and sign-in access.
+            This cannot be undone.
           </p>
           <button
             type="button"
@@ -787,32 +734,6 @@ export default function UserProfileView({
           </button>
         </div>
       )}
-
-      {onOpenAwards && (
-        <div className={fullBleed ? sectionShell : ''}>
-          <ProfileAwardsSection
-            summary={awardSummary}
-            loading={awardsLoading}
-            onOpenAwards={onOpenAwards}
-          />
-        </div>
-      )}
-
-      <div className={fullBleed ? sectionShell : 'sbn-section'}>
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <h3 className="text-sm font-bold text-app uppercase tracking-wider">Your posts</h3>
-          <span className="text-xs text-muted">{userPosts.length}</span>
-        </div>
-        <ProfilePostList
-          posts={userPosts
-            .slice()
-            .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime())}
-          emptyMessage="You have not posted anything yet."
-          onViewPost={onViewPost}
-          onRepostPost={onRepostPost}
-          onDeletePost={onDeletePost}
-        />
-      </div>
     </div>
   );
 }
