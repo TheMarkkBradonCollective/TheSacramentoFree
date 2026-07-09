@@ -45,7 +45,7 @@ export const PUBLIC_NAV: { route: PublicRoute; label: string }[] = [
 const APP_TAB_PATHS = new Set(['feed', 'events', 'map', 'chats', 'profile']);
 
 export function normalizePublicPath(raw: string): string {
-  return raw.replace(/^\/+/, '').split('?')[0].split('#')[0].trim().toLowerCase();
+  return raw.replace(/^\/+/, '').split('?')[0].split('#')[0].trim().toLowerCase().replace(/\/+$/, '');
 }
 
 export function parsePublicRoute(hash: string): PublicRoute {

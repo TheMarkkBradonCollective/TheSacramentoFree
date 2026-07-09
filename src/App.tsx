@@ -44,11 +44,13 @@ import {
   appTabPath,
   parseStoredTab,
   parseTabFromHistoryState,
+  parseTabFromPathname,
   persistActiveTab,
   pushActiveTabHistory,
   readPersistedTab,
   clearPersistedTab,
   TAB_HISTORY_KEY,
+  TAB_STORAGE_KEY,
   withTabInHistoryState,
 } from './lib/appNavigation';
 import {
@@ -379,10 +381,19 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Persist the active tab to localStorage for refresh recovery.
+  // URL and history-stack updates are handled by the effect below so that
+  // user-initiated tab clicks push a new history entry (enabling back-button
+  // tab navigation) while programmatic navigations via navigateToTab() still
+  // only replace the current entry.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!sessionUser?.id) return;
-    persistActiveTab(activeTab, sessionUser.id);
+    try {
+      window.localStorage.setItem(`${TAB_STORAGE_KEY}_${sessionUser.id}`, activeTab);
+    } catch {
+      // localStorage may be unavailable in private browsing
+    }
   }, [activeTab, sessionUser?.id]);
 
   useEffect(() => {
@@ -462,9 +473,11 @@ export default function App() {
       }
 
       // If browser history has no app-tab state, keep users in-app by restoring last tab.
+      // Prefer the pathname of the new URL (window.location has already been updated by
+      // the time popstate fires), then fall back to localStorage, then default to 'map'.
       const fallbackTab =
+        parseTabFromPathname(window.location.pathname) ||
         parseStoredTab(window.localStorage.getItem(`sbn_active_tab_v1_${sessionUserRef.current?.id ?? ''}`)) ||
-        parseTabFromHistoryState(window.history.state) ||
         'map';
       handlingPopStateRef.current = true;
       setActiveTab(fallbackTab);
