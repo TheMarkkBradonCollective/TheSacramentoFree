@@ -1,7 +1,6 @@
 import { UserProfile } from '../types';
 import AccountHelpSection from './AccountHelpSection';
-import StaffModerationPanel from './StaffModerationPanel';
-import { canAccessStaffDirectory, canViewDirectorOverview } from '../lib/roles';
+import { canViewDirectorOverview } from '../lib/roles';
 
 interface CommunityMenuViewProps {
   userProfile: UserProfile;
@@ -12,18 +11,16 @@ interface CommunityMenuViewProps {
   fullBleed?: boolean;
 }
 
-/** Director overview and staff tools — shown on the Account tab. */
+/** Director overview on the Account tab. Staff tools live in the staff sidebar. */
 export default function CommunityMenuView({
   userProfile,
-  onViewProfile,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
   fullBleed = false,
 }: CommunityMenuViewProps) {
-  const isStaff = canAccessStaffDirectory(userProfile.role);
   const isDirector = canViewDirectorOverview(userProfile?.role);
 
-  if (!isStaff && !isDirector) {
+  if (!isDirector) {
     return null;
   }
 
@@ -31,21 +28,13 @@ export default function CommunityMenuView({
 
   return (
     <div className={`${fullBleed ? 'pb-2' : 'space-y-6'} min-w-0 w-full overflow-x-hidden`}>
-      {isDirector ? (
-        <div className={fullBleed ? sectionShell : ''}>
-          <AccountHelpSection
-            user={userProfile}
-            scrollToDirectorOverview={scrollToDirectorOverview}
-            onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
-          />
-        </div>
-      ) : null}
-
-      {isStaff ? (
-        <div className={fullBleed ? `${sectionShell} border-t-0` : ''}>
-          <StaffModerationPanel viewer={userProfile} onViewProfile={onViewProfile} />
-        </div>
-      ) : null}
+      <div className={fullBleed ? sectionShell : ''}>
+        <AccountHelpSection
+          user={userProfile}
+          scrollToDirectorOverview={scrollToDirectorOverview}
+          onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+        />
+      </div>
     </div>
   );
 }
