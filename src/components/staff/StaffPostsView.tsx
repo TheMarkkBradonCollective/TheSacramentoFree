@@ -55,8 +55,10 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
 
   const load = async () => {
     setLoading(true);
-    const rows = await staffGetAllListings();
-    setPosts(rows);
+    setErr('');
+    const { items, errorMessage } = await staffGetAllListings();
+    setPosts(items);
+    if (errorMessage) setErr(errorMessage);
     setLoading(false);
   };
 

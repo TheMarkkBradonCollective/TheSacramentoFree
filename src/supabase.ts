@@ -4846,24 +4846,34 @@ export async function getSupabaseChatById(chatId: string): Promise<Chat | null> 
 }
 
 /** Staff: fetch all listings (any status except physically deleted) ordered by newest first. */
-export async function staffGetAllListings(): Promise<ItemPost[]> {
+export async function staffGetAllListings(): Promise<{ items: ItemPost[]; errorMessage?: string }> {
   try {
     const { data, error } = await supabase
       .from('items')
-      .select(
-        'id, title, description, type, category, status, neighborhood, userId, userDisplayName, userPhotoURL, imageUrls, createdAt, updatedAt',
-      )
+      .select('*')
       .order('createdAt', { ascending: false })
       .limit(1000);
 
     if (error) {
       handleSupabaseError(error, 'items');
-      return [];
+      return { items: [], errorMessage: String(error.message || 'Could not load listings.') };
     }
 
-    return (data ?? []).map((row) => normalizeItemFromRow(row as unknown as ItemPost)).filter((p): p is ItemPost => !!p);
-  } catch {
-    return [];
+    const items = (data ?? [])
+      .map((row) => {
+        try {
+          return normalizeItemFromRow(row as ItemPost);
+        } catch (rowErr) {
+          console.warn('Skipping malformed listing row:', row?.id, rowErr);
+          return null;
+        }
+      })
+      .filter((p): p is ItemPost => !!p);
+
+    return { items };
+  } catch (err) {
+    console.warn('staffGetAllListings failed:', err);
+    return { items: [], errorMessage: 'Could not load listings.' };
   }
 }
 
