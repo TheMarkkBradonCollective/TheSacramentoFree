@@ -10,15 +10,20 @@ import CommunityStatsBar from './CommunityStatsBar';
 import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
-import { AppTab } from '../lib/appTabs';
+import { type AnyTab, type AppTab } from '../lib/appTabs';
+import { isStaffRole } from '../lib/roles';
+import StaffSidebar from './staff/StaffSidebar';
+import StaffUsersView from './staff/StaffUsersView';
+import StaffPostsView from './staff/StaffPostsView';
+import StaffTeamView from './staff/StaffTeamView';
 import PageScrollFooter from './PageScrollFooter';
 
 interface DesktopViewProps {
   items: ItemPost[];
   events: CommunityEvent[];
   userProfile: UserProfile;
-  activeTab: AppTab;
-  setActiveTab: (tab: AppTab) => void;
+  activeTab: AnyTab;
+  setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
   onOpenNewEvent: () => void;
   canAccessEvents?: boolean;
@@ -104,11 +109,44 @@ export default function DesktopView({
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
 }: DesktopViewProps) {
+  const isStaff = isStaffRole(userProfile.role);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const communityTab = isStaff
+    ? (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
+      ? (activeTab as AppTab)
+      : 'feed'
+    : (activeTab as AppTab);
+
+  if (isStaff) {
+    return (
+      <div id="desktop_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
+        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />
+        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+          {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
+          {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
+          {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
+          {!['staff_users', 'staff_posts', 'staff_team'].includes(activeTab) && (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <Navbar userProfile={userProfile} activeTab={communityTab} setActiveTab={(t) => setActiveTab(t)} onOpenNewPost={onOpenNewPost} onOpenAwards={onOpenAwards ?? (() => {})} awardsButtonGlow={awardsButtonGlow} />
+              <main className="flex-1 min-h-0 overflow-hidden">
+                <div className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'map'}><SacramentoMapView items={items} events={events} userProfile={userProfile} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} mapVisible={communityTab === 'map'} itemsHydrated={itemsHydrated} eventsHydrated={!isEventsLoading} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} /></div>
+                <div className={`relative h-full min-h-0 overflow-y-auto p-6 ${communityTab === 'feed' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'feed'}><div className="max-w-4xl mx-auto"><CommunityStatsBar items={items} variant="compact" /><ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} /></div></div>
+                <div className={`relative h-full min-h-0 overflow-y-auto p-6 ${communityTab === 'events' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'events'}><div className="max-w-4xl mx-auto"><EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} /></div></div>
+                <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}><ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} fullBleed className="h-full min-h-0" /></div>
+                <div className={`h-full min-h-0 overflow-y-auto ${communityTab === 'profile' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'profile'}><div className="max-w-4xl mx-auto px-4 py-4"><UserProfileView userProfile={userProfile} userPosts={items.filter((i) => i.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} /><PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} /></div></div>
+              </main>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div id="desktop_device_workspace" className="min-h-screen h-dvh flex flex-col mesh-bg text-app overflow-hidden">
       <Navbar
         userProfile={userProfile}
-        activeTab={activeTab}
+        activeTab={communityTab}
         setActiveTab={setActiveTab}
         onOpenNewPost={onOpenNewPost}
         onOpenAwards={onOpenAwards ?? (() => {})}
@@ -116,7 +154,7 @@ export default function DesktopView({
       />
 
       <main id="desktop_main" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
-        {activeTab === 'feed' && (
+        {communityTab === 'feed' && (
           <div className="space-y-6" id="desktop_feed_view_root">
             <div className="sbn-page-header">
               <div className="flex items-center justify-between gap-4">
@@ -145,7 +183,7 @@ export default function DesktopView({
           </div>
         )}
 
-        {activeTab === 'events' && (
+        {communityTab === 'events' && (
           <div className="space-y-6" id="desktop_events_view_root">
             <div className="sbn-page-header">
               <div className="flex items-center justify-between gap-4">
@@ -175,7 +213,7 @@ export default function DesktopView({
           </div>
         )}
 
-        {activeTab === 'chats' && (
+        {communityTab === 'chats' && (
           <div
             id="desktop_chats_view_root"
             className="flex flex-col min-h-0 h-[min(42rem,calc(100dvh-6rem))] lg:h-[min(44rem,calc(100dvh-5.5rem))]"
@@ -205,7 +243,7 @@ export default function DesktopView({
           </div>
         )}
 
-        {activeTab === 'profile' && (
+        {communityTab === 'profile' && (
           <div className="space-y-4" id="desktop_profile_view_root">
             <div className="sbn-page-header">
               <h2>{IN_APP.profileTitle}</h2>
@@ -232,7 +270,7 @@ export default function DesktopView({
 
         {/* Keep the map mounted across tab switches so GPS, Leaflet state, and any
             active turn-by-turn navigation session survive — matches MobileView. */}
-        <div className={`space-y-6 ${activeTab === 'map' ? '' : 'hidden'}`} id="desktop_map_view_root">
+        <div className={`space-y-6 ${communityTab === 'map' ? '' : 'hidden'}`} id="desktop_map_view_root">
           <div className="sbn-page-header">
             <h2>{IN_APP.mapTitle}</h2>
             <p>{IN_APP.mapDescription}</p>
@@ -247,7 +285,7 @@ export default function DesktopView({
               onViewItem={onViewItem}
               onViewEvent={onViewEvent}
               onEditItem={onEditItem}
-              mapVisible={activeTab === 'map'}
+              mapVisible={communityTab === 'map'}
               itemsHydrated={itemsHydrated}
               eventsHydrated={!isEventsLoading}
               eventsEngagement={eventsEngagement}
@@ -256,7 +294,7 @@ export default function DesktopView({
           </div>
         </div>
 
-        {activeTab !== 'map' && activeTab !== 'chats' && (
+        {communityTab !== 'map' && communityTab !== 'chats' && (
           <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
         )}
       </main>

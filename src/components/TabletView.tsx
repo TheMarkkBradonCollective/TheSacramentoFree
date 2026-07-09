@@ -13,15 +13,20 @@ import { IN_APP } from '../siteContent';
 import AwardsButton from './AwardsButton';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import CommunityStatsBar from './CommunityStatsBar';
-import { AppTab } from '../lib/appTabs';
+import { type AnyTab, type AppTab } from '../lib/appTabs';
+import { isStaffRole } from '../lib/roles';
+import StaffSidebar from './staff/StaffSidebar';
+import StaffUsersView from './staff/StaffUsersView';
+import StaffPostsView from './staff/StaffPostsView';
+import StaffTeamView from './staff/StaffTeamView';
 import PageScrollFooter from './PageScrollFooter';
 
 interface TabletViewProps {
   items: ItemPost[];
   events: CommunityEvent[];
   userProfile: UserProfile;
-  activeTab: AppTab;
-  setActiveTab: (tab: AppTab) => void;
+  activeTab: AnyTab;
+  setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
   onOpenNewEvent: () => void;
   canAccessEvents?: boolean;
@@ -116,6 +121,44 @@ export default function TabletView({
   onClearScrollToDirectorOverview,
 }: TabletViewProps) {
   useScrollInputOnFocus();
+  const isStaff = isStaffRole(userProfile.role);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const communityTab = isStaff
+    ? (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
+      ? (activeTab as AppTab)
+      : 'feed'
+    : (activeTab as AppTab);
+
+  if (isStaff) {
+    return (
+      <div id="tablet_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
+        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />
+        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+          {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
+          {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
+          {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
+          {!['staff_users', 'staff_posts', 'staff_team'].includes(activeTab) && (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <header className="sbn-glass-nav px-4 py-2 border-b border-app flex items-center justify-between shrink-0">
+                <BrandLogo showTitle subtitle={userProfile.neighborhood} />
+                <div className="flex items-center gap-2">
+                  {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
+                  <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm">+ Post</button>
+                </div>
+              </header>
+              <main className="flex-1 min-h-0 overflow-hidden">
+                <div className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'map'}><SacramentoMapView items={items} events={events} userProfile={userProfile} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} mapVisible={communityTab === 'map'} itemsHydrated={itemsHydrated} eventsHydrated={!isEventsLoading} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} /></div>
+                <div className={`relative h-full min-h-0 overflow-y-auto p-6 ${communityTab === 'feed' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'feed'}><div className="max-w-3xl mx-auto"><CommunityStatsBar items={items} variant="compact" /><ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} /></div></div>
+                <div className={`relative h-full min-h-0 overflow-y-auto p-6 ${communityTab === 'events' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'events'}><div className="max-w-3xl mx-auto"><EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} /></div></div>
+                <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}><ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} fullBleed className="h-full min-h-0" /></div>
+                <div className={`h-full min-h-0 overflow-y-auto ${communityTab === 'profile' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'profile'}><div className="max-w-3xl mx-auto px-4 py-4"><UserProfileView userProfile={userProfile} userPosts={items.filter((i) => i.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} /></div></div>
+              </main>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="tablet_device_workspace" className="flex flex-col min-h-screen h-dvh mesh-bg text-app overflow-hidden">

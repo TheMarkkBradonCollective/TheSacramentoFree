@@ -4771,6 +4771,70 @@ export async function getStaffUserDirectory(): Promise<StaffUserRow[]> {
   }
 }
 
+/** Staff: fetch all listings (any status except physically deleted) ordered by newest first. */
+export async function staffGetAllListings(): Promise<ItemPost[]> {
+  try {
+    const { data, error } = await supabase
+      .from('items')
+      .select(
+        'id, title, description, type, category, status, neighborhood, userId, userDisplayName, userPhotoURL, imageUrls, createdAt, updatedAt',
+      )
+      .order('createdAt', { ascending: false })
+      .limit(1000);
+
+    if (error) {
+      handleSupabaseError(error, 'items');
+      return [];
+    }
+
+    return (data ?? []).map((row) => normalizeItemFromRow(row as unknown as ItemPost)).filter((p): p is ItemPost => !!p);
+  } catch {
+    return [];
+  }
+}
+
+/** Staff: withdraw (soft-delete) any listing. */
+export async function staffWithdrawListing(
+  itemId: string,
+  actor: Pick<import('./types').UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  const { isStaffRole } = await import('./lib/roles');
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+
+  const ok = await updateSupabaseItemStatus(itemId, 'withdrawn', actor.uid);
+  if (!ok) return { ok: false, errorMessage: 'Could not withdraw listing.' };
+
+  await writeModerationAudit({
+    actor: actor as import('./types').UserProfile,
+    target: { uid: itemId, displayName: `Listing ${itemId}` },
+    action: 'withdraw_listing',
+    detail: `Staff withdrew listing ${itemId}`,
+  });
+
+  return { ok: true };
+}
+
+/** Staff: delete a listing permanently (manager+). */
+export async function staffDeleteListing(
+  itemId: string,
+  actor: Pick<import('./types').UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  const { canStaffDeleteAccount } = await import('./lib/roles');
+  if (!canStaffDeleteAccount(actor.role)) return { ok: false, errorMessage: 'City Manager+ only.' };
+
+  const deleted = await deleteSupabaseItem(itemId);
+  if (!deleted) return { ok: false, errorMessage: 'Could not delete listing.' };
+
+  await writeModerationAudit({
+    actor: actor as import('./types').UserProfile,
+    target: { uid: itemId, displayName: `Listing ${itemId}` },
+    action: 'delete_listing',
+    detail: `Staff permanently deleted listing ${itemId}`,
+  });
+
+  return { ok: true };
+}
+
 export async function touchLastActive(): Promise<void> {
   try {
     await supabase.rpc('touch_last_active');

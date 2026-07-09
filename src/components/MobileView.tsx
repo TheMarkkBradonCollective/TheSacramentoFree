@@ -14,15 +14,20 @@ import AwardsButton from './AwardsButton';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
-import { AppTab } from '../lib/appTabs';
+import { type AnyTab, type AppTab } from '../lib/appTabs';
 import PageScrollFooter from './PageScrollFooter';
+import { isStaffRole } from '../lib/roles';
+import StaffSidebar from './staff/StaffSidebar';
+import StaffUsersView from './staff/StaffUsersView';
+import StaffPostsView from './staff/StaffPostsView';
+import StaffTeamView from './staff/StaffTeamView';
 
 interface MobileViewProps {
   items: ItemPost[];
   events: CommunityEvent[];
   userProfile: UserProfile;
-  activeTab: AppTab;
-  setActiveTab: (tab: AppTab) => void;
+  activeTab: AnyTab;
+  setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
   onOpenNewEvent: () => void;
   canAccessEvents?: boolean;
@@ -80,7 +85,7 @@ export default function MobileView({
   events,
   userProfile,
   activeTab,
-  setActiveTab,
+  setActiveTab: setActiveTabRaw,
   onOpenNewPost,
   onOpenNewEvent,
   canAccessEvents = true,
@@ -124,9 +129,86 @@ export default function MobileView({
   const [selectedMobileType, setSelectedMobileType] = useState<MapContentFilter>('all');
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
   const [mapImmersiveNav, setMapImmersiveNav] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useKeyboardInset();
   useScrollInputOnFocus();
+
+  const isStaff = isStaffRole(userProfile.role);
+  // For staff, the type is AnyTab; for regular users, it's AppTab.
+  // We cast activeTab back to AppTab for views that only accept AppTab.
+  const setActiveTab = setActiveTabRaw;
+  const communityTab = isStaff
+    ? (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
+      ? (activeTab as AppTab)
+      : 'feed'
+    : (activeTab as AppTab);
+
+  if (isStaff) {
+    return (
+      <div id="mobile_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
+        <StaffSidebar
+          userProfile={userProfile}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+        />
+        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+          {/* Staff panel views */}
+          {activeTab === 'staff_users' && (
+            <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />
+          )}
+          {activeTab === 'staff_posts' && (
+            <StaffPostsView actor={userProfile} onViewItem={onViewItem} />
+          )}
+          {activeTab === 'staff_team' && (
+            <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />
+          )}
+
+          {/* Community tab content within the sidebar layout */}
+          {!['staff_users', 'staff_posts', 'staff_team'].includes(activeTab) && (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <header className="sbn-glass-nav px-4 py-2 border-b border-app flex items-center justify-between shrink-0">
+                <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />
+                <div className="flex items-center gap-1">
+                  <NotificationsHubButton />
+                  {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
+                </div>
+              </header>
+              <main className="flex-1 min-h-0 overflow-hidden">
+                {/* Reuse all existing community tab views */}
+                <div className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'map'}>
+                  <SacramentoMapView items={items} events={events} userProfile={userProfile} selectedType={selectedMobileType} selectedCategory={selectedMobileCategory} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} isFullScreenMobile mapVisible={communityTab === 'map'} colorGuideOpen={colorGuideOpen} onColorGuideOpenChange={setColorGuideOpen} onOpenNewPost={onOpenNewPost} onImmersiveModeChange={setMapImmersiveNav} itemsHydrated={itemsHydrated} eventsHydrated={!isEventsLoading} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} />
+                </div>
+                <div className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 ${communityTab === 'feed' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'feed'}>
+                  <div className="max-w-2xl mx-auto">
+                    <div className="sbn-page-header"><h2>{IN_APP.feedTitle}</h2><p>{IN_APP.feedDescription} · {items.length} listings</p></div>
+                    <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
+                  </div>
+                </div>
+                <div className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 ${communityTab === 'events' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'events'}>
+                  <div className="max-w-2xl mx-auto">
+                    <div className="sbn-page-header"><h2>{IN_APP.eventsTitle}</h2></div>
+                    <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
+                  </div>
+                </div>
+                <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
+                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} fullBleed className="h-full min-h-0" />
+                </div>
+                <div className={`h-full w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none bg-app ${communityTab === 'profile' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'profile'}>
+                  <div className="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden">
+                    <UserProfileView userProfile={userProfile} userPosts={items.filter((item) => item.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} fullBleed />
+                    <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
+                  </div>
+                </div>
+              </main>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -153,8 +235,8 @@ export default function MobileView({
       >
         {/* Keep map mounted so Leaflet keeps size; hide when another tab is active */}
         <div
-          className={`relative h-full w-full min-h-0 ${activeTab === 'map' ? '' : 'hidden'}`}
-          aria-hidden={activeTab !== 'map'}
+          className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`}
+          aria-hidden={communityTab !== 'map'}
         >
           <SacramentoMapView
             items={items}
@@ -168,7 +250,7 @@ export default function MobileView({
             onViewEvent={onViewEvent}
             onEditItem={onEditItem}
             isFullScreenMobile
-            mapVisible={activeTab === 'map'}
+            mapVisible={communityTab === 'map'}
             colorGuideOpen={colorGuideOpen}
             onColorGuideOpenChange={setColorGuideOpen}
             onOpenNewPost={onOpenNewPost}
@@ -205,9 +287,9 @@ export default function MobileView({
         </div>
 
         <div
-          className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 ${activeTab === 'feed' ? '' : 'hidden'}`}
+          className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 ${communityTab === 'feed' ? '' : 'hidden'}`}
           id="mobile_directory_drawer"
-          aria-hidden={activeTab !== 'feed'}
+          aria-hidden={communityTab !== 'feed'}
         >
           <div className="max-w-2xl mx-auto">
             <div className="sbn-page-header">
@@ -241,9 +323,9 @@ export default function MobileView({
         </div>
 
         <div
-          className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 ${activeTab === 'events' ? '' : 'hidden'}`}
+          className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 ${communityTab === 'events' ? '' : 'hidden'}`}
           id="mobile_events_dock"
-          aria-hidden={activeTab !== 'events'}
+          aria-hidden={communityTab !== 'events'}
         >
           <div className="max-w-2xl mx-auto">
             <div className="sbn-page-header">
@@ -278,9 +360,9 @@ export default function MobileView({
         </div>
 
         <div
-          className={`h-full w-full min-h-0 overflow-hidden ${activeTab === 'chats' ? '' : 'hidden'}`}
+          className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`}
           id="mobile_messaging_dock"
-          aria-hidden={activeTab !== 'chats'}
+          aria-hidden={communityTab !== 'chats'}
         >
           <ChatSystem
             userProfile={userProfile}
@@ -308,9 +390,9 @@ export default function MobileView({
         </div>
 
         <div
-          className={`h-full w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none bg-app ${activeTab === 'profile' ? '' : 'hidden'}`}
+          className={`h-full w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none bg-app ${communityTab === 'profile' ? '' : 'hidden'}`}
           id="mobile_profile_dock"
-          aria-hidden={activeTab !== 'profile'}
+          aria-hidden={communityTab !== 'profile'}
         >
           <div className="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden">
             <div className="sbn-page-header px-4 pt-4 pb-2">
@@ -341,7 +423,7 @@ export default function MobileView({
         <div className="sbn-mobile-nav-bar">
           <div className="sbn-mobile-nav-side">
             {MOBILE_NAV_LEFT.map(({ id, label, icon: Icon }) => {
-              const isActive = activeTab === id;
+              const isActive = communityTab === id;
               return (
                 <button
                   key={id}
@@ -364,15 +446,15 @@ export default function MobileView({
             id="mobile_nav_map"
             onClick={() => setActiveTab(MOBILE_NAV_MAP.id)}
             aria-label={MOBILE_NAV_MAP.label}
-            aria-current={activeTab === MOBILE_NAV_MAP.id ? 'page' : undefined}
-            className={`sbn-mobile-nav-map ${activeTab === MOBILE_NAV_MAP.id ? 'sbn-mobile-nav-map-active' : ''}`}
+            aria-current={communityTab === MOBILE_NAV_MAP.id ? 'page' : undefined}
+            className={`sbn-mobile-nav-map ${communityTab === MOBILE_NAV_MAP.id ? 'sbn-mobile-nav-map-active' : ''}`}
           >
-            <Map className="w-6 h-6" strokeWidth={activeTab === MOBILE_NAV_MAP.id ? 2.5 : 2} />
+            <Map className="w-6 h-6" strokeWidth={communityTab === MOBILE_NAV_MAP.id ? 2.5 : 2} />
           </button>
 
           <div className="sbn-mobile-nav-side">
             {MOBILE_NAV_RIGHT.map(({ id, label, icon: Icon }) => {
-              const isActive = activeTab === id;
+              const isActive = communityTab === id;
               return (
                 <button
                   key={id}

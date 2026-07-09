@@ -39,7 +39,7 @@ import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
 import TermsOfUseContent from './components/TermsOfUseContent';
 import AwardsPanel from './components/AwardsPanel';
-import { AppTab } from './lib/appTabs';
+import { type AnyTab, type AppTab } from './lib/appTabs';
 import {
   appTabPath,
   parseStoredTab,
@@ -145,7 +145,7 @@ export default function App() {
   const logoutCleanupDoneRef = useRef(false);
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const pathnameSeededRef = useRef(false);
-  const [activeTab, setActiveTab] = useState<AppTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
+  const [activeTab, setActiveTab] = useState<AnyTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
   const [showPostModal, setShowPostModal] = useState(false);
   const [showPostEventModal, setShowPostEventModal] = useState(false);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
@@ -222,9 +222,9 @@ export default function App() {
     }
   }, []);
 
-  const navigateToTab = useCallback((tab: AppTab) => {
+  const navigateToTab = useCallback((tab: AnyTab) => {
     setActiveTab(tab);
-    persistActiveTab(tab, userProfile?.uid);
+    persistActiveTab(tab as AppTab, userProfile?.uid);
   }, [userProfile?.uid]);
 
   const pendingDeepLinkPathRef = useRef<string | null>(
