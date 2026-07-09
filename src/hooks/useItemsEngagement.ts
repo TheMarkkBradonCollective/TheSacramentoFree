@@ -252,12 +252,39 @@ export function useItemsEngagement(
     setExpandedPostComments((prev) => ({ ...prev, [postId]: expanded }));
   };
 
+  const ensureEngagementForPost = useCallback(async (postId: string) => {
+    if (!uid || !postId) return;
+    const [votes, comments] = await Promise.all([
+      getSupabaseItemVotes([postId]),
+      getSupabaseItemComments([postId]),
+    ]);
+
+    const votesForItem = votes.filter((vote) => vote.itemId === postId);
+    setItemVotes((prev) => ({
+      ...prev,
+      [postId]: {
+        userVote: (votesForItem.find((vote) => vote.userId === uid)?.voteType || null) as
+          | 'up'
+          | 'down'
+          | null,
+        upvotes: votesForItem.filter((vote) => vote.voteType === 'up').length,
+        downvotes: votesForItem.filter((vote) => vote.voteType === 'down').length,
+      },
+    }));
+
+    setItemComments((prev) => ({
+      ...prev,
+      [postId]: comments.filter((comment) => comment.itemId === postId),
+    }));
+  }, [uid]);
+
   return {
     getVotesForPost,
     getCommentsForPost,
     expandedPostComments,
     toggleComments,
     setCommentsExpanded,
+    ensureEngagementForPost,
     handleVote,
     handleAddComment,
     handleDeleteComment,

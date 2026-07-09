@@ -149,7 +149,7 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-accent font-mono">Staff Panel</p>
-            <h2 className="font-display font-bold text-app text-lg">Post Management</h2>
+            <h2 className="font-display font-bold text-app text-lg">Listings Management</h2>
             <p className="text-xs text-muted mt-0.5">{posts.length} listings total</p>
           </div>
           <button type="button" onClick={() => void load()} className="sbn-btn sbn-btn-secondary sbn-btn-sm">
@@ -292,7 +292,7 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
                               onClick={() => onViewItem(post)}
                               className="sbn-btn sbn-btn-secondary sbn-btn-sm"
                             >
-                              <Eye className="w-3.5 h-3.5" /> View post
+                              <Eye className="w-3.5 h-3.5" /> View listing
                             </button>
                             {post.status !== 'withdrawn' && (
                               <button
@@ -321,7 +321,7 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-muted text-sm">
                     <CircleOff className="w-8 h-8 mx-auto mb-2 text-subtle" />
-                    No posts match your filters.
+                    No listings match your filters.
                   </td>
                 </tr>
               )}

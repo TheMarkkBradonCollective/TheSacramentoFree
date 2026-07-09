@@ -38,7 +38,7 @@ const NAV_ITEMS: SidebarItem[] = [
   // Staff
   { id: 'staff_overview', label: 'Overview', icon: GaugeCircle, section: 'staff', minRank: 1 },
   { id: 'staff_users', label: 'Users', icon: Users, section: 'staff', minRank: 1 },
-  { id: 'staff_posts', label: 'Posts', icon: FileText, section: 'staff', minRank: 1 },
+  { id: 'staff_posts', label: 'Listings', icon: FileText, section: 'staff', minRank: 1 },
   { id: 'staff_messages', label: 'Messages', icon: Inbox, section: 'staff', minRank: 1 },
   { id: 'staff_meets', label: 'Meet Records', icon: MapPin, section: 'staff', minRank: 1 },
   { id: 'staff_moderation', label: 'Moderation', icon: ActivitySquare, section: 'staff', minRank: 1 },

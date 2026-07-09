@@ -533,3 +533,18 @@ ON CONFLICT (id) DO UPDATE SET
   "authorName" = EXCLUDED."authorName",
   "authorTitle" = EXCLUDED."authorTitle",
   "updatedAt" = NOW();
+
+-- Staff oversight: allow staff to read all chats (including neighbor DMs) for moderation.
+CREATE OR REPLACE FUNCTION public.can_read_chat(chat_id text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    chat_id = 'community-global'
+    OR (chat_id = 'community-staff' AND public.is_staff())
+    OR public.is_staff()
+    OR public.is_chat_participant(chat_id);
+$$;

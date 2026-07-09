@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Chat, Message, UserProfile, ItemPost, MessageRequest, PendingChatCompose, SupportTicket } from '../types';
 import {
   getSupabaseChats,
+  getSupabaseChatById,
   getSupabaseMessages,
   createSupabaseMessage,
   deleteSupabaseMessage,
@@ -328,7 +329,16 @@ export default function ChatSystem({
         setIsChatsLoading(false);
 
         if (initialSelectedChatId) {
-          const target = visibleChats.find((c) => c.id === initialSelectedChatId);
+          let target = visibleChats.find((c) => c.id === initialSelectedChatId);
+          if (!target && isStaffRole(userProfile.role)) {
+            const fetched = await getSupabaseChatById(initialSelectedChatId);
+            if (fetched) {
+              target = fetched;
+              if (!isCommunityChat(fetched.id)) {
+                setChats((prev) => (prev.some((c) => c.id === fetched.id) ? prev : [fetched, ...prev]));
+              }
+            }
+          }
           if (target) {
             setSelectedChat((prev) => prev ?? target);
             setSupportView(null);
