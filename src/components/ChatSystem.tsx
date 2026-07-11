@@ -1170,6 +1170,7 @@ export default function ChatSystem({
                       onClick={() => onViewProfile?.(getRecipientInfo(selectedChat).otherId)}
                       className="shrink-0 rounded-full cursor-pointer hover:opacity-90"
                       title="View neighbor profile"
+                      aria-label="View neighbor profile"
                     >
                       <PresenceUserAvatar
                         uid={getRecipientInfo(selectedChat).otherId}
@@ -1281,6 +1282,7 @@ export default function ChatSystem({
                                 <button
                                   type="button"
                                   onClick={() => onViewProfile?.(msg.senderId)}
+                                  aria-label="View neighbor profile"
                                   className="rounded-full"
                                 >
                                   {isCommunity ? (

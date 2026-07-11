@@ -64,7 +64,7 @@ export default function LeaderMessageEditModal({
       <div className="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto bg-surface border border-app rounded-t-2xl sm:rounded-2xl shadow-2xl">
         <div className="sticky top-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-app bg-surface/95">
           <h2 className="font-display font-bold text-app">{editTitle}</h2>
-          <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-inset text-muted">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-2 rounded-full hover:bg-inset text-muted">
             <X className="w-5 h-5" />
           </button>
         </div>

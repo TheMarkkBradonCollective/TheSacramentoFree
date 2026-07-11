@@ -339,6 +339,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
           <button
             id="close_modal_btn"
             onClick={onClose}
+            aria-label="Close"
             className="p-1.5 text-muted hover:text-app hover:bg-surface-hover rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-4.5 h-4.5" />
@@ -603,6 +604,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 onClick={handleDetectGPS}
                 disabled={gpsLoading}
                 title="Detect current location via GPS"
+                aria-label="Detect current location via GPS"
                 className="px-3.5 bg-inset hover:bg-surface-hover border border-app rounded-xl text-muted flex items-center justify-center cursor-pointer transition-all select-none disabled:opacity-50"
               >
                 <Navigation className={`w-4 h-4 text-muted ${gpsLoading ? 'animate-spin text-accent' : ''}`} />
@@ -613,6 +615,8 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                 type="button"
                 onClick={() => setShowMiniMap(!showMiniMap)}
                 title="Pinpoint neighborhood on interactive district map"
+                aria-label="Pinpoint neighborhood on interactive district map"
+                aria-pressed={showMiniMap}
                 className={`px-3.5 border rounded-xl flex items-center justify-center cursor-pointer transition-all select-none ${
                   showMiniMap
                     ? 'bg-accent border-accent text-white'
@@ -771,6 +775,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                       onClick={() => removeSavedImage(url)}
                       className="absolute top-1 right-1 bg-black/80 hover:bg-black text-app p-1.5 rounded-full cursor-pointer"
                       title="Remove photo"
+                      aria-label="Remove photo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -784,6 +789,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
                       onClick={() => removePendingImage(img.id)}
                       className="absolute top-1 right-1 bg-black/80 hover:bg-black text-app p-1.5 rounded-full cursor-pointer"
                       title="Remove photo"
+                      aria-label="Remove photo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

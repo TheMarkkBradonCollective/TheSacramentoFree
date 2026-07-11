@@ -89,6 +89,7 @@ export default function GuestListingPreview({
                   <button
                     type="button"
                     onClick={() => onViewItem(item)}
+                    aria-label={`View ${item.title || 'listing'}`}
                     className="relative aspect-[16/10] bg-inset w-full cursor-pointer"
                   >
                     {cover ? (

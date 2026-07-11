@@ -127,6 +127,7 @@ export default function StaffSidebar({
               onClick={() => selectTab(id)}
               aria-current={isActive ? 'page' : undefined}
               title={collapsed ? label : undefined}
+              aria-label={collapsed ? label : undefined}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mx-1 transition-colors text-sm font-medium ${
                 isActive
                   ? 'bg-accent/15 text-accent'
@@ -159,6 +160,7 @@ export default function StaffSidebar({
                   onClick={() => selectTab(id)}
                   aria-current={isActive ? 'page' : undefined}
                   title={collapsed ? label : undefined}
+                  aria-label={collapsed ? label : undefined}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mx-1 transition-colors text-sm font-medium ${
                     isActive
                       ? 'bg-accent/15 text-accent'
@@ -185,6 +187,7 @@ export default function StaffSidebar({
             type="button"
             onClick={onToggleCollapse}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             className="p-1.5 rounded-lg text-muted hover:text-app hover:bg-inset transition-colors"
           >
             <svg

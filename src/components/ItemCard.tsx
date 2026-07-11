@@ -107,7 +107,7 @@ export default function ItemCard({
 
   const actionButtons = isOwner ? (
     <div className="flex flex-wrap gap-1 justify-end">
-      <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-sm sbn-btn-secondary shrink-0">
+      <button type="button" onClick={onViewDetail} aria-label="View listing" className="sbn-btn sbn-btn-sm sbn-btn-secondary shrink-0">
         <Eye className="w-3.5 h-3.5 sm:mr-0" />
         <span className="hidden sm:inline ml-1">View</span>
       </button>
@@ -117,6 +117,7 @@ export default function ItemCard({
         onClick={onEdit}
         className="sbn-btn sbn-btn-sm sbn-btn-primary shrink-0"
         title="Edit listing"
+        aria-label="Edit listing"
       >
         <Pencil className="w-3.5 h-3.5" />
         <span className="hidden sm:inline ml-1">Edit</span>
@@ -191,7 +192,7 @@ export default function ItemCard({
     </div>
   ) : item.status !== 'withdrawn' ? (
     <div className="flex flex-wrap gap-1 justify-end">
-      <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
+      <button type="button" onClick={onViewDetail} aria-label="View listing" className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
         <Eye className="w-3.5 h-3.5" />
         <span className="hidden sm:inline ml-1">View</span>
       </button>
@@ -201,7 +202,7 @@ export default function ItemCard({
           <span className="ml-1">{getListingNavigateLabel(item)}</span>
         </button>
       ) : (
-        <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+        <button type="button" onClick={onMessage} aria-label="Message about this listing" className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
           <MessageSquare className="w-3.5 h-3.5" />
           <span className="hidden sm:inline ml-1">Message</span>
         </button>
@@ -219,6 +220,7 @@ export default function ItemCard({
       <button
         type="button"
         onClick={onViewDetail}
+        aria-label={`View ${item.title || 'listing'}`}
         className={`relative shrink-0 overflow-hidden bg-inset text-left cursor-pointer
           w-[5.25rem] h-[5.25rem] sm:w-full sm:h-auto sm:aspect-[16/10]
           ${!coverPhoto ? 'flex items-center justify-center border-r sm:border-r-0 border-app' : ''}`}

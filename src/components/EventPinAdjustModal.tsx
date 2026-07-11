@@ -67,7 +67,7 @@ export default function EventPinAdjustModal({ event, onClose, onSaved }: EventPi
             </h2>
             <p className="text-xs text-muted mt-0.5">Same map as the site — tap Fremont Park to line it up.</p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-inset text-muted">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-2 rounded-full hover:bg-inset text-muted">
             <X className="w-5 h-5" />
           </button>
         </div>

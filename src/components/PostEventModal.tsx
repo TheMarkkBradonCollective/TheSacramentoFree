@@ -171,7 +171,7 @@ export default function PostEventModal({
               All events must be 100% free — no tickets or fees
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-inset text-muted">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-2 rounded-full hover:bg-inset text-muted">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -316,6 +316,7 @@ export default function PostEventModal({
                     setPendingImage(null);
                     setImageUrl(null);
                   }}
+                  aria-label="Remove photo"
                   className="absolute top-2 right-2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
                 >
                   <Trash2 className="w-4 h-4" />

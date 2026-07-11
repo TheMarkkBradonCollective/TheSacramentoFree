@@ -49,7 +49,7 @@ export default function DirectorBroadcastTestModal({
               devices across the community — not just yours.
             </p>
           </div>
-          <button type="button" onClick={onClose} disabled={sending} className="p-1.5 rounded-full hover:bg-inset shrink-0">
+          <button type="button" onClick={onClose} disabled={sending} aria-label="Close" className="p-1.5 rounded-full hover:bg-inset shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>

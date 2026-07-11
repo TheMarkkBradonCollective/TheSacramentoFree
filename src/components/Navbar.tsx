@@ -77,6 +77,7 @@ export default function Navbar({
                   type="button"
                   id="navbar_create_post_btn"
                   onClick={onOpenNewPost}
+                  aria-label={IN_APP.postButton}
                   className="sbn-btn sbn-btn-primary sbn-btn-sm hidden sm:inline-flex"
                 >
                   <Plus className="w-4 h-4" />

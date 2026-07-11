@@ -86,7 +86,7 @@ export default function BlockNeighborModal({
               reason{proofFile ? ' and screenshot' : ''}.
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-inset shrink-0">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1.5 rounded-full hover:bg-inset shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -142,6 +142,7 @@ export default function BlockNeighborModal({
                     handleProofChange(null);
                     if (fileRef.current) fileRef.current.value = '';
                   }}
+                  aria-label="Remove screenshot"
                   className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white"
                 >
                   <X className="w-3.5 h-3.5" />
