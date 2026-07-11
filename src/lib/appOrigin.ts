@@ -1,6 +1,7 @@
 import { isNativeApp } from './nativePlatform';
+import { SITE } from '../siteContent';
 
-const configuredOrigin = String((import.meta as { env?: Record<string, string> }).env?.VITE_APP_URL || '')
+const configuredOrigin = String((import.meta as { env?: Record<string, string> }).env?.VITE_APP_URL || SITE.url)
   .trim()
   .replace(/\/$/, '');
 

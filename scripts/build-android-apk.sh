@@ -12,11 +12,12 @@ if [[ -z "${VITE_APP_URL:-}" && -f .env.local ]]; then
 fi
 
 if [[ -z "${VITE_APP_URL:-}" ]]; then
-  export VITE_APP_URL="${APP_URL:-https://sacramento-buy-nothing.vercel.app}"
+  export VITE_APP_URL="${APP_URL:-https://sacramentobuynothing.com}"
   echo "Using VITE_APP_URL=${VITE_APP_URL}"
 fi
 
 npm run build:android
+node scripts/sync-android-version.mjs
 npx cap sync android
 
 BUILD_TYPE="${1:-release}"

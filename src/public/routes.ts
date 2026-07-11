@@ -7,6 +7,7 @@ export const PUBLIC_ROUTES = {
   community: 'community',
   updates: 'updates',
   reviews: 'reviews',
+  download: 'download',
   gofundme: 'gofundme',
   privacy: 'privacy',
   terms: 'terms',
@@ -25,6 +26,7 @@ export const PUBLIC_ROUTE_LIST: PublicRoute[] = [
   'community',
   'updates',
   'reviews',
+  'download',
   'gofundme',
   'privacy',
   'terms',
@@ -83,6 +85,18 @@ export function isKnownPublicRoute(hash: string): boolean {
 
 export function publicRouteHref(route: PublicRoute): string {
   return route === 'home' ? '#/' : `#/${route}`;
+}
+
+export function isDownloadRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    publicRouteFromPathname(window.location.pathname) === 'download' ||
+    parsePublicRoute(window.location.hash) === 'download'
+  );
+}
+
+export function downloadPagePath(): string {
+  return '/download';
 }
 
 /**

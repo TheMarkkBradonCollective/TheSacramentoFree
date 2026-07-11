@@ -13,6 +13,7 @@ const COMMUNITY_LINKS: { route: PublicRoute; label: string }[] = [
   { route: 'community', label: 'About community' },
   { route: 'reviews', label: 'Reviews' },
   { route: 'updates', label: 'Updates' },
+  { route: 'download', label: 'Download app' },
 ];
 
 const MORE_LINKS: { route: PublicRoute; label: string }[] = [
@@ -24,7 +25,7 @@ const MORE_LINKS: { route: PublicRoute; label: string }[] = [
 const PRIMARY_NAV = PUBLIC_NAV.filter(({ route: r }) => r !== 'community');
 
 function isCommunityRoute(route: PublicRoute): boolean {
-  return route === 'community' || route === 'updates' || route === 'reviews';
+  return route === 'community' || route === 'updates' || route === 'reviews' || route === 'download';
 }
 
 function isMoreRoute(route: PublicRoute): boolean {

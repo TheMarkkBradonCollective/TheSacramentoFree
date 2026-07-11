@@ -24,7 +24,7 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 Set these before building the APK:
 
 ```bash
-VITE_APP_URL=https://your-production-url.vercel.app
+VITE_APP_URL=https://sacramentobuynothing.com
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_PUBLISHABLE_KEY=...
 VITE_VAPID_PUBLIC_KEY=...
@@ -43,6 +43,8 @@ npm run android:apk
 ```
 
 Output: `dist/android/sac-buy-nothing-debug.apk` or `dist/android/sac-buy-nothing-release.apk`.
+
+**Neighbors:** share the in-app download page at [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
 
 ## Open in Android Studio
 

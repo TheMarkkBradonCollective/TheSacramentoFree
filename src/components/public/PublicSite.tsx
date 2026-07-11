@@ -11,6 +11,7 @@ import NeighborhoodsPage from './pages/NeighborhoodsPage';
 import CommunityPage from './pages/CommunityPage';
 import UpdatesPage from './pages/UpdatesPage';
 import ReviewsPage from './pages/ReviewsPage';
+import DownloadPage from './pages/DownloadPage';
 import GoFundMePage from './pages/GoFundMePage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
@@ -83,6 +84,8 @@ export default function PublicSite({
         return <UpdatesPage onRequireSignIn={onRequireSignIn} />;
       case 'reviews':
         return <ReviewsPage onRequireSignIn={onRequireSignIn} />;
+      case 'download':
+        return <DownloadPage />;
       case 'gofundme':
         return <GoFundMePage />;
       case 'privacy':
