@@ -15,12 +15,12 @@ function createPickerPinIcon(): L.DivIcon {
     html: `
       <div class="relative flex flex-col items-center pointer-events-none">
         <span class="relative flex h-8 w-8">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF4500] opacity-40"></span>
-          <span class="relative inline-flex h-8 w-8 rounded-full bg-white border-2 border-[#FF4500] shadow-lg items-center justify-center">
-            <span class="w-2.5 h-2.5 rounded-full bg-[#FF4500]"></span>
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-accent)] opacity-40"></span>
+          <span class="relative inline-flex h-8 w-8 rounded-full bg-white border-2 border-[var(--color-accent)] shadow-lg items-center justify-center">
+            <span class="w-2.5 h-2.5 rounded-full bg-[var(--color-accent)]"></span>
           </span>
         </span>
-        <span class="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#FF4500] -mt-0.5"></span>
+        <span class="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[var(--color-accent)] -mt-0.5"></span>
       </div>
     `,
     iconSize: [32, 40],

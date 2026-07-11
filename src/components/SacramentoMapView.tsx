@@ -266,6 +266,7 @@ function MapSelectedEventCard({
           type="button"
           onClick={onPrev}
           disabled={total <= 1}
+          aria-label="Previous event"
           className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
         >
           <ChevronLeft className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
@@ -277,6 +278,7 @@ function MapSelectedEventCard({
           type="button"
           onClick={onNext}
           disabled={total <= 1}
+          aria-label="Next event"
           className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
         >
           <ChevronRight className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
@@ -286,6 +288,7 @@ function MapSelectedEventCard({
       <button
         type="button"
         onClick={onClose}
+        aria-label="Close event details"
         className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
       >
         <X className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
@@ -1485,18 +1488,22 @@ export default function SacramentoMapView({
         <div className="absolute sbn-map-edge-top left-3 z-20 pointer-events-auto" id="mobile_map_zoom_controls">
           <div className="flex flex-col bg-surface border border-app p-0.5 rounded-xl shadow-app w-11">
             <button
+              type="button"
               onClick={handleZoomIn}
               className="w-11 h-11 flex items-center justify-center text-app bg-surface hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-t-lg"
               title="Zoom in"
+              aria-label="Zoom in"
               id="mobile_zoom_in_btn"
             >
               <Plus className="w-5 h-5" />
             </button>
             <div className="h-px bg-app mx-1" />
             <button
+              type="button"
               onClick={handleZoomOut}
               className="w-11 h-11 flex items-center justify-center text-app bg-surface hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-b-lg"
               title="Zoom out"
+              aria-label="Zoom out"
               id="mobile_zoom_out_btn"
             >
               <Minus className="w-5 h-5" />
@@ -1505,6 +1512,7 @@ export default function SacramentoMapView({
         </div>
 
         <button
+          type="button"
           onClick={handleLocateUser}
           className={`absolute sbn-map-edge-bottom left-4 z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
             isLocating
@@ -1515,6 +1523,7 @@ export default function SacramentoMapView({
           }`}
           id="mobile_floating_locator_btn"
           title={followUser ? 'Following your location (tap to recenter)' : 'Center on my location'}
+          aria-label={followUser ? 'Following your location, tap to recenter' : 'Center on my location'}
         >
           <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
         </button>
@@ -1536,7 +1545,9 @@ export default function SacramentoMapView({
           <div className="absolute top-20 left-4 right-4 z-[35] sbn-card p-3 flex items-center justify-between gap-3">
             <span className="text-sm font-medium text-app">⚠️ {locationError}</span>
             <button
+              type="button"
               onClick={() => setLocationError(null)}
+              aria-label="Dismiss location error"
               className="p-1.5 rounded-full text-muted hover:text-app hover:bg-inset cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -1570,7 +1581,9 @@ export default function SacramentoMapView({
                     <p className="text-xs text-muted mt-0.5">Tap a color to filter the map</p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setShowColorGuide(false)}
+                    aria-label="Close map color guide"
                     className="p-2 rounded-full text-muted hover:text-app hover:bg-inset cursor-pointer"
                   >
                     <X className="w-4 h-4" />
@@ -1648,8 +1661,10 @@ export default function SacramentoMapView({
                 {/* Sliding Pagination Controls */}
                 <div className="absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg">
                   <button
+                    type="button"
                     onClick={handlePrevPost}
                     disabled={activeItems.length <= 1}
+                    aria-label="Previous listing"
                     className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
@@ -1658,8 +1673,10 @@ export default function SacramentoMapView({
                     {currentIndex + 1}/{activeItems.length}
                   </span>
                   <button
+                    type="button"
                     onClick={handleNextPost}
                     disabled={activeItems.length <= 1}
+                    aria-label="Next listing"
                     className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -1667,7 +1684,9 @@ export default function SacramentoMapView({
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => setSelectedPost(null)}
+                  aria-label="Close listing details"
                   className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -1846,7 +1865,7 @@ export default function SacramentoMapView({
       {selectedType === undefined && (
         <div className="flex flex-col space-y-1 pb-2 border-b border-app">
           <span className="text-[9px] font-black text-accent uppercase tracking-widest font-mono flex items-center gap-1.5">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#FF4500] animate-ping"></span>
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-accent animate-ping"></span>
             Sacramento Neighborhood Map
           </span>
           <h2 className="text-sm font-bold text-app tracking-tight">Interactive Community Items</h2>
@@ -1982,7 +2001,7 @@ export default function SacramentoMapView({
       <div className="flex items-center justify-between border-b border-app pb-2.5">
         <div>
           <h3 className="text-[11px] font-black text-accent uppercase tracking-widest flex items-center gap-1.5">
-            <span className="inline-block w-2.5 h-2.5 bg-[#FF4500] animate-pulse rounded-full"></span>
+            <span className="inline-block w-2.5 h-2.5 bg-accent animate-pulse rounded-full"></span>
             Sacramento Activity Map
           </h3>
           <p className="text-[10px] text-muted font-bold uppercase tracking-wider mt-0.5" id="active_pins_count_display">
@@ -2007,7 +2026,7 @@ export default function SacramentoMapView({
         <div className="absolute top-3 left-3 bg-surface/95 border border-app p-3 z-10 space-y-1.5 shadow-xl max-w-[155px] scale-90 origin-top-left rounded-xl text-app">
           <span className="text-[8.5px] font-black text-subtle uppercase tracking-widest block font-mono">Legend</span>
           <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-zinc-950 bg-[#FF4500] block shrink-0"></span>
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-zinc-950 bg-accent block shrink-0"></span>
             <span>GIVING (black ring)</span>
           </div>
           <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted">
@@ -2025,18 +2044,22 @@ export default function SacramentoMapView({
           {/* Zoom Actions Container */}
           <div className="flex flex-col bg-surface/95 border border-app p-0.5 rounded-xl shadow-md">
             <button
+              type="button"
               onClick={handleZoomIn}
               className="w-8.5 h-8.5 flex items-center justify-center text-app hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-t-lg"
               title="Zoom In"
+              aria-label="Zoom in"
               id="custom_zoom_in_btn"
             >
               <Plus className="w-4 h-4" />
             </button>
             <div className="h-[1px] bg-app/20 mx-1" />
             <button
+              type="button"
               onClick={handleZoomOut}
               className="w-8.5 h-8.5 flex items-center justify-center text-app hover:bg-surface-hover hover:text-accent transition-colors cursor-pointer rounded-b-lg"
               title="Zoom Out"
+              aria-label="Zoom out"
               id="custom_zoom_out_btn"
             >
               <Minus className="w-4 h-4" />
@@ -2045,6 +2068,7 @@ export default function SacramentoMapView({
 
           {/* Center to User (Locate Me) control at the bottom under the +- */}
           <button
+            type="button"
             onClick={handleLocateUser}
             className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
               isLocating
@@ -2054,6 +2078,7 @@ export default function SacramentoMapView({
                   : 'bg-surface/95 border-app text-app hover:bg-surface-hover hover:text-accent'
             }`}
             title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
+            aria-label={followUser ? 'Following your location, tap to recenter' : 'Follow my location'}
             id="custom_locate_user_btn"
           >
             <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
@@ -2079,7 +2104,9 @@ export default function SacramentoMapView({
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setShowColorGuide(false)}
+                    aria-label="Close map color guide"
                     className="p-1 px-2 text-muted hover:text-app cursor-pointer bg-inset rounded-lg border border-app"
                     id="close_color_guide_btn"
                   >
@@ -2152,7 +2179,7 @@ export default function SacramentoMapView({
                       setLocalCategory('All Categories');
                       setShowColorGuide(false);
                     }}
-                    className="mt-3 w-full bg-accent text-on-accent py-2 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-[#E03D00] transition-colors cursor-pointer shrink-0"
+                    className="mt-3 w-full bg-accent text-on-accent py-2 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-accent-hover transition-colors cursor-pointer shrink-0"
                     id="map_clear_colors_filter_btn"
                   >
                     Clear Filter (Show All Map)
@@ -2166,9 +2193,9 @@ export default function SacramentoMapView({
         {/* Fallback Empty Guide - Beautiful, non-blocking friendly popup overlay */}
         {((itemsHydrated && showItemsOnMap && blipPositions.length === 0 && (!showEventsOnMap || eventBlipPositions.length === 0)) ||
           (eventsHydrated && showingEvents && eventBlipPositions.length === 0)) && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md border border-[#FF4500]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md border border-[var(--color-accent)]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
             <div className="flex items-start space-x-3 text-left">
-              <div className="p-2 bg-[#FF4500]/10 text-accent rounded-xl shrink-0 mt-0.5">
+              <div className="p-2 bg-[var(--color-accent)]/10 text-accent rounded-xl shrink-0 mt-0.5">
                 {showingEvents ? <CalendarDays className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
               </div>
               <div className="space-y-0.5">
@@ -2225,10 +2252,12 @@ export default function SacramentoMapView({
             {/* Sliding Pagination Controls */}
             <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-inset border border-app px-2 py-0.5 rounded-lg animate-fade-in">
               <button
+                type="button"
                 onClick={handlePrevPost}
                 disabled={activeItems.length <= 1}
                 className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                 title="Slide Left"
+                aria-label="Previous listing"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -2236,10 +2265,12 @@ export default function SacramentoMapView({
                 {currentIndex + 1}/{activeItems.length}
               </span>
               <button
+                type="button"
                 onClick={handleNextPost}
                 disabled={activeItems.length <= 1}
                 className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
                 title="Slide Right"
+                aria-label="Next listing"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -2248,9 +2279,11 @@ export default function SacramentoMapView({
             {/* Close buttons */}
             <button
               id="close_map_card_btn"
+              type="button"
               onClick={() => setSelectedPost(null)}
               className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
               title="Close panel"
+              aria-label="Close listing details"
             >
               <X className="w-4 h-4" />
             </button>
