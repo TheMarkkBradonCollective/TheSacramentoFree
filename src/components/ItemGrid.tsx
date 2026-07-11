@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import ItemCard from './ItemCard';
+import { ItemGridSkeleton } from './Skeleton';
 import PostItemModal from './PostItemModal';
 import PickupAttributionModal from './PickupAttributionModal';
 import { updateSupabaseItemStatus } from '../supabase';
@@ -552,9 +553,7 @@ export default function ItemGrid({
       </div>
 
       {isLoading ? (
-        <div className="sbn-card text-center py-16 px-8 border-dashed" id="feed_loading_state">
-          <p className="text-sm text-muted">Loading community listings…</p>
-        </div>
+        <ItemGridSkeleton />
       ) : filteredItems.length === 0 ? (
         <div className="sbn-card text-center py-16 px-8 border-dashed" id="empty_feed_state">
           <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />

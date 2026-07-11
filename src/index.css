@@ -694,6 +694,64 @@ option {
   }
 }
 
+/* ——— Global keyboard focus visibility ———
+   :focus-visible keeps a clean, ring-free look for mouse/touch input while
+   guaranteeing every interactive element gets a clear, on-brand focus ring
+   for keyboard, switch-control, and screen-reader users. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Pill/rounded controls read better with a matched, tighter ring. */
+.sbn-btn:focus-visible,
+.sbn-chip:focus-visible,
+.sbn-nav-tab:focus-visible {
+  outline-offset: 1px;
+  border-radius: inherit;
+}
+
+/* ——— Skeleton / shimmer loading placeholders ——— */
+
+.sbn-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background-color: var(--color-inset);
+}
+
+.sbn-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in srgb, var(--color-surface) 55%, transparent) 45%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: sbn-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sbn-skeleton::after { animation: none; }
+}
+
+@keyframes sbn-skeleton-shimmer {
+  from { background-position-x: 160%; }
+  to { background-position-x: -40%; }
+}
+
 /* ——— Design system — sharp, clean, orange-forward ——— */
 
 @keyframes sbn-fade-in {

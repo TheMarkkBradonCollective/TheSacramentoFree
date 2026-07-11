@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowDownUp,
-  Calendar,
   MapPin,
   Search as SearchIcon,
   SlidersHorizontal,
@@ -13,6 +12,7 @@ import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { isEventUpcoming } from '../lib/eventRsvp';
 import { EVENTS } from '../siteContent';
 import EventCard from './EventCard';
+import { EventGridSkeleton } from './Skeleton';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
 
@@ -189,12 +189,7 @@ export default function EventsView({
   ]);
 
   if (isLoading && events.length === 0) {
-    return (
-      <div className="sbn-card text-center py-16 px-8 border-dashed">
-        <Calendar className="w-10 h-10 text-muted mx-auto mb-3 animate-pulse" />
-        <p className="text-sm text-muted">Loading community events…</p>
-      </div>
-    );
+    return <EventGridSkeleton />;
   }
 
   return (
