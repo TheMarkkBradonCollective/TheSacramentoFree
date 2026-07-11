@@ -33,6 +33,7 @@ import ProfileAwardsRow from './ProfileAwardsRow';
 import ProfileAwardsSection from './ProfileAwardsSection';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
+import { usePwaInstallPrompt } from '../hooks/usePwaInstallPrompt';
 import ThemeSettings from './ThemeSettings';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
@@ -137,51 +138,9 @@ export default function UserProfileView({
     );
   }, [userProfile.photoURL, userProfile.uid, isPhotoUploading]);
 
-  // PWA Prompt status
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isAppInstalled, setIsAppInstalled] = useState(false);
+  // PWA install status — shared listener, see usePwaInstallPrompt.
+  const { canPromptInstall, isInstalled: isAppInstalled, promptInstall } = usePwaInstallPrompt();
   const [activeManualPlatform, setActiveManualPlatform] = useState<'ios' | 'android' | 'chrome'>('ios');
-
-  useEffect(() => {
-    // 1. Listen for beforeinstallprompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      console.log('PWA installer ready inside view! 🚀');
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // 2. Check if already running inside standalone app shell
-    if (
-      window.matchMedia('(display-mode: standalone)').matches || 
-      (window.navigator as any).standalone === true
-    ) {
-      setIsAppInstalled(true);
-    }
-
-    // Capture install completion
-    const handleAppInstalled = () => {
-      setIsAppInstalled(true);
-      setDeferredPrompt(null);
-    };
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  const triggerDirectPWAInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsAppInstalled(true);
-    }
-    setDeferredPrompt(null);
-  };
 
 
   const handleSave = async (e: React.FormEvent) => {
@@ -584,9 +543,9 @@ export default function UserProfileView({
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="text-xs font-bold text-emerald-400">App installed on this device</span>
           </div>
-        ) : deferredPrompt ? (
+        ) : canPromptInstall ? (
           <button
-            onClick={triggerDirectPWAInstall}
+            onClick={() => void promptInstall()}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
             id="pwa_install_direct_trigger"
           >
