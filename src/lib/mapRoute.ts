@@ -1,3 +1,5 @@
+import { apiUrl } from './appOrigin';
+
 export interface LatLng {
   lat: number;
   lng: number;
@@ -167,7 +169,7 @@ async function fetchRouteFromApi(from: LatLng, to: LatLng, signal: AbortSignal):
     toLat: String(to.lat),
     toLng: String(to.lng),
   });
-  const res = await fetch(`/api/map/route?${params.toString()}`, { signal });
+  const res = await fetch(apiUrl(`/api/map/route?${params.toString()}`), { signal });
   if (!res.ok) return null;
 
   const data = (await res.json()) as DrivingRouteResult;

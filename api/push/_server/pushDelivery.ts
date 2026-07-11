@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabaseAdmin';
+import { isFcmConfigured, isFcmSubscription, sendFcmToSubscription } from './fcmDelivery';
 import { configureVapidAsync, getWebPushModuleAsync } from './webPushLoader';
 
 export type PushEventType =
@@ -306,7 +307,17 @@ function shouldRemoveSubscription(err: unknown): boolean {
   return false;
 }
 
+async function canDeliverPush(): Promise<boolean> {
+  return (await configureVapidAsync()) || isFcmConfigured();
+}
+
 export async function sendToSubscription(subscription: PushSubscriptionRow, payload: PushPayload) {
+  if (isFcmSubscription(subscription.endpoint)) {
+    const result = await sendFcmToSubscription(subscription.endpoint, payload);
+    if (result.removed) await removeInvalidSubscription(subscription.endpoint);
+    return result;
+  }
+
   if (!(await configureVapidAsync())) return { ok: false as const, removed: false };
 
   const pushSubscription = {
@@ -338,7 +349,7 @@ export async function sendPushToUsers(
 ) {
   const exclude = new Set(options?.excludeUserIds || []);
   const targets = [...new Set(userIds)].filter((id) => id && !exclude.has(id));
-  if (!targets.length || !(await configureVapidAsync())) {
+  if (!targets.length || !(await canDeliverPush())) {
     return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0 };
   }
 

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './auth';
 import { configureVapidAsync, getVapidPublicKey, getWebPushModuleAsync, isVapidConfigured } from '../api/push/_server/webPushLoader';
+import { isFcmConfigured, isFcmSubscription, sendFcmToSubscription } from '../api/push/_server/fcmDelivery';
 
 export type PushEventType =
   | 'new_item'
@@ -311,6 +312,12 @@ function shouldRemoveSubscription(err: unknown): boolean {
 }
 
 export async function sendToSubscription(subscription: PushSubscriptionRow, payload: PushPayload) {
+  if (isFcmSubscription(subscription.endpoint)) {
+    const result = await sendFcmToSubscription(subscription.endpoint, payload);
+    if (result.removed) await removeInvalidSubscription(subscription.endpoint);
+    return result;
+  }
+
   if (!(await configureVapidAsync())) return { ok: false as const, removed: false };
 
   const pushSubscription = {
@@ -342,7 +349,7 @@ export async function sendPushToUsers(
 ) {
   const exclude = new Set(options?.excludeUserIds || []);
   const targets = [...new Set(userIds)].filter((id) => id && !exclude.has(id));
-  if (!targets.length || !(await configureVapidAsync())) {
+  if (!targets.length || (!(await configureVapidAsync()) && !isFcmConfigured())) {
     return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0 };
   }
 

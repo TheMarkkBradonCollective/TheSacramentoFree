@@ -5,9 +5,11 @@ import {
   ensurePushSubscription,
   getNotificationPreferences,
   getPushPermissionState,
+  hasActivePushSubscription,
   listenForNotificationClicks,
   NOTIFICATION_SESSION_CLEARED_EVENT,
   preferencesEqual,
+  refreshNativePushPermissionState,
   saveNotificationPreferences,
   sendDirectorBroadcastTest,
   sendTestPushNotification,
@@ -48,7 +50,9 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
   );
 
   const refreshPermission = useCallback(() => {
-    setPermission(getPushPermissionState());
+    void refreshNativePushPermissionState().then(setPermission).catch(() => {
+      setPermission(getPushPermissionState());
+    });
   }, []);
 
   const applyLoadedPreferences = useCallback((prefs: NotificationPreferences) => {
@@ -74,17 +78,7 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
   }, [applyLoadedPreferences]);
 
   const checkSubscription = useCallback(async () => {
-    if (!('serviceWorker' in navigator)) {
-      setIsSubscribed(false);
-      return;
-    }
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      const sub = await registration.pushManager.getSubscription();
-      setIsSubscribed(!!sub);
-    } catch {
-      setIsSubscribed(false);
-    }
+    setIsSubscribed(await hasActivePushSubscription());
   }, []);
 
   const resetPreferencesState = useCallback(() => {

@@ -17,10 +17,12 @@ function clientEnvDefines(mode: string): Record<string, string> {
     env.SUPABASE_KEY ||
     env.SUPABASE_ANON_KEY;
   const vapidPublic = env.VITE_VAPID_PUBLIC_KEY || env.VAPID_PUBLIC_KEY;
+  const appUrl = env.VITE_APP_URL || env.APP_URL;
 
   if (supabaseUrl) defines['import.meta.env.VITE_SUPABASE_URL'] = JSON.stringify(supabaseUrl);
   if (supabaseKey) defines['import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY'] = JSON.stringify(supabaseKey);
   if (vapidPublic) defines['import.meta.env.VITE_VAPID_PUBLIC_KEY'] = JSON.stringify(vapidPublic);
+  if (appUrl) defines['import.meta.env.VITE_APP_URL'] = JSON.stringify(appUrl);
 
   return defines;
 }

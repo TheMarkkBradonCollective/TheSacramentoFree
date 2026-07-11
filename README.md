@@ -47,9 +47,25 @@ A community gifting PWA for Sacramento neighbors. Post free items, browse a loca
 | `npm run dev` | Vite dev server (port 3000) |
 | `npm run dev:full` | Vite + local Express push API |
 | `npm run build` | Production build → `dist/` |
+| `npm run build:android` | Production web build for Capacitor |
+| `npm run android:apk:debug` | Build a sideloadable debug APK → `dist/android/` |
+| `npm run cap:sync` | Copy web build into the Android project |
 | `npm run preview` | Preview production build |
 | `npm run lint` | TypeScript typecheck |
 | `npm run start` | Serve built app + API (production) |
+
+## Android APK
+
+The app can be packaged as a downloadable Android APK with Capacitor. See [docs/android-apk.md](docs/android-apk.md) for Firebase setup, build commands, and Play Store notes.
+
+Quick start:
+
+```bash
+bash scripts/setup-android-sdk.sh
+export ANDROID_HOME="$HOME/Android/Sdk"
+cp android/app/google-services.json.example android/app/google-services.json  # then replace with real Firebase file
+npm run android:apk:debug
+```
 
 ## Deploy
 

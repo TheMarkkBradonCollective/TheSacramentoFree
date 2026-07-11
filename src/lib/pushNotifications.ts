@@ -1,4 +1,14 @@
 import { supabase } from '../supabase';
+import { apiUrl } from './appOrigin';
+import {
+  fcmEndpointForToken,
+  FCM_NATIVE_KEY,
+  getNativePushPermissionState,
+  getStoredFcmToken,
+  registerNativePushToken,
+  unregisterNativePushToken,
+} from './nativePush';
+import { isNativeApp } from './nativePlatform';
 import type { NotificationPreferences, NearbyRadiusMiles } from '../types';
 
 const SW_PATH = '/service-worker.js';
@@ -121,6 +131,46 @@ async function ensureNotificationPreferencesOnSubscribe(userId: string): Promise
   }
 }
 
+async function persistNativePushSubscription(token: string, userId: string): Promise<void> {
+  const endpoint = fcmEndpointForToken(token);
+  const tokenAuth = await getAccessToken();
+  if (tokenAuth) {
+    const res = await fetch(apiUrl('/api/push/subscribe'), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${tokenAuth}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subscription: {
+          endpoint,
+          keys: { p256dh: FCM_NATIVE_KEY, auth: FCM_NATIVE_KEY },
+        },
+        userAgent: navigator.userAgent.slice(0, 512),
+      }),
+    });
+    const body = await readJsonResponse(res);
+    if (res.ok) return;
+
+    const serverError = typeof body.error === 'string' ? body.error : '';
+    if (res.status >= 500 || serverError.includes('SERVICE_ROLE_KEY')) {
+      console.warn('[push] server subscribe unavailable, saving native token directly:', serverError);
+      await savePushSubscriptionDirect(
+        { endpoint, keys: { p256dh: FCM_NATIVE_KEY, auth: FCM_NATIVE_KEY } },
+        userId,
+      );
+      return;
+    }
+
+    throw new Error(serverError || 'Could not save push subscription on the server.');
+  }
+
+  await savePushSubscriptionDirect(
+    { endpoint, keys: { p256dh: FCM_NATIVE_KEY, auth: FCM_NATIVE_KEY } },
+    userId,
+  );
+}
+
 async function persistPushSubscription(subscription: PushSubscription, userId: string): Promise<void> {
   const json = subscription.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
@@ -129,7 +179,7 @@ async function persistPushSubscription(subscription: PushSubscription, userId: s
 
   const token = await getAccessToken();
   if (token) {
-    const res = await fetch('/api/push/subscribe', {
+    const res = await fetch(apiUrl('/api/push/subscribe'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -174,7 +224,7 @@ async function removePushSubscriptionDirect(userId: string, endpoint?: string): 
 async function removePushSubscription(userId: string, endpoint?: string): Promise<void> {
   const token = await getAccessToken();
   if (token) {
-    const res = await fetch('/api/push/unsubscribe', {
+    const res = await fetch(apiUrl('/api/push/unsubscribe'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -210,7 +260,7 @@ async function clearStaleBrowserSubscription(): Promise<void> {
 
 async function getVapidPublicKey(): Promise<string> {
   try {
-    const res = await fetch('/api/push/vapid-public-key');
+    const res = await fetch(apiUrl('/api/push/vapid-public-key'));
     if (res.ok) {
       const json = (await res.json()) as { publicKey?: string };
       const serverKey = String(json.publicKey || '').trim();
@@ -238,10 +288,31 @@ async function getVapidPublicKey(): Promise<string> {
 export type PushPermissionState = NotificationPermission | 'unsupported';
 
 export function getPushPermissionState(): PushPermissionState {
+  if (isNativeApp()) {
+    try {
+      const stored = localStorage.getItem('sbn_native_push_permission_v1');
+      if (stored === 'granted' || stored === 'denied') return stored;
+    } catch {
+      // ignore
+    }
+    return getStoredFcmToken() ? 'granted' : 'default';
+  }
+
   if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
     return 'unsupported';
   }
   return Notification.permission;
+}
+
+export async function refreshNativePushPermissionState(): Promise<PushPermissionState> {
+  if (!isNativeApp()) return getPushPermissionState();
+  const state = await getNativePushPermissionState();
+  try {
+    localStorage.setItem('sbn_native_push_permission_v1', state);
+  } catch {
+    // ignore
+  }
+  return state;
 }
 
 export async function registerPushServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -255,6 +326,13 @@ export async function registerPushServiceWorker(): Promise<ServiceWorkerRegistra
 export async function subscribeToPushNotifications(): Promise<PushSubscription | null> {
   const userId = await getSessionUserId();
   if (!userId) throw new Error('Sign in to enable notifications');
+
+  if (isNativeApp()) {
+    const token = await registerNativePushToken();
+    if (!token) return null;
+    await persistNativePushSubscription(token, userId);
+    return null;
+  }
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return null;
@@ -279,7 +357,16 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
 }
 
 export async function detachPushSubscriptionForUser(userId: string): Promise<void> {
-  if (!userId || !('serviceWorker' in navigator)) return;
+  if (!userId) return;
+
+  if (isNativeApp()) {
+    const token = getStoredFcmToken();
+    await removePushSubscription(userId, token ? fcmEndpointForToken(token) : undefined);
+    await unregisterNativePushToken();
+    return;
+  }
+
+  if (!('serviceWorker' in navigator)) return;
 
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
@@ -347,6 +434,16 @@ export function preferencesEqual(a: NotificationPreferences, b: NotificationPref
 }
 
 export async function ensurePushSubscription(): Promise<PushSubscription | null> {
+  if (isNativeApp()) {
+    if ((await refreshNativePushPermissionState()) !== 'granted') return null;
+    const userId = await getSessionUserId();
+    if (!userId) return null;
+    const token = getStoredFcmToken() || (await registerNativePushToken());
+    if (!token) return null;
+    await persistNativePushSubscription(token, userId);
+    return null;
+  }
+
   if (getPushPermissionState() !== 'granted') return null;
 
   const registration = await navigator.serviceWorker.ready;
@@ -480,7 +577,7 @@ export async function sendTestPushNotification(): Promise<{
   const browserSubscription = await registration.pushManager.getSubscription();
 
   try {
-    const res = await fetch('/api/push/test', {
+    const res = await fetch(apiUrl('/api/push/test'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -534,7 +631,7 @@ export async function sendDirectorBroadcastTest(params: {
   }
 
   try {
-    const res = await fetch('/api/push/test-broadcast', {
+    const res = await fetch(apiUrl('/api/push/test-broadcast'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -593,7 +690,7 @@ async function postPushApi(path: string, body: unknown, retries = 2): Promise<Re
   let lastJson: Record<string, unknown> = {};
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      const res = await fetch(path, {
+      const res = await fetch(apiUrl(path), {
         method: 'POST',
         keepalive: true,
         headers: {
@@ -794,7 +891,16 @@ export async function saveNotificationPreferences(
 }
 
 export function listenForNotificationClicks(handler: (url: string) => void): () => void {
-  if (!('serviceWorker' in navigator)) return () => {};
+  const onNativeClick = (event: Event) => {
+    const url = String((event as CustomEvent<string>).detail || '').trim();
+    if (url) handler(url);
+  };
+
+  window.addEventListener('sbn-native-notification-click', onNativeClick);
+
+  if (!('serviceWorker' in navigator)) {
+    return () => window.removeEventListener('sbn-native-notification-click', onNativeClick);
+  }
 
   const onMessage = (event: MessageEvent) => {
     if (event.data?.type === 'NOTIFICATION_CLICK' && event.data.url) {
@@ -803,5 +909,23 @@ export function listenForNotificationClicks(handler: (url: string) => void): () 
   };
 
   navigator.serviceWorker.addEventListener('message', onMessage);
-  return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  return () => {
+    window.removeEventListener('sbn-native-notification-click', onNativeClick);
+    navigator.serviceWorker.removeEventListener('message', onMessage);
+  };
+}
+
+export async function hasActivePushSubscription(): Promise<boolean> {
+  if (isNativeApp()) {
+    return Boolean(getStoredFcmToken()) && (await refreshNativePushPermissionState()) === 'granted';
+  }
+
+  if (!('serviceWorker' in navigator)) return false;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    return Boolean(sub);
+  } catch {
+    return false;
+  }
 }
