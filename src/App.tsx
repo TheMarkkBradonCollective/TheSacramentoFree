@@ -82,7 +82,8 @@ import ReviewPromptModal from './components/ReviewPromptModal';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
-import { parsePublicRoute, publicRouteFromPathname } from './public/routes';
+import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath } from './public/routes';
+import DownloadPage from './components/public/pages/DownloadPage';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -163,6 +164,7 @@ export default function App() {
   const [pickupAttributionItem, setPickupAttributionItem] = useState<ItemPost | null>(null);
   const [pickupAttributionMode, setPickupAttributionMode] = useState<'complete' | 'edit'>('complete');
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
+  const [showDownloadPage, setShowDownloadPage] = useState(() => isDownloadRoute());
   const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
     'reviews' | 'report' | 'staffReports' | null
   >(null);
@@ -447,6 +449,14 @@ export default function App() {
     } else if (publicDest === 'gofundme') {
       setShowGoFundMeDetail(true);
       setLegalPanel(null);
+    } else if (publicDest === 'download') {
+      setShowDownloadPage(true);
+      try {
+        window.history.replaceState(window.history.state, '', downloadPagePath());
+      } catch (err) {
+        console.warn('History replaceState unavailable for download route:', err);
+      }
+      return;
     }
 
     const initialTab = readPersistedTab(initialAuth.userProfile?.uid);
@@ -459,6 +469,13 @@ export default function App() {
       console.warn('History replaceState unavailable, tab persistence fallback active:', err);
     }
   }, [sessionUser, activeTab]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncDownloadRoute = () => setShowDownloadPage(isDownloadRoute());
+    window.addEventListener('popstate', syncDownloadRoute);
+    return () => window.removeEventListener('popstate', syncDownloadRoute);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1270,7 +1287,19 @@ export default function App() {
 
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
-      {authBootstrapping && !sessionUser ? (
+      {showDownloadPage && sessionUser ? (
+        <DownloadPage
+          onBack={() => {
+            setShowDownloadPage(false);
+            const tab = readPersistedTab(userProfile?.uid);
+            try {
+              window.history.replaceState(withTabInHistoryState(tab), '', appTabPath(tab));
+            } catch {
+              window.location.assign(appTabPath(tab));
+            }
+          }}
+        />
+      ) : authBootstrapping && !sessionUser ? (
         <AppBootSplash />
       ) : !sessionUser ? (
         <>
@@ -1747,7 +1776,13 @@ export default function App() {
           </div>
           
           {!isIOS && (
-            <div className="mt-3 flex items-center justify-end space-x-3 pt-2.5 border-t border-app">
+            <div className="mt-3 flex items-center justify-end flex-wrap gap-2 pt-2.5 border-t border-app">
+              <a
+                href="/download"
+                className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all"
+              >
+                ANDROID APK
+              </a>
               <button
                 onClick={handleDismissPrompt}
                 className="px-3.5 py-1.5 text-[11px] font-extrabold text-muted hover:text-app rounded-lg transition-all cursor-pointer"

@@ -17,6 +17,7 @@ if [[ -z "${VITE_APP_URL:-}" ]]; then
 fi
 
 npm run build:android
+node scripts/sync-android-version.mjs
 npx cap sync android
 
 BUILD_TYPE="${1:-release}"

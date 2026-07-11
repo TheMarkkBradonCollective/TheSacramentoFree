@@ -571,6 +571,14 @@ export default function UserProfileView({
           Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience — no App Store required.
         </p>
 
+        <a
+          href="/download"
+          className="inline-flex items-center gap-2 px-4 py-2.5 mb-4 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          <span>Download page — APK vs home screen</span>
+        </a>
+
         {isAppInstalled ? (
           <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl" id="pwa_installed_badge">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
@@ -612,9 +620,18 @@ export default function UserProfileView({
               )}
               {activeManualPlatform === 'android' && (
                 <ol className="list-decimal list-inside space-y-2 pl-1">
-                  <li>Open in <strong className="text-app">Google Chrome</strong>.</li>
-                  <li>Tap the three-dot menu <strong className="text-app">(⋮)</strong>.</li>
-                  <li>Tap <strong className="text-app">Install app</strong> or <strong className="text-app">Add to Home Screen</strong>.</li>
+                  <li>
+                    <strong className="text-app">APK (recommended for alerts):</strong> open the{' '}
+                    <a href="/download" className="text-accent font-bold underline underline-offset-2">
+                      download page
+                    </a>{' '}
+                    and install the Android app file.
+                  </li>
+                  <li>
+                    <strong className="text-app">Or Chrome home screen:</strong> tap the three-dot menu{' '}
+                    <strong className="text-app">(⋮)</strong> → <strong className="text-app">Install app</strong> or{' '}
+                    <strong className="text-app">Add to Home Screen</strong>.
+                  </li>
                 </ol>
               )}
               {activeManualPlatform === 'chrome' && (

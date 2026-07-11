@@ -2,6 +2,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { isNativeApp } from '../lib/nativePlatform';
 import { initNativePushHandlers } from '../lib/nativePush';
+import { recordInstalledApkVersion } from '../lib/installContext';
 
 export async function initCapacitorApp(): Promise<void> {
   if (!isNativeApp()) return;
@@ -14,6 +15,7 @@ export async function initCapacitorApp(): Promise<void> {
   }
 
   void SplashScreen.hide();
+  void recordInstalledApkVersion();
 
   await initNativePushHandlers((url) => {
     window.dispatchEvent(new CustomEvent('sbn-native-notification-click', { detail: url }));

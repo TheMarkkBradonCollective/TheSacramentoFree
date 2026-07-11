@@ -44,6 +44,8 @@ npm run android:apk
 
 Output: `dist/android/sac-buy-nothing-debug.apk` or `dist/android/sac-buy-nothing-release.apk`.
 
+**Neighbors:** share the in-app download page at `/download` (or `#/download` on the marketing site). It compares APK vs home screen installs and shows whether an update is needed.
+
 ## Open in Android Studio
 
 ```bash
