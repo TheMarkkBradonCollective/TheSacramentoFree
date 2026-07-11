@@ -1,4 +1,4 @@
-package com.getcapacitor.myapp;
+package org.sacbuynothing.app;
 
 import static org.junit.Assert.*;
 
