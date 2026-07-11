@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useKeyboardInset, useScrollInputOnFocus } from '../hooks/useKeyboardInset';
 import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
@@ -18,15 +18,18 @@ import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import PageScrollFooter from './PageScrollFooter';
 import { isStaffRole } from '../lib/roles';
 import StaffSidebar from './staff/StaffSidebar';
-import StaffUsersView from './staff/StaffUsersView';
-import StaffPostsView from './staff/StaffPostsView';
-import StaffTeamView from './staff/StaffTeamView';
-import StaffOverviewView from './staff/StaffOverviewView';
-import StaffViolationsView from './staff/StaffViolationsView';
-import StaffAuditView from './staff/StaffAuditView';
-import StaffWelcomeView from './staff/StaffWelcomeView';
-import StaffMessagesView from './staff/StaffMessagesView';
-import StaffMeetsView from './staff/StaffMeetsView';
+import { OverlaySuspenseFallback } from './SuspenseFallback';
+import {
+  StaffUsersView,
+  StaffPostsView,
+  StaffTeamView,
+  StaffOverviewView,
+  StaffViolationsView,
+  StaffAuditView,
+  StaffWelcomeView,
+  StaffMessagesView,
+  StaffMeetsView,
+} from './staff/lazyStaffViews';
 
 interface MobileViewProps {
   items: ItemPost[];
@@ -175,23 +178,27 @@ export default function MobileView({
           }}
         >
           {/* Staff panel views */}
-          {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
-          {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
-          {activeTab === 'staff_messages' && (
-            <StaffMessagesView
-              actor={userProfile}
-              onViewProfile={onViewProfile}
-              onOpenChat={onOpenChatById}
-              onOpenTicket={onOpenTicketById}
-              onViewListing={onViewListingId}
-            />
+          {isStaffTab(activeTab) && (
+            <Suspense fallback={<OverlaySuspenseFallback />}>
+              {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
+              {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
+              {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
+              {activeTab === 'staff_messages' && (
+                <StaffMessagesView
+                  actor={userProfile}
+                  onViewProfile={onViewProfile}
+                  onOpenChat={onOpenChatById}
+                  onOpenTicket={onOpenTicketById}
+                  onViewListing={onViewListingId}
+                />
+              )}
+              {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
+              {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
+              {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
+              {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
+              {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
+            </Suspense>
           )}
-          {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
-          {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
-          {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
-          {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
 
           {/* Community tab content within the sidebar layout */}
           {!isStaffTab(activeTab) && (

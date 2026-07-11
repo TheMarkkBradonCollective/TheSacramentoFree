@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Plus } from 'lucide-react';
 import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
@@ -13,15 +13,18 @@ import { IN_APP } from '../siteContent';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import { isStaffRole } from '../lib/roles';
 import StaffSidebar from './staff/StaffSidebar';
-import StaffUsersView from './staff/StaffUsersView';
-import StaffPostsView from './staff/StaffPostsView';
-import StaffTeamView from './staff/StaffTeamView';
-import StaffOverviewView from './staff/StaffOverviewView';
-import StaffViolationsView from './staff/StaffViolationsView';
-import StaffAuditView from './staff/StaffAuditView';
-import StaffWelcomeView from './staff/StaffWelcomeView';
-import StaffMessagesView from './staff/StaffMessagesView';
-import StaffMeetsView from './staff/StaffMeetsView';
+import { OverlaySuspenseFallback } from './SuspenseFallback';
+import {
+  StaffUsersView,
+  StaffPostsView,
+  StaffTeamView,
+  StaffOverviewView,
+  StaffViolationsView,
+  StaffAuditView,
+  StaffWelcomeView,
+  StaffMessagesView,
+  StaffMeetsView,
+} from './staff/lazyStaffViews';
 import PageScrollFooter from './PageScrollFooter';
 
 interface DesktopViewProps {
@@ -134,23 +137,27 @@ export default function DesktopView({
       <div id="desktop_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
         <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} onCollapse={() => setSidebarCollapsed(true)} autoCollapseOnNavigate />
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
-          {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
-          {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
-          {activeTab === 'staff_messages' && (
-            <StaffMessagesView
-              actor={userProfile}
-              onViewProfile={onViewProfile}
-              onOpenChat={onOpenChatById}
-              onOpenTicket={onOpenTicketById}
-              onViewListing={onViewListingId}
-            />
+          {isStaffTab(activeTab) && (
+            <Suspense fallback={<OverlaySuspenseFallback />}>
+              {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
+              {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
+              {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
+              {activeTab === 'staff_messages' && (
+                <StaffMessagesView
+                  actor={userProfile}
+                  onViewProfile={onViewProfile}
+                  onOpenChat={onOpenChatById}
+                  onOpenTicket={onOpenTicketById}
+                  onViewListing={onViewListingId}
+                />
+              )}
+              {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
+              {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
+              {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
+              {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
+              {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
+            </Suspense>
           )}
-          {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
-          {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
-          {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
-          {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
           {!isStaffTab(activeTab) && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <Navbar userProfile={userProfile} activeTab={communityTab} setActiveTab={(t) => setActiveTab(t)} onOpenNewPost={onOpenNewPost} onOpenAwards={onOpenAwards ?? (() => {})} awardsButtonGlow={awardsButtonGlow} />

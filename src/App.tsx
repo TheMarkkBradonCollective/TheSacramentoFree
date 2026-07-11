@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useItemsEngagement } from './hooks/useItemsEngagement';
 import { useItemsRealtime } from './hooks/useItemsRealtime';
 import { useSavedItemPushAlerts } from './hooks/useSavedItemPushAlerts';
@@ -6,18 +6,26 @@ import { useEventsEngagement } from './hooks/useEventsEngagement';
 import { useEventsRealtime } from './hooks/useEventsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
+import { usePwaInstallPrompt } from './hooks/usePwaInstallPrompt';
 import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent } from './types';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
-import PostItemModal from './components/PostItemModal';
-import ItemDetailView from './components/ItemDetailView';
-import PickupAttributionModal from './components/PickupAttributionModal';
-import EventDetailView from './components/EventDetailView';
-import PostEventModal from './components/PostEventModal';
-import NeighborProfileView from './components/NeighborProfileView';
-import MobileView from './components/MobileView';
-import TabletView from './components/TabletView';
-import DesktopView from './components/DesktopView';
+import { FullScreenSuspenseFallback, OverlaySuspenseFallback } from './components/SuspenseFallback';
+
+// Signed-in views and overlays are code-split so guests browsing the public
+// marketing site (and the login/onboarding flow) never download the map,
+// chat, staff, and listing-editor bundles until they're actually needed.
+const PostItemModal = lazy(() => import('./components/PostItemModal'));
+const ItemDetailView = lazy(() => import('./components/ItemDetailView'));
+const PickupAttributionModal = lazy(() => import('./components/PickupAttributionModal'));
+const EventDetailView = lazy(() => import('./components/EventDetailView'));
+const PostEventModal = lazy(() => import('./components/PostEventModal'));
+const NeighborProfileView = lazy(() => import('./components/NeighborProfileView'));
+const MobileView = lazy(() => import('./components/MobileView'));
+const TabletView = lazy(() => import('./components/TabletView'));
+const DesktopView = lazy(() => import('./components/DesktopView'));
+const AwardsPanel = lazy(() => import('./components/AwardsPanel'));
+const GoFundMeSupport = lazy(() => import('./components/GoFundMeSupport'));
 import { 
   supabase, 
   getSupabaseProfile, 
@@ -36,10 +44,8 @@ import {
 } from './supabase';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
-import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
 import TermsOfUseContent from './components/TermsOfUseContent';
-import AwardsPanel from './components/AwardsPanel';
 import { type AnyTab, type AppTab } from './lib/appTabs';
 import {
   appTabPath,
@@ -295,70 +301,31 @@ export default function App() {
     return 'mobile';
   });
 
-  // PWA states and install trigger handlers
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  // PWA install status — shared listener, see usePwaInstallPrompt. The
+  // floating banner's own show/dismiss timing stays local to App.tsx.
+  const { canPromptInstall, isIOS, isInstalled: isAlreadyInstalled, promptInstall } = usePwaInstallPrompt();
   const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if running in standalone mode (already installed & launched from screen icon)
-    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches 
-      || (window.navigator as any).standalone === true;
-    
-    if (isStandaloneMode) {
-      setIsAlreadyInstalled(true);
+    if (isAlreadyInstalled) {
+      setShowInstallBanner(false);
       return;
     }
-
-    // Check device type
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIosDevice = /ipad|iphone|ipod/.test(userAgent) && !(window as any).MSStream;
-    setIsIOS(isIosDevice);
-
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      const isDismissed = localStorage.getItem('pwa_banner_dismissed_v1');
-      if (!isDismissed) {
-        setTimeout(() => {
-          setShowInstallBanner(true);
-        }, 3000);
-      }
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    const handleAppInstalled = () => {
-      setIsAlreadyInstalled(true);
-      setShowInstallBanner(false);
-      setDeferredPrompt(null);
-    };
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    if (isIosDevice && !isStandaloneMode) {
-      const isDismissed = localStorage.getItem('pwa_banner_dismissed_v1');
-      if (!isDismissed) {
-        setTimeout(() => {
-          setShowInstallBanner(true);
-        }, 5000);
-      }
+    const isDismissed = localStorage.getItem('pwa_banner_dismissed_v1');
+    if (isDismissed) return;
+    if (canPromptInstall) {
+      const timer = setTimeout(() => setShowInstallBanner(true), 3000);
+      return () => clearTimeout(timer);
     }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
+    if (isIOS) {
+      const timer = setTimeout(() => setShowInstallBanner(true), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [canPromptInstall, isIOS, isAlreadyInstalled]);
 
   const handleInstallApp = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setIsAlreadyInstalled(true);
-      }
-      setDeferredPrompt(null);
+    const outcome = await promptInstall();
+    if (outcome === 'accepted' || outcome === 'dismissed') {
       setShowInstallBanner(false);
     }
   };
@@ -1355,6 +1322,7 @@ export default function App() {
           ) : (
             <NotificationsHubProvider userProfile={userProfile} onDeepLink={handlePushDeepLink}>
             <PresenceProvider userId={userProfile.uid}>
+            <Suspense fallback={<FullScreenSuspenseFallback />}>
                {deviceType === 'mobile' ? (
                 <MobileView
                   items={visibleItems}
@@ -1512,6 +1480,7 @@ export default function App() {
                   onViewListingId={handleViewListingId}
                 />
               )}
+            </Suspense>
 
               {showGoFundMeDetail && (
                 <FullScreenPanel
@@ -1519,7 +1488,9 @@ export default function App() {
                   subtitle={SUPPORT.gofundmeBlurb}
                   onClose={() => setShowGoFundMeDetail(false)}
                 >
-                  <GoFundMeSupport />
+                  <Suspense fallback={<OverlaySuspenseFallback />}>
+                    <GoFundMeSupport />
+                  </Suspense>
                 </FullScreenPanel>
               )}
 
@@ -1549,30 +1520,35 @@ export default function App() {
                   subtitle={AWARDS.panelSubtitle}
                   onClose={() => setShowAwardsPanel(false)}
                 >
-                  <AwardsPanel
-                    userProfile={userProfile}
-                    userPosts={visibleItems.filter((item) => item.userId === userProfile.uid)}
-                    onViewProfile={handleViewProfile}
-                  />
+                  <Suspense fallback={<OverlaySuspenseFallback />}>
+                    <AwardsPanel
+                      userProfile={userProfile}
+                      userPosts={visibleItems.filter((item) => item.userId === userProfile.uid)}
+                      onViewProfile={handleViewProfile}
+                    />
+                  </Suspense>
                 </FullScreenPanel>
               )}
 
               {viewProfileUid && (
-                <NeighborProfileView
-                  userId={viewProfileUid}
-                  currentUserId={userProfile.uid}
-                  currentUserProfile={userProfile}
-                  listingHints={visibleItems}
-                  onClose={() => setViewProfileUid(null)}
-                  onOpenChat={handleOpenChatFromProfile}
-                  onViewPost={setDetailItem}
-                  onRepostPost={handleRepostPost}
-                  onDeletePost={handleDeletePost}
-                  onBlockListChanged={handleBlockListChanged}
-                />
+                <Suspense fallback={<OverlaySuspenseFallback />}>
+                  <NeighborProfileView
+                    userId={viewProfileUid}
+                    currentUserId={userProfile.uid}
+                    currentUserProfile={userProfile}
+                    listingHints={visibleItems}
+                    onClose={() => setViewProfileUid(null)}
+                    onOpenChat={handleOpenChatFromProfile}
+                    onViewPost={setDetailItem}
+                    onRepostPost={handleRepostPost}
+                    onDeletePost={handleDeletePost}
+                    onBlockListChanged={handleBlockListChanged}
+                  />
+                </Suspense>
               )}
 
               {detailItem && (
+                <Suspense fallback={<OverlaySuspenseFallback />}>
                 <ItemDetailView
                   item={detailItem}
                   currentUserId={userProfile.uid}
@@ -1621,23 +1597,27 @@ export default function App() {
                     setPickupAttributionItem(detailItem);
                   }}
                 />
+                </Suspense>
               )}
 
               {pickupAttributionItem && userProfile && (
-                <PickupAttributionModal
-                  item={pickupAttributionItem}
-                  owner={userProfile}
-                  mode={pickupAttributionMode}
-                  onClose={() => setPickupAttributionItem(null)}
-                  onSaved={async () => {
-                    setPickupAttributionItem(null);
-                    await refreshDetailItem();
-                    await loadItems(false);
-                  }}
-                />
+                <Suspense fallback={<OverlaySuspenseFallback />}>
+                  <PickupAttributionModal
+                    item={pickupAttributionItem}
+                    owner={userProfile}
+                    mode={pickupAttributionMode}
+                    onClose={() => setPickupAttributionItem(null)}
+                    onSaved={async () => {
+                      setPickupAttributionItem(null);
+                      await refreshDetailItem();
+                      await loadItems(false);
+                    }}
+                  />
+                </Suspense>
               )}
 
               {detailEvent && (
+                <Suspense fallback={<OverlaySuspenseFallback />}>
                 <EventDetailView
                   event={detailEvent}
                   currentUserId={userProfile.uid}
@@ -1688,40 +1668,45 @@ export default function App() {
                   updating={detailEventUpdating}
                   commentsLocked={!canAccessEvents}
                 />
+                </Suspense>
               )}
 
               {(showPostModal || editingItem) && (
-                <PostItemModal
-                  userProfile={userProfile}
-                  editItem={editingItem}
-                  onClose={() => {
-                    setShowPostModal(false);
-                    setEditingItem(null);
-                  }}
-                  onSuccess={() => {
-                    loadItems(false);
-                    setActiveTab('feed');
-                    setShowPostModal(false);
-                    setEditingItem(null);
-                  }}
-                />
+                <Suspense fallback={<OverlaySuspenseFallback />}>
+                  <PostItemModal
+                    userProfile={userProfile}
+                    editItem={editingItem}
+                    onClose={() => {
+                      setShowPostModal(false);
+                      setEditingItem(null);
+                    }}
+                    onSuccess={() => {
+                      loadItems(false);
+                      setActiveTab('feed');
+                      setShowPostModal(false);
+                      setEditingItem(null);
+                    }}
+                  />
+                </Suspense>
               )}
 
               {((showPostEventModal && canAccessEvents) || editingEvent) && (
-                <PostEventModal
-                  userProfile={userProfile}
-                  editEvent={editingEvent}
-                  onClose={() => {
-                    setShowPostEventModal(false);
-                    setEditingEvent(null);
-                  }}
-                  onSuccess={() => {
-                    void loadEvents(false);
-                    setActiveTab('events');
-                    setShowPostEventModal(false);
-                    setEditingEvent(null);
-                  }}
-                />
+                <Suspense fallback={<OverlaySuspenseFallback />}>
+                  <PostEventModal
+                    userProfile={userProfile}
+                    editEvent={editingEvent}
+                    onClose={() => {
+                      setShowPostEventModal(false);
+                      setEditingEvent(null);
+                    }}
+                    onSuccess={() => {
+                      void loadEvents(false);
+                      setActiveTab('events');
+                      setShowPostEventModal(false);
+                      setEditingEvent(null);
+                    }}
+                  />
+                </Suspense>
               )}
             </PresenceProvider>
             </NotificationsHubProvider>
@@ -1766,7 +1751,8 @@ export default function App() {
             <button 
               onClick={handleDismissPrompt}
               className="text-subtle hover:text-app p-1 hover:bg-surface rounded-lg transition-colors cursor-pointer shrink-0"
-              title="Dismiss Installation Banner"
+              title="Dismiss install banner"
+              aria-label="Dismiss install banner"
               id="pwa_banner_dismiss_btn"
             >
               <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

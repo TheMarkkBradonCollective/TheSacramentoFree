@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useScrollInputOnFocus } from '../hooks/useKeyboardInset';
 import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
@@ -16,15 +16,18 @@ import CommunityStatsBar from './CommunityStatsBar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import { isStaffRole } from '../lib/roles';
 import StaffSidebar from './staff/StaffSidebar';
-import StaffUsersView from './staff/StaffUsersView';
-import StaffPostsView from './staff/StaffPostsView';
-import StaffTeamView from './staff/StaffTeamView';
-import StaffOverviewView from './staff/StaffOverviewView';
-import StaffViolationsView from './staff/StaffViolationsView';
-import StaffAuditView from './staff/StaffAuditView';
-import StaffWelcomeView from './staff/StaffWelcomeView';
-import StaffMessagesView from './staff/StaffMessagesView';
-import StaffMeetsView from './staff/StaffMeetsView';
+import { OverlaySuspenseFallback } from './SuspenseFallback';
+import {
+  StaffUsersView,
+  StaffPostsView,
+  StaffTeamView,
+  StaffOverviewView,
+  StaffViolationsView,
+  StaffAuditView,
+  StaffWelcomeView,
+  StaffMessagesView,
+  StaffMeetsView,
+} from './staff/lazyStaffViews';
 import PageScrollFooter from './PageScrollFooter';
 
 interface TabletViewProps {
@@ -151,23 +154,27 @@ export default function TabletView({
             if (!sidebarCollapsed) setSidebarCollapsed(true);
           }}
         >
-          {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
-          {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
-          {activeTab === 'staff_messages' && (
-            <StaffMessagesView
-              actor={userProfile}
-              onViewProfile={onViewProfile}
-              onOpenChat={onOpenChatById}
-              onOpenTicket={onOpenTicketById}
-              onViewListing={onViewListingId}
-            />
+          {isStaffTab(activeTab) && (
+            <Suspense fallback={<OverlaySuspenseFallback />}>
+              {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
+              {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
+              {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
+              {activeTab === 'staff_messages' && (
+                <StaffMessagesView
+                  actor={userProfile}
+                  onViewProfile={onViewProfile}
+                  onOpenChat={onOpenChatById}
+                  onOpenTicket={onOpenTicketById}
+                  onViewListing={onViewListingId}
+                />
+              )}
+              {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
+              {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
+              {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
+              {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
+              {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
+            </Suspense>
           )}
-          {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
-          {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
-          {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
-          {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
           {!isStaffTab(activeTab) && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <header className="sbn-glass-nav px-4 py-2 border-b border-app flex items-center justify-between shrink-0">
@@ -215,7 +222,7 @@ export default function TabletView({
         <div className="flex items-center gap-2" id="tablet_actions">
           <NotificationsHubButton />
           {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
-          <button type="button" id="tablet_header_post" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+          <button type="button" id="tablet_header_post" onClick={onOpenNewPost} aria-label={IN_APP.postButton} className="sbn-btn sbn-btn-primary sbn-btn-sm">
             <Plus className="w-4 h-4" />
             <span className="hidden md:inline">{IN_APP.postButton}</span>
           </button>
