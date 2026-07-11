@@ -73,6 +73,7 @@ export default function ChatInboxList({
                 <button
                   type="button"
                   onClick={() => onViewProfile?.(request.fromUserId)}
+                  aria-label={`View ${request.fromUserName || 'neighbor'}'s profile`}
                   className="shrink-0 rounded-full"
                 >
                   <PresenceUserAvatar uid={request.fromUserId} src={photo} name={request.fromUserName} size="md" />

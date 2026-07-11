@@ -140,6 +140,7 @@ export default function ReportNeighborModal({
                 <button
                   type="button"
                   onClick={() => handleProofChange(null)}
+                  aria-label="Remove screenshot"
                   className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white"
                 >
                   <X className="w-4 h-4" />
