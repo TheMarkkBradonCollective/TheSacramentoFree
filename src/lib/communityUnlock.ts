@@ -1,4 +1,5 @@
 import type { AwardsUnlockStatus } from '../types';
+import { SITE } from '../siteContent';
 import { supabase } from '../supabase';
 
 export async function getCommunityUnlockStatus(target: number): Promise<AwardsUnlockStatus> {
@@ -18,6 +19,6 @@ export async function getCommunityUnlockStatus(target: number): Promise<AwardsUn
 }
 
 export function getInviteShareUrl(): string {
-  if (typeof window === 'undefined') return 'https://sacramentobuynothing.com/#/login';
+  if (typeof window === 'undefined') return `${SITE.url}/#/login`;
   return `${window.location.origin}${window.location.pathname}#/login`;
 }

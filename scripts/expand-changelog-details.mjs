@@ -717,7 +717,7 @@ function detailForEntry(entry) {
 ${body}
 
 WHAT WE BUILT
-${title} — part of the Sacramento Buy Nothing community app at sacramento-buy-nothing.vercel.app.
+${title} — part of the Sacramento Buy Nothing community app at sacramentobuynothing.com.
 
 WHERE TO LOOK IN CODE
 Search the repo for keywords from this update title, or browse src/components/, src/supabase.ts, and supabase-sql/ for related tables and UI.

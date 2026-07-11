@@ -2,6 +2,8 @@
 
 A community gifting PWA for Sacramento neighbors. Post free items, browse a local feed and map, coordinate pickup in chat, RSVP to events, and get push notifications — no money, no ads.
 
+**Live site:** [sacramentobuynothing.com](https://sacramentobuynothing.com) · **Android APK:** [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download)
+
 **Stack:** React 19, Vite, Tailwind CSS v4, Supabase (auth + Postgres + realtime), Vercel serverless push API.
 
 ## Run locally

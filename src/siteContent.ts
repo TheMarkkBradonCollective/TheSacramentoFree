@@ -4,6 +4,7 @@ export const APP_LOGO_SRC = '/Logo.jpeg';
 export const SITE = {
   name: 'Sacramento Buy Nothing',
   shortName: 'Sac Buy Nothing',
+  url: 'https://sacramentobuynothing.com',
   tagline: 'Sharing is better than throwing away.',
   description:
     'A community-powered platform where people in Sacramento can give away items they no longer need — completely free.',
