@@ -1064,10 +1064,10 @@ export default function MapNavigationView({
       const destIcon = L.divIcon({
         html: `
           <div class="sbn-nav-dest-pin relative flex flex-col items-center">
-            <div class="h-9 w-9 rounded-full bg-[#FF4500] border-[3px] border-white shadow-[0_4px_16px_rgba(255,69,0,0.55)] flex items-center justify-center">
+            <div class="h-9 w-9 rounded-full bg-[var(--color-accent)] border-[3px] border-white shadow-[0_4px_16px_rgba(255,69,0,0.55)] flex items-center justify-center">
               <div class="h-2.5 w-2.5 rounded-full bg-white"></div>
             </div>
-            <div class="w-0 h-0 border-l-[7px] border-r-[7px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#FF4500] -mt-0.5"></div>
+            <div class="w-0 h-0 border-l-[7px] border-r-[7px] border-t-[10px] border-l-transparent border-r-transparent border-t-[var(--color-accent)] -mt-0.5"></div>
           </div>
         `,
         className: 'nav-dest-marker',
