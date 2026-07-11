@@ -1,5 +1,6 @@
 import type { LatLng } from './mapRoute';
 import { haversineMeters } from './mapRoute';
+import { apiUrl } from './appOrigin';
 
 export interface NavigationStep {
   id: string;
@@ -186,7 +187,7 @@ async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<Na
       toLat: String(to.lat),
       toLng: String(to.lng),
     });
-    const res = await fetch(`/api/map/navigation?${params.toString()}`, {
+    const res = await fetch(apiUrl(`/api/map/navigation?${params.toString()}`), {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
     });

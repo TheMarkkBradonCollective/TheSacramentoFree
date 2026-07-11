@@ -9,6 +9,7 @@ import {
   type UserProfile,
 } from '../types';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { isAndroidApp } from '../lib/nativePlatform';
 import { isDirectorRole, isStaffRole } from '../lib/roles';
 
 export type NotificationSettingsScope = 'alerts' | 'listings' | 'all';
@@ -304,13 +305,22 @@ export default function NotificationSettings({
           <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
             <strong className="text-app">iPhone:</strong> add Sacramento Buy Nothing to your Home Screen, then enable
             alerts here. Safari tabs alone cannot receive push while closed.
+            {isAndroidApp() ? (
+              <>
+                {' '}
+                <strong className="text-app">Android app:</strong> alerts use Firebase Cloud Messaging for reliable
+                delivery in the background.
+              </>
+            ) : null}
           </p>
         </>
       ) : null}
 
       {permission === 'unsupported' && (
         <p className="text-sm text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-4">
-          This browser does not support push notifications.
+          {isAndroidApp()
+            ? 'Push is not configured on this Android build yet. Add google-services.json and redeploy the APK.'
+            : 'This browser does not support push notifications.'}
         </p>
       )}
 
