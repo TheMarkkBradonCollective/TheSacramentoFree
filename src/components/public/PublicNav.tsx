@@ -1,15 +1,16 @@
 import { ChevronDown, Menu, X } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import ThemeToggle from '../ThemeToggle';
 import BrandLogo from '../BrandLogo';
 import { PUBLIC_NAV, type PublicRoute } from '../../public/routes';
+import { isNativeApp } from '../../lib/nativePlatform';
 
 interface PublicNavProps {
   route: PublicRoute;
   onNavigate: (route: PublicRoute) => void;
 }
 
-const COMMUNITY_LINKS: { route: PublicRoute; label: string }[] = [
+const ALL_COMMUNITY_LINKS: { route: PublicRoute; label: string }[] = [
   { route: 'community', label: 'About community' },
   { route: 'reviews', label: 'Reviews' },
   { route: 'updates', label: 'Updates' },
@@ -47,6 +48,11 @@ function useDropdownMenu(onClose: () => void) {
 }
 
 export default function PublicNav({ route, onNavigate }: PublicNavProps) {
+  // Already inside the installed app — advertising the download is redundant.
+  const COMMUNITY_LINKS = useMemo(
+    () => (isNativeApp() ? ALL_COMMUNITY_LINKS.filter((l) => l.route !== 'download') : ALL_COMMUNITY_LINKS),
+    [],
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
