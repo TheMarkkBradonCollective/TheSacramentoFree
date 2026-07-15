@@ -214,7 +214,7 @@ export const IN_APP = {
   mapDescription: 'Explore free gifts and requests across Sacramento. Message neighbors to arrange porch pickup.',
   eventsTitle: 'Free Community Events',
   eventsDescription:
-    'Neighborhood potlucks, swaps, and meetups — always 100% free. Unlocks for everyone when we reach 1,000 neighbors.',
+    'Neighborhood potlucks, swaps, and meetups — always 100% free. Unlocks for everyone when we reach 500 neighbors.',
   eventsTabLabel: 'Events',
   postEventButton: 'Post Event',
   chatsTabLabel: 'Messages',
@@ -430,9 +430,9 @@ export const EVENTS = {
   unlockBadge: 'Almost meetup time',
   unlockTitle: 'Let\'s unlock community events!',
   unlockBody:
-    'We need 1,000 neighbors before the Events tab goes live. Copy your invite link and share it — every new neighbor gets us closer to potlucks, swaps, and park meetups!',
+    'We need 500 neighbors before the Events tab goes live. Copy your invite link and share it — every new neighbor gets us closer to potlucks, swaps, and park meetups!',
   unlockNote:
-    'Events are always 100% free — no tickets, no fees. Once we hit 1,000 members, you can post and RSVP to neighborhood gatherings.',
+    'Events are always 100% free — no tickets, no fees. Once we hit 500 members, you can post and RSVP to neighborhood gatherings.',
   shareButton: 'Copy link & spread the word',
   shareTitle: 'Join Sacramento Buy Nothing',
   shareMessage:
@@ -446,5 +446,5 @@ export const EVENTS = {
     'Always free — no tickets or fees allowed',
   ],
   staffPreviewNote:
-    'Our team may post gatherings early — browse below. RSVP is open now; comments open for everyone once we hit 1,000 neighbors.',
+    'Our team may post gatherings early — browse below. RSVP is open now; comments open for everyone once we hit 500 neighbors.',
 } as const;

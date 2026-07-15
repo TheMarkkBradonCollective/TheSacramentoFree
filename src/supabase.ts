@@ -3029,7 +3029,7 @@ export async function createSupabaseEvent(
         return {
           ok: false,
           errorMessage:
-            'Community events unlock at 1,000 neighbors. Share the invite link to help us get there!',
+            'Community events unlock at 500 neighbors. Share the invite link to help us get there!',
         };
       }
     }

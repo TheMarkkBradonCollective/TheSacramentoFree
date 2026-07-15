@@ -128,8 +128,8 @@ export default function EventEngagement({
           {commentsLocked ? (
             <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2">
               {isPast
-                ? 'Comments open once we reach 1,000 neighbors. You can still mark whether you went or missed it.'
-                : 'Comments open once we reach 1,000 neighbors. You can still RSVP Going, Maybe, or Can\u2019t go.'}
+                ? 'Comments open once we reach 500 neighbors. You can still mark whether you went or missed it.'
+                : 'Comments open once we reach 500 neighbors. You can still RSVP Going, Maybe, or Can\u2019t go.'}
             </p>
           ) : comments.length === 0 ? (
             <p className="text-xs text-muted italic text-center py-2">

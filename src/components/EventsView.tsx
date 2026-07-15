@@ -353,7 +353,7 @@ export default function EventsView({
           <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
             {events.length === 0
               ? sneakPeek
-                ? 'Events unlock when we reach 1,000 neighbors. Here is a preview of what is coming:'
+                ? 'Events unlock when we reach 500 neighbors. Here is a preview of what is coming:'
                 : 'Be the first to post a free neighborhood gathering — potlucks, swaps, park meetups, and more.'
               : 'Try different filters, or post a new event for your neighborhood.'}
           </p>
