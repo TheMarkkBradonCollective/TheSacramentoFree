@@ -1,4 +1,4 @@
-import { ArrowRight, FileText, HandHeart, Heart, MapPin, MessageSquare, Shield, Sparkles, Star, Users } from 'lucide-react';
+import { ArrowRight, FileText, HandHeart, Heart, MapPin, MessageCircle, MessageSquare, PackageCheck, Shield, Sparkles, Star, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
 import CommunityReviews from '../../CommunityReviews';
@@ -8,6 +8,12 @@ import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
 import { SITE, SUPPORT } from '../../../siteContent';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
+
+const HERO_FEATURES: { icon: typeof PackageCheck; title: string; blurb: string }[] = [
+  { icon: PackageCheck, title: 'Post in seconds', blurb: 'Snap a photo, write a few words, done.' },
+  { icon: MessageCircle, title: 'Chat safely', blurb: 'Message right in the app — no phone numbers needed.' },
+  { icon: MapPin, title: 'Meet nearby', blurb: 'Filter by neighborhood, coordinate porch pickup.' },
+];
 
 interface HomePageProps {
   onNavigate: (route: PublicRoute) => void;
@@ -39,43 +45,71 @@ export default function HomePage({
 }: HomePageProps) {
   return (
     <HomeScrollStage>
-      <section className="sbn-page-content sbn-hero-glow pb-4">
-        <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl mb-6" />
+      <section className="px-4 sbn-hero-glow pb-4">
+        <div className="lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:items-center max-w-3xl lg:max-w-none mx-auto">
+          <div>
+            <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl mb-6" />
 
-        <span className="sbn-badge sbn-badge-give">
-          <Heart className="w-3 h-3 inline mr-1" />
-          {SITE.name}
-        </span>
+            <span className="sbn-badge sbn-badge-give">
+              <Heart className="w-3 h-3 inline mr-1" />
+              {SITE.name}
+            </span>
 
-        <h1 className="mt-6 font-display text-4xl md:text-5xl font-bold text-app leading-[1.08] tracking-tight">
-          Give freely.
-          <br />
-          <span className="text-accent">Ask kindly.</span>
-        </h1>
+            <h1 className="mt-6 font-display text-4xl md:text-5xl lg:text-6xl font-bold text-app leading-[1.08] tracking-tight">
+              Give freely.
+              <br />
+              <span className="text-accent">Ask kindly.</span>
+            </h1>
 
-        <p className="mt-5 text-base text-muted leading-relaxed max-w-lg">{SITE.description}</p>
+            <p className="mt-5 text-base lg:text-lg text-muted leading-relaxed max-w-lg">{SITE.description}</p>
 
-        <ul className="mt-6 flex flex-wrap gap-2">
-          {SITE.principles.map((line) => (
-            <li key={line} className="sbn-chip text-xs">
-              {line}
-            </li>
-          ))}
-        </ul>
+            <ul className="mt-6 flex flex-wrap gap-2">
+              {SITE.principles.map((line) => (
+                <li key={line} className="sbn-chip text-xs">
+                  {line}
+                </li>
+              ))}
+            </ul>
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary">
-            Sign in or join
-          </button>
-          <button type="button" onClick={() => onNavigate('about')} className="sbn-btn sbn-btn-secondary">
-            Learn more
-          </button>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary">
+                Sign in or join
+              </button>
+              <button type="button" onClick={() => onNavigate('about')} className="sbn-btn sbn-btn-secondary">
+                Learn more
+              </button>
+            </div>
+
+            <p className="mt-5 text-sm font-semibold text-accent">{SITE.freeRule}</p>
+          </div>
+
+          {/* Live preview panel — desktop only, uses the space a stretched single column used to leave empty */}
+          <div className="hidden lg:block">
+            <div className="sbn-hero-preview-card">
+              <p className="text-[11px] font-black uppercase tracking-widest text-accent">Live in Sacramento</p>
+              <div className="mt-2">
+                <CommunityStatsBar items={items} variant="stacked" />
+              </div>
+              <div className="mt-5 pt-1">
+                {HERO_FEATURES.map(({ icon: Icon, title, blurb }) => (
+                  <div className="sbn-hero-preview-feature" key={title}>
+                    <span className="w-9 h-9 rounded-xl bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-app">{title}</p>
+                      <p className="text-xs text-muted">{blurb}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-
-        <p className="mt-5 text-sm font-semibold text-accent">{SITE.freeRule}</p>
       </section>
 
-      <DepthSection depth={2} className="mt-6">
+      {/* Desktop already shows live stats in the hero preview panel above */}
+      <DepthSection depth={2} className="mt-6 lg:hidden">
         <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">Community at a glance</p>
         <div className="sbn-card p-1">
           <CommunityStatsBar items={items} variant="full" />
@@ -137,7 +171,7 @@ export default function HomePage({
         <h2 className="font-display text-xl font-bold text-app">About the community</h2>
         <p className="mt-1 text-sm text-muted">Learn how we keep gifting local and free.</p>
 
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {EXPLORE_LINKS.map(({ route, title, blurb, icon: Icon }) => (
             <button
               key={route}
