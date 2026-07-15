@@ -4,6 +4,7 @@ import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
 import CommunityReviews from '../../CommunityReviews';
 import CommunityStatsBar from '../../CommunityStatsBar';
 import GuestListingPreview from '../GuestListingPreview';
+import HomeDownloadButtons from '../HomeDownloadButtons';
 import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
 import { SITE, SUPPORT } from '../../../siteContent';
 import type { PublicRoute } from '../../../public/routes';
@@ -79,6 +80,8 @@ export default function HomePage({
                 Learn more
               </button>
             </div>
+
+            <HomeDownloadButtons onNavigate={onNavigate} />
 
             <p className="mt-5 text-sm font-semibold text-accent">{SITE.freeRule}</p>
           </div>
