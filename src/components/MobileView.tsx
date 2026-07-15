@@ -5,7 +5,7 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, Plus, CalendarDays } from 'lucide-react';
+import { Map, List, MessageSquare, User, Plus, CalendarDays, Sparkles } from 'lucide-react';
 import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
@@ -16,8 +16,9 @@ import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import PageScrollFooter from './PageScrollFooter';
-import { isStaffRole } from '../lib/roles';
-import StaffSidebar from './staff/StaffSidebar';
+import { isStaffRole, roleTheme } from '../lib/roles';
+import { isNativeApp } from '../lib/nativePlatform';
+import AppSidebar from './AppSidebar';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
@@ -147,6 +148,15 @@ export default function MobileView({
   useScrollInputOnFocus();
 
   const isStaff = isStaffRole(userProfile.role);
+  const isNative = isNativeApp();
+  const theme = roleTheme(userProfile.role);
+  const firstName = userProfile.displayName.trim().split(/\s+/)[0] || userProfile.displayName;
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  })();
   // For staff, the type is AnyTab; for regular users, it's AppTab.
   // We cast activeTab back to AppTab for views that only accept AppTab.
   const setActiveTab = setActiveTabRaw;
@@ -158,11 +168,16 @@ export default function MobileView({
 
   if (isStaff) {
     return (
-      <div id="mobile_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
-        <StaffSidebar
+      <div
+        id="mobile_device_workspace"
+        className="flex h-screen bg-app text-app overflow-hidden"
+        style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as React.CSSProperties}
+      >
+        <AppSidebar
           userProfile={userProfile}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          variant="expanded"
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
           onCollapse={() => setSidebarCollapsed(true)}
@@ -196,7 +211,10 @@ export default function MobileView({
           {/* Community tab content within the sidebar layout */}
           {!isStaffTab(activeTab) && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <header className="sbn-glass-nav px-4 py-2 border-b border-app flex items-center justify-between shrink-0">
+              <header
+                className="sbn-glass-nav px-4 py-2 flex items-center justify-between shrink-0 border-b-2"
+                style={{ borderBottomColor: theme.accent }}
+              >
                 <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />
                 <div className="flex items-center gap-1">
                   <NotificationsHubButton />
@@ -242,7 +260,10 @@ export default function MobileView({
       id="mobile_device_workspace"
       className={`sbn-mobile-shell flex flex-col bg-app text-app${mapImmersiveNav ? ' sbn-immersive-nav' : ''}`}
     >
-      <header className={`sbn-mobile-header sbn-glass-nav${mapImmersiveNav ? ' sbn-mobile-chrome-hidden' : ''}`}>
+      <header
+        className={`sbn-mobile-header sbn-glass-nav${mapImmersiveNav ? ' sbn-mobile-chrome-hidden' : ''}${isNative ? ' sbn-native-header' : ''}`}
+        style={isNative ? ({ '--sbn-role-accent': theme.accent } as React.CSSProperties) : undefined}
+      >
         <div className="sbn-mobile-header-row">
         <BrandLogo
           imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
@@ -319,6 +340,20 @@ export default function MobileView({
           aria-hidden={communityTab !== 'feed'}
         >
           <div className="max-w-2xl mx-auto">
+            {isNative && (
+              <div className="sbn-native-hero mb-4">
+                <p className="relative text-[11px] font-bold uppercase tracking-widest text-white/75">
+                  {greeting}
+                </p>
+                <p className="relative font-display text-lg font-extrabold text-white mt-0.5">
+                  {firstName} 👋
+                </p>
+                <p className="relative text-xs text-white/85 mt-1.5 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  {items.length} listings live in Sacramento right now
+                </p>
+              </div>
+            )}
             <div className="sbn-page-header">
               <h2>{IN_APP.feedTitle}</h2>
               <p>
