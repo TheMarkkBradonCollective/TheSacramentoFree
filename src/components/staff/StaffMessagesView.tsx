@@ -262,7 +262,7 @@ export default function StaffMessagesView({
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden">
       <div className="px-4 pt-4 pb-0 border-b border-app shrink-0">
-        <p className="text-[10px] font-black uppercase tracking-widest text-accent font-mono pb-0.5">Staff Panel</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-role-accent font-mono pb-0.5">Staff Panel</p>
         <h2 className="font-display font-bold text-app text-lg">Message Management</h2>
         <p className="text-xs text-muted mt-0.5 pb-3">
           Oversight of reports, support tickets, listing comments, community channels, and neighbor DMs.

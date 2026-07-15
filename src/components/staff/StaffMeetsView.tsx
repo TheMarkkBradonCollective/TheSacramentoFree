@@ -148,7 +148,7 @@ export default function StaffMeetsView({ actor, onViewProfile }: StaffMeetsViewP
       <div className="px-4 pt-4 pb-0 border-b border-app shrink-0 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-accent font-mono">Staff Panel</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-role-accent font-mono">Staff Panel</p>
             <h2 className="font-display font-bold text-app text-lg">Meet Records</h2>
             <p className="text-xs text-muted mt-0.5">
               {liveCount > 0 ? (
