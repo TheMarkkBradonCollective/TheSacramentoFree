@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   ClipboardList,
+  Crown,
   FileText,
   GaugeCircle,
   Inbox,
@@ -15,10 +16,12 @@ import {
   User,
   Users,
 } from 'lucide-react';
-import type { UserProfile } from '../../types';
-import type { AnyTab } from '../../lib/appTabs';
-import { normalizeUserRole, roleLabel, roleRank } from '../../lib/roles';
-import BrandLogo from '../BrandLogo';
+import type { CSSProperties } from 'react';
+import type { UserProfile } from '../types';
+import type { AnyTab } from '../lib/appTabs';
+import { isStaffRole, roleLabel, roleRank, roleTheme } from '../lib/roles';
+import BrandLogo from './BrandLogo';
+import { PresenceUserAvatar } from './UserAvatar';
 
 interface SidebarItem {
   id: AnyTab;
@@ -48,27 +51,37 @@ const NAV_ITEMS: SidebarItem[] = [
   { id: 'staff_team', label: 'Team', icon: Shield, section: 'staff', minRank: 2 },
 ];
 
-interface StaffSidebarProps {
+interface AppSidebarProps {
   userProfile: UserProfile;
   activeTab: AnyTab;
   onTabChange: (tab: AnyTab) => void;
+  /**
+   * expanded = full-width icon+label sidebar with a collapse toggle (desktop).
+   * rail = permanently icon-only, no toggle — the tablet's signature nav shape.
+   */
+  variant?: 'expanded' | 'rail';
   collapsed?: boolean;
   onToggleCollapse?: () => void;
-  /** Collapse the sidebar after a nav item is selected (e.g. mobile/tablet). */
+  /** Collapse the sidebar after a nav item is selected (e.g. mobile). */
   onCollapse?: () => void;
   autoCollapseOnNavigate?: boolean;
 }
 
-export default function StaffSidebar({
+export default function AppSidebar({
   userProfile,
   activeTab,
   onTabChange,
+  variant = 'expanded',
   collapsed = false,
   onToggleCollapse,
   onCollapse,
   autoCollapseOnNavigate = false,
-}: StaffSidebarProps) {
+}: AppSidebarProps) {
   const actorRank = roleRank(userProfile.role);
+  const isRail = variant === 'rail';
+  const isCollapsed = isRail || collapsed;
+  const theme = roleTheme(userProfile.role);
+  const isStaff = isStaffRole(userProfile.role);
 
   const selectTab = (id: AnyTab) => {
     onTabChange(id);
@@ -83,36 +96,60 @@ export default function StaffSidebar({
   );
 
   const roleName = roleLabel(userProfile.role);
-  const isDirector = normalizeUserRole(userProfile.role) === 'director';
 
   return (
     <aside
-      id="staff_sidebar"
-      className={`flex flex-col h-full bg-surface border-r border-app transition-all duration-200 shrink-0 ${
-        collapsed ? 'w-14' : 'w-56'
+      id="app_sidebar"
+      data-variant={variant}
+      className={`sbn-sidebar flex flex-col h-full bg-surface border-r border-app shrink-0 ${
+        isRail ? 'w-[4.5rem]' : `transition-all duration-200 ${isCollapsed ? 'w-14' : 'w-60'}`
       }`}
+      style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as CSSProperties}
     >
+      {/* Role accent rail — a hairline strip of color so each rank reads instantly */}
+      <div className="sbn-sidebar-accent-bar" />
+
       {/* Logo */}
-      <div className={`flex items-center gap-2 px-3 py-4 border-b border-app ${collapsed ? 'justify-center' : ''}`}>
-        {collapsed ? (
-          <ShieldCheck className="w-6 h-6 text-accent shrink-0" />
+      <div className={`flex items-center gap-2 px-3 py-4 border-b border-app ${isCollapsed ? 'justify-center' : ''}`}>
+        {isCollapsed ? (
+          isStaff ? (
+            <ShieldCheck className="w-6 h-6 shrink-0" style={{ color: theme.accent }} />
+          ) : (
+            <BrandLogo imgClassName="h-7 w-7 object-cover rounded-lg shrink-0" showTitle={false} />
+          )
         ) : (
           <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />
         )}
       </div>
 
-      {/* Role badge */}
-      {!collapsed && (
-        <div className="px-3 py-2.5 border-b border-app">
-          <p className="text-[9px] font-black uppercase tracking-widest text-subtle font-mono">Signed in as</p>
-          <p className="text-xs font-semibold text-app truncate mt-0.5">{userProfile.displayName}</p>
-          <p className={`text-[10px] font-semibold mt-0.5 ${isDirector ? 'text-accent' : 'text-muted'}`}>{roleName}</p>
+      {/* Signed-in-as card */}
+      {!isCollapsed && (
+        <div className="sbn-sidebar-identity px-3 py-3 border-b border-app">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <PresenceUserAvatar
+              uid={userProfile.uid}
+              src={userProfile.photoURL}
+              name={userProfile.displayName}
+              size="sm"
+              className="shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-app truncate leading-tight">{userProfile.displayName}</p>
+              <p
+                className="text-[10px] font-bold mt-0.5 truncate inline-flex items-center gap-1"
+                style={{ color: theme.accent }}
+              >
+                {userProfile.role === 'director' && <Crown className="w-3 h-3 shrink-0" />}
+                {roleName}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
       <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 min-h-0">
         {/* Community section */}
-        {!collapsed && (
+        {!isCollapsed && (
           <p className="px-3 pt-2 pb-1 text-[9px] font-black uppercase tracking-widest text-subtle font-mono">
             Community
           </p>
@@ -123,18 +160,20 @@ export default function StaffSidebar({
             <button
               key={id}
               type="button"
-              id={`staff_sidebar_${id}`}
+              id={`app_sidebar_${id}`}
               onClick={() => selectTab(id)}
               aria-current={isActive ? 'page' : undefined}
-              title={collapsed ? label : undefined}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mx-1 transition-colors text-sm font-medium ${
-                isActive
-                  ? 'bg-accent/15 text-accent'
-                  : 'text-muted hover:bg-inset hover:text-app'
-              } ${collapsed ? 'justify-center w-auto' : ''}`}
+              title={isCollapsed ? label : undefined}
+              className={`sbn-sidebar-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg mx-1 text-sm font-medium ${
+                isActive ? 'sbn-sidebar-item-active' : 'text-muted hover:bg-inset hover:text-app'
+              } ${isCollapsed ? 'flex-col gap-1 justify-center py-2.5' : ''}`}
             >
               <Icon className="w-4 h-4 shrink-0" strokeWidth={isActive ? 2.5 : 2} />
-              {!collapsed && <span className="truncate">{label}</span>}
+              {!isCollapsed ? (
+                <span className="truncate">{label}</span>
+              ) : (
+                <span className="text-[9px] font-bold leading-none">{label}</span>
+              )}
             </button>
           );
         })}
@@ -142,12 +181,15 @@ export default function StaffSidebar({
         {/* Staff section */}
         {staffItems.length > 0 && (
           <>
-            {!collapsed && (
-              <p className="px-3 pt-4 pb-1 text-[9px] font-black uppercase tracking-widest text-accent font-mono">
+            {!isCollapsed && (
+              <p
+                className="px-3 pt-4 pb-1 text-[9px] font-black uppercase tracking-widest font-mono"
+                style={{ color: theme.accent }}
+              >
                 Staff
               </p>
             )}
-            {collapsed && <div className="mx-2 my-2 border-t border-app" />}
+            {isCollapsed && <div className="mx-2 my-2 border-t border-app" />}
             {staffItems.map(({ id, label, icon: Icon, minRank = 0 }) => {
               const hasAccess = actorRank >= minRank;
               const isActive = activeTab === id;
@@ -155,21 +197,23 @@ export default function StaffSidebar({
                 <button
                   key={id}
                   type="button"
-                  id={`staff_sidebar_${id}`}
+                  id={`app_sidebar_${id}`}
                   onClick={() => selectTab(id)}
                   aria-current={isActive ? 'page' : undefined}
-                  title={collapsed ? label : undefined}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mx-1 transition-colors text-sm font-medium ${
+                  title={isCollapsed ? label : undefined}
+                  className={`sbn-sidebar-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg mx-1 text-sm font-medium ${
                     isActive
-                      ? 'bg-accent/15 text-accent'
+                      ? 'sbn-sidebar-item-active'
                       : hasAccess
                         ? 'text-muted hover:bg-inset hover:text-app'
                         : 'text-subtle opacity-50 cursor-pointer'
-                  } ${collapsed ? 'justify-center w-auto' : ''}`}
+                  } ${isCollapsed ? 'flex-col gap-1 justify-center py-2.5' : ''}`}
                 >
                   <Icon className="w-4 h-4 shrink-0" strokeWidth={isActive ? 2.5 : 2} />
-                  {!collapsed && (
+                  {!isCollapsed ? (
                     <span className="flex-1 truncate text-left">{label}</span>
+                  ) : (
+                    <span className="text-[9px] font-bold leading-none text-center">{label}</span>
                   )}
                 </button>
               );
@@ -179,13 +223,13 @@ export default function StaffSidebar({
       </nav>
 
       {/* Footer */}
-      {onToggleCollapse && (
+      {onToggleCollapse && !isRail && (
         <div className={`border-t border-app p-2 flex items-center ${collapsed ? 'justify-center' : 'justify-end'}`}>
           <button
             type="button"
             onClick={onToggleCollapse}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="p-1.5 rounded-lg text-muted hover:text-app hover:bg-inset transition-colors"
+            className="p-1.5 rounded-lg text-muted hover:text-app hover:bg-inset transition-colors cursor-pointer"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

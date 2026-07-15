@@ -694,6 +694,214 @@ option {
   }
 }
 
+/* ——— App shell — persistent sidebar + topbar desktop/tablet workspace ——— */
+
+.sbn-sidebar {
+  position: relative;
+}
+
+.sbn-sidebar-accent-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--sbn-role-accent, var(--color-accent)), transparent 140%);
+}
+
+.sbn-sidebar-identity {
+  background: color-mix(in srgb, var(--sbn-role-soft, var(--color-accent-soft)) 45%, transparent);
+}
+
+.sbn-sidebar-item {
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.sbn-sidebar-item-active {
+  background: var(--sbn-role-soft, var(--color-accent-soft));
+  color: var(--sbn-role-accent, var(--color-accent));
+}
+
+/* Slim utility topbar shared by desktop + tablet shells */
+.sbn-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.75rem;
+  padding: 0 1.25rem;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(10px) saturate(1.2);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* Role-accent text — sidebar/topbar/staff panels all key off the same
+   --sbn-role-accent variable set on the app shell root, so every screen for
+   a given rank reads as one consistent color identity. */
+.text-role-accent {
+  color: var(--sbn-role-accent, var(--color-accent));
+}
+
+.sbn-topbar-eyebrow {
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sbn-role-accent, var(--color-accent));
+}
+
+.sbn-topbar-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* Desktop workspace body: main content column + optional right rail.
+   No overflow here — each tab panel inside owns its own scroll behavior
+   (map/chat need fixed height, feed/events/profile need to scroll). */
+.sbn-workspace-main {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.sbn-workspace-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sbn-dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 2.5rem;
+}
+
+@media (min-width: 1180px) {
+  .sbn-dash-grid {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}
+
+.sbn-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+}
+
+.sbn-rail-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 1.125rem;
+}
+
+.sbn-rail-card-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.sbn-rail-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0;
+}
+
+.sbn-rail-stat-row + .sbn-rail-stat-row {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.sbn-rail-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-inset);
+  border: 1px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
+}
+
+.sbn-rail-quick-btn:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.sbn-rail-quick-btn:active {
+  transform: scale(0.98);
+}
+
+/* Tablet: full-bleed content, no right rail — its own distinct shape from desktop */
+.sbn-tablet-content {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* Native app (Capacitor) only — richer greeting hero, not shown on mobile web */
+.sbn-native-hero {
+  border-radius: 1.25rem;
+  padding: 1.1rem 1.15rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 92%, #fff 8%), var(--color-accent) 55%, color-mix(in srgb, var(--color-accent) 80%, #000 12%));
+  color: #fff;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  position: relative;
+  overflow: hidden;
+}
+
+.sbn-native-hero::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 60%;
+  height: 160%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 65%);
+  pointer-events: none;
+}
+
+.sbn-boot-logo-glow img {
+  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--color-accent) 55%, transparent));
+  animation: sbn-boot-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes sbn-boot-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sbn-boot-logo-glow img {
+    animation: none;
+  }
+}
+
+.sbn-native-header {
+  border-bottom: 2px solid var(--sbn-role-accent, var(--color-accent));
+}
+
 /* ——— Design system — sharp, clean, orange-forward ——— */
 
 @keyframes sbn-fade-in {
