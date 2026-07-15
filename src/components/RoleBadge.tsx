@@ -1,5 +1,6 @@
+import { Crown } from 'lucide-react';
 import type { UserProfile } from '../types';
-import { normalizeUserRole, ROLE_LABELS } from '../lib/roles';
+import { normalizeUserRole, ROLE_LABELS, ROLE_THEME } from '../lib/roles';
 
 interface RoleBadgeProps {
   role?: UserProfile['role'];
@@ -7,40 +8,27 @@ interface RoleBadgeProps {
   showForUser?: boolean;
 }
 
+/** Every rank shares one color identity (see ROLE_THEME) across badges, sidebars, and topbars. */
 export default function RoleBadge({ role, showForUser = false }: RoleBadgeProps) {
   const normalized = normalizeUserRole(role);
 
-  switch (normalized) {
-    case 'director':
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-bold tracking-wider uppercase rounded-full border border-amber-500/20">
-          {ROLE_LABELS.director}
-        </span>
-      );
-    case 'city_manager':
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent text-on-accent text-[10px] font-bold tracking-wider uppercase rounded-full">
-          {ROLE_LABELS.city_manager}
-        </span>
-      );
-    case 'city_administrator':
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/10 text-sky-400 text-[10px] font-bold tracking-wider uppercase rounded-full border border-sky-500/20">
-          {ROLE_LABELS.city_administrator}
-        </span>
-      );
-    case 'city_moderator':
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold tracking-wider uppercase rounded-full border border-emerald-500/20">
-          {ROLE_LABELS.city_moderator}
-        </span>
-      );
-    default:
-      if (!showForUser) return null;
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-inset border border-app text-muted text-[10px] font-bold tracking-wider uppercase rounded-full">
-          {ROLE_LABELS.user}
-        </span>
-      );
+  if (normalized === 'user') {
+    if (!showForUser) return null;
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-inset border border-app text-muted text-[10px] font-bold tracking-wider uppercase rounded-full">
+        {ROLE_LABELS.user}
+      </span>
+    );
   }
+
+  const theme = ROLE_THEME[normalized];
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-full border"
+      style={{ backgroundColor: theme.soft, color: theme.accent, borderColor: theme.soft }}
+    >
+      {normalized === 'director' && <Crown className="w-3 h-3" />}
+      {ROLE_LABELS[normalized]}
+    </span>
+  );
 }

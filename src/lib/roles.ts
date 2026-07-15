@@ -19,6 +19,31 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   director: 'Sacramento Buy Nothing Director',
 };
 
+/**
+ * Per-role visual identity used across the app shell (sidebar, topbar chips,
+ * badges) so each rank reads as a distinct "tier" at a glance — neighbors stay
+ * on-brand orange, staff ranks step up through blue → teal → violet → gold.
+ */
+export interface RoleTheme {
+  /** CSS color value for accents, borders, active nav states. */
+  accent: string;
+  /** Low-opacity tint for chip/badge backgrounds. */
+  soft: string;
+  shortLabel: string;
+}
+
+export const ROLE_THEME: Record<UserRole, RoleTheme> = {
+  user: { accent: 'var(--color-accent)', soft: 'var(--color-accent-soft)', shortLabel: 'Neighbor' },
+  city_moderator: { accent: '#10b981', soft: 'rgba(16, 185, 129, 0.14)', shortLabel: 'Moderator' },
+  city_administrator: { accent: '#0ea5e9', soft: 'rgba(14, 165, 233, 0.14)', shortLabel: 'Administrator' },
+  city_manager: { accent: '#8b5cf6', soft: 'rgba(139, 92, 246, 0.14)', shortLabel: 'Manager' },
+  director: { accent: '#f59e0b', soft: 'rgba(245, 158, 11, 0.16)', shortLabel: 'Director' },
+};
+
+export function roleTheme(role?: UserProfile['role']): RoleTheme {
+  return ROLE_THEME[normalizeUserRole(role)];
+}
+
 export function staffRoleSlotMessage(role: UserRole, limit: number): string {
   const label = ROLE_LABELS[role];
   if (limit === 1) {
