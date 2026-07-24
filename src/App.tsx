@@ -143,6 +143,7 @@ export default function App() {
   const profileSyncRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
   const loadItemsRef = useRef<(isBackground?: boolean, attempt?: number) => Promise<void>>(async () => {});
+  const itemsCountRef = useRef(initialAuth.items.length);
   const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
   const logoutCleanupDoneRef = useRef(false);
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
@@ -172,6 +173,9 @@ export default function App() {
   const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
+  useEffect(() => {
+    itemsCountRef.current = items.length;
+  }, [items.length]);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const { confirm, alert } = useConfirm();
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
@@ -688,11 +692,12 @@ export default function App() {
     async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
       const isGuest = options?.guest === true;
       if (!isGuest && (!userProfile || !sessionUser)) return;
-      if (!isBackground) {
+      const hasVisibleItems = itemsCountRef.current > 0;
+      if (!isBackground && !hasVisibleItems) {
         setIsItemsLoading(true);
       }
       try {
-        const loadedItems = await getSupabaseItems();
+        const loadedItems = await withTimeout(getSupabaseItems(), 12_000, []);
         setItems((current) => {
           if (!isGuest && loadedItems.length === 0 && current.length > 0) {
             console.warn('Items fetch returned empty — keeping cached listings until auth syncs.');
@@ -739,7 +744,7 @@ export default function App() {
   // Load listings once auth is ready, then keep in sync via Supabase Realtime
   useEffect(() => {
     if (!sessionReady) return;
-    loadItems(false);
+    loadItems(itemsCountRef.current > 0);
   }, [sessionReady, userProfile?.uid, loadItems, authBootstrapping]);
 
   useEffect(() => {
