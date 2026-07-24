@@ -555,6 +555,18 @@ export default function App() {
       new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
     ]);
 
+  const waitForSupabaseAuth = async (maxMs = 10_000): Promise<boolean> => {
+    const deadline = Date.now() + maxMs;
+    while (Date.now() < deadline) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) return true;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    return false;
+  };
+
   /** Enter the app immediately from auth metadata — DB sync runs in background. */
   const applySession = useCallback((user: any) => {
     if (user?.id && lastSignedInUserIdRef.current && lastSignedInUserIdRef.current !== user.id) {
@@ -692,12 +704,30 @@ export default function App() {
     async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
       const isGuest = options?.guest === true;
       if (!isGuest && (!userProfile || !sessionUser)) return;
+
       const hasVisibleItems = itemsCountRef.current > 0;
       if (!isBackground && !hasVisibleItems) {
         setIsItemsLoading(true);
       }
+
+      let keepLoading = false;
+
       try {
-        const loadedItems = await withTimeout(getSupabaseItems(), 12_000, []);
+        if (!isGuest) {
+          const authed = await waitForSupabaseAuth();
+          if (!authed) {
+            console.warn('Items fetch waiting — Supabase auth session not ready.');
+            if (attempt < 2) {
+              keepLoading = !isBackground && !hasVisibleItems;
+              window.setTimeout(() => {
+                void loadItemsRef.current(isBackground, attempt + 1);
+              }, 1200 * (attempt + 1));
+            }
+            return;
+          }
+        }
+
+        const loadedItems = await getSupabaseItems();
         setItems((current) => {
           if (!isGuest && loadedItems.length === 0 && current.length > 0) {
             console.warn('Items fetch returned empty — keeping cached listings until auth syncs.');
@@ -708,20 +738,22 @@ export default function App() {
         if (loadedItems.length > 0) {
           writeCachedItems(loadedItems);
         } else if (!isGuest && attempt < 2) {
+          keepLoading = !isBackground && !hasVisibleItems;
           window.setTimeout(() => {
-            void loadItemsRef.current(true, attempt + 1);
+            void loadItemsRef.current(hasVisibleItems, attempt + 1);
           }, 1200 * (attempt + 1));
         }
       } catch (err) {
         console.warn('Supabase items fetch failed:', err);
         setItems((current) => (current.length === 0 ? DEFAULT_OFFLINE_ITEMS : current));
         if (!isGuest && attempt < 2) {
+          keepLoading = !isBackground && !hasVisibleItems;
           window.setTimeout(() => {
-            void loadItemsRef.current(true, attempt + 1);
+            void loadItemsRef.current(hasVisibleItems, attempt + 1);
           }, 1200 * (attempt + 1));
         }
       } finally {
-        if (!isBackground) {
+        if (!isBackground && !keepLoading) {
           setIsItemsLoading(false);
         }
       }
