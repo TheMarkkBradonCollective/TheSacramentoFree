@@ -42,9 +42,15 @@ npm run android:apk:debug
 npm run android:apk
 ```
 
-Output: `dist/android/sac-buy-nothing-debug.apk` or `dist/android/sac-buy-nothing-release.apk`.
+Output:
+- `dist/android/sac-buy-nothing-debug.apk` or `dist/android/sac-buy-nothing-release.apk`
+- `public/downloads/sac-buy-nothing.apk` (served publicly at `/downloads/sac-buy-nothing.apk`)
+
+`scripts/sync-android-version.mjs` updates `public/android-version.json` so the download page points at the site-hosted APK (not private GitHub Releases).
 
 **Neighbors:** share the in-app download page at [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
+
+After building, commit `public/downloads/sac-buy-nothing.apk` and `public/android-version.json`, then deploy so the live download button works.
 
 ## Open in Android Studio
 

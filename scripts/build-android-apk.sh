@@ -48,6 +48,13 @@ cd android
 ./gradlew "$GRADLE_TASK"
 cd ..
 
-mkdir -p dist/android
+mkdir -p dist/android public/downloads
 cp "$APK_PATH" "dist/android/sac-buy-nothing-${BUILD_TYPE}.apk"
+# Public site download — neighbors hit /downloads/sac-buy-nothing.apk (not private GitHub Releases).
+cp "$APK_PATH" "public/downloads/sac-buy-nothing.apk"
+# Keep manifest in sync after copy (publishedAt refresh).
+node scripts/sync-android-version.mjs
+
 echo "APK ready: dist/android/sac-buy-nothing-${BUILD_TYPE}.apk"
+echo "Public download: public/downloads/sac-buy-nothing.apk"
+ls -lh "public/downloads/sac-buy-nothing.apk"

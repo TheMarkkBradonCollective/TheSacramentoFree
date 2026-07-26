@@ -14,19 +14,20 @@ const existing = fs.existsSync(manifestPath)
   : {};
 
 const releaseTag = `android-v${versionName}`;
-const downloadUrl =
-  existing.downloadUrl?.includes(releaseTag)
-    ? existing.downloadUrl
-    : `https://github.com/sigsecspec/SacramentoBuyNothing/releases/download/${releaseTag}/sac-buy-nothing-debug.apk`;
+const fileName = 'sac-buy-nothing.apk';
+/** Always host the downloadable APK on the public site — private GitHub Releases 404 for neighbors. */
+const appOrigin = (process.env.VITE_APP_URL || process.env.APP_URL || 'https://sacramentobuynothing.com').replace(/\/$/, '');
+const downloadUrl = `${appOrigin}/downloads/${fileName}`;
 
 const manifest = {
   versionName,
   versionCode,
   downloadUrl,
   releaseTag,
-  publishedAt: existing.publishedAt ?? new Date().toISOString(),
-  fileName: existing.fileName ?? 'sac-buy-nothing-debug.apk',
+  publishedAt: new Date().toISOString(),
+  fileName,
 };
 
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`Synced public/android-version.json → ${versionName} (${versionCode})`);
+console.log(`Download URL: ${downloadUrl}`);
