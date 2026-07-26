@@ -1,7 +1,8 @@
-import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage } from '../supabase';
+import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage, staffGetListingById } from '../supabase';
 import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost, UserProfile } from '../types';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
 import { subscribePostgresChanges } from './supabaseRealtime';
+import { isStaffRole } from './roles';
 
 /** Curb Alert / Porch Pickup — first-come items meant to be grabbed with no handshake. */
 export const INSTANT_CLAIM_CATEGORIES = ['Curb Alert', 'Porch Pickup'];
@@ -829,4 +830,169 @@ export function subscribeToSessionForStaff(
   onChange: (session: GoGetSession) => void,
 ): () => void {
   return subscribeToGoGetSession(sessionId, onChange);
+}
+
+type StaffSessionActor = Pick<UserProfile, 'uid' | 'displayName' | 'role'>;
+
+async function staffSessionItem(session: GoGetSession): Promise<ItemPost | null> {
+  return staffGetListingById(session.itemId);
+}
+
+async function postStaffSessionChatMessage(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  message: string,
+): Promise<void> {
+  await createSupabaseMessage(
+    session.chatId,
+    message,
+    actor.uid,
+    `msg_staff_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
+}
+
+/** Staff: cancel any non-terminal Go Get session. */
+export async function staffCancelGoGetSession(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  reason: string,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+  if (isTerminalGoGetStatus(session.status)) {
+    return { ok: false, errorMessage: 'This session is already closed.' };
+  }
+  if (!reason.trim()) return { ok: false, errorMessage: 'A reason is required.' };
+
+  const item = await staffSessionItem(session);
+  if (!item) return { ok: false, errorMessage: 'Could not load the linked listing.' };
+
+  const result = await updateSession(session.id, {
+    status: 'cancelled',
+    cancelledAt: new Date().toISOString(),
+    cancelledByUserId: actor.uid,
+    cancelReason: `[Staff] ${reason.trim()}`,
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  const staffLabel = actor.displayName || 'Staff';
+  await postStaffSessionChatMessage(
+    session,
+    actor,
+    `🛡️ ${staffLabel} cancelled this Go Get: ${reason.trim()}`,
+  );
+
+  await runGoGetPushTask(() =>
+    import('./pushEvents').then((m) =>
+      m.notifyGoGetCancelled({
+        item,
+        recipientUserId: session.requesterUserId,
+        cancelledByName: staffLabel,
+        sessionId: session.id,
+      }),
+    ),
+  );
+  await runGoGetPushTask(() =>
+    import('./pushEvents').then((m) =>
+      m.notifyGoGetCancelled({
+        item,
+        recipientUserId: session.fulfillerUserId,
+        cancelledByName: staffLabel,
+        sessionId: session.id,
+      }),
+    ),
+  );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Staff: mark an arrived session complete when parties need help closing it out. */
+export async function staffCompleteGoGetSession(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  note?: string,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+  if (session.status !== 'arrived') {
+    return { ok: false, errorMessage: 'Only arrived sessions can be marked complete.' };
+  }
+
+  const result = await updateSession(session.id, {
+    status: 'completed',
+    completedAt: new Date().toISOString(),
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  const staffLabel = actor.displayName || 'Staff';
+  await postStaffSessionChatMessage(
+    session,
+    actor,
+    `✅ ${staffLabel} marked this Go Get complete${note?.trim() ? `: ${note.trim()}` : '.'}`,
+  );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Staff: expire a stale session that never finished scheduling or pickup. */
+export async function staffExpireGoGetSession(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  reason: string,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+  if (isTerminalGoGetStatus(session.status)) {
+    return { ok: false, errorMessage: 'This session is already closed.' };
+  }
+  if (!reason.trim()) return { ok: false, errorMessage: 'A reason is required.' };
+
+  const result = await updateSession(session.id, {
+    status: 'expired',
+    cancelReason: `[Staff expired] ${reason.trim()}`,
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  const staffLabel = actor.displayName || 'Staff';
+  await postStaffSessionChatMessage(
+    session,
+    actor,
+    `⏱️ ${staffLabel} expired this Go Get: ${reason.trim()}`,
+  );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Staff: mark a session disputed for review (e.g. handoff disagreement). */
+export async function staffDisputeGoGetSession(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  reason: string,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+  if (!['active', 'arrived'].includes(session.status)) {
+    return { ok: false, errorMessage: 'Only active or arrived sessions can be disputed.' };
+  }
+  if (!reason.trim()) return { ok: false, errorMessage: 'A reason is required.' };
+
+  const result = await updateSession(session.id, {
+    status: 'disputed',
+    cancelReason: `[Staff dispute] ${reason.trim()}`,
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  const staffLabel = actor.displayName || 'Staff';
+  await postStaffSessionChatMessage(
+    session,
+    actor,
+    `⚠️ ${staffLabel} flagged this Go Get for review: ${reason.trim()}`,
+  );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
 }

@@ -2621,7 +2621,7 @@ CREATE POLICY "user_violations_select" ON public.user_violations
   );
 
 CREATE POLICY "user_violations_insert" ON public.user_violations
-  FOR INSERT WITH CHECK (auth.uid()::text = "reportedByUserId");
+  FOR INSERT WITH CHECK (auth.uid()::text = "reportedByUserId" OR public.is_staff());
 
 -- Staff confirm/dismiss and decide appeals; the accused may only file an appeal
 -- on their own record. Rank-specific actions (appeal decisions require

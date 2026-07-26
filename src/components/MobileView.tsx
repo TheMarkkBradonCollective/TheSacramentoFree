@@ -143,6 +143,7 @@ export default function MobileView({
   const [colorGuideOpen, setColorGuideOpen] = useState(false);
   const [mapImmersiveNav, setMapImmersiveNav] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
 
   useKeyboardInset();
   useScrollInputOnFocus();
@@ -202,8 +203,23 @@ export default function MobileView({
               onViewListing={onViewListingId}
             />
           )}
-          {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
+          {activeTab === 'staff_meets' && (
+            <StaffMeetsView
+              actor={userProfile}
+              onViewProfile={onViewProfile}
+              onOpenViolations={(sessionId) => {
+                setViolationsFocusSessionId(sessionId);
+                setActiveTab('staff_violations');
+              }}
+            />
+          )}
+          {activeTab === 'staff_violations' && (
+            <StaffViolationsView
+              actor={userProfile}
+              focusSessionId={violationsFocusSessionId}
+              onClearFocusSession={() => setViolationsFocusSessionId(null)}
+            />
+          )}
           {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
           {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
           {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
