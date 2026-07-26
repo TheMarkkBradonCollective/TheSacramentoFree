@@ -1,8 +1,12 @@
-import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage, staffGetListingById } from '../supabase';
+import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage, staffGetListingById, getSupabaseProfile } from '../supabase';
 import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost, UserProfile } from '../types';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
 import { subscribePostgresChanges } from './supabaseRealtime';
 import { isStaffRole } from './roles';
+import {
+  checkSelfGoGetEligibility,
+  isGoGetCoordinationEnabled,
+} from './goGetEligibility';
 
 /** Curb Alert / Porch Pickup — first-come items meant to be grabbed with no handshake. */
 export const INSTANT_CLAIM_CATEGORIES = ['Curb Alert', 'Porch Pickup'];
@@ -161,6 +165,55 @@ export async function createGoGetSession(
 
   if (fulfillerUserId === requesterUserId) {
     return { ok: false, errorMessage: 'You cannot Go Get your own listing.' };
+  }
+
+  // Device + notification gate for whoever is creating the session (signed-in user).
+  const { data: authData } = await supabase.auth.getSession();
+  const actorUid = authData.session?.user?.id || '';
+  if (actorUid) {
+    const actorProfile = await getSupabaseProfile(actorUid);
+    if (actorProfile) {
+      const selfOk = await checkSelfGoGetEligibility(actorProfile);
+      if (selfOk.ok === false) {
+        if (selfOk.reason === 'need_install') {
+          return {
+            ok: false,
+            errorMessage:
+              'Go Get only works in the installed app (APK or Add to Home Screen). Open Download to install, then enable notifications.',
+          };
+        }
+        if (selfOk.reason === 'need_notifications') {
+          return {
+            ok: false,
+            errorMessage:
+              'Turn on notifications (bell → Notification settings) before using Go Get or pickup coordination.',
+          };
+        }
+        return {
+          ok: false,
+          errorMessage:
+            'You turned off Go Get & pickup coordination in Account settings. You can still message neighbors to arrange pickup.',
+        };
+      }
+    }
+  }
+
+  // Opt-out check for both parties (poster + navigator).
+  const [fulfillerProfile, requesterProfile] = await Promise.all([
+    getSupabaseProfile(fulfillerUserId),
+    getSupabaseProfile(requesterUserId),
+  ]);
+  if (fulfillerProfile && !isGoGetCoordinationEnabled(fulfillerProfile)) {
+    return {
+      ok: false,
+      errorMessage: `${fulfillerName} isn’t using app pickup coordination. Message them to arrange pickup independently.`,
+    };
+  }
+  if (requesterProfile && !isGoGetCoordinationEnabled(requesterProfile)) {
+    return {
+      ok: false,
+      errorMessage: `${requesterName} isn’t using app pickup coordination. Message them to arrange pickup independently.`,
+    };
   }
 
   const existing = await getActiveGoGetSession(item.id, requesterUserId);

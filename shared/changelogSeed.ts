@@ -163,6 +163,21 @@ Neighbors:
 
 — Mark`,
   ),
+  update(
+    '2026-07-26_goget-app-only',
+    '2026-07-26',
+    'Go Get & pickup coordination — installed app + notifications required',
+    'Go Get, Drop off, Meet up, and claim-at-pin now only work in the installed app (APK or Add to Home Screen) with notifications on. Prefer chat-only? Opt out in Account settings.',
+    `What changed:
+• Pickup coordination needs the installed app — not a regular browser tab.
+• Notifications must be enabled so both neighbors get handoff alerts.
+• Account → Go Get & pickup coordination lets you opt out anytime.
+• Opted out? You still list and message as usual — just without live tracking and handoff prompts.
+
+Install from sacramentobuynothing.com/download, turn on alerts in the bell, and you are set.
+
+— Mark`,
+  ),
 ];
 
 /** Latest News posts — community-facing announcements. */
@@ -196,6 +211,20 @@ Questions? Message staff from Help & support.
 • Confirmed violations still count toward the six-strike lock; you can appeal.
 
 Stay kind, meet in public when you can, and thank you for keeping Sacramento Buy Nothing safe.
+
+— Mark`,
+  ),
+  news(
+    '2026-07-26_goget-requires-app',
+    '2026-07-26',
+    'Go Get needs the installed app + notifications',
+    'Live pickup coordination only runs in the Android APK or home-screen app with notifications on. You can opt out in Account settings and keep listing + chatting without it.',
+    `To use Go Get / Drop off / Meet up:
+1. Install from https://sacramentobuynothing.com/download
+2. Enable notifications (bell → Notification settings)
+3. Keep “Go Get & pickup coordination” on in Account
+
+Prefer to arrange pickups yourself? Turn coordination off in Account — your listings stay up and neighbors can still message you.
 
 — Mark`,
   ),

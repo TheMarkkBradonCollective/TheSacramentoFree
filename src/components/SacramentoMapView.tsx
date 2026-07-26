@@ -395,7 +395,7 @@ export default function SacramentoMapView({
   commentsLocked = false,
 }: SacramentoMapViewProps) {
   const openItemDetail = onViewItem || onItemDetail;
-  const { confirm } = useConfirm();
+  const { confirm, alert } = useConfirm();
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -1251,6 +1251,15 @@ export default function SacramentoMapView({
       return;
     }
 
+    const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
+    const allowed = await ensureGoGetAllowed({
+      self: userProfile,
+      otherUserId: selectedPost.userId,
+      otherDisplayName: selectedPost.userDisplayName,
+      alert,
+    });
+    if (!allowed) return;
+
     if (selectedPost.type === 'looking') {
       const ok = await confirmDropOffAsFulfiller(confirm, selectedPost.userDisplayName, selectedPost.title);
       if (!ok) return;
@@ -1265,6 +1274,7 @@ export default function SacramentoMapView({
         destinationLabel: `${selectedPost.userDisplayName}'s area`,
       });
       if (result.ok && result.session?.status === 'active') openNavigation();
+      else if (!result.ok) await alert({ title: 'Could not start', message: result.errorMessage || 'Could not start drop off.' });
       else openItemDetail?.(selectedPost);
       return;
     }
@@ -1282,6 +1292,7 @@ export default function SacramentoMapView({
         destinationLabel: `Meetup: ${selectedPost.title}`,
       });
       if (result.ok && result.session?.status === 'active') openNavigation();
+      else if (!result.ok) await alert({ title: 'Could not start', message: result.errorMessage || 'Could not start meet up.' });
       else openItemDetail?.(selectedPost);
       return;
     }
@@ -1303,8 +1314,9 @@ export default function SacramentoMapView({
       destinationLabel: selectedPost.title,
     });
     if (result.ok && result.session?.status === 'active') openNavigation();
+    else if (!result.ok) await alert({ title: 'Could not start', message: result.errorMessage || 'Could not start Go Get.' });
     else openItemDetail?.(selectedPost);
-  }, [selectedEvent, selectedPost, userProfile, openNavigation, openItemDetail, confirm]);
+  }, [selectedEvent, selectedPost, userProfile, openNavigation, openItemDetail, confirm, alert]);
 
   const handleOpenExternalMaps = useCallback(() => {
     if (!routeEndpoints) return;

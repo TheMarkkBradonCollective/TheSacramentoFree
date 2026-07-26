@@ -147,7 +147,7 @@ export default function ChatSystem({
   const canStaffReports = canViewStaffReports(userProfile.role);
   const { reports: staffReports } = useStaffUserReports(canStaffReports, userProfile);
   const newStaffReportCount = staffReports.filter((report) => report.status === 'new').length;
-  const { confirm } = useConfirm();
+  const { confirm, alert } = useConfirm();
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLInputElement | null>(null);
@@ -193,6 +193,14 @@ export default function ChatSystem({
       const isLooking = linkedItem.type === 'looking';
       const isTrade = linkedItem.type === 'trade';
       const dropOffDestination = getItemMapDestination(linkedItem, linkedItem.userId) ?? myLocation;
+      const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
+      const allowed = await ensureGoGetAllowed({
+        self: userProfile,
+        otherUserId,
+        otherDisplayName: otherUserName,
+        alert,
+      });
+      if (!allowed) return;
       const confirmed = await confirmGoGetAsFulfiller(
         confirm,
         otherUserName,
@@ -242,7 +250,7 @@ export default function ChatSystem({
       );
       void getSupabaseMessages(selectedChat!.id).then(setMessages);
     },
-    [confirm, userProfile, selectedChat],
+    [alert, confirm, userProfile, selectedChat],
   );
 
   useEffect(() => {

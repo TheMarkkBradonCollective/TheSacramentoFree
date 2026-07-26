@@ -6,6 +6,7 @@ import { canOfferContactlessClaim, isContactlessClaimCategory } from '../lib/lis
 import SubItemPicker from './SubItemPicker';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface ClaimAtPickupButtonProps {
   item: ItemPost;
@@ -26,6 +27,7 @@ export default function ClaimAtPickupButton({
   className = '',
   compact = false,
 }: ClaimAtPickupButtonProps) {
+  const { alert } = useConfirm();
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [loadingSubitems, setLoadingSubitems] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -91,7 +93,15 @@ export default function ClaimAtPickupButton({
 
   if (availableCount === 0) return null;
 
-  const handleOpen = () => {
+  const handleOpen = async () => {
+    const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
+    const allowed = await ensureGoGetAllowed({
+      self: user,
+      otherUserId: item.userId,
+      otherDisplayName: item.userDisplayName,
+      alert,
+    });
+    if (!allowed) return;
     if (!atLocation) {
       setErr('Move closer to the curb alert pin.');
       return;
@@ -105,6 +115,14 @@ export default function ClaimAtPickupButton({
       setErr('Pick exactly one item you took.');
       return;
     }
+    const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
+    const allowed = await ensureGoGetAllowed({
+      self: user,
+      otherUserId: item.userId,
+      otherDisplayName: item.userDisplayName,
+      alert,
+    });
+    if (!allowed) return;
     setSubmitting(true);
     setErr('');
     const result = await submitSelfClaimRequest({
@@ -126,7 +144,7 @@ export default function ClaimAtPickupButton({
     <>
       <button
         type="button"
-        onClick={handleOpen}
+        onClick={() => void handleOpen()}
         title="Optional — let the poster know you picked this up"
         className={`sbn-btn sbn-btn-primary ${compact ? 'sbn-btn-sm' : ''} ${className}`}
       >

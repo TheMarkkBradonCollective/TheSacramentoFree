@@ -386,6 +386,8 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     role: normalizeUserRole(row.role),
     accountStatus,
     suspendedUntil,
+    // Default true when column missing / null — only explicit false opts out.
+    goGetEnabled: row.goGetEnabled === false || row.go_get_enabled === false ? false : true,
     createdAt: row.createdAt ?? row.created_at,
     lastActiveAt:
       typeof row.lastActiveAt === 'string'
@@ -533,6 +535,7 @@ function listingRowToProfile(uid: string, row: Record<string, unknown>): UserPro
     neighborhood: String(row.neighborhood || 'Sacramento'),
     bio: undefined,
     role: 'user',
+    goGetEnabled: true,
     createdAt: row.createdAt,
   };
 }
@@ -669,14 +672,25 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
+      goGetEnabled: profile.goGetEnabled !== false,
       createdAt: coerceToIsoDate(profile.createdAt),
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('users')
       .upsert(payload, { onConflict: 'uid' })
-      .select('uid, photoURL, displayName, email, neighborhood, bio, role, createdAt')
+      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, createdAt')
       .single();
+
+    // Older DBs may not have goGetEnabled yet — retry without it.
+    if (error && /goGetEnabled|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+      const { goGetEnabled: _ignored, ...legacyPayload } = payload;
+      ({ data, error } = await supabase
+        .from('users')
+        .upsert(legacyPayload, { onConflict: 'uid' })
+        .select('uid, photoURL, displayName, email, neighborhood, bio, role, createdAt')
+        .single());
+    }
 
     if (error) {
       handleSupabaseError(error, 'users');

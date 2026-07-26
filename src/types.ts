@@ -51,6 +51,11 @@ export interface UserProfile {
   role?: 'user' | 'city_moderator' | 'city_administrator' | 'city_manager' | 'director';
   accountStatus?: AccountStatus;
   suspendedUntil?: string | null;
+  /**
+   * When false, this neighbor opts out of Go Get / Drop off / Meet up / claim-at-pin
+   * coordination and uses listing + chat only. Default true when unset.
+   */
+  goGetEnabled?: boolean;
   createdAt: any;
   lastActiveAt?: string | null;
 }
