@@ -645,6 +645,24 @@ Neighbors:
   'Markeith White',
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_goget-app-only',
+  '2026-07-26',
+  'Go Get & pickup coordination — installed app + notifications required',
+  'Go Get, Drop off, Meet up, and claim-at-pin now only work in the installed app (APK or Add to Home Screen) with notifications on. Prefer chat-only? Opt out in Account settings.',
+  $detail$What changed:
+• Pickup coordination needs the installed app — not a regular browser tab.
+• Notifications must be enabled so both neighbors get handoff alerts.
+• Account → Go Get & pickup coordination lets you opt out anytime.
+• Opted out? You still list and message as usual — just without live tracking and handoff prompts.
+
+Install from sacramentobuynothing.com/download, turn on alerts in the bell, and you are set.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
 )
 ON CONFLICT (id) DO UPDATE SET
   date = EXCLUDED.date,
@@ -696,6 +714,23 @@ Stay kind, meet in public when you can, and thank you for keeping Sacramento Buy
   'Markeith White',
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_goget-requires-app',
+  '2026-07-26',
+  'Go Get needs the installed app + notifications',
+  'Live pickup coordination only runs in the Android APK or home-screen app with notifications on. You can opt out in Account settings and keep listing + chatting without it.',
+  $detail$To use Go Get / Drop off / Meet up:
+1. Install from https://sacramentobuynothing.com/download
+2. Enable notifications (bell → Notification settings)
+3. Keep “Go Get & pickup coordination” on in Account
+
+Prefer to arrange pickups yourself? Turn coordination off in Account — your listings stay up and neighbors can still message you.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
 )
 ON CONFLICT (id) DO UPDATE SET
   date = EXCLUDED.date,
@@ -736,8 +771,11 @@ CREATE POLICY "community_events_delete" ON public.community_events
   );
 
 -- Opt-out of Go Get / pickup coordination (listing + chat still work).
+-- Live Go Get / Drop off / Meet up / claim-at-pin also require the installed
+-- app (PWA or APK) with notifications on — enforced in application code.
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetEnabled" BOOLEAN NOT NULL DEFAULT true;
 
+-- Public profile view (no email) — includes goGetEnabled for pickup eligibility.
 CREATE OR REPLACE VIEW public.users_public
 WITH (security_invoker = true) AS
 SELECT
