@@ -271,7 +271,7 @@ CREATE POLICY "user_violations_select" ON public.user_violations
   );
 
 CREATE POLICY "user_violations_insert" ON public.user_violations
-  FOR INSERT WITH CHECK (auth.uid()::text = "reportedByUserId");
+  FOR INSERT WITH CHECK (auth.uid()::text = "reportedByUserId" OR public.is_staff());
 
 CREATE POLICY "user_violations_update" ON public.user_violations
   FOR UPDATE USING (

@@ -38,6 +38,7 @@ const LIVE_STATUSES: GoGetSessionStatus[] = ['active', 'arrived', 'awaiting_avai
 interface StaffMeetsViewProps {
   actor: UserProfile;
   onViewProfile: (userId: string) => void;
+  onOpenViolations?: (sessionId: string) => void;
 }
 
 function StatusBadge({ status }: { status: GoGetSessionStatus }) {
@@ -71,7 +72,7 @@ function elapsed(from: string | null | undefined, to?: string | null): string {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
-export default function StaffMeetsView({ actor, onViewProfile }: StaffMeetsViewProps) {
+export default function StaffMeetsView({ actor, onViewProfile, onOpenViolations }: StaffMeetsViewProps) {
   const [sessions, setSessions] = useState<GoGetSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -138,6 +139,11 @@ export default function StaffMeetsView({ actor, onViewProfile }: StaffMeetsViewP
         actor={actor}
         onViewProfile={onViewProfile}
         onBack={() => setSelectedSession(null)}
+        onSessionUpdated={(updated) => {
+          setSelectedSession(updated);
+          setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        }}
+        onOpenViolations={onOpenViolations}
       />
     );
   }
