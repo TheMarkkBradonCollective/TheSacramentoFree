@@ -21,6 +21,8 @@ yes | sdkmanager --licenses >/dev/null || true
 sdkmanager \
   "platform-tools" \
   "platforms;android-35" \
-  "build-tools;35.0.0"
+  "platforms;android-36" \
+  "build-tools;35.0.0" \
+  "build-tools;36.0.0"
 
 echo "Android SDK installed at $ANDROID_HOME"
