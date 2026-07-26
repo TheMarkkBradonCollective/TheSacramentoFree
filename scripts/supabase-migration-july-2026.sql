@@ -734,3 +734,23 @@ CREATE POLICY "community_events_delete" ON public.community_events
     (auth.uid()::text = "userId" AND (public.events_unlocked() OR public.is_staff()))
     OR public.is_staff()
   );
+
+-- Opt-out of Go Get / pickup coordination (listing + chat still work).
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetEnabled" BOOLEAN NOT NULL DEFAULT true;
+
+CREATE OR REPLACE VIEW public.users_public
+WITH (security_invoker = true) AS
+SELECT
+  uid,
+  "displayName",
+  "photoURL",
+  neighborhood,
+  bio,
+  role,
+  "accountStatus",
+  "goGetEnabled",
+  "createdAt",
+  "lastActiveAt"
+FROM public.users;
+
+GRANT SELECT ON public.users_public TO authenticated;

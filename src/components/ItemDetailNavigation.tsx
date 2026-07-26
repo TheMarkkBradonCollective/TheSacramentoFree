@@ -330,6 +330,14 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       openNavigation();
       return;
     }
+    const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
+    const allowed = await ensureGoGetAllowed({
+      self: userProfile,
+      otherUserId: item.userId,
+      otherDisplayName: item.userDisplayName,
+      alert,
+    });
+    if (!allowed) return;
     const confirmed = await confirmGoGetAsRequester(confirm, item.userDisplayName, item.title, item.category);
     if (!confirmed) return;
     setBusy(true);
@@ -352,10 +360,18 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     if (result.session.status === 'active') {
       openNavigation();
     }
-  }, [confirm, destination, userLocation, userProfile, item, openNavigation]);
+  }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
 
   const handleStartDropOff = useCallback(async () => {
     if (!destination || !userLocation || !userProfile) return;
+    const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
+    const allowed = await ensureGoGetAllowed({
+      self: userProfile,
+      otherUserId: item.userId,
+      otherDisplayName: item.userDisplayName,
+      alert,
+    });
+    if (!allowed) return;
     const confirmed = await confirmDropOffAsFulfiller(confirm, item.userDisplayName, item.title);
     if (!confirmed) return;
     setBusy(true);
@@ -379,10 +395,18 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     if (result.session.status === 'active') {
       openNavigation();
     }
-  }, [confirm, destination, userLocation, userProfile, item, openNavigation]);
+  }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
 
   const handleStartMeetUp = useCallback(async () => {
     if (!destination || !userLocation || !userProfile) return;
+    const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
+    const allowed = await ensureGoGetAllowed({
+      self: userProfile,
+      otherUserId: item.userId,
+      otherDisplayName: item.userDisplayName,
+      alert,
+    });
+    if (!allowed) return;
     const confirmed = await confirmMeetUp(confirm, item.userDisplayName, item.title);
     if (!confirmed) return;
     setBusy(true);
@@ -405,7 +429,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     if (result.session.status === 'active') {
       openNavigation();
     }
-  }, [confirm, destination, userLocation, userProfile, item, openNavigation]);
+  }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
 
   const handleListingNavigation = useCallback(() => {
     if (isOwner) {

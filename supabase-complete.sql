@@ -34,6 +34,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'us
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "photoURL" TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "lastActiveAt" TIMESTAMPTZ;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetEnabled" BOOLEAN NOT NULL DEFAULT true;
 
 CREATE INDEX IF NOT EXISTS users_last_active_at_idx ON public.users ("lastActiveAt" DESC);
 
@@ -2348,6 +2349,7 @@ SELECT
   bio,
   role,
   "accountStatus",
+  "goGetEnabled",
   "createdAt",
   "lastActiveAt"
 FROM public.users;
