@@ -686,6 +686,119 @@ The app and website are meant to stay with you from browsing to handoff. Try the
 )
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO public.app_updates (
+  id, date, title, body, detail, "directorName", "directorTitle", "postedByUserId"
+)
+VALUES
+(
+  '2026-07-26_android-apk-1-1-0',
+  '2026-07-26',
+  'Android APK v1.1.0 — download works from the site',
+  'The Android download was broken (private GitHub link 404). APK v1.1.0 now lives on the site — open Download and grab it straight from sacramentobuynothing.com.',
+  $detail$What you will notice:
+• Home and Download show APK + home-screen install options side by side.
+• The Download page compares your installed version with the latest APK.
+• Sideload file: https://sacramentobuynothing.com/downloads/sac-buy-nothing.apk
+
+How to install:
+• Open sacramentobuynothing.com/download (or Home → Download).
+• Tap Download APK and allow install from your browser or Files if Android asks.
+• Already on an older APK? Install 1.1.0 over it to get the latest build.
+
+This build includes the latest feed, map, Go Get, and staff tools from today.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_feed-loading-fix',
+  '2026-07-26',
+  'Feed no longer sticks on Loading community listings',
+  'A few neighbors hit a hang where the feed never finished loading. That path is fixed — listings show even when the network is slow.',
+  $detail$What changed:
+• Slow Supabase responses no longer leave the feed on a forever spinner.
+• Empty vs still-loading states are clearer on mobile and desktop.
+• The mobile footer stays pinned while the feed settles.
+
+If you still see a blank feed, pull to refresh once — you should get listings or a clear empty state.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_events-unlock-500',
+  '2026-07-26',
+  'Community events unlock at 500 neighbors',
+  'Events open for the whole community at 500 members now (was 1,000). Staff can still post and browse early.',
+  $detail$When we hit 500 neighbors, everyone can post and RSVP to free community gatherings. Until then, staff can still create events so we are ready for launch day.
+
+Find Events in the sidebar / tabs, or filter the map to Events once unlocked.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_staff-listings-events',
+  '2026-07-26',
+  'Staff Listings Management shows events + every listing type',
+  'Staff Listings Management now loads giveaways, Looking, Trade, and community events together — with filters, cancel/delete for events, and open-event from the panel.',
+  $detail$For staff:
+• Open Staff → Listings.
+• Filter by type (giveaway, looking, trade, event) or status.
+• Cancel or delete community events in the same place you moderate posts.
+• View an event or listing without leaving the panel.
+
+Neighbors are not affected — this is a moderation tooling update.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_staff-goget-escalation',
+  '2026-07-26',
+  'Staff can manage live Go Get sessions and escalate violations',
+  'Meet Records lets staff cancel, expire, dispute, or complete live pickups — and escalate to a violation in one step. The Violations queue defaults to open reports with accused names and review notes.',
+  $detail$For staff:
+• Staff → Meet Records → open a live session.
+• Cancel, expire, dispute, or mark complete when neighbors need help closing a pickup.
+• Escalate to violation closes the session and files the report together.
+• Linked violations jump into Go Get Violations; the open queue shows pending reports first.
+
+Neighbors:
+• Six confirmed strikes can still lock an account; appeals stay under staff review.
+• Meet in well-lit public spots and use in-app chat when you can.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_shell-download-home',
+  '2026-07-26',
+  'New shell layout + Download on the home page',
+  'Desktop got a real sidebar workspace, tablet an icon rail, and mobile a cleaner staff/community shell. Home now has clear APK and home-screen download buttons.',
+  $detail$What you will notice:
+• Desktop: sidebar + dashboard rail instead of the old top-only chrome.
+• Tablet: permanent icon rail that is not just a skinny desktop.
+• Mobile: role-accent header and a clearer path into staff tools when you have them.
+• Home hero: Download APK and Add to home screen without hunting through Account.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+)
+ON CONFLICT (id) DO NOTHING;
+
 INSERT INTO public.help_announcements (
   id, date, title, body, detail, "authorName", "authorTitle", "postedByUserId"
 )
@@ -702,6 +815,50 @@ VALUES (
 • Six confirmed violations can lock an account until an administrator reviews appeals.
 
 Meet in well-lit public spots when you can, and trust your instincts. Thank you for keeping Sacramento Buy Nothing kind and safe.',
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.help_announcements (
+  id, date, title, body, detail, "authorName", "authorTitle", "postedByUserId"
+)
+VALUES
+(
+  '2026-07-26_apk-download-fixed',
+  '2026-07-26',
+  'Android app download is fixed — get APK v1.1.0',
+  'If the Download button failed before, it is fixed. Grab the Android APK from sacramentobuynothing.com/download — no private GitHub link required.',
+  $detail$Steps:
+1. Open https://sacramentobuynothing.com/download
+2. Tap Download APK
+3. Allow install from your browser or Files if Android asks
+4. Sign in and turn on notifications if you want pickup alerts
+
+Home-screen install still works for a lighter option. The APK is best if you want stronger background alerts.
+
+Questions? Message staff from Help & support.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_goget-staff-watch',
+  '2026-07-26',
+  'Go Get pickups — staff can step in when a handoff stalls',
+  'If a live pickup gets stuck, city moderators can help close the session or escalate a problem into the violation review queue. Same 6-strike safety model as before.',
+  $detail$What this means for neighbors:
+• Keep using Go Get as usual — confirm, share location when you choose, and finish in-app when you can.
+• If something goes wrong (no-show, unsafe behavior, false claim), report it from the Go Get screen.
+• Staff may cancel or close a stalled session and file a review when needed.
+• Confirmed violations still count toward the six-strike lock; you can appeal.
+
+Stay kind, meet in public when you can, and thank you for keeping Sacramento Buy Nothing safe.
+
+— Mark$detail$,
   'Markeith White',
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'

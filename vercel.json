@@ -59,6 +59,10 @@
     {
       "path": "/api/cron/notification-jobs",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/publish-changelog",
+      "schedule": "40 23 * * *"
     }
   ]
 }
