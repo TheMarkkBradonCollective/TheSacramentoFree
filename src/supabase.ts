@@ -4921,6 +4921,93 @@ export async function staffDeleteListing(
   return { ok: true };
 }
 
+/** Staff: fetch all community events ordered by newest first. */
+export async function staffGetAllEvents(): Promise<{ events: CommunityEvent[]; errorMessage?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('community_events')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .limit(1000);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { events: [], errorMessage: String(error.message || 'Could not load events.') };
+    }
+
+    const rows = (data ?? []) as CommunityEvent[];
+    void syncPastEventStatuses(rows);
+    const events = rows.map((row) => normalizeSupabaseEvent(row));
+    return { events };
+  } catch (err) {
+    console.warn('staffGetAllEvents failed:', err);
+    return { events: [], errorMessage: 'Could not load events.' };
+  }
+}
+
+/** Staff: cancel any upcoming community event. */
+export async function staffCancelEvent(
+  event: Pick<CommunityEvent, 'id' | 'title' | 'userId' | 'userDisplayName' | 'status' | 'eventStartAt'>,
+  actor: Pick<import('./types').UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+
+  if (!isEventEditable(event)) {
+    return { ok: false, errorMessage: 'Only upcoming events can be cancelled.' };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({ status: 'cancelled', updatedAt: new Date().toISOString() })
+      .eq('id', event.id)
+      .in('status', ['active', 'upcoming']);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not cancel event.' };
+    }
+
+    await writeModerationAudit({
+      actor: actor as import('./types').UserProfile,
+      target: { uid: event.userId, displayName: event.userDisplayName },
+      action: 'cancel_event',
+      detail: `"${event.title}"`,
+    });
+
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not cancel event.',
+    };
+  }
+}
+
+/** Staff: delete a community event permanently (manager+). */
+export async function staffDeleteEvent(
+  event: Pick<CommunityEvent, 'id' | 'title' | 'userId' | 'userDisplayName'>,
+  actor: Pick<import('./types').UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canStaffDeleteAccount(actor.role)) return { ok: false, errorMessage: 'City Manager+ only.' };
+
+  try {
+    await deleteSupabaseEvent(event.id);
+    await writeModerationAudit({
+      actor: actor as import('./types').UserProfile,
+      target: { uid: event.userId, displayName: event.userDisplayName },
+      action: 'delete_event',
+      detail: `"${event.title}"`,
+    });
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not delete event.',
+    };
+  }
+}
+
 export async function touchLastActive(): Promise<void> {
   try {
     await supabase.rpc('touch_last_active');
