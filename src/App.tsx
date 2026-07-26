@@ -144,6 +144,7 @@ export default function App() {
   const handlingPopStateRef = useRef(false);
   const loadItemsRef = useRef<(isBackground?: boolean, attempt?: number) => Promise<void>>(async () => {});
   const itemsCountRef = useRef(initialAuth.items.length);
+  const itemsLoadGenRef = useRef(0);
   const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
   const logoutCleanupDoneRef = useRef(false);
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
@@ -555,14 +556,24 @@ export default function App() {
       new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
     ]);
 
-  const waitForSupabaseAuth = async (maxMs = 10_000): Promise<boolean> => {
+  const withTimeoutReject = <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+    ]);
+
+  const waitForSupabaseAuth = async (maxMs = 8_000): Promise<boolean> => {
     const deadline = Date.now() + maxMs;
     while (Date.now() < deadline) {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.access_token) return true;
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      try {
+        const {
+          data: { session },
+        } = await withTimeoutReject(supabase.auth.getSession(), 3_000, 'getSession timed out');
+        if (session?.access_token) return true;
+      } catch (err) {
+        console.warn('Waiting for Supabase auth session:', err);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
     return false;
   };
@@ -703,31 +714,42 @@ export default function App() {
   const loadItems = useCallback(
     async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
       const isGuest = options?.guest === true;
-      if (!isGuest && (!userProfile || !sessionUser)) return;
+      if (!isGuest && (!userProfile?.uid || !sessionUser?.id)) return;
 
+      const gen = ++itemsLoadGenRef.current;
+      const isStale = () => gen !== itemsLoadGenRef.current;
       const hasVisibleItems = itemsCountRef.current > 0;
+
+      // Foreground spinner only when we have nothing to show yet.
       if (!isBackground && !hasVisibleItems) {
         setIsItemsLoading(true);
       }
 
-      let keepLoading = false;
+      const scheduleRetry = () => {
+        if (isGuest || attempt >= 2) return;
+        window.setTimeout(() => {
+          // Only the latest load generation may retry.
+          if (gen !== itemsLoadGenRef.current) return;
+          // Retries are always background so the UI is never stuck on "Loading…".
+          void loadItemsRef.current(true, attempt + 1);
+        }, 1200 * (attempt + 1));
+      };
 
       try {
         if (!isGuest) {
-          const authed = await waitForSupabaseAuth();
-          if (!authed) {
-            console.warn('Items fetch waiting — Supabase auth session not ready.');
-            if (attempt < 2) {
-              keepLoading = !isBackground && !hasVisibleItems;
-              window.setTimeout(() => {
-                void loadItemsRef.current(isBackground, attempt + 1);
-              }, 1200 * (attempt + 1));
-            }
-            return;
-          }
+          // Best-effort wait for the JWT. Do not block the feed forever —
+          // public RLS still allows reading active listings without a session.
+          await waitForSupabaseAuth(4_000);
+          if (isStale()) return;
         }
 
-        const loadedItems = await getSupabaseItems();
+        const loadedItems = await withTimeoutReject(
+          getSupabaseItems(),
+          15_000,
+          'Items fetch timed out',
+        );
+        if (isStale()) return;
+
         setItems((current) => {
           if (!isGuest && loadedItems.length === 0 && current.length > 0) {
             console.warn('Items fetch returned empty — keeping cached listings until auth syncs.');
@@ -737,28 +759,23 @@ export default function App() {
         });
         if (loadedItems.length > 0) {
           writeCachedItems(loadedItems);
-        } else if (!isGuest && attempt < 2) {
-          keepLoading = !isBackground && !hasVisibleItems;
-          window.setTimeout(() => {
-            void loadItemsRef.current(hasVisibleItems, attempt + 1);
-          }, 1200 * (attempt + 1));
+        } else {
+          scheduleRetry();
         }
       } catch (err) {
         console.warn('Supabase items fetch failed:', err);
+        if (isStale()) return;
         setItems((current) => (current.length === 0 ? DEFAULT_OFFLINE_ITEMS : current));
-        if (!isGuest && attempt < 2) {
-          keepLoading = !isBackground && !hasVisibleItems;
-          window.setTimeout(() => {
-            void loadItemsRef.current(hasVisibleItems, attempt + 1);
-          }, 1200 * (attempt + 1));
-        }
+        scheduleRetry();
       } finally {
-        if (!isBackground && !keepLoading) {
+        // Only the latest generation clears the spinner. Older in-flight loads
+        // must not leave "Loading…" up after a newer attempt finishes.
+        if (gen === itemsLoadGenRef.current) {
           setIsItemsLoading(false);
         }
       }
     },
-    [userProfile?.uid, sessionUser],
+    [userProfile?.uid, sessionUser?.id],
   );
 
   useEffect(() => {
