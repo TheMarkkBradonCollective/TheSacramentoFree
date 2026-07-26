@@ -6,6 +6,7 @@ import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './l
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
+import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
 import { getEventsUnlockStatus } from './lib/eventsApi';
@@ -3588,16 +3589,20 @@ export async function getSupabaseAppUpdates(): Promise<AppUpdateRecord[]> {
       .order('updatedAt', { ascending: false });
 
     if (error) {
-      if (error.code === '42P01') return [];
+      if (error.code === '42P01') {
+        return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
+      }
       handleSupabaseError(error, 'app_updates');
-      return [];
+      return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
     }
 
-    if (!data?.length) return [];
     setSupabaseConfigurationState(true);
-    return enrichAppUpdatesWithAuthorProfiles(data as Record<string, unknown>[]);
+    const live = data?.length
+      ? await enrichAppUpdatesWithAuthorProfiles(data as Record<string, unknown>[])
+      : [];
+    return mergeByIdNewestFirst(SEEDED_APP_UPDATES, live) as AppUpdateRecord[];
   } catch {
-    return [];
+    return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
   }
 }
 
@@ -3868,16 +3873,18 @@ export async function getSupabaseHelpAnnouncements(): Promise<HelpAnnouncementRe
       .order('updatedAt', { ascending: false });
 
     if (error) {
-      if (error.code === '42P01') return [];
+      if (error.code === '42P01') {
+        return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
+      }
       handleSupabaseError(error, 'help_announcements');
-      return [];
+      return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
     }
 
-    if (!data?.length) return [];
     setSupabaseConfigurationState(true);
-    return (data as Record<string, unknown>[]).map(normalizeHelpAnnouncementRow);
+    const live = (data || []).map((row) => normalizeHelpAnnouncementRow(row as Record<string, unknown>));
+    return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, live) as HelpAnnouncementRecord[];
   } catch {
-    return [];
+    return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
   }
 }
 
