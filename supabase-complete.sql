@@ -9,6 +9,12 @@
 --   Awards unlock at 500 neighbors  (awards_unlocked)
 --   Events unlock at 500 neighbors  (events_unlocked)
 --
+-- Go Get / pickup coordination:
+--   users.goGetEnabled (default true) — neighbors may opt out in Account
+--   settings to list + chat without app-supported handoff. Live Go Get /
+--   Drop off / Meet up / claim-at-pin still require the installed app
+--   (PWA or APK) with notifications on (enforced in app code).
+--
 -- After running, configure push webhooks in Supabase Dashboard
 -- (see PUSH WEBHOOKS section at bottom of this file).
 -- =========================================================
@@ -26,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   neighborhood TEXT NOT NULL,
   bio TEXT,
   role TEXT NOT NULL DEFAULT 'user', -- user | city_moderator | city_administrator | city_manager | director
+  "goGetEnabled" BOOLEAN NOT NULL DEFAULT true, -- false = opt out of Go Get / pickup coordination
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -34,6 +41,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'us
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "photoURL" TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "lastActiveAt" TIMESTAMPTZ;
+-- Opt-out of Go Get / Drop off / Meet up / claim-at-pin (listing + chat still work).
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetEnabled" BOOLEAN NOT NULL DEFAULT true;
 
 CREATE INDEX IF NOT EXISTS users_last_active_at_idx ON public.users ("lastActiveAt" DESC);
@@ -797,6 +805,24 @@ Neighbors:
   'Markeith White',
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_goget-app-only',
+  '2026-07-26',
+  'Go Get & pickup coordination — installed app + notifications required',
+  'Go Get, Drop off, Meet up, and claim-at-pin now only work in the installed app (APK or Add to Home Screen) with notifications on. Prefer chat-only? Opt out in Account settings.',
+  $detail$What changed:
+• Pickup coordination needs the installed app — not a regular browser tab.
+• Notifications must be enabled so both neighbors get handoff alerts.
+• Account → Go Get & pickup coordination lets you opt out anytime.
+• Opted out? You still list and message as usual — just without live tracking and handoff prompts.
+
+Install from sacramentobuynothing.com/download, turn on alerts in the bell, and you are set.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
 )
 ON CONFLICT (id) DO NOTHING;
 
@@ -858,6 +884,23 @@ Questions? Message staff from Help & support.
 • Confirmed violations still count toward the six-strike lock; you can appeal.
 
 Stay kind, meet in public when you can, and thank you for keeping Sacramento Buy Nothing safe.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+),
+(
+  '2026-07-26_goget-requires-app',
+  '2026-07-26',
+  'Go Get needs the installed app + notifications',
+  'Live pickup coordination only runs in the Android APK or home-screen app with notifications on. You can opt out in Account settings and keep listing + chatting without it.',
+  $detail$To use Go Get / Drop off / Meet up:
+1. Install from https://sacramentobuynothing.com/download
+2. Enable notifications (bell → Notification settings)
+3. Keep “Go Get & pickup coordination” on in Account
+
+Prefer to arrange pickups yourself? Turn coordination off in Account — your listings stay up and neighbors can still message you.
 
 — Mark$detail$,
   'Markeith White',
@@ -2338,7 +2381,9 @@ AS $$
     OR public.is_chat_participant(chat_id);
 $$;
 
--- Public profile view (no email) — use for neighbor lookups
+-- Public profile view (no email) — use for neighbor lookups.
+-- Includes goGetEnabled so neighbors can see whether the other party
+-- accepts app-supported pickup coordination before starting Go Get.
 CREATE OR REPLACE VIEW public.users_public
 WITH (security_invoker = true) AS
 SELECT
