@@ -5072,6 +5072,7 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
     totalNeighbors: 0,
     neighborsJoinedToday: 0,
     activeOnlineCount: 0,
+    activeTodayCount: 0,
     activeNeighbors: [],
     activeListings: 0,
     openReports: 0,
@@ -5091,6 +5092,7 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       usersRes,
       joinedTodayRes,
       activeOnlineRes,
+      activeTodayRes,
       activeNeighborsRes,
       activeListingsRes,
       openReportsRes,
@@ -5105,6 +5107,11 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       supabase.from('users').select('uid', { count: 'exact', head: true }),
       supabase.from('users').select('uid', { count: 'exact', head: true }).gte('createdAt', todayIso),
       supabase.rpc('active_neighbor_count', { within_minutes: 5 }),
+      supabase
+        .from('users')
+        .select('uid', { count: 'exact', head: true })
+        .eq('accountStatus', 'active')
+        .gte('lastActiveAt', todayIso),
       supabase
         .from('users')
         .select('uid, displayName, photoURL, neighborhood, lastActiveAt')
@@ -5192,6 +5199,7 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       totalNeighbors: usersRes.count ?? 0,
       neighborsJoinedToday: joinedTodayRes.count ?? 0,
       activeOnlineCount: Number(activeOnlineRes.data ?? 0),
+      activeTodayCount: activeTodayRes.count ?? 0,
       activeNeighbors: (activeNeighborsRes.data ?? []).map((row) => {
         const r = row as Record<string, unknown>;
         return {

@@ -149,6 +149,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
     totalNeighbors: 0,
     neighborsJoinedToday: 0,
     activeOnlineCount: 0,
+    activeTodayCount: 0,
     activeNeighbors: [],
     activeListings: 0,
     openReports: 0,
@@ -195,7 +196,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <StatTile
           label="Active (online)"
           value={data.activeOnlineCount}
-          sub="last 5 min"
+          sub={data.activeTodayCount > 0 ? `+${data.activeTodayCount} today` : 'last 5 min'}
           accent="text-emerald-400"
         />
         <StatTile label="Active listings" value={data.activeListings} accent="text-accent" />

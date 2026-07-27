@@ -101,6 +101,8 @@ export interface DirectorSiteOverview {
   totalNeighbors: number;
   neighborsJoinedToday: number;
   activeOnlineCount: number;
+  /** Unique neighbors with lastActiveAt at any point since local midnight. */
+  activeTodayCount: number;
   activeNeighbors: DirectorActiveNeighbor[];
   activeListings: number;
   openReports: number;
