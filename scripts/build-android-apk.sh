@@ -12,7 +12,7 @@ if [[ -z "${VITE_APP_URL:-}" && -f .env.local ]]; then
 fi
 
 if [[ -z "${VITE_APP_URL:-}" ]]; then
-  export VITE_APP_URL="${APP_URL:-https://sacramentobuynothing.com}"
+  export VITE_APP_URL="${APP_URL:-https://www.sacramentobuynothing.com}"
   echo "Using VITE_APP_URL=${VITE_APP_URL}"
 fi
 

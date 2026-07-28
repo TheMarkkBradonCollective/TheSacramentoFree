@@ -16,7 +16,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsProps) {
-  const { latestApk } = useInstallVersions();
+  const { latestApk, apkDownloadHref } = useInstallVersions();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
   const isStandalone = installKind === 'pwa' || installKind === 'ios-pwa';
@@ -44,7 +44,7 @@ export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsP
 
   if (isNativeApp()) return null;
 
-  const apkUrl = latestApk?.downloadUrl;
+  const apkUrl = apkDownloadHref;
   const pwaLabel = deferredPrompt ? 'Install app' : 'Add to Home Screen';
 
   return (

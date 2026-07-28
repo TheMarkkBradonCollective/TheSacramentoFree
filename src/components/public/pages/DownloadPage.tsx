@@ -97,6 +97,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
     currentWebVersion,
     webStatus,
     latestApk,
+    apkDownloadHref,
     currentApkVersionName,
     currentApkVersionCode,
     apkStatus,
@@ -182,8 +183,10 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
               <div className="flex justify-between gap-4">
                 <dt className="text-subtle">Latest version</dt>
                 <dd className="font-bold text-app text-right">
-                  {loading ? '…' : latestApk?.versionName ?? '—'}
-                  {latestApk?.versionCode != null ? ` (build ${latestApk.versionCode})` : ''}
+                  {loading ? '…' : latestApk?.betaLabel ?? latestApk?.versionName ?? '—'}
+                  {!loading && latestApk?.betaLabel == null && latestApk?.versionCode != null
+                    ? ` (build ${latestApk.versionCode})`
+                    : ''}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
@@ -198,7 +201,13 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
 
             {apkStatus === 'update-available' ? (
               <p className="text-xs text-accent bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 mb-4">
-                A newer APK is available. Download and install it to get the latest features and fixes.
+                A newer APK is available. Download and install it once — after that, the app updates itself
+                automatically when we deploy.
+              </p>
+            ) : usingApk && apkStatus === 'up-to-date' ? (
+              <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
+                Your APK loads the live site and refreshes on its own. You should not need to download again unless we
+                ship a new native build.
               </p>
             ) : null}
 
@@ -209,10 +218,10 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
               </p>
             ) : null}
 
-            {latestApk?.downloadUrl ? (
+            {apkDownloadHref ? (
               <a
-                href={latestApk.downloadUrl}
-                download={latestApk.fileName || 'sac-buy-nothing.apk'}
+                href={apkDownloadHref}
+                download={latestApk?.fileName || 'sac-buy-nothing.apk'}
                 className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 bg-accent hover:bg-accent-hover text-on-accent text-sm font-black uppercase tracking-wide rounded-xl transition-colors"
               >
                 <Download className="w-4 h-4" />
@@ -321,7 +330,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
                 />
                 <ComparisonRow
                   label="Updates"
-                  apk="Download new APK when we release (this page will tell you)"
+                  apk="Install once — then auto-updates from the live site"
                   homeScreen="Updates automatically when you reopen the app"
                 />
                 <ComparisonRow

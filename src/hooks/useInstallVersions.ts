@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { apkDownloadUrl } from '../lib/apkDownload';
 import {
   detectInstallKind,
   installKindLabel,
@@ -12,6 +13,7 @@ export type VersionStatus = 'up-to-date' | 'update-available' | 'unknown' | 'not
 export interface AndroidVersionManifest {
   versionName: string;
   versionCode: number;
+  betaLabel?: string;
   downloadUrl: string;
   releaseTag: string;
   publishedAt: string;
@@ -27,6 +29,7 @@ export interface InstallVersionsState {
   currentWebVersion: string | null;
   webStatus: VersionStatus;
   latestApk: AndroidVersionManifest | null;
+  apkDownloadHref: string | null;
   currentApkVersionName: string | null;
   currentApkVersionCode: number | null;
   apkStatus: VersionStatus;
@@ -99,6 +102,7 @@ export function useInstallVersions(): InstallVersionsState {
 
   const webStatus = compareWebVersions(currentWebVersion, latestWebVersion);
   const apkStatus = compareApkVersions(currentApkVersionCode, latestApk?.versionCode ?? null);
+  const apkDownloadHref = apkDownloadUrl(latestApk);
 
   return {
     installKind,
@@ -109,6 +113,7 @@ export function useInstallVersions(): InstallVersionsState {
     currentWebVersion,
     webStatus,
     latestApk,
+    apkDownloadHref,
     currentApkVersionName,
     currentApkVersionCode,
     apkStatus,

@@ -9,7 +9,7 @@ const { versionName, versionCode, label } = readAppVersion();
 const releaseTag = `android-v${versionName}`;
 const fileName = 'sac-buy-nothing.apk';
 /** Always host the downloadable APK on the public site — private GitHub Releases 404 for neighbors. */
-const appOrigin = (process.env.VITE_APP_URL || process.env.APP_URL || 'https://sacramentobuynothing.com').replace(/\/$/, '');
+const appOrigin = (process.env.VITE_APP_URL || process.env.APP_URL || 'https://www.sacramentobuynothing.com').replace(/\/$/, '');
 const downloadUrl = `${appOrigin}/downloads/${fileName}`;
 
 const manifest = {
