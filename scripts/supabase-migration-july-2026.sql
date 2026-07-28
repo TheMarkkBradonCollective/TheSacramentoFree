@@ -11,7 +11,7 @@
 --   • 7 app_updates changelog rows + 1 help_announcement
 --
 -- For a FULL schema re-apply (fresh DB or disaster recovery), use instead:
---   supabase-complete.sql  (project root — entire site schema + seeds)
+--   complete-schema.sql  (project root — entire site schema + seeds)
 -- =========================================================
 
 -- ---------------------------------------------------------

@@ -48,13 +48,13 @@ function normalizeViolation(row: Record<string, unknown>): UserViolation {
 
 type Result = { ok: boolean; errorMessage?: string };
 
-const MISSING_TABLE_MESSAGE = 'Run the Go Get violations SQL (section 21 in supabase-complete.sql) in Supabase.';
+const MISSING_TABLE_MESSAGE = 'Run the Go Get violations SQL (section 21 in complete-schema.sql) in Supabase.';
 
 function isMissingTableError(error: { code?: string } | null | undefined): boolean {
   return error?.code === '42P01';
 }
 
-/** Max strikes before an account auto-locks — kept in sync with the DB trigger in supabase-complete.sql. */
+/** Max strikes before an account auto-locks — kept in sync with the DB trigger in complete-schema.sql. */
 export const VIOLATION_LOCK_THRESHOLD = 6;
 
 export interface FileViolationParams {

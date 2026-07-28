@@ -1,4 +1,4 @@
-import { Calendar, Eye, MapPin, Navigation } from 'lucide-react';
+import { Calendar, Eye, MapPin, Navigation, Repeat } from 'lucide-react';
 import { CommunityEvent } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
@@ -6,6 +6,7 @@ import EventStatusBadge from './EventStatusBadge';
 import UserAvatar from './UserAvatar';
 import ListingImage from './ListingImage';
 import { isEventPast, resolveEventStatus } from '../lib/eventRsvp';
+import { isSeriesEvent } from '../lib/eventSeries';
 import { formatRouteDistance } from '../lib/mapRoute';
 
 interface EventCardProps {
@@ -15,6 +16,8 @@ interface EventCardProps {
   onViewEvent: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
   commentsLocked?: boolean;
+  /** Upcoming dates in this event's repeat series (includes this card when upcoming). */
+  seriesUpcomingCount?: number;
   /** Straight-line distance from user to event location, in meters. */
   distanceMeters?: number | null;
   /** Open navigation to this event (map-view parity). */
@@ -48,6 +51,7 @@ export default function EventCard({
   onViewEvent,
   onViewProfile,
   commentsLocked = false,
+  seriesUpcomingCount,
   distanceMeters,
   onNavigate,
 }: EventCardProps) {
@@ -58,6 +62,7 @@ export default function EventCard({
   const rsvpState = engagement.getRsvpsForEvent(event.id);
   const comments = engagement.getCommentsForEvent(event.id);
   const coverImage = event.imageUrl;
+  const showSeriesBadge = isSeriesEvent(event) && (seriesUpcomingCount ?? 0) > 1;
 
   return (
     <article
@@ -89,6 +94,12 @@ export default function EventCard({
             Free event
           </span>
           <EventStatusBadge status={eventStatus} />
+          {showSeriesBadge && (
+            <span className="sbn-badge text-[10px] sm:text-xs py-0.5 inline-flex items-center gap-0.5">
+              <Repeat className="w-3 h-3 shrink-0" aria-hidden />
+              {seriesUpcomingCount} dates
+            </span>
+          )}
         </div>
 
         <button type="button" onClick={() => onViewEvent(event)} className="text-left w-full mt-1 sm:mt-3 cursor-pointer">

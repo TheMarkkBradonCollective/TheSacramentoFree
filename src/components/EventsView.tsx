@@ -11,6 +11,7 @@ import {
 import { CommunityEvent, SACRAMENTO_NEIGHBORHOODS, UserProfile } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { isEventUpcoming } from '../lib/eventRsvp';
+import { buildSeriesUpcomingCountMap } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
 import EventCard from './EventCard';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
@@ -138,6 +139,8 @@ export default function EventsView({
     setSelectedNeighborhood('All Neighborhoods');
     setMyAreaOnly(false);
   };
+
+  const seriesUpcomingCounts = useMemo(() => buildSeriesUpcomingCountMap(events), [events]);
 
   const filteredEvents = useMemo(() => {
     const filtered = events.filter((event) => {
@@ -384,6 +387,9 @@ export default function EventsView({
                 onViewEvent={onViewEvent}
                 onViewProfile={onViewProfile}
                 commentsLocked={commentsLocked}
+                seriesUpcomingCount={
+                  event.seriesId ? seriesUpcomingCounts.get(event.seriesId) : undefined
+                }
                 distanceMeters={getEventDistance(event)}
                 onNavigate={() => onViewEvent(event)}
               />

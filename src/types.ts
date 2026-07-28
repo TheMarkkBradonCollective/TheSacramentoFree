@@ -261,7 +261,7 @@ export interface ListingSubItem {
 
 // =========================================================
 // "Go Get" pickup sessions — Uber/DoorDash-style pickup coordination.
-// See supabase-complete.sql section 20/21 for the full lifecycle + strike rules.
+// See complete-schema.sql section 20/21 for the full lifecycle + strike rules.
 // =========================================================
 
 export type GoGetHandshakeMode = 'instant' | 'availability';
@@ -427,6 +427,8 @@ export interface CommunityEvent {
   /** Optional GPS pin for map and directions (decimal degrees). */
   locationLat?: number | null;
   locationLng?: number | null;
+  /** Links repeat occurrences at the same location (shared title, venue, host). */
+  seriesId?: string | null;
   /** Community events must always be free — enforced in DB and on create. */
   isFree: true;
   status: EventStatus;

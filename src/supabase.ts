@@ -201,10 +201,12 @@ CREATE TABLE IF NOT EXISTS public.community_events (
   "isFree" BOOLEAN NOT NULL DEFAULT true,
   status TEXT NOT NULL DEFAULT 'active',
   "imageUrl" TEXT,
+  "seriesId" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "seriesId" TEXT;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "hostedBy" TEXT;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLat" DOUBLE PRECISION;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION;
@@ -1742,7 +1744,7 @@ export async function replaceListingSubitems(
     const { error: insertError } = await supabase.from('listing_subitems').insert(rows);
     if (insertError) {
       if (insertError.code === '42P01') {
-        return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (listing_subitems).' };
+        return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (listing_subitems).' };
       }
       return { ok: false, errorMessage: insertError.message };
     }
@@ -1829,7 +1831,7 @@ async function recordPartialItemClaims(params: {
             return { ok: false, errorMessage: `"${sub.label}" was already claimed.` };
           }
           if (claimError.code === '42P01') {
-            return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (multi-item claims).' };
+            return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (multi-item claims).' };
           }
           return { ok: false, errorMessage: claimError.message };
         }
@@ -1967,7 +1969,7 @@ export async function submitSelfClaimRequest(params: {
 
   if (reqError) {
     if (reqError.code === '42P01') {
-      return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (item_claim_requests).' };
+      return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (item_claim_requests).' };
     }
     return { ok: false, errorMessage: reqError.message };
   }
@@ -2565,14 +2567,14 @@ export async function markItemFulfilledFromChat(params: {
       if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
         return {
           ok: false,
-          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see supabase-complete.sql).',
+          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see complete-schema.sql).',
         };
       }
       if (msg.includes('kind') || msg.includes('column')) {
         return {
           ok: false,
           errorMessage:
-            'Claims table needs the kind column — re-run section 7 in supabase-complete.sql (request_fulfilled support).',
+            'Claims table needs the kind column — re-run section 7 in complete-schema.sql (request_fulfilled support).',
         };
       }
       return { ok: false, errorMessage: claimError.message || 'Could not record fulfillment.' };
@@ -2972,6 +2974,7 @@ export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
   return {
     ...row,
     hostedBy: row.hostedBy?.trim() || null,
+    seriesId: row.seriesId?.trim() || null,
     locationLat:
       typeof row.locationLat === 'number' && Number.isFinite(row.locationLat) ? row.locationLat : null,
     locationLng:
@@ -3053,20 +3056,7 @@ export async function createSupabaseEvent(
       await upsertSupabaseProfile(author);
     }
 
-    const payload = {
-      ...event,
-      isFree: true,
-      status: 'upcoming' as const,
-      eventStartAt: new Date(event.eventStartAt).toISOString(),
-      eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
-      createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : new Date().toISOString(),
-      imageUrl:
-        event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
-          ? event.imageUrl
-          : null,
-    };
-
+    const payload = buildCommunityEventInsertPayload(event);
     const { error } = await supabase.from('community_events').insert(payload);
 
     if (error) {
@@ -3081,6 +3071,185 @@ export async function createSupabaseEvent(
     return {
       ok: false,
       errorMessage: err instanceof Error ? err.message : 'Could not save event.',
+    };
+  }
+}
+
+function buildCommunityEventInsertPayload(event: CommunityEvent) {
+  return {
+    ...event,
+    seriesId: event.seriesId?.trim() || null,
+    isFree: true,
+    status: 'upcoming' as const,
+    eventStartAt: new Date(event.eventStartAt).toISOString(),
+    eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
+    createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : new Date().toISOString(),
+    imageUrl:
+      event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
+        ? event.imageUrl
+        : null,
+  };
+}
+
+/** Post multiple occurrences at the same location (shared seriesId). */
+export async function createSupabaseEventSeries(
+  events: CommunityEvent[],
+  author?: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string; count?: number }> {
+  if (events.length === 0) {
+    return { ok: false, errorMessage: 'Add at least one date.' };
+  }
+
+  try {
+    for (const event of events) {
+      if (!event.isFree) {
+        return { ok: false, errorMessage: 'Only free community events are allowed.' };
+      }
+    }
+
+    if (author && !isStaffRole(author.role)) {
+      const unlockStatus = await getEventsUnlockStatus();
+      if (!unlockStatus.unlocked) {
+        return {
+          ok: false,
+          errorMessage:
+            'Community events unlock at 500 neighbors. Share the invite link to help us get there!',
+        };
+      }
+    }
+
+    if (author?.email) {
+      await upsertSupabaseProfile(author);
+    }
+
+    const payloads = events.map((event) => buildCommunityEventInsertPayload(event));
+    const { error } = await supabase.from('community_events').insert(payloads);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not save events.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true, count: events.length };
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not save events.',
+    };
+  }
+}
+
+/** Update map pin on all upcoming rows in a series (same venue). */
+export async function updateSupabaseEventSeriesLocation(
+  seriesId: string,
+  userId: string,
+  locationLat: number,
+  locationLng: number,
+  neighborhood: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({
+        locationLat,
+        locationLng,
+        neighborhood,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('seriesId', seriesId)
+      .eq('userId', userId)
+      .eq('status', 'upcoming');
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not update series locations.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not update series locations.',
+    };
+  }
+}
+
+/** Sync shared listing fields across every upcoming row in a repeat series. */
+export async function updateSupabaseEventSeriesMetadata(
+  seriesId: string,
+  userId: string,
+  patch: {
+    title: string;
+    description: string;
+    location: string;
+    neighborhood: string;
+    hostedBy: string | null;
+    locationLat: number | null;
+    locationLng: number | null;
+    imageUrl: string | null;
+  },
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({
+        title: patch.title,
+        description: patch.description,
+        location: patch.location,
+        neighborhood: patch.neighborhood,
+        hostedBy: patch.hostedBy,
+        locationLat: patch.locationLat,
+        locationLng: patch.locationLng,
+        imageUrl: patch.imageUrl,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('seriesId', seriesId)
+      .eq('userId', userId)
+      .eq('status', 'upcoming');
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not update series details.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not update series details.',
+    };
+  }
+}
+
+/** Link an existing event row into a repeat series (e.g. when adding dates later). */
+export async function assignSupabaseEventSeriesId(
+  eventId: string,
+  userId: string,
+  seriesId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({ seriesId, updatedAt: new Date().toISOString() })
+      .eq('id', eventId)
+      .eq('userId', userId);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not link event to series.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not link event to series.',
     };
   }
 }
@@ -3110,6 +3279,7 @@ export async function updateSupabaseEvent(
         hostedBy: event.hostedBy?.trim() || null,
         locationLat: event.locationLat ?? null,
         locationLng: event.locationLng ?? null,
+        seriesId: event.seriesId?.trim() || null,
         imageUrl:
           event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
             ? event.imageUrl
@@ -4422,7 +4592,7 @@ export async function blockUser(params: {
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Blocks table missing — run section 8 in supabase-complete.sql.' };
+        return { ok: false, errorMessage: 'Blocks table missing — run section 8 in complete-schema.sql.' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -4459,7 +4629,7 @@ export async function blockUser(params: {
       if (reportError.code === '42P01') {
         return {
           ok: true,
-          errorMessage: 'Neighbor blocked, but reports table is missing — run sections 12 and 16 in supabase-complete.sql.',
+          errorMessage: 'Neighbor blocked, but reports table is missing — run sections 12 and 16 in complete-schema.sql.',
         };
       }
       const missingColumn =
@@ -4592,7 +4762,7 @@ export async function sendMessageRequest(params: {
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Message requests table missing — run section 9 in supabase-complete.sql.' };
+        return { ok: false, errorMessage: 'Message requests table missing — run section 9 in complete-schema.sql.' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5280,7 +5450,7 @@ export async function staffSuspendUser(params: {
 
     if (error) {
       if (error.code === '42703') {
-        return { ok: false, errorMessage: 'Run section 10 in supabase-complete.sql (account moderation columns).' };
+        return { ok: false, errorMessage: 'Run section 10 in complete-schema.sql (account moderation columns).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5354,7 +5524,7 @@ export async function staffBanUser(params: {
 
     if (error) {
       if (error.code === '42703') {
-        return { ok: false, errorMessage: 'Run section 10 in supabase-complete.sql (account moderation columns).' };
+        return { ok: false, errorMessage: 'Run section 10 in complete-schema.sql (account moderation columns).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5587,7 +5757,7 @@ export async function submitUserReport(params: {
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Run section 12 in supabase-complete.sql (user_reports).' };
+        return { ok: false, errorMessage: 'Run section 12 in complete-schema.sql (user_reports).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5685,7 +5855,7 @@ export async function createSupportTicket(params: {
 
     if (ticketError) {
       if (ticketError.code === '42P01') {
-        return { ok: false, errorMessage: 'Run sections 13–14 in supabase-complete.sql (support tickets).' };
+        return { ok: false, errorMessage: 'Run sections 13–14 in complete-schema.sql (support tickets).' };
       }
       return { ok: false, errorMessage: ticketError.message };
     }
@@ -6169,7 +6339,7 @@ async function notifyDirectorDepartureAlert(params: {
 
 /**
  * Permanently removes the signed-in user's account (profile + auth).
- * Requires `delete_own_account()` in Supabase — run supabase-complete.sql.
+ * Requires `delete_own_account()` in Supabase — run complete-schema.sql.
  */
 export async function staffDeleteUserAccount(params: {
   actor: UserProfile;
@@ -6241,7 +6411,7 @@ export async function staffDeleteUserAccount(params: {
       actor: params.actor,
       target: { uid: params.targetUserId, displayName: params.targetName },
       action: 'delete_account',
-      detail: 'Community data removed (run supabase-complete.sql for full auth removal)',
+      detail: 'Community data removed (run complete-schema.sql for full auth removal)',
     });
 
     await notifyDirectorDepartureAlert({
@@ -6254,7 +6424,7 @@ export async function staffDeleteUserAccount(params: {
     return {
       ok: true,
       errorMessage:
-        'Community data removed. Run supabase-complete.sql to fully remove sign-in access.',
+        'Community data removed. Run complete-schema.sql to fully remove sign-in access.',
     };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };
@@ -6325,7 +6495,7 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     return {
       ok: true,
       errorMessage:
-        'Community data removed. Ask an admin to run supabase-complete.sql if you still receive sign-in emails.',
+        'Community data removed. Ask an admin to run complete-schema.sql if you still receive sign-in emails.',
     };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };
