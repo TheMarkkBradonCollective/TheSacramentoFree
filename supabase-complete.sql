@@ -426,6 +426,9 @@ ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_source_check
 -- =========================================================
 -- 17. Community events (free gatherings only)
 -- 500-member events unlock RLS (included in supabase-complete.sql).
+--
+-- Repeat events: multiple rows can share seriesId (same venue/details,
+-- different eventStartAt/eventEndAt). RSVPs and comments stay per row.
 -- =========================================================
 CREATE TABLE IF NOT EXISTS public.community_events (
   id TEXT PRIMARY KEY,
