@@ -19,6 +19,7 @@ import PageScrollFooter from './PageScrollFooter';
 import { isStaffRole, roleTheme } from '../lib/roles';
 import { isNativeApp } from '../lib/nativePlatform';
 import AppSidebar from './AppSidebar';
+import AppTopbar from './AppTopbar';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
@@ -168,76 +169,96 @@ export default function MobileView({
     : (activeTab as AppTab);
 
   if (isStaff) {
+    const onStaffTab = isStaffTab(activeTab);
+    const staffEyebrow = onStaffTab ? 'Staff console' : 'Community';
+    const staffTitle = onStaffTab
+      ? undefined
+      : communityTab === 'feed'
+        ? IN_APP.feedTitle
+        : communityTab === 'events'
+          ? IN_APP.eventsTitle
+          : communityTab === 'map'
+            ? IN_APP.mapTitle
+            : communityTab === 'chats'
+              ? IN_APP.chatsTabLabel
+              : IN_APP.profileTitle;
+
     return (
       <div
         id="mobile_device_workspace"
         className="flex h-screen bg-app text-app overflow-hidden"
         style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as React.CSSProperties}
       >
+        {!sidebarCollapsed && (
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-black/40"
+            aria-label="Close navigation menu"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
         <AppSidebar
           userProfile={userProfile}
           activeTab={activeTab}
           onTabChange={setActiveTab}
           variant="expanded"
           collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
           onCollapse={() => setSidebarCollapsed(true)}
           autoCollapseOnNavigate
+          fullyHiddenWhenCollapsed
+          overlay
         />
-        <div
-          className="flex-1 min-w-0 flex flex-col h-full overflow-hidden"
-          onClick={() => {
-            if (!sidebarCollapsed) setSidebarCollapsed(true);
-          }}
-        >
+        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+          <AppTopbar
+            userProfile={userProfile}
+            eyebrow={staffEyebrow}
+            title={staffTitle}
+            onOpenAwards={onOpenAwards ?? (() => {})}
+            awardsButtonGlow={awardsButtonGlow}
+            onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+          />
+
           {/* Staff panel views */}
-          {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
-          {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
-          {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} onViewEvent={onViewEvent} />}
-          {activeTab === 'staff_messages' && (
-            <StaffMessagesView
-              actor={userProfile}
-              onViewProfile={onViewProfile}
-              onOpenChat={onOpenChatById}
-              onOpenTicket={onOpenTicketById}
-              onViewListing={onViewListingId}
-            />
+          {onStaffTab && (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
+              {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
+              {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} onViewEvent={onViewEvent} />}
+              {activeTab === 'staff_messages' && (
+                <StaffMessagesView
+                  actor={userProfile}
+                  onViewProfile={onViewProfile}
+                  onOpenChat={onOpenChatById}
+                  onOpenTicket={onOpenTicketById}
+                  onViewListing={onViewListingId}
+                />
+              )}
+              {activeTab === 'staff_meets' && (
+                <StaffMeetsView
+                  actor={userProfile}
+                  onViewProfile={onViewProfile}
+                  onOpenViolations={(sessionId) => {
+                    setViolationsFocusSessionId(sessionId);
+                    setActiveTab('staff_violations');
+                  }}
+                />
+              )}
+              {activeTab === 'staff_violations' && (
+                <StaffViolationsView
+                  actor={userProfile}
+                  focusSessionId={violationsFocusSessionId}
+                  onClearFocusSession={() => setViolationsFocusSessionId(null)}
+                />
+              )}
+              {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
+              {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
+              {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
+            </div>
           )}
-          {activeTab === 'staff_meets' && (
-            <StaffMeetsView
-              actor={userProfile}
-              onViewProfile={onViewProfile}
-              onOpenViolations={(sessionId) => {
-                setViolationsFocusSessionId(sessionId);
-                setActiveTab('staff_violations');
-              }}
-            />
-          )}
-          {activeTab === 'staff_violations' && (
-            <StaffViolationsView
-              actor={userProfile}
-              focusSessionId={violationsFocusSessionId}
-              onClearFocusSession={() => setViolationsFocusSessionId(null)}
-            />
-          )}
-          {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
-          {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
-          {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
 
           {/* Community tab content within the sidebar layout */}
-          {!isStaffTab(activeTab) && (
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <header
-                className="sbn-glass-nav px-4 py-2 flex items-center justify-between shrink-0 border-b-2"
-                style={{ borderBottomColor: theme.accent }}
-              >
-                <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />
-                <div className="flex items-center gap-1">
-                  <NotificationsHubButton />
-                  {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
-                </div>
-              </header>
-              <main className="flex-1 min-h-0 overflow-hidden">
+          {!onStaffTab && (
+            <main className="flex-1 min-h-0 overflow-hidden">
                 {/* Reuse all existing community tab views */}
                 <div className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'map'}>
                   <SacramentoMapView items={items} events={events} userProfile={userProfile} selectedType={selectedMobileType} selectedCategory={selectedMobileCategory} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} isFullScreenMobile mapVisible={communityTab === 'map'} colorGuideOpen={colorGuideOpen} onColorGuideOpenChange={setColorGuideOpen} onOpenNewPost={onOpenNewPost} onImmersiveModeChange={setMapImmersiveNav} itemsHydrated={itemsHydrated} eventsHydrated={!isEventsLoading} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} />
@@ -266,7 +287,6 @@ export default function MobileView({
                   </div>
                 </div>
               </main>
-            </div>
           )}
         </div>
       </div>

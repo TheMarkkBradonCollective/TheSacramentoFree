@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, Menu } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import AwardsButton from './AwardsButton';
@@ -13,6 +13,8 @@ interface AppTopbarProps {
   awardsButtonGlow?: boolean;
   /** Contextual primary action, e.g. "+ Post" on Feed, "+ Post event" on Events. */
   action?: ReactNode;
+  /** Opens the staff sidebar drawer — hamburger sits top-left where the logo lives in the shell. */
+  onToggleSidebar?: () => void;
 }
 
 /** Slim utility bar shared by the desktop + tablet shells — always reachable, even inside staff panels. */
@@ -23,12 +25,26 @@ export default function AppTopbar({
   onOpenAwards,
   awardsButtonGlow = false,
   action,
+  onToggleSidebar,
 }: AppTopbarProps) {
   return (
     <header id="app_topbar" className="sbn-topbar">
-      <div className="min-w-0">
-        {eyebrow && <p className="sbn-topbar-eyebrow">{eyebrow}</p>}
-        {title && <h1 className="sbn-topbar-title truncate">{title}</h1>}
+      <div className="flex items-center gap-3 min-w-0">
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="p-2 -ml-1 rounded-lg text-muted hover:text-app hover:bg-inset transition-colors cursor-pointer shrink-0"
+            aria-label="Open navigation menu"
+            id="topbar_menu_btn"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        <div className="min-w-0">
+          {eyebrow && <p className="sbn-topbar-eyebrow">{eyebrow}</p>}
+          {title && <h1 className="sbn-topbar-title truncate">{title}</h1>}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 shrink-0" id="app_topbar_actions">
