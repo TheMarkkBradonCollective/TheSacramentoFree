@@ -1,5 +1,5 @@
 -- One-off event seeds — Lucid Winery 2026 series + Fremont Park Aug 1
--- NOT part of supabase-complete.sql. Safe to re-run (upserts by id).
+-- NOT part of complete-schema.sql. Safe to re-run (upserts by id).
 -- Requires seriesId column — run scripts/supabase-migration-event-series.sql first.
 
 -- ---------------------------------------------------------

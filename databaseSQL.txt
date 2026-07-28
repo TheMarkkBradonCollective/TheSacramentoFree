@@ -5,13 +5,17 @@
 --   Adds Go Get tables, pickup attribution, violation lockout, updates + news.
 --   Safe to re-run.
 --
--- REPEAT EVENTS + Lucid Winery 2026 schedule:
+-- REPEAT EVENTS (seriesId column — schema only, no event rows):
 --   scripts/supabase-migration-event-series.sql
---   Adds seriesId column and seeds Lucid + Fremont weekend events.
 --   Safe to re-run.
 --
+-- OPTIONAL ONE-OFF EVENT SEEDS (Lucid Winery 2026 + Fremont Aug 1):
+--   scripts/seed-lucid-fremont-events-2026.sql
+--   Not included in complete-schema.sql. Safe to re-run.
+--
 -- FULL SCHEMA (fresh install, new Supabase project, or full re-apply):
---   supabase-complete.sql  (this repo root)
+--   complete-schema.sql  (this repo root)
 --   Entire site schema, RLS, triggers, seeds, realtime — safe to re-run.
+--   Includes repeat-event seriesId on community_events (no sample events).
 --
 -- Paste either file into Supabase Dashboard → SQL Editor → New query → Run.

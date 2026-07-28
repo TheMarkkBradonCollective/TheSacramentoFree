@@ -1744,7 +1744,7 @@ export async function replaceListingSubitems(
     const { error: insertError } = await supabase.from('listing_subitems').insert(rows);
     if (insertError) {
       if (insertError.code === '42P01') {
-        return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (listing_subitems).' };
+        return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (listing_subitems).' };
       }
       return { ok: false, errorMessage: insertError.message };
     }
@@ -1831,7 +1831,7 @@ async function recordPartialItemClaims(params: {
             return { ok: false, errorMessage: `"${sub.label}" was already claimed.` };
           }
           if (claimError.code === '42P01') {
-            return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (multi-item claims).' };
+            return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (multi-item claims).' };
           }
           return { ok: false, errorMessage: claimError.message };
         }
@@ -1969,7 +1969,7 @@ export async function submitSelfClaimRequest(params: {
 
   if (reqError) {
     if (reqError.code === '42P01') {
-      return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (item_claim_requests).' };
+      return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (item_claim_requests).' };
     }
     return { ok: false, errorMessage: reqError.message };
   }
@@ -2567,14 +2567,14 @@ export async function markItemFulfilledFromChat(params: {
       if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
         return {
           ok: false,
-          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see supabase-complete.sql).',
+          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see complete-schema.sql).',
         };
       }
       if (msg.includes('kind') || msg.includes('column')) {
         return {
           ok: false,
           errorMessage:
-            'Claims table needs the kind column — re-run section 7 in supabase-complete.sql (request_fulfilled support).',
+            'Claims table needs the kind column — re-run section 7 in complete-schema.sql (request_fulfilled support).',
         };
       }
       return { ok: false, errorMessage: claimError.message || 'Could not record fulfillment.' };
@@ -4592,7 +4592,7 @@ export async function blockUser(params: {
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Blocks table missing — run section 8 in supabase-complete.sql.' };
+        return { ok: false, errorMessage: 'Blocks table missing — run section 8 in complete-schema.sql.' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -4629,7 +4629,7 @@ export async function blockUser(params: {
       if (reportError.code === '42P01') {
         return {
           ok: true,
-          errorMessage: 'Neighbor blocked, but reports table is missing — run sections 12 and 16 in supabase-complete.sql.',
+          errorMessage: 'Neighbor blocked, but reports table is missing — run sections 12 and 16 in complete-schema.sql.',
         };
       }
       const missingColumn =
@@ -4762,7 +4762,7 @@ export async function sendMessageRequest(params: {
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Message requests table missing — run section 9 in supabase-complete.sql.' };
+        return { ok: false, errorMessage: 'Message requests table missing — run section 9 in complete-schema.sql.' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5450,7 +5450,7 @@ export async function staffSuspendUser(params: {
 
     if (error) {
       if (error.code === '42703') {
-        return { ok: false, errorMessage: 'Run section 10 in supabase-complete.sql (account moderation columns).' };
+        return { ok: false, errorMessage: 'Run section 10 in complete-schema.sql (account moderation columns).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5524,7 +5524,7 @@ export async function staffBanUser(params: {
 
     if (error) {
       if (error.code === '42703') {
-        return { ok: false, errorMessage: 'Run section 10 in supabase-complete.sql (account moderation columns).' };
+        return { ok: false, errorMessage: 'Run section 10 in complete-schema.sql (account moderation columns).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5757,7 +5757,7 @@ export async function submitUserReport(params: {
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Run section 12 in supabase-complete.sql (user_reports).' };
+        return { ok: false, errorMessage: 'Run section 12 in complete-schema.sql (user_reports).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5855,7 +5855,7 @@ export async function createSupportTicket(params: {
 
     if (ticketError) {
       if (ticketError.code === '42P01') {
-        return { ok: false, errorMessage: 'Run sections 13–14 in supabase-complete.sql (support tickets).' };
+        return { ok: false, errorMessage: 'Run sections 13–14 in complete-schema.sql (support tickets).' };
       }
       return { ok: false, errorMessage: ticketError.message };
     }
@@ -6339,7 +6339,7 @@ async function notifyDirectorDepartureAlert(params: {
 
 /**
  * Permanently removes the signed-in user's account (profile + auth).
- * Requires `delete_own_account()` in Supabase — run supabase-complete.sql.
+ * Requires `delete_own_account()` in Supabase — run complete-schema.sql.
  */
 export async function staffDeleteUserAccount(params: {
   actor: UserProfile;
@@ -6411,7 +6411,7 @@ export async function staffDeleteUserAccount(params: {
       actor: params.actor,
       target: { uid: params.targetUserId, displayName: params.targetName },
       action: 'delete_account',
-      detail: 'Community data removed (run supabase-complete.sql for full auth removal)',
+      detail: 'Community data removed (run complete-schema.sql for full auth removal)',
     });
 
     await notifyDirectorDepartureAlert({
@@ -6424,7 +6424,7 @@ export async function staffDeleteUserAccount(params: {
     return {
       ok: true,
       errorMessage:
-        'Community data removed. Run supabase-complete.sql to fully remove sign-in access.',
+        'Community data removed. Run complete-schema.sql to fully remove sign-in access.',
     };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };
@@ -6495,7 +6495,7 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     return {
       ok: true,
       errorMessage:
-        'Community data removed. Ask an admin to run supabase-complete.sql if you still receive sign-in emails.',
+        'Community data removed. Ask an admin to run complete-schema.sql if you still receive sign-in emails.',
     };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };

@@ -261,7 +261,7 @@ export interface ListingSubItem {
 
 // =========================================================
 // "Go Get" pickup sessions — Uber/DoorDash-style pickup coordination.
-// See supabase-complete.sql section 20/21 for the full lifecycle + strike rules.
+// See complete-schema.sql section 20/21 for the full lifecycle + strike rules.
 // =========================================================
 
 export type GoGetHandshakeMode = 'instant' | 'availability';

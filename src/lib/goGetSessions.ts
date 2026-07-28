@@ -109,7 +109,7 @@ function normalizeGoGetLiveLocation(row: Record<string, unknown>): GoGetLiveLoca
 type Result<T = undefined> = { ok: boolean; errorMessage?: string } & (T extends undefined ? {} : Partial<T>);
 
 const MISSING_TABLE_MESSAGE =
-  'Run the Go Get pickup sessions SQL (section 20/21 in supabase-complete.sql) in Supabase.';
+  'Run the Go Get pickup sessions SQL (section 20/21 in complete-schema.sql) in Supabase.';
 
 function isMissingTableError(error: { code?: string } | null | undefined): boolean {
   return error?.code === '42P01';

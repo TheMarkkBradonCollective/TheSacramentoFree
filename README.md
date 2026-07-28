@@ -73,7 +73,7 @@ npm run android:apk:debug
 
 Deployed on Vercel. Set all variables from `.env.example` in Vercel project settings (Production + Preview), then redeploy after changes.
 
-Database schema lives in `supabase-complete.sql` at the repo root. Paste the entire file into the Supabase SQL editor and run it when setting up a new project or after schema changes — it is safe to re-run and keeps the whole site intact.
+Database schema lives in `complete-schema.sql` at the repo root. Paste the entire file into the Supabase SQL editor and run it when setting up a new project or after schema changes — it is safe to re-run and keeps the whole site intact.
 
 ## Project layout
 
