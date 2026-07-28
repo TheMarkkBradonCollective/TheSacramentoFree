@@ -16,6 +16,9 @@ if [[ -z "${VITE_APP_URL:-}" ]]; then
   echo "Using VITE_APP_URL=${VITE_APP_URL}"
 fi
 
+export CAPACITOR_SERVER_URL="${CAPACITOR_SERVER_URL:-$VITE_APP_URL}"
+echo "Using CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL}"
+
 npm run build:android
 node scripts/generate-android-assets.mjs
 node scripts/sync-android-version.mjs

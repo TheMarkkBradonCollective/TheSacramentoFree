@@ -1,14 +1,16 @@
 import BrandLogo from './BrandLogo';
 import { SITE } from '../siteContent';
+import { getBetaVersionLabel } from '../lib/appVersion';
 import { isNativeApp } from '../lib/nativePlatform';
 
 export default function AppBootSplash() {
   const isNative = isNativeApp();
+  const betaVersion = getBetaVersionLabel();
 
   return (
     <div
       id="app_boot_splash"
-      className="min-h-[100svh] flex flex-col items-center justify-center gap-6 px-6 text-center mesh-bg"
+      className="min-h-[100svh] flex flex-col items-center justify-center gap-6 px-6 text-center mesh-bg relative"
       aria-busy="true"
       aria-label="Loading Sacramento Buy Nothing"
     >
@@ -29,6 +31,9 @@ export default function AppBootSplash() {
         className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin"
         aria-hidden
       />
+      <p className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-0 right-0 text-[10px] tracking-[0.18em] uppercase text-subtle font-semibold">
+        {betaVersion}
+      </p>
     </div>
   );
 }

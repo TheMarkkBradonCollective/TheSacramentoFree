@@ -1,5 +1,6 @@
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { apiUrl } from './appOrigin';
 
 export type InstallKind = 'browser' | 'pwa' | 'ios-pwa' | 'android-apk';
 
@@ -51,7 +52,7 @@ export async function recordInstalledApkVersion(): Promise<void> {
 
 export async function recordInstalledWebVersion(): Promise<void> {
   try {
-    const res = await fetch(`/version.json?_=${Date.now()}`, { cache: 'no-store' });
+    const res = await fetch(`${apiUrl('/version.json')}?_=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) return;
     const data = (await res.json()) as { v?: string };
     if (data.v) localStorage.setItem(INSTALLED_WEB_VERSION_KEY, data.v);

@@ -1,17 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { readAppVersion } from './read-app-version.mjs';
 
 const root = process.cwd();
-const gradlePath = path.join(root, 'android/app/build.gradle');
 const manifestPath = path.join(root, 'public/android-version.json');
-
-const gradle = fs.readFileSync(gradlePath, 'utf8');
-const versionName = gradle.match(/versionName\s+"([^"]+)"/)?.[1] ?? '1.0.0';
-const versionCode = Number.parseInt(gradle.match(/versionCode\s+(\d+)/)?.[1] ?? '1', 10);
-
-const existing = fs.existsSync(manifestPath)
-  ? JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
-  : {};
+const { versionName, versionCode, label } = readAppVersion();
 
 const releaseTag = `android-v${versionName}`;
 const fileName = 'sac-buy-nothing.apk';
@@ -22,6 +15,7 @@ const downloadUrl = `${appOrigin}/downloads/${fileName}`;
 const manifest = {
   versionName,
   versionCode,
+  betaLabel: label,
   downloadUrl,
   releaseTag,
   publishedAt: new Date().toISOString(),

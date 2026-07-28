@@ -1,12 +1,19 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const serverUrl = (process.env.CAPACITOR_SERVER_URL || process.env.VITE_APP_URL || '').trim().replace(/\/$/, '');
+
 const config: CapacitorConfig = {
   appId: 'org.sacbuynothing.app',
   appName: 'Sac Buy Nothing',
   webDir: 'dist',
-  server: {
-    androidScheme: 'https',
-  },
+  server: serverUrl
+    ? {
+        url: serverUrl,
+        cleartext: false,
+      }
+    : {
+        androidScheme: 'https',
+      },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1500,
