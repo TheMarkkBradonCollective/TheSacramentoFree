@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import type {Connect, Plugin} from 'vite';
 import {defineConfig, loadEnv} from 'vite';
+import {readAppVersion} from './scripts/read-app-version.mjs';
 
 /** Map common Vercel env names into Vite client build variables. */
 function clientEnvDefines(mode: string): Record<string, string> {
@@ -67,12 +68,23 @@ function pushApiPlugin(): Plugin {
  * can poll for new deploys as a fallback (e.g. iOS Safari).
  */
 function swVersionPlugin(): Plugin {
+  let appVersion = readAppVersion();
+
   return {
     name: 'sw-version',
     apply: 'build',
+    config() {
+      appVersion = readAppVersion();
+      return {
+        define: {
+          'import.meta.env.VITE_APP_BETA_VERSION_LABEL': JSON.stringify(appVersion.label),
+        },
+      };
+    },
     closeBundle() {
       const timestamp = String(Date.now());
       const distDir = path.resolve(__dirname, 'dist');
+      appVersion = readAppVersion();
 
       for (const swFile of ['service-worker.js', 'sw.js']) {
         const swPath = path.join(distDir, swFile);
@@ -84,7 +96,14 @@ function swVersionPlugin(): Plugin {
 
       fs.writeFileSync(
         path.join(distDir, 'version.json'),
-        JSON.stringify({ v: timestamp, t: new Date().toISOString() }),
+        JSON.stringify({
+          v: timestamp,
+          t: new Date().toISOString(),
+          label: appVersion.label,
+          channel: appVersion.channel,
+          versionName: appVersion.versionName,
+          versionCode: appVersion.versionCode,
+        }),
       );
     },
   };

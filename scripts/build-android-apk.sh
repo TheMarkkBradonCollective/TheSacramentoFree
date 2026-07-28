@@ -12,9 +12,12 @@ if [[ -z "${VITE_APP_URL:-}" && -f .env.local ]]; then
 fi
 
 if [[ -z "${VITE_APP_URL:-}" ]]; then
-  export VITE_APP_URL="${APP_URL:-https://sacramentobuynothing.com}"
+  export VITE_APP_URL="${APP_URL:-https://www.sacramentobuynothing.com}"
   echo "Using VITE_APP_URL=${VITE_APP_URL}"
 fi
+
+export CAPACITOR_SERVER_URL="${CAPACITOR_SERVER_URL:-$VITE_APP_URL}"
+echo "Using CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL}"
 
 npm run build:android
 node scripts/generate-android-assets.mjs

@@ -1,8 +1,9 @@
 {
-  "versionName": "1.1.0",
-  "versionCode": 2,
-  "downloadUrl": "https://sacramentobuynothing.com/downloads/sac-buy-nothing.apk",
-  "releaseTag": "android-v1.1.0",
-  "publishedAt": "2026-07-26T23:17:25.293Z",
+  "versionName": "0.1.0",
+  "versionCode": 3,
+  "betaLabel": "beta v0.1.0.0003",
+  "downloadUrl": "https://www.sacramentobuynothing.com/downloads/sac-buy-nothing.apk",
+  "releaseTag": "android-v0.1.0",
+  "publishedAt": "2026-07-28T10:01:07.926Z",
   "fileName": "sac-buy-nothing.apk"
 }

@@ -106,7 +106,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (/\.(js|css|mjs|woff2?|ttf|otf)$/i.test(url.pathname)) {
-    event.respondWith(staleWhileRevalidate(event.request));
+    event.respondWith(networkFirst(event.request));
     return;
   }
 
