@@ -12,6 +12,7 @@
     "build:android": "node scripts/build-push-bundle.mjs && vite build",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
+    "android:assets": "node scripts/generate-android-assets.mjs",
     "android:apk": "bash scripts/build-android-apk.sh",
     "android:apk:debug": "bash scripts/build-android-apk.sh debug",
     "start": "NODE_ENV=production tsx server/index.ts",

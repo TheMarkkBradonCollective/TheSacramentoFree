@@ -17,6 +17,7 @@ if [[ -z "${VITE_APP_URL:-}" ]]; then
 fi
 
 npm run build:android
+node scripts/generate-android-assets.mjs
 node scripts/sync-android-version.mjs
 npx cap sync android
 
