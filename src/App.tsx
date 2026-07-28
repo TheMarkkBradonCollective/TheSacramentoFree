@@ -159,6 +159,7 @@ export default function App() {
   const [termsGateOpen, setTermsGateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
+  const [addEventDatesMode, setAddEventDatesMode] = useState(false);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
   const [detailEvent, setDetailEvent] = useState<CommunityEvent | null>(null);
   const [detailEventUpdating, setDetailEventUpdating] = useState(false);
@@ -205,6 +206,7 @@ export default function App() {
     setShowAwardsPanel(false);
     setEditingItem(null);
     setEditingEvent(null);
+    setAddEventDatesMode(false);
     setPickupAttributionItem(null);
     setInitialSelectedChatId(null);
     setPendingChatCompose(null);
@@ -1714,6 +1716,12 @@ export default function App() {
                   onClose={() => setDetailEvent(null)}
                   onEdit={() => {
                     if (!isEventEditable(detailEvent)) return;
+                    setAddEventDatesMode(false);
+                    setEditingEvent(detailEvent);
+                    setDetailEvent(null);
+                  }}
+                  onAddDates={() => {
+                    setAddEventDatesMode(true);
                     setEditingEvent(detailEvent);
                     setDetailEvent(null);
                   }}
@@ -1767,15 +1775,19 @@ export default function App() {
                 <PostEventModal
                   userProfile={userProfile}
                   editEvent={editingEvent}
+                  allEvents={events}
+                  addOccurrencesOnly={addEventDatesMode}
                   onClose={() => {
                     setShowPostEventModal(false);
                     setEditingEvent(null);
+                    setAddEventDatesMode(false);
                   }}
                   onSuccess={() => {
                     void loadEvents(false);
                     setActiveTab('events');
                     setShowPostEventModal(false);
                     setEditingEvent(null);
+                    setAddEventDatesMode(false);
                   }}
                 />
               )}

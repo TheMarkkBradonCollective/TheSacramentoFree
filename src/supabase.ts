@@ -3178,6 +3178,82 @@ export async function updateSupabaseEventSeriesLocation(
   }
 }
 
+/** Sync shared listing fields across every upcoming row in a repeat series. */
+export async function updateSupabaseEventSeriesMetadata(
+  seriesId: string,
+  userId: string,
+  patch: {
+    title: string;
+    description: string;
+    location: string;
+    neighborhood: string;
+    hostedBy: string | null;
+    locationLat: number | null;
+    locationLng: number | null;
+    imageUrl: string | null;
+  },
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({
+        title: patch.title,
+        description: patch.description,
+        location: patch.location,
+        neighborhood: patch.neighborhood,
+        hostedBy: patch.hostedBy,
+        locationLat: patch.locationLat,
+        locationLng: patch.locationLng,
+        imageUrl: patch.imageUrl,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('seriesId', seriesId)
+      .eq('userId', userId)
+      .eq('status', 'upcoming');
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not update series details.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not update series details.',
+    };
+  }
+}
+
+/** Link an existing event row into a repeat series (e.g. when adding dates later). */
+export async function assignSupabaseEventSeriesId(
+  eventId: string,
+  userId: string,
+  seriesId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({ seriesId, updatedAt: new Date().toISOString() })
+      .eq('id', eventId)
+      .eq('userId', userId);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not link event to series.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not link event to series.',
+    };
+  }
+}
+
 export async function updateSupabaseEvent(
   event: CommunityEvent,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
@@ -3203,6 +3279,7 @@ export async function updateSupabaseEvent(
         hostedBy: event.hostedBy?.trim() || null,
         locationLat: event.locationLat ?? null,
         locationLng: event.locationLng ?? null,
+        seriesId: event.seriesId?.trim() || null,
         imageUrl:
           event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
             ? event.imageUrl

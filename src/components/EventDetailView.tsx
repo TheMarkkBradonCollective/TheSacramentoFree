@@ -21,6 +21,7 @@ interface EventDetailViewProps {
   onDeleteComment?: (commentId: string) => void;
   onClose: () => void;
   onEdit?: () => void;
+  onAddDates?: () => void;
   onCancel?: () => void;
   onViewProfile: (userId: string) => void;
   onSelectOccurrence?: (event: CommunityEvent) => void;
@@ -67,6 +68,7 @@ export default function EventDetailView({
   onDeleteComment,
   onClose,
   onEdit,
+  onAddDates,
   onCancel,
   onViewProfile,
   onSelectOccurrence,
@@ -80,6 +82,7 @@ export default function EventDetailView({
   const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
   const canEdit = isOwner && isEventEditable(event);
+  const canAddDates = isOwner && !isCancelled && onAddDates;
   const seriesSiblings = getSeriesSiblings(allEvents, event);
   const upcomingInSeries =
     event.seriesId ? getUpcomingSeriesOccurrences(allEvents, event.seriesId) : [];
@@ -97,17 +100,30 @@ export default function EventDetailView({
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="font-display font-bold text-app flex-1 truncate">Event details</h1>
-        {canEdit && onEdit && (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-            disabled={updating}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            Edit
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {canAddDates && (
+            <button
+              type="button"
+              onClick={onAddDates}
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+              disabled={updating}
+            >
+              <Repeat className="w-3.5 h-3.5" />
+              Add dates
+            </button>
+          )}
+          {canEdit && onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+              disabled={updating}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto">
