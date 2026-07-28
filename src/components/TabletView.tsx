@@ -14,7 +14,7 @@ import AppSidebar from './AppSidebar';
 import AppTopbar from './AppTopbar';
 import CommunityStatsBar from './CommunityStatsBar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
-import { roleTheme } from '../lib/roles';
+import { isStaffRole, roleTheme } from '../lib/roles';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
@@ -138,8 +138,10 @@ export default function TabletView({
   onViewListingId,
 }: TabletViewProps) {
   useScrollInputOnFocus();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => isStaffRole(userProfile.role));
   const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
   const onStaffTab = isStaffTab(activeTab);
+  const isStaff = isStaffRole(userProfile.role);
   const communityTab: AppTab = (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
     ? (activeTab as AppTab)
     : 'feed';
@@ -164,7 +166,16 @@ export default function TabletView({
       className="flex h-screen bg-app text-app overflow-hidden"
       style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as CSSProperties}
     >
-      <AppSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} variant="rail" />
+      <AppSidebar
+        userProfile={userProfile}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        variant={isStaff ? 'expanded' : 'rail'}
+        collapsed={isStaff ? sidebarCollapsed : false}
+        fullyHiddenWhenCollapsed={isStaff}
+        onCollapse={() => setSidebarCollapsed(true)}
+        autoCollapseOnNavigate={isStaff}
+      />
 
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
         <AppTopbar
@@ -174,6 +185,7 @@ export default function TabletView({
           onOpenAwards={onOpenAwards ?? (() => {})}
           awardsButtonGlow={awardsButtonGlow}
           action={topbarAction}
+          onToggleSidebar={isStaff ? () => setSidebarCollapsed((c) => !c) : undefined}
         />
 
         {onStaffTab ? (

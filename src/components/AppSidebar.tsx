@@ -65,6 +65,10 @@ interface AppSidebarProps {
   /** Collapse the sidebar after a nav item is selected (e.g. mobile). */
   onCollapse?: () => void;
   autoCollapseOnNavigate?: boolean;
+  /** When collapsed, hide the sidebar entirely instead of leaving a narrow icon rail. */
+  fullyHiddenWhenCollapsed?: boolean;
+  /** Render as a fixed overlay drawer (e.g. mobile staff). */
+  overlay?: boolean;
 }
 
 export default function AppSidebar({
@@ -76,9 +80,12 @@ export default function AppSidebar({
   onToggleCollapse,
   onCollapse,
   autoCollapseOnNavigate = false,
+  fullyHiddenWhenCollapsed = false,
+  overlay = false,
 }: AppSidebarProps) {
   const actorRank = roleRank(userProfile.role);
   const isRail = variant === 'rail';
+  const isFullyHidden = fullyHiddenWhenCollapsed && collapsed && !isRail;
   const isCollapsed = isRail || collapsed;
   const theme = roleTheme(userProfile.role);
   const isStaff = isStaffRole(userProfile.role);
@@ -102,9 +109,14 @@ export default function AppSidebar({
       id="app_sidebar"
       data-variant={variant}
       className={`sbn-sidebar flex flex-col h-full bg-surface border-r border-app shrink-0 ${
-        isRail ? 'w-[4.5rem]' : `transition-all duration-200 ${isCollapsed ? 'w-14' : 'w-60'}`
-      }`}
+        isRail
+          ? 'w-[4.5rem]'
+          : isFullyHidden
+            ? 'w-0 border-r-0 overflow-hidden pointer-events-none'
+            : `transition-all duration-200 ${isCollapsed ? 'w-14' : 'w-60'}`
+      } ${overlay && !isFullyHidden ? 'fixed inset-y-0 left-0 z-50 shadow-xl' : ''}`}
       style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as CSSProperties}
+      aria-hidden={isFullyHidden || undefined}
     >
       {/* Role accent rail — a hairline strip of color so each rank reads instantly */}
       <div className="sbn-sidebar-accent-bar" />
@@ -223,7 +235,7 @@ export default function AppSidebar({
       </nav>
 
       {/* Footer */}
-      {onToggleCollapse && !isRail && (
+      {onToggleCollapse && !isRail && !fullyHiddenWhenCollapsed && (
         <div className={`border-t border-app p-2 flex items-center ${collapsed ? 'justify-center' : 'justify-end'}`}>
           <button
             type="button"
