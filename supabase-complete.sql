@@ -444,6 +444,7 @@ CREATE TABLE IF NOT EXISTS public.community_events (
   "isFree" BOOLEAN NOT NULL DEFAULT true,
   status TEXT NOT NULL DEFAULT 'upcoming',
   "imageUrl" TEXT,
+  "seriesId" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
@@ -451,6 +452,7 @@ CREATE TABLE IF NOT EXISTS public.community_events (
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "hostedBy" TEXT;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLat" DOUBLE PRECISION;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION;
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "seriesId" TEXT;
 
 ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_status_check;
 UPDATE public.community_events SET status = 'upcoming' WHERE status = 'active';
@@ -468,6 +470,8 @@ ALTER TABLE public.community_events ADD CONSTRAINT community_events_free_only
 ALTER TABLE public.community_events ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS community_events_start_idx ON public.community_events ("eventStartAt" ASC);
 CREATE INDEX IF NOT EXISTS community_events_user_idx ON public.community_events ("userId");
+CREATE INDEX IF NOT EXISTS community_events_series_idx ON public.community_events ("seriesId")
+  WHERE "seriesId" IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.event_rsvps (
   "eventId" TEXT NOT NULL,

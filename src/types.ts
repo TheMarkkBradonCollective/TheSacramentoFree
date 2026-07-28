@@ -427,6 +427,8 @@ export interface CommunityEvent {
   /** Optional GPS pin for map and directions (decimal degrees). */
   locationLat?: number | null;
   locationLng?: number | null;
+  /** Links repeat occurrences at the same location (shared title, venue, host). */
+  seriesId?: string | null;
   /** Community events must always be free — enforced in DB and on create. */
   isFree: true;
   status: EventStatus;

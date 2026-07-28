@@ -201,10 +201,12 @@ CREATE TABLE IF NOT EXISTS public.community_events (
   "isFree" BOOLEAN NOT NULL DEFAULT true,
   status TEXT NOT NULL DEFAULT 'active',
   "imageUrl" TEXT,
+  "seriesId" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "seriesId" TEXT;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "hostedBy" TEXT;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLat" DOUBLE PRECISION;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION;
@@ -2972,6 +2974,7 @@ export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
   return {
     ...row,
     hostedBy: row.hostedBy?.trim() || null,
+    seriesId: row.seriesId?.trim() || null,
     locationLat:
       typeof row.locationLat === 'number' && Number.isFinite(row.locationLat) ? row.locationLat : null,
     locationLng:
@@ -3053,20 +3056,7 @@ export async function createSupabaseEvent(
       await upsertSupabaseProfile(author);
     }
 
-    const payload = {
-      ...event,
-      isFree: true,
-      status: 'upcoming' as const,
-      eventStartAt: new Date(event.eventStartAt).toISOString(),
-      eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
-      createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : new Date().toISOString(),
-      imageUrl:
-        event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
-          ? event.imageUrl
-          : null,
-    };
-
+    const payload = buildCommunityEventInsertPayload(event);
     const { error } = await supabase.from('community_events').insert(payload);
 
     if (error) {
@@ -3081,6 +3071,109 @@ export async function createSupabaseEvent(
     return {
       ok: false,
       errorMessage: err instanceof Error ? err.message : 'Could not save event.',
+    };
+  }
+}
+
+function buildCommunityEventInsertPayload(event: CommunityEvent) {
+  return {
+    ...event,
+    seriesId: event.seriesId?.trim() || null,
+    isFree: true,
+    status: 'upcoming' as const,
+    eventStartAt: new Date(event.eventStartAt).toISOString(),
+    eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
+    createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : new Date().toISOString(),
+    imageUrl:
+      event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
+        ? event.imageUrl
+        : null,
+  };
+}
+
+/** Post multiple occurrences at the same location (shared seriesId). */
+export async function createSupabaseEventSeries(
+  events: CommunityEvent[],
+  author?: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string; count?: number }> {
+  if (events.length === 0) {
+    return { ok: false, errorMessage: 'Add at least one date.' };
+  }
+
+  try {
+    for (const event of events) {
+      if (!event.isFree) {
+        return { ok: false, errorMessage: 'Only free community events are allowed.' };
+      }
+    }
+
+    if (author && !isStaffRole(author.role)) {
+      const unlockStatus = await getEventsUnlockStatus();
+      if (!unlockStatus.unlocked) {
+        return {
+          ok: false,
+          errorMessage:
+            'Community events unlock at 500 neighbors. Share the invite link to help us get there!',
+        };
+      }
+    }
+
+    if (author?.email) {
+      await upsertSupabaseProfile(author);
+    }
+
+    const payloads = events.map((event) => buildCommunityEventInsertPayload(event));
+    const { error } = await supabase.from('community_events').insert(payloads);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not save events.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true, count: events.length };
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not save events.',
+    };
+  }
+}
+
+/** Update map pin on all upcoming rows in a series (same venue). */
+export async function updateSupabaseEventSeriesLocation(
+  seriesId: string,
+  userId: string,
+  locationLat: number,
+  locationLng: number,
+  neighborhood: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({
+        locationLat,
+        locationLng,
+        neighborhood,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('seriesId', seriesId)
+      .eq('userId', userId)
+      .eq('status', 'upcoming');
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not update series locations.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not update series locations.',
     };
   }
 }

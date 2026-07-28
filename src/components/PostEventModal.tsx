@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X, Calendar, MapPin, Sparkles, Camera, Trash2 } from 'lucide-react';
+import { X, Calendar, MapPin, Sparkles, Camera, Trash2, Plus } from 'lucide-react';
 import { SACRAMENTO_NEIGHBORHOODS, CommunityEvent, UserProfile, findClosestNeighborhoodByLatLng } from '../types';
-import { createSupabaseEvent, updateSupabaseEvent, uploadItemImage } from '../supabase';
+import { createSupabaseEvent, createSupabaseEventSeries, updateSupabaseEvent, uploadItemImage } from '../supabase';
 import { isEventEditable } from '../lib/eventRsvp';
+import { generateSeriesId } from '../lib/eventSeries';
 import EventLocationMapPicker from './EventLocationMapPicker';
 
 interface PostEventModalProps {
@@ -12,10 +13,24 @@ interface PostEventModalProps {
   onSuccess: () => void;
 }
 
+interface OccurrenceSlot {
+  id: string;
+  start: string;
+  end: string;
+}
+
 function toDatetimeLocalValue(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function newOccurrenceSlot(): OccurrenceSlot {
+  return { id: `slot_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, start: '', end: '' };
+}
+
+function generateEventId(): string {
+  return `event_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
 export default function PostEventModal({
@@ -35,6 +50,7 @@ export default function PostEventModal({
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [eventStartAt, setEventStartAt] = useState('');
   const [eventEndAt, setEventEndAt] = useState('');
+  const [extraOccurrences, setExtraOccurrences] = useState<OccurrenceSlot[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<{ file: File; preview: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,6 +75,7 @@ export default function PostEventModal({
     );
     setEventStartAt(toDatetimeLocalValue(editEvent.eventStartAt));
     setEventEndAt(editEvent.eventEndAt ? toDatetimeLocalValue(editEvent.eventEndAt) : '');
+    setExtraOccurrences([]);
     setImageUrl(editEvent.imageUrl || null);
     setPendingImage(null);
     setErrorMsg('');
@@ -79,24 +96,45 @@ export default function PostEventModal({
       return;
     }
 
-    const startDate = new Date(eventStartAt);
-    if (Number.isNaN(startDate.getTime())) {
-      setErrorMsg('Invalid start date/time.');
+    const parseOccurrence = (startValue: string, endValue: string) => {
+      const startDate = new Date(startValue);
+      if (Number.isNaN(startDate.getTime())) {
+        return { error: 'Invalid start date/time.' };
+      }
+
+      let endIso: string | null = null;
+      if (endValue) {
+        const endDate = new Date(endValue);
+        if (Number.isNaN(endDate.getTime())) {
+          return { error: 'Invalid end date/time.' };
+        }
+        if (endDate <= startDate) {
+          return { error: 'End time must be after start time.' };
+        }
+        endIso = endDate.toISOString();
+      }
+
+      return { startDate, endIso };
+    };
+
+    const primary = parseOccurrence(eventStartAt, eventEndAt);
+    if ('error' in primary) {
+      setErrorMsg(primary.error);
       return;
     }
 
-    let endIso: string | null = null;
-    if (eventEndAt) {
-      const endDate = new Date(eventEndAt);
-      if (Number.isNaN(endDate.getTime())) {
-        setErrorMsg('Invalid end date/time.');
+    const occurrenceInputs: { startDate: Date; endIso: string | null }[] = [primary];
+    for (const slot of extraOccurrences) {
+      if (!slot.start.trim()) {
+        setErrorMsg('Each added date needs a start time.');
         return;
       }
-      if (endDate <= startDate) {
-        setErrorMsg('End time must be after start time.');
+      const parsed = parseOccurrence(slot.start, slot.end);
+      if ('error' in parsed) {
+        setErrorMsg(parsed.error);
         return;
       }
-      endIso = endDate.toISOString();
+      occurrenceInputs.push(parsed);
     }
 
     if (editBlocked) {
@@ -106,40 +144,73 @@ export default function PostEventModal({
 
     setIsSubmitting(true);
 
-    const eventId = editEvent?.id || `event_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const isMultiOccurrence = !isEditing && occurrenceInputs.length > 1;
+    const seriesId = isMultiOccurrence ? generateSeriesId() : editEvent?.seriesId ?? null;
+    const uploadKey = seriesId || editEvent?.id || generateEventId();
     let finalImageUrl = imageUrl;
 
     if (pendingImage) {
-      const uploaded = await uploadItemImage(pendingImage.file, eventId);
+      const uploaded = await uploadItemImage(pendingImage.file, uploadKey);
       if (uploaded?.startsWith('http')) {
         finalImageUrl = uploaded;
       }
     }
 
-    const event: CommunityEvent = {
-      id: eventId,
+    const sharedFields = {
       title: title.trim(),
       description: description.trim(),
       location: location.trim(),
       neighborhood,
-      eventStartAt: startDate.toISOString(),
-      eventEndAt: endIso,
       userId: userProfile.uid,
       userDisplayName: userProfile.displayName,
       userPhotoURL: userProfile.photoURL,
       hostedBy: hostedBy.trim() || null,
       locationLat,
       locationLng,
-      isFree: true,
-      status: editEvent?.status === 'cancelled' ? 'cancelled' : 'upcoming',
+      isFree: true as const,
       imageUrl: finalImageUrl || undefined,
-      createdAt: editEvent?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     };
 
-    const result = isEditing
-      ? await updateSupabaseEvent(event)
-      : await createSupabaseEvent(event, userProfile);
+    if (isEditing && editEvent) {
+      const event: CommunityEvent = {
+        ...sharedFields,
+        id: editEvent.id,
+        seriesId: editEvent.seriesId ?? null,
+        eventStartAt: occurrenceInputs[0].startDate.toISOString(),
+        eventEndAt: occurrenceInputs[0].endIso,
+        status: editEvent.status === 'cancelled' ? 'cancelled' : 'upcoming',
+        createdAt: editEvent.createdAt,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const result = await updateSupabaseEvent(event);
+      setIsSubmitting(false);
+
+      if (!result.ok) {
+        setErrorMsg(result.errorMessage || 'Could not save event.');
+        return;
+      }
+
+      onSuccess();
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const events: CommunityEvent[] = occurrenceInputs.map((occurrence) => ({
+      ...sharedFields,
+      id: generateEventId(),
+      seriesId,
+      eventStartAt: occurrence.startDate.toISOString(),
+      eventEndAt: occurrence.endIso,
+      status: 'upcoming',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    }));
+
+    const result =
+      events.length === 1
+        ? await createSupabaseEvent(events[0], userProfile)
+        : await createSupabaseEventSeries(events, userProfile);
 
     setIsSubmitting(false);
 
@@ -299,6 +370,80 @@ export default function PostEventModal({
               />
             </label>
           </div>
+
+          {!isEditing && (
+            <div className="space-y-3 rounded-xl border border-app bg-inset/40 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wide">Repeat at this location</p>
+                  <p className="text-[11px] text-muted mt-0.5">
+                    Same place, multiple days — neighbors see every upcoming date.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setExtraOccurrences((prev) => [...prev, newOccurrenceSlot()])}
+                  className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add date
+                </button>
+              </div>
+
+              {extraOccurrences.length > 0 && (
+                <div className="space-y-2">
+                  {extraOccurrences.map((slot, index) => (
+                    <div
+                      key={slot.id}
+                      className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end border border-app rounded-lg p-2 bg-surface/60"
+                    >
+                      <label className="block space-y-1">
+                        <span className="text-[10px] font-semibold text-muted uppercase">Date {index + 2} starts</span>
+                        <input
+                          type="datetime-local"
+                          value={slot.start}
+                          onChange={(e) =>
+                            setExtraOccurrences((prev) =>
+                              prev.map((row) =>
+                                row.id === slot.id ? { ...row, start: e.target.value } : row,
+                              ),
+                            )
+                          }
+                          className="sbn-input w-full"
+                          required
+                        />
+                      </label>
+                      <label className="block space-y-1">
+                        <span className="text-[10px] font-semibold text-muted uppercase">Ends (optional)</span>
+                        <input
+                          type="datetime-local"
+                          value={slot.end}
+                          onChange={(e) =>
+                            setExtraOccurrences((prev) =>
+                              prev.map((row) =>
+                                row.id === slot.id ? { ...row, end: e.target.value } : row,
+                              ),
+                            )
+                          }
+                          className="sbn-input w-full"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExtraOccurrences((prev) => prev.filter((row) => row.id !== slot.id))
+                        }
+                        className="sbn-btn sbn-btn-secondary sbn-btn-sm justify-center"
+                        aria-label="Remove date"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <span className="text-xs font-semibold text-muted uppercase tracking-wide">Photo (optional)</span>

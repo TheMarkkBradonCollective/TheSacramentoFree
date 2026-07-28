@@ -1694,6 +1694,7 @@ export default function App() {
               {detailEvent && (
                 <EventDetailView
                   event={detailEvent}
+                  allEvents={events}
                   currentUserId={userProfile.uid}
                   userProfile={userProfile}
                   rsvpState={eventsEngagement.getRsvpsForEvent(detailEvent.id)}
@@ -1735,6 +1736,7 @@ export default function App() {
                     }
                   }}
                   onViewProfile={handleViewProfile}
+                  onSelectOccurrence={(occurrence) => setDetailEvent(occurrence)}
                   onEventUpdated={(updatedEvent) => {
                     setDetailEvent(updatedEvent);
                     void loadEvents(true);

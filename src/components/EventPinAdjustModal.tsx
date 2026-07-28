@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { X, MapPin } from 'lucide-react';
 import { CommunityEvent, findClosestNeighborhoodByLatLng } from '../types';
-import { updateSupabaseEvent } from '../supabase';
+import { updateSupabaseEvent, updateSupabaseEventSeriesLocation } from '../supabase';
 import { isEventEditable } from '../lib/eventRsvp';
+import { isSeriesEvent } from '../lib/eventSeries';
 import EventLocationMapPicker from './EventLocationMapPicker';
 
 interface EventPinAdjustModalProps {
@@ -32,15 +33,25 @@ export default function EventPinAdjustModal({ event, onClose, onSaved }: EventPi
     setSaving(true);
     setErrorMsg('');
 
+    const neighborhood = findClosestNeighborhoodByLatLng(latitude, longitude);
     const updatedEvent: CommunityEvent = {
       ...event,
       locationLat: latitude,
       locationLng: longitude,
-      neighborhood: findClosestNeighborhoodByLatLng(latitude, longitude),
+      neighborhood,
       updatedAt: new Date().toISOString(),
     };
 
-    const result = await updateSupabaseEvent(updatedEvent);
+    const result =
+      isSeriesEvent(event) && event.seriesId
+        ? await updateSupabaseEventSeriesLocation(
+            event.seriesId,
+            event.userId,
+            latitude,
+            longitude,
+            neighborhood,
+          )
+        : await updateSupabaseEvent(updatedEvent);
     setSaving(false);
 
     if (!result.ok) {
@@ -65,7 +76,11 @@ export default function EventPinAdjustModal({ event, onClose, onSaved }: EventPi
               <MapPin className="w-4 h-4 text-accent" />
               Fix event map pin
             </h2>
-            <p className="text-xs text-muted mt-0.5">Same map as the site — tap Fremont Park to line it up.</p>
+            <p className="text-xs text-muted mt-0.5">
+              {isSeriesEvent(event)
+                ? 'Pin applies to every upcoming date in this repeat series.'
+                : 'Same map as the site — tap Fremont Park to line it up.'}
+            </p>
           </div>
           <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-inset text-muted">
             <X className="w-5 h-5" />

@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { ArrowLeft, Calendar, MapPin, Pencil } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Pencil, Repeat } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
-import { isEventEditable, isEventPast, resolveEventStatus } from '../lib/eventRsvp';
+import { isEventEditable, isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
+import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
 import EventStatusBadge from './EventStatusBadge';
 import EventDetailNavigation from './EventDetailNavigation';
 
 interface EventDetailViewProps {
   event: CommunityEvent;
+  allEvents?: CommunityEvent[];
   currentUserId: string;
   userProfile?: UserProfile;
   rsvpState: EventRsvpState;
@@ -21,6 +23,7 @@ interface EventDetailViewProps {
   onEdit?: () => void;
   onCancel?: () => void;
   onViewProfile: (userId: string) => void;
+  onSelectOccurrence?: (event: CommunityEvent) => void;
   onEventUpdated?: (event: CommunityEvent) => void;
   updating?: boolean;
   commentsLocked?: boolean;
@@ -42,8 +45,19 @@ function hostLabel(hostedBy?: string | null): string {
   return trimmed || 'Unknown';
 }
 
+function formatOccurrenceLabel(iso: string, endIso?: string | null): string {
+  const start = formatEventDate(iso);
+  if (!endIso) return start;
+  const end = new Date(endIso).toLocaleString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `${start} – ${end}`;
+}
+
 export default function EventDetailView({
   event,
+  allEvents = [],
   currentUserId,
   userProfile,
   rsvpState,
@@ -55,6 +69,7 @@ export default function EventDetailView({
   onEdit,
   onCancel,
   onViewProfile,
+  onSelectOccurrence,
   onEventUpdated,
   updating = false,
   commentsLocked = false,
@@ -65,6 +80,10 @@ export default function EventDetailView({
   const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
   const canEdit = isOwner && isEventEditable(event);
+  const seriesSiblings = getSeriesSiblings(allEvents, event);
+  const upcomingInSeries =
+    event.seriesId ? getUpcomingSeriesOccurrences(allEvents, event.seriesId) : [];
+  const pastSiblings = seriesSiblings.filter((sibling) => !isEventUpcoming(sibling));
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-app">
@@ -106,6 +125,12 @@ export default function EventDetailView({
             <div className="flex flex-wrap items-center gap-2">
               <span className="sbn-badge sbn-badge-give">Free event</span>
               <EventStatusBadge status={eventStatus} />
+              {isSeriesEvent(event) && (
+                <span className="sbn-badge inline-flex items-center gap-1">
+                  <Repeat className="w-3 h-3" aria-hidden />
+                  Repeating
+                </span>
+              )}
             </div>
             <h2 className="font-display text-2xl font-bold text-app leading-tight">{event.title}</h2>
           </div>
@@ -139,6 +164,56 @@ export default function EventDetailView({
               </div>
             </div>
           </div>
+
+          {isSeriesEvent(event) && (
+            <div className="sbn-card p-4 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-1">
+                  <Repeat className="w-3.5 h-3.5" />
+                  All dates at this location
+                </p>
+                <p className="text-[11px] text-muted mt-0.5">
+                  RSVP per date — pick the day you plan to go.
+                </p>
+              </div>
+
+              {upcomingInSeries.length > 0 && (
+                <ul className="space-y-2">
+                  {upcomingInSeries.map((occurrence) => (
+                    <li key={occurrence.id}>
+                      <button
+                        type="button"
+                        onClick={() => onSelectOccurrence?.(occurrence)}
+                        className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+                          occurrence.id === event.id
+                            ? 'border-accent bg-accent/10 text-app'
+                            : 'border-app bg-inset/40 hover:border-accent/50'
+                        }`}
+                      >
+                        <span className="font-semibold">
+                          {formatOccurrenceLabel(occurrence.eventStartAt, occurrence.eventEndAt)}
+                        </span>
+                        {occurrence.id === event.id && (
+                          <span className="text-xs text-muted block mt-0.5">Viewing this date</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {pastSiblings.length > 0 && (
+                <div className="space-y-2 border-t border-app pt-3">
+                  <p className="text-[10px] font-semibold text-muted uppercase">Past dates</p>
+                  <ul className="space-y-1 text-xs text-muted">
+                    {pastSiblings.map((sibling) => (
+                      <li key={sibling.id}>{formatOccurrenceLabel(sibling.eventStartAt, sibling.eventEndAt)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           <EventDetailNavigation event={event} currentUserId={currentUserId} />
 
