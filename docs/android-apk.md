@@ -48,6 +48,18 @@ Output:
 
 `scripts/sync-android-version.mjs` updates `public/android-version.json` so the download page points at the site-hosted APK (not private GitHub Releases).
 
+### App icon and splash (branding)
+
+The web app uses `public/Logo.jpeg` for favicons, the PWA manifest, and in-app UI. Android launcher icons and splash screens are **native** resources under `android/app/src/main/res/` — they are not picked up automatically from the web bundle.
+
+Regenerate them from the community logo before building an APK:
+
+```bash
+npm run android:assets
+```
+
+This copies `public/Logo.jpeg` into `assets/logo.png` and runs `@capacitor/assets` with the dark brand background (`#0b0b0c`). `npm run android:apk` and `npm run android:apk:debug` run this step automatically.
+
 **Neighbors:** share the in-app download page at [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
 
 After building, commit `public/downloads/sac-buy-nothing.apk` and `public/android-version.json`, then deploy so the live download button works.
