@@ -24,14 +24,16 @@ node scripts/generate-android-assets.mjs
 node scripts/sync-android-version.mjs
 npx cap sync android
 
-BUILD_TYPE="${1:-debug}"
-GRADLE_TASK="assembleDebug"
-APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+BUILD_TYPE="${1:-release}"
+GRADLE_TASK="assembleRelease"
+APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
 
-if [[ "$BUILD_TYPE" == "release" ]]; then
-  GRADLE_TASK="assembleRelease"
-  APK_PATH="android/app/build/outputs/apk/release/app-release-unsigned.apk"
+if [[ "$BUILD_TYPE" == "debug" ]]; then
+  GRADLE_TASK="assembleDebug"
+  APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
 fi
+
+bash scripts/setup-android-keystore.sh
 
 if [[ ! -d "${ANDROID_HOME:-}" ]]; then
   if [[ -d "$HOME/Android/Sdk" ]]; then

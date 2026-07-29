@@ -35,18 +35,20 @@ VITE_VAPID_PUBLIC_KEY=...
 ## Build commands
 
 ```bash
-# Debug APK (easy to sideload for testing)
-npm run android:apk:debug
-
-# Release APK (unsigned — sign before Play Store upload)
+# Release APK (signed — used for public sideload download)
 npm run android:apk
+
+# Debug APK (local testing only — Android may flag as unsafe)
+npm run android:apk:debug
 ```
 
 Output:
 - `dist/android/sac-buy-nothing-debug.apk` or `dist/android/sac-buy-nothing-release.apk`
 - `public/downloads/sac-buy-nothing.apk` (served publicly at `/downloads/sac-buy-nothing.apk`)
 
-`scripts/sync-android-version.mjs` updates `public/android-version.json` so the download page points at the site-hosted APK (not private GitHub Releases).
+Public downloads use a **signed release** APK (`android/keystore.properties`). Debug builds are for local testing only — Android Play Protect often blocks debug APKs as unsafe.
+
+The first time you run `npm run android:apk`, `scripts/setup-android-keystore.sh` creates the release keystore if needed.
 
 ### App icon and splash (branding)
 
