@@ -58,7 +58,7 @@ export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsP
             className="sbn-btn sbn-btn-secondary inline-flex items-center justify-center gap-2"
           >
             <Download className="w-4 h-4" />
-            Download APK
+            {latestApk?.betaLabel ? `Download ${latestApk.betaLabel}` : 'Download APK'}
           </a>
         ) : (
           <button
