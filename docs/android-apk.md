@@ -35,11 +35,11 @@ VITE_VAPID_PUBLIC_KEY=...
 ## Build commands
 
 ```bash
-# Debug APK (easy to sideload for testing)
-npm run android:apk:debug
-
-# Release APK (unsigned — sign before Play Store upload)
+# Release APK (signed — used for public sideload download)
 npm run android:apk
+
+# Debug APK (local testing only — Android may flag as unsafe)
+npm run android:apk:debug
 ```
 
 Output:
