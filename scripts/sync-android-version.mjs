@@ -4,10 +4,11 @@ import { readAppVersion } from './read-app-version.mjs';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'public/android-version.json');
-const { versionName, versionCode, label } = readAppVersion();
+const { versionName, versionCode, label, build } = readAppVersion();
 
 const releaseTag = `android-v${versionName}`;
-const fileName = 'sac-buy-nothing.apk';
+const fileName = `sac-buy-nothing-beta-v${versionName}.${build}.apk`;
+const legacyFileName = 'sac-buy-nothing.apk';
 /** Always host the downloadable APK on the public site — private GitHub Releases 404 for neighbors. */
 const appOrigin = (process.env.VITE_APP_URL || process.env.APP_URL || 'https://www.sacramentobuynothing.com').replace(/\/$/, '');
 const downloadUrl = `${appOrigin}/downloads/${fileName}`;

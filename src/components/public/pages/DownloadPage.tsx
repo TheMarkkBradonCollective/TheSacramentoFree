@@ -225,7 +225,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
                 className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 bg-accent hover:bg-accent-hover text-on-accent text-sm font-black uppercase tracking-wide rounded-xl transition-colors"
               >
                 <Download className="w-4 h-4" />
-                Download APK
+                {latestApk?.betaLabel ? `Download ${latestApk.betaLabel}` : 'Download APK'}
               </a>
             ) : (
               <p className="text-xs text-muted">APK download link is not configured yet.</p>
@@ -233,6 +233,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
 
             <p className="text-[11px] text-subtle mt-3 leading-relaxed">
               After downloading, open the file and allow install from your browser or Files app if Android asks.
+              If install fails or nothing changes, uninstall the old Sac Buy Nothing app first, then install again.
             </p>
           </PublicCard>
 
