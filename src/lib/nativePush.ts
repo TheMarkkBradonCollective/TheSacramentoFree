@@ -1,4 +1,5 @@
 import { PushNotifications } from '@capacitor/push-notifications';
+import { pauseAppUpdateWatcher } from '../pwa/appUpdateWatcher';
 import { isNativeApp } from './nativePlatform';
 
 export const FCM_ENDPOINT_PREFIX = 'fcm:';
@@ -109,7 +110,9 @@ export async function initNativePushHandlers(onNotificationClick: (url: string) 
 export async function registerNativePushToken(): Promise<string | null> {
   if (!isNativeApp()) return null;
 
+  pauseAppUpdateWatcher(45_000);
   const permission = await PushNotifications.requestPermissions();
+  pauseAppUpdateWatcher(10_000);
   if (permission.receive !== 'granted') {
     storeNativePermission('denied');
     return null;
@@ -125,8 +128,7 @@ export async function unregisterNativePushToken(): Promise<void> {
   if (!isNativeApp()) return;
   clearStoredFcmToken();
   try {
-    await PushNotifications.removeAllListeners();
-    handlersReady = false;
+    await PushNotifications.unregister();
   } catch {
     // ignore
   }

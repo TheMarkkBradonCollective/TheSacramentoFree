@@ -6,6 +6,9 @@ const config: CapacitorConfig = {
   appId: 'org.sacbuynothing.app',
   appName: 'Sac Buy Nothing',
   webDir: 'dist',
+  android: {
+    adjustMarginsForEdgeToEdge: 'force',
+  },
   server: serverUrl
     ? {
         url: serverUrl,

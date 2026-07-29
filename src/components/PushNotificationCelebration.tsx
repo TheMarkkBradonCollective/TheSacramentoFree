@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Bell, Sparkles, X } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { dismissPushCelebration, isPushCelebrationDismissed } from '../lib/pushCelebrationPrompt';
+import { pauseAppUpdateWatcher } from '../pwa/appUpdateWatcher';
 import { SITE } from '../siteContent';
 
 const CONFETTI_COLORS = ['#FF4500', '#FFB347', '#FFD166', '#FF8C42', '#FFFFFF', '#FFECE6'];
@@ -123,6 +124,7 @@ export default function PushNotificationCelebration({
 
   const handleTurnOn = useCallback(async () => {
     setEnabling(true);
+    pauseAppUpdateWatcher(45_000);
     try {
       await enableNotifications();
       if (Notification.permission === 'granted') {
