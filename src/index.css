@@ -1712,9 +1712,15 @@ button {
 /* Mobile app shell — fixed chrome, stable viewport height */
 :root {
   --sbn-mobile-header-body-h: 3.5rem;
-  --sbn-mobile-header-h: calc(var(--sbn-mobile-header-body-h) + env(safe-area-inset-top, 0px));
+  --sbn-safe-area-top: env(safe-area-inset-top, 0px);
+  --sbn-mobile-header-h: calc(var(--sbn-mobile-header-body-h) + var(--sbn-safe-area-top));
   --sbn-mobile-nav-h: calc(4.25rem + env(safe-area-inset-bottom, 0px));
   --sbn-keyboard-inset: 0px;
+}
+
+html.capacitor-native {
+  --sbn-safe-area-top: max(env(safe-area-inset-top, 0px), 28px);
+  --sbn-mobile-header-h: calc(var(--sbn-mobile-header-body-h) + var(--sbn-safe-area-top));
 }
 
 .sbn-mobile-shell {
@@ -1733,7 +1739,7 @@ button {
   left: 0;
   right: 0;
   z-index: 50;
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--sbn-safe-area-top);
   box-sizing: border-box;
 }
 

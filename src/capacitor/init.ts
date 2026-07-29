@@ -7,7 +7,10 @@ import { recordInstalledApkVersion } from '../lib/installContext';
 export async function initCapacitorApp(): Promise<void> {
   if (!isNativeApp()) return;
 
+  document.documentElement.classList.add('capacitor-native');
+
   try {
+    await StatusBar.setOverlaysWebView({ overlay: false });
     await StatusBar.setStyle({ style: Style.Dark });
     await StatusBar.setBackgroundColor({ color: '#0b0b0c' });
   } catch {

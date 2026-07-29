@@ -19,6 +19,14 @@ fi
 export CAPACITOR_SERVER_URL="${CAPACITOR_SERVER_URL:-$VITE_APP_URL}"
 echo "Using CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL}"
 
+# APKs in public/downloads get copied into dist/ and then nested inside the next APK.
+# Stage them out before the web build, then restore only the fresh build at the end.
+APK_STAGING_DIR="$(mktemp -d)"
+if compgen -G "public/downloads/*.apk" > /dev/null; then
+  mv public/downloads/*.apk "$APK_STAGING_DIR/"
+fi
+rm -rf dist/downloads
+
 npm run build:android
 node scripts/generate-android-assets.mjs
 node scripts/sync-android-version.mjs
@@ -63,6 +71,7 @@ cp "$APK_PATH" "public/downloads/${VERSIONED_FILE}"
 # Legacy URL — always points at the latest build too.
 cp "$APK_PATH" "public/downloads/sac-buy-nothing.apk"
 node scripts/sync-android-version.mjs
+rm -rf "$APK_STAGING_DIR"
 
 echo "APK ready: dist/android/sac-buy-nothing-${BUILD_TYPE}.apk"
 echo "Public download: public/downloads/${VERSIONED_FILE}"
