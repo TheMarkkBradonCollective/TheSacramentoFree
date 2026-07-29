@@ -11,7 +11,7 @@ import {
 import { CommunityEvent, SACRAMENTO_NEIGHBORHOODS, UserProfile } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { isEventUpcoming } from '../lib/eventRsvp';
-import { buildSeriesUpcomingCountMap } from '../lib/eventSeries';
+import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
 import EventCard from './EventCard';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
@@ -165,7 +165,7 @@ export default function EventsView({
       return rsvp.going + rsvp.maybe + rsvp.gone + rsvp.missed;
     };
 
-    return [...filtered].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       if (sortBy === 'newest') {
         return eventCreatedMs(b) - eventCreatedMs(a);
       }
@@ -180,6 +180,8 @@ export default function EventsView({
       if (!aUpcoming && !bUpcoming) return bTime - aTime;
       return aUpcoming ? -1 : 1;
     });
+
+    return collapseEventSeriesForDisplay(sorted);
   }, [
     events,
     searchTerm,

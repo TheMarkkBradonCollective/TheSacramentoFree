@@ -38,3 +38,48 @@ export function buildSeriesUpcomingCountMap(events: CommunityEvent[]): Map<strin
 export function generateSeriesId(): string {
   return `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
+
+/** One card per repeat series — keeps the first event per seriesId in the given order. */
+export function collapseEventSeriesForDisplay(events: CommunityEvent[]): CommunityEvent[] {
+  const seenSeries = new Set<string>();
+  const result: CommunityEvent[] = [];
+
+  for (const event of events) {
+    const seriesId = event.seriesId?.trim();
+    if (!seriesId) {
+      result.push(event);
+      continue;
+    }
+    if (seenSeries.has(seriesId)) continue;
+    seenSeries.add(seriesId);
+    result.push(event);
+  }
+
+  return result;
+}
+
+/** Pick the soonest-upcoming row per series (for unsorted feeds like the map). */
+export function pickSoonestPerEventSeries(events: CommunityEvent[]): CommunityEvent[] {
+  const standalone: CommunityEvent[] = [];
+  const bySeries = new Map<string, CommunityEvent>();
+
+  for (const event of events) {
+    const seriesId = event.seriesId?.trim();
+    if (!seriesId) {
+      standalone.push(event);
+      continue;
+    }
+
+    const existing = bySeries.get(seriesId);
+    if (!existing) {
+      bySeries.set(seriesId, event);
+      continue;
+    }
+
+    if (new Date(event.eventStartAt).getTime() < new Date(existing.eventStartAt).getTime()) {
+      bySeries.set(seriesId, event);
+    }
+  }
+
+  return [...standalone, ...bySeries.values()];
+}

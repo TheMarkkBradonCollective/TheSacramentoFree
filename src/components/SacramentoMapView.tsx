@@ -44,6 +44,7 @@ import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
+import { pickSoonestPerEventSeries } from '../lib/eventSeries';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
 interface SacramentoMapViewProps {
@@ -779,6 +780,11 @@ export default function SacramentoMapView({
     });
   }, [events, showEventsOnMap, sNeigh, sTerm]);
 
+  const mapDisplayEvents = useMemo(
+    () => pickSoonestPerEventSeries(activeEvents),
+    [activeEvents],
+  );
+
   // Find current listing index in filtered list for pagination
   const currentIndex = useMemo(() => {
     if (!selectedPost) return -1;
@@ -787,8 +793,8 @@ export default function SacramentoMapView({
 
   const currentEventIndex = useMemo(() => {
     if (!selectedEvent) return -1;
-    return activeEvents.findIndex((event) => event.id === selectedEvent.id);
-  }, [selectedEvent, activeEvents]);
+    return mapDisplayEvents.findIndex((event) => event.id === selectedEvent.id);
+  }, [selectedEvent, mapDisplayEvents]);
 
   const handleNextPost = () => {
     if (activeItems.length <= 1 || currentIndex === -1) return;
@@ -805,17 +811,17 @@ export default function SacramentoMapView({
   };
 
   const handleNextEvent = () => {
-    if (activeEvents.length <= 1 || currentEventIndex === -1) return;
+    if (mapDisplayEvents.length <= 1 || currentEventIndex === -1) return;
     setSlideDirection('right');
-    const nextIdx = (currentEventIndex + 1) % activeEvents.length;
-    setSelectedEvent(activeEvents[nextIdx]);
+    const nextIdx = (currentEventIndex + 1) % mapDisplayEvents.length;
+    setSelectedEvent(mapDisplayEvents[nextIdx]);
   };
 
   const handlePrevEvent = () => {
-    if (activeEvents.length <= 1 || currentEventIndex === -1) return;
+    if (mapDisplayEvents.length <= 1 || currentEventIndex === -1) return;
     setSlideDirection('left');
-    const prevIdx = (currentEventIndex - 1 + activeEvents.length) % activeEvents.length;
-    setSelectedEvent(activeEvents[prevIdx]);
+    const prevIdx = (currentEventIndex - 1 + mapDisplayEvents.length) % mapDisplayEvents.length;
+    setSelectedEvent(mapDisplayEvents[prevIdx]);
   };
 
   // Every active listing gets a map pin: exact GPS when set, otherwise neighborhood center.
@@ -850,7 +856,7 @@ export default function SacramentoMapView({
   }, [activeItems, userProfile?.uid]);
 
   const eventBlipPositions = useMemo(() => {
-    return activeEvents.flatMap((event) => {
+    return mapDisplayEvents.flatMap((event) => {
       if (
         typeof event.locationLat === 'number' &&
         typeof event.locationLng === 'number' &&
@@ -861,7 +867,7 @@ export default function SacramentoMapView({
       }
       return [];
     });
-  }, [activeEvents]);
+  }, [mapDisplayEvents]);
 
   // Map mounted lifecycle hook
   useEffect(() => {
@@ -1594,7 +1600,7 @@ export default function SacramentoMapView({
               <MapSelectedEventCard
                 event={selectedEvent}
                 currentIndex={currentEventIndex}
-                total={activeEvents.length}
+                total={mapDisplayEvents.length}
                 slideDirection={slideDirection}
                 compact
                 onClose={() => setSelectedEvent(null)}
@@ -1943,7 +1949,7 @@ export default function SacramentoMapView({
           </h3>
           <p className="text-[10px] text-muted font-bold uppercase tracking-wider mt-0.5" id="active_pins_count_display">
             {showingEvents
-              ? `${activeEvents.length} events · ${eventBlipPositions.length} on map`
+              ? `${mapDisplayEvents.length} events · ${eventBlipPositions.length} on map`
               : `${activeItems.length} listings · ${blipPositions.length} on map`}
           </p>
         </div>
