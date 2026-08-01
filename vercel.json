@@ -47,6 +47,14 @@
         { "key": "Content-Disposition", "value": "attachment; filename=\"sac-buy-nothing.apk\"" },
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
+    },
+    {
+      "source": "/(.*)\\.apk",
+      "headers": [
+        { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+        { "key": "Cache-Control", "value": "public, max-age=3600" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
     }
   ],
   "functions": {
@@ -57,7 +65,7 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api/|downloads/|assets/|android-version\\.json|version\\.json|manifest\\.json|service-worker\\.js|sw\\.js|icon\\.svg|Logo\\.jpeg|favicon\\.ico).*)",
+      "source": "/((?!api/|downloads/|assets/|.*\\.apk|android-version\\.json|version\\.json|manifest\\.json|service-worker\\.js|sw\\.js|icon\\.svg|Logo\\.jpeg|favicon\\.ico).*)",
       "destination": "/index.html"
     }
   ],
