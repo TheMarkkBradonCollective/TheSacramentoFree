@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import PageScrollFooter from '../PageScrollFooter';
-import { PublicScrollContainerContext } from '../../public/PublicScrollContext';
 import { usePublicRoute } from '../../public/usePublicRoute';
 import PublicNav from './PublicNav';
 import HomePage from './pages/HomePage';
@@ -121,10 +120,8 @@ export default function PublicSite({
     <div className="min-h-screen h-dvh bg-app text-app font-sans flex flex-col overflow-hidden">
       <PublicNav route={route} onNavigate={navigate} />
       <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto">
-        <PublicScrollContainerContext.Provider value={mainRef}>
-          {renderPage()}
-          <PageScrollFooter />
-        </PublicScrollContainerContext.Provider>
+        {renderPage()}
+        <PageScrollFooter />
       </main>
     </div>
   );

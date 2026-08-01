@@ -1577,136 +1577,19 @@ button {
   z-index: 1;
 }
 
-/* Public home — scroll-driven 3D depth stage */
+/* Public home — normal document layout (no 3D scroll / pointer tilt) */
 .home-scroll-stage {
-  perspective: 1400px;
-  perspective-origin: 50% 20%;
-  transform-style: preserve-3d;
-}
-
-.home-scroll-stage__ambient {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  z-index: 0;
+  position: relative;
+  overflow-x: hidden;
 }
 
 .home-scroll-stage__content {
   position: relative;
   z-index: 1;
-  transform-style: preserve-3d;
-  will-change: transform;
-  pointer-events: none;
 }
 
 .home-scroll-stage__section {
-  transform-style: preserve-3d;
-  will-change: transform, opacity;
-  margin-bottom: 0.25rem;
-  pointer-events: none;
-}
-
-.home-scroll-stage__panel {
-  transform-style: preserve-3d;
-  will-change: transform;
-  pointer-events: none;
-}
-
-.home-scroll-stage__content > *,
-.home-scroll-stage__section > *,
-.home-scroll-stage__panel > * {
-  pointer-events: auto;
-}
-
-.home-scroll-stage__orb {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(48px);
-  opacity: 0.55;
-  will-change: transform;
-}
-
-.home-scroll-stage__orb--far {
-  top: 6%;
-  left: -8%;
-  width: min(52vw, 420px);
-  height: min(52vw, 420px);
-  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 28%, transparent), transparent 70%);
-}
-
-.home-scroll-stage__orb--mid {
-  top: 28%;
-  right: -6%;
-  width: min(44vw, 360px);
-  height: min(44vw, 360px);
-  background: radial-gradient(circle, color-mix(in srgb, #8b5cf6 22%, transparent), transparent 72%);
-}
-
-.home-scroll-stage__orb--near {
-  bottom: 12%;
-  left: 18%;
-  width: min(36vw, 280px);
-  height: min(36vw, 280px);
-  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 18%, transparent), transparent 68%);
-}
-
-.home-scroll-stage__glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 50% 20%,
-    color-mix(in srgb, var(--color-accent-soft) 85%, transparent) 0%,
-    transparent 52%
-  );
-  opacity: 0.9;
-  will-change: background-position;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-scroll-stage,
-  .home-scroll-stage__content,
-  .home-scroll-stage__section,
-  .home-scroll-stage__panel,
-  .home-scroll-stage__orb {
-    transform: none !important;
-    animation: none !important;
-    will-change: auto;
-  }
-
-  .home-scroll-stage__ambient {
-    display: none;
-  }
-}
-
-/* Disable 3-D perspective effects on mobile — they cause overflow and visual glitches on touch screens */
-@media (max-width: 767px) {
-  .home-scroll-stage {
-    perspective: none;
-    perspective-origin: unset;
-    transform-style: flat;
-    overflow-x: hidden;
-  }
-
-  .home-scroll-stage__content {
-    transform: none !important;
-    will-change: auto;
-  }
-
-  .home-scroll-stage__section {
-    transform: none !important;
-    opacity: 1 !important;
-    will-change: auto;
-    margin-bottom: 0;
-  }
-
-  .home-scroll-stage__panel {
-    transform: none !important;
-    will-change: auto;
-  }
-
-  .home-scroll-stage__ambient {
-    display: none;
-  }
+  position: relative;
 }
 
 /* Mobile app shell — fixed chrome, stable viewport height */
