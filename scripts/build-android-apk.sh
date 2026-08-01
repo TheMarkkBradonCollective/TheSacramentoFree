@@ -19,11 +19,14 @@ fi
 export CAPACITOR_SERVER_URL="${CAPACITOR_SERVER_URL:-$VITE_APP_URL}"
 echo "Using CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL}"
 
-# APKs in public/downloads get copied into dist/ and then nested inside the next APK.
+# APKs in public/ get copied into dist/ and then nested inside the next APK.
 # Stage them out before the web build, then restore only the fresh build at the end.
 APK_STAGING_DIR="$(mktemp -d)"
 if compgen -G "public/downloads/*.apk" > /dev/null; then
   mv public/downloads/*.apk "$APK_STAGING_DIR/"
+fi
+if compgen -G "public/buynothing*.apk" > /dev/null; then
+  mv public/buynothing*.apk "$APK_STAGING_DIR/"
 fi
 rm -rf dist/downloads
 
@@ -67,13 +70,18 @@ cp "$APK_PATH" "dist/android/sac-buy-nothing-${BUILD_TYPE}.apk"
 # Keep manifest in sync before copy so fileName is current.
 node scripts/sync-android-version.mjs
 VERSIONED_FILE="$(node -e "const m=require('./public/android-version.json'); process.stdout.write(m.fileName)")"
+VERSION_NAME="$(node -e "const m=require('./public/android-version.json'); process.stdout.write(m.versionName)")"
 cp "$APK_PATH" "public/downloads/${VERSIONED_FILE}"
 # Legacy URL — always points at the latest build too.
 cp "$APK_PATH" "public/downloads/sac-buy-nothing.apk"
+# MBC App Market (Findr pattern): root-level slug APK + versioned copy.
+cp "$APK_PATH" "public/buynothing.apk"
+cp "$APK_PATH" "public/buynothing-v${VERSION_NAME}.apk"
 node scripts/sync-android-version.mjs
 rm -rf "$APK_STAGING_DIR"
 
 echo "APK ready: dist/android/sac-buy-nothing-${BUILD_TYPE}.apk"
 echo "Public download: public/downloads/${VERSIONED_FILE}"
 echo "Legacy alias: public/downloads/sac-buy-nothing.apk"
-ls -lh "public/downloads/${VERSIONED_FILE}" "public/downloads/sac-buy-nothing.apk"
+echo "MBC App Market: public/buynothing.apk (and buynothing-v${VERSION_NAME}.apk)"
+ls -lh "public/downloads/${VERSIONED_FILE}" "public/downloads/sac-buy-nothing.apk" "public/buynothing.apk"

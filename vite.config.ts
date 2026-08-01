@@ -1,10 +1,16 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import {createHash} from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import type {Connect, Plugin} from 'vite';
 import {defineConfig, loadEnv} from 'vite';
 import {readAppVersion} from './scripts/read-app-version.mjs';
+
+/** MBC App Market slug — must match main repo My-Projects.json / apk-catalog. */
+const APK_SLUG = 'buynothing';
+const APK_PACKAGE_ID = 'org.sacbuynothing.app';
+const APK_DISPLAY_NAME = 'Sacramento Buy Nothing';
 
 /** Map common Vercel env names into Vite client build variables. */
 function clientEnvDefines(mode: string): Record<string, string> {
@@ -62,10 +68,44 @@ function pushApiPlugin(): Plugin {
 }
 
 /**
+ * Build the MBC App Market `apk` block (Findr / StrainVerse pattern) when
+ * public/buynothing.apk was copied into dist/.
+ */
+function buildApkManifest(distDir: string, appVersion: ReturnType<typeof readAppVersion>) {
+  const apkPath = path.join(distDir, `${APK_SLUG}.apk`);
+  if (!fs.existsSync(apkPath)) return undefined;
+
+  const buf = fs.readFileSync(apkPath);
+  const sha256 = createHash('sha256').update(buf).digest('hex');
+  const versionedUrl = `/${APK_SLUG}-v${appVersion.versionName}.apk`;
+  const versionedPath = path.join(distDir, `${APK_SLUG}-v${appVersion.versionName}.apk`);
+  if (!fs.existsSync(versionedPath)) {
+    fs.copyFileSync(apkPath, versionedPath);
+  }
+
+  return {
+    ready: true,
+    packageId: APK_PACKAGE_ID,
+    name: APK_DISPLAY_NAME,
+    label: `${APK_DISPLAY_NAME} v${appVersion.versionName}`,
+    version: appVersion.versionName,
+    versionCode: appVersion.versionCode,
+    url: `/${APK_SLUG}.apk`,
+    downloadName: `${APK_SLUG}-v${appVersion.versionName}.apk`,
+    versionedUrl,
+    fileSize: buf.length,
+    sha256,
+    releaseNotes: `${APK_DISPLAY_NAME} v${appVersion.versionName} Android APK — Capacitor build with native FCM push for the MBC App Market.`,
+    archives: [] as unknown[],
+  };
+}
+
+/**
  * Injects a build timestamp into service-worker.js (and the legacy sw.js) so
  * the browser always detects a byte change on every deploy and triggers the
  * SW update chain automatically. Also writes /dist/version.json so the client
- * can poll for new deploys as a fallback (e.g. iOS Safari).
+ * can poll for new deploys as a fallback (e.g. iOS Safari), and embeds the
+ * MBC App Market apk block when a root-level APK is present.
  */
 function swVersionPlugin(): Plugin {
   let appVersion = readAppVersion();
@@ -94,17 +134,21 @@ function swVersionPlugin(): Plugin {
         }
       }
 
-      fs.writeFileSync(
-        path.join(distDir, 'version.json'),
-        JSON.stringify({
-          v: timestamp,
-          t: new Date().toISOString(),
-          label: appVersion.label,
-          channel: appVersion.channel,
-          versionName: appVersion.versionName,
-          versionCode: appVersion.versionCode,
-        }),
-      );
+      const apk = buildApkManifest(distDir, appVersion);
+      const payload: Record<string, unknown> = {
+        v: timestamp,
+        t: new Date().toISOString(),
+        label: appVersion.label,
+        channel: appVersion.channel,
+        versionName: appVersion.versionName,
+        versionCode: appVersion.versionCode,
+        version: appVersion.versionName,
+        name: APK_DISPLAY_NAME,
+        updatedAt: new Date().toISOString(),
+      };
+      if (apk) payload.apk = apk;
+
+      fs.writeFileSync(path.join(distDir, 'version.json'), JSON.stringify(payload));
     },
   };
 }

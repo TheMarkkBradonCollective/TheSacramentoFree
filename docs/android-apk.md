@@ -45,8 +45,11 @@ npm run android:apk:debug
 Output:
 - `dist/android/sac-buy-nothing-debug.apk` or `dist/android/sac-buy-nothing-release.apk`
 - `public/downloads/sac-buy-nothing.apk` (served publicly at `/downloads/sac-buy-nothing.apk`)
+- `public/buynothing.apk` and `public/buynothing-v{version}.apk` (MBC App Market — Findr pattern)
 
 Public downloads use a **signed release** APK (`android/keystore.properties`). Debug builds are for local testing only — Android Play Protect often blocks debug APKs as unsafe.
+
+The Vite production build writes an `apk` block into `/version.json` (ready, version, sha256, download URL) so the MBC App Market can list this app on the next catalog sync.
 
 The first time you run `npm run android:apk`, `scripts/setup-android-keystore.sh` creates the release keystore if needed.
 
@@ -64,7 +67,7 @@ This copies `public/Logo.jpeg` into `assets/logo.png` and runs `@capacitor/asset
 
 **Neighbors:** share the in-app download page at [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
 
-After building, commit `public/downloads/sac-buy-nothing.apk` and `public/android-version.json`, then deploy so the live download button works.
+After building, commit `public/buynothing.apk`, `public/buynothing-v*.apk`, `public/downloads/sac-buy-nothing.apk`, and `public/android-version.json`, then deploy so the live download button and MBC App Market listing work.
 
 ## Open in Android Studio
 
