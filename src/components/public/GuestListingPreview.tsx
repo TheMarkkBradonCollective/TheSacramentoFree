@@ -13,7 +13,7 @@ interface GuestListingPreviewProps {
   isLoading?: boolean;
   onViewItem: (item: ItemPost) => void;
   onRequireSignIn: () => void;
-  /** When nested inside HomeScrollStage DepthSection */
+  /** When nested inside the home page section layout */
   embedded?: boolean;
 }
 
