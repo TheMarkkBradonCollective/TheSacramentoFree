@@ -185,10 +185,11 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     setIsLoading(true);
     setError('');
     try {
-      const sub = await subscribeToPushNotifications();
-      setIsSubscribed(!!sub);
+      await subscribeToPushNotifications();
+      const active = await hasActivePushSubscription();
+      setIsSubscribed(active);
       refreshPermission();
-      if (!sub) {
+      if (!active) {
         setError('Notification permission was not granted.');
       } else {
         await loadPreferences({ force: true });
