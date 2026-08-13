@@ -10,7 +10,7 @@ import {readAppVersion} from './scripts/read-app-version.mjs';
 /** MBC App Market slug — must match main repo My-Projects.json / apk-catalog. */
 const APK_SLUG = 'buynothing';
 const APK_PACKAGE_ID = 'org.sacramentobuynothing.app';
-const APK_DISPLAY_NAME = 'Sacramento Buy Nothing';
+const APK_DISPLAY_NAME = 'SacramentoBuyNothing';
 
 /** Map common Vercel env names into Vite client build variables. */
 function clientEnvDefines(mode: string): Record<string, string> {

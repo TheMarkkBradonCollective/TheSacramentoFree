@@ -580,7 +580,7 @@ export async function sendTestPushNotification(): Promise<{
     return {
       ok: false,
       errorMessage: isNativeApp()
-        ? 'Allow notifications for Sac Buy Nothing in Android settings, then tap Enable alerts again.'
+        ? 'Allow notifications for SacramentoBuyNothing in Android settings, then tap Enable alerts again.'
         : 'Allow notifications in your browser, then try again.',
     };
   }

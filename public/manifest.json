@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Sacramento Buy Nothing",
-  "short_name": "Sac Buy Nothing",
+  "name": "SacramentoBuyNothing",
+  "short_name": "SacramentoBuyNothing",
   "description": "A community-powered platform where Sacramento neighbors give away items and request what they need — completely free. No selling. No bidding. No flipping.",
   "start_url": "/",
   "scope": "/",

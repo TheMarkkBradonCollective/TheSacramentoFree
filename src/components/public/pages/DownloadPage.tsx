@@ -235,7 +235,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
               After downloading, open the file and allow install from your browser or Files app if Android asks.
               If Google Play Protect warns about an unknown app, tap <strong className="text-app">Install anyway</strong>
               — this is normal for community apps downloaded outside the Play Store. If install fails, uninstall the old
-              Sac Buy Nothing app first, then try again.
+              SacramentoBuyNothing app first, then try again.
             </p>
           </PublicCard>
 
