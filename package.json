@@ -17,6 +17,7 @@
     "android:apk:debug": "bash scripts/build-android-apk.sh debug",
     "android:aab": "bash scripts/build-android-aab.sh",
     "android:play-assets": "bash scripts/generate-play-store-assets.sh",
+    "play:reviewer-account": "node scripts/create-play-reviewer-account.mjs",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
