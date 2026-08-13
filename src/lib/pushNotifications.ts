@@ -14,6 +14,22 @@ import type { NotificationPreferences, NearbyRadiusMiles } from '../types';
 const SW_PATH = '/service-worker.js';
 const PUSH_CELEBRATION_DISMISSED_KEY = 'sbn_push_celebration_prompt_dismissed_v1';
 const VAPID_CACHE_KEY = 'sbn_vapid_public_key_v1';
+const PUSH_API_TIMEOUT_MS = 20_000;
+
+async function fetchPushApi(input: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), PUSH_API_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Push server took too long to respond. Try again in a moment.');
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 const OPTIONAL_PREF_COLUMNS = ['communityChat', 'staffChat'] as const;
 
@@ -135,7 +151,7 @@ async function persistNativePushSubscription(token: string, userId: string): Pro
   const endpoint = fcmEndpointForToken(token);
   const tokenAuth = await getAccessToken();
   if (tokenAuth) {
-    const res = await fetch(apiUrl('/api/push/subscribe'), {
+    const res = await fetchPushApi(apiUrl('/api/push/subscribe'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${tokenAuth}`,
@@ -179,7 +195,7 @@ async function persistPushSubscription(subscription: PushSubscription, userId: s
 
   const token = await getAccessToken();
   if (token) {
-    const res = await fetch(apiUrl('/api/push/subscribe'), {
+    const res = await fetchPushApi(apiUrl('/api/push/subscribe'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -570,7 +586,13 @@ export async function sendTestPushNotification(): Promise<{
   }
 
   try {
-    await ensurePushSubscription();
+    if (isNativeApp()) {
+      if (!getStoredFcmToken()) {
+        await ensurePushSubscription();
+      }
+    } else {
+      await ensurePushSubscription();
+    }
   } catch (err) {
     return {
       ok: false,
@@ -601,7 +623,7 @@ export async function sendTestPushNotification(): Promise<{
   }
 
   try {
-    const res = await fetch(apiUrl('/api/push/test'), {
+    const res = await fetchPushApi(apiUrl('/api/push/test'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -655,7 +677,7 @@ export async function sendDirectorBroadcastTest(params: {
   }
 
   try {
-    const res = await fetch(apiUrl('/api/push/test-broadcast'), {
+    const res = await fetchPushApi(apiUrl('/api/push/test-broadcast'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
