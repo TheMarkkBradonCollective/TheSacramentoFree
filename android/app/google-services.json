@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "269407197791",
+    "project_id": "peppy-ratio-473008-b9",
+    "storage_bucket": "peppy-ratio-473008-b9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:269407197791:android:6bbe03e210ef7037d499ea",
+        "android_client_info": {
+          "package_name": "com.signaturesecurity.guardr"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "269407197791-h2o0v8c54c4kn0esk9hefssnjjbt10m4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaiJmy17bSqUoBfH9h-B7LzFMkb2pcHXw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "269407197791-h2o0v8c54c4kn0esk9hefssnjjbt10m4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:269407197791:android:806949f83aa4d4a4d499ea",
+        "android_client_info": {
+          "package_name": "org.sacramentobuynothing.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "269407197791-h2o0v8c54c4kn0esk9hefssnjjbt10m4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaiJmy17bSqUoBfH9h-B7LzFMkb2pcHXw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "269407197791-h2o0v8c54c4kn0esk9hefssnjjbt10m4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

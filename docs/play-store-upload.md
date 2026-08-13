@@ -1,11 +1,11 @@
 # Google Play Console upload guide
 
-Everything below is pre-filled for **Sac Buy Nothing** (`org.sacbuynothing.app`). Your account is already set up — follow these steps in order.
+Everything below is pre-filled for **Sac Buy Nothing** (`org.sacramentobuynothing.app`). Your account is already set up — follow these steps in order.
 
 ## What is already done
 
 - Release signing keystore: `android/app/sac-buynothing-release.keystore`
-- `versionCode` **7**, `versionName` **0.1.0**
+- `versionCode` **8**, `versionName` **0.1.0**
 - Build command: `npm run android:aab` → `dist/android/sac-buy-nothing-release.aab`
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`
@@ -46,7 +46,7 @@ On first upload, choose **Let Google manage and protect your app signing key** (
 | Default language | English (United States) |
 | App or game | App |
 | Free or paid | Free |
-| Package name | `org.sacbuynothing.app` (must match exactly) |
+| Package name | `org.sacramentobuynothing.app` (must match exactly) |
 
 ---
 
@@ -170,7 +170,7 @@ Recommend **18 and over** (user-generated content, messaging, location).
 
 1. **Testing → Internal testing → Create release**
 2. Upload `dist/android/sac-buy-nothing-release.aab`
-3. Release name: `0.1.0 (7)`
+3. Release name: `0.1.0 (8)`
 4. Release notes:
 
 ```
@@ -190,7 +190,7 @@ First Google Play release of Sac Buy Nothing for Sacramento neighbors.
 
 ## Firebase checklist (before production push works)
 
-1. [Firebase Console](https://console.firebase.google.com/) → add Android app `org.sacbuynothing.app`
+1. [Firebase Console](https://console.firebase.google.com/) → add Android app `org.sacramentobuynothing.app`
 2. Download `google-services.json` → `android/app/google-services.json`
 3. Service account JSON → `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel
 4. Rebuild: `npm run android:aab`

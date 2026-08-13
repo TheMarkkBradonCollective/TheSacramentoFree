@@ -9,7 +9,7 @@ import {readAppVersion} from './scripts/read-app-version.mjs';
 
 /** MBC App Market slug — must match main repo My-Projects.json / apk-catalog. */
 const APK_SLUG = 'buynothing';
-const APK_PACKAGE_ID = 'org.sacbuynothing.app';
+const APK_PACKAGE_ID = 'org.sacramentobuynothing.app';
 const APK_DISPLAY_NAME = 'Sacramento Buy Nothing';
 
 /** Map common Vercel env names into Vite client build variables. */

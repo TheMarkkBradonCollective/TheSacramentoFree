@@ -7,7 +7,7 @@ Sacramento Buy Nothing ships as a Capacitor Android app. The React web app is bu
 ### 1. Firebase (required for Android push)
 
 1. Create a [Firebase project](https://console.firebase.google.com/).
-2. Add an Android app with package name `org.sacbuynothing.app`.
+2. Add an Android app with package name `org.sacramentobuynothing.app`.
 3. Download `google-services.json` and place it at `android/app/google-services.json`.
 4. In Firebase → Project settings → Service accounts, create a new private key.
 5. Set `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel (and locally for `npm run dev:full`) to the full JSON string.
