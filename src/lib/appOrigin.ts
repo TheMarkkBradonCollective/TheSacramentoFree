@@ -8,7 +8,9 @@ const configuredOrigin = String((import.meta as { env?: Record<string, string> }
 /** Production origin for API calls. Required in the Android APK build. */
 export function getAppOrigin(): string {
   if (typeof window === 'undefined') return configuredOrigin;
-  if (isNativeApp()) return configuredOrigin || window.location.origin;
+  // Capacitor loads server.url in a WebView — API calls must match that origin
+  // or CSP connect-src 'self' blocks cross-host fetches (www vs apex).
+  if (isNativeApp()) return window.location.origin || configuredOrigin;
   return window.location.origin;
 }
 
