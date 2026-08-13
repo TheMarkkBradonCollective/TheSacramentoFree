@@ -561,7 +561,12 @@ export async function sendTestPushNotification(): Promise<{
   }
 
   if (getPushPermissionState() !== 'granted') {
-    return { ok: false, errorMessage: 'Allow notifications in your browser, then try again.' };
+    return {
+      ok: false,
+      errorMessage: isNativeApp()
+        ? 'Allow notifications for Sac Buy Nothing in Android settings, then tap Enable alerts again.'
+        : 'Allow notifications in your browser, then try again.',
+    };
   }
 
   try {
