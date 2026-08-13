@@ -286,7 +286,7 @@ function webPushOptionsFor(eventType: PushEventType): { TTL: number; urgency: 'h
 function buildNotificationPayload(payload: PushPayload): string {
   const body = String(payload.body || '').trim() || String(payload.title || '').trim() || 'New activity';
   return JSON.stringify({
-    title: payload.title || 'Sacramento Buy Nothing',
+    title: payload.title || 'SacramentoBuyNothing',
     body,
     url: payload.url,
     icon: '/Logo.jpeg',

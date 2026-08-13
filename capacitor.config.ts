@@ -4,7 +4,7 @@ const serverUrl = (process.env.CAPACITOR_SERVER_URL || process.env.VITE_APP_URL 
 
 const config: CapacitorConfig = {
   appId: 'org.sacramentobuynothing.app',
-  appName: 'Sac Buy Nothing',
+  appName: 'SacramentoBuyNothing',
   webDir: 'dist',
   android: {
     adjustMarginsForEdgeToEdge: 'force',

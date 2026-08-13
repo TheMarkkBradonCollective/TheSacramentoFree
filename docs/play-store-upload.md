@@ -1,6 +1,6 @@
 # Google Play Console upload guide
 
-Everything below is pre-filled for **Sac Buy Nothing** (`org.sacramentobuynothing.app`). Your account is already set up — follow these steps in order.
+Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuynothing.app`). Your account is already set up — follow these steps in order.
 
 ## What is already done
 
@@ -9,11 +9,12 @@ Everything below is pre-filled for **Sac Buy Nothing** (`org.sacramentobuynothin
 - Build command: `npm run android:aab` → `dist/android/sac-buy-nothing-release.aab`
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`
+- Firebase push configured (client + server)
 
 ## What only you can do
 
-1. **Firebase** — download `google-services.json` into `android/app/`, then rebuild the AAB (`npm run android:aab`). Required for Android push notifications.
-2. **Phone screenshots** — capture 2–8 screenshots on a real device or emulator (feed, map, chat, profile). Play Console → Store presence → Main store listing.
+1. **Phone screenshots** — capture 2–8 screenshots on a real device (feed, map, chat, profile). Play Console → Store presence → Main store listing.
+2. **Set app price** — Play Console → Monetize → Products → set your paid download price.
 3. **Upload the AAB** — Play Console → Testing → Internal testing → Create release → upload `dist/android/sac-buy-nothing-release.aab`.
 4. **Contact email** — use your support address (e.g. `support@sacbuynothing.org` from `.env.example`).
 
@@ -22,7 +23,6 @@ Everything below is pre-filled for **Sac Buy Nothing** (`org.sacramentobuynothin
 ## Step 1 — Build the upload bundle
 
 ```bash
-# Optional: place google-services.json in android/app/ first (recommended)
 npm run android:aab
 ```
 
@@ -42,11 +42,14 @@ On first upload, choose **Let Google manage and protect your app signing key** (
 
 | Field | Value |
 |-------|-------|
-| App name | Sac Buy Nothing |
+| App name | **SacramentoBuyNothing** |
 | Default language | English (United States) |
 | App or game | App |
-| Free or paid | Free |
+| Free or paid | **Paid** |
 | Package name | `org.sacramentobuynothing.app` (must match exactly) |
+
+After creating the app, set your price:
+**Monetize → Products → App pricing** → choose price tier → Save.
 
 ---
 
@@ -54,17 +57,17 @@ On first upload, choose **Let Google manage and protect your app signing key** (
 
 ### App name
 ```
-Sac Buy Nothing
+SacramentoBuyNothing
 ```
 
 ### Short description (80 characters max)
 ```
-Free neighbor gifting in Sacramento — give items, request what you need, meet locally.
+Sacramento neighbor gifting — give items, request what you need, meet locally.
 ```
 
 ### Full description
 ```
-Sacramento Buy Nothing is a free, ad-free community app where neighbors give away items and request what they need — no selling, no bidding, no flipping.
+SacramentoBuyNothing is the community app for Sacramento neighbors who give away items and request what they need — no selling, no bidding, no flipping.
 
 WHAT YOU CAN DO
 • Post items to give away or requests for things you need
@@ -83,7 +86,7 @@ SAFE & LOCAL
 • Delete your account anytime from Account settings
 • Your data is stored securely — never sold, no ads
 
-Sacramento Buy Nothing is run by Markeith White as a volunteer community project. 100% free for neighbors, forever.
+SacramentoBuyNothing is run by Markeith White for local, free neighbor-to-neighbor gifting. Items in the community are always free — the app download is a paid Play Store listing.
 
 Privacy policy: https://www.sacramentobuynothing.com/privacy
 Terms of use: https://www.sacramentobuynothing.com/terms
@@ -99,7 +102,7 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 
 ### Category
 - **Primary:** Social (or Lifestyle)
-- **Tags:** community, free, local, gifting
+- **Tags:** community, local, gifting, Sacramento
 
 ### Contact details
 - **Email:** your support email
@@ -141,7 +144,7 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 - Controlled substances: None
 - User interaction / UGC: **Yes** (posts, messages, reviews)
 - Shares location: **Yes** (optional, user-provided)
-- Digital purchases: **No**
+- Digital purchases: **No** (paid app download is set in Play pricing, not in-app purchases)
 
 ### Target audience
 Recommend **18 and over** (user-generated content, messaging, location).
@@ -174,26 +177,17 @@ Recommend **18 and over** (user-generated content, messaging, location).
 4. Release notes:
 
 ```
-First Google Play release of Sac Buy Nothing for Sacramento neighbors.
+First Google Play release of SacramentoBuyNothing for Sacramento neighbors.
 
-• Browse and post free items and requests
+• Browse and post items and requests (always free between neighbors)
 • In-app messaging and neighborhood map
 • Optional push notifications for community activity
 • Account, privacy, and terms flows built in
 ```
 
 5. Add yourself as an internal tester → install from opt-in link
-6. Verify: sign-in, feed, map, location prompt, push (after `google-services.json`), account deletion
+6. Verify: sign-in, feed, map, location prompt, push, account deletion
 7. Promote to **Production** when ready → **Send for review**
-
----
-
-## Firebase checklist (before production push works)
-
-1. [Firebase Console](https://console.firebase.google.com/) → add Android app `org.sacramentobuynothing.app`
-2. Download `google-services.json` → `android/app/google-services.json`
-3. Service account JSON → `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel
-4. Rebuild: `npm run android:aab`
 
 ---
 
