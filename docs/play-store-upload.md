@@ -17,6 +17,49 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 2. **Set app price** — Play Console → Monetize → Products → set your paid download price.
 3. **Upload the AAB** — Play Console → Testing → Internal testing → Create release → upload `dist/android/sac-buy-nothing-release.aab`.
 4. **Contact email** — use your support address (e.g. `support@sacbuynothing.org` from `.env.example`).
+5. **Play reviewer account** — run `npm run play:reviewer-account` (see below).
+
+---
+
+## Google Play — App access (sign-in details)
+
+Play Console → **App content → App access** (dashboard: **Sign in details**).
+
+### Select this option
+
+**All or some functionality in my app is restricted**
+
+### Credentials
+
+| Field | Value |
+|-------|--------|
+| **Email** | `playstore-review@sacramentobuynothing.com` |
+| **Password** | `PlayReview-Sac2026!` |
+
+Create the account once: `npm run play:reviewer-account` (needs Supabase service role key from Vercel).
+
+### Paste these instructions for Google reviewers
+
+```
+SacramentoBuyNothing requires sign-in to open the main app (feed, map, messages, profile).
+
+Email: playstore-review@sacramentobuynothing.com
+Password: PlayReview-Sac2026!
+
+WHAT REVIEWERS CAN DO (browse-only test account):
+• Sign in and navigate all main tabs: Feed, Map, Events, Messages, Account
+• View listings, neighbor profiles, community map, and message threads
+• Read comments and community content
+
+WHAT IS RESTRICTED (disabled for this test account):
+• Creating or editing listings
+• Sending messages or chat replies
+• Claiming items, votes, and comments
+• Posting events, support tickets, and reports
+
+Location and notification permissions are optional — tap Skip if prompted.
+No 2FA. No phone number required.
+```
 
 ---
 
