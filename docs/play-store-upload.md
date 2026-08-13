@@ -27,7 +27,9 @@ Play Console → **App content → App access** (dashboard: **Sign in details**)
 
 ### Select this option
 
-**All or some functionality in my app is restricted**
+**Sign in details in this declaration provide full access to all the features and content within this app, including premium or paid content**
+
+(SacramentoBuyNothing is a paid Play download — this tells Google the test account unlocks everything without a separate purchase.)
 
 ### Credentials
 
@@ -41,21 +43,16 @@ Create the account once: `npm run play:reviewer-account` (needs Supabase service
 ### Paste these instructions for Google reviewers
 
 ```
-SacramentoBuyNothing requires sign-in to open the main app (feed, map, messages, profile).
+SacramentoBuyNothing requires sign-in. Use this test account for full access — no additional purchase needed for review.
 
 Email: playstore-review@sacramentobuynothing.com
 Password: PlayReview-Sac2026!
 
-WHAT REVIEWERS CAN DO (browse-only test account):
-• Sign in and navigate all main tabs: Feed, Map, Events, Messages, Account
-• View listings, neighbor profiles, community map, and message threads
-• Read comments and community content
-
-WHAT IS RESTRICTED (disabled for this test account):
-• Creating or editing listings
-• Sending messages or chat replies
-• Claiming items, votes, and comments
-• Posting events, support tickets, and reports
+After sign-in, reviewers can use all features:
+• Browse feed and map
+• View and open listings, profiles, and message threads
+• Post listings, send messages, comment, and claim items
+• Account settings, notifications, and support chat
 
 Location and notification permissions are optional — tap Skip if prompted.
 No 2FA. No phone number required.

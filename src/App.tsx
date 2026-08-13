@@ -84,8 +84,6 @@ import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
 import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath } from './public/routes';
 import DownloadPage from './components/public/pages/DownloadPage';
-import { isPlayReviewBrowseOnly } from './lib/playReviewAccount';
-import { BrowseOnlyProvider } from './contexts/BrowseOnlyContext';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -1324,15 +1322,6 @@ export default function App() {
   }, [blockedUserIds, viewProfileUid, detailItem, initialSelectedChatId, userProfile]);
 
   const accountRestriction = isAccountRestricted(userProfile);
-  const browseOnlyReview = isPlayReviewBrowseOnly(userProfile?.email);
-  const openNewPost = () => {
-    if (browseOnlyReview) return;
-    setShowPostModal(true);
-  };
-  const openNewEvent = () => {
-    if (browseOnlyReview) return;
-    setShowPostEventModal(true);
-  };
 
   const reviewPromptEnabled =
     Boolean(userProfile) &&
@@ -1420,7 +1409,6 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <BrowseOnlyProvider browseOnly={browseOnlyReview}>
             <NotificationsHubProvider userProfile={userProfile} onDeepLink={handlePushDeepLink}>
             <PresenceProvider userId={userProfile.uid}>
                {deviceType === 'mobile' ? (
@@ -1430,8 +1418,8 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
-                  onOpenNewPost={openNewPost}
-                  onOpenNewEvent={openNewEvent}
+                  onOpenNewPost={() => setShowPostModal(true)}
+                  onOpenNewEvent={() => setShowPostEventModal(true)}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
@@ -1482,8 +1470,8 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
-                  onOpenNewPost={openNewPost}
-                  onOpenNewEvent={openNewEvent}
+                  onOpenNewPost={() => setShowPostModal(true)}
+                  onOpenNewEvent={() => setShowPostEventModal(true)}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
@@ -1534,8 +1522,8 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
-                  onOpenNewPost={openNewPost}
-                  onOpenNewEvent={openNewEvent}
+                  onOpenNewPost={() => setShowPostModal(true)}
+                  onOpenNewEvent={() => setShowPostEventModal(true)}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onClaimSubmitted={handleClaimSubmitted}
@@ -1766,7 +1754,7 @@ export default function App() {
                 />
               )}
 
-              {(showPostModal || editingItem) && !browseOnlyReview && (
+              {(showPostModal || editingItem) && (
                 <PostItemModal
                   userProfile={userProfile}
                   editItem={editingItem}
@@ -1783,7 +1771,7 @@ export default function App() {
                 />
               )}
 
-              {((showPostEventModal && canAccessEvents) || editingEvent) && !browseOnlyReview && (
+              {((showPostEventModal && canAccessEvents) || editingEvent) && (
                 <PostEventModal
                   userProfile={userProfile}
                   editEvent={editingEvent}
@@ -1805,7 +1793,6 @@ export default function App() {
               )}
             </PresenceProvider>
             </NotificationsHubProvider>
-            </BrowseOnlyProvider>
           )}
         </>
       )}
