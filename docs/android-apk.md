@@ -86,8 +86,18 @@ npm run cap:open
 
 ## Distribution options
 
-- **Sideload**: Share the debug APK directly (enable “Install unknown apps” on the device).
-- **Play Store**: Sign the release APK/AAB, create a Play Console listing, and upload.
+- **Sideload**: Share the signed release APK (`npm run android:apk`) — neighbors use [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download).
+- **Play Store**: Build an AAB with `npm run android:aab` and follow [play-store-upload.md](./play-store-upload.md).
+
+```bash
+# Google Play upload bundle (AAB — required by Play Console)
+npm run android:aab
+# → dist/android/sac-buy-nothing-release.aab
+
+# Store listing graphics (512 icon + 1024×500 feature graphic)
+npm run android:play-assets
+# → play-store-assets/
+```
 
 ## Updating the app
 
