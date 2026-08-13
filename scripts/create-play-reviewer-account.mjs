@@ -101,11 +101,9 @@ async function main() {
   console.log(`Email:    ${REVIEW_EMAIL}`);
   console.log(`Password: ${REVIEW_PASSWORD}`);
   console.log('');
-  console.log('Instructions for reviewers:');
-  console.log('1. Open SacramentoBuyNothing and tap Sign in.');
-  console.log('2. Enter the email and password above.');
-  console.log('3. Location and notifications are optional — Skip is fine.');
-  console.log('4. Feed, map, messages, and posting work after sign-in.');
+  console.log('Instructions for reviewers (full access):');
+  console.log('Play Console: check full access to all features, including premium/paid content.');
+  console.log('After sign-in: feed, map, messages, posting, claiming, and profile all work.');
 }
 
 main().catch((err) => {
