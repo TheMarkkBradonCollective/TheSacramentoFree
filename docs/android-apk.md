@@ -7,7 +7,7 @@ Sacramento Buy Nothing ships as a Capacitor Android app. The React web app is bu
 ### 1. Firebase (required for Android push)
 
 1. Create a [Firebase project](https://console.firebase.google.com/).
-2. Add an Android app with package name `org.sacbuynothing.app`.
+2. Add an Android app with package name `org.sacramentobuynothing.app`.
 3. Download `google-services.json` and place it at `android/app/google-services.json`.
 4. In Firebase → Project settings → Service accounts, create a new private key.
 5. Set `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel (and locally for `npm run dev:full`) to the full JSON string.
@@ -86,8 +86,18 @@ npm run cap:open
 
 ## Distribution options
 
-- **Sideload**: Share the debug APK directly (enable “Install unknown apps” on the device).
-- **Play Store**: Sign the release APK/AAB, create a Play Console listing, and upload.
+- **Sideload**: Share the signed release APK (`npm run android:apk`) — neighbors use [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download).
+- **Play Store**: Build an AAB with `npm run android:aab` and follow [play-store-upload.md](./play-store-upload.md).
+
+```bash
+# Google Play upload bundle (AAB — required by Play Console)
+npm run android:aab
+# → dist/android/sac-buy-nothing-release.aab
+
+# Store listing graphics (512 icon + 1024×500 feature graphic)
+npm run android:play-assets
+# → play-store-assets/
+```
 
 ## Updating the app
 

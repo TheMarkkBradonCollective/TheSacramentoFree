@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const serverUrl = (process.env.CAPACITOR_SERVER_URL || process.env.VITE_APP_URL || '').trim().replace(/\/$/, '');
 
 const config: CapacitorConfig = {
-  appId: 'org.sacbuynothing.app',
+  appId: 'org.sacramentobuynothing.app',
   appName: 'Sac Buy Nothing',
   webDir: 'dist',
   android: {
