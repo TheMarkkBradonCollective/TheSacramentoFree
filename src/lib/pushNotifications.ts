@@ -573,8 +573,27 @@ export async function sendTestPushNotification(): Promise<{
     };
   }
 
-  const registration = await navigator.serviceWorker.ready;
-  const browserSubscription = await registration.pushManager.getSubscription();
+  let inlineSubscription: { endpoint: string; keys: { p256dh: string; auth: string } } | null = null;
+
+  if (isNativeApp()) {
+    const token = getStoredFcmToken();
+    if (token) {
+      inlineSubscription = {
+        endpoint: fcmEndpointForToken(token),
+        keys: { p256dh: FCM_NATIVE_KEY, auth: FCM_NATIVE_KEY },
+      };
+    }
+  } else {
+    const registration = await navigator.serviceWorker.ready;
+    const browserSubscription = await registration.pushManager.getSubscription();
+    const json = browserSubscription?.toJSON();
+    if (json?.endpoint && json.keys?.p256dh && json.keys?.auth) {
+      inlineSubscription = {
+        endpoint: json.endpoint,
+        keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      };
+    }
+  }
 
   try {
     const res = await fetch(apiUrl('/api/push/test'), {
@@ -584,7 +603,7 @@ export async function sendTestPushNotification(): Promise<{
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        subscription: browserSubscription?.toJSON() || null,
+        subscription: inlineSubscription,
       }),
     });
     const json = await readJsonResponse(res);
