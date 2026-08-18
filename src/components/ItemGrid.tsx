@@ -3,6 +3,7 @@ import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CA
 import {
   ArrowDownUp,
   ChevronDown,
+  CircleDot,
   Search as SearchIcon,
   MapPin,
   SlidersHorizontal,
