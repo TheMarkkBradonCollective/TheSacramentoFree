@@ -194,7 +194,7 @@ export default function MobileView({
         {!sidebarCollapsed && (
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/40"
+            className="fixed inset-0 z-40 bg-black/40 sbn-sidebar-backdrop animate-in fade-in duration-200"
             aria-label="Close navigation menu"
             onClick={() => setSidebarCollapsed(true)}
           />

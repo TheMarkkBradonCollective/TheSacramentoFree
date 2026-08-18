@@ -85,7 +85,8 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const actorRank = roleRank(userProfile.role);
   const isRail = variant === 'rail';
-  const isFullyHidden = fullyHiddenWhenCollapsed && collapsed && !isRail;
+  const isSlideDrawer = overlay && fullyHiddenWhenCollapsed;
+  const isFullyHidden = fullyHiddenWhenCollapsed && collapsed && !isRail && !isSlideDrawer;
   const isCollapsed = isRail || collapsed;
   const theme = roleTheme(userProfile.role);
   const isStaff = isStaffRole(userProfile.role);
@@ -103,21 +104,28 @@ export default function AppSidebar({
   );
 
   const roleName = roleLabel(userProfile.role);
-  const isOverlayDrawer = overlay && !isFullyHidden && !isCollapsed;
+  const drawerOpen = isSlideDrawer && !collapsed;
+  const isOverlayDrawer = isSlideDrawer ? drawerOpen : overlay && !isFullyHidden && !isCollapsed;
 
-  return (
-    <aside
-      id="app_sidebar"
-      data-variant={variant}
-      className={`sbn-sidebar flex flex-col h-full bg-surface border-r border-app shrink-0 ${
+  const asideClassName = isSlideDrawer
+    ? `sbn-sidebar sbn-sidebar-drawer flex flex-col bg-surface border-r border-app ${
+        drawerOpen ? 'sbn-sidebar-drawer-open' : 'sbn-sidebar-drawer-closed'
+      }`
+    : `sbn-sidebar flex flex-col h-full bg-surface border-r border-app shrink-0 ${
         isRail
           ? 'w-[4.5rem]'
           : isFullyHidden
             ? 'w-0 border-r-0 overflow-hidden pointer-events-none'
             : `transition-all duration-200 ${isCollapsed ? 'w-14' : 'w-60'}`
-      } ${isOverlayDrawer ? 'sbn-sidebar-overlay fixed inset-y-0 left-0 z-50 shadow-xl' : ''}`}
+      } ${isOverlayDrawer ? 'sbn-sidebar-overlay fixed inset-y-0 left-0 z-50 shadow-xl' : ''}`;
+
+  return (
+    <aside
+      id="app_sidebar"
+      data-variant={variant}
+      className={asideClassName}
       style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as CSSProperties}
-      aria-hidden={isFullyHidden || undefined}
+      aria-hidden={isFullyHidden || (isSlideDrawer && collapsed) || undefined}
     >
       {/* Role accent rail — a hairline strip of color so each rank reads instantly */}
       <div className="sbn-sidebar-accent-bar" />
@@ -185,10 +193,10 @@ export default function AppSidebar({
         </>
       )}
 
-      <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 min-h-0">
+      <nav className="sbn-sidebar-nav flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5 min-h-0 min-w-0">
         {/* Community section */}
         {!isCollapsed && (
-          <p className="px-3 pt-2 pb-1 text-[9px] font-black uppercase tracking-widest text-subtle font-mono">
+          <p className="px-1 pt-1 pb-1 text-[9px] font-black uppercase tracking-widest text-subtle font-mono">
             Community
           </p>
         )}
@@ -202,13 +210,13 @@ export default function AppSidebar({
               onClick={() => selectTab(id)}
               aria-current={isActive ? 'page' : undefined}
               title={isCollapsed ? label : undefined}
-              className={`sbn-sidebar-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg mx-1 text-sm font-medium ${
+              className={`sbn-sidebar-item w-full min-w-0 flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-sm font-medium ${
                 isActive ? 'sbn-sidebar-item-active' : 'text-muted hover:bg-inset hover:text-app'
               } ${isCollapsed ? 'flex-col gap-1 justify-center py-2.5' : ''}`}
             >
               <Icon className="w-4 h-4 shrink-0" strokeWidth={isActive ? 2.5 : 2} />
               {!isCollapsed ? (
-                <span className="truncate">{label}</span>
+                <span className="truncate text-left min-w-0 flex-1">{label}</span>
               ) : (
                 <span className="text-[9px] font-bold leading-none">{label}</span>
               )}
@@ -221,13 +229,13 @@ export default function AppSidebar({
           <>
             {!isCollapsed && (
               <p
-                className="px-3 pt-4 pb-1 text-[9px] font-black uppercase tracking-widest font-mono"
+                className="px-1 pt-3 pb-1 text-[9px] font-black uppercase tracking-widest font-mono"
                 style={{ color: theme.accent }}
               >
                 Staff
               </p>
             )}
-            {isCollapsed && <div className="mx-2 my-2 border-t border-app" />}
+            {isCollapsed && <div className="mx-1 my-2 border-t border-app" />}
             {staffItems.map(({ id, label, icon: Icon, minRank = 0 }) => {
               const hasAccess = actorRank >= minRank;
               const isActive = activeTab === id;
@@ -239,7 +247,7 @@ export default function AppSidebar({
                   onClick={() => selectTab(id)}
                   aria-current={isActive ? 'page' : undefined}
                   title={isCollapsed ? label : undefined}
-                  className={`sbn-sidebar-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg mx-1 text-sm font-medium ${
+                  className={`sbn-sidebar-item w-full min-w-0 flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-[13px] font-medium ${
                     isActive
                       ? 'sbn-sidebar-item-active'
                       : hasAccess
@@ -249,7 +257,7 @@ export default function AppSidebar({
                 >
                   <Icon className="w-4 h-4 shrink-0" strokeWidth={isActive ? 2.5 : 2} />
                   {!isCollapsed ? (
-                    <span className="flex-1 truncate text-left">{label}</span>
+                    <span className="flex-1 min-w-0 text-left leading-snug line-clamp-2">{label}</span>
                   ) : (
                     <span className="text-[9px] font-bold leading-none text-center">{label}</span>
                   )}
