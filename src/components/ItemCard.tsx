@@ -1,4 +1,4 @@
-import { Bookmark, Calendar, Eye, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
+import { Bookmark, Calendar, Eye, LifeBuoy, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
@@ -6,6 +6,7 @@ import { getPostTypeBadgeClass, getPostTypeLabel, getPostTypeCompletedLabel } fr
 import { extractListingImageUrls } from '../lib/listingContent';
 import { getListingNavigateLabel } from '../lib/listingMapActions';
 import { formatRouteDistance } from '../lib/mapRoute';
+import { isStaffRole } from '../lib/roles';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
 import UserAvatar from './UserAvatar';
@@ -37,6 +38,8 @@ interface ItemCardProps {
   distanceMeters?: number | null;
   /** Open navigation directly from the card (map-view parity). */
   onNavigate?: () => void;
+  /** Staff opens reverse support thread about this listing. */
+  onStaffChat?: () => void;
 }
 
 export default function ItemCard({
@@ -60,9 +63,11 @@ export default function ItemCard({
   onViewProfile,
   distanceMeters,
   onNavigate,
+  onStaffChat,
 }: ItemCardProps) {
   const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;
+  const isStaffViewer = isStaffRole(userProfile?.role);
   const inactive = item.status === 'completed' || item.status === 'withdrawn';
 
   const dateLabel = item.createdAt
@@ -202,17 +207,24 @@ export default function ItemCard({
         <Eye className="w-3.5 h-3.5" />
         <span className="hidden sm:inline ml-1">View</span>
       </button>
-      {onNavigate && item.status === 'active' ? (
-        <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-          <Navigation className="w-3.5 h-3.5" />
-          <span className="ml-1">{getListingNavigateLabel(item)}</span>
+      {isStaffViewer && onStaffChat ? (
+        <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+          <LifeBuoy className="w-3.5 h-3.5" />
+          <span className="ml-1">Staff chat</span>
         </button>
-      ) : (
-        <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-          <MessageSquare className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline ml-1">Message</span>
-        </button>
-      )}
+      ) : !isStaffViewer ? (
+        onNavigate && item.status === 'active' ? (
+          <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+            <Navigation className="w-3.5 h-3.5" />
+            <span className="ml-1">{getListingNavigateLabel(item)}</span>
+          </button>
+        ) : (
+          <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline ml-1">Message</span>
+          </button>
+        )
+      ) : null}
     </div>
   ) : (
     <span className="text-[10px] font-medium text-muted">Archived</span>

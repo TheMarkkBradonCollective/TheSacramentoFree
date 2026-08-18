@@ -150,6 +150,8 @@ export interface UserReport {
 
 export type TicketStatus = 'open' | 'closed';
 
+export type SupportTicketSource = 'neighbor' | 'staff_listing' | 'staff_event';
+
 export interface SupportTicket {
   id: string;
   openerUserId: string;
@@ -159,6 +161,12 @@ export interface SupportTicket {
   subject: string;
   status: TicketStatus;
   closedByUserId?: string | null;
+  ticketSource?: SupportTicketSource;
+  relatedItemId?: string | null;
+  relatedItemTitle?: string | null;
+  relatedEventId?: string | null;
+  relatedEventTitle?: string | null;
+  initiatedByUserId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

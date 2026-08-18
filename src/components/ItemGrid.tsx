@@ -23,6 +23,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
+import { isStaffRole } from '../lib/roles';
 import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
@@ -118,6 +119,7 @@ interface ItemGridProps {
   userProfile: UserProfile;
   engagement: ItemsEngagementApi;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
   onViewItem: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
@@ -129,6 +131,7 @@ export default function ItemGrid({
   userProfile,
   engagement,
   onInitiateChat,
+  onStaffListingChat,
   onViewItem,
   onViewProfile,
   onRefresh,
@@ -645,9 +648,14 @@ export default function ItemGrid({
                 onMessage={() =>
                   onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)
                 }
+                onStaffChat={onStaffListingChat ? () => onStaffListingChat(item) : undefined}
                 onViewProfile={onViewProfile}
                 distanceMeters={getItemDistance(item)}
-                onNavigate={item.userId !== userProfile.uid ? () => onViewItem(item) : undefined}
+                onNavigate={
+                  item.userId !== userProfile.uid && !isStaffRole(userProfile.role)
+                    ? () => onViewItem(item)
+                    : undefined
+                }
               />
             </div>
           ))}

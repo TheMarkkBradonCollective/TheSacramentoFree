@@ -34,7 +34,11 @@ import {
   migrateLocalSavedItemsToDb,
   getClaimRequestById,
   staffGetListingById,
+  findOrCreateStaffListingOutreachTicket,
+  findOrCreateStaffEventOutreachTicket,
 } from './supabase';
+import { confirmStaffEventOutreach, confirmStaffListingOutreach } from './lib/staffChatSafety';
+import { isStaffRole } from './lib/roles';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
@@ -1227,9 +1231,73 @@ export default function App() {
     [userProfile, detailItem?.id, loadItems, confirm],
   );
 
+  const handleOpenSupportTicket = useCallback((ticketId: string) => {
+    setInitialSupportTicketId(ticketId);
+    setActiveTab('chats');
+  }, []);
+
+  const handleStaffListingOutreach = useCallback(
+    async (item: ItemPost) => {
+      if (!userProfile || !isStaffRole(userProfile.role)) return;
+      if (blockedUserIds.has(item.userId)) return;
+
+      const confirmed = await confirmStaffListingOutreach(
+        confirm,
+        item.userDisplayName,
+        item.title,
+      );
+      if (!confirmed) return;
+
+      const result = await findOrCreateStaffListingOutreachTicket({ staff: userProfile, item });
+      if (!result.ok || !result.ticketId) {
+        await alert({
+          title: 'Could not open staff thread',
+          message: result.errorMessage || 'Could not open staff thread.',
+        });
+        return;
+      }
+
+      setDetailItem(null);
+      handleOpenSupportTicket(result.ticketId);
+    },
+    [userProfile, blockedUserIds, confirm, alert, handleOpenSupportTicket],
+  );
+
+  const handleStaffEventOutreach = useCallback(
+    async (event: CommunityEvent) => {
+      if (!userProfile || !isStaffRole(userProfile.role)) return;
+      if (blockedUserIds.has(event.userId)) return;
+
+      const confirmed = await confirmStaffEventOutreach(
+        confirm,
+        event.userDisplayName,
+        event.title,
+      );
+      if (!confirmed) return;
+
+      const result = await findOrCreateStaffEventOutreachTicket({ staff: userProfile, event });
+      if (!result.ok || !result.ticketId) {
+        await alert({
+          title: 'Could not open staff thread',
+          message: result.errorMessage || 'Could not open staff thread.',
+        });
+        return;
+      }
+
+      setDetailEvent(null);
+      handleOpenSupportTicket(result.ticketId);
+    },
+    [userProfile, blockedUserIds, confirm, alert, handleOpenSupportTicket],
+  );
+
   const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
+
+    if (isStaffRole(userProfile.role) && item) {
+      void handleStaffListingOutreach(item);
+      return;
+    }
 
     const participants = [userProfile.uid, posterUid].sort();
     const chatId = participants.join('_');
@@ -1307,11 +1375,6 @@ export default function App() {
     setActiveTab('chats');
   }, []);
 
-  const handleOpenSupportTicket = useCallback((ticketId: string) => {
-    setInitialSupportTicketId(ticketId);
-    setActiveTab('chats');
-  }, []);
-
   const handleViewListingId = useCallback(
     async (itemId: string) => {
       const fromFeed = items.find((i) => i.id === itemId);
@@ -1325,6 +1388,14 @@ export default function App() {
       engagement.setCommentsExpanded(item.id, true);
     },
     [items, engagement, handleViewItem],
+  );
+
+  const handleViewEventId = useCallback(
+    (eventId: string) => {
+      const event = events.find((e) => e.id === eventId);
+      if (event) setDetailEvent(event);
+    },
+    [events],
   );
 
   const handleClaimSubmitted = useCallback((chatId: string) => {
@@ -1613,6 +1684,7 @@ export default function App() {
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}
@@ -1655,6 +1727,7 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -1667,6 +1740,7 @@ export default function App() {
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}
@@ -1709,6 +1783,7 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
                 />
               ) : (
                 <DesktopView
@@ -1721,6 +1796,7 @@ export default function App() {
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}
@@ -1763,6 +1839,7 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
                 />
               )}
 
@@ -1860,7 +1937,7 @@ export default function App() {
                     void engagement.handleDeleteComment(detailItem.id, commentId)
                   }
                   onMessage={
-                    blockedUserIds.has(detailItem.userId)
+                    blockedUserIds.has(detailItem.userId) || isStaffRole(userProfile.role)
                       ? undefined
                       : () => {
                           handleInitiateChat(
@@ -1872,6 +1949,17 @@ export default function App() {
                           setDetailItem(null);
                         }
                   }
+                  onStaffChat={
+                    isStaffRole(userProfile.role) && !blockedUserIds.has(detailItem.userId)
+                      ? () => {
+                          void handleStaffListingOutreach(detailItem);
+                        }
+                      : undefined
+                  }
+                  onListingStaffAction={async () => {
+                    await refreshDetailItem();
+                    await loadItems(true);
+                  }}
                   userProfile={userProfile}
                   onClaimSubmitted={handleClaimSubmitted}
                   onOpenChat={(chatId) => {
@@ -1951,6 +2039,12 @@ export default function App() {
                     }
                   }}
                   onViewProfile={handleViewProfile}
+                  onStaffChat={
+                    isStaffRole(userProfile.role) && !blockedUserIds.has(detailEvent.userId)
+                      ? () => void handleStaffEventOutreach(detailEvent)
+                      : undefined
+                  }
+                  onEventStaffAction={() => void loadEvents(true)}
                   onSelectOccurrence={(occurrence) => setDetailEvent(occurrence)}
                   onEventUpdated={(updatedEvent) => {
                     setDetailEvent(updatedEvent);
