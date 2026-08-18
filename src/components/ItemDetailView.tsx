@@ -153,7 +153,7 @@ export default function ItemDetailView({
   return (
     <div
       id="item_detail_fullscreen"
-      className="fixed inset-0 z-[80] bg-app overflow-y-auto"
+      className="sbn-app-sheet overflow-y-auto"
       role="dialog"
       aria-modal="true"
     >

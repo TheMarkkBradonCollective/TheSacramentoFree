@@ -37,7 +37,7 @@ export default function FullScreenPanel({
 
   const panel = (
     <div
-      className={`fixed inset-0 ${nested ? 'z-[95]' : 'z-[90]'} bg-app flex flex-col font-sans`}
+      className={`sbn-app-sheet ${nested ? 'sbn-app-sheet-nested' : ''} flex flex-col font-sans`}
       role="dialog"
       aria-modal="true"
     >

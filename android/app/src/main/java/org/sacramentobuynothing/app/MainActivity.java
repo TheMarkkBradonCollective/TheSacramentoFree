@@ -13,6 +13,22 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         createNotificationChannel();
+        disableWebViewCache();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        disableWebViewCache();
+    }
+
+    private void disableWebViewCache() {
+        if (getBridge() == null || getBridge().getWebView() == null) {
+            return;
+        }
+        android.webkit.WebSettings settings = getBridge().getWebView().getSettings();
+        settings.setCacheMode(android.webkit.WebSettings.LOAD_NO_CACHE);
+        getBridge().getWebView().clearCache(true);
     }
 
     private void createNotificationChannel() {

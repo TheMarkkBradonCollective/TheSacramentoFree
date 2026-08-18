@@ -1,4 +1,8 @@
 import type { ItemPost, UserProfile } from '../types';
+import {
+  isPersistableListingImageUrl,
+  plainListingDescription,
+} from './listingContent';
 
 const PROFILE_KEY = 'sbn_profile_cache_v1';
 const ITEMS_KEY = 'sbn_items_cache_v1';
@@ -57,13 +61,25 @@ export function writeCachedProfile(profile: UserProfile): void {
 export function readCachedItems(): ItemPost[] {
   if (typeof window === 'undefined') return [];
   const cache = safeParse<ItemsCache>(localStorage.getItem(ITEMS_KEY));
-  return cache?.items?.length ? cache.items : [];
+  if (!cache?.items?.length) return [];
+  return cache.items.map((item) => ({
+    ...item,
+    description: plainListingDescription(item.description),
+    imageUrl: isPersistableListingImageUrl(item.imageUrl) ? item.imageUrl : undefined,
+    imageUrls: item.imageUrls?.filter((url) => isPersistableListingImageUrl(url)),
+  }));
 }
 
 export function writeCachedItems(items: ItemPost[]): void {
   if (!items.length) return;
   try {
-    const payload: ItemsCache = { savedAt: Date.now(), items: items.slice(0, 300) };
+    const slim = items.slice(0, 300).map((item) => ({
+      ...item,
+      description: plainListingDescription(item.description),
+      imageUrl: isPersistableListingImageUrl(item.imageUrl) ? item.imageUrl : undefined,
+      imageUrls: item.imageUrls?.filter((url) => isPersistableListingImageUrl(url)),
+    }));
+    const payload: ItemsCache = { savedAt: Date.now(), items: slim };
     localStorage.setItem(ITEMS_KEY, JSON.stringify(payload));
   } catch {
     /* storage full — ignore */

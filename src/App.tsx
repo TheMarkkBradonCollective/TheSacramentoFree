@@ -24,6 +24,7 @@ import {
   upsertSupabaseProfile,
   profileFromAuthUser,
   getSupabaseItems,
+  getSupabaseItemById,
   getSupabaseEvents,
   cancelSupabaseEvent,
   updateSupabaseItemStatus,
@@ -73,7 +74,7 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
-import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
+import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
@@ -158,7 +159,9 @@ export default function App() {
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
-  const loadItemsRef = useRef<(isBackground?: boolean, attempt?: number) => Promise<void>>(async () => {});
+  const loadItemsRef = useRef<
+    (isBackground?: boolean, attempt?: number, options?: { guest?: boolean }) => Promise<void>
+  >(async () => {});
   const itemsCountRef = useRef(initialAuth.items.length);
   const eventsCountRef = useRef(0);
   const itemsLoadGenRef = useRef(0);
@@ -256,10 +259,32 @@ export default function App() {
     }
   }, []);
 
-  const navigateToTab = useCallback((tab: AnyTab) => {
-    setActiveTab(tab);
-    persistActiveTab(tab as AppTab, userProfile?.uid);
-  }, [userProfile?.uid]);
+  const closeTransientOverlays = useCallback(() => {
+    setDetailItem(null);
+    setDetailEvent(null);
+    setViewProfileUid(null);
+    setLegalPanel(null);
+    setShowAwardsPanel(false);
+    setShowGoFundMeDetail(false);
+    closeNotificationsHub();
+  }, []);
+
+  const handleTabChange = useCallback(
+    (tab: AnyTab) => {
+      closeTransientOverlays();
+      setActiveTab(tab);
+      persistActiveTab(tab as AppTab, userProfile?.uid);
+    },
+    [closeTransientOverlays, userProfile?.uid],
+  );
+
+  const navigateToTab = useCallback(
+    (tab: AnyTab) => {
+      setActiveTab(tab);
+      persistActiveTab(tab as AppTab, userProfile?.uid);
+    },
+    [userProfile?.uid],
+  );
 
   const pendingDeepLinkPathRef = useRef<string | null>(
     typeof window !== 'undefined' ? readPendingDeepLinkPath() : null,
@@ -689,7 +714,9 @@ export default function App() {
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
         void syncProfileFromDb(session.user);
-      } else {
+      } else if (!hadSessionOnMountRef.current) {
+        // No cached session — this is a real guest. Do not wipe a restored
+        // session if getSession() races ahead of INITIAL_SESSION.
         setSessionUser(null);
         setUserProfile(null);
         clearSessionCache();
@@ -712,6 +739,7 @@ export default function App() {
       if (event === 'TOKEN_REFRESHED') return;
 
       if (session?.user) {
+        const alreadyInApp = !!lastSignedInUserIdRef.current;
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
         // Defer DB sync — never await inside this callback (Supabase auth deadlock).
@@ -720,7 +748,7 @@ export default function App() {
             void syncProfileFromDb(session.user);
           }
         }, 0);
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' && !alreadyInApp) {
           const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
           const hasDeepLink = Boolean(pendingPath && parsePushDeepLink(pendingPath));
           if (!hasDeepLink) {
@@ -733,22 +761,37 @@ export default function App() {
           }, 100);
         }
       } else {
-        const signedOutUserId = lastSignedInUserIdRef.current;
+        if (event === 'SIGNED_OUT') {
+          const signedOutUserId = lastSignedInUserIdRef.current;
+          lastSignedInUserIdRef.current = null;
+          profileSyncRef.current = null;
+          if (!logoutCleanupDoneRef.current) {
+            logoutCleanupDoneRef.current = true;
+            void clearNotificationDataOnLogout(signedOutUserId);
+          }
+          clearSessionCache();
+          clearAuthenticatedUiState();
+          setSessionUser(null);
+          setUserProfile(null);
+          setItems([]);
+          setIsAuthLoading(false);
+          resetTabStateForSignOut();
+          return;
+        }
+        // INITIAL_SESSION with no user: keep a restored cache. getSession() often
+        // races and would otherwise flash the public site through the signed-in app.
+        if (event === 'INITIAL_SESSION' && hadSessionOnMountRef.current) {
+          return;
+        }
+        if (event !== 'INITIAL_SESSION') return;
         lastSignedInUserIdRef.current = null;
         profileSyncRef.current = null;
-        if (!logoutCleanupDoneRef.current) {
-          logoutCleanupDoneRef.current = true;
-          void clearNotificationDataOnLogout(signedOutUserId);
-        }
         clearSessionCache();
         clearAuthenticatedUiState();
         setSessionUser(null);
         setUserProfile(null);
         setItems([]);
         setIsAuthLoading(false);
-        if (event === 'SIGNED_OUT') {
-          resetTabStateForSignOut();
-        }
       }
     });
 
@@ -774,15 +817,16 @@ export default function App() {
       }
 
       const scheduleRetry = () => {
-        if (isGuest || attempt >= 2) return;
+        if (attempt >= 2) return;
         window.setTimeout(() => {
           // Only the latest load generation may retry.
           if (gen !== itemsLoadGenRef.current) return;
           // Retries are always background so the UI is never stuck on "Loading…".
-          void loadItemsRef.current(true, attempt + 1);
+          void loadItemsRef.current(true, attempt + 1, options);
         }, 1200 * (attempt + 1));
       };
 
+      let loadedOk = false;
       try {
         if (!isGuest) {
           // Best-effort wait for the JWT. Do not block the feed forever —
@@ -797,6 +841,7 @@ export default function App() {
           'Items fetch timed out',
         );
         if (isStale()) return;
+        loadedOk = true;
 
         setItems((current) => {
           if (!isGuest && loadedItems.length === 0 && current.length > 0) {
@@ -820,7 +865,11 @@ export default function App() {
         // must not leave "Loading…" up after a newer attempt finishes.
         if (gen === itemsLoadGenRef.current) {
           setIsItemsLoading(false);
-          setItemsHydrated(true);
+          // A failed/empty fetch must not look like “the community has 0 posts”
+          // unless we actually completed a load (or we already have cached cards).
+          if (loadedOk || itemsCountRef.current > 0 || attempt >= 2) {
+            setItemsHydrated(true);
+          }
         }
       }
     },
@@ -904,11 +953,16 @@ export default function App() {
       updated.updatedAt !== detailItem.updatedAt ||
       updated.status !== detailItem.status ||
       updated.title !== detailItem.title ||
-      updated.description !== detailItem.description ||
+      (updated.description !== detailItem.description && updated.description) ||
       updated.pickupAttributionType !== detailItem.pickupAttributionType ||
       updated.pickupAttributionLabel !== detailItem.pickupAttributionLabel
     ) {
-      setDetailItem(updated);
+      setDetailItem({
+        ...updated,
+        description: updated.description || detailItem.description,
+        imageUrl: updated.imageUrl || detailItem.imageUrl,
+        imageUrls: updated.imageUrls?.length ? updated.imageUrls : detailItem.imageUrls,
+      });
     }
   }, [items, detailItem]);
 
@@ -1050,15 +1104,29 @@ export default function App() {
   }, [detailItem?.id]);
 
   const refreshDetailItem = useCallback(async () => {
-    const loadedItems = await getSupabaseItems();
-    setItems((current) => {
-      if (loadedItems.length === 0 && current.length > 0) return current;
-      return loadedItems;
-    });
-    setDetailItem((current) => {
-      if (!current) return null;
-      return loadedItems.find((i) => i.id === current.id) ?? null;
-    });
+    try {
+      const loadedItems = await getSupabaseItems();
+      setItems((current) => {
+        if (loadedItems.length === 0 && current.length > 0) return current;
+        return loadedItems;
+      });
+      setDetailItem((current) => {
+        if (!current) return null;
+        const next = loadedItems.find((i) => i.id === current.id);
+        if (!next) return current;
+        if (!next.description && current.description) {
+          return {
+            ...next,
+            description: current.description,
+            imageUrl: next.imageUrl || current.imageUrl,
+            imageUrls: next.imageUrls?.length ? next.imageUrls : current.imageUrls,
+          };
+        }
+        return next;
+      });
+    } catch (err) {
+      console.warn('Could not refresh listing detail:', err);
+    }
   }, []);
 
   const handleDetailUpdateStatus = async (
@@ -1182,6 +1250,34 @@ export default function App() {
     [blockedUserIds],
   );
 
+  const handleViewItem = useCallback((item: ItemPost) => {
+    setDetailItem(item);
+    if (item.description) return;
+    void getSupabaseItemById(item.id).then((full) => {
+      if (!full) return;
+      setDetailItem((current) => {
+        if (current?.id !== full.id) return current;
+        return {
+          ...full,
+          description: full.description || current.description,
+          imageUrl: full.imageUrl || current.imageUrl,
+          imageUrls: full.imageUrls?.length ? full.imageUrls : current.imageUrls,
+        };
+      });
+      setItems((current) =>
+        current.map((row) => {
+          if (row.id !== full.id) return row;
+          return {
+            ...row,
+            description: full.description || row.description,
+            imageUrl: full.imageUrl || row.imageUrl,
+            imageUrls: full.imageUrls?.length ? full.imageUrls : row.imageUrls,
+          };
+        }),
+      );
+    });
+  }, []);
+
   const handleOpenChatFromProfile = useCallback((chatId: string) => {
     setViewProfileUid(null);
     setInitialSelectedChatId(chatId);
@@ -1201,11 +1297,11 @@ export default function App() {
         setErrorMsg('That listing is no longer available.');
         return;
       }
-      setDetailItem(item);
+      handleViewItem(item);
       await engagement.ensureEngagementForPost(item.id);
       engagement.setCommentsExpanded(item.id, true);
     },
-    [items, engagement],
+    [items, engagement, handleViewItem],
   );
 
   const handleClaimSubmitted = useCallback((chatId: string) => {
@@ -1244,9 +1340,7 @@ export default function App() {
         if (existing) {
           openListing(existing);
         } else {
-          void getSupabaseItems().then((loaded) => {
-            openListing(loaded.find((item) => item.id === target.listingId));
-          });
+          void getSupabaseItemById(target.listingId).then((item) => openListing(item ?? undefined));
         }
         tabForUrl = 'feed';
         navigateToTab('feed');
@@ -1428,7 +1522,13 @@ export default function App() {
             isAuthLoading={isAuthLoading}
             items={items}
             isItemsLoading={isItemsLoading}
-            onViewListing={setGuestDetailItem}
+            onViewListing={(item) => {
+              setGuestDetailItem(item);
+              if (item.description) return;
+              void getSupabaseItemById(item.id).then((full) => {
+                if (full) setGuestDetailItem((current) => (current?.id === full.id ? full : current));
+              });
+            }}
             onRequireSignIn={() => {
               window.location.hash = '#/login';
             }}
@@ -1480,7 +1580,7 @@ export default function App() {
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={handleTabChange}
                   onOpenNewPost={openNewPost}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
@@ -1498,7 +1598,7 @@ export default function App() {
                   isEventsLoading={isEventsLoading}
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
-                  onViewItem={setDetailItem}
+                  onViewItem={handleViewItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
@@ -1533,7 +1633,7 @@ export default function App() {
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={handleTabChange}
                   onOpenNewPost={openNewPost}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
@@ -1551,7 +1651,7 @@ export default function App() {
                   isEventsLoading={isEventsLoading}
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
-                  onViewItem={setDetailItem}
+                  onViewItem={handleViewItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
@@ -1586,7 +1686,7 @@ export default function App() {
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={handleTabChange}
                   onOpenNewPost={openNewPost}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
@@ -1604,7 +1704,7 @@ export default function App() {
                   isEventsLoading={isEventsLoading}
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
-                  onViewItem={setDetailItem}
+                  onViewItem={handleViewItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onViewEvent={setDetailEvent}
@@ -1687,7 +1787,7 @@ export default function App() {
                   listingHints={visibleItems}
                   onClose={() => setViewProfileUid(null)}
                   onOpenChat={handleOpenChatFromProfile}
-                  onViewPost={setDetailItem}
+                  onViewPost={handleViewItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onBlockListChanged={handleBlockListChanged}

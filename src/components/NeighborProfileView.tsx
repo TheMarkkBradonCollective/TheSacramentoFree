@@ -277,7 +277,7 @@ export default function NeighborProfileView({
 
   return (
     <div
-      className="fixed inset-0 z-[75] bg-app overflow-y-auto"
+      className="sbn-app-sheet overflow-y-auto"
       role="dialog"
       aria-modal="true"
       id="neighbor_profile_overlay"

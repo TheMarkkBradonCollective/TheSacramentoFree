@@ -89,7 +89,7 @@ export default function EventDetailView({
   const pastSiblings = seriesSiblings.filter((sibling) => !isEventUpcoming(sibling));
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-app">
+    <div className="sbn-app-sheet flex flex-col">
       <header className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-app bg-surface/95 backdrop-blur">
         <button
           type="button"
