@@ -761,6 +761,19 @@ function mapItemRows(rows: unknown[]): ItemPost[] {
   return items;
 }
 
+let itemFeedDescriptionRpc: boolean | null = null;
+
+async function itemFeedDescription(itemId: string): Promise<string | null> {
+  if (!itemId || itemFeedDescriptionRpc === false) return null;
+  const { data, error } = await supabase.rpc('item_feed_description', { item_id: itemId });
+  if (error) {
+    itemFeedDescriptionRpc = false;
+    return null;
+  }
+  itemFeedDescriptionRpc = true;
+  return typeof data === 'string' ? data : null;
+}
+
 /**
  * Load every listing without pulling multi-megabyte `data:image` camera dumps
  * that some descriptions still store in `[PHOTOS:]`.
@@ -792,6 +805,22 @@ async function fetchItemRowsForFeed(): Promise<Record<string, unknown>[]> {
     descById.set(id, plainListingDescription((row as { description?: string }).description));
   }
 
+  const missing = (heads ?? []).filter((row) => !descById.get(String((row as { id?: string }).id ?? '')));
+  if (missing.length > 0) {
+    const probeId = String((missing[0] as { id?: string }).id ?? '');
+    const probe = await itemFeedDescription(probeId);
+    if (probe != null) {
+      descById.set(probeId, plainListingDescription(probe));
+      await Promise.all(
+        missing.slice(1).map(async (row) => {
+          const id = String((row as { id?: string }).id ?? '');
+          const text = await itemFeedDescription(id);
+          if (text != null) descById.set(id, plainListingDescription(text));
+        }),
+      );
+    }
+  }
+
   return (heads ?? []).map((row) => {
     const id = String((row as { id?: string }).id ?? '');
     return {
@@ -816,14 +845,31 @@ export async function getSupabaseItems(): Promise<ItemPost[]> {
 export async function getSupabaseItemById(itemId: string): Promise<ItemPost | null> {
   if (!itemId) return null;
   try {
-    const { data, error } = await supabase.from('items').select('*').eq('id', itemId).maybeSingle();
+    const headQuery = supabase.from('items').select(ITEM_FEED_COLUMNS).eq('id', itemId).maybeSingle();
+    const { data: head, error } = await headQuery;
     if (error) {
       handleSupabaseError(error, 'items');
       return null;
     }
-    if (!data) return null;
+    if (!head) return null;
+
+    const { data: body } = await supabase
+      .from('items')
+      .select('description')
+      .eq('id', itemId)
+      .not('description', 'ilike', '%data:image%')
+      .maybeSingle();
+
+    let description = (body as { description?: string } | null)?.description || '';
+    if (!description) {
+      description = (await itemFeedDescription(itemId)) || '';
+    }
+
     setSupabaseConfigurationState(true);
-    return normalizeItemFromRow(data as ItemPost);
+    return normalizeItemFromRow({
+      ...(head as ItemPost),
+      description,
+    });
   } catch (err: any) {
     console.warn('Supabase item fetch failed:', err);
     handleSupabaseError(err, 'items');

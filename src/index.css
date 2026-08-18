@@ -1725,6 +1725,10 @@ html.sbn-keyboard-open .sbn-mobile-main {
   bottom: var(--sbn-keyboard-inset);
 }
 
+html.sbn-keyboard-open:has(.sbn-mobile-shell) .sbn-app-sheet {
+  bottom: var(--sbn-keyboard-inset);
+}
+
 html.sbn-keyboard-open .sbn-mobile-nav {
   opacity: 0;
   pointer-events: none;

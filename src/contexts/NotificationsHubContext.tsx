@@ -61,6 +61,7 @@ type NotificationsHubContextValue = {
 const NotificationsHubContext = createContext<NotificationsHubContextValue | null>(null);
 
 let openNotificationsHubGlobal: ((tab?: NotificationsHubTab) => void) | null = null;
+let closeNotificationsHubGlobal: (() => void) | null = null;
 
 function resolveHubTab(tab: NotificationsHubTab | 'notifications' | 'listings'): NotificationsHubTab {
   if (tab === 'listings') return 'notifications';
@@ -70,6 +71,10 @@ function resolveHubTab(tab: NotificationsHubTab | 'notifications' | 'listings'):
 /** Open the navbar bell panel from outside React (e.g. push deep links in App.tsx). */
 export function openNotificationsHub(tab: NotificationsHubTab | 'listings' = 'notifications') {
   openNotificationsHubGlobal?.(resolveHubTab(tab));
+}
+
+export function closeNotificationsHub() {
+  closeNotificationsHubGlobal?.();
 }
 
 export function useNotificationsHub(): NotificationsHubContextValue {
@@ -137,8 +142,10 @@ export function NotificationsHubProvider({
 
   useEffect(() => {
     openNotificationsHubGlobal = openHub;
+    closeNotificationsHubGlobal = () => setOpen(false);
     return () => {
       openNotificationsHubGlobal = null;
+      closeNotificationsHubGlobal = null;
     };
   }, [openHub]);
 

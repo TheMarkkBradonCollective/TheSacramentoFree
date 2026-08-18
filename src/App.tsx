@@ -74,7 +74,7 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
-import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
+import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
@@ -259,10 +259,32 @@ export default function App() {
     }
   }, []);
 
-  const navigateToTab = useCallback((tab: AnyTab) => {
-    setActiveTab(tab);
-    persistActiveTab(tab as AppTab, userProfile?.uid);
-  }, [userProfile?.uid]);
+  const closeTransientOverlays = useCallback(() => {
+    setDetailItem(null);
+    setDetailEvent(null);
+    setViewProfileUid(null);
+    setLegalPanel(null);
+    setShowAwardsPanel(false);
+    setShowGoFundMeDetail(false);
+    closeNotificationsHub();
+  }, []);
+
+  const handleTabChange = useCallback(
+    (tab: AnyTab) => {
+      closeTransientOverlays();
+      setActiveTab(tab);
+      persistActiveTab(tab as AppTab, userProfile?.uid);
+    },
+    [closeTransientOverlays, userProfile?.uid],
+  );
+
+  const navigateToTab = useCallback(
+    (tab: AnyTab) => {
+      setActiveTab(tab);
+      persistActiveTab(tab as AppTab, userProfile?.uid);
+    },
+    [userProfile?.uid],
+  );
 
   const pendingDeepLinkPathRef = useRef<string | null>(
     typeof window !== 'undefined' ? readPendingDeepLinkPath() : null,
@@ -739,23 +761,37 @@ export default function App() {
           }, 100);
         }
       } else {
-        if (event !== 'SIGNED_OUT' && event !== 'INITIAL_SESSION') return;
-        const signedOutUserId = lastSignedInUserIdRef.current;
+        if (event === 'SIGNED_OUT') {
+          const signedOutUserId = lastSignedInUserIdRef.current;
+          lastSignedInUserIdRef.current = null;
+          profileSyncRef.current = null;
+          if (!logoutCleanupDoneRef.current) {
+            logoutCleanupDoneRef.current = true;
+            void clearNotificationDataOnLogout(signedOutUserId);
+          }
+          clearSessionCache();
+          clearAuthenticatedUiState();
+          setSessionUser(null);
+          setUserProfile(null);
+          setItems([]);
+          setIsAuthLoading(false);
+          resetTabStateForSignOut();
+          return;
+        }
+        // INITIAL_SESSION with no user: keep a restored cache. getSession() often
+        // races and would otherwise flash the public site through the signed-in app.
+        if (event === 'INITIAL_SESSION' && hadSessionOnMountRef.current) {
+          return;
+        }
+        if (event !== 'INITIAL_SESSION') return;
         lastSignedInUserIdRef.current = null;
         profileSyncRef.current = null;
-        if (!logoutCleanupDoneRef.current) {
-          logoutCleanupDoneRef.current = true;
-          void clearNotificationDataOnLogout(signedOutUserId);
-        }
         clearSessionCache();
         clearAuthenticatedUiState();
         setSessionUser(null);
         setUserProfile(null);
         setItems([]);
         setIsAuthLoading(false);
-        if (event === 'SIGNED_OUT') {
-          resetTabStateForSignOut();
-        }
       }
     });
 
@@ -1544,7 +1580,7 @@ export default function App() {
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={handleTabChange}
                   onOpenNewPost={openNewPost}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
@@ -1597,7 +1633,7 @@ export default function App() {
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={handleTabChange}
                   onOpenNewPost={openNewPost}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
@@ -1650,7 +1686,7 @@ export default function App() {
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={handleTabChange}
                   onOpenNewPost={openNewPost}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}

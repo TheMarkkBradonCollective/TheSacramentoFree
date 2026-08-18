@@ -74,6 +74,7 @@ export async function registerServiceWorker() {
   await clearAppAssetCaches();
   await unregisterLegacyServiceWorkers();
 
+  const hadController = !!navigator.serviceWorker.controller;
   let refreshing = false;
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -84,6 +85,8 @@ export async function registerServiceWorker() {
     } catch {
       // sessionStorage may be unavailable
     }
+    // First install has no previous controller; this document is already live.
+    if (!hadController) return;
     refreshing = true;
     window.location.reload();
   });
