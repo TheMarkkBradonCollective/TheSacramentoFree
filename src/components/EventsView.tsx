@@ -13,6 +13,7 @@ import { isEventUpcoming } from '../lib/eventRsvp';
 import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
+import CollapsibleFilterSection from './CollapsibleFilterSection';
 import EventCard from './EventCard';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
@@ -142,6 +143,12 @@ export default function EventsView({
     searchTerm.trim() !== '' ||
     sortBy !== 'soonest';
 
+  const toggleFilterCount = [
+    sortBy !== 'soonest',
+    timeFilter !== 'all',
+    activeQuickPicks.size > 0,
+  ].filter(Boolean).length;
+
   const clearFilters = () => {
     setSearchTerm('');
     setTimeFilter('all');
@@ -269,54 +276,60 @@ export default function EventsView({
           />
         </div>
 
-        <div className="space-y-3" id="events_filter_switches">
-          <div className="space-y-1.5" id="events_sort_bar">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort events</p>
-            <div className="flex flex-wrap gap-2">
-              {SORT_OPTIONS.map(({ value, label }) => (
-                <FilterLabeledSwitch
-                  key={value}
-                  id={`events_sort_${value}`}
-                  label={label}
-                  checked={sortBy === value}
-                  onChange={handleSortSwitch(value)}
-                />
-              ))}
+        <CollapsibleFilterSection
+          id="events_filter_toggles_toggle"
+          title="Sort & filters"
+          activeCount={toggleFilterCount}
+        >
+          <div className="space-y-3" id="events_filter_switches">
+            <div className="space-y-1.5" id="events_sort_bar">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort events</p>
+              <div className="flex flex-wrap gap-2">
+                {SORT_OPTIONS.map(({ value, label }) => (
+                  <FilterLabeledSwitch
+                    key={value}
+                    id={`events_sort_${value}`}
+                    label={label}
+                    checked={sortBy === value}
+                    onChange={handleSortSwitch(value)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted">When</p>
+              <div className="flex flex-wrap gap-2" id="events_time_filter">
+                {TIME_FILTER_OPTIONS.map(({ value, label }) => (
+                  <FilterLabeledSwitch
+                    key={value}
+                    id={`events_time_${value}`}
+                    label={label}
+                    checked={timeFilter === value}
+                    onChange={handleTimeSwitch(value)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+              <div className="flex flex-wrap gap-2">
+                {EVENT_QUICK_PICKS.map(({ id, label }) => (
+                  <FilterLabeledSwitch
+                    key={id}
+                    id={`events_quick_pick_${id}`}
+                    label={label}
+                    checked={activeQuickPicks.has(id)}
+                    onChange={handleQuickPickSwitch(id)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
+        </CollapsibleFilterSection>
 
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">When</p>
-            <div className="flex flex-wrap gap-2" id="events_time_filter">
-              {TIME_FILTER_OPTIONS.map(({ value, label }) => (
-                <FilterLabeledSwitch
-                  key={value}
-                  id={`events_time_${value}`}
-                  label={label}
-                  checked={timeFilter === value}
-                  onChange={handleTimeSwitch(value)}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
-            <div className="flex flex-wrap gap-2">
-              {EVENT_QUICK_PICKS.map(({ id, label }) => (
-                <FilterLabeledSwitch
-                  key={id}
-                  id={`events_quick_pick_${id}`}
-                  label={label}
-                  checked={activeQuickPicks.has(id)}
-                  onChange={handleQuickPickSwitch(id)}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="pt-1 border-t border-app">
+        <div className="pt-0 border-t border-app">
           <button
             type="button"
             onClick={() => setFiltersOpen((open) => !open)}
