@@ -30,6 +30,11 @@ const DIRECTOR_NAME = 'Markeith White';
 const DIRECTOR_TITLE = 'Buy Nothing Director';
 const PUBLISHED_AT = '2026-07-26T23:20:00.000Z';
 const OUTAGE_PUBLISHED_AT = '2026-08-18T08:20:00.000Z';
+const OUTAGE_UPDATED_AT = '2026-08-18T12:00:00.000Z';
+const MAP_ROUTE_PUBLISHED_AT = '2026-08-18T09:30:00.000Z';
+const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
+const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
+const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
 
 function update(
   id: string,
@@ -38,6 +43,7 @@ function update(
   body: string,
   detail: string,
   publishedAt: string = PUBLISHED_AT,
+  updatedAt: string = publishedAt,
 ): SeededAppUpdate {
   return {
     id,
@@ -49,7 +55,7 @@ function update(
     directorTitle: DIRECTOR_TITLE,
     postedByUserId: CHANGELOG_AUTHOR_UID,
     createdAt: publishedAt,
-    updatedAt: publishedAt,
+    updatedAt,
   };
 }
 
@@ -60,6 +66,7 @@ function news(
   body: string,
   detail: string,
   publishedAt: string = PUBLISHED_AT,
+  updatedAt: string = publishedAt,
 ): SeededHelpAnnouncement {
   return {
     id,
@@ -71,34 +78,130 @@ function news(
     authorTitle: DIRECTOR_TITLE,
     postedByUserId: CHANGELOG_AUTHOR_UID,
     createdAt: publishedAt,
-    updatedAt: publishedAt,
+    updatedAt,
   };
 }
 
-/** Latest Update posts — merged with Supabase so neighbors always see current release notes. */
+/** Latest Update posts — merged with Supabase so neighbors always see current release notes.
+ * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_map-route-apk-0011',
+    '2026-08-18',
+    'Map routes and live updates are smoother — new APK',
+    'Tapping a listing on the map no longer flashes a frozen route. Live listing updates stay on screen instead of reloading the page. Android beta v0.1.0.0011 is on the Download page.',
+    `WHAT NEIGHBORS SEE
+If you tapped a pin and the orange driving line blinked, the distance did not change, or you looked stuck on the map — that is fixed. The line and mileage now update when you pick a different listing, and they stay put while you are standing still.
+
+Live posts should also stop making the whole site blink or jump back to a loading screen while you are looking.
+
+New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0011). The app you already have still loads the live website, so reopening it picks up the map fix too.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/hooks/usePreviewDrivingRoute.ts — keep the last good route; refetch only when the pin or walker actually moved.
+- src/components/SacramentoMapView.tsx + MapNavigationView.tsx — no more clear-then-reload splash; delayed WebView GPS is not dropped.
+- src/pwa/appUpdateWatcher.ts + src/hooks/useItemsRealtime.ts — apply live data and deploys without a full-page flash.
+- android/app/build.gradle + public/android-version.json — beta 0.1.0.0011 (versionCode 11).
+
+HISTORY
+2026-08-18 — Merged outage notes (PR #190), quiet live updates (PR #191), and route-glitch fix (PR #192), then shipped Android beta 0011.`,
+    MAP_ROUTE_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_login-crash-fix',
     '2026-08-18',
     'Sign-in is fixed — website and app are back',
     'After login, the website and Android app crashed on “Something went wrong.” That bug is fixed. Sign in again and you should land on the map. A new APK is on the Download page.',
-    `What happened:
-• A small code mistake in Messages shipped with a Play Store review change.
-• It only ran after you signed in, so the public site looked fine — then the signed-in app crashed for everyone, website and APK.
+    `WHAT NEIGHBORS SEE
+If you signed in this morning and saw “Something went wrong,” that was on us. Sign-in is working again on the website and in the Android app.
 
-What we fixed:
-• Restored the missing React hooks in Messages so the signed-in shell can render.
-• Added a Sign out button on the error screen so a future crash is easier to recover from.
-• Shipped Android APK beta v0.1.0.0010 with the same fix.
+You can keep using the same app you already have. Open it again, or refresh the website, then sign in as usual. If the error is still sitting on the screen, tap Sign out, then sign back in. New APK: https://www.sacramentobuynothing.com/download
 
-What to do:
-• Website: refresh, then sign in.
-• Android APK: open the app (it loads the live site) or install the new build from sacramentobuynothing.com/download.
+Sorry for the scare. Thank you for staying with Sacramento Buy Nothing.
 
-Sorry for the downtime. Thank you for sticking with Sacramento Buy Nothing.
+— Mark
 
-— Mark`,
+WHERE TO LOOK IN CODE
+- src/components/ChatSystem.tsx — restore the React hooks import (useState, useEffect, useRef, useCallback, useMemo). ChatSystem still mounts after login even when you are on Map or Stuff, so a missing hook name crashes the whole signed-in app.
+- src/components/AppErrorBoundary.tsx — Sign out clears the cached session, calls supabase.auth.signOut(), then sends people home. Without that, a crash after login loops because the session is still saved.
+- src/App.tsx — /updates, /news, and /announcements keep the Notifications hub instead of being overwritten by the last Map/Events tab.
+- src/lib/pushDeepLink.ts — /news, /announcements, and /notifications/updates aliases for the in-app tabs.
+- android/app/build.gradle + public/android-version.json — beta 0.1.0.0010 (versionCode 10). Existing Capacitor APKs still load the live site, so reopening the old app also picks up the web fix.
+- shared/changelogSeed.ts + complete-schema.sql — this neighbor note and the matching News post. Cron /api/cron/publish-changelog upserts seeds (schedule 40 23 * * *).
+- scripts/supabase-migration-aug-18-2026-outage.sql — paste into the Supabase SQL editor if you need the rows immediately instead of waiting for cron.
+
+HISTORY
+2026-08-18 — After login, both the website and Android app showed the error screen. Public pages still worked. Login itself succeeded; the crash happened on the first signed-in render. Production JS was index-BHuwUyoa.js after the fix (PR #189, merge 9bedf63). Play review account used to reproduce: playstore-review@sacramentobuynothing.com.
+
+Root cause: PR #187 (commit 7c0e3d0, “Hide Give and Chat for browse-only guests”) replaced the ChatSystem React hooks import with useBrowseOnly and never put the hooks back. Render threw ReferenceError: useState is not defined.
+
+Fix: restore the hooks import, keep useBrowseOnly, add Sign out on the error screen, bump the Android beta to 0010, and post this Update plus News so neighbors see we are back.`,
     OUTAGE_PUBLISHED_AT,
+    OUTAGE_UPDATED_AT,
+  ),
+  update(
+    '2026-08-13_android-www-api',
+    '2026-08-13',
+    'Android app can reach the site again',
+    'Some Android installs showed “Failed to fetch” because the app called the apex domain while the WebView is on www. That origin mismatch is fixed — reopen the app and it should load.',
+    `WHAT NEIGHBORS SEE
+If the Android app could open but listings, sign-in, or buttons failed with “Failed to fetch,” that was a www vs non-www mismatch. Reopen the app. You do not need a new install for the web fix.
+
+Download page: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/lib/appOrigin.ts — native WebView uses window.location.origin so /api/* stays on the same host (www).
+- src/lib/apkDownload.ts + capacitor.config.ts — canonical origin is https://www.sacramentobuynothing.com (VITE_APP_URL / CAPACITOR_SERVER_URL).
+- docs/android-apk.md — build env must use the www origin, not the apex domain.
+
+HISTORY
+2026-08-13 — PR #182 (fabb421). Apex redirects to www, but Capacitor server.url is www, so API calls to the apex host were blocked by CSP connect-src 'self'.`,
+    ANDROID_WWW_PUBLISHED_AT,
+  ),
+  update(
+    '2026-07-29_repeat-event-series',
+    '2026-07-29',
+    'Repeat events show as one series',
+    'Recurring community events now group into one card on the feed and map. Posters can add upcoming dates to a series they already posted.',
+    `WHAT NEIGHBORS SEE
+A weekly or monthly gathering is one event series instead of a pile of duplicate cards. Open it to see upcoming dates. Posters can add more dates from the event screen.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- Event series merge in feed/map (repeat event series work from 2026-07-28 / 2026-07-29).
+- Posters: EventDetailView → Add dates for an existing series.
+- scripts/seed-lucid-fremont-events-2026.sql — Lucid Winery 2026 schedule seed.
+
+HISTORY
+2026-07-28 — Add repeat event series + ability to add upcoming dates (PR #171).
+2026-07-29 — Merge series into one card in feed and map (cf359a5).`,
+    EVENT_SERIES_PUBLISHED_AT,
+  ),
+  update(
+    '2026-07-29_signed-apk-auto-update',
+    '2026-07-29',
+    'Android download is a signed app — no unsafe warning',
+    'The Download page now serves a signed release APK, so Android should stop calling it an unsafe debug build. The installed app can also pick up website fixes without a new install.',
+    `WHAT NEIGHBORS SEE
+Install from https://www.sacramentobuynothing.com/download. Use the signed release APK (not an old debug file). After install, many website fixes arrive the next time you open the app because the APK loads the live site.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- npm run android:apk — signed release via android/keystore.properties.
+- public/android-version.json + public/downloads/ — versioned sideload files.
+- PWA/APK auto-update splash (86b3732, 2026-07-28).
+- Status bar overlap + push-permission reload, build 6 (41f23cc, 2026-07-29).
+
+HISTORY
+2026-07-28 — Instant PWA/APK auto-updates and beta version on boot splash.
+2026-07-29 — Signed release instead of debug (unsafe Play Protect warning); versioned APK filenames; status bar fix.`,
+    SIGNED_APK_PUBLISHED_AT,
   ),
   update(
     '2026-07-26_android-apk-1-1-0',
@@ -209,27 +312,68 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
   news(
+    '2026-08-18_smoother-map-apk',
+    '2026-08-18',
+    'Smoother map and a new Android download',
+    'Tapping a listing on the map should show a real driving distance now, without the line blinking in place. A new APK (beta v0.1.0.0011) is on the Download page.',
+    `WHAT NEIGHBORS SEE
+If the orange route on the map flashed, the miles stayed the same, or you looked frozen after tapping a pin — that is fixed. Live listings should also stop making the page blink while you are looking.
+
+Download: https://www.sacramentobuynothing.com/download (beta v0.1.0.0011). Reopening the app you already have also picks up the website fix.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_map-route-apk-0011.
+
+HISTORY
+2026-08-18 — Map route glitches, live-update flashes, and Android beta 0011.`,
+    MAP_ROUTE_PUBLISHED_AT,
+  ),
+  news(
     '2026-08-18_we-are-back',
     '2026-08-18',
     'We are back — sorry we were down after login',
     'If you signed in today and only saw “Something went wrong,” that was us, not you. The website and app are fixed. Sign in again — you should get the map, feed, and messages.',
-    `Neighbors,
+    `WHAT NEIGHBORS SEE
+Neighbors,
 
 We were down after login on both the website and the Android app. You could reach the public pages and sign in, then the community froze on an error screen. Refreshing did not help because you were still signed in.
 
-Why: a Play Store review change accidentally removed a required line of code from Messages. Messages loads as soon as you sign in, so every neighbor hit the crash.
+That is fixed. Sign in again. If the error screen is still up, tap Sign out first, then sign back in. You do not need a new app install. New APK: https://www.sacramentobuynothing.com/download
 
-What is fixed:
-• Sign-in opens the community again on the website and in the app.
-• The error screen now has Sign out if this ever happens again.
-• A new Android APK (beta v0.1.0.0010) is on sacramentobuynothing.com/download.
+I am sorry we were down. Thank you for hanging in — and for giving freely in Sacramento.
 
-If the app still looks stuck, close it fully and reopen, or install the new APK over the old one. Message staff from Help & support if you are still locked out.
+— Mark
 
-Thank you for your patience — and for giving freely in Sacramento.
+WHERE TO LOOK IN CODE
+Same notes as Update 2026-08-18_login-crash-fix: ChatSystem.tsx hooks import, AppErrorBoundary Sign out, /updates routing, Android 0010, changelog seeds, and scripts/supabase-migration-aug-18-2026-outage.sql.
 
-— Mark`,
+HISTORY
+2026-08-18 — Same outage as the Update post. News is the director announcement in Notifications → News. Update is the product note in Notifications → Updates. Both stay published so neighbors who only check one tab still see we are back.
+
+Root cause: PR #187 removed ChatSystem React hooks. Fix: PR #189.`,
     OUTAGE_PUBLISHED_AT,
+    OUTAGE_UPDATED_AT,
+  ),
+  news(
+    '2026-08-13_android-can-load',
+    '2026-08-13',
+    'Android app talking to the site again',
+    'If the Android app opened but nothing would load (“Failed to fetch”), that is fixed. Reopen the app — it should reach the community on www.sacramentobuynothing.com.',
+    `WHAT NEIGHBORS SEE
+A few Android neighbors could open the app but not load listings or sign in. The app was calling the wrong hostname. That is fixed. Close the app fully and reopen.
+
+Download: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-13_android-www-api (src/lib/appOrigin.ts, www vs apex).
+
+HISTORY
+2026-08-13 — PR #182.`,
+    ANDROID_WWW_PUBLISHED_AT,
   ),
   news(
     '2026-07-26_apk-download-fixed',
@@ -284,8 +428,9 @@ export function mergeByIdNewestFirst<T extends { id: string; date: string; updat
   live: T[],
 ): T[] {
   const byId = new Map<string, T>();
-  for (const row of seeded) byId.set(row.id, row);
+  // Live-only rows first; seeded ids overwrite so shared/changelogSeed.ts stays canonical.
   for (const row of live) byId.set(row.id, row);
+  for (const row of seeded) byId.set(row.id, row);
   return [...byId.values()].sort((a, b) => {
     const dateCmp = b.date.localeCompare(a.date);
     if (dateCmp !== 0) return dateCmp;

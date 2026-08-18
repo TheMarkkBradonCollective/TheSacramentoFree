@@ -40,9 +40,7 @@ export default function MapSelectionRouteRow({
   return (
     <div className="mt-2 pt-2 border-t border-app flex items-center gap-2">
       <div className="flex-1 min-w-0">
-        {routeLoading ? (
-          <p className="text-[9px] font-medium text-muted animate-pulse">Calculating route…</p>
-        ) : distanceMeters != null ? (
+        {distanceMeters != null ? (
           <>
             <p className="text-[10px] font-bold text-app leading-snug">
               <span className="text-accent">{formatRouteDistance(distanceMeters)}</span>
@@ -58,10 +56,12 @@ export default function MapSelectionRouteRow({
             {!hasLiveGps && (
               <p className="text-[7.5px] text-subtle mt-0.5">Enable GPS for distance from you</p>
             )}
-            {!routeOnMap && distanceMeters != null && (
+            {!routeOnMap && (
               <p className="text-[7.5px] text-subtle mt-0.5">Road route loading…</p>
             )}
           </>
+        ) : routeLoading ? (
+          <p className="text-[9px] font-medium text-muted animate-pulse">Calculating route…</p>
         ) : null}
       </div>
       <div className="flex shrink-0 gap-1">

@@ -1,3 +1,5 @@
+import { geolocationAgeMs } from './mapRoute';
+
 type PositionListener = (position: GeolocationPosition) => void;
 type ErrorListener = (error: GeolocationPositionError) => void;
 
@@ -116,5 +118,5 @@ export function getLastLivePosition(): GeolocationPosition | null {
 /** Age of the last cached GPS fix in milliseconds, or null if none. */
 export function getLastLivePositionAgeMs(): number | null {
   if (!lastPosition) return null;
-  return Math.max(0, Date.now() - lastPosition.timestamp);
+  return geolocationAgeMs(lastPosition);
 }

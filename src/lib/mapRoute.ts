@@ -31,6 +31,27 @@ export function haversineMeters(from: LatLng, to: LatLng): number {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a));
 }
 
+/** True when two points are within `meters` of each other. */
+export function sameLatLng(
+  a: LatLng | null | undefined,
+  b: LatLng | null | undefined,
+  meters = 8,
+): boolean {
+  if (!a || !b) return a === b;
+  return haversineMeters(a, b) <= meters;
+}
+
+/**
+ * Age of a GeolocationPosition. Some WebViews report a monotonic timestamp
+ * (not epoch ms); treat those as fresh so the puck can move.
+ */
+export function geolocationAgeMs(position: { timestamp: number }): number {
+  const ts = position.timestamp;
+  if (!Number.isFinite(ts)) return 0;
+  if (ts > 0 && ts < 1_000_000_000_000) return 0;
+  return Math.max(0, Date.now() - ts);
+}
+
 /** Rough driving estimate when OSRM is unavailable. */
 export function estimateDrivingStats(from: LatLng, to: LatLng): Pick<DrivingRouteResult, 'distanceMeters' | 'durationSeconds'> {
   const straight = haversineMeters(from, to);

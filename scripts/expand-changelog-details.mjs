@@ -56,6 +56,75 @@ function escSql(s) {
 
 // ─── Detail content keyed by app_updates.id ───────────────────────────────
 const RAW_DETAILS = {
+  '2026-08-18_login-crash-fix': `WHAT NEIGHBORS SEE
+If you signed in this morning and saw “Something went wrong,” that was on us. Sign-in is working again on the website and in the Android app.
+
+You can keep using the same app you already have. Open it again, or refresh the website, then sign in as usual. If the error is still sitting on the screen, tap Sign out, then sign back in. New APK: https://www.sacramentobuynothing.com/download
+
+Sorry for the scare. Thank you for staying with Sacramento Buy Nothing.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/ChatSystem.tsx — restore the React hooks import (useState, useEffect, useRef, useCallback, useMemo). ChatSystem still mounts after login even when you are on Map or Stuff, so a missing hook name crashes the whole signed-in app.
+- src/components/AppErrorBoundary.tsx — Sign out clears the cached session, calls supabase.auth.signOut(), then sends people home. Without that, a crash after login loops because the session is still saved.
+- src/App.tsx — /updates, /news, and /announcements keep the Notifications hub instead of being overwritten by the last Map/Events tab.
+- src/lib/pushDeepLink.ts — /news, /announcements, and /notifications/updates aliases for the in-app tabs.
+- android/app/build.gradle + public/android-version.json — beta 0.1.0.0010 (versionCode 10). Existing Capacitor APKs still load the live site, so reopening the old app also picks up the web fix.
+- shared/changelogSeed.ts + complete-schema.sql — this neighbor note and the matching News post. Cron /api/cron/publish-changelog upserts seeds (schedule 40 23 * * *).
+- scripts/supabase-migration-aug-18-2026-outage.sql — paste into the Supabase SQL editor if you need the rows immediately instead of waiting for cron.
+
+HISTORY
+2026-08-18 — After login, both the website and Android app showed the error screen. Public pages still worked. Login itself succeeded; the crash happened on the first signed-in render. Production JS was index-BHuwUyoa.js after the fix (PR #189, merge 9bedf63). Play review account used to reproduce: playstore-review@sacramentobuynothing.com.
+
+Root cause: PR #187 (commit 7c0e3d0, “Hide Give and Chat for browse-only guests”) replaced the ChatSystem React hooks import with useBrowseOnly and never put the hooks back. Render threw ReferenceError: useState is not defined.
+
+Fix: restore the hooks import, keep useBrowseOnly, add Sign out on the error screen, bump the Android beta to 0010, and post this Update plus News so neighbors see we are back.`,
+
+  '2026-08-13_android-www-api': `WHAT NEIGHBORS SEE
+If the Android app could open but listings, sign-in, or buttons failed with “Failed to fetch,” that was a www vs non-www mismatch. Reopen the app. You do not need a new install for the web fix.
+
+Download page: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/lib/appOrigin.ts — native WebView uses window.location.origin so /api/* stays on the same host (www).
+- src/lib/apkDownload.ts + capacitor.config.ts — canonical origin is https://www.sacramentobuynothing.com (VITE_APP_URL / CAPACITOR_SERVER_URL).
+- docs/android-apk.md — build env must use the www origin, not the apex domain.
+
+HISTORY
+2026-08-13 — PR #182 (fabb421). Apex redirects to www, but Capacitor server.url is www, so API calls to the apex host were blocked by CSP connect-src 'self'.`,
+
+  '2026-07-29_repeat-event-series': `WHAT NEIGHBORS SEE
+A weekly or monthly gathering is one event series instead of a pile of duplicate cards. Open it to see upcoming dates. Posters can add more dates from the event screen.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- Event series merge in feed/map (repeat event series work from 2026-07-28 / 2026-07-29).
+- Posters: EventDetailView → Add dates for an existing series.
+- scripts/seed-lucid-fremont-events-2026.sql — Lucid Winery 2026 schedule seed.
+
+HISTORY
+2026-07-28 — Add repeat event series + ability to add upcoming dates (PR #171).
+2026-07-29 — Merge series into one card in feed and map (cf359a5).`,
+
+  '2026-07-29_signed-apk-auto-update': `WHAT NEIGHBORS SEE
+Install from https://www.sacramentobuynothing.com/download. Use the signed release APK (not an old debug file). After install, many website fixes arrive the next time you open the app because the APK loads the live site.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- npm run android:apk — signed release via android/keystore.properties.
+- public/android-version.json + public/downloads/ — versioned sideload files.
+- PWA/APK auto-update splash (86b3732, 2026-07-28).
+- Status bar overlap + push-permission reload, build 6 (41f23cc, 2026-07-29).
+
+HISTORY
+2026-07-28 — Instant PWA/APK auto-updates and beta version on boot splash.
+2026-07-29 — Signed release instead of debug (unsafe Play Protect warning); versioned APK filenames; status bar fix.`,
+
   '2026-06-09_comment-and-saved-listing-alerts': `WHAT NEIGHBORS SEE
 Listing owners get a push when someone comments on their post. Neighbors who bookmark a listing get alerts when that post is edited, commented on, claimed, or changes status (active → pending pickup → completed).
 
