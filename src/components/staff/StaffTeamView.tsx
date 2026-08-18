@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Loader2, Shield, ShieldOff, Users } from 'lucide-react';
 import type { StaffUserRow, UserProfile } from '../../types';
-import { getStaffUserDirectory, setUserRole, staffSuspendUser, staffUnsuspendUser } from '../../supabase';
+import { getStaffUserDirectory, getPendingStaffApplications, setUserRole, staffSuspendUser, staffUnsuspendUser } from '../../supabase';
 import {
   ASSIGNABLE_ROLE_OPTIONS,
   ROLE_LABELS,
   STAFF_ROLE_SLOTS,
   isStaffRole,
   normalizeUserRole,
-  roleLabel,
   roleRank,
   staffRoleSlotMessage,
 } from '../../lib/roles';
 import type { UserRole } from '../../lib/roles';
+import { nextPendingApplication, type StaffApplication } from '../../lib/staffApplications';
 import { useStaffPermission } from '../../hooks/useStaffPermission';
 import NoPermissionModal from './NoPermissionModal';
+import StaffApplicationQueue from './StaffApplicationQueue';
 import UserAvatar from '../UserAvatar';
 
 const ROLE_ORDER: UserRole[] = ['director', 'city_manager', 'city_administrator', 'city_moderator'];
@@ -31,6 +32,7 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
   const [err, setErr] = useState('');
   const [expandedUid, setExpandedUid] = useState<string | null>(null);
   const [pendingRole, setPendingRole] = useState<Record<string, UserRole>>({});
+  const [applications, setApplications] = useState<StaffApplication[]>([]);
 
   const perm = useStaffPermission(actor);
 
@@ -40,8 +42,9 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
 
   const load = async () => {
     setLoading(true);
-    const all = await getStaffUserDirectory();
+    const [all, pending] = await Promise.all([getStaffUserDirectory(), getPendingStaffApplications()]);
     setUsers(all);
+    setApplications(pending);
     setLoading(false);
   };
 
@@ -51,6 +54,8 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
     () => users.filter((u) => isStaffRole(u.role)).sort((a, b) => roleRank(b.role) - roleRank(a.role)),
     [users],
   );
+
+  const applicationQueue = useMemo(() => nextPendingApplication(applications), [applications]);
 
   const run = async (uid: string, fn: () => Promise<{ ok: boolean; errorMessage?: string }>) => {
     setBusy(uid); setErr('');
@@ -150,14 +155,23 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-accent" />
         </div>
-      ) : staffMembers.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-          <Users className="w-10 h-10 text-subtle" />
-          <p className="text-sm text-muted">No staff members found.</p>
-        </div>
       ) : (
-        <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-2">
-          {ROLE_ORDER.filter((r) => r !== 'user').map((roleTier) => {
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+          <StaffApplicationQueue
+            actor={actor}
+            current={applicationQueue.current}
+            waiting={applicationQueue.waiting}
+            onViewProfile={onViewProfile}
+            onReviewed={() => void load()}
+          />
+
+          {staffMembers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+              <Users className="w-10 h-10 text-subtle" />
+              <p className="text-sm text-muted">No staff members found.</p>
+            </div>
+          ) : (
+            ROLE_ORDER.filter((r) => r !== 'user').map((roleTier) => {
             const members = staffMembers.filter((u) => normalizeUserRole(u.role) === roleTier);
             if (members.length === 0) return null;
             return (
@@ -316,7 +330,8 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
                 })}
               </div>
             );
-          })}
+          })
+          )}
         </div>
       )}
     </div>

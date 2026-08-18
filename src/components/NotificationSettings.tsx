@@ -418,7 +418,7 @@ export default function NotificationSettings({
                       disabled={isTesting || isBroadcastTesting || isLoading}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/40 bg-amber-500/10 text-sm font-bold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
                     >
-                      {isBroadcastTesting ? 'Broadcasting…' : 'Test all users'}
+                      {isBroadcastTesting ? 'Broadcasting…' : 'Broadcast'}
                     </button>
                   )}
                 </>

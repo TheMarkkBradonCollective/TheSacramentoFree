@@ -44,6 +44,8 @@ import { isTermsAccepted } from '../lib/termsPolicyPrompt';
 import { getNeighborAwardClaims } from '../supabase';
 import { buildNeighborAwardSummary, type NeighborAwardSummary } from '../lib/neighborAwards';
 import GoGetRecordSection from './goget/GoGetRecordSection';
+import FullScreenPanel from './FullScreenPanel';
+import StaffApplyView from './StaffApplyView';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -100,6 +102,7 @@ export default function UserProfileView({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [staffApplyOpen, setStaffApplyOpen] = useState(false);
   const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
   const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
 
@@ -664,6 +667,36 @@ export default function UserProfileView({
           onClose={() => setShowTermsModal(false)}
         />
       )}
+
+      {!isStaffRole(userProfile.role) ? (
+        <div className={fullBleed ? sectionShell : 'sbn-section'} id="account_staff_apply_section">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="w-4 h-4 text-accent" />
+            <h3 className="text-sm font-bold text-app uppercase tracking-wider">Join the staff team</h3>
+          </div>
+          <p className="text-xs text-muted leading-relaxed mb-4">
+            Read what each role actually does, then apply for one. Tell us how fast you can respond
+            and if you've been a mod elsewhere. Staff see one request at a time.
+          </p>
+          <button
+            type="button"
+            onClick={() => setStaffApplyOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-accent/40 bg-accent/10 text-accent text-xs font-bold uppercase tracking-wider hover:bg-accent/15 transition-colors"
+          >
+            View roles & apply
+          </button>
+        </div>
+      ) : null}
+
+      {staffApplyOpen ? (
+        <FullScreenPanel
+          title="Join the staff team"
+          subtitle="Read each role, then apply for one"
+          onClose={() => setStaffApplyOpen(false)}
+        >
+          <StaffApplyView user={userProfile} />
+        </FullScreenPanel>
+      ) : null}
 
       {/* ── Privacy & legal ──────────────────────────────────── */}
       <div className={fullBleed ? sectionShell : 'sbn-section'} id="account_privacy_section">

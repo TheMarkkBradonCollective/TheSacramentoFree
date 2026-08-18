@@ -42,10 +42,10 @@ export default function DirectorBroadcastTestModal({
               className="font-display font-bold text-app flex items-center gap-2"
             >
               <Megaphone className="w-4 h-4 text-amber-300" />
-              Test all users
+              Broadcast
             </h4>
             <p className="text-xs text-muted mt-1 leading-snug">
-              Send a test notification to every neighbor with push enabled. This alerts all subscribed
+              Send a notification to every neighbor with push enabled. This alerts all subscribed
               devices across the community — not just yours.
             </p>
           </div>

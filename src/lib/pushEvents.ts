@@ -373,6 +373,7 @@ export async function notifyAccountUpdate(params: {
   userId: string;
   title: string;
   body: string;
+  tag?: string;
 }) {
   await sendPushNotification({
     eventType: 'account_update',
@@ -380,7 +381,7 @@ export async function notifyAccountUpdate(params: {
     body: params.body,
     url: '/profile',
     recipientUserIds: [params.userId],
-    tag: `account-${params.userId}`,
+    tag: params.tag || `account-${params.userId}`,
   });
 }
 
