@@ -42,6 +42,7 @@ const FEED_APK_PUBLISHED_AT = '2026-08-18T12:15:00.000Z';
 const APK_0015_ANNOUNCE_PUBLISHED_AT = '2026-08-18T12:20:00.000Z';
 const FEED_SWITCHES_APK_PUBLISHED_AT = '2026-08-18T13:10:00.000Z';
 const APK_0017_PUBLISHED_AT = '2026-08-18T13:30:00.000Z';
+const APK_0018_PUBLISHED_AT = '2026-08-18T14:00:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -95,6 +96,33 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_apk-0018',
+    '2026-08-18',
+    'New Android download — beta v0.1.0.0018',
+    'Staff sidebar slides in smoothly, mobile headers now show theme + notifications + badges for everyone, and nav labels fit inside the drawer.',
+    `WHAT NEIGHBORS SEE
+Grab beta v0.1.0.0018 from https://www.sacramentobuynothing.com/download
+
+Since 0017:
+• Staff mobile sidebar slides in/out instead of popping open
+• Long staff nav labels (like Go Get Violations) wrap cleanly inside the drawer
+• Every mobile user gets theme, notifications, and badges in the header — not just staff
+• Staff drawer header stays clean (avatar, role pill, close) while the top bar hides behind the menu
+
+Already on 0017? Reopening the app still loads the live site, but install 0018 for the latest native shell.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/AppSidebar.tsx + src/index.css — slide drawer animation
+- src/components/TopbarActions.tsx + MobileView.tsx — unified mobile header actions
+- android/app/build.gradle — versionCode 18
+
+HISTORY
+2026-08-18 — APK 0018 ships staff sidebar slide + unified mobile header actions.`,
+    APK_0018_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_apk-0017',
     '2026-08-18',
