@@ -48,11 +48,11 @@ import {
 } from '../lib/goGetSessions';
 import { fileGoGetViolation } from '../lib/violations';
 import {
-  recordItemClaimInChat,
   markItemFulfilledFromChat,
   updateSupabaseItemStatus,
   createSupabaseMessage,
   getListingSubitems,
+  recordGiveawayPickupFromGoGet,
 } from '../supabase';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import type { GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
@@ -77,6 +77,8 @@ interface ItemDetailNavigationProps {
   currentUserId: string;
   userProfile?: UserProfile;
   onOpenChat?: (chatId: string) => void;
+  /** Feed + profile stats refresh after a confirmed Go Get handoff. */
+  onPickupCompleted?: () => void;
 }
 
 /** Applies the pickup completion for whichever post type this session is for, reusing the existing claim/fulfill/trade paths. */
@@ -85,7 +87,7 @@ async function applyCompletionForItemType(
   session: GoGetSession,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   if (item.type === 'giveaway') {
-    return recordItemClaimInChat({
+    return recordGiveawayPickupFromGoGet({
       itemId: item.id,
       itemTitle: item.title,
       giverUserId: session.fulfillerUserId,
@@ -117,7 +119,7 @@ async function applyCompletionForItemType(
   return { ok: true };
 }
 
-export default function ItemDetailNavigation({ item, currentUserId, userProfile, onOpenChat }: ItemDetailNavigationProps) {
+export default function ItemDetailNavigation({ item, currentUserId, userProfile, onOpenChat, onPickupCompleted }: ItemDetailNavigationProps) {
   const { confirm, alert } = useConfirm();
   const goGetAvailable = supportsGoGetCoordination();
 
@@ -544,7 +546,16 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     setSession(sessionResult.session);
     if (!completionResult.ok) {
       setErr(completionResult.errorMessage || 'Pickup confirmed, but the listing could not be updated.');
+      return;
     }
+    void import('../lib/pushEvents').then((m) =>
+      m.notifyGoGetCompleted({
+        item,
+        requesterUserId: session.requesterUserId,
+        sessionId: session.id,
+      }),
+    );
+    onPickupCompleted?.();
   };
 
   const handleDisputeCompletion = async () => {

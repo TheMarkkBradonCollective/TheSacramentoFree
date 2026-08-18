@@ -2553,6 +2553,39 @@ export async function recordItemClaimInChat(params: {
   return result;
 }
 
+/** Go Get handoff — marks giveaway claimed, listing completed, and profile stats for both neighbors. */
+export async function recordGiveawayPickupFromGoGet(params: {
+  itemId: string;
+  itemTitle: string;
+  giverUserId: string;
+  claimerUserId: string;
+  chatId: string;
+  claimMessage: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const subitems = await getListingSubitems(params.itemId);
+  const availableIds =
+    subitems.length > 0
+      ? subitems
+          .filter((s) => s.status === 'available' || s.status === 'pending_pickup')
+          .map((s) => s.id)
+      : null;
+
+  if (subitems.length > 0 && (availableIds?.length ?? 0) === 0) {
+    return { ok: false, errorMessage: 'This listing was already marked as picked up.' };
+  }
+
+  return recordPartialItemClaims({
+    itemId: params.itemId,
+    itemTitle: params.itemTitle,
+    giverUserId: params.giverUserId,
+    claimerUserId: params.claimerUserId,
+    chatId: params.chatId,
+    subItemIds: availableIds,
+    claimMessage: params.claimMessage,
+    actorUserId: params.giverUserId,
+  });
+}
+
 function buildPickupAttributionPayload(input: PickupAttributionInput | null): Record<string, unknown> {
   if (!input) {
     return {

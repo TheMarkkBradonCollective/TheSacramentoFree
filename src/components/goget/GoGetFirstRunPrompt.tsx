@@ -61,8 +61,9 @@ export default function GoGetFirstRunPrompt({
 
         <div className="p-5 space-y-3">
           <p className="text-xs text-muted leading-relaxed">
-            Using app pickup coordination: neighbors can start Go Get with you when you both have the app and
-            notifications on. You can change this anytime in Account.
+            When you finish a pickup in the app, the listing is marked <strong className="text-app">given</strong>{' '}
+            or <strong className="text-app">fulfilled</strong> automatically — and both neighbors&apos; profile counts
+            update (items given / items claimed). You can change this anytime in Account.
           </p>
 
           {err && <p className="text-xs font-semibold text-red-400">{err}</p>}

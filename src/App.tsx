@@ -1886,6 +1886,9 @@ export default function App() {
                     setPickupAttributionMode('edit');
                     setPickupAttributionItem(detailItem);
                   }}
+                  onPickupCompleted={() => {
+                    void loadItems(true);
+                  }}
                 />
               )}
 

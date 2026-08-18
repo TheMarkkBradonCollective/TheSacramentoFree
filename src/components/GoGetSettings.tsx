@@ -69,7 +69,7 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
           </p>
           <p className="text-[10px] text-muted mt-0.5 leading-snug">
             {enabled
-              ? 'Neighbors can start Go Get with you when you both have the app and notifications on.'
+              ? 'Full Go Get / Drop off flow — when pickup is confirmed, listings auto-mark given or fulfilled and both profiles update.'
               : 'Your posts stay up. Neighbors message you to arrange pickup independently.'}
           </p>
         </div>

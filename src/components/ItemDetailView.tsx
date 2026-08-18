@@ -53,6 +53,7 @@ interface ItemDetailViewProps {
   onDelete?: () => void;
   updating?: boolean;
   onEditPickupAttribution?: () => void;
+  onPickupCompleted?: () => void;
 }
 
 export default function ItemDetailView({
@@ -76,6 +77,7 @@ export default function ItemDetailView({
   onDelete,
   updating = false,
   onEditPickupAttribution,
+  onPickupCompleted,
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [hasAppClaim, setHasAppClaim] = useState(false);
@@ -309,6 +311,7 @@ export default function ItemDetailView({
                 currentUserId={currentUserId}
                 userProfile={userProfile}
                 onOpenChat={onOpenChat}
+                onPickupCompleted={onPickupCompleted}
               />
             )}
           </section>
