@@ -45,6 +45,8 @@ import { getNeighborAwardClaims } from '../supabase';
 import { buildNeighborAwardSummary, type NeighborAwardSummary } from '../lib/neighborAwards';
 import GoGetRecordSection from './goget/GoGetRecordSection';
 import { openStaffApplyPanel } from '../lib/staffApplyOpen';
+import { useInstallVersions } from '../hooks/useInstallVersions';
+import { detectInstallKind } from '../lib/installContext';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -59,6 +61,7 @@ interface UserProfileViewProps {
   onLogout?: () => void | Promise<void>;
   onViewProfile?: (userId: string) => void;
   onOpenAwards?: () => void;
+  onOpenDownload?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
@@ -83,6 +86,7 @@ export default function UserProfileView({
   onLogout,
   onViewProfile,
   onOpenAwards,
+  onOpenDownload,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
   fullBleed = false,
@@ -103,6 +107,18 @@ export default function UserProfileView({
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
   const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
+  const { apkDownloadHref, latestApk, apkStatus, loading: apkVersionLoading } = useInstallVersions();
+  const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
+  const usingApk = installKind === 'android-apk';
+
+  const openDownloadPage = (event?: React.MouseEvent) => {
+    event?.preventDefault();
+    if (onOpenDownload) {
+      onOpenDownload();
+      return;
+    }
+    window.location.assign('/download');
+  };
 
   useEffect(() => {
     getNeighborStats(userProfile.uid).then(setStats);
@@ -574,13 +590,35 @@ export default function UserProfileView({
           Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience — no App Store required.
         </p>
 
-        <a
-          href="/download"
-          className="inline-flex items-center gap-2 px-4 py-2.5 mb-4 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          <span>Download page — APK vs home screen</span>
-        </a>
+        <div className="flex flex-col gap-2 mb-4 min-w-0">
+          <button
+            type="button"
+            onClick={openDownloadPage}
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+          >
+            <Download className="w-4 h-4 shrink-0" />
+            <span>Compare APK vs home screen</span>
+          </button>
+
+          {apkDownloadHref ? (
+            <a
+              href={apkDownloadHref}
+              download={latestApk?.fileName || 'sac-buy-nothing.apk'}
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+            >
+              <Download className="w-4 h-4 shrink-0" />
+              <span>
+                {apkVersionLoading
+                  ? 'Loading APK…'
+                  : latestApk?.betaLabel
+                    ? usingApk && apkStatus === 'update-available'
+                      ? `Update to ${latestApk.betaLabel}`
+                      : `Download ${latestApk.betaLabel}`
+                    : 'Download latest APK'}
+              </span>
+            </a>
+          ) : null}
+        </div>
 
         {isAppInstalled ? (
           <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl" id="pwa_installed_badge">
@@ -624,11 +662,15 @@ export default function UserProfileView({
               {activeManualPlatform === 'android' && (
                 <ol className="list-decimal list-inside space-y-2 pl-1">
                   <li>
-                    <strong className="text-app">APK (recommended for alerts):</strong> open the{' '}
-                    <a href="/download" className="text-accent font-bold underline underline-offset-2">
+                    <strong className="text-app">APK (recommended for alerts):</strong> open{' '}
+                    <button
+                      type="button"
+                      onClick={openDownloadPage}
+                      className="text-accent font-bold underline underline-offset-2 cursor-pointer"
+                    >
                       download page
-                    </a>{' '}
-                    and install the Android app file.
+                    </button>{' '}
+                    or use the download button above.
                   </li>
                   <li>
                     <strong className="text-app">Or Chrome home screen:</strong> tap the three-dot menu{' '}

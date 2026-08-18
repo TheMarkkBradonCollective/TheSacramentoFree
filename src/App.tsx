@@ -215,6 +215,15 @@ export default function App() {
     setShowAwardsPanel(true);
   }, [markAwardsSeen]);
 
+  const handleOpenDownload = useCallback(() => {
+    setShowDownloadPage(true);
+    try {
+      window.history.pushState(window.history.state, '', downloadPagePath());
+    } catch (err) {
+      console.warn('History pushState unavailable for download route:', err);
+    }
+  }, []);
+
   const handleOpenStaffApply = useCallback(() => {
     setShowStaffApplyPanel(true);
   }, []);
@@ -1632,6 +1641,7 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
+                  onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
                   awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
@@ -1685,6 +1695,7 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
+                  onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
                   awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
@@ -1738,6 +1749,7 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
+                  onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
                   awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
@@ -2041,12 +2053,13 @@ export default function App() {
           
           {!isIOS && (
             <div className="mt-3 flex items-center justify-end flex-wrap gap-2 pt-2.5 border-t border-app">
-              <a
-                href="/download"
-                className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all"
+              <button
+                type="button"
+                onClick={handleOpenDownload}
+                className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all cursor-pointer"
               >
                 ANDROID APK
-              </a>
+              </button>
               <button
                 onClick={handleDismissPrompt}
                 className="px-3.5 py-1.5 text-[11px] font-extrabold text-muted hover:text-app rounded-lg transition-all cursor-pointer"
