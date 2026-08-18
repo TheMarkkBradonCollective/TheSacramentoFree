@@ -32,6 +32,7 @@ const PUBLISHED_AT = '2026-07-26T23:20:00.000Z';
 const OUTAGE_PUBLISHED_AT = '2026-08-18T08:20:00.000Z';
 const OUTAGE_UPDATED_AT = '2026-08-18T12:00:00.000Z';
 const MAP_ROUTE_PUBLISHED_AT = '2026-08-18T09:30:00.000Z';
+const FOOTER_APK_PUBLISHED_AT = '2026-08-18T09:40:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -85,6 +86,27 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_scroll-footer-apk-0012',
+    '2026-08-18',
+    'Account footer sits at the bottom — new APK',
+    'The legal footer on Account and other short pages no longer floats in the middle of the screen. Top and bottom bars stay put. Android beta v0.1.0.0012 is on the Download page.',
+    `WHAT NEIGHBORS SEE
+On Account, Stuff, Events, and similar pages, the gray legal strip belongs at the bottom of the page. The header and the Stuff / Events / Map / Messages / Account bar stay pinned while you scroll.
+
+New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0012). The app you already have still loads the live website, so reopening it picks up this layout too.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/PageScrollFooter.tsx — ScrollPage is at least as tall as the viewport; the footer is in the document flow.
+- src/components/MobileView.tsx — feed, events, and account use that scroll column.
+- android/app/build.gradle + public/android-version.json — beta 0.1.0.0012 (versionCode 12).
+
+HISTORY
+2026-08-18 — PR #194, then Android beta 0012.`,
+    FOOTER_APK_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_map-route-apk-0011',
     '2026-08-18',
@@ -311,6 +333,25 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_footer-apk-0012',
+    '2026-08-18',
+    'Page footer and a new Android download',
+    'The legal footer now sits at the bottom of Account and other short pages, instead of in the middle of the screen. A new APK (beta v0.1.0.0012) is on the Download page.',
+    `WHAT NEIGHBORS SEE
+Header stays up top. Bottom tabs stay at the bottom. The gray legal strip is at the end of the page.
+
+Download: https://www.sacramentobuynothing.com/download (beta v0.1.0.0012). Reopening the app you already have also picks up the website fix.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_scroll-footer-apk-0012.
+
+HISTORY
+2026-08-18 — Scroll footer layout and Android beta 0012.`,
+    FOOTER_APK_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_smoother-map-apk',
     '2026-08-18',
