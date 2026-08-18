@@ -121,6 +121,20 @@ export function staffApplySeatLabel(
   return limit === 1 ? '1 seat' : `${limit} seats`;
 }
 
+export function staffApplySeatPillClass(
+  role: StaffApplyRole,
+  seatCounts?: StaffApplySeatCounts,
+): string {
+  const filled = seatCounts?.[role];
+  if (filled === undefined) {
+    return 'bg-inset text-muted border-app';
+  }
+  if (isStaffApplySeatFilled(role, seatCounts)) {
+    return 'bg-red-500/15 text-red-400 border-red-500/25';
+  }
+  return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25';
+}
+
 export function isStaffApplySeatFilled(
   role: StaffApplyRole,
   seatCounts?: StaffApplySeatCounts,

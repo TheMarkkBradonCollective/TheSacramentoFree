@@ -14,6 +14,7 @@ import {
   isStaffApplySeatFilled,
   staffApplyRoleLabel,
   staffApplySeatLabel,
+  staffApplySeatPillClass,
   staffApplicationDecisionNotice,
   type StaffApplication,
   type StaffApplyRole,
@@ -212,9 +213,10 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
                   {staffApplyRoleLabel(applyRole)}
                 </p>
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wider ${
-                    seatFilled ? 'text-amber-400' : 'text-muted'
-                  }`}
+                  className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${staffApplySeatPillClass(
+                    applyRole,
+                    seatCounts,
+                  )}`}
                 >
                   {staffApplySeatLabel(applyRole, seatCounts)}
                 </span>
