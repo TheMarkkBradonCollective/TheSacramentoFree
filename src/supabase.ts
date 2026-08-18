@@ -24,11 +24,14 @@ import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirect
 import {
   deriveApplicantStaffApplyState,
   isStaffApplyRole,
+  isStaffApplySeatFilled,
+  parseStaffApplySeatCounts,
   staffApplicationDecisionNotice,
   type ApplicantStaffApplyState,
   type StaffApplication,
   type StaffApplicationDecision,
   type StaffApplyRole,
+  type StaffApplySeatCounts,
 } from './lib/staffApplications';
 import { notifyAccountUpdate } from './lib/pushEvents';
 
@@ -1694,15 +1697,26 @@ function parseStaffApplicationRow(raw: unknown): StaffApplication | null {
 }
 
 export async function getMyStaffApplyState(): Promise<ApplicantStaffApplyState> {
-  const empty: ApplicantStaffApplyState = { blocked: false, pending: null, lastDecision: null };
+  const empty: ApplicantStaffApplyState = {
+    blocked: false,
+    pending: null,
+    lastDecision: null,
+    seatCounts: {},
+  };
   try {
     const { data, error } = await supabase.rpc('my_staff_apply_state');
     if (!error && data && typeof data === 'object') {
-      const payload = data as { blocked?: unknown; pending?: unknown; lastDecision?: unknown };
+      const payload = data as {
+        blocked?: unknown;
+        pending?: unknown;
+        lastDecision?: unknown;
+        seatCounts?: unknown;
+      };
       return {
         blocked: payload.blocked === true,
         pending: parseStaffApplicationRow(payload.pending),
         lastDecision: parseStaffApplicationRow(payload.lastDecision),
+        seatCounts: parseStaffApplySeatCounts(payload.seatCounts),
       };
     }
     if (error && !isMissingRelationOrRpc(error)) {
@@ -1738,8 +1752,12 @@ export async function submitStaffApplication(params: {
   responseTime: string;
   otherGroups: string;
   otherInfo: string;
+  seatCounts?: StaffApplySeatCounts;
 }): Promise<{ ok: boolean; application?: StaffApplication; errorMessage?: string }> {
   try {
+    if (isStaffApplySeatFilled(params.role, params.seatCounts)) {
+      return { ok: false, errorMessage: 'That staff seat is filled.' };
+    }
     const { data, error } = await supabase.rpc('submit_staff_application', {
       apply_role: params.role,
       statement: params.statement,

@@ -10,11 +10,14 @@ import {
   STAFF_APPLY_ROLES,
   STAFF_ROLE_APPLY_COPY,
   applicantApplyView,
+  firstOpenStaffApplyRole,
+  isStaffApplySeatFilled,
   staffApplyRoleLabel,
   staffApplySeatLabel,
   staffApplicationDecisionNotice,
   type StaffApplication,
   type StaffApplyRole,
+  type StaffApplySeatCounts,
 } from '../lib/staffApplications';
 
 interface StaffApplyViewProps {
@@ -26,6 +29,7 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
   const [blocked, setBlocked] = useState(false);
   const [pending, setPending] = useState<StaffApplication | null>(null);
   const [lastDecision, setLastDecision] = useState<StaffApplication | null>(null);
+  const [seatCounts, setSeatCounts] = useState<StaffApplySeatCounts>({});
   const [role, setRole] = useState<StaffApplyRole>('city_moderator');
   const [statement, setStatement] = useState('');
   const [responseTime, setResponseTime] = useState<(typeof RESPONSE_TIME_OPTIONS)[number]>(
@@ -43,12 +47,21 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
     setBlocked(state.blocked);
     setPending(state.pending);
     setLastDecision(state.lastDecision);
+    setSeatCounts(state.seatCounts);
     setLoading(false);
   };
 
   useEffect(() => {
     void load();
   }, [user.uid]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (isStaffApplySeatFilled(role, seatCounts)) {
+      const openRole = firstOpenStaffApplyRole(seatCounts);
+      if (openRole) setRole(openRole);
+    }
+  }, [loading, role, seatCounts]);
 
   const view = useMemo(
     () =>
@@ -63,6 +76,10 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErr('');
+    if (isStaffApplySeatFilled(role, seatCounts)) {
+      setErr('That staff seat is filled. Pick another role.');
+      return;
+    }
     if (!statement.trim()) {
       setErr('Tell us why you want this role.');
       return;
@@ -76,6 +93,7 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
         ? otherGroups.trim() || 'Yes — mod or admin of other groups'
         : otherGroups.trim() || 'No',
       otherInfo: otherInfo.trim(),
+      seatCounts,
     });
     setBusy(false);
     if (!result.ok) {
@@ -142,6 +160,9 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
 
   const maybeNotice =
     lastDecision?.status === 'maybe' ? staffApplicationDecisionNotice(lastDecision) : null;
+  const openRole = firstOpenStaffApplyRole(seatCounts);
+  const allSeatsFilled = !openRole;
+  const selectedSeatFilled = isStaffApplySeatFilled(role, seatCounts);
 
   return (
     <div className="space-y-6">
@@ -151,6 +172,15 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
           <p className="text-sm text-muted leading-relaxed">{maybeNotice.body}</p>
         </div>
       ) : null}
+      {allSeatsFilled ? (
+        <div className="sbn-help-card space-y-2">
+          <h3 className="font-display font-bold text-app">All staff seats are filled</h3>
+          <p className="text-sm text-muted leading-relaxed">
+            Every role is full right now. Check back later if a seat opens up.
+          </p>
+        </div>
+      ) : (
+        <>
       <p className="text-sm text-muted leading-relaxed">
         Sacramento Buy Nothing is neighbor-run. Pick one role, tell us how you'd show up, and send it.
         Only one application can wait at a time.
@@ -160,22 +190,37 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
         {STAFF_APPLY_ROLES.map((applyRole) => {
           const copy = STAFF_ROLE_APPLY_COPY[applyRole];
           const selected = role === applyRole;
+          const seatFilled = isStaffApplySeatFilled(applyRole, seatCounts);
           return (
             <button
               key={applyRole}
               type="button"
-              onClick={() => setRole(applyRole)}
+              onClick={() => {
+                if (!seatFilled) setRole(applyRole);
+              }}
+              disabled={seatFilled}
               className={`w-full text-left rounded-xl border p-4 space-y-2 transition-colors ${
-                selected ? 'border-accent bg-accent/10' : 'border-app bg-surface hover:border-accent/40'
+                seatFilled
+                  ? 'border-app bg-inset opacity-70 cursor-not-allowed'
+                  : selected
+                    ? 'border-accent bg-accent/10'
+                    : 'border-app bg-surface hover:border-accent/40'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="font-display font-bold text-app">{staffApplyRoleLabel(applyRole)}</p>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
-                  {staffApplySeatLabel(applyRole)}
+                <p className={`font-display font-bold ${seatFilled ? 'text-muted' : 'text-app'}`}>
+                  {staffApplyRoleLabel(applyRole)}
+                </p>
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider ${
+                    seatFilled ? 'text-amber-400' : 'text-muted'
+                  }`}
+                >
+                  {staffApplySeatLabel(applyRole, seatCounts)}
                 </span>
               </div>
               <p className="text-sm text-muted leading-relaxed">{copy.summary}</p>
+              {!seatFilled ? (
               <ul className="space-y-1">
                 {copy.duties.map((duty) => (
                   <li key={duty} className="text-xs text-app leading-relaxed flex gap-2">
@@ -184,6 +229,7 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
                   </li>
                 ))}
               </ul>
+              ) : null}
             </button>
           );
         })}
@@ -257,11 +303,17 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
 
         {err ? <p className="text-xs font-semibold text-red-400">{err}</p> : null}
 
-        <button type="submit" disabled={busy} className="sbn-btn sbn-btn-primary w-full justify-center">
+        <button
+          type="submit"
+          disabled={busy || selectedSeatFilled || allSeatsFilled}
+          className="sbn-btn sbn-btn-primary w-full justify-center"
+        >
           <CheckCircle className="w-4 h-4" />
           {busy ? 'Sending…' : `Apply for ${staffApplyRoleLabel(role)}`}
         </button>
       </form>
+        </>
+      )}
     </div>
   );
 }

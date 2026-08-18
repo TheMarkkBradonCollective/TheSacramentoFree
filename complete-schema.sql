@@ -3496,7 +3496,13 @@ BEGIN
   RETURN jsonb_build_object(
     'blocked', blocked,
     'pending', CASE WHEN pending_row.id IS NULL THEN NULL ELSE to_jsonb(pending_row) END,
-    'lastDecision', CASE WHEN last_row.id IS NULL THEN NULL ELSE to_jsonb(last_row) END
+    'lastDecision', CASE WHEN last_row.id IS NULL THEN NULL ELSE to_jsonb(last_row) END,
+    'seatCounts', jsonb_build_object(
+      'city_moderator', (SELECT COUNT(*)::integer FROM public.users WHERE role = 'city_moderator'),
+      'city_administrator', (SELECT COUNT(*)::integer FROM public.users WHERE role = 'city_administrator'),
+      'city_manager', (SELECT COUNT(*)::integer FROM public.users WHERE role = 'city_manager'),
+      'director', (SELECT COUNT(*)::integer FROM public.users WHERE role = 'director')
+    )
   );
 END;
 $$;
@@ -3517,6 +3523,8 @@ DECLARE
   actor_uid text := auth.uid()::text;
   actor public.users%ROWTYPE;
   new_row public.staff_applications;
+  seat_limit integer;
+  seat_count integer;
 BEGIN
   IF actor_uid IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
@@ -3547,6 +3555,23 @@ BEGIN
 
   IF apply_role NOT IN ('city_moderator', 'city_administrator', 'city_manager', 'director') THEN
     RAISE EXCEPTION 'Pick a staff role';
+  END IF;
+
+  seat_limit := CASE apply_role
+    WHEN 'city_moderator' THEN 5
+    WHEN 'city_administrator' THEN 3
+    WHEN 'city_manager' THEN 1
+    WHEN 'director' THEN 1
+    ELSE NULL
+  END;
+
+  IF seat_limit IS NOT NULL THEN
+    SELECT COUNT(*)::integer INTO seat_count
+    FROM public.users
+    WHERE role = apply_role;
+    IF seat_count >= seat_limit THEN
+      RAISE EXCEPTION 'That staff seat is filled';
+    END IF;
   END IF;
 
   IF COALESCE(btrim(statement), '') = '' THEN

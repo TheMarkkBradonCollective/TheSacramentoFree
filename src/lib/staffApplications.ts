@@ -15,6 +15,7 @@ export const STAFF_APPLY_ROLES = [
 ] as const;
 
 export type StaffApplyRole = (typeof STAFF_APPLY_ROLES)[number];
+export type StaffApplySeatCounts = Partial<Record<StaffApplyRole, number>>;
 export type StaffApplicationStatus = 'pending' | 'yes' | 'no' | 'maybe';
 export type StaffApplicationDecision = 'yes' | 'no' | 'maybe';
 
@@ -41,6 +42,7 @@ export interface ApplicantStaffApplyState {
   blocked: boolean;
   pending: StaffApplication | null;
   lastDecision: StaffApplication | null;
+  seatCounts: StaffApplySeatCounts;
 }
 
 export type ApplicantApplyView =
@@ -106,10 +108,43 @@ export function staffApplyRoleLabel(role: StaffApplyRole): string {
   return ROLE_LABELS[role];
 }
 
-export function staffApplySeatLabel(role: StaffApplyRole): string {
+export function staffApplySeatLabel(
+  role: StaffApplyRole,
+  seatCounts?: StaffApplySeatCounts,
+): string {
   const limit = STAFF_ROLE_SLOTS[role];
   if (!limit) return '';
+  const filled = seatCounts?.[role];
+  if (filled !== undefined && filled >= limit) return 'Seat filled';
+  if (limit === 1) return filled !== undefined ? `${filled}/1 seat` : '1 seat';
+  if (filled !== undefined) return `${filled}/${limit} seats`;
   return limit === 1 ? '1 seat' : `${limit} seats`;
+}
+
+export function isStaffApplySeatFilled(
+  role: StaffApplyRole,
+  seatCounts?: StaffApplySeatCounts,
+): boolean {
+  const limit = STAFF_ROLE_SLOTS[role];
+  if (limit === undefined) return false;
+  return (seatCounts?.[role] ?? 0) >= limit;
+}
+
+export function firstOpenStaffApplyRole(
+  seatCounts?: StaffApplySeatCounts,
+): StaffApplyRole | null {
+  return STAFF_APPLY_ROLES.find((role) => !isStaffApplySeatFilled(role, seatCounts)) ?? null;
+}
+
+export function parseStaffApplySeatCounts(value: unknown): StaffApplySeatCounts {
+  if (!value || typeof value !== 'object') return {};
+  const counts: StaffApplySeatCounts = {};
+  for (const role of STAFF_APPLY_ROLES) {
+    const raw = (value as Record<string, unknown>)[role];
+    const parsed = typeof raw === 'number' ? raw : Number.parseInt(String(raw ?? ''), 10);
+    if (Number.isFinite(parsed) && parsed >= 0) counts[role] = parsed;
+  }
+  return counts;
 }
 
 export function staffApplicationDecisionNotice(
@@ -149,7 +184,7 @@ export function deriveApplicantStaffApplyState(applications: StaffApplication[])
         const bAt = new Date(b.reviewedAt || b.updatedAt || b.createdAt).getTime();
         return bAt - aAt;
       })[0] ?? null;
-  return { blocked, pending, lastDecision };
+  return { blocked, pending, lastDecision, seatCounts: {} };
 }
 
 export function applicantApplyView(params: {
