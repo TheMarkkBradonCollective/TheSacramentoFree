@@ -51,11 +51,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
     }
 
+    let staffApplyInvite: Record<string, unknown> = {};
+    try {
+      const { sendStaffApplyInviteCampaign } = await import('../push/_server/staffApplyInvitePush');
+      staffApplyInvite = await sendStaffApplyInviteCampaign();
+    } catch (inviteErr) {
+      console.error('[notification-jobs] staff-apply invite', inviteErr);
+      staffApplyInvite = {
+        error: inviteErr instanceof Error ? inviteErr.message : 'staff-apply invite failed',
+      };
+    }
+
     return res.status(200).json({
       ok: true,
       expiry: expiry.body,
       pickup: pickup.body,
       changelog,
+      staffApplyInvite,
     });
   } catch (err) {
     console.error('[api/cron/notification-jobs]', err);

@@ -61,10 +61,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: newsError.message });
     }
 
+    let staffApplyInvite: Record<string, unknown> = {};
+    try {
+      const { sendStaffApplyInviteCampaign } = await import('../push/_server/staffApplyInvitePush');
+      staffApplyInvite = await sendStaffApplyInviteCampaign();
+    } catch (inviteErr) {
+      console.error('[publish-changelog] staff-apply invite', inviteErr);
+      staffApplyInvite = {
+        error: inviteErr instanceof Error ? inviteErr.message : 'staff-apply invite failed',
+      };
+    }
+
     return res.status(200).json({
       ok: true,
       updates: updateRows.length,
       announcements: newsRows.length,
+      staffApplyInvite,
       ids: {
         updates: updateRows.map((r) => r.id),
         announcements: newsRows.map((r) => r.id),

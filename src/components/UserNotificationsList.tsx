@@ -24,6 +24,7 @@ import { isStaffRole } from '../lib/roles';
 import {
   STAFF_APPLY_INVITE,
   STAFF_APPLY_INVITE_KIND,
+  isStaffApplyInviteItem,
   isStaffApplyInviteSeen,
   markStaffApplyInviteSeen,
 } from '../lib/staffApplyInvite';
@@ -167,11 +168,15 @@ interface UserNotificationsListProps {
 
 export default function UserNotificationsList({ user, onNavigate, onViewed }: UserNotificationsListProps) {
   const { items, loading } = useUserNotifications(user.uid);
+  const dbInvites = items.filter(isStaffApplyInviteItem);
+  const otherItems = items.filter((item) => !isStaffApplyInviteItem(item));
   const showInvite = !isStaffRole(user.role);
   const inviteSeen = isStaffApplyInviteSeen(user.uid);
-  const inviteItem = showInvite
-    ? { ...STAFF_APPLY_INVITE, readAt: inviteSeen ? new Date().toISOString() : null }
-    : null;
+  const seededInvite =
+    showInvite && dbInvites.length === 0
+      ? { ...STAFF_APPLY_INVITE, readAt: inviteSeen ? new Date().toISOString() : null }
+      : null;
+  const inviteCards = seededInvite ? [seededInvite] : showInvite ? dbInvites : [];
 
   // Mark read only once the Notify list is actually shown.
   useEffect(() => {
@@ -183,7 +188,7 @@ export default function UserNotificationsList({ user, onNavigate, onViewed }: Us
     return <p className="text-sm text-muted">Loading your notifications…</p>;
   }
 
-  if (!inviteItem && items.length === 0) {
+  if (!inviteCards.length && otherItems.length === 0) {
     return (
       <p className="text-sm text-muted italic">
         Nothing yet — every alert you receive (messages, listings, comments, claims, and more) is logged here.
@@ -193,8 +198,8 @@ export default function UserNotificationsList({ user, onNavigate, onViewed }: Us
 
   return (
     <ul className="space-y-3">
-      {inviteItem ? (
-        <li>
+      {inviteCards.map((inviteItem) => (
+        <li key={inviteItem.id}>
           <StaffApplyInviteCard
             item={inviteItem}
             onApply={() => {
@@ -203,8 +208,8 @@ export default function UserNotificationsList({ user, onNavigate, onViewed }: Us
             }}
           />
         </li>
-      ) : null}
-      {items.map((item) => {
+      ))}
+      {otherItems.map((item) => {
         const Icon = kindIcon(item.kind);
         const target = targetForNotification(item);
         const isInteractive = Boolean(onNavigate && target);

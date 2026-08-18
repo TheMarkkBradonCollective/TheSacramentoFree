@@ -1,18 +1,36 @@
 import type { UserNotificationItem } from '../types';
+import {
+  STAFF_APPLY_INVITE_ACTOR,
+  STAFF_APPLY_INVITE_AT,
+  STAFF_APPLY_INVITE_BODY,
+  STAFF_APPLY_INVITE_ID,
+  STAFF_APPLY_INVITE_KIND,
+  STAFF_APPLY_INVITE_TITLE,
+  STAFF_APPLY_INVITE_URL,
+} from '../../shared/staffApplyInvite';
 
-export const STAFF_APPLY_INVITE_ID = 'seed_staff-apply-invite';
-export const STAFF_APPLY_INVITE_URL = '/staff/apply';
-export const STAFF_APPLY_INVITE_KIND = 'staff_apply';
+export {
+  STAFF_APPLY_INVITE_ID,
+  STAFF_APPLY_INVITE_KIND,
+  STAFF_APPLY_INVITE_URL,
+} from '../../shared/staffApplyInvite';
 
 export const STAFF_APPLY_INVITE: UserNotificationItem = {
   id: STAFF_APPLY_INVITE_ID,
   kind: STAFF_APPLY_INVITE_KIND,
-  title: 'Want to help run the circle?',
-  body: 'You can apply for staff — Moderator, Administrator, Manager, or Director. Read each role, then send one application.',
-  at: '2026-08-18T11:05:00.000Z',
+  title: STAFF_APPLY_INVITE_TITLE,
+  body: STAFF_APPLY_INVITE_BODY,
+  at: STAFF_APPLY_INVITE_AT,
   url: STAFF_APPLY_INVITE_URL,
-  actorName: 'Markeith White',
+  actorName: STAFF_APPLY_INVITE_ACTOR,
 };
+
+export function isStaffApplyInviteItem(item: {
+  url?: string | null;
+  kind?: string | null;
+}): boolean {
+  return item.url === STAFF_APPLY_INVITE_URL || item.kind === STAFF_APPLY_INVITE_KIND;
+}
 
 function seenKey(userId: string): string {
   return `sbn_staff_apply_invite_seen_v1:${userId}`;

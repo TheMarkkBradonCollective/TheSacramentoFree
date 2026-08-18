@@ -25,3 +25,4 @@ export {
   runItemCompletedNotify,
 } from './neighborNotify';
 export { parseJsonBody } from './parseBody';
+export { sendStaffApplyInviteCampaign } from './staffApplyInvitePush';
