@@ -28,7 +28,7 @@ import {
   type LocationTrailPoint,
 } from '../../lib/goGetSessions';
 import { getViolationsForSession, staffEscalateGoGetSession } from '../../lib/violations';
-import { formatRouteDuration, formatRouteDistance } from '../../lib/mapRoute';
+import { formatRouteDuration, formatRouteDistance, haversineMeters } from '../../lib/mapRoute';
 import { useStaffPermission } from '../../hooks/useStaffPermission';
 import NoPermissionModal from './NoPermissionModal';
 import StaffEscalateViolationDialog from './StaffEscalateViolationDialog';
@@ -154,8 +154,13 @@ export default function StaffMeetDetailPanel({
   const destMarkerRef = useRef<L.Marker | null>(null);
   const liveMarkerRef = useRef<L.Marker | null>(null);
   const trailPolyRef = useRef<L.Polyline | null>(null);
+  const lastFitLiveRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const isLive = !TERMINAL.includes(session.status);
+
+  useEffect(() => {
+    lastFitLiveRef.current = null;
+  }, [session.id]);
 
   const applySession = (next: GoGetSession) => {
     setSession(next);
@@ -337,14 +342,22 @@ export default function StaffMeetDetailPanel({
       }
     }
 
-    // Fit bounds to all points
+    // Fit bounds to all points — only when the live pin has actually moved,
+    // so GPS ticks don't keep zooming the staff map.
     const allCoords: [number, number][] = [
       [session.destinationLat, session.destinationLng],
       ...trail.map((p) => [p.lat, p.lng] as [number, number]),
       ...(liveLocation ? [[liveLocation.lat, liveLocation.lng] as [number, number]] : []),
     ];
-    if (allCoords.length > 1) {
-      map.fitBounds(L.latLngBounds(allCoords).pad(0.2), { animate: true, maxZoom: 16 });
+    const fitFrom = liveLocation ?? trail[trail.length - 1] ?? null;
+    const movedFar =
+      !lastFitLiveRef.current ||
+      (fitFrom
+        ? haversineMeters(lastFitLiveRef.current, { lat: fitFrom.lat, lng: fitFrom.lng }) >= 50
+        : false);
+    if (allCoords.length > 1 && movedFar) {
+      if (fitFrom) lastFitLiveRef.current = { lat: fitFrom.lat, lng: fitFrom.lng };
+      map.fitBounds(L.latLngBounds(allCoords).pad(0.2), { animate: false, maxZoom: 16 });
     }
   }, [trail, liveLocation]);
 

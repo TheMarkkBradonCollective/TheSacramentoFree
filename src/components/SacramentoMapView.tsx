@@ -19,13 +19,13 @@ import { confirmDropOffAsFulfiller, confirmGoGetAsRequester, confirmMeetUp } fro
 import { useConfirm } from '../contexts/ConfirmContext';
 import { extractListingImageUrls } from '../lib/listingContent';
 import {
-  fetchDrivingRoute,
   haversineMeters,
   isRoadGeometry,
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
-import { fetchNavigationRoute, type NavigationRouteResult } from '../lib/navigationRoute';
+import { remainingRouteMeters } from '../lib/navigationRoute';
+import { usePreviewDrivingRoute } from '../hooks/usePreviewDrivingRoute';
 import { subscribeLiveGeolocation, getLastLiveLatLng, retainLiveGeolocation } from '../lib/liveGeolocation';
 import {
   clearActiveNavSession,
@@ -452,7 +452,7 @@ export default function SacramentoMapView({
   const followUserRef = useRef(true);
   const mapVisibleRef = useRef(mapVisible);
   const lastFollowPanRef = useRef<LatLng | null>(null);
-  const selectedPostRef = useRef<ItemPost | null>(null);
+  const routePreviewActiveRef = useRef(false);
   const navigationOpenRef = useRef(false);
   const hasInitialMapCenterRef = useRef(false);
   const navRestoreDoneRef = useRef(false);
@@ -464,12 +464,7 @@ export default function SacramentoMapView({
   const [followUser, setFollowUser] = useState(true);
   const [isLocating, setIsLocating] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
-  const [routeDistanceMeters, setRouteDistanceMeters] = useState<number | null>(null);
-  const [routeDurationSeconds, setRouteDurationSeconds] = useState<number | null>(null);
-  const [prefetchedNavRoute, setPrefetchedNavRoute] = useState<NavigationRouteResult | null>(null);
-  const [routeLoading, setRouteLoading] = useState(false);
-  const routeFetchIdRef = useRef(0);
+  const lastFitDestKeyRef = useRef<string | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const routeEndpointsRef = useRef<{ start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null>(null);
   const routeCoordsRef = useRef<[number, number][] | null>(null);
@@ -484,10 +479,6 @@ export default function SacramentoMapView({
   const resolveNavOrigin = useCallback((): LatLng => {
     return userLocationRef.current ?? userLocation ?? getLastLiveLatLng() ?? fallbackLatLng;
   }, [userLocation, fallbackLatLng]);
-
-  useEffect(() => {
-    routeCoordsRef.current = routeCoords;
-  }, [routeCoords]);
 
   useEffect(() => {
     routeAutoFitEnabledRef.current = true;
@@ -532,8 +523,8 @@ export default function SacramentoMapView({
   }, [resolveNavOrigin]);
 
   useEffect(() => {
-    selectedPostRef.current = selectedPost;
-  }, [selectedPost]);
+    routePreviewActiveRef.current = Boolean(selectedPost || selectedEvent);
+  }, [selectedPost, selectedEvent]);
 
   useEffect(() => {
     navigationOpenRef.current = navigationOpen;
@@ -613,9 +604,11 @@ export default function SacramentoMapView({
     const nextPos = { lat: latitude, lng: longitude };
     userLocationRef.current = nextPos;
 
+    const gpsStateMeters =
+      routePreviewActiveRef.current || navigationOpenRef.current ? 12 : GPS_STATE_UPDATE_METERS;
     const shouldUpdateState =
       !lastGpsStateUpdateRef.current ||
-      haversineMeters(lastGpsStateUpdateRef.current, nextPos) >= GPS_STATE_UPDATE_METERS;
+      haversineMeters(lastGpsStateUpdateRef.current, nextPos) >= gpsStateMeters;
 
     if (!hasGpsFixRef.current) {
       hasGpsFixRef.current = true;
@@ -653,7 +646,8 @@ export default function SacramentoMapView({
       console.warn('Could not update user location marker:', error);
     }
 
-    if (!followUserRef.current || selectedPostRef.current) return;
+    // Previewing a pin/event: keep the camera on the route, not chasing GPS.
+    if (!followUserRef.current || routePreviewActiveRef.current) return;
 
     if (!hasInitialMapCenterRef.current) {
       try {
@@ -1066,11 +1060,11 @@ export default function SacramentoMapView({
     }
 
     if (selectedEvent) {
-      const selectedBlip = eventBlipPositions.find((b) => b.event.id === selectedEvent.id);
-      if (selectedBlip) return { lat: selectedBlip.lat, lng: selectedBlip.lng } as LatLng;
       if (
         typeof selectedEvent.locationLat === 'number' &&
-        typeof selectedEvent.locationLng === 'number'
+        typeof selectedEvent.locationLng === 'number' &&
+        Number.isFinite(selectedEvent.locationLat) &&
+        Number.isFinite(selectedEvent.locationLng)
       ) {
         return { lat: selectedEvent.locationLat, lng: selectedEvent.locationLng };
       }
@@ -1081,12 +1075,37 @@ export default function SacramentoMapView({
     }
 
     return null;
-  }, [selectedPost?.id, selectedEvent?.id, blipPositions, eventBlipPositions, userProfile.uid]);
+  }, [selectedPost, selectedEvent, userProfile.uid]);
 
   const navTargetLabel = selectedPost?.title ?? selectedEvent?.title ?? '';
   const navTargetId = selectedPost?.id ?? selectedEvent?.id ?? null;
 
   const hasGpsFix = userLocation != null;
+
+  const {
+    coords: routeCoords,
+    distanceMeters: fetchedRouteDistanceMeters,
+    durationSeconds: routeDurationSeconds,
+    navRoute: prefetchedNavRoute,
+    loading: routeLoading,
+  } = usePreviewDrivingRoute(
+    userLocation,
+    routeDestination,
+    true,
+    selectedPost?.id ?? selectedEvent?.id ?? null,
+  );
+
+  useEffect(() => {
+    routeCoordsRef.current = routeCoords;
+  }, [routeCoords]);
+
+  const liveRouteDistanceMeters = useMemo(() => {
+    const here = userLocationRef.current ?? userLocation;
+    if (routeCoords && here && routeCoords.length >= 2) {
+      return remainingRouteMeters(routeCoords, here);
+    }
+    return fetchedRouteDistanceMeters;
+  }, [routeCoords, userLocation, fetchedRouteDistanceMeters]);
 
   const routeEndpoints = useMemo(() => {
     if (!routeDestination) return null;
@@ -1345,54 +1364,8 @@ export default function SacramentoMapView({
         )
       : null;
 
-  useEffect(() => {
-    if ((!selectedPost && !selectedEvent) || !routeDestination) {
-      routeEndpointsRef.current = null;
-      setRouteCoords(null);
-      setRouteDistanceMeters(null);
-      setRouteDurationSeconds(null);
-      setPrefetchedNavRoute(null);
-      setRouteLoading(false);
-      routeLayerRef.current?.clearLayers();
-      return;
-    }
-
-    const start = userLocationRef.current ?? userLocation;
-    if (!start) return;
-
-    routeEndpointsRef.current = { start, end: routeDestination };
-
-    const fetchId = ++routeFetchIdRef.current;
-    setRouteCoords(null);
-    setRouteDistanceMeters(null);
-    setRouteDurationSeconds(null);
-    setPrefetchedNavRoute(null);
-    setRouteLoading(true);
-
-    fetchNavigationRoute(start, routeDestination).then(async (navResult) => {
-      if (fetchId !== routeFetchIdRef.current) return;
-
-      if (navResult) {
-        setPrefetchedNavRoute(navResult);
-        setRouteCoords(navResult.coords.length >= 2 ? navResult.coords : null);
-        setRouteDistanceMeters(navResult.distanceMeters);
-        setRouteDurationSeconds(navResult.durationSeconds);
-        setRouteLoading(false);
-        return;
-      }
-
-      const fallback = await fetchDrivingRoute(start, routeDestination);
-      if (fetchId !== routeFetchIdRef.current) return;
-
-      setPrefetchedNavRoute(null);
-      setRouteCoords(fallback.onRoads && isRoadGeometry(fallback.coords) ? fallback.coords : null);
-      setRouteDistanceMeters(fallback.distanceMeters);
-      setRouteDurationSeconds(fallback.durationSeconds);
-      setRouteLoading(false);
-    });
-  }, [selectedPost?.id, selectedEvent?.id, routeDestination, hasGpsFix]);
-
-  // Route layer — separate from blips so marker refreshes don't wipe the line.
+  // Redraw only when the selected pin or polyline actually changes — GPS ticks
+  // used to clearLayers() here and flash the line in place.
   useEffect(() => {
     const map = mapRef.current;
     const routeLayer = routeLayerRef.current;
@@ -1400,9 +1373,11 @@ export default function SacramentoMapView({
 
     routeLayer.clearLayers();
 
-    const endpoints = routeEndpointsRef.current;
     const activeTargetId = selectedPost?.id ?? selectedEvent?.id ?? null;
-    if (!activeTargetId || !endpoints || !routeCoords || routeCoords.length < 2) return;
+    if (!activeTargetId || !routeDestination || !routeCoords || routeCoords.length < 2) return;
+
+    const destKey = `${routeDestination.lat.toFixed(5)},${routeDestination.lng.toFixed(5)}`;
+    const destChanged = destKey !== lastFitDestKeyRef.current;
 
     L.polyline(routeCoords, {
       color: '#FF4500',
@@ -1420,24 +1395,21 @@ export default function SacramentoMapView({
       lineJoin: 'round',
     }).addTo(routeLayer);
 
-    fitRouteToAvailableView();
-  }, [selectedPost?.id, selectedEvent?.id, routeCoords, fitRouteToAvailableView]);
+    if (destChanged) {
+      lastFitDestKeyRef.current = destKey;
+      fitRouteToAvailableView();
+    }
+  }, [selectedPost?.id, selectedEvent?.id, routeDestination?.lat, routeDestination?.lng, routeCoords, fitRouteToAvailableView]);
 
   useEffect(() => {
-    const card = selectionCardRef.current;
-    if (!card || (!selectedPost && !selectedEvent)) return;
-
-    const refit = () => fitRouteToAvailableView({ force: true });
-    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refit) : null;
-    observer?.observe(card);
-    return () => observer?.disconnect();
-  }, [selectedPost?.id, selectedEvent?.id, fitRouteToAvailableView]);
-
-  useEffect(() => {
-    if (!routeCoords || routeCoords.length < 2 || routeLoading) return;
-    const timer = window.setTimeout(() => fitRouteToAvailableView({ force: true }), 80);
-    return () => window.clearTimeout(timer);
-  }, [routeLoading, routeCoords, fitRouteToAvailableView]);
+    if (!routeDestination) {
+      routeEndpointsRef.current = null;
+      lastFitDestKeyRef.current = null;
+      return;
+    }
+    const start = userLocationRef.current ?? userLocation;
+    if (start) routeEndpointsRef.current = { start, end: routeDestination };
+  }, [routeDestination, userLocation]);
 
   // Handle programmatically panning/zooming to a selected neighborhood
   useEffect(() => {
@@ -1612,7 +1584,7 @@ export default function SacramentoMapView({
                 commentsLocked={commentsLocked}
                 routeEndpoints={routeEndpoints}
                 routeLoading={routeLoading}
-                distanceMeters={routeDistanceMeters}
+                distanceMeters={liveRouteDistanceMeters}
                 durationSeconds={routeDurationSeconds}
                 routeOnMap={isRoadGeometry(routeCoords)}
                 hasLiveGps={!!userLocation}
@@ -1715,7 +1687,7 @@ export default function SacramentoMapView({
                         locationHint={listingLocationHint(selectedPost, userProfile.uid)}
                         routeEndpoints={routeEndpoints}
                         routeLoading={routeLoading}
-                        distanceMeters={routeDistanceMeters}
+                        distanceMeters={liveRouteDistanceMeters}
                         durationSeconds={routeDurationSeconds}
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
@@ -2165,7 +2137,7 @@ export default function SacramentoMapView({
             commentsLocked={commentsLocked}
             routeEndpoints={routeEndpoints}
             routeLoading={routeLoading}
-            distanceMeters={routeDistanceMeters}
+            distanceMeters={liveRouteDistanceMeters}
             durationSeconds={routeDurationSeconds}
             routeOnMap={isRoadGeometry(routeCoords)}
             hasLiveGps={!!userLocation}
@@ -2275,7 +2247,7 @@ export default function SacramentoMapView({
                     locationHint={listingLocationHint(selectedPost, userProfile.uid)}
                     routeEndpoints={routeEndpoints}
                     routeLoading={routeLoading}
-                    distanceMeters={routeDistanceMeters}
+                    distanceMeters={liveRouteDistanceMeters}
                     durationSeconds={routeDurationSeconds}
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
