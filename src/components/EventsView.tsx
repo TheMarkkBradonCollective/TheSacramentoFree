@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
-  ArrowDownUp,
   Calendar,
   MapPin,
   Search as SearchIcon,
@@ -13,6 +12,7 @@ import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { isEventUpcoming } from '../lib/eventRsvp';
 import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
+import FilterLabeledSwitch from './FilterLabeledSwitch';
 import EventCard from './EventCard';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
@@ -31,17 +31,27 @@ interface EventsViewProps {
 
 type EventTimeFilter = 'all' | 'upcoming' | 'past';
 type EventSortMode = 'soonest' | 'newest' | 'most_rsvps';
+type EventQuickPick = 'my_area' | 'with_photos' | 'has_pin' | 'im_going' | 'has_rsvps' | 'series';
 
 const TIME_FILTER_OPTIONS: { value: EventTimeFilter; label: string }[] = [
-  { value: 'all', label: 'All events' },
+  { value: 'all', label: 'All' },
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'past', label: 'Past' },
 ];
 
-const SORT_OPTIONS: { value: EventSortMode; label: string; hint: string }[] = [
-  { value: 'soonest', label: 'Soonest', hint: 'Next on the calendar first' },
-  { value: 'newest', label: 'Newest', hint: 'Recently posted first' },
-  { value: 'most_rsvps', label: 'Popular', hint: 'Most RSVPs first' },
+const SORT_OPTIONS: { value: EventSortMode; label: string }[] = [
+  { value: 'soonest', label: 'Soonest' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'most_rsvps', label: 'Popular' },
+];
+
+const EVENT_QUICK_PICKS: { id: EventQuickPick; label: string }[] = [
+  { id: 'my_area', label: 'My area' },
+  { id: 'with_photos', label: 'With photos' },
+  { id: 'has_pin', label: 'Has map' },
+  { id: 'im_going', label: "I'm going" },
+  { id: 'has_rsvps', label: 'Has RSVPs' },
+  { id: 'series', label: 'Series' },
 ];
 
 function eventCreatedMs(event: CommunityEvent): number {
@@ -103,7 +113,7 @@ export default function EventsView({
   const [timeFilter, setTimeFilter] = useState<EventTimeFilter>('all');
   const [sortBy, setSortBy] = useState<EventSortMode>('soonest');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
-  const [myAreaOnly, setMyAreaOnly] = useState(false);
+  const [activeQuickPicks, setActiveQuickPicks] = useState<Set<EventQuickPick>>(() => new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Subscribe to live GPS so we can show distance badges on event cards.
@@ -128,7 +138,7 @@ export default function EventsView({
   const hasExtraFilters =
     timeFilter !== 'all' ||
     selectedNeighborhood !== 'All Neighborhoods' ||
-    myAreaOnly ||
+    activeQuickPicks.size > 0 ||
     searchTerm.trim() !== '' ||
     sortBy !== 'soonest';
 
@@ -137,7 +147,32 @@ export default function EventsView({
     setTimeFilter('all');
     setSortBy('soonest');
     setSelectedNeighborhood('All Neighborhoods');
-    setMyAreaOnly(false);
+    setActiveQuickPicks(new Set());
+  };
+
+  const handleSortSwitch = (value: EventSortMode) => (checked: boolean) => {
+    if (checked) {
+      setSortBy(value);
+      return;
+    }
+    if (sortBy === value) setSortBy('soonest');
+  };
+
+  const handleTimeSwitch = (value: EventTimeFilter) => (checked: boolean) => {
+    if (checked) {
+      setTimeFilter(value);
+      return;
+    }
+    if (timeFilter === value) setTimeFilter('all');
+  };
+
+  const handleQuickPickSwitch = (pick: EventQuickPick) => (checked: boolean) => {
+    setActiveQuickPicks((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(pick);
+      else next.delete(pick);
+      return next;
+    });
   };
 
   const seriesUpcomingCounts = useMemo(() => buildSeriesUpcomingCountMap(events), [events]);
@@ -155,7 +190,18 @@ export default function EventsView({
         return false;
       }
 
-      if (myAreaOnly && event.neighborhood !== userProfile.neighborhood) return false;
+      if (activeQuickPicks.has('my_area') && event.neighborhood !== userProfile.neighborhood) {
+        return false;
+      }
+      if (activeQuickPicks.has('with_photos') && !event.imageUrl) return false;
+      if (activeQuickPicks.has('has_pin') && (event.locationLat == null || event.locationLng == null)) {
+        return false;
+      }
+      if (activeQuickPicks.has('series') && !event.seriesId) return false;
+
+      const rsvp = engagement.getRsvpsForEvent(event.id);
+      if (activeQuickPicks.has('im_going') && rsvp.userRsvp !== 'going') return false;
+      if (activeQuickPicks.has('has_rsvps') && rsvp.going + rsvp.maybe === 0) return false;
 
       return true;
     });
@@ -187,7 +233,7 @@ export default function EventsView({
     searchTerm,
     timeFilter,
     selectedNeighborhood,
-    myAreaOnly,
+    activeQuickPicks,
     userProfile.neighborhood,
     sortBy,
     engagement,
@@ -223,59 +269,50 @@ export default function EventsView({
           />
         </div>
 
-        <div className="space-y-2" id="events_sort_bar">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="space-y-3" id="events_filter_switches">
+          <div className="space-y-1.5" id="events_sort_bar">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort events</p>
-            <p className="text-[10px] text-subtle">
-              {SORT_OPTIONS.find((option) => option.value === sortBy)?.hint}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Sort events">
-            {SORT_OPTIONS.map(({ value, label }) => {
-              const active = sortBy === value;
-              return (
-                <button
+            <div className="flex flex-wrap gap-2">
+              {SORT_OPTIONS.map(({ value, label }) => (
+                <FilterLabeledSwitch
                   key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
                   id={`events_sort_${value}`}
-                  onClick={() => setSortBy(value)}
-                  className={`sbn-chip flex items-center gap-1.5 ${active ? 'sbn-chip-active' : ''}`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+                  label={label}
+                  checked={sortBy === value}
+                  onChange={handleSortSwitch(value)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">When</p>
-          <div className="flex flex-wrap gap-2" id="events_time_filter">
-            {TIME_FILTER_OPTIONS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setTimeFilter(value)}
-                className={`sbn-chip ${timeFilter === value ? 'sbn-chip-active' : ''}`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">When</p>
+            <div className="flex flex-wrap gap-2" id="events_time_filter">
+              {TIME_FILTER_OPTIONS.map(({ value, label }) => (
+                <FilterLabeledSwitch
+                  key={value}
+                  id={`events_time_${value}`}
+                  label={label}
+                  checked={timeFilter === value}
+                  onChange={handleTimeSwitch(value)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setMyAreaOnly((prev) => !prev)}
-              className={`sbn-chip ${myAreaOnly ? 'sbn-chip-active' : ''}`}
-            >
-              My area
-            </button>
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+            <div className="flex flex-wrap gap-2">
+              {EVENT_QUICK_PICKS.map(({ id, label }) => (
+                <FilterLabeledSwitch
+                  key={id}
+                  id={`events_quick_pick_${id}`}
+                  label={label}
+                  checked={activeQuickPicks.has(id)}
+                  onChange={handleQuickPickSwitch(id)}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
@@ -308,20 +345,6 @@ export default function EventsView({
                 {SACRAMENTO_NEIGHBORHOODS.map((n) => (
                   <option key={n} value={n}>
                     {n}
-                  </option>
-                ))}
-              </FilterSelect>
-
-              <FilterSelect
-                id="events_filter_sort_select"
-                label="More sort options"
-                icon={ArrowDownUp}
-                value={sortBy}
-                onChange={(v) => setSortBy(v as EventSortMode)}
-              >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
                   </option>
                 ))}
               </FilterSelect>

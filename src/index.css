@@ -1541,15 +1541,15 @@ option {
   transform: translateX(2.25rem);
 }
 
-/* Compact feed filter pill — label + ON/OFF written on the toggle */
+/* Compact feed filter pill — label on track; ON/OFF only in the thumb */
 .sbn-filter-switch {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 2rem;
-  min-width: 4.5rem;
-  padding: 0 1.55rem 0 1.65rem;
+  min-width: 4.25rem;
+  padding: 0 0.65rem 0 1.85rem;
   border-radius: 9999px;
   border: 2px solid var(--color-accent);
   background: var(--color-surface);
@@ -1563,7 +1563,7 @@ option {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: #ffffff;
-  padding: 0 1.65rem 0 1.55rem;
+  padding: 0 1.85rem 0 0.65rem;
 }
 
 .sbn-filter-switch-name {
@@ -1579,54 +1579,32 @@ option {
   color: #ffffff;
 }
 
-.sbn-filter-switch-state {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.5rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-
-.sbn-filter-switch-state-on {
-  left: 0.45rem;
-  color: #ffffff;
-  opacity: 0;
-}
-
-.sbn-filter-switch-state-off {
-  right: 0.4rem;
-  color: var(--color-accent);
-  opacity: 1;
-}
-
-.sbn-filter-switch-on .sbn-filter-switch-state-on {
-  opacity: 1;
-}
-
-.sbn-filter-switch-on .sbn-filter-switch-state-off {
-  opacity: 0;
-}
-
 .sbn-filter-switch-thumb {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 1.35rem;
-  height: 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.2rem;
   border-radius: 9999px;
   background: var(--color-accent);
+  color: #ffffff;
+  font-size: 0.4375rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1;
   box-shadow: 0 1px 3px var(--color-shadow);
-  transition: left 0.2s ease, right 0.2s ease, background-color 0.2s ease;
+  transition: left 0.2s ease, right 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .sbn-filter-switch-on .sbn-filter-switch-thumb {
   left: auto;
   right: 2px;
   background: #ffffff;
+  color: var(--color-accent);
 }
 
 .sbn-help-list-item {

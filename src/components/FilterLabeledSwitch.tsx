@@ -6,7 +6,7 @@ interface FilterLabeledSwitchProps {
   ariaLabel?: string;
 }
 
-/** Compact pill toggle — filter name + ON/OFF written on the control (chip-like row). */
+/** Compact pill toggle — filter name on the track; ON/OFF only inside the thumb circle. */
 export default function FilterLabeledSwitch({
   id,
   label,
@@ -24,14 +24,10 @@ export default function FilterLabeledSwitch({
       onClick={() => onChange(!checked)}
       className={`sbn-filter-switch shrink-0 ${checked ? 'sbn-filter-switch-on' : ''}`}
     >
-      <span className="sbn-filter-switch-state sbn-filter-switch-state-on" aria-hidden>
-        ON
-      </span>
       <span className="sbn-filter-switch-name">{label}</span>
-      <span className="sbn-filter-switch-state sbn-filter-switch-state-off" aria-hidden>
-        OFF
+      <span className="sbn-filter-switch-thumb" aria-hidden>
+        {checked ? 'ON' : 'OFF'}
       </span>
-      <span className="sbn-filter-switch-thumb" aria-hidden />
     </button>
   );
 }
