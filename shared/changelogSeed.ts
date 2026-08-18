@@ -38,6 +38,7 @@ const STAFF_APPLY_PUBLISHED_AT = '2026-08-18T11:05:00.000Z';
 const STAFF_APPLY_APK_PUBLISHED_AT = '2026-08-18T11:45:00.000Z';
 const STAFF_SEAT_FILLED_PUBLISHED_AT = '2026-08-18T11:55:00.000Z';
 const FEED_HIDE_COMPLETED_PUBLISHED_AT = '2026-08-18T12:10:00.000Z';
+const FEED_APK_PUBLISHED_AT = '2026-08-18T12:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -91,6 +92,29 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_feed-apk-0015',
+    '2026-08-18',
+    'Cleaner Stuff feed and staff apply pills — new APK',
+    'Hide given and fulfilled from Community Stuff, and staff apply shows green or red seat pills. Android beta v0.1.0.0015 is on the Download page.',
+    `WHAT NEIGHBORS SEE
+Community Stuff has Hide given and Hide fulfilled toggles so claimed giveaways and completed requests stay out of your feed when you want a cleaner list.
+
+Account → Join the staff team shows green seat pills for open roles and red Seat filled when a role is full.
+
+New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0015). The app you already have still loads the live website, so reopening it picks up these changes too.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/ItemGrid.tsx + src/lib/feedDisplayPrefs.ts — hide given / hide fulfilled.
+- src/components/StaffApplyView.tsx — green and red staff seat pills.
+- android/app/build.gradle + public/android-version.json — beta 0.1.0.0015 (versionCode 15).
+
+HISTORY
+2026-08-18 — Feed toggles, staff seat pills, then Android beta 0015.`,
+    FEED_APK_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_feed-hide-given-fulfilled',
     '2026-08-18',
@@ -451,6 +475,27 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_feed-apk-0015',
+    '2026-08-18',
+    'Cleaner feed and staff apply — new Android download',
+    'Hide given and fulfilled on Community Stuff, plus green and red seat pills when you apply for staff. A new APK (beta v0.1.0.0015) is on the Download page.',
+    `WHAT NEIGHBORS SEE
+Stuff feed → Completed in feed lets you hide claimed giveaways and completed requests.
+
+Staff apply shows green pills for open seats and red Seat filled when a role is full.
+
+Download: https://www.sacramentobuynothing.com/download (beta v0.1.0.0015). Reopening the app you already have also picks up the website changes.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_feed-apk-0015.
+
+HISTORY
+2026-08-18 — Feed toggles, staff pills, Android beta 0015.`,
+    FEED_APK_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_feed-hide-given-fulfilled',
     '2026-08-18',
