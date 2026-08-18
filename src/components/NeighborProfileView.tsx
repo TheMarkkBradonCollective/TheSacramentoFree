@@ -9,6 +9,7 @@ import {
   MapPin,
   MessageSquare,
   Package,
+  Repeat2,
   ShieldCheck,
   UserX,
 } from 'lucide-react';
@@ -456,7 +457,7 @@ export default function NeighborProfileView({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="sbn-card p-4 text-center">
                 <Gift className="w-6 h-6 text-accent mx-auto mb-2" />
                 <p className="font-display text-2xl font-bold text-app">{stats?.itemsGiven ?? 0}</p>
@@ -468,11 +469,16 @@ export default function NeighborProfileView({
                 <p className="text-xs text-muted mt-0.5">Items claimed</p>
               </div>
               <div className="sbn-card p-4 text-center">
+                <Repeat2 className="w-6 h-6 text-accent mx-auto mb-2" />
+                <p className="font-display text-2xl font-bold text-app">{stats?.tradesCompleted ?? 0}</p>
+                <p className="text-xs text-muted mt-0.5">Trades</p>
+              </div>
+              <div className="sbn-card p-4 text-center">
                 <ChevronUp className="w-6 h-6 text-accent mx-auto mb-2" />
                 <p className="font-display text-2xl font-bold text-app">{stats?.upvotesReceived ?? 0}</p>
                 <p className="text-xs text-muted mt-0.5">Upvotes received</p>
               </div>
-              <div className="sbn-card p-4 text-center">
+              <div className="sbn-card p-4 text-center sm:col-span-2">
                 <ChevronDown className="w-6 h-6 text-muted mx-auto mb-2" />
                 <p className="font-display text-2xl font-bold text-app">{stats?.downvotesReceived ?? 0}</p>
                 <p className="text-xs text-muted mt-0.5">Downvotes received</p>

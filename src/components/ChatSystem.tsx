@@ -63,6 +63,7 @@ import { formatPickupLocationMessage } from '../lib/itemLocation';
 import { formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import {
   markItemFulfilledFromChat,
+  markTradeCompletedFromChat,
 } from '../supabase';
 import ChatClaimActions from './ChatClaimActions';
 import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
@@ -800,14 +801,21 @@ export default function ChatSystem({
 
     setIsSending(true);
     setErrorMsg('');
-    const statusOk = await updateSupabaseItemStatus(linkedItem.id, 'completed', userProfile.uid);
+    const result = await markTradeCompletedFromChat({
+      itemId: linkedItem.id,
+      posterUserId: userProfile.uid,
+      partnerUserId,
+      chatId: selectedChat.id,
+      message: formatTradeCompletedChatMessage(linkedItem.title, partnerName),
+    });
     setIsSending(false);
 
-    if (statusOk) {
-      await sendChatText(formatTradeCompletedChatMessage(linkedItem.title, partnerName));
+    if (result.ok) {
       onItemsChanged?.();
+      const loadedMessages = await getSupabaseMessages(selectedChat.id);
+      setMessages(loadedMessages);
     } else {
-      setErrorMsg('Could not mark trade as completed.');
+      setErrorMsg(result.errorMessage || 'Could not mark trade as completed.');
     }
   };
 

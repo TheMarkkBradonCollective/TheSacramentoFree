@@ -128,7 +128,6 @@ export function buildAwardTimeline(params: {
 }
 
 export function buildAwardBadges(stats: NeighborStats, posts: ItemPost[]): NeighborAwardBadge[] {
-  const completedTrades = posts.filter((p) => p.type === 'trade' && p.status === 'completed').length;
   const completedGives = posts.filter((p) => p.type === 'giveaway' && p.status === 'completed').length;
   const completedIso = posts.filter((p) => p.type === 'looking' && p.status === 'completed').length;
 
@@ -167,7 +166,7 @@ export function buildAwardBadges(stats: NeighborStats, posts: ItemPost[]): Neigh
       id: 'trade_pioneer',
       title: 'Trade pioneer',
       description: 'Completed a free item-for-item trade',
-      earned: completedTrades >= 1,
+      earned: stats.tradesCompleted >= 1,
     },
     {
       id: 'request_champion',

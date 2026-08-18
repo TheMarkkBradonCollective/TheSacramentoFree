@@ -50,8 +50,7 @@ import { fileGoGetViolation } from '../lib/violations';
 import {
   recordItemClaimInChat,
   markItemFulfilledFromChat,
-  updateSupabaseItemStatus,
-  createSupabaseMessage,
+  markTradeCompletedFromChat,
   getListingSubitems,
 } from '../supabase';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
@@ -103,17 +102,14 @@ async function applyCompletionForItemType(
       message: formatItemFulfilledChatMessage(item.title, session.requesterName),
     });
   }
-  // trade
-  const ok = await updateSupabaseItemStatus(item.id, 'completed', session.fulfillerUserId);
-  if (!ok) return { ok: false, errorMessage: 'Could not mark trade as completed.' };
-  await createSupabaseMessage(
-    session.chatId,
-    formatTradeCompletedChatMessage(item.title, session.requesterName),
-    session.fulfillerUserId,
-    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-    { skipPush: true },
-  );
-  return { ok: true };
+  // trade — fulfiller is the listing poster; requester is the trade partner
+  return markTradeCompletedFromChat({
+    itemId: item.id,
+    posterUserId: session.fulfillerUserId,
+    partnerUserId: session.requesterUserId,
+    chatId: session.chatId,
+    message: formatTradeCompletedChatMessage(item.title, session.requesterName),
+  });
 }
 
 export default function ItemDetailNavigation({ item, currentUserId, userProfile, onOpenChat }: ItemDetailNavigationProps) {
