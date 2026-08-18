@@ -41,6 +41,7 @@ const FEED_HIDE_COMPLETED_PUBLISHED_AT = '2026-08-18T12:10:00.000Z';
 const FEED_APK_PUBLISHED_AT = '2026-08-18T12:15:00.000Z';
 const APK_0015_ANNOUNCE_PUBLISHED_AT = '2026-08-18T12:20:00.000Z';
 const FEED_SWITCHES_APK_PUBLISHED_AT = '2026-08-18T13:10:00.000Z';
+const APK_0017_PUBLISHED_AT = '2026-08-18T13:30:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -94,6 +95,35 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_apk-0017',
+    '2026-08-18',
+    'New Android download — beta v0.1.0.0017',
+    'Compact filter toggles, collapsible sort panels, brand name in the header, staff safe-area fix, and Events filters — fresh APK on the Download page.',
+    `WHAT NEIGHBORS SEE
+Grab beta v0.1.0.0017 from https://www.sacramentobuynothing.com/download
+
+Since 0016:
+• Filter toggles show ON/OFF inside the thumb circle — compact rows, not a long list
+• Sort & filters panel collapses to save space (Stuff + Events)
+• Header shows SacramentoBuyNothing + tagline beside the logo
+• Staff mobile layout respects status bar and navigation buttons
+• Events get the same toggle filters (sort, when, quick picks)
+• Filters & sort no longer crashes when opened
+
+Already on 0016? Reopening the app still loads the live site, but install 0017 for the latest native shell and safe-area fixes baked in.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/FilterLabeledSwitch.tsx + CollapsibleFilterSection.tsx
+- src/components/BrandLogo.tsx + EventsView.tsx + ItemGrid.tsx
+- android/app/build.gradle — versionCode 17
+
+HISTORY
+2026-08-18 — APK 0017 ships filter UI polish + staff safe area + header branding.`,
+    APK_0017_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_feed-switches-apk-0016',
     '2026-08-18',
