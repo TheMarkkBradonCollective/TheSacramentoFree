@@ -11,3 +11,14 @@ export function apkDownloadUrl(manifest: Pick<AndroidVersionManifest, 'downloadU
   url.searchParams.set('build', String(manifest.versionCode));
   return url.toString();
 }
+
+/** Build a cache-busted AAB download URL for sideload / developer bundles. */
+export function aabDownloadUrl(
+  manifest: Pick<AndroidVersionManifest, 'aabDownloadUrl' | 'versionCode' | 'aabFileName'> | null,
+): string | null {
+  if (!manifest?.aabDownloadUrl) return null;
+
+  const url = new URL(manifest.aabDownloadUrl, APP_ORIGIN);
+  url.searchParams.set('build', String(manifest.versionCode));
+  return url.toString();
+}

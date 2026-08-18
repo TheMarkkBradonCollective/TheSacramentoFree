@@ -5575,6 +5575,11 @@ export async function getUsersLastActive(uids: string[]): Promise<Record<string,
   }
 }
 
+function countFromHeadResult(result: { count?: number | null; error?: { code?: string } | null }): number {
+  if (result.error?.code === '42P01') return 0;
+  return result.count ?? 0;
+}
+
 export async function getDirectorSiteOverview(): Promise<import('./types').DirectorSiteOverview> {
   const empty: import('./types').DirectorSiteOverview = {
     totalNeighbors: 0,
@@ -5583,10 +5588,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
     activeTodayCount: 0,
     activeNeighbors: [],
     activeListings: 0,
+    upcomingEvents: 0,
     openReports: 0,
     openTickets: 0,
     suspendedCount: 0,
     bannedCount: 0,
+    downloadDevicesApk: 0,
+    downloadDevicesAab: 0,
+    downloadDevicesTotal: 0,
+    installDevicesCount: 0,
+    installDevicesApk: 0,
+    installDevicesPwa: 0,
+    installDevicesIosPwa: 0,
     recentActivity: [],
   };
 
@@ -5603,10 +5616,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       activeTodayRes,
       activeNeighborsRes,
       activeListingsRes,
+      upcomingEventsRes,
       openReportsRes,
       openTicketsRes,
       suspendedRes,
       bannedRes,
+      downloadApkRes,
+      downloadAabRes,
+      downloadAnyRes,
+      installTotalRes,
+      installApkRes,
+      installPwaRes,
+      installIosPwaRes,
       auditRes,
       reportsRes,
       ticketsRes,
@@ -5628,10 +5649,39 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
         .order('lastActiveAt', { ascending: false })
         .limit(12),
       supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase
+        .from('community_events')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['active', 'upcoming']),
       supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'new'),
       supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
       supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'suspended'),
       supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'banned'),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .not('apkDownloadedAt', 'is', null),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .not('aabDownloadedAt', 'is', null),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .or('apkDownloadedAt.not.is.null,aabDownloadedAt.not.is.null'),
+      supabase.from('app_device_installs').select('deviceId', { count: 'exact', head: true }),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'android-apk'),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'pwa'),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'ios-pwa'),
       supabase
         .from('moderation_audit_log')
         .select('*')
@@ -5719,10 +5769,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
         };
       }),
       activeListings: activeListingsRes.count ?? 0,
+      upcomingEvents: upcomingEventsRes.count ?? 0,
       openReports: openReportsRes.count ?? 0,
       openTickets: openTicketsRes.count ?? 0,
       suspendedCount: suspendedRes.count ?? 0,
       bannedCount: bannedRes.count ?? 0,
+      downloadDevicesApk: countFromHeadResult(downloadApkRes),
+      downloadDevicesAab: countFromHeadResult(downloadAabRes),
+      downloadDevicesTotal: countFromHeadResult(downloadAnyRes),
+      installDevicesCount: countFromHeadResult(installTotalRes),
+      installDevicesApk: countFromHeadResult(installApkRes),
+      installDevicesPwa: countFromHeadResult(installPwaRes),
+      installDevicesIosPwa: countFromHeadResult(installIosPwaRes),
       recentActivity: activity.slice(0, 20),
     };
   } catch {

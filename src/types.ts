@@ -105,10 +105,22 @@ export interface DirectorSiteOverview {
   activeTodayCount: number;
   activeNeighbors: DirectorActiveNeighbor[];
   activeListings: number;
+  upcomingEvents: number;
   openReports: number;
   openTickets: number;
   suspendedCount: number;
   bannedCount: number;
+  /** Unique devices that downloaded APK at least once. */
+  downloadDevicesApk: number;
+  /** Unique devices that downloaded AAB at least once. */
+  downloadDevicesAab: number;
+  /** Unique devices with any APK or AAB download. */
+  downloadDevicesTotal: number;
+  /** Unique devices with a recorded app install (APK or home screen). */
+  installDevicesCount: number;
+  installDevicesApk: number;
+  installDevicesPwa: number;
+  installDevicesIosPwa: number;
   recentActivity: DirectorActivityItem[];
 }
 

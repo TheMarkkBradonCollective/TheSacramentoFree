@@ -43,6 +43,8 @@ import TermsOfUseContent from './components/TermsOfUseContent';
 import AwardsPanel from './components/AwardsPanel';
 import StaffApplyView from './components/StaffApplyView';
 import { registerStaffApplyOpener } from './lib/staffApplyOpen';
+import { detectInstallKind } from './lib/installContext';
+import { reportAppInstall } from './lib/deviceTracking';
 import { type AnyTab, type AppTab } from './lib/appTabs';
 import {
   appTabPath,
@@ -389,6 +391,7 @@ export default function App() {
     
     if (isStandaloneMode) {
       setIsAlreadyInstalled(true);
+      void reportAppInstall();
       return;
     }
 
@@ -414,6 +417,7 @@ export default function App() {
       setIsAlreadyInstalled(true);
       setShowInstallBanner(false);
       setDeferredPrompt(null);
+      void reportAppInstall();
     };
     window.addEventListener('appinstalled', handleAppInstalled);
 
@@ -438,6 +442,7 @@ export default function App() {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setIsAlreadyInstalled(true);
+        void reportAppInstall(userProfile?.uid);
       }
       setDeferredPrompt(null);
       setShowInstallBanner(false);
@@ -448,6 +453,11 @@ export default function App() {
     setShowInstallBanner(false);
     localStorage.setItem('pwa_banner_dismissed_v1', 'true');
   };
+
+  useEffect(() => {
+    if (detectInstallKind() === 'browser') return;
+    void reportAppInstall(userProfile?.uid);
+  }, [userProfile?.uid]);
 
   useEffect(() => {
     const handleResize = () => {

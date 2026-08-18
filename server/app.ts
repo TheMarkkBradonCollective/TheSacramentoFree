@@ -137,6 +137,72 @@ export function createPushApp() {
     res.json({ ok: true });
   });
 
+  app.post('/api/app/track-download', async (req, res) => {
+    try {
+      const { normalizeDeviceId, normalizeFileType, trackDeviceDownload } = await import(
+        '../api/app/_server/deviceStats'
+      );
+      const deviceId = normalizeDeviceId(req.body?.deviceId);
+      const fileType = normalizeFileType(req.body?.fileType);
+      if (!deviceId) {
+        res.status(400).json({ error: 'deviceId is required' });
+        return;
+      }
+      if (!fileType) {
+        res.status(400).json({ error: 'fileType must be apk or aab' });
+        return;
+      }
+      await trackDeviceDownload(deviceId, fileType);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[api/app/track-download]', err);
+      const message = err instanceof Error ? err.message : 'Could not track download';
+      res.status(message.includes('missing') ? 503 : 500).json({ error: message });
+    }
+  });
+
+  app.post('/api/app/track-install', async (req, res) => {
+    try {
+      const { normalizeDeviceId, normalizeInstallKind, trackDeviceInstall } = await import(
+        '../api/app/_server/deviceStats'
+      );
+      const deviceId = normalizeDeviceId(req.body?.deviceId);
+      const installKind = normalizeInstallKind(req.body?.installKind);
+      if (!deviceId) {
+        res.status(400).json({ error: 'deviceId is required' });
+        return;
+      }
+      if (!installKind) {
+        res.status(400).json({ error: 'installKind must be pwa, ios-pwa, or android-apk' });
+        return;
+      }
+      const apkVersionCode =
+        typeof req.body?.apkVersionCode === 'number' && Number.isFinite(req.body.apkVersionCode)
+          ? Math.floor(req.body.apkVersionCode)
+          : null;
+      const apkVersionName =
+        typeof req.body?.apkVersionName === 'string' && req.body.apkVersionName.trim()
+          ? req.body.apkVersionName.trim().slice(0, 64)
+          : null;
+      const userId =
+        typeof req.body?.userId === 'string' && req.body.userId.trim()
+          ? req.body.userId.trim().slice(0, 128)
+          : null;
+      await trackDeviceInstall({
+        deviceId,
+        installKind,
+        apkVersionCode,
+        apkVersionName,
+        userId,
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[api/app/track-install]', err);
+      const message = err instanceof Error ? err.message : 'Could not track install';
+      res.status(message.includes('missing') ? 503 : 500).json({ error: message });
+    }
+  });
+
   app.get('/api/map/route', async (req, res) => {
     const { parseRouteEndpoints, isInSacramentoServiceArea } = await import('../api/_lib/mapCoords');
     const parsed = parseRouteEndpoints(req.query);
