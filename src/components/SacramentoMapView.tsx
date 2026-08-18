@@ -1440,7 +1440,7 @@ export default function SacramentoMapView({
         />
 
         {/* Mobile map controls — zoom top-left; center bottom-left; new post bottom-right */}
-        <div className="absolute top-14 left-3 z-20 pointer-events-auto" id="mobile_map_zoom_controls">
+        <div className="absolute sbn-map-edge-top left-3 z-20 pointer-events-auto" id="mobile_map_zoom_controls">
           <div className="flex flex-col bg-surface border border-app p-0.5 rounded-xl shadow-app w-11">
             <button
               onClick={handleZoomIn}
@@ -1464,7 +1464,7 @@ export default function SacramentoMapView({
 
         <button
           onClick={handleLocateUser}
-          className={`absolute bottom-4 left-4 z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
+          className={`absolute sbn-map-edge-bottom left-4 z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
             isLocating
               ? 'bg-accent text-on-accent border-accent'
               : followUser
@@ -1481,7 +1481,7 @@ export default function SacramentoMapView({
           <button
             type="button"
             onClick={onOpenNewPost}
-            className="sbn-fab absolute bottom-4 right-4 z-20 pointer-events-auto"
+            className="sbn-fab absolute sbn-map-edge-bottom right-4 z-20 pointer-events-auto"
             aria-label="New post"
             id="mobile_map_new_post_btn"
           >
@@ -1566,7 +1566,7 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Selected listing/event floating panel */}
-        <div ref={selectionCardRef} className="absolute bottom-4 left-4 right-4 z-30 pointer-events-none">
+        <div ref={selectionCardRef} className="absolute sbn-map-edge-bottom left-4 right-4 z-30 pointer-events-none">
           <AnimatePresence>
             {selectedEvent && currentEventIndex >= 0 && (
               <MapSelectedEventCard

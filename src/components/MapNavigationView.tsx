@@ -1594,7 +1594,7 @@ export default function MapNavigationView({
         )}
 
         {gpsError && !showFatalError && (
-          <div className="absolute inset-x-3 top-[calc(env(safe-area-inset-top,0px)+5.5rem)] z-30 pointer-events-none">
+          <div className="absolute inset-x-3 top-[calc(var(--sbn-safe-area-top,var(--sbn-inset-top,0px))+5.5rem)] z-30 pointer-events-none">
             <div className="sbn-nav-glass rounded-2xl px-4 py-3 text-xs font-semibold text-[var(--sbn-nav-warning)] text-center">
               {gpsError}
             </div>

@@ -95,12 +95,14 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
   update(
     '2026-08-18_feed-apk-0015',
     '2026-08-18',
-    'Cleaner Stuff feed and staff apply pills — new APK',
-    'Hide given and fulfilled from Community Stuff, and staff apply shows green or red seat pills. Android beta v0.1.0.0015 is on the Download page.',
+    'Cleaner Stuff feed, staff pills, and system bar spacing — new APK',
+    'Hide given and fulfilled from Community Stuff, staff apply shows green or red seat pills, and the app respects the status bar and navigation buttons. Android beta v0.1.0.0015 is on the Download page.',
     `WHAT NEIGHBORS SEE
 Community Stuff has Hide given and Hide fulfilled toggles so claimed giveaways and completed requests stay out of your feed when you want a cleaner list.
 
 Account → Join the staff team shows green seat pills for open roles and red Seat filled when a role is full.
+
+The header, bottom tabs, map buttons, and new-post FAB now sit below the status bar and above the system navigation buttons.
 
 New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0015). The app you already have still loads the live website, so reopening it picks up these changes too.
 
@@ -109,10 +111,11 @@ New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0015). The a
 WHERE TO LOOK IN CODE
 - src/components/ItemGrid.tsx + src/lib/feedDisplayPrefs.ts — hide given / hide fulfilled.
 - src/components/StaffApplyView.tsx — green and red staff seat pills.
+- src/capacitor/init.ts + src/index.css — Android safe-area insets for status + nav bars.
 - android/app/build.gradle + public/android-version.json — beta 0.1.0.0015 (versionCode 15).
 
 HISTORY
-2026-08-18 — Feed toggles, staff seat pills, then Android beta 0015.`,
+2026-08-18 — Feed toggles, staff pills, system bar spacing, Android beta 0015.`,
     FEED_APK_PUBLISHED_AT,
   ),
   update(
@@ -478,12 +481,14 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
   news(
     '2026-08-18_feed-apk-0015',
     '2026-08-18',
-    'Cleaner feed and staff apply — new Android download',
-    'Hide given and fulfilled on Community Stuff, plus green and red seat pills when you apply for staff. A new APK (beta v0.1.0.0015) is on the Download page.',
+    'Cleaner feed, staff pills, and system bar spacing — new Android download',
+    'Hide given and fulfilled on Community Stuff, green and red staff seat pills, and proper spacing for the status bar and navigation buttons. APK beta v0.1.0.0015 is on the Download page.',
     `WHAT NEIGHBORS SEE
 Stuff feed → Completed in feed lets you hide claimed giveaways and completed requests.
 
 Staff apply shows green pills for open seats and red Seat filled when a role is full.
+
+The app header and map buttons no longer sit under the phone status bar or system buttons.
 
 Download: https://www.sacramentobuynothing.com/download (beta v0.1.0.0015). Reopening the app you already have also picks up the website changes.
 
@@ -493,7 +498,7 @@ WHERE TO LOOK IN CODE
 See Update 2026-08-18_feed-apk-0015.
 
 HISTORY
-2026-08-18 — Feed toggles, staff pills, Android beta 0015.`,
+2026-08-18 — Feed toggles, staff pills, system bar spacing, Android beta 0015.`,
     FEED_APK_PUBLISHED_AT,
   ),
   news(

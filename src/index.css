@@ -66,6 +66,21 @@
   --radius-card: var(--radius-lg);
 }
 
+/* Safe area — Capacitor Android injects --safe-area-inset-*; iOS uses env(). */
+:root {
+  --sbn-inset-top: env(safe-area-inset-top, 0px);
+  --sbn-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --sbn-inset-left: env(safe-area-inset-left, 0px);
+  --sbn-inset-right: env(safe-area-inset-right, 0px);
+}
+
+html.capacitor-native {
+  --sbn-inset-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --sbn-inset-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --sbn-inset-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --sbn-inset-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+}
+
 html,
 body {
   background-color: var(--color-bg);
@@ -1027,15 +1042,15 @@ option {
 
 /* Respect iPhone notch / home indicator when viewport-fit=cover */
 .sbn-safe-top {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--sbn-inset-top, 0px);
 }
 
 .sbn-safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--sbn-keyboard-inset));
+  padding-bottom: max(var(--sbn-inset-bottom, 0px), var(--sbn-keyboard-inset));
 }
 
 .sbn-input-tray {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(0.75rem, var(--sbn-inset-bottom, 0px));
 }
 
 .chat-thread-bg {
@@ -1623,15 +1638,11 @@ button {
 /* Mobile app shell — fixed chrome, stable viewport height */
 :root {
   --sbn-mobile-header-body-h: 3.5rem;
-  --sbn-safe-area-top: env(safe-area-inset-top, 0px);
+  --sbn-safe-area-top: var(--sbn-inset-top, 0px);
+  --sbn-safe-area-bottom: var(--sbn-inset-bottom, 0px);
   --sbn-mobile-header-h: calc(var(--sbn-mobile-header-body-h) + var(--sbn-safe-area-top));
-  --sbn-mobile-nav-h: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+  --sbn-mobile-nav-h: calc(4.25rem + var(--sbn-safe-area-bottom));
   --sbn-keyboard-inset: 0px;
-}
-
-html.capacitor-native {
-  --sbn-safe-area-top: max(env(safe-area-inset-top, 0px), 28px);
-  --sbn-mobile-header-h: calc(var(--sbn-mobile-header-body-h) + var(--sbn-safe-area-top));
 }
 
 .sbn-mobile-shell {
@@ -1717,7 +1728,7 @@ html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet .sbn-safe-bot
 }
 
 .sbn-mobile-shell.sbn-immersive-nav .sbn-mobile-prompt-offset {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(1rem, var(--sbn-safe-area-bottom, 0px));
 }
 
 /* Shrink the app above the virtual keyboard; hide bottom nav while typing */
@@ -1744,7 +1755,7 @@ html.sbn-keyboard-open .sbn-mobile-nav {
   z-index: 50;
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-bottom: var(--sbn-safe-area-bottom, 0px);
 }
 
 .sbn-mobile-nav-item {
@@ -1853,11 +1864,19 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 }
 
 .safe-area-pb {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px), var(--sbn-keyboard-inset));
+  padding-bottom: max(0.75rem, var(--sbn-inset-bottom, 0px), var(--sbn-keyboard-inset));
 }
 
 .safe-area-pt {
-  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  padding-top: max(0.75rem, var(--sbn-inset-top, 0px));
+}
+
+.sbn-map-edge-bottom {
+  bottom: calc(1rem + var(--sbn-safe-area-bottom, var(--sbn-inset-bottom, 0px)));
+}
+
+.sbn-map-edge-top {
+  top: calc(1rem + var(--sbn-safe-area-top, var(--sbn-inset-top, 0px)));
 }
 
 /* Lift bottom sheets/dialogs above the mobile tab bar */
