@@ -35,6 +35,7 @@ const MAP_ROUTE_PUBLISHED_AT = '2026-08-18T09:30:00.000Z';
 const FOOTER_APK_PUBLISHED_AT = '2026-08-18T09:40:00.000Z';
 const LISTINGS_APK_PUBLISHED_AT = '2026-08-18T10:20:00.000Z';
 const STAFF_APPLY_PUBLISHED_AT = '2026-08-18T11:05:00.000Z';
+const STAFF_APPLY_APK_PUBLISHED_AT = '2026-08-18T11:45:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -88,6 +89,30 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_staff-apply-apk-0014',
+    '2026-08-18',
+    'Staff applications and Broadcast — new APK',
+    'Apply for staff from Account, get notified for Yes, Maybe, or No, and see Broadcast instead of Test all users. Android beta v0.1.0.0014 is on the Download page.',
+    `WHAT NEIGHBORS SEE
+Account has Join the staff team — read what each role does, then apply. Staff review one request at a time. You hear back either way.
+
+The Alerts button that used to say Test all users is now Broadcast.
+
+New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0014). The app you already have still loads the live website, so reopening it picks up these changes too.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/StaffApplyView.tsx — neighbor apply page.
+- src/components/staff/StaffApplicationQueue.tsx — Yes / Maybe / No on Team.
+- api/push/_server/staffApplyInvitePush.ts — one-time staff-apply invite push.
+- android/app/build.gradle + public/android-version.json — beta 0.1.0.0014 (versionCode 14).
+
+HISTORY
+2026-08-18 — Staff applications merged, then Android beta 0014.`,
+    STAFF_APPLY_APK_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_staff-apply-broadcast',
     '2026-08-18',
@@ -383,6 +408,25 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_staff-apply-apk-0014',
+    '2026-08-18',
+    'Staff applications and a new Android download',
+    'Apply for staff from Account and hear back for Yes, Maybe, or No. A new APK (beta v0.1.0.0014) is on the Download page.',
+    `WHAT NEIGHBORS SEE
+Open Account → Join the staff team. Pick one role and send your application. Staff review one at a time and you get notified either way.
+
+Download: https://www.sacramentobuynothing.com/download (beta v0.1.0.0014). Reopening the app you already have also picks up the website changes.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_staff-apply-apk-0014.
+
+HISTORY
+2026-08-18 — Staff applications and Android beta 0014.`,
+    STAFF_APPLY_APK_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_staff-apply',
     '2026-08-18',
