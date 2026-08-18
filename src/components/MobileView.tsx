@@ -39,6 +39,7 @@ interface MobileViewProps {
   onOpenNewEvent: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
@@ -78,6 +79,7 @@ interface MobileViewProps {
   onOpenChatById?: (chatId: string) => void;
   onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
+  onViewEventId?: (eventId: string) => void;
 }
 
 const MOBILE_NAV_LEFT = [
@@ -102,6 +104,7 @@ export default function MobileView({
   onOpenNewEvent,
   canAccessEvents = true,
   onInitiateChat,
+  onStaffListingChat,
   onClaimSubmitted,
   onViewItem,
   onRepostPost,
@@ -141,6 +144,7 @@ export default function MobileView({
   onOpenChatById,
   onOpenTicketById,
   onViewListingId,
+  onViewEventId,
 }: MobileViewProps) {
   const [selectedMobileCategory, setSelectedMobileCategory] = useState('All Categories');
   const [selectedMobileType, setSelectedMobileType] = useState<MapContentFilter>('all');
@@ -275,7 +279,7 @@ export default function MobileView({
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <div className="sbn-page-header"><h2>{IN_APP.feedTitle}</h2><p>{IN_APP.feedDescription} · {items.length} listings</p></div>
-                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
+                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
                 </ScrollPage>
                 <ScrollPage
                   className={communityTab === 'events' ? '' : 'hidden'}
@@ -287,7 +291,7 @@ export default function MobileView({
                   <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
                 </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
-                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} fullBleed className="h-full min-h-0" />
+                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
                 </div>
                 <ScrollPage
                   className={`bg-app ${communityTab === 'profile' ? '' : 'hidden'}`}
@@ -497,6 +501,8 @@ export default function MobileView({
             onOpenPrivacy={onOpenPrivacy}
             onOpenTerms={onOpenTerms}
             onStartDirectMessage={() => setActiveTab('feed')}
+            onViewRelatedListing={onViewListingId}
+            onViewRelatedEvent={onViewEventId}
             fullBleed
             className="h-full min-h-0"
           />

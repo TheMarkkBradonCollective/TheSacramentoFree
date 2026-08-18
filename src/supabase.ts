@@ -20,7 +20,7 @@ import {
   VOTE_COOLDOWN_MAX_NEW_VOTES,
   VOTE_COOLDOWN_WINDOW_MS,
 } from './lib/voteCooldown';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, ROLE_RANK, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 import {
   deriveApplicantStaffApplyState,
   isStaffApplyRole,
@@ -6036,6 +6036,12 @@ function normalizeReport(row: Record<string, unknown>): UserReport {
 }
 
 function normalizeTicket(row: Record<string, unknown>): SupportTicket {
+  const ticketSourceRaw = row.ticketSource ?? row.ticket_source;
+  const ticketSource =
+    ticketSourceRaw === 'staff_listing' || ticketSourceRaw === 'staff_event' || ticketSourceRaw === 'neighbor'
+      ? ticketSourceRaw
+      : 'neighbor';
+
   return {
     id: String(row.id),
     openerUserId: String(row.openerUserId),
@@ -6045,6 +6051,12 @@ function normalizeTicket(row: Record<string, unknown>): SupportTicket {
     subject: String(row.subject),
     status: row.status === 'closed' ? 'closed' : 'open',
     closedByUserId: row.closedByUserId ? String(row.closedByUserId) : null,
+    ticketSource,
+    relatedItemId: row.relatedItemId ? String(row.relatedItemId) : null,
+    relatedItemTitle: row.relatedItemTitle ? String(row.relatedItemTitle) : null,
+    relatedEventId: row.relatedEventId ? String(row.relatedEventId) : null,
+    relatedEventTitle: row.relatedEventTitle ? String(row.relatedEventTitle) : null,
+    initiatedByUserId: row.initiatedByUserId ? String(row.initiatedByUserId) : null,
     createdAt: String(row.createdAt ?? row.created_at ?? ''),
     updatedAt: String(row.updatedAt ?? row.updated_at ?? ''),
   };
@@ -6281,6 +6293,150 @@ export async function createSupportTicket(params: {
     return { ok: true, ticketId };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open ticket.' };
+  }
+}
+
+export async function findOrCreateStaffListingOutreachTicket(params: {
+  staff: UserProfile;
+  item: Pick<import('./types').ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  if (!isStaffRole(params.staff.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('support_tickets')
+      .select('id')
+      .eq('openerUserId', params.item.userId)
+      .eq('relatedItemId', params.item.id)
+      .eq('ticketSource', 'staff_listing')
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (findError && findError.code !== '42P01') {
+      return { ok: false, errorMessage: findError.message };
+    }
+    if (existing?.id) return { ok: true, ticketId: String(existing.id) };
+
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const subject = `Listing: ${params.item.title}`;
+
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.item.userId,
+      openerName: params.item.userDisplayName,
+      openerRole: 'user',
+      minStaffRank: ROLE_RANK.city_moderator,
+      subject,
+      status: 'open',
+      ticketSource: 'staff_listing',
+      relatedItemId: params.item.id,
+      relatedItemTitle: params.item.title,
+      initiatedByUserId: params.staff.uid,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run staff outreach ticket migration in Supabase.' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const msgResult = await insertSupportTicketMessageRow({
+      ticketId,
+      senderUserId: params.staff.uid,
+      senderName: params.staff.displayName,
+      text: `${roleLabel(params.staff.role)} opened a staff thread about this listing. Neighbors and staff can coordinate here.`,
+      createdAt: now,
+    });
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened', messageId: msgResult.messageId });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
+
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open staff thread.' };
+  }
+}
+
+export async function findOrCreateStaffEventOutreachTicket(params: {
+  staff: UserProfile;
+  event: Pick<import('./types').CommunityEvent, 'id' | 'title' | 'userId' | 'userDisplayName'>;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  if (!isStaffRole(params.staff.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('support_tickets')
+      .select('id')
+      .eq('openerUserId', params.event.userId)
+      .eq('relatedEventId', params.event.id)
+      .eq('ticketSource', 'staff_event')
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (findError && findError.code !== '42P01') {
+      return { ok: false, errorMessage: findError.message };
+    }
+    if (existing?.id) return { ok: true, ticketId: String(existing.id) };
+
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const subject = `Event: ${params.event.title}`;
+
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.event.userId,
+      openerName: params.event.userDisplayName,
+      openerRole: 'user',
+      minStaffRank: ROLE_RANK.city_moderator,
+      subject,
+      status: 'open',
+      ticketSource: 'staff_event',
+      relatedEventId: params.event.id,
+      relatedEventTitle: params.event.title,
+      initiatedByUserId: params.staff.uid,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run staff outreach ticket migration in Supabase.' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const msgResult = await insertSupportTicketMessageRow({
+      ticketId,
+      senderUserId: params.staff.uid,
+      senderName: params.staff.displayName,
+      text: `${roleLabel(params.staff.role)} opened a staff thread about this event.`,
+      createdAt: now,
+    });
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened', messageId: msgResult.messageId });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
+
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open staff thread.' };
   }
 }
 

@@ -31,6 +31,8 @@ interface ChatSupportSectionProps {
   onOpenTerms?: () => void;
   initialTicketId?: string | null;
   onClearInitialTicketId?: () => void;
+  onViewRelatedListing?: (itemId: string) => void;
+  onViewRelatedEvent?: (eventId: string) => void;
   /** Compact rows for the chat sidebar */
   compact?: boolean;
   className?: string;
@@ -46,6 +48,8 @@ export default function ChatSupportSection({
   onOpenTerms,
   initialTicketId = null,
   onClearInitialTicketId,
+  onViewRelatedListing,
+  onViewRelatedEvent,
   compact = false,
   className = '',
 }: ChatSupportSectionProps) {
@@ -342,6 +346,8 @@ export default function ChatSupportSection({
             ticket={activeTicket}
             viewer={user}
             showTicketMeta={false}
+            onViewRelatedListing={onViewRelatedListing}
+            onViewRelatedEvent={onViewRelatedEvent}
             onClosed={() => {
               void getSupportTicketById(activeTicket.id).then((t) => {
                 if (t) setActiveTicket(t);

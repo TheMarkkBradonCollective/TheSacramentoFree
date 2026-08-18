@@ -11,6 +11,7 @@ import {
 import { canDeleteSupportTicket, canUnsendSupportTicketMessage, canViewerAccessTicket } from '../lib/roles';
 import RoleBadge from './RoleBadge';
 import ListingImage from './ListingImage';
+import SupportTicketRelatedPreview from './SupportTicketRelatedPreview';
 import { safeHttpUrl } from '../lib/safeUrl';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
@@ -30,6 +31,8 @@ interface SupportTicketThreadProps {
   onUpdated?: () => void;
   /** Hide ticket meta bar when the parent header already shows context */
   showTicketMeta?: boolean;
+  onViewRelatedListing?: (itemId: string) => void;
+  onViewRelatedEvent?: (eventId: string) => void;
 }
 
 export default function SupportTicketThread({
@@ -39,6 +42,8 @@ export default function SupportTicketThread({
   onDeleted,
   onUpdated,
   showTicketMeta = true,
+  onViewRelatedListing,
+  onViewRelatedEvent,
 }: SupportTicketThreadProps) {
   const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -240,6 +245,16 @@ export default function SupportTicketThread({
         </p>
       </div>
       ) : null}
+
+      {(ticket.relatedItemId || ticket.relatedEventId) && (
+        <div className="shrink-0 px-4 py-3 border-b border-app">
+          <SupportTicketRelatedPreview
+            ticket={ticket}
+            onViewListing={onViewRelatedListing}
+            onViewEvent={onViewRelatedEvent}
+          />
+        </div>
+      )}
 
       {err && <p className="px-4 py-2 text-xs font-semibold text-red-400">{err}</p>}
 

@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Calendar, ExternalLink, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bookmark, Calendar, ExternalLink, LifeBuoy, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ItemPost, extractGPSCoordinates, ItemComment, ListingSubItem, UserProfile } from '../types';
 import {
@@ -27,6 +27,8 @@ import ItemDetailNavigation from './ItemDetailNavigation';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
+import StaffListingActions from './StaffListingActions';
+import { isStaffRole } from '../lib/roles';
 import { getListingSubitems, itemHasRecordedAppClaim, getUserDisplayInfoByIds } from '../supabase';
 import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
@@ -40,6 +42,8 @@ interface ItemDetailViewProps {
   userLng?: number | null;
   onClose: () => void;
   onMessage?: () => void;
+  onStaffChat?: () => void;
+  onListingStaffAction?: () => void;
   onClaimSubmitted?: (chatId: string) => void;
   onOpenChat?: (chatId: string) => void;
   onEdit: () => void;
@@ -63,6 +67,8 @@ export default function ItemDetailView({
   userLng = null,
   onClose,
   onMessage,
+  onStaffChat,
+  onListingStaffAction,
   onClaimSubmitted,
   onOpenChat,
   onEdit,
@@ -81,6 +87,7 @@ export default function ItemDetailView({
   const [hasAppClaim, setHasAppClaim] = useState(false);
   const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const isOwner = item.userId === currentUserId;
+  const isStaffViewer = isStaffRole(userProfile?.role);
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
 
@@ -183,11 +190,19 @@ export default function ItemDetailView({
         {isOwner && isOpenForCoordination ? (
           <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
         ) : !isOwner ? (
-          isOpenForCoordination && onMessage && (
-            <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-              <MessageSquare className="w-4 h-4" />
-              Message
+          isStaffViewer && onStaffChat ? (
+            <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+              <LifeBuoy className="w-4 h-4" />
+              Staff chat
             </button>
+          ) : (
+            isOpenForCoordination &&
+            onMessage && (
+              <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+                <MessageSquare className="w-4 h-4" />
+                Message
+              </button>
+            )
           )
         ) : null}
       </header>
@@ -303,13 +318,24 @@ export default function ItemDetailView({
             {/* Renders itself only when there's a pickup pin OR an already-active Go Get
                 session — the latter matters for Looking/Trade, where the destination is
                 wherever the fulfiller is, not the listing's own (often absent) pin. */}
-            {userProfile && (
+            {userProfile && !isStaffViewer && (
               <ItemDetailNavigation
                 item={item}
                 currentUserId={currentUserId}
                 userProfile={userProfile}
                 onOpenChat={onOpenChat}
               />
+            )}
+
+            {isStaffViewer && !isOwner && userProfile && (
+              <section className="sbn-card p-4 space-y-3 border border-role-accent/20">
+                <StaffListingActions
+                  item={item}
+                  actor={userProfile}
+                  onChanged={() => onListingStaffAction?.()}
+                  onDeleted={onClose}
+                />
+              </section>
             )}
           </section>
 
@@ -513,14 +539,22 @@ export default function ItemDetailView({
                 <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
                   Back
                 </button>
-                {isOpenForCoordination && onMessage && (
-                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
-                    <MessageSquare className="w-4 h-4" />
-                    Message
+                {isStaffViewer && onStaffChat ? (
+                  <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary flex-1">
+                    <LifeBuoy className="w-4 h-4" />
+                    Staff chat
                   </button>
+                ) : (
+                  isOpenForCoordination &&
+                  onMessage && (
+                    <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
+                      <MessageSquare className="w-4 h-4" />
+                      Message
+                    </button>
+                  )
                 )}
               </div>
-              {item.status === 'active' && userProfile && onClaimSubmitted && (
+              {item.status === 'active' && userProfile && onClaimSubmitted && !isStaffViewer && (
                 <ClaimAtPickupButton
                   item={item}
                   user={userProfile}

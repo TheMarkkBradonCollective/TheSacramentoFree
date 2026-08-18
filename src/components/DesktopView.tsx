@@ -34,6 +34,7 @@ interface DesktopViewProps {
   onOpenNewEvent: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
@@ -73,6 +74,7 @@ interface DesktopViewProps {
   onOpenChatById?: (chatId: string) => void;
   onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
+  onViewEventId?: (eventId: string) => void;
 }
 
 const TAB_TITLES: Record<AppTab, string> = {
@@ -93,6 +95,7 @@ export default function DesktopView({
   onOpenNewEvent,
   canAccessEvents = true,
   onInitiateChat,
+  onStaffListingChat,
   onClaimSubmitted,
   onViewItem,
   onRepostPost,
@@ -132,6 +135,7 @@ export default function DesktopView({
   onOpenChatById,
   onOpenTicketById,
   onViewListingId,
+  onViewEventId,
 }: DesktopViewProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => isStaffRole(userProfile.role));
   const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
@@ -234,6 +238,7 @@ export default function DesktopView({
                       userProfile={userProfile}
                       engagement={engagement}
                       onInitiateChat={onInitiateChat}
+                      onStaffListingChat={onStaffListingChat}
                       onViewItem={onViewItem}
                       onViewProfile={onViewProfile}
                       onRefresh={onRefresh}
@@ -329,6 +334,8 @@ export default function DesktopView({
                   onOpenPrivacy={onOpenPrivacy}
                   onOpenTerms={onOpenTerms}
                   onStartDirectMessage={() => setActiveTab('feed')}
+                  onViewRelatedListing={onViewListingId}
+                  onViewRelatedEvent={onViewEventId}
                   className="h-full min-h-0 rounded-2xl border border-app overflow-hidden bg-surface"
                 />
               </div>

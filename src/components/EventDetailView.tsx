@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { ArrowLeft, Calendar, MapPin, Pencil, Repeat } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Calendar, LifeBuoy, MapPin, Pencil, Repeat } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
+import StaffEventActions from './StaffEventActions';
+import { isStaffRole } from '../lib/roles';
+import { getUserDisplayInfoByIds } from '../supabase';
 import { isEventEditable, isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
 import EventStatusBadge from './EventStatusBadge';
@@ -24,6 +27,8 @@ interface EventDetailViewProps {
   onAddDates?: () => void;
   onCancel?: () => void;
   onViewProfile: (userId: string) => void;
+  onStaffChat?: () => void;
+  onEventStaffAction?: () => void;
   onSelectOccurrence?: (event: CommunityEvent) => void;
   onEventUpdated?: (event: CommunityEvent) => void;
   updating?: boolean;
@@ -71,14 +76,18 @@ export default function EventDetailView({
   onAddDates,
   onCancel,
   onViewProfile,
+  onStaffChat,
+  onEventStaffAction,
   onSelectOccurrence,
   onEventUpdated,
   updating = false,
   commentsLocked = false,
 }: EventDetailViewProps) {
   const [showPinModal, setShowPinModal] = useState(false);
+  const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const eventStatus = resolveEventStatus(event);
   const isOwner = event.userId === currentUserId;
+  const isStaffViewer = isStaffRole(userProfile?.role);
   const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
   const canEdit = isOwner && isEventEditable(event);
@@ -87,6 +96,18 @@ export default function EventDetailView({
   const upcomingInSeries =
     event.seriesId ? getUpcomingSeriesOccurrences(allEvents, event.seriesId) : [];
   const pastSiblings = seriesSiblings.filter((sibling) => !isEventUpcoming(sibling));
+
+  useEffect(() => {
+    const uniqueIds = [...new Set(comments.map((c) => c.userId))];
+    if (uniqueIds.length === 0) return;
+    void getUserDisplayInfoByIds(uniqueIds).then((info) => {
+      const roles: Record<string, UserProfile['role']> = {};
+      for (const [uid, data] of Object.entries(info)) {
+        if (data.role) roles[uid] = data.role;
+      }
+      setCommenterRoles(roles);
+    });
+  }, [comments]);
 
   return (
     <div className="sbn-app-sheet flex flex-col">
@@ -121,6 +142,12 @@ export default function EventDetailView({
             >
               <Pencil className="w-3.5 h-3.5" />
               Edit
+            </button>
+          )}
+          {isStaffViewer && !isOwner && onStaffChat && (
+            <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+              <LifeBuoy className="w-3.5 h-3.5" />
+              Staff chat
             </button>
           )}
         </div>
@@ -231,7 +258,18 @@ export default function EventDetailView({
             </div>
           )}
 
-          <EventDetailNavigation event={event} currentUserId={currentUserId} />
+          {!isStaffViewer && <EventDetailNavigation event={event} currentUserId={currentUserId} />}
+
+          {isStaffViewer && !isOwner && userProfile && (
+            <section className="sbn-card p-4 border border-role-accent/20">
+              <StaffEventActions
+                event={event}
+                actor={userProfile}
+                onChanged={() => onEventStaffAction?.()}
+                onDeleted={onClose}
+              />
+            </section>
+          )}
 
           <div className="sbn-card p-3 space-y-3">
             <button
@@ -284,6 +322,7 @@ export default function EventDetailView({
             rsvpDisabled={isCancelled}
             commentsLocked={commentsLocked}
             isPast={isPast}
+            commenterRoles={commenterRoles}
           />
         </div>
       </div>
