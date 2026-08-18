@@ -24,7 +24,10 @@ All files are **1080×1920**, 24-bit PNG (Play phone size). Upload in this order
 
 ## Feature graphic (required)
 
-`play-store-assets/feature-graphic-1024x500.png` — 1024×500 PNG.
+- `play-store-assets/feature-graphic-1024x500.png`
+- or `play-store-assets/screenshots/00-feature-graphic-1024x500.png` (same file)
+
+1024×500 PNG. Used at the top of the Play Store listing.
 
 ## Regenerate
 
