@@ -1,10 +1,8 @@
 import type { ReactNode } from 'react';
-import { MapPin, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import type { UserProfile } from '../types';
-import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
-import AwardsButton from './AwardsButton';
-import ThemeToggle from './ThemeToggle';
 import BrandLogo from './BrandLogo';
+import TopbarActions from './TopbarActions';
 
 interface AppTopbarProps {
   userProfile: UserProfile;
@@ -63,17 +61,14 @@ export default function AppTopbar({
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0" id="app_topbar_actions">
-        <div
-          className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-inset border border-app text-accent text-xs font-semibold"
-          id="topbar_neighborhood_badge"
-        >
-          <MapPin className="w-3.5 h-3.5" />
-          {userProfile.neighborhood}
-        </div>
-        <ThemeToggle compact={compactActions} />
-        <NotificationsHubButton compact={compactActions} />
-        <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} compact={compactActions} />
+      <div className="flex items-center gap-2 shrink-0">
+        <TopbarActions
+          userProfile={userProfile}
+          onOpenAwards={onOpenAwards}
+          awardsButtonGlow={awardsButtonGlow}
+          compact={compactActions}
+          showNeighborhood
+        />
         {action}
       </div>
     </header>

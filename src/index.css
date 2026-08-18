@@ -725,6 +725,50 @@ option {
   position: relative;
 }
 
+.sbn-sidebar-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 50;
+  width: min(20rem, calc(100vw - 1.25rem));
+  max-width: 20rem;
+  height: 100%;
+  height: 100dvh;
+  padding-top: var(--sbn-inset-top, 0px);
+  padding-bottom: var(--sbn-inset-bottom, 0px);
+  box-shadow: 0 12px 40px var(--color-shadow-lg);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+
+.sbn-sidebar-drawer-closed {
+  transform: translateX(-105%);
+  pointer-events: none;
+}
+
+.sbn-sidebar-drawer-open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.sbn-sidebar-backdrop {
+  animation: sbn-backdrop-in 0.22s ease-out both;
+}
+
+@keyframes sbn-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sbn-sidebar-nav {
+  -webkit-overflow-scrolling: touch;
+}
+
 .sbn-sidebar-accent-bar {
   position: absolute;
   top: 0;
@@ -748,7 +792,9 @@ option {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 1rem 1rem 0.875rem;
+  padding: 0.875rem 0.875rem 0.75rem;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .sbn-sidebar-role-pill {

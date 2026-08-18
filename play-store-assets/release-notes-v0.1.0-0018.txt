@@ -1,0 +1,9 @@
+Android beta v0.1.0.0018 (versionCode 18)
+
+What's new:
+• Staff mobile sidebar slides in/out smoothly — nav labels fit inside the drawer
+• Every mobile user gets theme, notifications, and badges in the header
+• Staff drawer header polish (avatar, role pill, close) with top bar hidden while menu is open
+• Includes 0017 filter toggles, safe-area fixes, and header branding
+
+Download (sideload): https://www.sacramentobuynothing.com/download

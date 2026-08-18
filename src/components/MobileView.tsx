@@ -10,9 +10,8 @@ import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { MAP_CONTENT_FILTERS, getMapContentFilterLabel, type MapContentFilter } from '../lib/postType';
-import AwardsButton from './AwardsButton';
-import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
+import TopbarActions from './TopbarActions';
 import CommunityStatsBar from './CommunityStatsBar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
@@ -194,7 +193,7 @@ export default function MobileView({
         {!sidebarCollapsed && (
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/40"
+            className="fixed inset-0 z-40 bg-black/40 sbn-sidebar-backdrop animate-in fade-in duration-200"
             aria-label="Close navigation menu"
             onClick={() => setSidebarCollapsed(true)}
           />
@@ -319,8 +318,12 @@ export default function MobileView({
           compact
         />
         <div className="flex items-center gap-1 shrink-0">
-          <NotificationsHubButton />
-          {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
+          <TopbarActions
+            userProfile={userProfile}
+            onOpenAwards={onOpenAwards ?? (() => {})}
+            awardsButtonGlow={awardsButtonGlow}
+            compact
+          />
         </div>
         </div>
       </header>
