@@ -5,7 +5,7 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 ## What is already done
 
 - Release signing keystore: `android/app/sac-buynothing-release.keystore`
-- `versionCode` **10**, `versionName` **0.1.0**
+- `versionCode` **11**, `versionName` **0.1.0**
 - Build command: `npm run android:aab` → `dist/android/sac-buy-nothing-release.aab`
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`

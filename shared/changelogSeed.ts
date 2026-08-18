@@ -31,6 +31,7 @@ const DIRECTOR_TITLE = 'Buy Nothing Director';
 const PUBLISHED_AT = '2026-07-26T23:20:00.000Z';
 const OUTAGE_PUBLISHED_AT = '2026-08-18T08:20:00.000Z';
 const OUTAGE_UPDATED_AT = '2026-08-18T12:00:00.000Z';
+const MAP_ROUTE_PUBLISHED_AT = '2026-08-18T09:30:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -84,6 +85,30 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_map-route-apk-0011',
+    '2026-08-18',
+    'Map routes and live updates are smoother — new APK',
+    'Tapping a listing on the map no longer flashes a frozen route. Live listing updates stay on screen instead of reloading the page. Android beta v0.1.0.0011 is on the Download page.',
+    `WHAT NEIGHBORS SEE
+If you tapped a pin and the orange driving line blinked, the distance did not change, or you looked stuck on the map — that is fixed. The line and mileage now update when you pick a different listing, and they stay put while you are standing still.
+
+Live posts should also stop making the whole site blink or jump back to a loading screen while you are looking.
+
+New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0011). The app you already have still loads the live website, so reopening it picks up the map fix too.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/hooks/usePreviewDrivingRoute.ts — keep the last good route; refetch only when the pin or walker actually moved.
+- src/components/SacramentoMapView.tsx + MapNavigationView.tsx — no more clear-then-reload splash; delayed WebView GPS is not dropped.
+- src/pwa/appUpdateWatcher.ts + src/hooks/useItemsRealtime.ts — apply live data and deploys without a full-page flash.
+- android/app/build.gradle + public/android-version.json — beta 0.1.0.0011 (versionCode 11).
+
+HISTORY
+2026-08-18 — Merged outage notes (PR #190), quiet live updates (PR #191), and route-glitch fix (PR #192), then shipped Android beta 0011.`,
+    MAP_ROUTE_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_login-crash-fix',
     '2026-08-18',
@@ -286,6 +311,25 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_smoother-map-apk',
+    '2026-08-18',
+    'Smoother map and a new Android download',
+    'Tapping a listing on the map should show a real driving distance now, without the line blinking in place. A new APK (beta v0.1.0.0011) is on the Download page.',
+    `WHAT NEIGHBORS SEE
+If the orange route on the map flashed, the miles stayed the same, or you looked frozen after tapping a pin — that is fixed. Live listings should also stop making the page blink while you are looking.
+
+Download: https://www.sacramentobuynothing.com/download (beta v0.1.0.0011). Reopening the app you already have also picks up the website fix.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_map-route-apk-0011.
+
+HISTORY
+2026-08-18 — Map route glitches, live-update flashes, and Android beta 0011.`,
+    MAP_ROUTE_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_we-are-back',
     '2026-08-18',
