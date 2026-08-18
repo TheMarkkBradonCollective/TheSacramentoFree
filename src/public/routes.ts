@@ -53,6 +53,7 @@ export function normalizePublicPath(raw: string): string {
 export function parsePublicRoute(hash: string): PublicRoute {
   const path = normalizePublicPath(hash.replace(/^#\/?/, ''));
   if (path === '' || path === 'home') return 'home';
+  if (path === 'news' || path === 'announcements') return 'updates';
   if (PUBLIC_ROUTE_LIST.includes(path as PublicRoute)) {
     return path as PublicRoute;
   }
@@ -71,6 +72,7 @@ export function publicRouteFromPathname(pathname: string): PublicRoute | null {
   const path = normalizePublicPath(pathname);
   if (path === '' || path === 'home') return 'home';
   if (APP_TAB_PATHS.has(path)) return null;
+  if (path === 'news' || path === 'announcements') return 'updates';
   if (PUBLIC_ROUTE_LIST.includes(path as PublicRoute)) {
     return path as PublicRoute;
   }

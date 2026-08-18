@@ -24,13 +24,13 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 Set these before building the APK:
 
 ```bash
-VITE_APP_URL=https://sacramentobuynothing.com
+VITE_APP_URL=https://www.sacramentobuynothing.com
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_PUBLISHABLE_KEY=...
 VITE_VAPID_PUBLIC_KEY=...
 ```
 
-`VITE_APP_URL` must point at production so `/api/*` routes work from the installed app.
+`VITE_APP_URL` must be the **www** production origin (`https://www.sacramentobuynothing.com`), not the apex host. Apex redirects to www; Capacitor WebView API calls must match that host or neighbors see “Failed to fetch.” You can also set `CAPACITOR_SERVER_URL` to the same www URL.
 
 ## Build commands
 
@@ -65,7 +65,7 @@ npm run android:assets
 
 This copies `public/Logo.jpeg` into `assets/logo.png` and runs `@capacitor/assets` with the dark brand background (`#0b0b0c`). `npm run android:apk` and `npm run android:apk:debug` run this step automatically.
 
-**Neighbors:** share the in-app download page at [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
+**Neighbors:** share the in-app download page at [www.sacramentobuynothing.com/download](https://www.sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
 
 After building, commit `public/buynothing.apk`, `public/buynothing-v*.apk`, `public/downloads/sac-buy-nothing.apk`, and `public/android-version.json`, then deploy so the live download button and MBC App Market listing work.
 
@@ -86,7 +86,7 @@ npm run cap:open
 
 ## Distribution options
 
-- **Sideload**: Share the signed release APK (`npm run android:apk`) — neighbors use [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download).
+- **Sideload**: Share the signed release APK (`npm run android:apk`) — neighbors use [www.sacramentobuynothing.com/download](https://www.sacramentobuynothing.com/download).
 - **Play Store**: Build an AAB with `npm run android:aab` and follow [play-store-upload.md](./play-store-upload.md).
 
 ```bash

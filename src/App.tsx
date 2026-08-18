@@ -65,7 +65,7 @@ import {
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
-import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
+import { parsePushDeepLink, shouldPreservePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 import PushNotificationCelebration from './components/PushNotificationCelebration';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
@@ -82,7 +82,7 @@ import ReviewPromptModal from './components/ReviewPromptModal';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
-import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath } from './public/routes';
+import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath, normalizePublicPath } from './public/routes';
 import DownloadPage from './components/public/pages/DownloadPage';
 import { isPlayReviewBrowseOnly } from './lib/playReviewAccount';
 import { BrowseOnlyProvider } from './contexts/BrowseOnlyContext';
@@ -465,6 +465,25 @@ export default function App() {
       } catch (err) {
         console.warn('History replaceState unavailable for download route:', err);
       }
+      return;
+    }
+
+    // Last-tab replaceState used to wipe /updates, /news, /listing/… before the
+    // deep-link effect ran, so signed-in neighbors never reached Updates/News.
+    const currentPath = window.location.pathname;
+    const hashPath = window.location.hash
+      ? normalizePublicPath(window.location.hash.replace(/^#\/?/, ''))
+      : '';
+    const pendingFromDeepLink = shouldPreservePushDeepLink(parsePushDeepLink(currentPath))
+      ? currentPath
+      : hashPath === 'news' || hashPath === 'announcements'
+        ? '/news'
+        : null;
+    const pendingFromPublic = !pendingFromDeepLink && publicDest === 'updates' ? '/updates' : null;
+    const pendingPath = pendingFromDeepLink || pendingFromPublic;
+    if (pendingPath) {
+      pendingDeepLinkPathRef.current = pendingPath;
+      rememberPendingDeepLinkPath(pendingPath);
       return;
     }
 
@@ -1281,6 +1300,10 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (pendingDeepLinkPathRef.current) {
+      rememberPendingDeepLinkPath(pendingDeepLinkPathRef.current);
+      return;
+    }
     const path = readPendingDeepLinkPath();
     if (path) {
       pendingDeepLinkPathRef.current = path;

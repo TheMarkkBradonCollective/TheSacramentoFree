@@ -35,8 +35,15 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
 
   if (path === 'notifications' || path === 'notifications/listings') return { notificationsTab: 'notifications' };
   if (path === 'notifications/alerts' || path === 'alerts') return { notificationsTab: 'alerts' };
-  if (path === 'updates') return { notificationsTab: 'updates' };
-  if (path === 'help/announcements') return { notificationsTab: 'announcements' };
+  if (path === 'updates' || path === 'notifications/updates') return { notificationsTab: 'updates' };
+  if (
+    path === 'help/announcements' ||
+    path === 'announcements' ||
+    path === 'news' ||
+    path === 'notifications/announcements'
+  ) {
+    return { notificationsTab: 'announcements' };
+  }
   if (path === 'staff/tickets') return { tab: 'chats', chatSupportView: 'list' };
   if (path === 'staff/reports') return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
   if (path === 'director/overview') return { tab: 'profile', directorOverview: true };
@@ -70,6 +77,24 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (requestMatch) return { tab: 'chats', requestId: requestMatch[1] };
 
   return null;
+}
+
+/** True when the URL should survive last-tab replaceState (Updates, News, listing, chat, …). */
+export function shouldPreservePushDeepLink(target: PushDeepLinkTarget | null): boolean {
+  if (!target) return false;
+  return Boolean(
+    target.notificationsTab ||
+      target.notifications ||
+      target.listingId ||
+      target.eventId ||
+      target.conversationId ||
+      target.requestId ||
+      target.staffPanel ||
+      target.chatFeedbackPanel ||
+      target.directorOverview ||
+      target.supportTicketId ||
+      target.chatSupportView,
+  );
 }
 
 export function pushUrlForListing(listingId: string): string {
