@@ -20,6 +20,7 @@
     "play:reviewer-account": "node scripts/create-play-reviewer-account.mjs",
     "export:user-emails": "node scripts/export-user-emails.mjs",
     "export:play-testers": "node scripts/export-user-emails.mjs --play-testers",
+    "export:play-testers:internal": "node scripts/export-user-emails.mjs --play-testers --limit=100",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",

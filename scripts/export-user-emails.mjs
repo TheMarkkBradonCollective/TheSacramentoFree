@@ -15,17 +15,24 @@
  *   --play-testers                        same as EXPORT_PLAY_TESTERS=1
  */
 import { createClient } from '@supabase/supabase-js';
+import { config as loadEnv } from 'dotenv';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const outputPath = process.env.EXPORT_OUTPUT || join(root, 'exports', 'user-emails.csv');
-const emailsOnly = process.env.EXPORT_EMAILS_ONLY === '1' || process.argv.includes('--emails-only');
+loadEnv({ path: join(root, '.env.local') });
+loadEnv({ path: join(root, '.env') });
+
 const playTesters =
   process.env.EXPORT_PLAY_TESTERS === '1' ||
-  process.argv.includes('--play-testers') ||
-  outputPath.toLowerCase().includes('play-testers');
+  process.argv.includes('--play-testers');
+const outputPath =
+  process.env.EXPORT_OUTPUT ||
+  (playTesters ? join(root, 'exports', 'play-testers.csv') : join(root, 'exports', 'user-emails.csv'));
+const emailsOnly = process.env.EXPORT_EMAILS_ONLY === '1' || process.argv.includes('--emails-only');
+const limitRaw = process.env.EXPORT_LIMIT || process.argv.find((a) => a.startsWith('--limit='))?.split('=')[1];
+const limit = limitRaw ? Math.max(1, Number.parseInt(limitRaw, 10) || 0) : 0;
 
 const url =
   process.env.SUPABASE_URL ||
@@ -84,7 +91,10 @@ async function main() {
     process.exit(1);
   }
 
-  const emails = users.map((u) => String(u.email || '').trim()).filter(Boolean);
+  const emails = users
+    .map((u) => String(u.email || '').trim())
+    .filter(Boolean)
+    .slice(0, limit > 0 ? limit : undefined);
 
   let body;
   if (playTesters) {
