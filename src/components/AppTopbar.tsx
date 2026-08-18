@@ -18,6 +18,10 @@ interface AppTopbarProps {
   onToggleSidebar?: () => void;
   /** Logo + SacramentoBuyNothing + tagline instead of eyebrow/title (staff mobile). */
   brandLockup?: boolean;
+  /** Hide while a mobile nav drawer covers the shell. */
+  drawerOpen?: boolean;
+  /** Ghost icon buttons — less chrome on narrow mobile headers. */
+  compactActions?: boolean;
 }
 
 /** Slim utility bar shared by the desktop + tablet shells — always reachable, even inside staff panels. */
@@ -30,9 +34,13 @@ export default function AppTopbar({
   action,
   onToggleSidebar,
   brandLockup = false,
+  drawerOpen = false,
+  compactActions = false,
 }: AppTopbarProps) {
+  if (drawerOpen) return null;
+
   return (
-    <header id="app_topbar" className="sbn-topbar">
+    <header id="app_topbar" className={`sbn-topbar${compactActions ? ' sbn-topbar-compact' : ''}`}>
       <div className="flex items-center gap-2 min-w-0">
         {onToggleSidebar && (
           <button
@@ -63,9 +71,9 @@ export default function AppTopbar({
           <MapPin className="w-3.5 h-3.5" />
           {userProfile.neighborhood}
         </div>
-        <ThemeToggle />
-        <NotificationsHubButton />
-        <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} />
+        <ThemeToggle compact={compactActions} />
+        <NotificationsHubButton compact={compactActions} />
+        <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} compact={compactActions} />
         {action}
       </div>
     </header>

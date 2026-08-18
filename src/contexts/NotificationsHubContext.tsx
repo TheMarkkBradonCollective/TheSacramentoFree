@@ -87,7 +87,13 @@ export function useNotificationsHub(): NotificationsHubContextValue {
   return ctx;
 }
 
-export function NotificationsHubButton({ className = '' }: { className?: string }) {
+export function NotificationsHubButton({
+  className = '',
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   const { openHub, shouldGlow } = useNotificationsHub();
 
   return (
@@ -96,6 +102,7 @@ export function NotificationsHubButton({ className = '' }: { className?: string 
       icon={Bell}
       label="Notify"
       glow={shouldGlow}
+      compact={compact}
       title={shouldGlow ? 'You have unread notifications' : 'Notify, news, updates, and alerts'}
       ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notify, news, updates, and alerts'}
       id="notifications_hub_btn"

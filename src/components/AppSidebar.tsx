@@ -1,7 +1,6 @@
 import {
   CalendarDays,
   ClipboardList,
-  Crown,
   FileText,
   GaugeCircle,
   Inbox,
@@ -15,6 +14,7 @@ import {
   ShieldCheck,
   User,
   Users,
+  X,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import type { UserProfile } from '../types';
@@ -103,6 +103,7 @@ export default function AppSidebar({
   );
 
   const roleName = roleLabel(userProfile.role);
+  const isOverlayDrawer = overlay && !isFullyHidden && !isCollapsed;
 
   return (
     <aside
@@ -114,49 +115,74 @@ export default function AppSidebar({
           : isFullyHidden
             ? 'w-0 border-r-0 overflow-hidden pointer-events-none'
             : `transition-all duration-200 ${isCollapsed ? 'w-14' : 'w-60'}`
-      } ${overlay && !isFullyHidden ? 'fixed inset-y-0 left-0 z-50 shadow-xl' : ''}`}
+      } ${isOverlayDrawer ? 'sbn-sidebar-overlay fixed inset-y-0 left-0 z-50 shadow-xl' : ''}`}
       style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as CSSProperties}
       aria-hidden={isFullyHidden || undefined}
     >
       {/* Role accent rail — a hairline strip of color so each rank reads instantly */}
       <div className="sbn-sidebar-accent-bar" />
 
-      {/* Logo */}
-      <div className={`flex items-center gap-2 px-3 py-4 border-b border-app ${isCollapsed ? 'justify-center' : ''}`}>
-        {isCollapsed ? (
-          isStaff ? (
-            <ShieldCheck className="w-6 h-6 shrink-0" style={{ color: theme.accent }} />
-          ) : (
-            <BrandLogo imgClassName="h-7 w-7 object-cover rounded-lg shrink-0" showTitle={false} />
-          )
-        ) : (
-          <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />
-        )}
-      </div>
-
-      {/* Signed-in-as card */}
-      {!isCollapsed && (
-        <div className="sbn-sidebar-identity px-3 py-3 border-b border-app">
-          <div className="flex items-center gap-2.5 min-w-0">
+      {isOverlayDrawer ? (
+        <div className="sbn-sidebar-drawer-head border-b border-app">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <PresenceUserAvatar
               uid={userProfile.uid}
               src={userProfile.photoURL}
               name={userProfile.displayName}
               size="sm"
-              className="shrink-0"
+              className="shrink-0 mt-0.5"
             />
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-app truncate leading-tight">{userProfile.displayName}</p>
-              <p
-                className="text-[10px] font-bold mt-0.5 truncate inline-flex items-center gap-1"
-                style={{ color: theme.accent }}
-              >
-                {userProfile.role === 'director' && <Crown className="w-3 h-3 shrink-0" />}
-                {roleName}
-              </p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-app truncate leading-tight">{userProfile.displayName}</p>
+              <span className="sbn-sidebar-role-pill mt-1">{theme.shortLabel}</span>
             </div>
           </div>
+          {onCollapse && (
+            <button
+              type="button"
+              onClick={onCollapse}
+              className="p-2 -mr-1 rounded-lg text-muted hover:text-app hover:bg-inset transition-colors shrink-0"
+              aria-label="Close navigation menu"
+              id="app_sidebar_close_btn"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
+      ) : (
+        <>
+          {/* Logo */}
+          <div className={`flex items-center gap-2 px-3 py-4 border-b border-app ${isCollapsed ? 'justify-center' : ''}`}>
+            {isCollapsed ? (
+              isStaff ? (
+                <ShieldCheck className="w-6 h-6 shrink-0" style={{ color: theme.accent }} />
+              ) : (
+                <BrandLogo imgClassName="h-7 w-7 object-cover rounded-lg shrink-0" showTitle={false} />
+              )
+            ) : (
+              <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />
+            )}
+          </div>
+
+          {/* Signed-in-as card */}
+          {!isCollapsed && (
+            <div className="sbn-sidebar-identity px-3 py-3 border-b border-app">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <PresenceUserAvatar
+                  uid={userProfile.uid}
+                  src={userProfile.photoURL}
+                  name={userProfile.displayName}
+                  size="sm"
+                  className="shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-app truncate leading-tight">{userProfile.displayName}</p>
+                  <p className="text-[10px] font-semibold text-muted mt-0.5 truncate">{roleName}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 min-h-0">

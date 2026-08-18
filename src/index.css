@@ -738,6 +738,41 @@ option {
   background: color-mix(in srgb, var(--sbn-role-soft, var(--color-accent-soft)) 45%, transparent);
 }
 
+.sbn-sidebar-overlay {
+  padding-top: var(--sbn-inset-top, 0px);
+  width: min(100vw - 2.5rem, 17.5rem);
+}
+
+.sbn-sidebar-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.875rem;
+}
+
+.sbn-sidebar-role-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--sbn-role-accent, var(--color-accent));
+  background: var(--sbn-role-soft, var(--color-accent-soft));
+}
+
+.sbn-topbar-compact {
+  min-height: 3.25rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.sbn-topbar-compact #app_topbar_actions {
+  gap: 0.15rem;
+}
+
 .sbn-sidebar-item {
   transition: background 0.12s ease, color 0.12s ease;
 }
