@@ -21,7 +21,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
-import { haversineMeters, openDrivingDirections } from '../lib/mapRoute';
+import { haversineMeters, geolocationAgeMs, openDrivingDirections } from '../lib/mapRoute';
 import { projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
 import NavManeuverShield from './navigation/NavManeuverShield';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
@@ -632,12 +632,11 @@ export default function MapNavigationView({
   const routeFetchedForDestRef = useRef<string | null>(null);
   const routeRequestIdRef = useRef(0);
   const lastBearingApplyRef = useRef(0);
-  const hasFreshGpsRef = useRef(false);
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS = 28;
+  const NAV_GPS_FOLLOW_METERS = 10;
   const NAV_UI_TICK_MS = 900;
   const NAV_MAP_SYNC_MS = 450;
   const NAV_ROUTE_DRAW_MIN_METERS = 14;
@@ -649,7 +648,10 @@ export default function MapNavigationView({
   const NAV_OFF_ROUTE_TICKS = 4;
   const NAV_ARRIVE_DEST_M = 40;
   const NAV_ARRIVE_REMAINING_M = 40;
-  const NAV_STALE_GPS_MS = 5000;
+  /** Drop only ancient cached samples. Do not require a "fresh" fix first —
+   *  some WebViews stamp every update several seconds in the past, which used
+   *  to freeze the puck and remaining distance. */
+  const NAV_STALE_GPS_MS = 60_000;
   const NAV_INITIAL_ROUTE_FRESH_M = 50;
 
   const [loading, setLoading] = useState(!initialRoute);
@@ -884,7 +886,7 @@ export default function MapNavigationView({
       setRoute(prefetch);
       setLoading(false);
       setLoadingStage('ready');
-    } else {
+    } else if (!routeRef.current) {
       setLoading(true);
       setLoadingStage('locating');
     }
@@ -1215,12 +1217,7 @@ export default function MapNavigationView({
     (position: GeolocationPosition) => {
       setGpsError(null);
 
-      // Ignore stale cached GPS replayed on subscribe (can be up to ~20s old).
-      const ageMs = Math.max(0, Date.now() - position.timestamp);
-      if (ageMs > NAV_STALE_GPS_MS && !hasFreshGpsRef.current) {
-        return;
-      }
-      hasFreshGpsRef.current = true;
+      if (geolocationAgeMs(position) > NAV_STALE_GPS_MS) return;
 
       const raw: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude };
       const activeRoute = routeRef.current;
@@ -1571,7 +1568,7 @@ export default function MapNavigationView({
       <div className="relative flex-1 min-h-0">
         <div ref={mapContainerRef} className="absolute inset-0 z-0" />
 
-        {loading && <NavLoadingOverlay stage={loadingStage} destinationLabel={destinationLabel} />}
+        {loading && !route && <NavLoadingOverlay stage={loadingStage} destinationLabel={destinationLabel} />}
 
         {showFatalError && (
           <div className="sbn-nav-error-overlay safe-area-pb">
