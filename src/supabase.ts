@@ -1595,6 +1595,8 @@ export interface NeighborStats {
   itemsGiven: number;
   /** Giveaways picked up + ISO requests fulfilled (received from a neighbor) */
   itemsClaimed: number;
+  /** Completed barter trades (posted or as trade partner) */
+  tradesCompleted: number;
   /** Upvotes neighbors cast on this user's listings */
   upvotesReceived: number;
   /** Downvotes neighbors cast on this user's listings */
@@ -1945,11 +1947,13 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
   const empty = {
     itemsGiven: 0,
     itemsClaimed: 0,
+    tradesCompleted: 0,
     upvotesReceived: 0,
     downvotesReceived: 0,
   };
   try {
-    const [givenRes, claimedRes, helpedGiveRes, itemsRes] = await Promise.all([
+    const [givenRes, claimedRes, helpedGiveRes, tradesPostedRes, tradesPartnerRes, itemsRes] =
+      await Promise.all([
       supabase
         .from('items')
         .select('id', { count: 'exact', head: true })
@@ -1966,6 +1970,17 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
         .select('id', { count: 'exact', head: true })
         .eq('giverUserId', uid)
         .eq('kind', 'request_fulfilled'),
+      supabase
+        .from('items')
+        .select('id', { count: 'exact', head: true })
+        .eq('userId', uid)
+        .eq('type', 'trade')
+        .eq('status', 'completed'),
+      supabase
+        .from('item_claims')
+        .select('id', { count: 'exact', head: true })
+        .eq('claimerUserId', uid)
+        .eq('kind', 'trade_completed'),
       supabase.from('items').select('id').eq('userId', uid),
     ]);
 
@@ -1998,6 +2013,7 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
     return {
       itemsGiven: (givenRes.count ?? 0) + helpedGive,
       itemsClaimed,
+      tradesCompleted: (tradesPostedRes.count ?? 0) + (tradesPartnerRes.count ?? 0),
       upvotesReceived,
       downvotesReceived,
     };
@@ -2959,6 +2975,71 @@ export async function markItemFulfilledFromChat(params: {
     return { ok: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Could not mark as fulfilled.';
+    return { ok: false, errorMessage: message };
+  }
+}
+
+export async function markTradeCompletedFromChat(params: {
+  itemId: string;
+  posterUserId: string;
+  partnerUserId: string;
+  chatId: string;
+  message: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const claimId = `trade_${params.itemId}_${Date.now()}`;
+
+    const { error: claimError } = await supabase.from('item_claims').insert({
+      id: claimId,
+      itemId: params.itemId,
+      giverUserId: params.posterUserId,
+      claimerUserId: params.partnerUserId,
+      chatId: params.chatId,
+      kind: 'trade_completed',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (claimError) {
+      const msg = String(claimError.message || '').toLowerCase();
+      if (msg.includes('duplicate') || msg.includes('unique')) {
+        return { ok: false, errorMessage: 'This trade was already marked as completed.' };
+      }
+      if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
+        return {
+          ok: false,
+          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see complete-schema.sql).',
+        };
+      }
+      if (msg.includes('kind') || msg.includes('column')) {
+        return {
+          ok: false,
+          errorMessage:
+            'Claims table needs trade_completed support — re-run section 7 in complete-schema.sql.',
+        };
+      }
+      return { ok: false, errorMessage: claimError.message || 'Could not record trade.' };
+    }
+
+    const statusOk = await updateSupabaseItemStatus(params.itemId, 'completed', params.posterUserId);
+    if (!statusOk) {
+      return { ok: false, errorMessage: 'Trade saved but listing status could not be updated.' };
+    }
+
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const msgOk = await createSupabaseMessage(
+      params.chatId,
+      params.message,
+      params.posterUserId,
+      messageId,
+      { skipPush: true },
+    );
+    if (!msgOk) {
+      return { ok: false, errorMessage: 'Trade marked complete but chat message failed.' };
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Could not mark trade as completed.';
     return { ok: false, errorMessage: message };
   }
 }
