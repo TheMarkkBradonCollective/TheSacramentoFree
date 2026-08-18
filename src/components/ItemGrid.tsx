@@ -11,7 +11,7 @@ import {
   ThumbsUp,
   X,
 } from 'lucide-react';
-import FeedFilterSwitchRow from './FeedFilterSwitchRow';
+import FilterLabeledSwitch from './FilterLabeledSwitch';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
 import PickupAttributionModal from './PickupAttributionModal';
@@ -346,16 +346,15 @@ export default function ItemGrid({
           />
         </div>
 
-        <div className="space-y-4" id="feed_filter_switches">
-          <div className="space-y-2" id="feed_sort_bar">
+        <div className="space-y-3" id="feed_filter_switches">
+          <div className="space-y-1.5" id="feed_sort_bar">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {PRIMARY_FEED_SORTS.map(({ value, label, hint }) => (
-                <FeedFilterSwitchRow
+            <div className="flex flex-wrap gap-2">
+              {PRIMARY_FEED_SORTS.map(({ value, label }) => (
+                <FilterLabeledSwitch
                   key={value}
                   id={`feed_sort_${value}`}
                   label={label}
-                  description={hint}
                   checked={sortBy === value}
                   onChange={handleSortSwitch(value)}
                 />
@@ -363,11 +362,11 @@ export default function ItemGrid({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" id="feed_type_filter">
+            <div className="flex flex-wrap gap-2" id="feed_type_filter">
               {LISTING_TYPE_FILTERS.map((type) => (
-                <FeedFilterSwitchRow
+                <FilterLabeledSwitch
                   key={type}
                   id={`type_${type}_switch`}
                   label={getPostTypeFilterLabel(type)}
@@ -378,11 +377,11 @@ export default function ItemGrid({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="flex flex-wrap gap-2">
               {QUICK_PICKS.map(({ id, label }) => (
-                <FeedFilterSwitchRow
+                <FilterLabeledSwitch
                   key={id}
                   id={`quick_pick_${id}`}
                   label={label}
@@ -393,23 +392,21 @@ export default function ItemGrid({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Completed in feed</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <FeedFilterSwitchRow
+            <div className="flex flex-wrap gap-2">
+              <FilterLabeledSwitch
                 id="feed_hide_given_toggle"
                 label="Hide given"
-                description="Claimed giveaways"
                 checked={hideGiven}
                 onChange={(value) => {
                   setHideGiven(value);
                   writeHideGivenFromFeed(value);
                 }}
               />
-              <FeedFilterSwitchRow
+              <FilterLabeledSwitch
                 id="feed_hide_fulfilled_toggle"
                 label="Hide fulfilled"
-                description="Completed requests"
                 checked={hideFulfilled}
                 onChange={(value) => {
                   setHideFulfilled(value);
