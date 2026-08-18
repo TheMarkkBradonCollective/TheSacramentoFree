@@ -833,6 +833,36 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 )
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO public.app_updates (
+  id, date, title, body, detail, "directorName", "directorTitle", "postedByUserId"
+)
+VALUES (
+  '2026-08-18_login-crash-fix',
+  '2026-08-18',
+  'Sign-in is fixed — website and app are back',
+  'After login, the website and Android app crashed on “Something went wrong.” That bug is fixed. Sign in again and you should land on the map. A new APK is on the Download page.',
+  $detail$What happened:
+• A small code mistake in Messages shipped with a Play Store review change.
+• It only ran after you signed in, so the public site looked fine — then the signed-in app crashed for everyone, website and APK.
+
+What we fixed:
+• Restored the missing React hooks in Messages so the signed-in shell can render.
+• Added a Sign out button on the error screen so a future crash is easier to recover from.
+• Shipped Android APK beta v0.1.0.0010 with the same fix.
+
+What to do:
+• Website: refresh, then sign in.
+• Android APK: open the app (it loads the live site) or install the new build from sacramentobuynothing.com/download.
+
+Sorry for the downtime. Thank you for sticking with Sacramento Buy Nothing.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+)
+ON CONFLICT (id) DO NOTHING;
+
 INSERT INTO public.help_announcements (
   id, date, title, body, detail, "authorName", "authorTitle", "postedByUserId"
 )
@@ -908,6 +938,36 @@ Stay kind, meet in public when you can, and thank you for keeping Sacramento Buy
 3. Keep “Go Get & pickup coordination” on in Account
 
 Prefer to arrange pickups yourself? Turn coordination off in Account — your listings stay up and neighbors can still message you.
+
+— Mark$detail$,
+  'Markeith White',
+  'Buy Nothing Director',
+  '204b071f-100c-401d-b76d-40c594e1f132'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.help_announcements (
+  id, date, title, body, detail, "authorName", "authorTitle", "postedByUserId"
+)
+VALUES (
+  '2026-08-18_we-are-back',
+  '2026-08-18',
+  'We are back — sorry we were down after login',
+  'If you signed in today and only saw “Something went wrong,” that was us, not you. The website and app are fixed. Sign in again — you should get the map, feed, and messages.',
+  $detail$Neighbors,
+
+We were down after login on both the website and the Android app. You could reach the public pages and sign in, then the community froze on an error screen. Refreshing did not help because you were still signed in.
+
+Why: a Play Store review change accidentally removed a required line of code from Messages. Messages loads as soon as you sign in, so every neighbor hit the crash.
+
+What is fixed:
+• Sign-in opens the community again on the website and in the app.
+• The error screen now has Sign out if this ever happens again.
+• A new Android APK (beta v0.1.0.0010) is on sacramentobuynothing.com/download.
+
+If the app still looks stuck, close it fully and reopen, or install the new APK over the old one. Message staff from Help & support if you are still locked out.
+
+Thank you for your patience — and for giving freely in Sacramento.
 
 — Mark$detail$,
   'Markeith White',
