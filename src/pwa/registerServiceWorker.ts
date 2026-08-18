@@ -1,5 +1,6 @@
 import { ensurePushSubscription } from '../lib/pushNotifications';
 import { startAppUpdateWatcher } from './appUpdateWatcher';
+import { clearAppAssetCaches } from './clearAppCaches';
 
 /** How often to ask the browser to re-fetch service-worker.js and check for changes. */
 const SW_POLL_INTERVAL_MS = 60 * 1000;
@@ -70,15 +71,19 @@ function setupServiceWorker(registration: ServiceWorkerRegistration) {
 export async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
+  await clearAppAssetCaches();
   await unregisterLegacyServiceWorkers();
 
   let refreshing = false;
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return;
-    // Stay on the current map/feed while the user is looking. The new worker
-    // applies on the next visit or after the tab is backgrounded.
-    if (document.visibilityState === 'visible') return;
+    try {
+      if (sessionStorage.getItem('sbn_sw_claim_reload') === '1') return;
+      sessionStorage.setItem('sbn_sw_claim_reload', '1');
+    } catch {
+      // sessionStorage may be unavailable
+    }
     refreshing = true;
     window.location.reload();
   });

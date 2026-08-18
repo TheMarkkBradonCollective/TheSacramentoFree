@@ -418,16 +418,17 @@ export default function MobileView({
               onRefresh={onRefresh}
               isLoading={!itemsHydrated}
             />
+        </ScrollPage>
+        {communityTab === 'feed' && (
           <button
             type="button"
             onClick={onOpenNewPost}
-            className="sbn-fab fixed right-4 z-20"
-            style={{ bottom: 'calc(var(--sbn-mobile-nav-h) + 1rem)' }}
+            className="sbn-fab absolute right-4 bottom-4 z-20"
             aria-label="New post"
           >
             <Plus className="w-6 h-6" />
           </button>
-        </ScrollPage>
+        )}
 
         <ScrollPage
           className={communityTab === 'events' ? '' : 'hidden'}
@@ -452,18 +453,17 @@ export default function MobileView({
               onRefresh={onRefreshEvents}
               isLoading={isEventsLoading}
             />
-          {canAccessEvents && (
+        </ScrollPage>
+        {communityTab === 'events' && canAccessEvents && (
           <button
             type="button"
             onClick={onOpenNewEvent}
-            className="sbn-fab fixed right-4 z-20"
-            style={{ bottom: 'calc(var(--sbn-mobile-nav-h) + 1rem)' }}
+            className="sbn-fab absolute right-4 bottom-4 z-20"
             aria-label="Post event"
           >
             <Plus className="w-6 h-6" />
           </button>
-          )}
-        </ScrollPage>
+        )}
 
         <div
           className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`}

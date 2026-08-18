@@ -692,7 +692,9 @@ export default function App() {
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
         void syncProfileFromDb(session.user);
-      } else {
+      } else if (!hadSessionOnMountRef.current) {
+        // No cached session — this is a real guest. Do not wipe a restored
+        // session if getSession() races ahead of INITIAL_SESSION.
         setSessionUser(null);
         setUserProfile(null);
         clearSessionCache();
@@ -715,6 +717,7 @@ export default function App() {
       if (event === 'TOKEN_REFRESHED') return;
 
       if (session?.user) {
+        const alreadyInApp = !!lastSignedInUserIdRef.current;
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
         // Defer DB sync — never await inside this callback (Supabase auth deadlock).
@@ -723,7 +726,7 @@ export default function App() {
             void syncProfileFromDb(session.user);
           }
         }, 0);
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' && !alreadyInApp) {
           const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
           const hasDeepLink = Boolean(pendingPath && parsePushDeepLink(pendingPath));
           if (!hasDeepLink) {
@@ -736,6 +739,7 @@ export default function App() {
           }, 100);
         }
       } else {
+        if (event !== 'SIGNED_OUT' && event !== 'INITIAL_SESSION') return;
         const signedOutUserId = lastSignedInUserIdRef.current;
         lastSignedInUserIdRef.current = null;
         profileSyncRef.current = null;

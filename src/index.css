@@ -1674,6 +1674,38 @@ html.capacitor-native {
   overflow-x: clip;
 }
 
+/*
+ * In-app sheets (listing, neighbor, notify, legal) sit in the content band.
+ * Only the app header and the tab bar stay locked to the viewport.
+ */
+.sbn-app-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--color-bg);
+  min-height: 0;
+}
+
+.sbn-mobile-shell:not(.sbn-immersive-nav) .sbn-app-sheet,
+html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet {
+  top: var(--sbn-mobile-header-h);
+  bottom: var(--sbn-mobile-nav-h);
+  z-index: 40;
+}
+
+html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet-nested {
+  z-index: 45;
+}
+
+html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet .sbn-safe-top {
+  padding-top: 0;
+}
+
+html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet.sbn-safe-bottom,
+html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet .sbn-safe-bottom {
+  padding-bottom: 0;
+}
+
 /* Full-screen map navigation — hide app chrome */
 .sbn-mobile-shell.sbn-immersive-nav .sbn-mobile-main {
   top: 0;
