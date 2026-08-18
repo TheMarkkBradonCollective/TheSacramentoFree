@@ -9,6 +9,7 @@ import {
 import {
   appendPhotosToDescription,
   extractListingImageUrls,
+  isPersistableListingImageUrl,
   MAX_LISTING_PHOTOS,
 } from '../lib/listingContent';
 import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil, Plus, ArrowLeftRight } from 'lucide-react';
@@ -217,14 +218,15 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       ? editItem.id
       : `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    const imageUrls: string[] = [...savedImageUrls];
+    const imageUrls: string[] = savedImageUrls.filter((url) => isPersistableListingImageUrl(url));
     for (let i = 0; i < pendingImages.length; i++) {
-      try {
-        const url = await uploadItemImage(pendingImages[i].file, `${itemId}_${i}`);
-        if (url) imageUrls.push(url);
-      } catch (err) {
-        console.warn('Image uploading failed:', err);
+      const url = await uploadItemImage(pendingImages[i].file, `${itemId}_${i}`);
+      if (!url || !isPersistableListingImageUrl(url)) {
+        setIsSubmitting(false);
+        setErrorMsg('Could not upload photos. Check your connection and try again.');
+        return;
       }
+      imageUrls.push(url);
     }
     const imageUrl = imageUrls[0];
 

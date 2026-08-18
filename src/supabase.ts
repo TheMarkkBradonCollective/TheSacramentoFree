@@ -4,7 +4,7 @@ import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
-import { normalizeItemMedia } from './lib/listingContent';
+import { normalizeItemMedia, plainListingDescription } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
 import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
@@ -746,33 +746,88 @@ export async function upsertSupabaseProfile(
 /**
  * --- ITEMS / LISTINGS ---
  */
+const ITEM_FEED_COLUMNS =
+  'id,title,type,category,userId,userDisplayName,userPhotoURL,neighborhood,status,imageUrl,createdAt,updatedAt,pickupAttributionType,pickupAttributionUserId,pickupAttributionLabel';
+
+function mapItemRows(rows: unknown[]): ItemPost[] {
+  const items: ItemPost[] = [];
+  for (const row of rows) {
+    try {
+      items.push(normalizeItemFromRow(row as ItemPost));
+    } catch (rowErr) {
+      console.warn('Skipping malformed listing row:', (row as { id?: string })?.id, rowErr);
+    }
+  }
+  return items;
+}
+
+/**
+ * Load every listing without pulling multi-megabyte `data:image` camera dumps
+ * that some descriptions still store in `[PHOTOS:]`.
+ */
+async function fetchItemRowsForFeed(): Promise<Record<string, unknown>[]> {
+  const { data: heads, error } = await supabase
+    .from('items')
+    .select(ITEM_FEED_COLUMNS)
+    .order('createdAt', { ascending: false });
+
+  if (error) {
+    handleSupabaseError(error, 'items');
+    throw error;
+  }
+
+  const { data: bodies, error: bodyError } = await supabase
+    .from('items')
+    .select('id,description')
+    .not('description', 'ilike', '%data:image%');
+
+  if (bodyError) {
+    console.warn('Listing descriptions fetch skipped bloated rows filter:', bodyError);
+  }
+
+  const descById = new Map<string, string>();
+  for (const row of bodies ?? []) {
+    const id = String((row as { id?: string }).id ?? '');
+    if (!id) continue;
+    descById.set(id, plainListingDescription((row as { description?: string }).description));
+  }
+
+  return (heads ?? []).map((row) => {
+    const id = String((row as { id?: string }).id ?? '');
+    return {
+      ...(row as Record<string, unknown>),
+      description: descById.get(id) || '',
+    };
+  });
+}
+
 export async function getSupabaseItems(): Promise<ItemPost[]> {
   try {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('createdAt', { ascending: false });
-
-    if (error) {
-      handleSupabaseError(error, 'items');
-      return [];
-    }
-
+    const rows = await fetchItemRowsForFeed();
     setSupabaseConfigurationState(true);
-    const rows = data || [];
-    const items: ItemPost[] = [];
-    for (const row of rows) {
-      try {
-        items.push(normalizeItemFromRow(row as ItemPost));
-      } catch (rowErr) {
-        console.warn('Skipping malformed listing row:', row?.id, rowErr);
-      }
-    }
-    return items;
+    return mapItemRows(rows);
   } catch (err: any) {
     console.warn('Supabase items fetch failed:', err);
     handleSupabaseError(err, 'items');
-    return [];
+    throw err;
+  }
+}
+
+export async function getSupabaseItemById(itemId: string): Promise<ItemPost | null> {
+  if (!itemId) return null;
+  try {
+    const { data, error } = await supabase.from('items').select('*').eq('id', itemId).maybeSingle();
+    if (error) {
+      handleSupabaseError(error, 'items');
+      return null;
+    }
+    if (!data) return null;
+    setSupabaseConfigurationState(true);
+    return normalizeItemFromRow(data as ItemPost);
+  } catch (err: any) {
+    console.warn('Supabase item fetch failed:', err);
+    handleSupabaseError(err, 'items');
+    return null;
   }
 }
 
@@ -783,7 +838,7 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
     const filePath = `${itemId}_${Date.now()}.${fileExt}`;
 
     // Upload to 'items' bucket using supabase-js
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('items')
       .upload(filePath, compressed, {
         cacheControl: '3600',
@@ -800,20 +855,13 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
       .from('items')
       .getPublicUrl(filePath);
 
-    return publicData?.publicUrl || null;
+    const publicUrl = publicData?.publicUrl || null;
+    return publicUrl && publicUrl.startsWith('http') ? publicUrl : null;
   } catch (err: any) {
-    console.warn('Real storage upload failed, using local/base64 cache fallback:', err);
-    // If the storage block is disabled/empty/permission denied, fallback to dataURL base64 format mapping
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        resolve(reader.result as string);
-      };
-      reader.onerror = () => {
-        resolve(null);
-      };
-      reader.readAsDataURL(file);
-    });
+    // Never fall back to a data URL — inlining photos in `items.description`
+    // has ballooned a handful of rows to 4–12MB and emptied the community feed.
+    console.warn('Listing photo upload failed:', err);
+    return null;
   }
 }
 
@@ -5039,29 +5087,8 @@ export async function getSupabaseChatById(chatId: string): Promise<Chat | null> 
 /** Staff: fetch all listings (any status except physically deleted) ordered by newest first. */
 export async function staffGetAllListings(): Promise<{ items: ItemPost[]; errorMessage?: string }> {
   try {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('createdAt', { ascending: false })
-      .limit(1000);
-
-    if (error) {
-      handleSupabaseError(error, 'items');
-      return { items: [], errorMessage: String(error.message || 'Could not load listings.') };
-    }
-
-    const items = (data ?? [])
-      .map((row) => {
-        try {
-          return normalizeItemFromRow(row as ItemPost);
-        } catch (rowErr) {
-          console.warn('Skipping malformed listing row:', row?.id, rowErr);
-          return null;
-        }
-      })
-      .filter((p): p is ItemPost => !!p);
-
-    return { items };
+    const rows = await fetchItemRowsForFeed();
+    return { items: mapItemRows(rows) };
   } catch (err) {
     console.warn('staffGetAllListings failed:', err);
     return { items: [], errorMessage: 'Could not load listings.' };
