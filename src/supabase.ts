@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded } from './lib/imageUrl';
-import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
+import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatSelfClaimRequestMessage, formatSelfDropOffRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia, plainListingDescription } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
@@ -2264,17 +2264,41 @@ export async function submitSelfClaimRequest(params: {
   claimer: UserProfile;
   subItemIds: string[];
 }): Promise<{ ok: boolean; chatId?: string; errorMessage?: string }> {
-  if (params.item.type !== 'giveaway' || params.item.status !== 'active') {
-    return { ok: false, errorMessage: 'This listing is not available to claim.' };
-  }
-  if (params.item.userId === params.claimer.uid) {
-    return { ok: false, errorMessage: 'You cannot claim your own listing.' };
+  return submitSelfHandoffRequest({
+    item: params.item,
+    actor: params.claimer,
+    subItemIds: params.subItemIds,
+    kind: 'pickup',
+  });
+}
+
+/** PWA / web handoff — claimer says "I picked up" or helper says "I dropped off"; poster confirms in chat. */
+export async function submitSelfHandoffRequest(params: {
+  item: ItemPost;
+  actor: UserProfile;
+  subItemIds: string[];
+  kind: 'pickup' | 'dropoff';
+}): Promise<{ ok: boolean; chatId?: string; errorMessage?: string }> {
+  const { item, actor, kind } = params;
+
+  if (kind === 'pickup') {
+    if (item.type !== 'giveaway' || item.status !== 'active') {
+      return { ok: false, errorMessage: 'This listing is not available to claim.' };
+    }
+  } else {
+    if (item.type !== 'looking' || item.status !== 'active') {
+      return { ok: false, errorMessage: 'This request is not open for drop-off confirmation.' };
+    }
   }
 
-  const subitems = await getListingSubitems(params.item.id);
+  if (item.userId === actor.uid) {
+    return { ok: false, errorMessage: 'You cannot confirm your own listing.' };
+  }
+
+  const subitems = await getListingSubitems(item.id);
   let targetIds = params.subItemIds;
 
-  if (subitems.length > 0) {
+  if (kind === 'pickup' && subitems.length > 0) {
     const available = subitems.filter((s) => s.status === 'available');
     if (targetIds.length !== 1) {
       return { ok: false, errorMessage: 'Pick exactly one item you picked up.' };
@@ -2285,27 +2309,30 @@ export async function submitSelfClaimRequest(params: {
       return { ok: false, errorMessage: 'That item is no longer available to claim.' };
     }
     targetIds = [subId];
+  } else if (kind === 'pickup') {
+    targetIds = [];
   } else {
     targetIds = [];
   }
 
-  const chatId = buildDmChatId(params.claimer.uid, params.item.userId);
+  const posterUserId = item.userId;
+  const chatId = buildDmChatId(actor.uid, posterUserId);
   const chatPayload = {
     id: chatId,
-    participantIds: [params.claimer.uid, params.item.userId].sort(),
+    participantIds: [actor.uid, posterUserId].sort(),
     participantNames: {
-      [params.claimer.uid]: params.claimer.displayName,
-      [params.item.userId]: params.item.userDisplayName,
+      [actor.uid]: actor.displayName,
+      [posterUserId]: item.userDisplayName,
     },
     participantPhotos: {
-      [params.claimer.uid]: params.claimer.photoURL || '',
-      [params.item.userId]: params.item.userPhotoURL || '',
+      [actor.uid]: actor.photoURL || '',
+      [posterUserId]: item.userPhotoURL || '',
     },
     lastMessageAt: new Date().toISOString(),
     lastMessageText: '',
-    lastMessageSenderId: params.claimer.uid,
-    itemId: params.item.id,
-    itemTitle: params.item.title,
+    lastMessageSenderId: actor.uid,
+    itemId: item.id,
+    itemTitle: item.title,
   };
 
   const chatOk = await getOrCreateSupabaseChat(chatId, chatPayload);
@@ -2313,13 +2340,13 @@ export async function submitSelfClaimRequest(params: {
     return { ok: false, errorMessage: 'Could not open chat with the poster.' };
   }
 
-  const requestId = `clreq_${params.item.id}_${Date.now()}`;
+  const requestId = `clreq_${item.id}_${Date.now()}`;
   const { error: reqError } = await supabase.from('item_claim_requests').insert({
     id: requestId,
-    itemId: params.item.id,
-    giverUserId: params.item.userId,
-    claimerUserId: params.claimer.uid,
-    claimerName: params.claimer.displayName,
+    itemId: item.id,
+    giverUserId: posterUserId,
+    claimerUserId: actor.uid,
+    claimerName: actor.displayName,
     subItemIds: JSON.stringify(targetIds),
     status: 'pending',
     chatId,
@@ -2333,7 +2360,7 @@ export async function submitSelfClaimRequest(params: {
     return { ok: false, errorMessage: reqError.message };
   }
 
-  if (targetIds.length === 1) {
+  if (kind === 'pickup' && targetIds.length === 1) {
     const { error: holdError } = await supabase
       .from('listing_subitems')
       .update({ status: 'pending_pickup' })
@@ -2346,27 +2373,27 @@ export async function submitSelfClaimRequest(params: {
   }
 
   const labels =
-    subitems.length > 0
+    kind === 'pickup' && subitems.length > 0
       ? subitems.filter((s) => targetIds.includes(s.id)).map((s) => s.label)
-      : [params.item.title];
+      : [item.title];
+
+  const handoffMessage =
+    kind === 'dropoff'
+      ? formatSelfDropOffRequestMessage(actor.displayName, item.title)
+      : formatSelfClaimRequestMessage(actor.displayName, labels);
 
   const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  const msgOk = await createSupabaseMessage(
-    chatId,
-    formatSelfClaimRequestMessage(params.claimer.displayName, labels),
-    params.claimer.uid,
-    messageId,
-  );
+  const msgOk = await createSupabaseMessage(chatId, handoffMessage, actor.uid, messageId);
 
   if (!msgOk) {
-    return { ok: false, errorMessage: 'Claim request saved but message failed to send.' };
+    return { ok: false, errorMessage: 'Handoff request saved but message failed to send.' };
   }
 
   await runPushTask(() =>
     import('./lib/pushIntegration').then((m) =>
       m.pushAfterClaimRequest({
-        item: params.item,
-        claimerName: params.claimer.displayName,
+        item,
+        claimerName: actor.displayName,
         requestId,
       }),
     ),
@@ -2425,7 +2452,25 @@ export async function confirmClaimRequest(params: {
       return { ok: false, errorMessage: 'This claim request was already handled.' };
     }
     if (request.giverUserId !== params.actor.uid) {
-      return { ok: false, errorMessage: 'Only the poster can confirm pickups.' };
+      return { ok: false, errorMessage: 'Only the poster can confirm handoffs.' };
+    }
+
+    const { data: itemRow } = await supabase.from('items').select('type, title').eq('id', request.itemId).maybeSingle();
+    const itemType = itemRow?.type as ItemPost['type'] | undefined;
+    const itemTitle = params.itemTitle || String(itemRow?.title ?? '');
+
+    if (itemType === 'looking') {
+      const fulfillResult = await markItemFulfilledFromChat({
+        itemId: request.itemId,
+        ownerUserId: request.giverUserId,
+        helperUserId: request.claimerUserId,
+        chatId: request.chatId,
+        message: formatItemFulfilledChatMessage(itemTitle, request.claimerName),
+      });
+      if (!fulfillResult.ok) return fulfillResult;
+
+      await supabase.from('item_claim_requests').update({ status: 'confirmed' }).eq('id', request.id);
+      return { ok: true };
     }
 
     const ids = params.subItemIds ?? request.subItemIds;
@@ -2633,6 +2678,94 @@ export async function itemHasRecordedAppClaim(itemId: string): Promise<boolean> 
     return false;
   }
   return (count ?? 0) > 0;
+}
+
+export async function getAppClaimsForItem(
+  itemId: string,
+): Promise<{ claimerUserId: string; giverUserId: string; kind: string }[]> {
+  try {
+    const { data, error } = await supabase
+      .from('item_claims')
+      .select('claimerUserId, giverUserId, kind')
+      .eq('itemId', itemId);
+
+    if (error) return [];
+    return (data ?? []).map((row) => ({
+      claimerUserId: String((row as Record<string, unknown>).claimerUserId),
+      giverUserId: String((row as Record<string, unknown>).giverUserId),
+      kind: String((row as Record<string, unknown>).kind ?? 'giveaway'),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function submitClaimDisputeSupportTicket(params: {
+  opener: UserProfile;
+  item: ItemPost;
+  chatId: string;
+  note?: string;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  const claims = await getAppClaimsForItem(params.item.id);
+  const claimSummary =
+    claims.length > 0
+      ? claims.map((c) => `• recorded claimer uid: ${c.claimerUserId} (${c.kind})`).join('\n')
+      : '• no in-app claim record yet';
+
+  const message = [
+    `Listing: "${params.item.title}" (${params.item.id})`,
+    `Type: ${params.item.type} · Status: ${params.item.status}`,
+    `Chat: ${params.chatId}`,
+    '',
+    'I believe the wrong neighbor was marked or someone else picked up / dropped off.',
+    claimSummary,
+    '',
+    params.note?.trim() || '(Neighbor did not add extra details.)',
+    '',
+    'Please review the listing claim record and adjust if needed.',
+  ].join('\n');
+
+  return createSupportTicket({
+    opener: params.opener,
+    subject: `Wrong pickup claim — ${params.item.title}`.slice(0, 120),
+    message,
+  });
+}
+
+/** Staff: mark listing completed with off-app / unnamed attribution (no specific neighbor credited). */
+export async function staffCompleteListingWithoutClaimer(
+  item: Pick<ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>,
+  actor: Pick<UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!isStaffRole(actor.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  const { error } = await supabase
+    .from('items')
+    .update({
+      status: 'completed',
+      pickupAttributionType: 'other',
+      pickupAttributionUserId: null,
+      pickupAttributionLabel: 'Claimed (corrected by staff — no app user named)',
+      updatedAt: new Date().toISOString(),
+    })
+    .eq('id', item.id);
+
+  if (error) {
+    handleSupabaseError(error, 'items');
+    return { ok: false, errorMessage: error.message };
+  }
+
+  await markAllSubitemsClaimed(item.id);
+  await writeModerationAudit({
+    actor: actor as UserProfile,
+    target: { uid: item.userId, displayName: item.userDisplayName },
+    action: 'complete_listing_staff',
+    detail: `"${item.title}" marked completed without naming a claimer`,
+  });
+
+  return { ok: true };
 }
 
 export async function getFacebookPickupGroups(): Promise<string[]> {

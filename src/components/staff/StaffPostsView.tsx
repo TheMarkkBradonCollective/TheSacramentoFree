@@ -9,11 +9,14 @@ import {
   Search,
   Tag,
   Trash2,
+  CheckCircle,
   X,
 } from 'lucide-react';
 import type { CommunityEvent, ItemPost, UserProfile } from '../../types';
 import {
+  getAppClaimsForItem,
   staffCancelEvent,
+  staffCompleteListingWithoutClaimer,
   staffDeleteEvent,
   staffDeleteListing,
   staffGetAllEvents,
@@ -129,8 +132,16 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [claimRecords, setClaimRecords] = useState<
+    Record<string, { claimerUserId: string; giverUserId: string; kind: string }[]>
+  >({});
 
   const perm = useStaffPermission(actor);
+
+  const loadClaimsForItem = async (itemId: string) => {
+    const claims = await getAppClaimsForItem(itemId);
+    setClaimRecords((prev) => ({ ...prev, [itemId]: claims }));
+  };
 
   const load = async () => {
     setLoading(true);
@@ -235,6 +246,26 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
   const handleDeleteEvent = (row: StaffContentRow) => {
     if (!row.event || !perm.checkModeratePost()) return;
     void run(row.id, () => staffDeleteEvent(row.event!, actor));
+  };
+
+  const handleStaffCompleteListing = (row: StaffContentRow) => {
+    if (!row.item || !perm.checkModeratePost()) return;
+    if (
+      !window.confirm(
+        `Mark "${row.title}" completed without naming a neighbor? Use when pickup happened off-app or the wrong claimer was recorded.`,
+      )
+    ) {
+      return;
+    }
+    void run(row.id, () => staffCompleteListingWithoutClaimer(row.item!, actor));
+  };
+
+  const toggleExpandedRow = (row: StaffContentRow) => {
+    const next = expandedRow === row.id ? null : row.id;
+    setExpandedRow(next);
+    if (next && row.kind === 'item' && row.item) {
+      void loadClaimsForItem(row.item.id);
+    }
   };
 
   const formatDate = (createdAt: unknown) => {
@@ -380,7 +411,7 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setExpandedRow(isExpanded ? null : row.id)}
+                            onClick={() => toggleExpandedRow(row)}
                             className="sbn-btn sbn-btn-secondary sbn-btn-sm"
                           >
                             {isExpanded ? 'Close' : 'Actions'}
@@ -395,6 +426,16 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
                           <div className="flex flex-wrap gap-2 items-center">
                             {row.kind === 'item' && row.item && (
                               <>
+                                {claimRecords[row.item.id]?.length ? (
+                                  <p className="text-xs text-muted w-full mb-1">
+                                    In-app claims:{' '}
+                                    {claimRecords[row.item.id]
+                                      .map((c) => `${c.claimerUserId.slice(0, 8)}… (${c.kind})`)
+                                      .join(', ')}
+                                  </p>
+                                ) : row.status === 'active' || row.status === 'pending_pickup' ? (
+                                  <p className="text-xs text-muted w-full mb-1">No in-app claim record yet.</p>
+                                ) : null}
                                 <button
                                   type="button"
                                   onClick={() => onViewItem(row.item!)}
@@ -402,6 +443,15 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
                                 >
                                   <Eye className="w-3.5 h-3.5" /> View listing
                                 </button>
+                                {(row.status === 'active' || row.status === 'pending_pickup') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStaffCompleteListing(row)}
+                                    className="sbn-btn sbn-btn-sm bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                                  >
+                                    <CheckCircle className="w-3.5 h-3.5" /> Mark completed (no neighbor)
+                                  </button>
+                                )}
                                 {row.status !== 'withdrawn' && (
                                   <button
                                     type="button"

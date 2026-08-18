@@ -66,6 +66,7 @@ import {
   markItemFulfilledFromChat,
 } from '../supabase';
 import ChatClaimActions from './ChatClaimActions';
+import ChatClaimerActions from './ChatClaimerActions';
 import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
 import { confirmGoGetAsFulfiller } from './goget/goGetSafetyConfirm';
 import { getChatCoordinationLabel } from '../lib/listingMapActions';
@@ -1119,11 +1120,19 @@ export default function ChatSystem({
               linkedItem.type === 'trade' &&
               linkedItem.status === 'active';
 
-            const showMarkClaimedBtn =
+            const showPosterHandoffActions =
               !!linkedItem &&
               !isChatDisabled &&
               isListingOwner &&
-              linkedItem.type === 'giveaway' &&
+              (linkedItem.type === 'giveaway' || linkedItem.type === 'looking') &&
+              linkedItem.status === 'active';
+
+            const showClaimerHandoffActions =
+              !supportsGoGetCoordination() &&
+              !!linkedItem &&
+              !isChatDisabled &&
+              !isListingOwner &&
+              (linkedItem.type === 'giveaway' || linkedItem.type === 'looking') &&
               linkedItem.status === 'active';
 
             const claimerUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
@@ -1488,13 +1497,27 @@ export default function ChatSystem({
                       ) : null}
                     </div>
                   ) : null}
-                  {!isCommunity && showMarkClaimedBtn && claimerUserId ? (
+                  {!isCommunity && showPosterHandoffActions && claimerUserId && linkedItem ? (
                     <ChatClaimActions
                       chatId={selectedChat.id}
                       linkedItem={linkedItem}
                       viewer={userProfile}
                       claimerUserId={claimerUserId}
                       disabled={isSending}
+                      onOpenSupport={() => setSupportView('list')}
+                      onChanged={() => {
+                        onItemsChanged?.();
+                        void getSupabaseMessages(selectedChat.id).then(setMessages);
+                      }}
+                    />
+                  ) : null}
+                  {!isCommunity && showClaimerHandoffActions && linkedItem ? (
+                    <ChatClaimerActions
+                      chatId={selectedChat.id}
+                      linkedItem={linkedItem}
+                      viewer={userProfile}
+                      disabled={isSending}
+                      onOpenSupport={() => setSupportView('list')}
                       onChanged={() => {
                         onItemsChanged?.();
                         void getSupabaseMessages(selectedChat.id).then(setMessages);
