@@ -775,6 +775,41 @@ function mapItemRows(rows: unknown[]): ItemPost[] {
 }
 
 let itemFeedDescriptionRpc: boolean | null = null;
+let itemFeedImageUrlMapRpc: boolean | null = null;
+let cachedPhotoUrlMap: Map<string, string[]> | null = null;
+let cachedPhotoUrlMapAt = 0;
+
+async function itemFeedImageUrlMap(force = false): Promise<Map<string, string[]>> {
+  const now = Date.now();
+  if (!force && cachedPhotoUrlMap && now - cachedPhotoUrlMapAt < 60_000) {
+    return cachedPhotoUrlMap;
+  }
+
+  const map = new Map<string, string[]>();
+  if (itemFeedImageUrlMapRpc === false && cachedPhotoUrlMap) return cachedPhotoUrlMap;
+
+  const { data, error } = await supabase.rpc('item_feed_image_url_map');
+  if (error) {
+    itemFeedImageUrlMapRpc = false;
+    console.warn('Listing photo URL map RPC unavailable:', error.message);
+    return cachedPhotoUrlMap ?? map;
+  }
+
+  itemFeedImageUrlMapRpc = true;
+  for (const row of data ?? []) {
+    const id = String((row as { id?: string }).id ?? '');
+    const rawUrls = (row as { image_urls?: unknown }).image_urls;
+    if (!id || !Array.isArray(rawUrls)) continue;
+    const urls = rawUrls
+      .map((url) => String(url).trim())
+      .filter((url) => url.startsWith('http://') || url.startsWith('https://'));
+    if (urls.length > 0) map.set(id, urls);
+  }
+
+  cachedPhotoUrlMap = map;
+  cachedPhotoUrlMapAt = now;
+  return map;
+}
 
 async function itemFeedDescription(itemId: string): Promise<string | null> {
   if (!itemId || itemFeedDescriptionRpc === false) return null;
@@ -834,11 +869,15 @@ async function fetchItemRowsForFeed(): Promise<Record<string, unknown>[]> {
     }
   }
 
+  const photoUrlsById = await itemFeedImageUrlMap();
+
   return (heads ?? []).map((row) => {
     const id = String((row as { id?: string }).id ?? '');
+    const imageUrls = photoUrlsById.get(id);
     return {
       ...(row as Record<string, unknown>),
       description: descById.get(id) || '',
+      ...(imageUrls?.length ? { imageUrls } : {}),
     };
   });
 }
@@ -878,10 +917,14 @@ export async function getSupabaseItemById(itemId: string): Promise<ItemPost | nu
       description = (await itemFeedDescription(itemId)) || '';
     }
 
+    const photoUrlsById = await itemFeedImageUrlMap();
+    const imageUrls = photoUrlsById.get(itemId);
+
     setSupabaseConfigurationState(true);
     return normalizeItemFromRow({
       ...(head as ItemPost),
       description,
+      ...(imageUrls?.length ? { imageUrls } : {}),
     });
   } catch (err: any) {
     console.warn('Supabase item fetch failed:', err);

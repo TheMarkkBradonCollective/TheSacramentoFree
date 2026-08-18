@@ -9,6 +9,27 @@ const PICKUP_NOTES_BLOCK_RE = /\[PICKUP_NOTES\]([\s\S]*?)\[\/PICKUP_NOTES\]/i;
 const PHOTOS_TAG_RE = /\[PHOTOS:\s*([^\]]+)\]/i;
 const LEGACY_PHOTO_RE = /\[Photo\]:\s*(\S+)/gi;
 
+function extractPhotosTagUrls(desc: string): string[] {
+  const photosIdx = desc.indexOf('[PHOTOS:');
+  if (photosIdx < 0) return [];
+  const match = desc.slice(photosIdx).match(PHOTOS_TAG_RE);
+  if (!match?.[1]) return [];
+  return match[1]
+    .split('|')
+    .map((part) => part.trim())
+    .filter((url) => isPersistableListingImageUrl(url));
+}
+
+function extractLegacyPhotoUrls(desc: string): string[] {
+  const scan = desc.length > 12_000 ? desc.slice(-12_000) : desc;
+  const urls: string[] = [];
+  for (const match of scan.matchAll(LEGACY_PHOTO_RE)) {
+    const url = match[1]?.trim();
+    if (isPersistableListingImageUrl(url) && !urls.includes(url)) urls.push(url);
+  }
+  return urls;
+}
+
 /** Photos we may persist or render from the feed — never inlined camera dumps. */
 export function isPersistableListingImageUrl(url: string | undefined | null): boolean {
   const t = url?.trim() ?? '';
@@ -64,7 +85,11 @@ export function getListingDetailsText(description: string): string {
   return text.trim();
 }
 
-export function extractListingImageUrls(item: { description?: string; imageUrl?: string }): string[] {
+export function extractListingImageUrls(item: {
+  description?: string;
+  imageUrl?: string;
+  imageUrls?: string[];
+}): string[] {
   const urls: string[] = [];
 
   const add = (url: string | undefined) => {
@@ -73,18 +98,18 @@ export function extractListingImageUrls(item: { description?: string; imageUrl?:
     urls.push(t);
   };
 
+  item.imageUrls?.forEach((url) => add(url));
   add(item.imageUrl);
 
   const desc = item.description || '';
-  if (desc.length <= MAX_LISTING_DESCRIPTION_CHARS) {
-    const photosTag = desc.match(PHOTOS_TAG_RE);
-    if (photosTag) {
-      photosTag[1].split('|').forEach((part) => add(part));
-    }
+  extractPhotosTagUrls(desc).forEach((url) => add(url));
 
+  if (desc.length <= MAX_LISTING_DESCRIPTION_CHARS) {
     for (const match of desc.matchAll(LEGACY_PHOTO_RE)) {
       add(match[1]);
     }
+  } else {
+    extractLegacyPhotoUrls(desc).forEach((url) => add(url));
   }
 
   return urls.slice(0, MAX_LISTING_PHOTOS);

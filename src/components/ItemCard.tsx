@@ -1,4 +1,5 @@
 import { Bookmark, Calendar, Eye, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
 import { getPostTypeBadgeClass, getPostTypeLabel, getPostTypeCompletedLabel } from '../lib/postType';
@@ -75,6 +76,12 @@ export default function ItemCard({
   const previewText = stripListingMetadata(item.description);
   const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
   const coverPhoto = photos[0];
+  const [coverFailed, setCoverFailed] = useState(false);
+  const showCoverPhoto = Boolean(coverPhoto) && !coverFailed;
+
+  useEffect(() => {
+    setCoverFailed(false);
+  }, [coverPhoto, item.id]);
 
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
 
@@ -221,15 +228,16 @@ export default function ItemCard({
         onClick={onViewDetail}
         className={`relative shrink-0 overflow-hidden bg-inset text-left cursor-pointer
           w-[5.25rem] h-[5.25rem] sm:w-full sm:h-auto sm:aspect-[16/10]
-          ${!coverPhoto ? 'flex items-center justify-center border-r sm:border-r-0 border-app' : ''}`}
+          ${!showCoverPhoto ? 'flex items-center justify-center border-r sm:border-r-0 border-app' : ''}`}
       >
-        {coverPhoto ? (
+        {showCoverPhoto ? (
           <>
             <ListingImage
               src={coverPhoto}
               alt={item.title}
               width={480}
               className="h-full w-full object-cover"
+              onLoadError={() => setCoverFailed(true)}
             />
             {photos.length > 1 && (
               <span className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 text-[8px] sm:text-[10px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
