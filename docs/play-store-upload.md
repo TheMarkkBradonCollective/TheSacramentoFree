@@ -6,7 +6,7 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 
 - Release signing keystore: `android/app/sac-buynothing-release.keystore`
 - `versionCode` **15**, `versionName` **0.1.0**
-- Build command: `npm run android:aab` → `dist/android/sac-buy-nothing-release.aab`
+- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0015.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`
 - Firebase push configured (client + server)
@@ -69,11 +69,15 @@ No 2FA. No phone number required.
 npm run android:aab
 ```
 
-Upload file:
+Upload file (same build as the sideload APK):
 
 ```
-dist/android/sac-buy-nothing-release.aab
+public/downloads/sac-buy-nothing-beta-v0.1.0.0015.aab
 ```
+
+Legacy alias: `public/downloads/sac-buy-nothing.aab`
+
+Local copy after build: `dist/android/sac-buy-nothing-release.aab`
 
 **Back up** `android/app/sac-buynothing-release.keystore` and `android/keystore.properties` offline. Losing them blocks future updates.
 
@@ -215,7 +219,7 @@ Recommend **18 and over** (user-generated content, messaging, location).
 ## Step 6 — Release (current: beta v0.1.0.0015)
 
 1. **Testing → Internal testing → Create release** (or Production when ready)
-2. Upload `dist/android/sac-buy-nothing-release.aab`
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0015.aab` (or `sac-buy-nothing.aab`)
 3. Release name: `0.1.0 (15)`
 4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0015.txt`:
 
@@ -244,7 +248,7 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 For reference — first Play upload used versionCode 8:
 
 1. **Testing → Internal testing → Create release**
-2. Upload `dist/android/sac-buy-nothing-release.aab`
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0015.aab` (or `sac-buy-nothing.aab`)
 3. Release name: `0.1.0 (8)`
 4. Release notes:
 
@@ -267,6 +271,6 @@ First Google Play release of SacramentoBuyNothing for Sacramento neighbors.
 
 1. Increase `versionCode` in `android/app/build.gradle` (must be higher than last Play upload)
 2. Update `versionName` if needed
-3. `npm run android:aab` → upload `dist/android/sac-buy-nothing-release.aab`
+3. `npm run android:aab` → upload `public/downloads/sac-buy-nothing-beta-v0.1.0.00XX.aab`
 4. Add `play-store-assets/release-notes-v0.1.0-00XX.txt` and update `play-store-assets/current-release.json`
 5. Upload new AAB with updated release notes in Play Console

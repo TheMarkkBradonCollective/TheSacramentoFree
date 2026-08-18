@@ -19,10 +19,13 @@ fi
 export CAPACITOR_SERVER_URL="${CAPACITOR_SERVER_URL:-$VITE_APP_URL}"
 echo "Using CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL}"
 
-# APKs in public/ get copied into dist/ and then nested inside the next AAB.
+# APKs and AABs in public/ get copied into dist/ and then nested inside the next build.
 APK_STAGING_DIR="$(mktemp -d)"
 if compgen -G "public/downloads/*.apk" > /dev/null; then
   mv public/downloads/*.apk "$APK_STAGING_DIR/"
+fi
+if compgen -G "public/downloads/*.aab" > /dev/null; then
+  mv public/downloads/*.aab "$APK_STAGING_DIR/"
 fi
 if compgen -G "public/buynothing*.apk" > /dev/null; then
   mv public/buynothing*.apk "$APK_STAGING_DIR/"
@@ -56,23 +59,32 @@ cd android
 cd ..
 
 AAB_PATH="android/app/build/outputs/bundle/release/app-release.aab"
-mkdir -p dist/android
+mkdir -p dist/android public/downloads
 cp "$AAB_PATH" "dist/android/sac-buy-nothing-release.aab"
+node scripts/sync-android-version.mjs
 VERSION_NAME="$(node -e "const m=require('./public/android-version.json'); process.stdout.write(m.versionName)")"
 VERSION_CODE="$(node -e "const m=require('./public/android-version.json'); process.stdout.write(String(m.versionCode))")"
+AAB_FILE="$(node -e "const m=require('./public/android-version.json'); process.stdout.write(m.aabFileName)")"
 BUILD="$(printf '%04d' "$VERSION_CODE")"
 VERSIONED_AAB="dist/android/sac-buy-nothing-beta-v${VERSION_NAME}.${BUILD}.aab"
 cp "$AAB_PATH" "$VERSIONED_AAB"
+cp "$AAB_PATH" "public/downloads/${AAB_FILE}"
+cp "$AAB_PATH" "public/downloads/sac-buy-nothing.aab"
+node scripts/sync-android-version.mjs
 if compgen -G "$APK_STAGING_DIR/*.apk" > /dev/null; then
-  mkdir -p public/downloads
   mv "$APK_STAGING_DIR"/*.apk public/downloads/ 2>/dev/null || true
   for f in public/downloads/buynothing*.apk; do
     [[ -f "$f" ]] && mv "$f" public/ 2>/dev/null || true
   done
 fi
+if compgen -G "$APK_STAGING_DIR/*.aab" > /dev/null; then
+  mv "$APK_STAGING_DIR"/*.aab public/downloads/ 2>/dev/null || true
+fi
 rm -rf "$APK_STAGING_DIR"
 
 echo "AAB ready for Google Play: dist/android/sac-buy-nothing-release.aab"
+echo "Public download: public/downloads/${AAB_FILE}"
+echo "Legacy alias: public/downloads/sac-buy-nothing.aab"
 echo "Versioned copy: $VERSIONED_AAB"
 echo "Release notes: play-store-assets/release-notes-v${VERSION_NAME}-${BUILD}.txt"
-ls -lh "dist/android/sac-buy-nothing-release.aab" "$VERSIONED_AAB"
+ls -lh "dist/android/sac-buy-nothing-release.aab" "public/downloads/${AAB_FILE}" "public/downloads/sac-buy-nothing.aab"

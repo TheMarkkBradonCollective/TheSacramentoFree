@@ -67,7 +67,7 @@ This copies `public/Logo.jpeg` into `assets/logo.png` and runs `@capacitor/asset
 
 **Neighbors:** share the in-app download page at [www.sacramentobuynothing.com/download](https://www.sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
 
-After building, commit `public/buynothing.apk`, `public/buynothing-v*.apk`, `public/downloads/sac-buy-nothing.apk`, and `public/android-version.json`, then deploy so the live download button and MBC App Market listing work.
+After building, commit `public/buynothing.apk`, `public/buynothing-v*.apk`, `public/downloads/sac-buy-nothing.apk`, `public/downloads/sac-buy-nothing.aab`, and `public/android-version.json`, then deploy so the live download button and MBC App Market listing work.
 
 ## Open in Android Studio
 
@@ -92,7 +92,7 @@ npm run cap:open
 ```bash
 # Google Play upload bundle (AAB — required by Play Console)
 npm run android:aab
-# → dist/android/sac-buy-nothing-release.aab
+# → public/downloads/sac-buy-nothing-beta-v0.1.0.0015.aab (+ sac-buy-nothing.aab)
 
 # Store listing graphics (512 icon + 1024×500 feature graphic)
 npm run android:play-assets

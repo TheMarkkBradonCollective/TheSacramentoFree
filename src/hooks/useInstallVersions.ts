@@ -15,9 +15,12 @@ export interface AndroidVersionManifest {
   versionCode: number;
   betaLabel?: string;
   downloadUrl: string;
+  aabDownloadUrl?: string;
   releaseTag: string;
   publishedAt: string;
   fileName: string;
+  aabFileName?: string;
+  legacyAabFileName?: string;
 }
 
 export interface InstallVersionsState {

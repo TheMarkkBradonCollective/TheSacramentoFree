@@ -19,11 +19,14 @@ fi
 export CAPACITOR_SERVER_URL="${CAPACITOR_SERVER_URL:-$VITE_APP_URL}"
 echo "Using CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL}"
 
-# APKs in public/ get copied into dist/ and then nested inside the next APK.
+# APKs and AABs in public/ get copied into dist/ and then nested inside the next APK.
 # Stage them out before the web build, then restore only the fresh build at the end.
 APK_STAGING_DIR="$(mktemp -d)"
 if compgen -G "public/downloads/*.apk" > /dev/null; then
   mv public/downloads/*.apk "$APK_STAGING_DIR/"
+fi
+if compgen -G "public/downloads/*.aab" > /dev/null; then
+  mv public/downloads/*.aab "$APK_STAGING_DIR/"
 fi
 if compgen -G "public/buynothing*.apk" > /dev/null; then
   mv public/buynothing*.apk "$APK_STAGING_DIR/"
