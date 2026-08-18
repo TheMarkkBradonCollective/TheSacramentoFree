@@ -40,6 +40,7 @@ const STAFF_SEAT_FILLED_PUBLISHED_AT = '2026-08-18T11:55:00.000Z';
 const FEED_HIDE_COMPLETED_PUBLISHED_AT = '2026-08-18T12:10:00.000Z';
 const FEED_APK_PUBLISHED_AT = '2026-08-18T12:15:00.000Z';
 const APK_0015_ANNOUNCE_PUBLISHED_AT = '2026-08-18T12:20:00.000Z';
+const FEED_SWITCHES_APK_PUBLISHED_AT = '2026-08-18T13:10:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -93,6 +94,29 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_feed-switches-apk-0016',
+    '2026-08-18',
+    'Labeled feed switches and stronger system bar spacing — beta v0.1.0.0016',
+    'Community Stuff filters are now orange ON/OFF switches, and the app keeps header, tabs, and feed content clear of the status bar and navigation buttons.',
+    `WHAT NEIGHBORS SEE
+On Community Stuff, sort, listing type, quick picks, and hide-completed options are labeled ON/OFF switches in our orange brand color.
+
+The top header and bottom tabs should no longer sit under the clock, battery, or system navigation buttons — even on phones where Android did not report safe-area insets correctly before.
+
+New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0016).
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/LabeledSwitch.tsx + FeedFilterSwitchRow.tsx + ItemGrid.tsx — labeled feed switches.
+- src/lib/safeAreaInsets.ts + src/capacitor/init.ts + MainActivity.java — Android safe-area fallbacks.
+- android/app/build.gradle — versionCode 16.
+
+HISTORY
+2026-08-18 — Feed switch UI + safe-area fix, Android beta 0016.`,
+    FEED_SWITCHES_APK_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_apk-0015-announcement',
     '2026-08-18',

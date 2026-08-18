@@ -81,6 +81,16 @@ html.capacitor-native {
   --sbn-inset-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
 }
 
+/* Tablet + staff-mobile shells (no fixed sbn-mobile-header/nav band) */
+html.capacitor-native #tablet_device_workspace,
+html.capacitor-native #mobile_device_workspace.flex.h-screen {
+  box-sizing: border-box;
+  height: 100svh;
+  max-height: 100svh;
+  padding-top: var(--sbn-inset-top);
+  padding-bottom: var(--sbn-inset-bottom);
+}
+
 html,
 body {
   background-color: var(--color-bg);
@@ -799,6 +809,7 @@ option {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-x: none;
+  scroll-padding-bottom: var(--sbn-inset-bottom, 0px);
 }
 
 .sbn-scroll-page-body {
@@ -1453,6 +1464,81 @@ option {
 
 .sbn-switch-on .sbn-switch-thumb {
   transform: translateX(1.25rem);
+}
+
+.sbn-labeled-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 4.25rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-accent);
+  background: var(--color-surface);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.sbn-labeled-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sbn-labeled-switch-on {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.sbn-labeled-switch-label {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.sbn-labeled-switch-label-on {
+  left: 0.45rem;
+  color: #ffffff;
+  opacity: 0;
+}
+
+.sbn-labeled-switch-label-off {
+  right: 0.4rem;
+  color: var(--color-accent);
+  opacity: 1;
+}
+
+.sbn-labeled-switch-on .sbn-labeled-switch-label-on {
+  opacity: 1;
+}
+
+.sbn-labeled-switch-on .sbn-labeled-switch-label-off {
+  opacity: 0;
+}
+
+.sbn-labeled-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  box-shadow: 0 1px 3px var(--color-shadow);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.sbn-labeled-switch-on .sbn-labeled-switch-thumb {
+  background: #ffffff;
+  transform: translateX(2.25rem);
 }
 
 .sbn-help-list-item {

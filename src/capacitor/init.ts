@@ -3,6 +3,7 @@ import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 import { isAndroidApp, isNativeApp } from '../lib/nativePlatform';
 import { initNativePushHandlers } from '../lib/nativePush';
 import { recordInstalledApkVersion } from '../lib/installContext';
+import { startSafeAreaInsetWatcher } from '../lib/safeAreaInsets';
 
 export async function initCapacitorApp(): Promise<void> {
   if (!isNativeApp()) return;
@@ -11,6 +12,8 @@ export async function initCapacitorApp(): Promise<void> {
   if (isAndroidApp()) {
     document.documentElement.classList.add('capacitor-android');
   }
+
+  startSafeAreaInsetWatcher();
 
   try {
     if (isAndroidApp()) {

@@ -28,6 +28,12 @@
         if (localStorage.getItem('sbn_profile_cache_v1')) {
           document.documentElement.classList.add('sbn-session-restore');
         }
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+          document.documentElement.classList.add('capacitor-native');
+          if (window.Capacitor.getPlatform() === 'android') {
+            document.documentElement.classList.add('capacitor-android');
+          }
+        }
       })();
     </script>
   </head>
