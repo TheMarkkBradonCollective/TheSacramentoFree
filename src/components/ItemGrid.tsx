@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
+import CollapsibleFilterSection from './CollapsibleFilterSection';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
 import PickupAttributionModal from './PickupAttributionModal';
@@ -250,6 +251,14 @@ export default function ItemGrid({
     !isPrimaryFeedSort(sortBy),
   ].filter(Boolean).length;
 
+  const toggleFilterCount = [
+    sortBy !== 'new',
+    selectedType !== 'all',
+    activeQuickPicks.size > 0,
+    hideGiven,
+    hideFulfilled,
+  ].filter(Boolean).length;
+
   const hasExtraFilters =
     selectedType !== 'all' ||
     hasRefineFilters ||
@@ -347,78 +356,84 @@ export default function ItemGrid({
           />
         </div>
 
-        <div className="space-y-3" id="feed_filter_switches">
-          <div className="space-y-1.5" id="feed_sort_bar">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
-            <div className="flex flex-wrap gap-2">
-              {PRIMARY_FEED_SORTS.map(({ value, label }) => (
+        <CollapsibleFilterSection
+          id="feed_filter_toggles_toggle"
+          title="Sort & filters"
+          activeCount={toggleFilterCount}
+        >
+          <div className="space-y-3" id="feed_filter_switches">
+            <div className="space-y-1.5" id="feed_sort_bar">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
+              <div className="flex flex-wrap gap-2">
+                {PRIMARY_FEED_SORTS.map(({ value, label }) => (
+                  <FilterLabeledSwitch
+                    key={value}
+                    id={`feed_sort_${value}`}
+                    label={label}
+                    checked={sortBy === value}
+                    onChange={handleSortSwitch(value)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
+              <div className="flex flex-wrap gap-2" id="feed_type_filter">
+                {LISTING_TYPE_FILTERS.map((type) => (
+                  <FilterLabeledSwitch
+                    key={type}
+                    id={`type_${type}_switch`}
+                    label={getPostTypeFilterLabel(type)}
+                    checked={selectedType === type}
+                    onChange={handleTypeSwitch(type)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_PICKS.map(({ id, label }) => (
+                  <FilterLabeledSwitch
+                    key={id}
+                    id={`quick_pick_${id}`}
+                    label={label}
+                    checked={activeQuickPicks.has(id)}
+                    onChange={handleQuickPickSwitch(id)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Completed in feed</p>
+              <div className="flex flex-wrap gap-2">
                 <FilterLabeledSwitch
-                  key={value}
-                  id={`feed_sort_${value}`}
-                  label={label}
-                  checked={sortBy === value}
-                  onChange={handleSortSwitch(value)}
+                  id="feed_hide_given_toggle"
+                  label="Hide given"
+                  checked={hideGiven}
+                  onChange={(value) => {
+                    setHideGiven(value);
+                    writeHideGivenFromFeed(value);
+                  }}
                 />
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
-            <div className="flex flex-wrap gap-2" id="feed_type_filter">
-              {LISTING_TYPE_FILTERS.map((type) => (
                 <FilterLabeledSwitch
-                  key={type}
-                  id={`type_${type}_switch`}
-                  label={getPostTypeFilterLabel(type)}
-                  checked={selectedType === type}
-                  onChange={handleTypeSwitch(type)}
+                  id="feed_hide_fulfilled_toggle"
+                  label="Hide fulfilled"
+                  checked={hideFulfilled}
+                  onChange={(value) => {
+                    setHideFulfilled(value);
+                    writeHideFulfilledFromFeed(value);
+                  }}
                 />
-              ))}
+              </div>
             </div>
           </div>
+        </CollapsibleFilterSection>
 
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
-            <div className="flex flex-wrap gap-2">
-              {QUICK_PICKS.map(({ id, label }) => (
-                <FilterLabeledSwitch
-                  key={id}
-                  id={`quick_pick_${id}`}
-                  label={label}
-                  checked={activeQuickPicks.has(id)}
-                  onChange={handleQuickPickSwitch(id)}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Completed in feed</p>
-            <div className="flex flex-wrap gap-2">
-              <FilterLabeledSwitch
-                id="feed_hide_given_toggle"
-                label="Hide given"
-                checked={hideGiven}
-                onChange={(value) => {
-                  setHideGiven(value);
-                  writeHideGivenFromFeed(value);
-                }}
-              />
-              <FilterLabeledSwitch
-                id="feed_hide_fulfilled_toggle"
-                label="Hide fulfilled"
-                checked={hideFulfilled}
-                onChange={(value) => {
-                  setHideFulfilled(value);
-                  writeHideFulfilledFromFeed(value);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="pt-3 border-t border-app">
+        <div className="pt-0 border-t border-app">
           <button
             type="button"
             id="feed_filters_sort_toggle"
