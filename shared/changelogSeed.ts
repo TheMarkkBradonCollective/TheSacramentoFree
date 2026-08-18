@@ -29,6 +29,7 @@ export interface SeededHelpAnnouncement {
 const DIRECTOR_NAME = 'Markeith White';
 const DIRECTOR_TITLE = 'Buy Nothing Director';
 const PUBLISHED_AT = '2026-07-26T23:20:00.000Z';
+const OUTAGE_PUBLISHED_AT = '2026-08-18T08:20:00.000Z';
 
 function update(
   id: string,
@@ -36,6 +37,7 @@ function update(
   title: string,
   body: string,
   detail: string,
+  publishedAt: string = PUBLISHED_AT,
 ): SeededAppUpdate {
   return {
     id,
@@ -46,8 +48,8 @@ function update(
     directorName: DIRECTOR_NAME,
     directorTitle: DIRECTOR_TITLE,
     postedByUserId: CHANGELOG_AUTHOR_UID,
-    createdAt: PUBLISHED_AT,
-    updatedAt: PUBLISHED_AT,
+    createdAt: publishedAt,
+    updatedAt: publishedAt,
   };
 }
 
@@ -57,6 +59,7 @@ function news(
   title: string,
   body: string,
   detail: string,
+  publishedAt: string = PUBLISHED_AT,
 ): SeededHelpAnnouncement {
   return {
     id,
@@ -67,13 +70,36 @@ function news(
     authorName: DIRECTOR_NAME,
     authorTitle: DIRECTOR_TITLE,
     postedByUserId: CHANGELOG_AUTHOR_UID,
-    createdAt: PUBLISHED_AT,
-    updatedAt: PUBLISHED_AT,
+    createdAt: publishedAt,
+    updatedAt: publishedAt,
   };
 }
 
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_login-crash-fix',
+    '2026-08-18',
+    'Sign-in is fixed — website and app are back',
+    'After login, the website and Android app crashed on “Something went wrong.” That bug is fixed. Sign in again and you should land on the map. A new APK is on the Download page.',
+    `What happened:
+• A small code mistake in Messages shipped with a Play Store review change.
+• It only ran after you signed in, so the public site looked fine — then the signed-in app crashed for everyone, website and APK.
+
+What we fixed:
+• Restored the missing React hooks in Messages so the signed-in shell can render.
+• Added a Sign out button on the error screen so a future crash is easier to recover from.
+• Shipped Android APK beta v0.1.0.0010 with the same fix.
+
+What to do:
+• Website: refresh, then sign in.
+• Android APK: open the app (it loads the live site) or install the new build from sacramentobuynothing.com/download.
+
+Sorry for the downtime. Thank you for sticking with Sacramento Buy Nothing.
+
+— Mark`,
+    OUTAGE_PUBLISHED_AT,
+  ),
   update(
     '2026-07-26_android-apk-1-1-0',
     '2026-07-26',
@@ -182,6 +208,29 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_we-are-back',
+    '2026-08-18',
+    'We are back — sorry we were down after login',
+    'If you signed in today and only saw “Something went wrong,” that was us, not you. The website and app are fixed. Sign in again — you should get the map, feed, and messages.',
+    `Neighbors,
+
+We were down after login on both the website and the Android app. You could reach the public pages and sign in, then the community froze on an error screen. Refreshing did not help because you were still signed in.
+
+Why: a Play Store review change accidentally removed a required line of code from Messages. Messages loads as soon as you sign in, so every neighbor hit the crash.
+
+What is fixed:
+• Sign-in opens the community again on the website and in the app.
+• The error screen now has Sign out if this ever happens again.
+• A new Android APK (beta v0.1.0.0010) is on sacramentobuynothing.com/download.
+
+If the app still looks stuck, close it fully and reopen, or install the new APK over the old one. Message staff from Help & support if you are still locked out.
+
+Thank you for your patience — and for giving freely in Sacramento.
+
+— Mark`,
+    OUTAGE_PUBLISHED_AT,
+  ),
   news(
     '2026-07-26_apk-download-fixed',
     '2026-07-26',
