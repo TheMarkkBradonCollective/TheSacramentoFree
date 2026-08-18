@@ -2,19 +2,16 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
-  Bookmark,
   ChevronDown,
-  CircleDot,
-  Flame,
   Search as SearchIcon,
   MapPin,
   SlidersHorizontal,
   Tag,
   AlertCircle,
   ThumbsUp,
-  TrendingUp,
   X,
 } from 'lucide-react';
+import FeedFilterSwitchRow from './FeedFilterSwitchRow';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
 import PickupAttributionModal from './PickupAttributionModal';
@@ -79,11 +76,6 @@ function needsPickupListing(item: ItemPost): boolean {
   return /pickup|curb|porch/i.test(item.category);
 }
 
-const PRIMARY_SORT_ICONS: Partial<Record<FeedSortMode, typeof Flame>> = {
-  hot: Flame,
-  top: TrendingUp,
-};
-
 function FilterSelect({
   id,
   label,
@@ -116,42 +108,6 @@ function FilterSelect({
         </select>
       </div>
     </label>
-  );
-}
-
-function FeedDisplaySwitch({
-  label,
-  description,
-  checked,
-  onChange,
-  id,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  id: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-app bg-inset px-3 py-2.5">
-      <div className="min-w-0 flex-1">
-        <label htmlFor={id} className="text-sm font-semibold text-app cursor-pointer">
-          {label}
-        </label>
-        <p className="text-[11px] text-muted mt-0.5 leading-snug">{description}</p>
-      </div>
-      <button
-        id={id}
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className={`sbn-switch shrink-0 ${checked ? 'sbn-switch-on' : ''}`}
-      >
-        <span className="sbn-switch-thumb" aria-hidden />
-      </button>
-    </div>
   );
 }
 
@@ -249,11 +205,31 @@ export default function ItemGrid({
     }
   };
 
-  const toggleQuickPick = (pick: QuickPick) => {
+  const handleSortSwitch = (value: FeedSortMode) => (checked: boolean) => {
+    if (checked) {
+      setSortBy(value);
+      return;
+    }
+    if (sortBy === value) setSortBy('new');
+  };
+
+  const handleTypeSwitch = (type: ListingTypeFilter) => (checked: boolean) => {
+    if (checked) {
+      setSelectedType(type);
+      if (type !== 'all') setSelectedCategory('All Categories');
+      return;
+    }
+    if (selectedType === type) {
+      setSelectedType('all');
+      setSelectedCategory('All Categories');
+    }
+  };
+
+  const handleQuickPickSwitch = (pick: QuickPick) => (checked: boolean) => {
     setActiveQuickPicks((prev) => {
       const next = new Set(prev);
-      if (next.has(pick)) next.delete(pick);
-      else next.add(pick);
+      if (checked) next.add(pick);
+      else next.delete(pick);
       return next;
     });
   };
@@ -370,102 +346,77 @@ export default function ItemGrid({
           />
         </div>
 
-        <div className="space-y-2" id="feed_sort_bar">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="space-y-4" id="feed_filter_switches">
+          <div className="space-y-2" id="feed_sort_bar">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
-            <p className="text-[10px] text-subtle">
-              {PRIMARY_FEED_SORTS.find((option) => option.value === sortBy)?.hint ??
-                MORE_FEED_SORTS.find((option) => option.value === sortBy)?.label}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Sort feed">
-            {PRIMARY_FEED_SORTS.map(({ value, label }) => {
-              const Icon = PRIMARY_SORT_ICONS[value];
-              const active = sortBy === value;
-              return (
-                <button
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {PRIMARY_FEED_SORTS.map(({ value, label, hint }) => (
+                <FeedFilterSwitchRow
                   key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
                   id={`feed_sort_${value}`}
-                  onClick={() => setSortBy(value)}
-                  className={`sbn-chip flex items-center gap-1.5 ${active ? 'sbn-chip-active' : ''}`}
-                >
-                  {Icon ? <Icon className="w-3.5 h-3.5" /> : null}
-                  {label}
-                </button>
-              );
-            })}
+                  label={label}
+                  description={hint}
+                  checked={sortBy === value}
+                  onChange={handleSortSwitch(value)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
-          <div className="flex flex-wrap gap-2" id="feed_type_filter">
-            {LISTING_TYPE_FILTERS.map((type) => (
-              <button
-                key={type}
-                type="button"
-                id={`type_${type}_btn`}
-                onClick={() => {
-                  setSelectedType(type);
-                  setSelectedCategory('All Categories');
-                }}
-                className={`sbn-chip ${selectedType === type ? 'sbn-chip-active' : ''}`}
-              >
-                {getPostTypeFilterLabel(type)}
-              </button>
-            ))}
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" id="feed_type_filter">
+              {LISTING_TYPE_FILTERS.map((type) => (
+                <FeedFilterSwitchRow
+                  key={type}
+                  id={`type_${type}_switch`}
+                  label={getPostTypeFilterLabel(type)}
+                  checked={selectedType === type}
+                  onChange={handleTypeSwitch(type)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="space-y-2">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
-            <p className="text-[10px] text-subtle">Tap to combine multiple</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {QUICK_PICKS.map(({ id, label }) => (
+                <FeedFilterSwitchRow
+                  key={id}
+                  id={`quick_pick_${id}`}
+                  label={label}
+                  checked={activeQuickPicks.has(id)}
+                  onChange={handleQuickPickSwitch(id)}
+                />
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {QUICK_PICKS.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                id={`quick_pick_${id}`}
-                onClick={() => toggleQuickPick(id)}
-                className={`sbn-chip flex items-center gap-1.5 ${activeQuickPicks.has(id) ? 'sbn-chip-active' : ''}`}
-              >
-                {id === 'saved' && (
-                  <Bookmark className={`w-3 h-3 ${activeQuickPicks.has('saved') ? 'fill-current' : ''}`} />
-                )}
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
 
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Completed in feed</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <FeedDisplaySwitch
-              id="feed_hide_given_toggle"
-              label="Hide given"
-              description="Claimed giveaways"
-              checked={hideGiven}
-              onChange={(value) => {
-                setHideGiven(value);
-                writeHideGivenFromFeed(value);
-              }}
-            />
-            <FeedDisplaySwitch
-              id="feed_hide_fulfilled_toggle"
-              label="Hide fulfilled"
-              description="Completed requests"
-              checked={hideFulfilled}
-              onChange={(value) => {
-                setHideFulfilled(value);
-                writeHideFulfilledFromFeed(value);
-              }}
-            />
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Completed in feed</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <FeedFilterSwitchRow
+                id="feed_hide_given_toggle"
+                label="Hide given"
+                description="Claimed giveaways"
+                checked={hideGiven}
+                onChange={(value) => {
+                  setHideGiven(value);
+                  writeHideGivenFromFeed(value);
+                }}
+              />
+              <FeedFilterSwitchRow
+                id="feed_hide_fulfilled_toggle"
+                label="Hide fulfilled"
+                description="Completed requests"
+                checked={hideFulfilled}
+                onChange={(value) => {
+                  setHideFulfilled(value);
+                  writeHideFulfilledFromFeed(value);
+                }}
+              />
+            </div>
           </div>
         </div>
 
