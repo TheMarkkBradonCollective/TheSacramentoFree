@@ -34,6 +34,7 @@ import ProfileAwardsSection from './ProfileAwardsSection';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
 import ThemeSettings from './ThemeSettings';
+import SystemPermissionsSettings from './SystemPermissionsSettings';
 import GoGetSettings from './GoGetSettings';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
@@ -528,6 +529,7 @@ export default function UserProfileView({
             </button>
           </form>
 
+          <SystemPermissionsSettings />
           <ThemeSettings />
           <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
         </div>
