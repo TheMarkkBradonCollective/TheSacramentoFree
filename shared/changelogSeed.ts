@@ -34,6 +34,7 @@ const OUTAGE_UPDATED_AT = '2026-08-18T12:00:00.000Z';
 const MAP_ROUTE_PUBLISHED_AT = '2026-08-18T09:30:00.000Z';
 const FOOTER_APK_PUBLISHED_AT = '2026-08-18T09:40:00.000Z';
 const LISTINGS_APK_PUBLISHED_AT = '2026-08-18T10:20:00.000Z';
+const STAFF_APPLY_PUBLISHED_AT = '2026-08-18T11:05:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -87,6 +88,29 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_staff-apply-broadcast',
+    '2026-08-18',
+    'Apply for staff — and Broadcast is the new name',
+    'Neighbors can apply for staff from Account. Each role is explained. Staff review one request at a time with Yes, Maybe, or No — and you get notified either way. The old Test all users button is now Broadcast.',
+    `WHAT NEIGHBORS SEE
+Account now has Join the staff team. Read what Moderator, Administrator, Manager, and Director actually do, then apply for one. Tell us how fast you can respond and if you have been a mod elsewhere. Only one application waits at a time.
+
+Yes, Maybe, and No all send you a notification. Maybe lets you apply again. No blocks applying for every staff role.
+
+Staff see one request at a time on Team. The Alerts button that used to say Test all users is now Broadcast.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/StaffApplyView.tsx — neighbor apply page.
+- src/components/staff/StaffApplicationQueue.tsx — Yes / Maybe / No on Team.
+- scripts/supabase-migration-aug-18-2026-staff-applications.sql — run this in Supabase.
+
+HISTORY
+2026-08-18 — PR #198.`,
+    STAFF_APPLY_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_listings-apk-0013',
     '2026-08-18',
@@ -359,6 +383,25 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_staff-apply',
+    '2026-08-18',
+    'Want to help run the circle? Apply for staff',
+    'Account now has a staff application page. Each role is explained. You get notified for Yes, Maybe, or No.',
+    `WHAT NEIGHBORS SEE
+Open Account → Join the staff team. Pick one role, tell us how you would show up, and send it.
+
+Yes puts you on the team. Maybe lets you apply again. No blocks later applications. You hear either way.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_staff-apply-broadcast.
+
+HISTORY
+2026-08-18 — Staff applications.`,
+    STAFF_APPLY_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_listings-feed-apk-0013',
     '2026-08-18',
