@@ -36,6 +36,7 @@ const FOOTER_APK_PUBLISHED_AT = '2026-08-18T09:40:00.000Z';
 const LISTINGS_APK_PUBLISHED_AT = '2026-08-18T10:20:00.000Z';
 const STAFF_APPLY_PUBLISHED_AT = '2026-08-18T11:05:00.000Z';
 const STAFF_APPLY_APK_PUBLISHED_AT = '2026-08-18T11:45:00.000Z';
+const STAFF_SEAT_FILLED_PUBLISHED_AT = '2026-08-18T11:55:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -89,6 +90,29 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_staff-apply-seat-filled',
+    '2026-08-18',
+    'Staff apply shows Seat filled when a role is full',
+    'On Account → Join the staff team, each role now shows how many seats are open. If a role is full, it says Seat filled and you cannot apply for it.',
+    `WHAT NEIGHBORS SEE
+Open Account → Join the staff team. Open roles show live counts like 2/5 seats. Full roles say Seat filled and are grayed out — you can only apply for roles with an open seat.
+
+If every role is full, the page says all staff seats are filled.
+
+Reopening the app you already have picks this up — no new APK needed.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/StaffApplyView.tsx — Seat filled cards and open-seat counts.
+- src/lib/staffApplications.ts — seat limit helpers.
+- scripts/supabase-migration-aug-18-2026-staff-apply-seat-filled.sql — run in Supabase.
+
+HISTORY
+2026-08-18 — PR #201.`,
+    STAFF_SEAT_FILLED_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_staff-apply-apk-0014',
     '2026-08-18',
@@ -408,6 +432,23 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_staff-seat-filled',
+    '2026-08-18',
+    'Staff roles show Seat filled when full',
+    'When you apply for staff, roles with no openings now say Seat filled so you only apply where there is room.',
+    `WHAT NEIGHBORS SEE
+Account → Join the staff team. Each role shows how many seats are open. Full roles say Seat filled and cannot be selected.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_staff-apply-seat-filled.
+
+HISTORY
+2026-08-18 — Staff apply seat availability.`,
+    STAFF_SEAT_FILLED_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_staff-apply-apk-0014',
     '2026-08-18',
