@@ -21,6 +21,13 @@ import {
   VOTE_COOLDOWN_WINDOW_MS,
 } from './lib/voteCooldown';
 import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
+import {
+  isStaffApplyRole,
+  type ApplicantStaffApplyState,
+  type StaffApplication,
+  type StaffApplicationDecision,
+  type StaffApplyRole,
+} from './lib/staffApplications';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -1645,6 +1652,185 @@ export async function setUserRole(
     return { ok: true };
   } catch (err: any) {
     return { ok: false, errorMessage: err?.message || 'Could not update role.' };
+  }
+}
+
+function isMissingRelationOrRpc(error: { code?: string; message?: string } | null | undefined): boolean {
+  const blob = `${error?.code || ''} ${error?.message || ''}`;
+  return /42P01|42883|PGRST202|PGRST205|schema cache|does not exist|could not find the function/i.test(blob);
+}
+
+function parseStaffApplicationRow(raw: unknown): StaffApplication | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const row = raw as Record<string, unknown>;
+  const role = String(row.role || '');
+  const status = String(row.status || '');
+  if (!isStaffApplyRole(role)) return null;
+  if (status !== 'pending' && status !== 'yes' && status !== 'no' && status !== 'maybe') return null;
+  const id = String(row.id || '').trim();
+  const applicantUserId = String(row.applicantUserId || '').trim();
+  if (!id || !applicantUserId) return null;
+  return {
+    id,
+    applicantUserId,
+    applicantName: String(row.applicantName || 'Neighbor'),
+    applicantEmail: String(row.applicantEmail || ''),
+    neighborhood: String(row.neighborhood || ''),
+    role,
+    statement: String(row.statement || ''),
+    responseTime: String(row.responseTime || ''),
+    otherGroups: String(row.otherGroups || ''),
+    otherInfo: String(row.otherInfo || ''),
+    status,
+    reviewedByUserId: row.reviewedByUserId ? String(row.reviewedByUserId) : null,
+    reviewedByName: row.reviewedByName ? String(row.reviewedByName) : null,
+    reviewedAt: row.reviewedAt ? String(row.reviewedAt) : null,
+    createdAt: String(row.createdAt || new Date().toISOString()),
+    updatedAt: String(row.updatedAt || row.createdAt || new Date().toISOString()),
+  };
+}
+
+export async function getMyStaffApplyState(): Promise<ApplicantStaffApplyState> {
+  const empty: ApplicantStaffApplyState = { blocked: false, pending: null };
+  try {
+    const { data, error } = await supabase.rpc('my_staff_apply_state');
+    if (!error && data && typeof data === 'object') {
+      const payload = data as { blocked?: unknown; pending?: unknown };
+      return {
+        blocked: payload.blocked === true,
+        pending: parseStaffApplicationRow(payload.pending),
+      };
+    }
+    if (error && !isMissingRelationOrRpc(error)) {
+      console.warn('my_staff_apply_state:', error.message);
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const uid = sessionData.session?.user?.id;
+    if (!uid) return empty;
+    const { data: rows, error: selectError } = await supabase
+      .from('staff_applications')
+      .select('*')
+      .eq('applicantUserId', uid)
+      .eq('status', 'pending')
+      .order('createdAt', { ascending: true })
+      .limit(1);
+    if (selectError) {
+      if (!isMissingRelationOrRpc(selectError)) {
+        console.warn('staff_applications pending:', selectError.message);
+      }
+      return empty;
+    }
+    return { blocked: false, pending: parseStaffApplicationRow(rows?.[0]) };
+  } catch (err) {
+    console.warn('getMyStaffApplyState failed:', err);
+    return empty;
+  }
+}
+
+export async function submitStaffApplication(params: {
+  role: StaffApplyRole;
+  statement: string;
+  responseTime: string;
+  otherGroups: string;
+  otherInfo: string;
+}): Promise<{ ok: boolean; application?: StaffApplication; errorMessage?: string }> {
+  try {
+    const { data, error } = await supabase.rpc('submit_staff_application', {
+      apply_role: params.role,
+      statement: params.statement,
+      response_time: params.responseTime,
+      other_groups: params.otherGroups,
+      other_info: params.otherInfo,
+    });
+    if (!error) {
+      const application = parseStaffApplicationRow(data);
+      if (application) return { ok: true, application };
+    }
+    if (error && !isMissingRelationOrRpc(error)) {
+      return { ok: false, errorMessage: error.message || 'Could not submit application.' };
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user?.id) return { ok: false, errorMessage: 'Sign in to apply.' };
+    const profile = await getSupabaseProfile(user.id);
+    const row = {
+      id: `sapp_${crypto.randomUUID().replace(/-/g, '')}`,
+      applicantUserId: user.id,
+      applicantName: profile?.displayName?.trim() || 'Neighbor',
+      applicantEmail: profile?.email || user.email || '',
+      neighborhood: profile?.neighborhood || '',
+      role: params.role,
+      statement: params.statement.trim(),
+      responseTime: params.responseTime.trim(),
+      otherGroups: params.otherGroups.trim(),
+      otherInfo: params.otherInfo.trim(),
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const { data: inserted, error: insertError } = await supabase
+      .from('staff_applications')
+      .insert(row)
+      .select('*')
+      .maybeSingle();
+    if (insertError) {
+      return {
+        ok: false,
+        errorMessage: isMissingRelationOrRpc(insertError)
+          ? 'Staff applications are not set up yet. Run the staff applications SQL in Supabase.'
+          : insertError.message || 'Could not submit application.',
+      };
+    }
+    const application = parseStaffApplicationRow(inserted) ?? parseStaffApplicationRow(row);
+    if (!application) return { ok: false, errorMessage: 'Could not submit application.' };
+    return { ok: true, application };
+  } catch (err: any) {
+    return { ok: false, errorMessage: err?.message || 'Could not submit application.' };
+  }
+}
+
+export async function getPendingStaffApplications(): Promise<StaffApplication[]> {
+  try {
+    const { data, error } = await supabase
+      .from('staff_applications')
+      .select('*')
+      .eq('status', 'pending')
+      .order('createdAt', { ascending: true })
+      .limit(40);
+    if (error) {
+      if (!isMissingRelationOrRpc(error)) {
+        console.warn('getPendingStaffApplications:', error.message);
+      }
+      return [];
+    }
+    return (data ?? []).map(parseStaffApplicationRow).filter((row): row is StaffApplication => !!row);
+  } catch (err) {
+    console.warn('getPendingStaffApplications failed:', err);
+    return [];
+  }
+}
+
+export async function reviewStaffApplication(params: {
+  applicationId: string;
+  decision: StaffApplicationDecision;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase.rpc('review_staff_application', {
+      app_id: params.applicationId,
+      decision: params.decision,
+    });
+    if (!error) return { ok: true };
+    if (!isMissingRelationOrRpc(error)) {
+      return { ok: false, errorMessage: error.message || 'Could not save that decision.' };
+    }
+    return {
+      ok: false,
+      errorMessage: 'Staff application review is not set up yet. Run the staff applications SQL in Supabase.',
+    };
+  } catch (err: any) {
+    return { ok: false, errorMessage: err?.message || 'Could not save that decision.' };
   }
 }
 
