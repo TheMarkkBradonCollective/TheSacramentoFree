@@ -9,7 +9,10 @@
  *
  * Options:
  *   EXPORT_OUTPUT=exports/user-emails.csv   output path (default)
- *   EXPORT_EMAILS_ONLY=1                  single-column CSV (email only)
+ *   EXPORT_EMAILS_ONLY=1                  single-column CSV with header row
+ *   EXPORT_PLAY_TESTERS=1                 Play Console tester upload (one email
+ *                                         per line, no header, UTF-8 no BOM)
+ *   --play-testers                        same as EXPORT_PLAY_TESTERS=1
  */
 import { createClient } from '@supabase/supabase-js';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -19,6 +22,10 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outputPath = process.env.EXPORT_OUTPUT || join(root, 'exports', 'user-emails.csv');
 const emailsOnly = process.env.EXPORT_EMAILS_ONLY === '1' || process.argv.includes('--emails-only');
+const playTesters =
+  process.env.EXPORT_PLAY_TESTERS === '1' ||
+  process.argv.includes('--play-testers') ||
+  outputPath.toLowerCase().includes('play-testers');
 
 const url =
   process.env.SUPABASE_URL ||
@@ -77,28 +84,46 @@ async function main() {
     process.exit(1);
   }
 
-  const lines = emailsOnly
-    ? ['email', ...users.map((u) => csvEscape(u.email))]
-    : [
-        'email,displayName,neighborhood,role,accountStatus,uid,createdAt',
-        ...users.map((u) =>
-          [
-            csvEscape(u.email),
-            csvEscape(u.displayName),
-            csvEscape(u.neighborhood),
-            csvEscape(u.role),
-            csvEscape(u.accountStatus),
-            csvEscape(u.uid),
-            csvEscape(u.createdAt),
-          ].join(','),
-        ),
-      ];
+  const emails = users.map((u) => String(u.email || '').trim()).filter(Boolean);
+
+  let body;
+  if (playTesters) {
+    body = `${emails.join('\n')}\n`;
+  } else if (emailsOnly) {
+    body = `${['email', ...emails.map((email) => csvEscape(email))].join('\n')}\n`;
+  } else {
+    body = `${[
+      'email,displayName,neighborhood,role,accountStatus,uid,createdAt',
+      ...users.map((u) =>
+        [
+          csvEscape(u.email),
+          csvEscape(u.displayName),
+          csvEscape(u.neighborhood),
+          csvEscape(u.role),
+          csvEscape(u.accountStatus),
+          csvEscape(u.uid),
+          csvEscape(u.createdAt),
+        ].join(','),
+      ),
+    ].join('\n')}\n`;
+  }
 
   mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, `${lines.join('\n')}\n`, 'utf8');
+  // Play Console rejects UTF-8 with BOM — write plain UTF-8 only.
+  writeFileSync(outputPath, body, 'utf8');
 
-  console.log(`Wrote ${users.length} rows → ${outputPath}`);
-  if (emailsOnly) console.log('(email column only — set EXPORT_EMAILS_ONLY=0 for full export)');
+  console.log(`Wrote ${emails.length} rows → ${outputPath}`);
+  if (playTesters) {
+    console.log('Play Console format: one email per line, no header, UTF-8 (no BOM).');
+    console.log('Upload at Testing → Internal/Closed testing → Testers → Create email list → Upload CSV.');
+    if (emails.length > 100) {
+      console.warn(
+        `Warning: Internal testing allows at most 100 testers (you have ${emails.length}). Use Closed testing (up to 2,000/list) or trim the file.`,
+      );
+    }
+  } else if (emailsOnly) {
+    console.log('(email column with header — not for Play Console CSV upload; use --play-testers instead)');
+  }
 }
 
 main().catch((err) => {

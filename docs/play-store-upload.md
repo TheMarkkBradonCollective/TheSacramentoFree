@@ -218,6 +218,37 @@ Recommend **18 and over** (user-generated content, messaging, location).
 
 ---
 
+## Tester email CSV (Internal / Closed testing only)
+
+Play Console **does not** accept CSV on the store listing, Data safety, or App content pages. CSV upload is only for **tester email lists**:
+
+**Testing → Internal testing** (or **Closed testing**) → **Testers** → **Create email list** → **Upload CSV file**
+
+Google’s rules for that file:
+
+| Rule | Why your export failed |
+|------|-------------------------|
+| **One email per line** | Multi-column CSV (`email,name,...`) is rejected |
+| **No header row** | A first line like `email` is rejected |
+| **No commas in the file** | Standard CSV uses commas between columns |
+| **UTF-8 without BOM** | Excel “CSV UTF-8” often adds a BOM byte Play rejects |
+
+Generate the correct file from this repo (service role required):
+
+```bash
+SUPABASE_URL="https://YOUR-PROJECT.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="eyJ..." \
+npm run export:play-testers
+```
+
+Output: `exports/user-emails.csv` — plain list, one Gmail address per line.
+
+**Limits:** Internal testing = **100 testers max**. Closed testing = **2,000 per list**. You cannot add all ~478 neighbors to Internal testing in one list — use **Closed testing** for a larger beta, or paste a short list (yourself + staff + a few neighbors).
+
+After saving the list, copy the **opt-in link** and share it — testers must open it while signed into the same Google account email you added.
+
+---
+
 ## Step 6 — Release (current: beta v0.1.0.0015)
 
 1. **Testing → Internal testing → Create release** (or Production when ready)
