@@ -4,7 +4,10 @@ Upload these from a computer (or Files app) into **Play Console → Store presen
 
 ## App icon (required)
 
-`play-store-assets/icon-512.png` — 512×512 PNG, no transparency.
+- `play-store-assets/icon-512.png`
+- or `play-store-assets/screenshots/00-app-icon-512.png` (same file)
+
+512×512 PNG, no transparency.
 
 ## Phone screenshots (required, 2–8)
 
