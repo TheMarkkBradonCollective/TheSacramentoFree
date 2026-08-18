@@ -172,18 +172,6 @@ export default function MobileView({
 
   if (isStaff) {
     const onStaffTab = isStaffTab(activeTab);
-    const staffEyebrow = onStaffTab ? 'Staff console' : 'Community';
-    const staffTitle = onStaffTab
-      ? undefined
-      : communityTab === 'feed'
-        ? IN_APP.feedTitle
-        : communityTab === 'events'
-          ? IN_APP.eventsTitle
-          : communityTab === 'map'
-            ? IN_APP.mapTitle
-            : communityTab === 'chats'
-              ? IN_APP.chatsTabLabel
-              : IN_APP.profileTitle;
 
     return (
       <div
@@ -213,8 +201,7 @@ export default function MobileView({
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
           <AppTopbar
             userProfile={userProfile}
-            eyebrow={staffEyebrow}
-            title={staffTitle}
+            brandLockup
             onOpenAwards={onOpenAwards ?? (() => {})}
             awardsButtonGlow={awardsButtonGlow}
             onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
@@ -312,9 +299,9 @@ export default function MobileView({
       >
         <div className="sbn-mobile-header-row">
         <BrandLogo
-          imgClassName="h-8 w-auto max-w-[120px] object-contain rounded-lg shrink-0"
-          subtitle={userProfile.neighborhood}
+          imgClassName="h-8 w-8 object-cover rounded-lg shrink-0"
           showTitle
+          compact
         />
         <div className="flex items-center gap-1 shrink-0">
           <NotificationsHubButton />
