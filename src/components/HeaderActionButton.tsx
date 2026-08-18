@@ -9,6 +9,7 @@ interface HeaderActionButtonProps {
   ariaLabel: string;
   id: string;
   className?: string;
+  compact?: boolean;
 }
 
 export default function HeaderActionButton({
@@ -20,6 +21,7 @@ export default function HeaderActionButton({
   ariaLabel,
   id,
   className = '',
+  compact = false,
 }: HeaderActionButtonProps) {
   return (
     <button
@@ -28,9 +30,11 @@ export default function HeaderActionButton({
       id={id}
       title={title}
       aria-label={ariaLabel}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-app text-accent bg-inset hover:bg-surface-hover active:scale-[0.98] transition-all cursor-pointer ${
-        glow ? 'sbn-header-action-btn-glow border-accent/40' : ''
-      } ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-lg text-accent transition-all cursor-pointer active:scale-[0.98] ${
+        compact
+          ? 'p-2 text-muted hover:text-app hover:bg-inset'
+          : 'px-2.5 py-1.5 border border-app bg-inset hover:bg-surface-hover'
+      } ${glow ? 'sbn-header-action-btn-glow border-accent/40' : ''} ${className}`}
     >
       <Icon className="w-4 h-4 shrink-0" aria-hidden />
       <span className="hidden sm:inline text-[10px] font-bold tracking-wide">{label}</span>

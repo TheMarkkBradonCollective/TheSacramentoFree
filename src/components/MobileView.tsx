@@ -172,6 +172,18 @@ export default function MobileView({
 
   if (isStaff) {
     const onStaffTab = isStaffTab(activeTab);
+    const staffEyebrow = onStaffTab ? 'Staff console' : 'Community';
+    const staffTitle = onStaffTab
+      ? undefined
+      : communityTab === 'feed'
+        ? IN_APP.feedTitle
+        : communityTab === 'events'
+          ? IN_APP.eventsTitle
+          : communityTab === 'map'
+            ? IN_APP.mapTitle
+            : communityTab === 'chats'
+              ? IN_APP.chatsTabLabel
+              : IN_APP.profileTitle;
 
     return (
       <div
@@ -201,7 +213,10 @@ export default function MobileView({
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
           <AppTopbar
             userProfile={userProfile}
-            brandLockup
+            eyebrow={staffEyebrow}
+            title={staffTitle}
+            drawerOpen={!sidebarCollapsed}
+            compactActions
             onOpenAwards={onOpenAwards ?? (() => {})}
             awardsButtonGlow={awardsButtonGlow}
             onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
