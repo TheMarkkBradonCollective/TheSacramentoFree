@@ -110,8 +110,8 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
     !usingApk && apkStatus === 'not-installed' && (installKind === 'browser' || usingHomeScreen);
 
   const shell = onBack ? (
-    <div className="max-w-5xl mx-auto px-4 py-10 md:py-12">
-      <div className="sbn-page-content">
+    <div className="sbn-download-in-app min-h-screen min-h-[100dvh] overflow-y-auto overflow-x-hidden bg-app text-app">
+      <div className="max-w-5xl mx-auto w-full min-w-0 px-4 py-6 md:py-12 sbn-download-in-app-inner">
         <button type="button" onClick={onBack} className="sbn-back-btn" aria-label="Go back">
           <ArrowLeft className="w-4 h-4" />
           Back to app
@@ -120,13 +120,14 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
           <h1>Download the app</h1>
           <p>Choose the Android APK or add {SITE.shortName} to your home screen — compare both below.</p>
         </header>
-        <div className="space-y-4">{renderBody()}</div>
+        <div className="space-y-4 min-w-0">{renderBody()}</div>
       </div>
     </div>
   ) : (
     <PublicPageShell
       title="Download the app"
       subtitle={`Get ${SITE.shortName} on your phone — Android APK or home screen install. Compare both options below.`}
+      className="min-w-0 overflow-x-hidden"
     >
       {renderBody()}
     </PublicPageShell>

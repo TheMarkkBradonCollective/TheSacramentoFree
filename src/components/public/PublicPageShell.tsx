@@ -8,9 +8,10 @@ interface PublicPageShellProps {
   children: React.ReactNode;
   /** When false, hide the back button even on sub-pages (e.g. login). */
   showBack?: boolean;
+  className?: string;
 }
 
-export default function PublicPageShell({ title, subtitle, children, showBack = true }: PublicPageShellProps) {
+export default function PublicPageShell({ title, subtitle, children, showBack = true, className = '' }: PublicPageShellProps) {
   const { route, navigate } = usePublicRoute();
   const canGoBack = showBack && route !== 'home';
 
@@ -23,7 +24,7 @@ export default function PublicPageShell({ title, subtitle, children, showBack = 
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 md:py-12">
+    <div className={`max-w-5xl mx-auto px-4 py-10 md:py-12 min-w-0 overflow-x-hidden ${className}`.trim()}>
       <div className="sbn-page-content">
         {canGoBack && (
           <button type="button" onClick={goBack} className="sbn-back-btn" aria-label="Go back">

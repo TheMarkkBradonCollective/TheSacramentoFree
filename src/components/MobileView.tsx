@@ -64,6 +64,7 @@ interface MobileViewProps {
   onOpenGoFundMe?: () => void;
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
+  onOpenDownload?: () => void;
   onOpenAwards?: () => void;
   awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
@@ -126,6 +127,7 @@ export default function MobileView({
   onOpenGoFundMe,
   onOpenPrivacy,
   onOpenTerms,
+  onOpenDownload,
   onOpenAwards,
   awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
@@ -293,7 +295,7 @@ export default function MobileView({
                   contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <UserProfileView userProfile={userProfile} userPosts={items.filter((item) => item.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} fullBleed />
+                  <UserProfileView userProfile={userProfile} userPosts={items.filter((item) => item.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} onOpenDownload={onOpenDownload} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} fullBleed />
                 </ScrollPage>
               </main>
           )}
@@ -522,6 +524,7 @@ export default function MobileView({
               onLogout={onLogout}
               onViewProfile={onViewProfile}
               onOpenAwards={onOpenAwards}
+              onOpenDownload={onOpenDownload}
               scrollToDirectorOverview={scrollToDirectorOverview}
               onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               fullBleed

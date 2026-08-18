@@ -61,6 +61,7 @@ interface TabletViewProps {
   onOpenGoFundMe?: () => void;
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
+  onOpenDownload?: () => void;
   onOpenAwards?: () => void;
   awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
@@ -125,6 +126,7 @@ export default function TabletView({
   onOpenGoFundMe,
   onOpenPrivacy,
   onOpenTerms,
+  onOpenDownload,
   onOpenAwards,
   awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
@@ -334,6 +336,7 @@ export default function TabletView({
                       onLogout={onLogout}
                       onViewProfile={onViewProfile}
                       onOpenAwards={onOpenAwards}
+                      onOpenDownload={onOpenDownload}
                       scrollToDirectorOverview={scrollToDirectorOverview}
                       onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
                     />

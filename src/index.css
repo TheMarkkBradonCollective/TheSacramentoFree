@@ -1476,6 +1476,16 @@ option {
   padding-right: 1rem;
 }
 
+.sbn-download-in-app {
+  padding-top: var(--sbn-safe-area-top, 0px);
+  padding-bottom: var(--sbn-safe-area-bottom, 0px);
+  -webkit-overflow-scrolling: touch;
+}
+
+.sbn-download-in-app-inner {
+  padding-bottom: calc(var(--sbn-safe-area-bottom, 0px) + 1.5rem);
+}
+
 .sbn-panel-content {
   width: 100%;
   max-width: 42rem;
