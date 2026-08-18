@@ -212,7 +212,36 @@ Recommend **18 and over** (user-generated content, messaging, location).
 
 ---
 
-## Step 6 — Release
+## Step 6 — Release (current: beta v0.1.0.0015)
+
+1. **Testing → Internal testing → Create release** (or Production when ready)
+2. Upload `dist/android/sac-buy-nothing-release.aab`
+3. Release name: `0.1.0 (15)`
+4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0015.txt`:
+
+```
+Android beta v0.1.0.0015 (versionCode 15)
+
+What's new:
+• Hide given and fulfilled toggles on Community Stuff — keep your feed focused on open posts
+• Staff apply shows green seat pills for open roles and red Seat filled when full
+• Header, bottom tabs, map buttons, and new-post FAB respect the status bar and navigation buttons
+• Staff applications, Broadcast rename, and listing feed fixes from earlier today
+
+Download (sideload): https://www.sacramentobuynothing.com/download
+```
+
+5. Add yourself as an internal tester → install from opt-in link
+6. Verify: sign-in, feed, map, status bar spacing, navigation bar spacing, push, account deletion
+7. Promote to **Production** when ready → **Send for review**
+
+**Current release manifest:** `play-store-assets/current-release.json`
+
+---
+
+## Step 6 (legacy first release notes)
+
+For reference — first Play upload used versionCode 8:
 
 1. **Testing → Internal testing → Create release**
 2. Upload `dist/android/sac-buy-nothing-release.aab`
@@ -238,5 +267,6 @@ First Google Play release of SacramentoBuyNothing for Sacramento neighbors.
 
 1. Increase `versionCode` in `android/app/build.gradle` (must be higher than last Play upload)
 2. Update `versionName` if needed
-3. `npm run android:aab`
-4. Upload new AAB with updated release notes
+3. `npm run android:aab` → upload `dist/android/sac-buy-nothing-release.aab`
+4. Add `play-store-assets/release-notes-v0.1.0-00XX.txt` and update `play-store-assets/current-release.json`
+5. Upload new AAB with updated release notes in Play Console

@@ -58,6 +58,8 @@ cd ..
 AAB_PATH="android/app/build/outputs/bundle/release/app-release.aab"
 mkdir -p dist/android
 cp "$AAB_PATH" "dist/android/sac-buy-nothing-release.aab"
+VERSIONED_AAB="dist/android/sac-buy-nothing-beta-v${VERSION_NAME}.${BUILD}.aab"
+cp "$AAB_PATH" "$VERSIONED_AAB"
 if compgen -G "$APK_STAGING_DIR/*.apk" > /dev/null; then
   mkdir -p public/downloads
   mv "$APK_STAGING_DIR"/*.apk public/downloads/ 2>/dev/null || true
@@ -68,4 +70,6 @@ fi
 rm -rf "$APK_STAGING_DIR"
 
 echo "AAB ready for Google Play: dist/android/sac-buy-nothing-release.aab"
-ls -lh "dist/android/sac-buy-nothing-release.aab"
+echo "Versioned copy: $VERSIONED_AAB"
+echo "Release notes: play-store-assets/release-notes-v${VERSION_NAME}-${BUILD}.txt"
+ls -lh "dist/android/sac-buy-nothing-release.aab" "$VERSIONED_AAB"

@@ -39,6 +39,7 @@ const STAFF_APPLY_APK_PUBLISHED_AT = '2026-08-18T11:45:00.000Z';
 const STAFF_SEAT_FILLED_PUBLISHED_AT = '2026-08-18T11:55:00.000Z';
 const FEED_HIDE_COMPLETED_PUBLISHED_AT = '2026-08-18T12:10:00.000Z';
 const FEED_APK_PUBLISHED_AT = '2026-08-18T12:15:00.000Z';
+const APK_0015_ANNOUNCE_PUBLISHED_AT = '2026-08-18T12:20:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -92,6 +93,30 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_apk-0015-announcement',
+    '2026-08-18',
+    'New Android download — beta v0.1.0.0015',
+    'A fresh APK is on the Download page. Hide given and fulfilled from Stuff, staff apply seat pills, and the app now respects your phone status bar and navigation buttons.',
+    `WHAT NEIGHBORS SEE
+Head to https://www.sacramentobuynothing.com/download and grab beta v0.1.0.0015.
+
+New in this build:
+• Hide given / Hide fulfilled toggles on Community Stuff
+• Green and red seat pills when you apply for staff
+• Header, tabs, and map buttons no longer sit under the status bar or system buttons
+
+Already have the app? Reopen it — it loads the live site, so you still pick up web fixes without reinstalling.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_feed-apk-0015. Play Store bundle: npm run android:aab → dist/android/sac-buy-nothing-release.aab
+
+HISTORY
+2026-08-18 — APK 0015 announcement.`,
+    APK_0015_ANNOUNCE_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_feed-apk-0015',
     '2026-08-18',
@@ -478,6 +503,25 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_apk-0015-download',
+    '2026-08-18',
+    'New Android app download available',
+    'Beta v0.1.0.0015 is ready on the Download page — cleaner Stuff feed, staff apply seat pills, and proper spacing for your phone bars.',
+    `WHAT NEIGHBORS SEE
+Download: https://www.sacramentobuynothing.com/download (beta v0.1.0.0015).
+
+Hide given or fulfilled posts from Community Stuff. Staff apply shows which seats are open. The header and map buttons no longer hide under your status bar or navigation buttons.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_apk-0015-announcement.
+
+HISTORY
+2026-08-18 — APK 0015 neighbor announcement.`,
+    APK_0015_ANNOUNCE_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_feed-apk-0015',
     '2026-08-18',
