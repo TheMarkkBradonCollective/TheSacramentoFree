@@ -9,6 +9,8 @@ import UserNotificationsList from '../components/UserNotificationsList';
 import { useNotificationsHubUnread } from '../hooks/useNotificationsHubUnread';
 import HeaderActionButton from '../components/HeaderActionButton';
 import type { PushDeepLinkTarget } from '../lib/pushDeepLink';
+import { isStaffRole } from '../lib/roles';
+import { isStaffApplyInviteSeen, markStaffApplyInviteSeen } from '../lib/staffApplyInvite';
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts';
 
@@ -123,6 +125,7 @@ export function NotificationsHubProvider({
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationsHubTab>('notifications');
+  const [inviteSeen, setInviteSeen] = useState(true);
 
   const {
     shouldGlow,
@@ -132,7 +135,18 @@ export function NotificationsHubProvider({
     markTabSeen,
   } = useNotificationsHubUnread(userProfile?.uid);
 
-  const unreadCounts = { unreadNotifications, unreadAnnouncements, unreadUpdates };
+  useEffect(() => {
+    if (!userProfile || isStaffRole(userProfile.role)) {
+      setInviteSeen(true);
+      return;
+    }
+    setInviteSeen(isStaffApplyInviteSeen(userProfile.uid));
+  }, [userProfile]);
+
+  const inviteUnread = userProfile && !isStaffRole(userProfile.role) && !inviteSeen ? 1 : 0;
+  const notifyUnread = unreadNotifications + inviteUnread;
+
+  const unreadCounts = { unreadNotifications: notifyUnread, unreadAnnouncements, unreadUpdates };
 
   const openHub = useCallback((initialTab: NotificationsHubTab = 'notifications') => {
     const resolved = resolveHubTab(initialTab);
@@ -158,12 +172,16 @@ export function NotificationsHubProvider({
   }, [open, tab, userProfile, markTabSeen]);
 
   const handleNotificationsViewed = useCallback(() => {
+    if (userProfile && !isStaffRole(userProfile.role)) {
+      markStaffApplyInviteSeen(userProfile.uid);
+      setInviteSeen(true);
+    }
     void markTabSeen('notifications');
-  }, [markTabSeen]);
+  }, [markTabSeen, userProfile]);
 
   const value = useMemo(
-    () => ({ openHub, shouldGlow }),
-    [openHub, shouldGlow],
+    () => ({ openHub, shouldGlow: shouldGlow || inviteUnread > 0 }),
+    [openHub, shouldGlow, inviteUnread],
   );
 
   const selectTab = (next: NotificationsHubTab) => {
@@ -216,7 +234,7 @@ export function NotificationsHubProvider({
             {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes showComments /> : null}
             {tab === 'notifications' ? (
               <UserNotificationsList
-                userId={userProfile.uid}
+                user={userProfile}
                 onViewed={handleNotificationsViewed}
                 onNavigate={(target) => {
                   setOpen(false);

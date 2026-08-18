@@ -10,6 +10,8 @@ export interface PushDeepLinkTarget {
   notificationsTab?: 'announcements' | 'updates' | 'notifications' | 'alerts' | 'listings';
   staffPanel?: 'tickets' | 'reports';
   chatFeedbackPanel?: 'reviews' | 'report' | 'staffReports';
+  /** Neighbor staff application page. */
+  staffApply?: boolean;
   /** @deprecated tickets — opens Messages → Support inbox */
   directorOverview?: boolean;
   supportTicketId?: string;
@@ -46,6 +48,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   }
   if (path === 'staff/tickets') return { tab: 'chats', chatSupportView: 'list' };
   if (path === 'staff/reports') return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
+  if (path === 'staff/apply' || path === 'profile/apply') return { tab: 'profile', staffApply: true };
   if (path === 'director/overview') return { tab: 'profile', directorOverview: true };
 
   const listingMatch = path.match(/^listing\/([^/]+)/);
@@ -92,6 +95,7 @@ export function shouldPreservePushDeepLink(target: PushDeepLinkTarget | null): b
       target.staffPanel ||
       target.chatFeedbackPanel ||
       target.directorOverview ||
+      target.staffApply ||
       target.supportTicketId ||
       target.chatSupportView,
   );
@@ -131,6 +135,10 @@ export function pushUrlForSupportTicket(ticketId: string): string {
 
 export function pushUrlForStaffReports(): string {
   return '/staff/reports';
+}
+
+export function pushUrlForStaffApply(): string {
+  return '/staff/apply';
 }
 
 export function pushUrlForDirectorOverview(): string {

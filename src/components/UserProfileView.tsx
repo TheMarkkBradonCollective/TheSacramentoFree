@@ -44,8 +44,7 @@ import { isTermsAccepted } from '../lib/termsPolicyPrompt';
 import { getNeighborAwardClaims } from '../supabase';
 import { buildNeighborAwardSummary, type NeighborAwardSummary } from '../lib/neighborAwards';
 import GoGetRecordSection from './goget/GoGetRecordSection';
-import FullScreenPanel from './FullScreenPanel';
-import StaffApplyView from './StaffApplyView';
+import { openStaffApplyPanel } from '../lib/staffApplyOpen';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -102,7 +101,6 @@ export default function UserProfileView({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [staffApplyOpen, setStaffApplyOpen] = useState(false);
   const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
   const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
 
@@ -680,22 +678,12 @@ export default function UserProfileView({
           </p>
           <button
             type="button"
-            onClick={() => setStaffApplyOpen(true)}
+            onClick={() => openStaffApplyPanel()}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-accent/40 bg-accent/10 text-accent text-xs font-bold uppercase tracking-wider hover:bg-accent/15 transition-colors"
           >
             View roles & apply
           </button>
         </div>
-      ) : null}
-
-      {staffApplyOpen ? (
-        <FullScreenPanel
-          title="Join the staff team"
-          subtitle="Read each role, then apply for one"
-          onClose={() => setStaffApplyOpen(false)}
-        >
-          <StaffApplyView user={userProfile} />
-        </FullScreenPanel>
       ) : null}
 
       {/* ── Privacy & legal ──────────────────────────────────── */}

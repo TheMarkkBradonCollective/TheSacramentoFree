@@ -41,6 +41,8 @@ import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
 import TermsOfUseContent from './components/TermsOfUseContent';
 import AwardsPanel from './components/AwardsPanel';
+import StaffApplyView from './components/StaffApplyView';
+import { registerStaffApplyOpener } from './lib/staffApplyOpen';
 import { type AnyTab, type AppTab } from './lib/appTabs';
 import {
   appTabPath,
@@ -175,6 +177,7 @@ export default function App() {
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
   const [legalPanel, setLegalPanel] = useState<'privacy' | 'terms' | null>(null);
   const [showAwardsPanel, setShowAwardsPanel] = useState(false);
+  const [showStaffApplyPanel, setShowStaffApplyPanel] = useState(false);
   const [privacyGateOpen, setPrivacyGateOpen] = useState(false);
   const [termsGateOpen, setTermsGateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
@@ -212,6 +215,15 @@ export default function App() {
     setShowAwardsPanel(true);
   }, [markAwardsSeen]);
 
+  const handleOpenStaffApply = useCallback(() => {
+    setShowStaffApplyPanel(true);
+  }, []);
+
+  useEffect(() => {
+    registerStaffApplyOpener(userProfile ? handleOpenStaffApply : null);
+    return () => registerStaffApplyOpener(null);
+  }, [userProfile, handleOpenStaffApply]);
+
   const goHomeTab = useCallback(() => {
     setActiveTab('map');
     persistActiveTab('map', userProfile?.uid);
@@ -231,6 +243,7 @@ export default function App() {
     setShowGoFundMeDetail(false);
     setLegalPanel(null);
     setShowAwardsPanel(false);
+    setShowStaffApplyPanel(false);
     setEditingItem(null);
     setEditingEvent(null);
     setAddEventDatesMode(false);
@@ -265,6 +278,7 @@ export default function App() {
     setViewProfileUid(null);
     setLegalPanel(null);
     setShowAwardsPanel(false);
+    setShowStaffApplyPanel(false);
     setShowGoFundMeDetail(false);
     closeNotificationsHub();
   }, []);
@@ -1402,6 +1416,11 @@ export default function App() {
         navigateToTab('profile');
         tabForUrl = 'profile';
       }
+      if (target.staffApply) {
+        setShowStaffApplyPanel(true);
+        navigateToTab('profile');
+        tabForUrl = 'profile';
+      }
       if (target.supportTicketId) {
         setInitialSupportTicketId(target.supportTicketId);
         navigateToTab('chats');
@@ -1776,6 +1795,16 @@ export default function App() {
                     userPosts={visibleItems.filter((item) => item.userId === userProfile.uid)}
                     onViewProfile={handleViewProfile}
                   />
+                </FullScreenPanel>
+              )}
+
+              {showStaffApplyPanel && userProfile && (
+                <FullScreenPanel
+                  title="Join the staff team"
+                  subtitle="Read each role, then apply for one"
+                  onClose={() => setShowStaffApplyPanel(false)}
+                >
+                  <StaffApplyView user={userProfile} />
                 </FullScreenPanel>
               )}
 
