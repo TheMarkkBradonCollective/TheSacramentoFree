@@ -14,7 +14,7 @@ import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
 import { LifeBuoy, MessageSquarePlus, ChevronLeft } from 'lucide-react';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
-import PageScrollFooter from './PageScrollFooter';
+import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 import ChatSectionEmptyState from './ChatSectionEmptyState';
 import ChatSidebarRow from './ChatSidebarRow';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
@@ -261,7 +261,11 @@ export default function ChatSupportSection({
             <p className="text-xs text-muted">Start a private chat with staff</p>
           </div>
         </header>
-        <div className="flex-1 min-h-0 overflow-y-auto p-4">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ScrollPage
+            contentClassName="p-4"
+            footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          >
           <div className="sbn-help-card space-y-4 max-w-lg mx-auto">
             {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
             <label className="block space-y-1">
@@ -299,7 +303,7 @@ export default function ChatSupportSection({
               {ticketCreating ? 'Starting…' : 'Start conversation'}
             </button>
           </div>
-          <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
+          </ScrollPage>
         </div>
       </div>
     );
@@ -378,7 +382,8 @@ export default function ChatSupportSection({
           <p className="text-xs text-muted">{listSubtitle}</p>
         </div>
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <ScrollPage footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}>
         {!isStaffInbox ? (
           <ChatSidebarRow
             id="chat_support_row_new"
@@ -434,7 +439,7 @@ export default function ChatSupportSection({
             ))}
           </ul>
         )}
-        <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
+        </ScrollPage>
       </div>
     </div>
   );

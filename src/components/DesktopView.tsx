@@ -22,7 +22,7 @@ import StaffAuditView from './staff/StaffAuditView';
 import StaffWelcomeView from './staff/StaffWelcomeView';
 import StaffMessagesView from './staff/StaffMessagesView';
 import StaffMeetsView from './staff/StaffMeetsView';
-import PageScrollFooter from './PageScrollFooter';
+import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 
 interface DesktopViewProps {
   items: ItemPost[];
@@ -220,7 +220,11 @@ export default function DesktopView({
         ) : (
           <main id="desktop_main" className="sbn-workspace-main">
             {communityTab === 'feed' && (
-              <div className="sbn-workspace-scroll" id="desktop_feed_view_root">
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="desktop_feed_view_root"
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
                 <div className="sbn-dash-grid">
                   <div className="min-w-0 space-y-5">
                     <ItemGrid
@@ -244,11 +248,15 @@ export default function DesktopView({
                     onViewProfile={onViewProfile}
                   />
                 </div>
-              </div>
+              </ScrollPage>
             )}
 
             {communityTab === 'events' && (
-              <div className="sbn-workspace-scroll" id="desktop_events_view_root">
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="desktop_events_view_root"
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
                 <div className="sbn-dash-grid">
                   <div className="min-w-0 space-y-5">
                     <EventsPanel
@@ -271,7 +279,7 @@ export default function DesktopView({
                     onViewProfile={onViewProfile}
                   />
                 </div>
-              </div>
+              </ScrollPage>
             )}
 
             {/* Keep the map mounted across tab switches so GPS, Leaflet state, and any
@@ -325,8 +333,12 @@ export default function DesktopView({
             )}
 
             {communityTab === 'profile' && (
-              <div className="sbn-workspace-scroll" id="desktop_profile_view_root">
-                <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="desktop_profile_view_root"
+                contentClassName="max-w-4xl mx-auto px-6 py-6"
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
                   <div className="sbn-card p-6 md:p-8">
                     <UserProfileView
                       userProfile={userProfile}
@@ -344,9 +356,7 @@ export default function DesktopView({
                       onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
                     />
                   </div>
-                  <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-                </div>
-              </div>
+              </ScrollPage>
             )}
           </main>
         )}

@@ -26,7 +26,7 @@ export default function LegalFooter({ className = '', onOpenPrivacy, onOpenTerms
   };
 
   return (
-    <footer className={className}>
+    <footer className={`w-full shrink-0 ${className}`.trim()}>
       <div className="w-full border-t border-app bg-inset px-4 py-5 text-center space-y-3">
         <p className="text-[10px] text-muted leading-relaxed max-w-md mx-auto">
           {SITE.name} is run by Markeith White. Your data is stored by Supabase. By using this app you agree to

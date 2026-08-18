@@ -24,7 +24,7 @@ import StaffAuditView from './staff/StaffAuditView';
 import StaffWelcomeView from './staff/StaffWelcomeView';
 import StaffMessagesView from './staff/StaffMessagesView';
 import StaffMeetsView from './staff/StaffMeetsView';
-import PageScrollFooter from './PageScrollFooter';
+import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 
 interface TabletViewProps {
   items: ItemPost[];
@@ -228,8 +228,12 @@ export default function TabletView({
         ) : (
           <main id="tablet_main" className="sbn-workspace-main">
             {communityTab === 'feed' && (
-              <div className="sbn-workspace-scroll" id="tablet_feed_pane">
-                <div className="sbn-tablet-content space-y-4">
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="tablet_feed_pane"
+                contentClassName="sbn-tablet-content space-y-4"
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
                   <CommunityStatsBar items={items} variant="compact" />
                   <ItemGrid
                     items={items}
@@ -241,13 +245,16 @@ export default function TabletView({
                     onRefresh={onRefresh}
                     isLoading={!itemsHydrated}
                   />
-                </div>
-              </div>
+              </ScrollPage>
             )}
 
             {communityTab === 'events' && (
-              <div className="sbn-workspace-scroll" id="tablet_events_pane">
-                <div className="sbn-tablet-content space-y-4">
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="tablet_events_pane"
+                contentClassName="sbn-tablet-content space-y-4"
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
                   <CommunityStatsBar items={items} variant="compact" />
                   <EventsPanel
                     events={events}
@@ -258,8 +265,7 @@ export default function TabletView({
                     onRefresh={onRefreshEvents}
                     isLoading={isEventsLoading}
                   />
-                </div>
-              </div>
+              </ScrollPage>
             )}
 
             {/* Keep the map mounted across tab switches — matches Desktop/Mobile. */}
@@ -309,8 +315,12 @@ export default function TabletView({
             )}
 
             {communityTab === 'profile' && (
-              <div className="sbn-workspace-scroll" id="tablet_profile_pane">
-                <div className="sbn-tablet-content space-y-4">
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="tablet_profile_pane"
+                contentClassName="sbn-tablet-content"
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
                   <div className="sbn-card p-5">
                     <UserProfileView
                       userProfile={userProfile}
@@ -328,9 +338,7 @@ export default function TabletView({
                       onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
                     />
                   </div>
-                  <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-                </div>
-              </div>
+              </ScrollPage>
             )}
           </main>
         )}
