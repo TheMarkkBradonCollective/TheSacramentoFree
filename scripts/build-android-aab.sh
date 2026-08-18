@@ -58,6 +58,9 @@ cd ..
 AAB_PATH="android/app/build/outputs/bundle/release/app-release.aab"
 mkdir -p dist/android
 cp "$AAB_PATH" "dist/android/sac-buy-nothing-release.aab"
+VERSION_NAME="$(node -e "const m=require('./public/android-version.json'); process.stdout.write(m.versionName)")"
+VERSION_CODE="$(node -e "const m=require('./public/android-version.json'); process.stdout.write(String(m.versionCode))")"
+BUILD="$(printf '%04d' "$VERSION_CODE")"
 VERSIONED_AAB="dist/android/sac-buy-nothing-beta-v${VERSION_NAME}.${BUILD}.aab"
 cp "$AAB_PATH" "$VERSIONED_AAB"
 if compgen -G "$APK_STAGING_DIR/*.apk" > /dev/null; then
