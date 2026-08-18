@@ -1,6 +1,6 @@
 -- Neighbor staff applications: one pending request at a time, Yes / No / Maybe.
--- Safe to re-run. Maybe never shows to the applicant (they can apply again).
--- No blocks applying for every staff role.
+-- Safe to re-run. Yes, Maybe, and No all notify the applicant.
+-- Maybe lets them apply again. No blocks applying for every staff role.
 
 CREATE TABLE IF NOT EXISTS public.staff_applications (
   id TEXT PRIMARY KEY,
@@ -44,10 +44,7 @@ ALTER TABLE public.staff_applications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "staff_applications_select" ON public.staff_applications;
 CREATE POLICY "staff_applications_select" ON public.staff_applications
   FOR SELECT USING (
-    (
-      auth.uid()::text = "applicantUserId"
-      AND status IN ('pending', 'yes')
-    )
+    auth.uid()::text = "applicantUserId"
     OR public.role_rank(public.current_user_role()) >= public.role_rank('city_administrator')
   );
 
@@ -78,6 +75,7 @@ DECLARE
   actor_uid text := auth.uid()::text;
   blocked boolean := false;
   pending_row public.staff_applications;
+  last_row public.staff_applications;
 BEGIN
   IF actor_uid IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
@@ -94,9 +92,16 @@ BEGIN
   ORDER BY "createdAt" ASC
   LIMIT 1;
 
+  SELECT * INTO last_row
+  FROM public.staff_applications
+  WHERE "applicantUserId" = actor_uid AND status IN ('yes', 'no', 'maybe')
+  ORDER BY COALESCE("reviewedAt", "updatedAt", "createdAt") DESC
+  LIMIT 1;
+
   RETURN jsonb_build_object(
     'blocked', blocked,
-    'pending', CASE WHEN pending_row.id IS NULL THEN NULL ELSE to_jsonb(pending_row) END
+    'pending', CASE WHEN pending_row.id IS NULL THEN NULL ELSE to_jsonb(pending_row) END,
+    'lastDecision', CASE WHEN last_row.id IS NULL THEN NULL ELSE to_jsonb(last_row) END
   );
 END;
 $$;
@@ -287,6 +292,53 @@ BEGIN
       || ')',
     NOW()
   );
+
+  BEGIN
+    INSERT INTO public.user_notifications (
+      id, "userId", kind, title, body, "actorUserId", "actorName", "eventType", tag, url, "createdAt"
+    ) VALUES (
+      'un_sapp_' || app_row.id,
+      app_row."applicantUserId",
+      'account_update',
+      CASE decision
+        WHEN 'yes' THEN 'You''re on the staff team'
+        ELSE 'Staff application update'
+      END,
+      CASE decision
+        WHEN 'yes' THEN
+          'Welcome — you are now a ' || CASE app_row.role
+            WHEN 'city_moderator' THEN 'City Moderator'
+            WHEN 'city_administrator' THEN 'City Administrator'
+            WHEN 'city_manager' THEN 'City Manager'
+            ELSE 'Sacramento Buy Nothing Director'
+          END || '. Staff tools are in the app.'
+        WHEN 'maybe' THEN
+          'Your ' || CASE app_row.role
+            WHEN 'city_moderator' THEN 'City Moderator'
+            WHEN 'city_administrator' THEN 'City Administrator'
+            WHEN 'city_manager' THEN 'City Manager'
+            ELSE 'Sacramento Buy Nothing Director'
+          END || ' application came back as maybe. You can apply again for that role or any other from Account.'
+        ELSE
+          'Your ' || CASE app_row.role
+            WHEN 'city_moderator' THEN 'City Moderator'
+            WHEN 'city_administrator' THEN 'City Administrator'
+            WHEN 'city_manager' THEN 'City Manager'
+            ELSE 'Sacramento Buy Nothing Director'
+          END || ' application was not approved. This account can''t apply for staff roles.'
+      END,
+      actor_uid,
+      COALESCE(NULLIF(btrim(actor."displayName"), ''), 'Staff'),
+      'account_update',
+      'staff-apply-' || app_row.id,
+      '/profile',
+      NOW()
+    )
+    ON CONFLICT (id) DO NOTHING;
+  EXCEPTION
+    WHEN undefined_table THEN NULL;
+    WHEN undefined_column THEN NULL;
+  END;
 
   RETURN app_row;
 END;

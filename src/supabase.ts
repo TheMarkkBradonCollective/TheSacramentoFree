@@ -22,12 +22,15 @@ import {
 } from './lib/voteCooldown';
 import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 import {
+  deriveApplicantStaffApplyState,
   isStaffApplyRole,
+  staffApplicationDecisionNotice,
   type ApplicantStaffApplyState,
   type StaffApplication,
   type StaffApplicationDecision,
   type StaffApplyRole,
 } from './lib/staffApplications';
+import { notifyAccountUpdate } from './lib/pushEvents';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -1691,14 +1694,15 @@ function parseStaffApplicationRow(raw: unknown): StaffApplication | null {
 }
 
 export async function getMyStaffApplyState(): Promise<ApplicantStaffApplyState> {
-  const empty: ApplicantStaffApplyState = { blocked: false, pending: null };
+  const empty: ApplicantStaffApplyState = { blocked: false, pending: null, lastDecision: null };
   try {
     const { data, error } = await supabase.rpc('my_staff_apply_state');
     if (!error && data && typeof data === 'object') {
-      const payload = data as { blocked?: unknown; pending?: unknown };
+      const payload = data as { blocked?: unknown; pending?: unknown; lastDecision?: unknown };
       return {
         blocked: payload.blocked === true,
         pending: parseStaffApplicationRow(payload.pending),
+        lastDecision: parseStaffApplicationRow(payload.lastDecision),
       };
     }
     if (error && !isMissingRelationOrRpc(error)) {
@@ -1712,16 +1716,16 @@ export async function getMyStaffApplyState(): Promise<ApplicantStaffApplyState> 
       .from('staff_applications')
       .select('*')
       .eq('applicantUserId', uid)
-      .eq('status', 'pending')
-      .order('createdAt', { ascending: true })
-      .limit(1);
+      .order('createdAt', { ascending: false })
+      .limit(20);
     if (selectError) {
       if (!isMissingRelationOrRpc(selectError)) {
-        console.warn('staff_applications pending:', selectError.message);
+        console.warn('staff_applications state:', selectError.message);
       }
       return empty;
     }
-    return { blocked: false, pending: parseStaffApplicationRow(rows?.[0]) };
+    const parsed = (rows ?? []).map(parseStaffApplicationRow).filter((row): row is StaffApplication => !!row);
+    return deriveApplicantStaffApplyState(parsed);
   } catch (err) {
     console.warn('getMyStaffApplyState failed:', err);
     return empty;
@@ -1817,11 +1821,25 @@ export async function reviewStaffApplication(params: {
   decision: StaffApplicationDecision;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
-    const { error } = await supabase.rpc('review_staff_application', {
+    const { data, error } = await supabase.rpc('review_staff_application', {
       app_id: params.applicationId,
       decision: params.decision,
     });
-    if (!error) return { ok: true };
+    if (!error) {
+      const application = parseStaffApplicationRow(data);
+      if (application) {
+        const notice = staffApplicationDecisionNotice(application);
+        void notifyAccountUpdate({
+          userId: application.applicantUserId,
+          title: notice.title,
+          body: notice.body,
+          tag: `staff-apply-${application.id}`,
+        }).catch((err) => {
+          console.warn('staff application notify failed:', err);
+        });
+      }
+      return { ok: true };
+    }
     if (!isMissingRelationOrRpc(error)) {
       return { ok: false, errorMessage: error.message || 'Could not save that decision.' };
     }

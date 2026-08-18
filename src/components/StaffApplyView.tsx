@@ -12,6 +12,7 @@ import {
   applicantApplyView,
   staffApplyRoleLabel,
   staffApplySeatLabel,
+  staffApplicationDecisionNotice,
   type StaffApplication,
   type StaffApplyRole,
 } from '../lib/staffApplications';
@@ -24,6 +25,7 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
   const [loading, setLoading] = useState(true);
   const [blocked, setBlocked] = useState(false);
   const [pending, setPending] = useState<StaffApplication | null>(null);
+  const [lastDecision, setLastDecision] = useState<StaffApplication | null>(null);
   const [role, setRole] = useState<StaffApplyRole>('city_moderator');
   const [statement, setStatement] = useState('');
   const [responseTime, setResponseTime] = useState<(typeof RESPONSE_TIME_OPTIONS)[number]>(
@@ -40,6 +42,7 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
     const state = await getMyStaffApplyState();
     setBlocked(state.blocked);
     setPending(state.pending);
+    setLastDecision(state.lastDecision);
     setLoading(false);
   };
 
@@ -91,20 +94,28 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
   }
 
   if (view.kind === 'staff') {
+    const yesNotice =
+      lastDecision?.status === 'yes' ? staffApplicationDecisionNotice(lastDecision) : null;
     return (
-      <p className="text-sm text-muted leading-relaxed">
-        You are already on the staff team. Role changes happen from Team management.
-      </p>
+      <div className="sbn-help-card space-y-2">
+        <h3 className="font-display font-bold text-app">
+          {yesNotice?.title || "You're on the staff team"}
+        </h3>
+        <p className="text-sm text-muted leading-relaxed">
+          {yesNotice?.body || 'Role changes happen from Team management.'}
+        </p>
+      </div>
     );
   }
 
   if (view.kind === 'blocked') {
+    const noNotice = lastDecision?.status === 'no' ? staffApplicationDecisionNotice(lastDecision) : null;
     return (
       <div className="sbn-help-card space-y-2">
-            <h3 className="font-display font-bold text-app">Applications aren't open</h3>
-            <p className="text-sm text-muted leading-relaxed">
-              This account can't apply for staff roles right now.
-            </p>
+        <h3 className="font-display font-bold text-app">{noNotice?.title || "Applications aren't open"}</h3>
+        <p className="text-sm text-muted leading-relaxed">
+          {noNotice?.body || "This account can't apply for staff roles right now."}
+        </p>
       </div>
     );
   }
@@ -120,7 +131,8 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
             <h3 className="font-display font-bold text-app">Application is in</h3>
             <p className="text-sm text-muted mt-1 leading-relaxed">
               You applied for {staffApplyRoleLabel(view.application.role)}. Staff will take it from
-              here — you don't need to follow up, and you can only have one request waiting at a time.
+              here — you'll get a notification either way, and you can only have one request waiting
+              at a time.
             </p>
           </div>
         </div>
@@ -128,8 +140,17 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
     );
   }
 
+  const maybeNotice =
+    lastDecision?.status === 'maybe' ? staffApplicationDecisionNotice(lastDecision) : null;
+
   return (
     <div className="space-y-6">
+      {maybeNotice ? (
+        <div className="sbn-help-card space-y-1 border-amber-500/30">
+          <h3 className="font-display font-bold text-app">{maybeNotice.title}</h3>
+          <p className="text-sm text-muted leading-relaxed">{maybeNotice.body}</p>
+        </div>
+      ) : null}
       <p className="text-sm text-muted leading-relaxed">
         Sacramento Buy Nothing is neighbor-run. Pick one role, tell us how you'd show up, and send it.
         Only one application can wait at a time.

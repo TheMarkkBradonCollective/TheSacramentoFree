@@ -140,8 +140,8 @@ export default function StaffApplicationQueue({
             ))}
           </div>
           <p className="text-[10px] text-subtle leading-relaxed">
-            Yes adds them to the team. Maybe never tells them — they can apply again. No blocks
-            applying for every staff role.
+            Yes, Maybe, and No all notify them. Yes adds them to the team. Maybe lets them apply
+            again. No blocks applying for every staff role.
           </p>
         </div>
       )}

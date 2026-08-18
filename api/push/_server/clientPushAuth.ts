@@ -1,6 +1,6 @@
 import type { PushEventType } from './pushDelivery';
 import { getSupabaseAdmin } from './supabaseAdmin';
-import { getUserRole, isStaffRole, normalizeUserRole } from './staffRoles';
+import { getUserRole, isStaffRole, normalizeUserRole, roleRank } from './staffRoles';
 import type { PushSendBody } from './runPushSend';
 
 /** Events that cannot be sent from the public client API under any circumstance. */
@@ -213,7 +213,32 @@ export async function validateClientPush(
     }
 
     case 'account_update': {
-      return { ok: true, recipientUserIds: [callerId] };
+      const requested = Array.isArray(body.recipientUserIds)
+        ? String(body.recipientUserIds[0] || '').trim()
+        : '';
+      if (!requested || requested === callerId) {
+        return { ok: true, recipientUserIds: [callerId] };
+      }
+
+      const callerRole = await getUserRole(callerId);
+      if (roleRank(callerRole) < roleRank('city_administrator')) {
+        return { ok: false, error: 'Not allowed to notify another account' };
+      }
+
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin
+        .from('staff_applications')
+        .select('id, applicantUserId, reviewedByUserId, status')
+        .eq('applicantUserId', requested)
+        .eq('reviewedByUserId', callerId)
+        .in('status', ['yes', 'no', 'maybe'])
+        .order('reviewedAt', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!data) {
+        return { ok: false, error: 'No matching staff application review' };
+      }
+      return { ok: true, recipientUserIds: [requested] };
     }
 
     case 'new_message': {

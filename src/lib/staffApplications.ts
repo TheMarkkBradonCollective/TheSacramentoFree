@@ -40,6 +40,7 @@ export interface StaffApplication {
 export interface ApplicantStaffApplyState {
   blocked: boolean;
   pending: StaffApplication | null;
+  lastDecision: StaffApplication | null;
 }
 
 export type ApplicantApplyView =
@@ -109,6 +110,46 @@ export function staffApplySeatLabel(role: StaffApplyRole): string {
   const limit = STAFF_ROLE_SLOTS[role];
   if (!limit) return '';
   return limit === 1 ? '1 seat' : `${limit} seats`;
+}
+
+export function staffApplicationDecisionNotice(
+  app: Pick<StaffApplication, 'role' | 'status'>,
+): { title: string; body: string } {
+  const label = staffApplyRoleLabel(app.role);
+  if (app.status === 'yes') {
+    return {
+      title: "You're on the staff team",
+      body: `Welcome — you are now a ${label}. Staff tools are in the app.`,
+    };
+  }
+  if (app.status === 'maybe') {
+    return {
+      title: 'Staff application update',
+      body: `Your ${label} application came back as maybe. You can apply again for that role or any other from Account.`,
+    };
+  }
+  return {
+    title: 'Staff application update',
+    body: `Your ${label} application was not approved. This account can't apply for staff roles.`,
+  };
+}
+
+export function deriveApplicantStaffApplyState(applications: StaffApplication[]): ApplicantStaffApplyState {
+  const blocked = applications.some((row) => row.status === 'no');
+  const pending = applications
+    .filter((row) => row.status === 'pending')
+    .slice()
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0] ?? null;
+  const lastDecision =
+    applications
+      .filter((row) => row.status === 'yes' || row.status === 'no' || row.status === 'maybe')
+      .slice()
+      .sort((a, b) => {
+        const aAt = new Date(a.reviewedAt || a.updatedAt || a.createdAt).getTime();
+        const bAt = new Date(b.reviewedAt || b.updatedAt || b.createdAt).getTime();
+        return bAt - aAt;
+      })[0] ?? null;
+  return { blocked, pending, lastDecision };
 }
 
 export function applicantApplyView(params: {
