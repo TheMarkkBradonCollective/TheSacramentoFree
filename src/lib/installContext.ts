@@ -45,6 +45,8 @@ export async function recordInstalledApkVersion(): Promise<void> {
     const info = await App.getInfo();
     localStorage.setItem(INSTALLED_APK_VERSION_CODE_KEY, String(info.build));
     localStorage.setItem(INSTALLED_APK_VERSION_NAME_KEY, info.version);
+    const { reportAppInstall } = await import('./deviceTracking');
+    void reportAppInstall();
   } catch {
     // ignore
   }

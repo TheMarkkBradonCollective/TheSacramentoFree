@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
+import TrackedDownloadLink from '../../TrackedDownloadLink';
 import { useInstallVersions, type VersionStatus } from '../../../hooks/useInstallVersions';
 import { SITE } from '../../../siteContent';
 
@@ -98,6 +99,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
     webStatus,
     latestApk,
     apkDownloadHref,
+    aabDownloadHref,
     currentApkVersionName,
     currentApkVersionCode,
     apkStatus,
@@ -220,17 +222,28 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
             ) : null}
 
             {apkDownloadHref ? (
-              <a
+              <TrackedDownloadLink
                 href={apkDownloadHref}
                 download={latestApk?.fileName || 'sac-buy-nothing.apk'}
                 className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 bg-accent hover:bg-accent-hover text-on-accent text-sm font-black uppercase tracking-wide rounded-xl transition-colors"
               >
                 <Download className="w-4 h-4" />
                 {latestApk?.betaLabel ? `Download ${latestApk.betaLabel}` : 'Download APK'}
-              </a>
+              </TrackedDownloadLink>
             ) : (
               <p className="text-xs text-muted">APK download link is not configured yet.</p>
             )}
+
+            {aabDownloadHref ? (
+              <TrackedDownloadLink
+                href={aabDownloadHref}
+                download={latestApk?.aabFileName || latestApk?.legacyAabFileName || 'sac-buy-nothing.aab'}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 px-4 py-2.5 border border-app bg-inset hover:bg-surface text-app text-xs font-bold rounded-xl transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download AAB (Play Store bundle)
+              </TrackedDownloadLink>
+            ) : null}
 
             <p className="text-[11px] text-subtle mt-3 leading-relaxed">
               After downloading, open the file and allow install from your browser or Files app if Android asks.

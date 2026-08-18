@@ -20,7 +20,7 @@ import {
   VOTE_COOLDOWN_MAX_NEW_VOTES,
   VOTE_COOLDOWN_WINDOW_MS,
 } from './lib/voteCooldown';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, ROLE_RANK, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 import {
   deriveApplicantStaffApplyState,
   isStaffApplyRole,
@@ -5656,6 +5656,11 @@ export async function getUsersLastActive(uids: string[]): Promise<Record<string,
   }
 }
 
+function countFromHeadResult(result: { count?: number | null; error?: { code?: string } | null }): number {
+  if (result.error?.code === '42P01') return 0;
+  return result.count ?? 0;
+}
+
 export async function getDirectorSiteOverview(): Promise<import('./types').DirectorSiteOverview> {
   const empty: import('./types').DirectorSiteOverview = {
     totalNeighbors: 0,
@@ -5664,10 +5669,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
     activeTodayCount: 0,
     activeNeighbors: [],
     activeListings: 0,
+    upcomingEvents: 0,
     openReports: 0,
     openTickets: 0,
     suspendedCount: 0,
     bannedCount: 0,
+    downloadDevicesApk: 0,
+    downloadDevicesAab: 0,
+    downloadDevicesTotal: 0,
+    installDevicesCount: 0,
+    installDevicesApk: 0,
+    installDevicesPwa: 0,
+    installDevicesIosPwa: 0,
     recentActivity: [],
   };
 
@@ -5684,10 +5697,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       activeTodayRes,
       activeNeighborsRes,
       activeListingsRes,
+      upcomingEventsRes,
       openReportsRes,
       openTicketsRes,
       suspendedRes,
       bannedRes,
+      downloadApkRes,
+      downloadAabRes,
+      downloadAnyRes,
+      installTotalRes,
+      installApkRes,
+      installPwaRes,
+      installIosPwaRes,
       auditRes,
       reportsRes,
       ticketsRes,
@@ -5709,10 +5730,39 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
         .order('lastActiveAt', { ascending: false })
         .limit(12),
       supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase
+        .from('community_events')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['active', 'upcoming']),
       supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'new'),
       supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
       supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'suspended'),
       supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'banned'),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .not('apkDownloadedAt', 'is', null),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .not('aabDownloadedAt', 'is', null),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .or('apkDownloadedAt.not.is.null,aabDownloadedAt.not.is.null'),
+      supabase.from('app_device_installs').select('deviceId', { count: 'exact', head: true }),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'android-apk'),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'pwa'),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'ios-pwa'),
       supabase
         .from('moderation_audit_log')
         .select('*')
@@ -5800,10 +5850,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
         };
       }),
       activeListings: activeListingsRes.count ?? 0,
+      upcomingEvents: upcomingEventsRes.count ?? 0,
       openReports: openReportsRes.count ?? 0,
       openTickets: openTicketsRes.count ?? 0,
       suspendedCount: suspendedRes.count ?? 0,
       bannedCount: bannedRes.count ?? 0,
+      downloadDevicesApk: countFromHeadResult(downloadApkRes),
+      downloadDevicesAab: countFromHeadResult(downloadAabRes),
+      downloadDevicesTotal: countFromHeadResult(downloadAnyRes),
+      installDevicesCount: countFromHeadResult(installTotalRes),
+      installDevicesApk: countFromHeadResult(installApkRes),
+      installDevicesPwa: countFromHeadResult(installPwaRes),
+      installDevicesIosPwa: countFromHeadResult(installIosPwaRes),
       recentActivity: activity.slice(0, 20),
     };
   } catch {
@@ -6059,6 +6117,12 @@ function normalizeReport(row: Record<string, unknown>): UserReport {
 }
 
 function normalizeTicket(row: Record<string, unknown>): SupportTicket {
+  const ticketSourceRaw = row.ticketSource ?? row.ticket_source;
+  const ticketSource =
+    ticketSourceRaw === 'staff_listing' || ticketSourceRaw === 'staff_event' || ticketSourceRaw === 'neighbor'
+      ? ticketSourceRaw
+      : 'neighbor';
+
   return {
     id: String(row.id),
     openerUserId: String(row.openerUserId),
@@ -6068,6 +6132,12 @@ function normalizeTicket(row: Record<string, unknown>): SupportTicket {
     subject: String(row.subject),
     status: row.status === 'closed' ? 'closed' : 'open',
     closedByUserId: row.closedByUserId ? String(row.closedByUserId) : null,
+    ticketSource,
+    relatedItemId: row.relatedItemId ? String(row.relatedItemId) : null,
+    relatedItemTitle: row.relatedItemTitle ? String(row.relatedItemTitle) : null,
+    relatedEventId: row.relatedEventId ? String(row.relatedEventId) : null,
+    relatedEventTitle: row.relatedEventTitle ? String(row.relatedEventTitle) : null,
+    initiatedByUserId: row.initiatedByUserId ? String(row.initiatedByUserId) : null,
     createdAt: String(row.createdAt ?? row.created_at ?? ''),
     updatedAt: String(row.updatedAt ?? row.updated_at ?? ''),
   };
@@ -6304,6 +6374,150 @@ export async function createSupportTicket(params: {
     return { ok: true, ticketId };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open ticket.' };
+  }
+}
+
+export async function findOrCreateStaffListingOutreachTicket(params: {
+  staff: UserProfile;
+  item: Pick<import('./types').ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  if (!isStaffRole(params.staff.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('support_tickets')
+      .select('id')
+      .eq('openerUserId', params.item.userId)
+      .eq('relatedItemId', params.item.id)
+      .eq('ticketSource', 'staff_listing')
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (findError && findError.code !== '42P01') {
+      return { ok: false, errorMessage: findError.message };
+    }
+    if (existing?.id) return { ok: true, ticketId: String(existing.id) };
+
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const subject = `Listing: ${params.item.title}`;
+
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.item.userId,
+      openerName: params.item.userDisplayName,
+      openerRole: 'user',
+      minStaffRank: ROLE_RANK.city_moderator,
+      subject,
+      status: 'open',
+      ticketSource: 'staff_listing',
+      relatedItemId: params.item.id,
+      relatedItemTitle: params.item.title,
+      initiatedByUserId: params.staff.uid,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run staff outreach ticket migration in Supabase.' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const msgResult = await insertSupportTicketMessageRow({
+      ticketId,
+      senderUserId: params.staff.uid,
+      senderName: params.staff.displayName,
+      text: `${roleLabel(params.staff.role)} opened a staff thread about this listing. Neighbors and staff can coordinate here.`,
+      createdAt: now,
+    });
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened', messageId: msgResult.messageId });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
+
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open staff thread.' };
+  }
+}
+
+export async function findOrCreateStaffEventOutreachTicket(params: {
+  staff: UserProfile;
+  event: Pick<import('./types').CommunityEvent, 'id' | 'title' | 'userId' | 'userDisplayName'>;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  if (!isStaffRole(params.staff.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('support_tickets')
+      .select('id')
+      .eq('openerUserId', params.event.userId)
+      .eq('relatedEventId', params.event.id)
+      .eq('ticketSource', 'staff_event')
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (findError && findError.code !== '42P01') {
+      return { ok: false, errorMessage: findError.message };
+    }
+    if (existing?.id) return { ok: true, ticketId: String(existing.id) };
+
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const subject = `Event: ${params.event.title}`;
+
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.event.userId,
+      openerName: params.event.userDisplayName,
+      openerRole: 'user',
+      minStaffRank: ROLE_RANK.city_moderator,
+      subject,
+      status: 'open',
+      ticketSource: 'staff_event',
+      relatedEventId: params.event.id,
+      relatedEventTitle: params.event.title,
+      initiatedByUserId: params.staff.uid,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run staff outreach ticket migration in Supabase.' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const msgResult = await insertSupportTicketMessageRow({
+      ticketId,
+      senderUserId: params.staff.uid,
+      senderName: params.staff.displayName,
+      text: `${roleLabel(params.staff.role)} opened a staff thread about this event.`,
+      createdAt: now,
+    });
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened', messageId: msgResult.messageId });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
+
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open staff thread.' };
   }
 }
 

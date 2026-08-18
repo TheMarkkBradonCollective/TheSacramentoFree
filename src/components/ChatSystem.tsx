@@ -75,6 +75,7 @@ import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
 import { isStaffRole as isSenderStaff } from '../lib/roles';
+import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -99,6 +100,8 @@ interface ChatSystemProps {
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
   onStartDirectMessage?: () => void;
+  onViewRelatedListing?: (itemId: string) => void;
+  onViewRelatedEvent?: (eventId: string) => void;
 }
 
 export default function ChatSystem({
@@ -123,6 +126,8 @@ export default function ChatSystem({
   onOpenPrivacy,
   onOpenTerms,
   onStartDirectMessage,
+  onViewRelatedListing,
+  onViewRelatedEvent,
 }: ChatSystemProps) {
   const browseOnly = useBrowseOnly();
   const [chats, setChats] = useState<Chat[]>([]);
@@ -351,8 +356,7 @@ export default function ChatSystem({
             }
           }
           if (target) {
-            setSelectedChat((prev) => prev ?? target);
-            setSupportView(null);
+            void selectChat(target);
           }
         } else if (pendingChatCompose) {
           const existing = visibleChats.find((c) => c.id === pendingChatCompose.chatId);
@@ -871,7 +875,18 @@ export default function ChatSystem({
   }, [chats, incomingRequests, userProfile.uid]);
   useTrackPresence(presenceUids);
 
-  const selectChat = (chat: Chat) => {
+  const staffCoordinationAckRef = useRef<Set<string>>(new Set());
+
+  const selectChat = async (chat: Chat) => {
+    if (
+      isStaffRole(userProfile.role) &&
+      chat.itemId &&
+      !staffCoordinationAckRef.current.has(chat.id)
+    ) {
+      const ok = await confirmStaffCoordinationChatView(confirm, chat.itemTitle);
+      if (!ok) return;
+      staffCoordinationAckRef.current.add(chat.id);
+    }
     setSelectedChat(chat);
     setSupportView(null);
     onClearInitialChat();
@@ -1094,6 +1109,8 @@ export default function ChatSystem({
               setSupportOpenTicketId(null);
               onClearInitialSupportTicket?.();
             }}
+            onViewRelatedListing={onViewRelatedListing}
+            onViewRelatedEvent={onViewRelatedEvent}
             className="h-full"
           />
         ) : selectedChat ? (
@@ -1403,6 +1420,7 @@ export default function ChatSystem({
                   id="input_tray"
                 >
                   {!isCommunity &&
+                  !userIsStaff &&
                   (showSendLocationBtn ||
                     showMarkPendingPickupBtn ||
                     showRequestHoldBtn ||
@@ -1494,7 +1512,7 @@ export default function ChatSystem({
                       ) : null}
                     </div>
                   ) : null}
-                  {!isCommunity && showMarkClaimedBtn && claimerUserId ? (
+                  {!isCommunity && showMarkClaimedBtn && claimerUserId && !userIsStaff ? (
                     <ChatClaimActions
                       chatId={selectedChat.id}
                       linkedItem={linkedItem}
@@ -1510,6 +1528,12 @@ export default function ChatSystem({
                   {!isCommunity && chatGoGetSession && !isChatDisabled && (
                     <p className="text-[11px] text-muted text-center">
                       Go Get in progress — open "{linkedItem?.title}" to follow along.
+                    </p>
+                  )}
+                  {userIsStaff && linkedItem && !isCommunity && (
+                    <p className="text-[11px] text-amber-500/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-center leading-snug">
+                      Staff oversight — neighbor coordination chat. Use Staff chat on the listing for official
+                      outreach; reply here only when needed for safety or moderation.
                     </p>
                   )}
                   {isChatDisabled && (

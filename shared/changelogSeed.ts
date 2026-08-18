@@ -44,6 +44,7 @@ const FEED_SWITCHES_APK_PUBLISHED_AT = '2026-08-18T13:10:00.000Z';
 const APK_0017_PUBLISHED_AT = '2026-08-18T13:30:00.000Z';
 const APK_0018_PUBLISHED_AT = '2026-08-18T14:00:00.000Z';
 const APK_0019_PUBLISHED_AT = '2026-08-18T14:15:00.000Z';
+const APK_0020_PUBLISHED_AT = '2026-08-18T21:35:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -97,6 +98,36 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_apk-0020',
+    '2026-08-18',
+    'New Android download — beta v0.1.0.0020',
+    'Staff overview adds Events, Downloads, and Installs. Staff accounts now use support threads instead of neighbor pickup/DM flows, with safety prompts on sensitive chats.',
+    `WHAT NEIGHBORS SEE
+Grab beta v0.1.0.0020 from https://www.sacramentobuynothing.com/download
+
+Since 0019:
+• Staff Console overview pairs Events with Listings and tracks unique APK/AAB downloads and app installs
+• Staff on listings/events: upvote, comment with staff badge, staff actions — no navigate, go get, pickup, or private DM
+• Staff Message opens a shared support thread with a clickable listing/event preview at the top
+• Confirmations before staff open outreach or neighbor coordination chats
+• Feed listing photos fixed for legacy image storage
+
+Already on 0019? Reopening the app still loads the live site, but install 0020 for the latest native shell.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/DirectorSiteOverview.tsx — overview metrics grid
+- src/lib/staffChatSafety.ts + StaffListingActions / StaffEventActions
+- scripts/supabase-migration-aug-18-2026-app-device-stats.sql
+- scripts/supabase-migration-aug-18-2026-staff-outreach-tickets.sql
+- android/app/build.gradle — versionCode 20
+
+HISTORY
+2026-08-18 — APK 0020 ships staff overview + staff neighbor-action restrictions.`,
+    APK_0020_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_apk-0019',
     '2026-08-18',

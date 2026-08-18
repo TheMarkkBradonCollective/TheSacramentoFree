@@ -49,6 +49,7 @@ import GoGetRecordSection from './goget/GoGetRecordSection';
 import { openStaffApplyPanel } from '../lib/staffApplyOpen';
 import { useInstallVersions } from '../hooks/useInstallVersions';
 import { detectInstallKind } from '../lib/installContext';
+import TrackedDownloadLink from './TrackedDownloadLink';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -609,7 +610,7 @@ export default function UserProfileView({
           </button>
 
           {apkDownloadHref ? (
-            <a
+            <TrackedDownloadLink
               href={apkDownloadHref}
               download={latestApk?.fileName || 'sac-buy-nothing.apk'}
               className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
@@ -624,7 +625,7 @@ export default function UserProfileView({
                       : `Download ${latestApk.betaLabel}`
                     : 'Download latest APK'}
               </span>
-            </a>
+            </TrackedDownloadLink>
           ) : null}
         </div>
 

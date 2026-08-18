@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apkDownloadUrl } from '../lib/apkDownload';
+import { aabDownloadUrl, apkDownloadUrl } from '../lib/apkDownload';
 import {
   detectInstallKind,
   installKindLabel,
@@ -33,6 +33,7 @@ export interface InstallVersionsState {
   webStatus: VersionStatus;
   latestApk: AndroidVersionManifest | null;
   apkDownloadHref: string | null;
+  aabDownloadHref: string | null;
   currentApkVersionName: string | null;
   currentApkVersionCode: number | null;
   apkStatus: VersionStatus;
@@ -106,6 +107,7 @@ export function useInstallVersions(): InstallVersionsState {
   const webStatus = compareWebVersions(currentWebVersion, latestWebVersion);
   const apkStatus = compareApkVersions(currentApkVersionCode, latestApk?.versionCode ?? null);
   const apkDownloadHref = apkDownloadUrl(latestApk);
+  const aabDownloadHref = aabDownloadUrl(latestApk);
 
   return {
     installKind,
@@ -117,6 +119,7 @@ export function useInstallVersions(): InstallVersionsState {
     webStatus,
     latestApk,
     apkDownloadHref,
+    aabDownloadHref,
     currentApkVersionName,
     currentApkVersionCode,
     apkStatus,

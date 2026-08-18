@@ -36,6 +36,7 @@ interface TabletViewProps {
   onOpenNewEvent: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
@@ -75,6 +76,7 @@ interface TabletViewProps {
   onOpenChatById?: (chatId: string) => void;
   onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
+  onViewEventId?: (eventId: string) => void;
 }
 
 const TAB_TITLES: Record<AppTab, string> = {
@@ -101,6 +103,7 @@ export default function TabletView({
   onOpenNewEvent,
   canAccessEvents = true,
   onInitiateChat,
+  onStaffListingChat,
   onClaimSubmitted,
   onViewItem,
   onRepostPost,
@@ -140,6 +143,7 @@ export default function TabletView({
   onOpenChatById,
   onOpenTicketById,
   onViewListingId,
+  onViewEventId,
 }: TabletViewProps) {
   useScrollInputOnFocus();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => isStaffRole(userProfile.role));
@@ -242,6 +246,7 @@ export default function TabletView({
                     userProfile={userProfile}
                     engagement={engagement}
                     onInitiateChat={onInitiateChat}
+                    onStaffListingChat={onStaffListingChat}
                     onViewItem={onViewItem}
                     onViewProfile={onViewProfile}
                     onRefresh={onRefresh}
@@ -311,6 +316,8 @@ export default function TabletView({
                   onOpenPrivacy={onOpenPrivacy}
                   onOpenTerms={onOpenTerms}
                   onStartDirectMessage={() => setActiveTab('feed')}
+                  onViewRelatedListing={onViewListingId}
+                  onViewRelatedEvent={onViewEventId}
                   className="h-full min-h-0 rounded-2xl border border-app overflow-hidden bg-surface"
                 />
               </div>

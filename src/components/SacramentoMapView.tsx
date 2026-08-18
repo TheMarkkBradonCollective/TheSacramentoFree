@@ -24,6 +24,7 @@ import {
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
+import { isStaffRole } from '../lib/roles';
 import { remainingRouteMeters } from '../lib/navigationRoute';
 import { usePreviewDrivingRoute } from '../hooks/usePreviewDrivingRoute';
 import { subscribeLiveGeolocation, getLastLiveLatLng, retainLiveGeolocation } from '../lib/liveGeolocation';
@@ -34,7 +35,7 @@ import {
 } from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
-import { MapPin, MessageSquare, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
+import { MapPin, MessageSquare, LifeBuoy, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import EventEngagement from './EventEngagement';
@@ -395,6 +396,7 @@ export default function SacramentoMapView({
   eventsEngagement,
   commentsLocked = false,
 }: SacramentoMapViewProps) {
+  const isStaffViewer = isStaffRole(userProfile.role);
   const openItemDetail = onViewItem || onItemDetail;
   const { confirm, alert } = useConfirm();
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -1251,6 +1253,8 @@ export default function SacramentoMapView({
   // Events navigate straight from the map pin. Curb alerts use "Pick Up" (direct nav, no poster notification).
   // Other types start their coordination flow (Go Get / Drop off / Meet up).
   const handleNavigateRequest = useCallback(async () => {
+    if (isStaffViewer) return;
+
     if (selectedEvent) {
       openNavigation();
       return;
@@ -1588,7 +1592,7 @@ export default function SacramentoMapView({
                 durationSeconds={routeDurationSeconds}
                 routeOnMap={isRoadGeometry(routeCoords)}
                 hasLiveGps={!!userLocation}
-                canNavigate={hasGpsFix && !!routeDestination}
+                canNavigate={!isStaffViewer && hasGpsFix && !!routeDestination}
                 onStartNavigation={handleNavigateRequest}
                 onOpenExternalMaps={handleOpenExternalMaps}
               />
@@ -1691,7 +1695,7 @@ export default function SacramentoMapView({
                         durationSeconds={routeDurationSeconds}
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
-                        canNavigate={hasGpsFix && !!routeDestination}
+                        canNavigate={!isStaffViewer && hasGpsFix && !!routeDestination}
                         navigateLabel={selectedPost ? getListingNavigateLabel(selectedPost) : 'Navigate'}
                         onStartNavigation={handleNavigateRequest}
                         onOpenExternalMaps={handleOpenExternalMaps}
@@ -1728,7 +1732,7 @@ export default function SacramentoMapView({
                           )
                         ) : (
                           <>
-                            {onClaimSubmitted &&
+                            {!isStaffViewer && onClaimSubmitted &&
                               canOfferContactlessClaim(
                                 selectedPost,
                                 userProfile.uid,
@@ -1756,8 +1760,17 @@ export default function SacramentoMapView({
                               }
                               className="sbn-btn sbn-btn-primary sbn-btn-sm"
                             >
-                              <MessageSquare className="w-3 h-3" />
-                              Message
+                              {isStaffViewer ? (
+                                <>
+                                  <LifeBuoy className="w-3 h-3" />
+                                  Staff chat
+                                </>
+                              ) : (
+                                <>
+                                  <MessageSquare className="w-3 h-3" />
+                                  Message
+                                </>
+                              )}
                             </button>
                           </>
                         )}
@@ -2141,7 +2154,7 @@ export default function SacramentoMapView({
             durationSeconds={routeDurationSeconds}
             routeOnMap={isRoadGeometry(routeCoords)}
             hasLiveGps={!!userLocation}
-            canNavigate={hasGpsFix && !!routeDestination}
+                    canNavigate={!isStaffViewer && hasGpsFix && !!routeDestination}
             onStartNavigation={handleNavigateRequest}
             onOpenExternalMaps={handleOpenExternalMaps}
           />
@@ -2251,7 +2264,7 @@ export default function SacramentoMapView({
                     durationSeconds={routeDurationSeconds}
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
-                    canNavigate={hasGpsFix && !!routeDestination}
+                    canNavigate={!isStaffViewer && hasGpsFix && !!routeDestination}
                     navigateLabel={selectedPost ? getListingNavigateLabel(selectedPost) : 'Navigate'}
                     onStartNavigation={handleNavigateRequest}
                     onOpenExternalMaps={handleOpenExternalMaps}
@@ -2290,7 +2303,7 @@ export default function SacramentoMapView({
                       )
                     ) : (
                       <>
-                        {onClaimSubmitted &&
+                        {!isStaffViewer && onClaimSubmitted &&
                           canOfferContactlessClaim(
                             selectedPost,
                             userProfile.uid,
@@ -2318,8 +2331,17 @@ export default function SacramentoMapView({
                           }
                           className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
                         >
-                          <MessageSquare className="w-3 h-3" />
-                          <span>Message</span>
+                          {isStaffViewer ? (
+                            <>
+                              <LifeBuoy className="w-3 h-3" />
+                              <span>Staff chat</span>
+                            </>
+                          ) : (
+                            <>
+                              <MessageSquare className="w-3 h-3" />
+                              <span>Message</span>
+                            </>
+                          )}
                         </button>
                       </>
                     )}
