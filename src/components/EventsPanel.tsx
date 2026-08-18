@@ -26,7 +26,7 @@ export default function EventsPanel({
 }: EventsPanelProps) {
   const { unlockStatus, loading, isCommunityUnlocked, canAccessEvents } = useEventsUnlock(userProfile);
 
-  if (loading) {
+  if (loading && !unlockStatus) {
     return (
       <div className="sbn-card text-center py-16 px-8 border-dashed">
         <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-accent-soft border border-accent/30 mx-auto mb-3">

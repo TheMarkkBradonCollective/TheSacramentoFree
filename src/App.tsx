@@ -90,6 +90,20 @@ import { BrowseOnlyProvider } from './contexts/BrowseOnlyContext';
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
 
+function sameFeedSnapshot<T extends { id: string; updatedAt?: unknown; status?: unknown }>(
+  current: T[],
+  next: T[],
+): boolean {
+  if (current === next) return true;
+  if (current.length !== next.length) return false;
+  for (let i = 0; i < current.length; i++) {
+    if (current[i].id !== next[i].id) return false;
+    if (String(current[i].updatedAt ?? '') !== String(next[i].updatedAt ?? '')) return false;
+    if (String(current[i].status ?? '') !== String(next[i].status ?? '')) return false;
+  }
+  return true;
+}
+
 function readPendingDeepLinkPath(): string | null {
   if (typeof window === 'undefined') return null;
   const stored = window.sessionStorage.getItem(PENDING_DEEP_LINK_KEY);
@@ -146,6 +160,7 @@ export default function App() {
   const handlingPopStateRef = useRef(false);
   const loadItemsRef = useRef<(isBackground?: boolean, attempt?: number) => Promise<void>>(async () => {});
   const itemsCountRef = useRef(initialAuth.items.length);
+  const eventsCountRef = useRef(0);
   const itemsLoadGenRef = useRef(0);
   const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
   const logoutCleanupDoneRef = useRef(false);
@@ -181,6 +196,9 @@ export default function App() {
     itemsCountRef.current = items.length;
   }, [items.length]);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
+  useEffect(() => {
+    eventsCountRef.current = events.length;
+  }, [events.length]);
   const { confirm, alert } = useConfirm();
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
   const { shouldGlow: awardsButtonGlow, markAwardsSeen } = useAwardsGlow(userProfile?.uid);
@@ -198,6 +216,10 @@ export default function App() {
 
   const clearAuthenticatedUiState = useCallback(() => {
     setEvents([]);
+    setEventsHydrated(false);
+    setIsEventsLoading(false);
+    setItemsHydrated(false);
+    setIsItemsLoading(false);
     setDetailItem(null);
     setDetailEvent(null);
     setViewProfileUid(null);
@@ -278,6 +300,8 @@ export default function App() {
   const eventsEngagement = useEventsEngagement(eventIds, userProfile, blockedUserIds);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [isEventsLoading, setIsEventsLoading] = useState(false);
+  const [itemsHydrated, setItemsHydrated] = useState(() => initialAuth.items.length > 0);
+  const [eventsHydrated, setEventsHydrated] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [guestDetailItem, setGuestDetailItem] = useState<ItemPost | null>(null);
 
@@ -607,7 +631,7 @@ export default function App() {
       clearAuthenticatedUiState();
     }
     if (user?.id) lastSignedInUserIdRef.current = user.id;
-    setSessionUser(user);
+    setSessionUser((prev) => (prev?.id === user.id ? prev : user));
     setUserProfile((prev) => {
       if (prev?.uid === user.id) return prev;
       return profileFromAuthUser(user);
@@ -685,6 +709,7 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
+      if (event === 'TOKEN_REFRESHED') return;
 
       if (session?.user) {
         logoutCleanupDoneRef.current = false;
@@ -778,7 +803,7 @@ export default function App() {
             console.warn('Items fetch returned empty — keeping cached listings until auth syncs.');
             return current;
           }
-          return loadedItems;
+          return sameFeedSnapshot(current, loadedItems) ? current : loadedItems;
         });
         if (loadedItems.length > 0) {
           writeCachedItems(loadedItems);
@@ -795,6 +820,7 @@ export default function App() {
         // must not leave "Loading…" up after a newer attempt finishes.
         if (gen === itemsLoadGenRef.current) {
           setIsItemsLoading(false);
+          setItemsHydrated(true);
         }
       }
     },
@@ -827,20 +853,22 @@ export default function App() {
 
   const loadEvents = useCallback(async (isBackground = false) => {
     if (!userProfile || !sessionUser) return;
-    if (!isBackground) setIsEventsLoading(true);
+    const hasVisibleEvents = eventsCountRef.current > 0;
+    if (!isBackground && !hasVisibleEvents) setIsEventsLoading(true);
     try {
       const loaded = await getSupabaseEvents();
-      setEvents(loaded);
+      setEvents((current) => (sameFeedSnapshot(current, loaded) ? current : loaded));
     } catch (err) {
       console.warn('Supabase events fetch failed:', err);
     } finally {
-      if (!isBackground) setIsEventsLoading(false);
+      setIsEventsLoading(false);
+      setEventsHydrated(true);
     }
-  }, [userProfile?.uid, sessionUser]);
+  }, [userProfile?.uid, sessionUser?.id]);
 
   useEffect(() => {
     if (!sessionReady) return;
-    void loadEvents(false);
+    void loadEvents(eventsCountRef.current > 0);
   }, [sessionReady, userProfile?.uid, loadEvents]);
 
   useItemsRealtime(sessionReady, setItems);
@@ -1065,7 +1093,7 @@ export default function App() {
           return;
         }
         if (detailItem?.id === post.id) await refreshDetailItem();
-        await loadItems(false);
+        await loadItems(true);
         setActiveTab('feed');
       } catch (err) {
         console.warn('Failed to repost listing:', err);
@@ -1097,7 +1125,7 @@ export default function App() {
           return;
         }
         if (detailItem?.id === post.id) setDetailItem(null);
-        await loadItems(false);
+        await loadItems(true);
       } catch (err) {
         console.warn('Failed to delete post:', err);
         setErrorMsg('Could not delete post.');
@@ -1184,7 +1212,7 @@ export default function App() {
     setDetailItem(null);
     setInitialSelectedChatId(chatId);
     setActiveTab('chats');
-    void loadItems(false);
+    void loadItems(true);
   }, [loadItems]);
 
   const handleBlockListChanged = useCallback(() => {
@@ -1465,10 +1493,11 @@ export default function App() {
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
-                  onRefresh={loadItems}
-                  onRefreshEvents={() => void loadEvents(false)}
+                  onRefresh={() => void loadItems(true)}
+                  onRefreshEvents={() => void loadEvents(true)}
                   isEventsLoading={isEventsLoading}
-                  itemsHydrated={!isItemsLoading}
+                  itemsHydrated={itemsHydrated}
+                  eventsHydrated={eventsHydrated}
                   onViewItem={setDetailItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
@@ -1517,10 +1546,11 @@ export default function App() {
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
-                  onRefresh={loadItems}
-                  onRefreshEvents={() => void loadEvents(false)}
+                  onRefresh={() => void loadItems(true)}
+                  onRefreshEvents={() => void loadEvents(true)}
                   isEventsLoading={isEventsLoading}
-                  itemsHydrated={!isItemsLoading}
+                  itemsHydrated={itemsHydrated}
+                  eventsHydrated={eventsHydrated}
                   onViewItem={setDetailItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
@@ -1569,10 +1599,11 @@ export default function App() {
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
-                  onRefresh={loadItems}
-                  onRefreshEvents={() => void loadEvents(false)}
+                  onRefresh={() => void loadItems(true)}
+                  onRefreshEvents={() => void loadEvents(true)}
                   isEventsLoading={isEventsLoading}
-                  itemsHydrated={!isItemsLoading}
+                  itemsHydrated={itemsHydrated}
+                  eventsHydrated={eventsHydrated}
                   onViewItem={setDetailItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
@@ -1723,7 +1754,7 @@ export default function App() {
                   onSaved={async () => {
                     setPickupAttributionItem(null);
                     await refreshDetailItem();
-                    await loadItems(false);
+                    await loadItems(true);
                   }}
                 />
               )}
@@ -1798,7 +1829,7 @@ export default function App() {
                     setEditingItem(null);
                   }}
                   onSuccess={() => {
-                    loadItems(false);
+                    void loadItems(true);
                     setActiveTab('feed');
                     setShowPostModal(false);
                     setEditingItem(null);
@@ -1818,7 +1849,7 @@ export default function App() {
                     setAddEventDatesMode(false);
                   }}
                   onSuccess={() => {
-                    void loadEvents(false);
+                    void loadEvents(true);
                     setActiveTab('events');
                     setShowPostEventModal(false);
                     setEditingEvent(null);

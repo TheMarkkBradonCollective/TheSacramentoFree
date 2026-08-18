@@ -64,7 +64,7 @@ export default function GuestListingPreview({
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && items.length === 0 ? (
         <p className="text-sm text-muted text-center py-12">Loading listings…</p>
       ) : previewItems.length === 0 ? (
         <div className="sbn-card text-center py-12 px-6 border-dashed">

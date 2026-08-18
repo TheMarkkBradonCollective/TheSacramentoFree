@@ -3,9 +3,6 @@ import { apiUrl } from '../lib/appOrigin';
 /** How often to poll for a new deploy. */
 const VERSION_POLL_INTERVAL_MS = 15 * 1000;
 
-/** Grace period for service-worker activation before a hard reload. */
-const RELOAD_GRACE_MS = 750;
-
 /** Ignore resume/focus checks briefly after returning from a system dialog. */
 const RESUME_GRACE_MS = 8_000;
 
@@ -18,6 +15,7 @@ export interface VersionManifest {
 
 let pausedUntil = 0;
 let resumeGraceUntil = 0;
+let watcherStarted = false;
 
 function fetchVersionManifest(): Promise<VersionManifest | null> {
   return fetch(`${apiUrl('/version.json')}?_=${Date.now()}`, { cache: 'no-store' })
@@ -46,12 +44,37 @@ function writeStoredVersion(version: string): void {
   }
 }
 
+function reloadNow(): void {
+  window.location.reload();
+}
+
 /**
- * Polls /version.json and reloads when the server deploy id changes.
+ * Apply a new deploy without flashing the live UI. Reload only after the
+ * user leaves the tab so the map/feed stay usable while data still updates live.
+ */
+function reloadWhenQuiet(): void {
+  if (Date.now() < pausedUntil) return;
+  if (document.visibilityState === 'hidden') {
+    reloadNow();
+    return;
+  }
+
+  const onHidden = () => {
+    if (document.visibilityState !== 'hidden') return;
+    document.removeEventListener('visibilitychange', onHidden);
+    if (Date.now() < pausedUntil) return;
+    reloadNow();
+  };
+  document.addEventListener('visibilitychange', onHidden);
+}
+
+/**
+ * Polls /version.json and applies the new deploy when the tab is in the background.
  * Used for native APK (no service worker) and as a fast fallback on the web.
  */
 export function startAppUpdateWatcher(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || watcherStarted) return;
+  watcherStarted = true;
 
   let knownVersion: string | null = readStoredVersion();
   let reloadScheduled = false;
@@ -59,9 +82,7 @@ export function startAppUpdateWatcher(): void {
   const scheduleReload = () => {
     if (reloadScheduled || Date.now() < pausedUntil) return;
     reloadScheduled = true;
-    window.setTimeout(() => {
-      window.location.reload();
-    }, RELOAD_GRACE_MS);
+    reloadWhenQuiet();
   };
 
   const checkVersion = async () => {
