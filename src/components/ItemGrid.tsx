@@ -4,6 +4,8 @@ import {
   ArrowDownUp,
   ChevronDown,
   CircleDot,
+  LayoutGrid,
+  LayoutList,
   Search as SearchIcon,
   MapPin,
   SlidersHorizontal,
@@ -26,6 +28,7 @@ import { SITE } from '../siteContent';
 import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
+  compareFeedItemsByDistance,
   feedEngagementSlice,
   isPrimaryFeedSort,
   MORE_FEED_SORTS,
@@ -37,11 +40,14 @@ import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
 import { getItemMapDestination } from '../lib/itemLocation';
 import {
+  readFeedViewMode,
   readHideFulfilledFromFeed,
   readHideGivenFromFeed,
   shouldHideCompletedListing,
+  writeFeedViewMode,
   writeHideFulfilledFromFeed,
   writeHideGivenFromFeed,
+  type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
@@ -144,6 +150,7 @@ export default function ItemGrid({
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
   const [hideGiven, setHideGiven] = useState(() => readHideGivenFromFeed());
   const [hideFulfilled, setHideFulfilled] = useState(() => readHideFulfilledFromFeed());
+  const [viewMode, setViewMode] = useState<FeedViewMode>(() => readFeedViewMode());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
@@ -171,6 +178,11 @@ export default function ItemGrid({
     const dest = getItemMapDestination(item, userProfile.uid);
     if (!dest) return null;
     return haversineMeters(userLocation, dest);
+  };
+
+  const handleViewModeChange = (mode: FeedViewMode) => {
+    setViewMode(mode);
+    writeFeedViewMode(mode);
   };
 
   const {
@@ -318,6 +330,10 @@ export default function ItemGrid({
       return feedEngagementSlice(votes.upvotes, votes.downvotes, getCommentsForPost(itemId).length);
     };
 
+    if (viewMode === 'grid') {
+      return [...filtered].sort((a, b) => compareFeedItemsByDistance(a, b, getItemDistance));
+    }
+
     return [...filtered].sort((a, b) => compareFeedItems(a, b, sortBy, getEngagement));
   }, [
     items,
@@ -333,6 +349,9 @@ export default function ItemGrid({
     hideGiven,
     hideFulfilled,
     userProfile.neighborhood,
+    userProfile.uid,
+    userLocation,
+    viewMode,
     getVotesForPost,
     getCommentsForPost,
   ]);
@@ -343,6 +362,57 @@ export default function ItemGrid({
   return (
     <>
     <div className="space-y-6" id="item_feed_wrapper">
+      <div className="flex items-center justify-between gap-3" id="feed_view_mode_bar">
+        <p className="text-xs text-muted min-w-0">
+          {viewMode === 'grid' ? (
+            <>
+              <span className="font-semibold text-app">Nearest first</span>
+              {!userLocation && ' · turn on location for distance sorting'}
+            </>
+          ) : (
+            <>
+              <span className="font-semibold text-app">List view</span>
+              <span className="hidden sm:inline"> · sorted by {PRIMARY_FEED_SORTS.find((s) => s.value === sortBy)?.label ?? sortBy}</span>
+            </>
+          )}
+        </p>
+        <div
+          className="inline-flex rounded-xl border border-app bg-inset p-0.5 shrink-0"
+          role="group"
+          aria-label="Feed view"
+          id="feed_view_mode_toggle"
+        >
+          <button
+            type="button"
+            id="feed_view_list_btn"
+            aria-pressed={viewMode === 'list'}
+            onClick={() => handleViewModeChange('list')}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-[0.65rem] px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+              viewMode === 'list'
+                ? 'bg-accent text-on-accent'
+                : 'text-muted hover:text-app hover:bg-surface-hover'
+            }`}
+          >
+            <LayoutList className="w-4 h-4 shrink-0" aria-hidden />
+            <span className="hidden sm:inline">List</span>
+          </button>
+          <button
+            type="button"
+            id="feed_view_grid_btn"
+            aria-pressed={viewMode === 'grid'}
+            onClick={() => handleViewModeChange('grid')}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-[0.65rem] px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+              viewMode === 'grid'
+                ? 'bg-accent text-on-accent'
+                : 'text-muted hover:text-app hover:bg-surface-hover'
+            }`}
+          >
+            <LayoutGrid className="w-4 h-4 shrink-0" aria-hidden />
+            <span className="sr-only sm:not-sr-only">Grid</span>
+          </button>
+        </div>
+      </div>
+
       <div className="sbn-card p-4 sm:p-5 space-y-4" id="filter_panel">
         <div className="relative">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
@@ -622,11 +692,19 @@ export default function ItemGrid({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5" id="items_grid_cards">
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5'
+              : 'flex flex-col gap-2 sm:gap-2.5'
+          }
+          id="items_grid_cards"
+        >
           {filteredItems.map((item) => (
             <div key={item.id}>
               <ItemCard
                 item={item}
+                layout={viewMode}
                 currentUserId={userProfile.uid}
                 voteState={getVotesForPost(item.id)}
                 comments={getCommentsForPost(item.id)}

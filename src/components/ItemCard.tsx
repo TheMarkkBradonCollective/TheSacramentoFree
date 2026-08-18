@@ -37,6 +37,8 @@ interface ItemCardProps {
   distanceMeters?: number | null;
   /** Open navigation directly from the card (map-view parity). */
   onNavigate?: () => void;
+  /** List rows (default) or compact proximity grid tiles. */
+  layout?: 'list' | 'grid';
 }
 
 export default function ItemCard({
@@ -60,6 +62,7 @@ export default function ItemCard({
   onViewProfile,
   distanceMeters,
   onNavigate,
+  layout = 'list',
 }: ItemCardProps) {
   const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;
@@ -218,17 +221,76 @@ export default function ItemCard({
     <span className="text-[10px] font-medium text-muted">Archived</span>
   );
 
+  if (layout === 'grid') {
+    return (
+      <article
+        id={`item_card_${item.id}`}
+        className={`item-feed-tile ${inactive ? 'opacity-75' : ''}`}
+      >
+        <button
+          type="button"
+          onClick={onViewDetail}
+          className="item-feed-tile__hit w-full text-left cursor-pointer"
+          aria-label={`${item.title}${distanceMeters != null ? `, ${formatRouteDistance(distanceMeters)} away` : ''}`}
+        >
+          <div className="item-feed-tile__media relative aspect-square overflow-hidden bg-inset">
+            {showCoverPhoto ? (
+              <>
+                <ListingImage
+                  src={coverPhoto}
+                  alt=""
+                  width={320}
+                  className="h-full w-full object-cover"
+                  onLoadError={() => setCoverFailed(true)}
+                />
+                {photos.length > 1 && (
+                  <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
+                    +{photos.length - 1}
+                  </span>
+                )}
+              </>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Tag className="w-7 h-7 text-subtle" aria-hidden />
+              </div>
+            )}
+            <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
+              <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[9px] py-0.5 shadow-sm`}>
+                {getPostTypeLabel(item.type)}
+              </span>
+              {item.status === 'completed' && (
+                <span className="sbn-badge sbn-badge-done text-[9px] py-0.5 shadow-sm">
+                  {getPostTypeCompletedLabel(item.type)}
+                </span>
+              )}
+            </div>
+            {distanceMeters != null && (
+              <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <Navigation className="w-3 h-3 shrink-0" aria-hidden />
+                {formatRouteDistance(distanceMeters)}
+              </span>
+            )}
+          </div>
+          <div className="item-feed-tile__body p-2">
+            <h3 className="font-display text-xs font-bold text-app leading-snug line-clamp-2">{item.title}</h3>
+            <p className="mt-0.5 text-[10px] text-muted truncate">{item.neighborhood}</p>
+          </div>
+        </button>
+      </article>
+    );
+  }
+
   return (
     <article
       id={`item_card_${item.id}`}
-      className={`item-feed-card item-feed-card--responsive flex flex-row sm:flex-col ${inactive ? 'opacity-75' : ''}`}
+      className={`item-feed-card item-feed-card--responsive item-feed-card--list flex flex-row sm:flex-row ${inactive ? 'opacity-75' : ''}`}
     >
       <button
         type="button"
         onClick={onViewDetail}
         className={`relative shrink-0 overflow-hidden bg-inset text-left cursor-pointer
-          w-[5.25rem] h-[5.25rem] sm:w-full sm:h-auto sm:aspect-[16/10]
-          ${!showCoverPhoto ? 'flex items-center justify-center border-r sm:border-r-0 border-app' : ''}`}
+          w-[5.25rem] h-[5.25rem] sm:w-28 sm:h-28
+          ${!showCoverPhoto ? 'flex items-center justify-center border-r border-app' : ''}`}
       >
         {showCoverPhoto ? (
           <>
@@ -270,7 +332,7 @@ export default function ItemCard({
           </p>
         )}
 
-        <p className="hidden sm:block text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
+        <p className="hidden text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
           <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
