@@ -37,6 +37,13 @@ import { useTrackPresence } from '../contexts/PresenceContext';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
 import { getItemMapDestination } from '../lib/itemLocation';
+import {
+  readHideFulfilledFromFeed,
+  readHideGivenFromFeed,
+  shouldHideCompletedListing,
+  writeHideFulfilledFromFeed,
+  writeHideGivenFromFeed,
+} from '../lib/feedDisplayPrefs';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
@@ -112,6 +119,42 @@ function FilterSelect({
   );
 }
 
+function FeedDisplaySwitch({
+  label,
+  description,
+  checked,
+  onChange,
+  id,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  id: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-app bg-inset px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <label htmlFor={id} className="text-sm font-semibold text-app cursor-pointer">
+          {label}
+        </label>
+        <p className="text-[11px] text-muted mt-0.5 leading-snug">{description}</p>
+      </div>
+      <button
+        id={id}
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={`sbn-switch shrink-0 ${checked ? 'sbn-switch-on' : ''}`}
+      >
+        <span className="sbn-switch-thumb" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
 interface ItemGridProps {
   items: ItemPost[];
   userProfile: UserProfile;
@@ -141,6 +184,8 @@ export default function ItemGrid({
   const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
   const [sortBy, setSortBy] = useState<FeedSortMode>('new');
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
+  const [hideGiven, setHideGiven] = useState(() => readHideGivenFromFeed());
+  const [hideFulfilled, setHideFulfilled] = useState(() => readHideFulfilledFromFeed());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
@@ -232,7 +277,9 @@ export default function ItemGrid({
     selectedType !== 'all' ||
     hasRefineFilters ||
     searchTerm.trim() !== '' ||
-    activeQuickPicks.size > 0;
+    activeQuickPicks.size > 0 ||
+    hideGiven ||
+    hideFulfilled;
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -243,6 +290,10 @@ export default function ItemGrid({
     setSelectedVoteFilter('all');
     setSortBy('new');
     setActiveQuickPicks(new Set());
+    setHideGiven(false);
+    setHideFulfilled(false);
+    writeHideGivenFromFeed(false);
+    writeHideFulfilledFromFeed(false);
   };
 
   const filteredItems = useMemo(() => {
@@ -271,6 +322,8 @@ export default function ItemGrid({
       if (activeQuickPicks.has('with_photos') && extractListingImageUrls(item).length === 0) return false;
       if (activeQuickPicks.has('needs_pickup') && !needsPickupListing(item)) return false;
 
+      if (shouldHideCompletedListing(item, { hideGiven, hideFulfilled })) return false;
+
       return true;
     });
 
@@ -291,6 +344,8 @@ export default function ItemGrid({
     selectedVoteFilter,
     sortBy,
     activeQuickPicks,
+    hideGiven,
+    hideFulfilled,
     userProfile.neighborhood,
     getVotesForPost,
     getCommentsForPost,
@@ -385,6 +440,32 @@ export default function ItemGrid({
                 {label}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Completed in feed</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <FeedDisplaySwitch
+              id="feed_hide_given_toggle"
+              label="Hide given"
+              description="Claimed giveaways"
+              checked={hideGiven}
+              onChange={(value) => {
+                setHideGiven(value);
+                writeHideGivenFromFeed(value);
+              }}
+            />
+            <FeedDisplaySwitch
+              id="feed_hide_fulfilled_toggle"
+              label="Hide fulfilled"
+              description="Completed requests"
+              checked={hideFulfilled}
+              onChange={(value) => {
+                setHideFulfilled(value);
+                writeHideFulfilledFromFeed(value);
+              }}
+            />
           </div>
         </div>
 

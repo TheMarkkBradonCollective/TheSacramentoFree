@@ -37,6 +37,7 @@ const LISTINGS_APK_PUBLISHED_AT = '2026-08-18T10:20:00.000Z';
 const STAFF_APPLY_PUBLISHED_AT = '2026-08-18T11:05:00.000Z';
 const STAFF_APPLY_APK_PUBLISHED_AT = '2026-08-18T11:45:00.000Z';
 const STAFF_SEAT_FILLED_PUBLISHED_AT = '2026-08-18T11:55:00.000Z';
+const FEED_HIDE_COMPLETED_PUBLISHED_AT = '2026-08-18T12:10:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -90,6 +91,24 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_feed-hide-given-fulfilled',
+    '2026-08-18',
+    'Hide given and fulfilled from Community Stuff',
+    'Two toggles on the Stuff feed let you turn off claimed giveaways and completed requests so the list stays focused on what is still open.',
+    `WHAT NEIGHBORS SEE
+On Community Stuff, open Completed in feed. Flip Hide given to drop claimed giveaways, or Hide fulfilled to drop completed requests. Your choice saves on this device.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/ItemGrid.tsx — Hide given / Hide fulfilled switches.
+- src/lib/feedDisplayPrefs.ts — saved feed display prefs.
+
+HISTORY
+2026-08-18 — Feed display toggles.`,
+    FEED_HIDE_COMPLETED_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_staff-apply-seat-filled',
     '2026-08-18',
@@ -432,6 +451,23 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_feed-hide-given-fulfilled',
+    '2026-08-18',
+    'Cleaner Stuff feed — hide given and fulfilled',
+    'New toggles on Community Stuff let you hide claimed giveaways and completed requests from your feed.',
+    `WHAT NEIGHBORS SEE
+Stuff feed → Completed in feed. Turn on Hide given or Hide fulfilled to keep the list focused on open posts.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_feed-hide-given-fulfilled.
+
+HISTORY
+2026-08-18 — Feed display toggles.`,
+    FEED_HIDE_COMPLETED_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_staff-seat-filled',
     '2026-08-18',
