@@ -296,6 +296,35 @@ export const PRIVACY = {
   viewAgainNote: 'You can read this policy anytime from the home page or your Account tab.',
 } as const;
 
+export const DELETE_ACCOUNT = {
+  title: 'Delete your SacramentoBuyNothing account',
+  shortTitle: 'Delete account',
+  lastUpdated: 'August 2026',
+  summary:
+    'You can permanently delete your SacramentoBuyNothing account and associated data at any time from inside the app. Deletion is immediate and cannot be undone.',
+  steps: [
+    'Open SacramentoBuyNothing and sign in.',
+    'Go to the Account tab (bottom navigation).',
+    'Scroll to the Delete account section at the bottom.',
+    'Tap Delete my account and confirm when prompted.',
+  ],
+  deletedData: [
+    'Your email, display name, neighborhood, bio, and profile photo.',
+    'Your listings, comments, messages, events, reviews, and reports.',
+    'Your push notification tokens and in-app notification preferences.',
+    'Your sign-in credentials (you will not be able to sign in again with the same account).',
+  ],
+  retainedData: [
+    'Staff safety and moderation records may be kept when required to investigate reports or enforce community rules.',
+    'Anonymized or aggregate community statistics (for example, total items given) may remain without identifying you.',
+  ],
+  retentionNote:
+    'Most personal data is removed immediately when you confirm deletion. Any safety-related records kept for moderation are retained only as long as needed for community safety, then deleted or anonymized.',
+  supportNote:
+    'Questions about deletion? Contact staff through Chat → Support in the app, or email support@sacbuynothing.org.',
+  privacyLinkLabel: 'Read the full privacy policy',
+} as const;
+
 export const TERMS = {
   title: 'Terms of use',
   shortTitle: 'Terms & user agreement',

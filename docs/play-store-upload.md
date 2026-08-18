@@ -154,6 +154,7 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 ### Contact details
 - **Email:** your support email
 - **Privacy policy URL:** `https://www.sacramentobuynothing.com/privacy`
+- **Delete account URL:** `https://www.sacramentobuynothing.com/delete-account`
 - **Website:** `https://www.sacramentobuynothing.com`
 
 ---
@@ -167,6 +168,7 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 | Collects or shares user data? | Yes, collects |
 | Data encrypted in transit? | Yes |
 | Users can request deletion? | Yes (Account → Delete account) |
+| Delete account URL | `https://www.sacramentobuynothing.com/delete-account` |
 | Committed to Play Families Policy? | Only if you target children (recommend **18+** audience) |
 
 **Data types to declare:**

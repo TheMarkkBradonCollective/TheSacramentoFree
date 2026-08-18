@@ -13,6 +13,7 @@ import ReviewsPage from './pages/ReviewsPage';
 import DownloadPage from './pages/DownloadPage';
 import GoFundMePage from './pages/GoFundMePage';
 import PrivacyPage from './pages/PrivacyPage';
+import DeleteAccountPage from './pages/DeleteAccountPage';
 import TermsPage from './pages/TermsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AuthPage from './AuthPage';
@@ -89,6 +90,8 @@ export default function PublicSite({
         return <GoFundMePage />;
       case 'privacy':
         return <PrivacyPage />;
+      case 'delete-account':
+        return <DeleteAccountPage />;
       case 'terms':
         return <TermsPage />;
       case 'login':
