@@ -33,6 +33,7 @@ const OUTAGE_PUBLISHED_AT = '2026-08-18T08:20:00.000Z';
 const OUTAGE_UPDATED_AT = '2026-08-18T12:00:00.000Z';
 const MAP_ROUTE_PUBLISHED_AT = '2026-08-18T09:30:00.000Z';
 const FOOTER_APK_PUBLISHED_AT = '2026-08-18T09:40:00.000Z';
+const LISTINGS_APK_PUBLISHED_AT = '2026-08-18T10:20:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -86,6 +87,31 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-18_listings-apk-0013',
+    '2026-08-18',
+    'Stuff listings are back — new APK',
+    'Community Stuff was showing 0 listings even when neighbors had posted. That is fixed. Header and tabs stay put; the rest of the page scrolls. Android beta v0.1.0.0013 is on the Download page.',
+    `WHAT NEIGHBORS SEE
+If Community Stuff said 0 listings / No listings found while the neighborhood actually had posts, that was a timeout on huge camera photos stored inside a few listings. The feed now loads without those photo dumps.
+
+Header stays at the top. Bottom tabs stay at the bottom. Everything else scrolls. Old screens should stop flashing through after a refresh.
+
+New APK: https://www.sacramentobuynothing.com/download (beta v0.1.0.0013). The app you already have still loads the live website, so reopening it picks up the feed fix too.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/supabase.ts — light listing columns; skip data:image descriptions.
+- src/lib/listingContent.ts — never keep inlined camera dumps in feed/cache.
+- src/index.css — listing and neighbor sheets sit between the header and tab bar.
+- public/service-worker.js — no HTML/JS/CSS cache of old deploys.
+- android/app/build.gradle + public/android-version.json — beta 0.1.0.0013 (versionCode 13).
+
+HISTORY
+2026-08-18 — PR #196, then Android beta 0013.`,
+    LISTINGS_APK_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_scroll-footer-apk-0012',
     '2026-08-18',
@@ -333,6 +359,25 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-18_listings-feed-apk-0013',
+    '2026-08-18',
+    'Stuff listings and a new Android download',
+    'Community Stuff should show real posts again instead of 0 listings. A new APK (beta v0.1.0.0013) is on the Download page.',
+    `WHAT NEIGHBORS SEE
+If Stuff said nobody had posted, that was a timeout — not an empty neighborhood. Header and tabs stay locked; the rest of the page scrolls.
+
+Download: https://www.sacramentobuynothing.com/download (beta v0.1.0.0013). Reopening the app you already have also picks up the website fix.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-18_listings-apk-0013.
+
+HISTORY
+2026-08-18 — Listing feed restore and Android beta 0013.`,
+    LISTINGS_APK_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_footer-apk-0012',
     '2026-08-18',
