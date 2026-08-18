@@ -179,7 +179,7 @@ export async function createGoGetSession(
           return {
             ok: false,
             errorMessage:
-              'Go Get only works in the installed app (APK or Add to Home Screen). Open Download to install, then enable notifications.',
+              'Go Get only works in the Sacramento Buy Nothing Android app (APK or Play Store). On the website, message the neighbor to arrange pickup.',
           };
         }
         if (selfOk.reason === 'need_notifications') {

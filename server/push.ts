@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './auth';
 import { configureVapidAsync, getVapidPublicKey, getWebPushModuleAsync, isVapidConfigured } from '../api/push/_server/webPushLoader';
 import { isFcmConfigured, isFcmSubscription, sendFcmToSubscription } from '../api/push/_server/fcmDelivery';
+import { filterSubscriptionsForPickupPush } from '../api/push/_server/pickupPushEvents';
 
 export type PushEventType =
   | 'new_item'
@@ -366,7 +367,10 @@ export async function sendPushToUsers(
     });
   }
 
-  const subscriptions = await getSubscriptionsForUsers(allowed);
+  const subscriptions = filterSubscriptionsForPickupPush(
+    await getSubscriptionsForUsers(allowed),
+    payload.eventType,
+  );
   let sent = 0;
   let failed = 0;
   let removed = 0;

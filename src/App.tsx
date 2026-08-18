@@ -82,6 +82,9 @@ import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { useReviewPrompt } from './hooks/useReviewPrompt';
 import ReviewPromptModal from './components/ReviewPromptModal';
+import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
+import { isNativeApp } from './lib/nativePlatform';
+import { hasSeenGoGetFirstRunPrompt } from './lib/goGetFirstRunState';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
@@ -2105,6 +2108,19 @@ export default function App() {
           onDismiss={dismissPrompt}
         />
       )}
+
+      {sessionReady &&
+        userProfile &&
+        isNativeApp() &&
+        !hasSeenGoGetFirstRunPrompt() &&
+        !privacyGateOpen &&
+        !termsGateOpen && (
+          <GoGetFirstRunPrompt
+            userProfile={userProfile}
+            onUpdateProfile={setUserProfile}
+            onOpenNotificationSettings={() => openNotificationsHub('alerts')}
+          />
+        )}
     </div>
   );
 }

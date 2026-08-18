@@ -45,9 +45,9 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
         <div className="min-w-0">
           <h4 className="text-xs font-bold text-muted uppercase tracking-wider">Go Get & pickup coordination</h4>
           <p className="text-xs text-muted mt-1 leading-relaxed">
-            App-supported pickups (Go Get, Drop off, Meet up, claim-at-pin) only work in the installed app
-            (APK or Add to Home Screen) with notifications on. Turn this off to list normally and arrange
-            pickups yourself in chat — without live tracking or handoff prompts.
+            App-supported pickups (Go Get, Drop off, Meet up, claim-at-pin) only work in the Android app
+            (APK or Play Store) with notifications on. Turn this off to list normally and arrange pickups
+            yourself in chat — without live tracking or handoff prompts.
           </p>
         </div>
       </div>

@@ -31,6 +31,7 @@ import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffReports, canView
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
 import ChatInboxHeader from './ChatInboxHeader';
@@ -1137,6 +1138,7 @@ export default function ChatSystem({
             // Looking/Trade: only the non-poster starts coordination so they become the
             // navigator (requester). Poster waits as fulfiller — same as listing/map.
             const showStartGoGetBtn =
+              supportsGoGetCoordination() &&
               !!linkedItem &&
               !isChatDisabled &&
               linkedItem.status === 'active' &&

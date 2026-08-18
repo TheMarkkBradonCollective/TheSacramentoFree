@@ -17,6 +17,7 @@ import {
 import { createGoGetSession } from '../lib/goGetSessions';
 import { confirmDropOffAsFulfiller, confirmGoGetAsRequester, confirmMeetUp } from './goget/goGetSafetyConfirm';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 import { extractListingImageUrls } from '../lib/listingContent';
 import {
   haversineMeters,
@@ -1276,6 +1277,11 @@ export default function SacramentoMapView({
       return;
     }
 
+    if (!supportsGoGetCoordination()) {
+      openNavigation();
+      return;
+    }
+
     const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
     const allowed = await ensureGoGetAllowed({
       self: userProfile,
@@ -1692,7 +1698,11 @@ export default function SacramentoMapView({
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
                         canNavigate={hasGpsFix && !!routeDestination}
-                        navigateLabel={selectedPost ? getListingNavigateLabel(selectedPost) : 'Navigate'}
+                        navigateLabel={
+                          selectedPost && supportsGoGetCoordination()
+                            ? getListingNavigateLabel(selectedPost)
+                            : 'Navigate'
+                        }
                         onStartNavigation={handleNavigateRequest}
                         onOpenExternalMaps={handleOpenExternalMaps}
                       />
@@ -2252,7 +2262,11 @@ export default function SacramentoMapView({
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
                     canNavigate={hasGpsFix && !!routeDestination}
-                    navigateLabel={selectedPost ? getListingNavigateLabel(selectedPost) : 'Navigate'}
+                    navigateLabel={
+                      selectedPost && supportsGoGetCoordination()
+                        ? getListingNavigateLabel(selectedPost)
+                        : 'Navigate'
+                    }
                     onStartNavigation={handleNavigateRequest}
                     onOpenExternalMaps={handleOpenExternalMaps}
                   />

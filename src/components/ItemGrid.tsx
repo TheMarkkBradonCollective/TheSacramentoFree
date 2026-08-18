@@ -36,6 +36,7 @@ import { useTrackPresence } from '../contexts/PresenceContext';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
 import { getItemMapDestination } from '../lib/itemLocation';
+import { isNativeApp } from '../lib/nativePlatform';
 import {
   readHideFulfilledFromFeed,
   readHideGivenFromFeed,
@@ -647,7 +648,9 @@ export default function ItemGrid({
                 }
                 onViewProfile={onViewProfile}
                 distanceMeters={getItemDistance(item)}
-                onNavigate={item.userId !== userProfile.uid ? () => onViewItem(item) : undefined}
+                onNavigate={
+                  isNativeApp() && item.userId !== userProfile.uid ? () => onViewItem(item) : undefined
+                }
               />
             </div>
           ))}

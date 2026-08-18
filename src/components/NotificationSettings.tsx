@@ -83,22 +83,34 @@ const PREF_SECTIONS: {
   },
 ];
 
+const LISTING_PREF_ITEMS = [
+  { key: 'claims' as const, label: 'Claims', description: 'When someone claims your item' },
+  { key: 'gifts' as const, label: 'Gifts', description: 'When an item is marked gifted' },
+  { key: 'comments' as const, label: 'Comments', description: 'New comments on your listings' },
+  { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When someone upvotes your listing (anonymous)' },
+  { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When someone downvotes your listing (anonymous)' },
+  {
+    key: 'listingStatus' as const,
+    label: 'Listing status',
+    description: 'Expiring soon, gifted, withdrawn, and other status changes',
+  },
+  {
+    key: 'pickupReminders' as const,
+    label: 'Pickup reminders',
+    description: 'Go Get, pending pickup, on-the-way alerts — Android app only',
+    nativeAppOnly: true,
+  },
+  { key: 'accountUpdates' as const, label: 'Account updates', description: 'Profile and account notices' },
+] as const;
+
 const LISTING_PREF_SECTION = {
   title: 'Your posts & profile',
-  items: [
-    { key: 'claims' as const, label: 'Claims', description: 'When someone claims your item' },
-    { key: 'gifts' as const, label: 'Gifts', description: 'When an item is marked gifted' },
-    { key: 'comments' as const, label: 'Comments', description: 'New comments on your listings' },
-    { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When someone upvotes your listing (anonymous)' },
-    { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When someone downvotes your listing (anonymous)' },
-    {
-      key: 'listingStatus' as const,
-      label: 'Listing status',
-      description: 'Expiring soon, gifted, withdrawn, and other status changes',
-    },
-    { key: 'pickupReminders' as const, label: 'Pickup reminders', description: 'Pending pickup, on-the-way alerts, and nudges' },
-    { key: 'accountUpdates' as const, label: 'Account updates', description: 'Profile and account notices' },
-  ],
+  get items() {
+    return LISTING_PREF_ITEMS.filter((item) => {
+      if ('nativeAppOnly' in item && item.nativeAppOnly) return isAndroidApp();
+      return true;
+    });
+  },
 };
 
 function SwitchRow({

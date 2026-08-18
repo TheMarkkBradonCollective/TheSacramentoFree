@@ -1,5 +1,5 @@
 import type { UserProfile } from '../types';
-import { detectInstallKind } from './installContext';
+import { isNativeApp } from './nativePlatform';
 import {
   getNotificationPreferences,
   getPushPermissionState,
@@ -15,9 +15,14 @@ export type GoGetBlockReason =
 
 export type GoGetEligibility = { ok: true } | { ok: false; reason: GoGetBlockReason; otherName?: string };
 
-/** PWA (home screen) or Android APK — not a regular browser tab. */
+/** Go Get / pickup coordination — Android APK & AAB only (not browser or PWA). */
+export function supportsGoGetCoordination(): boolean {
+  return isNativeApp();
+}
+
+/** @deprecated Use supportsGoGetCoordination — kept for existing call sites. */
 export function isInstalledApp(): boolean {
-  return detectInstallKind() !== 'browser';
+  return supportsGoGetCoordination();
 }
 
 export function isGoGetCoordinationEnabled(profile: Pick<UserProfile, 'goGetEnabled'> | null | undefined): boolean {
@@ -75,9 +80,9 @@ export function goGetBlockAlert(eligibility: Extract<GoGetEligibility, { ok: fal
   switch (eligibility.reason) {
     case 'need_install':
       return {
-        title: 'Install the app to use Go Get',
+        title: 'Install the Android app to use Go Get',
         message:
-          'Pickup coordination (Go Get, Drop off, Meet up, and claim-at-pin) only works in the installed app — Android APK or Add to Home Screen. Open Download from the home page or Account to install, then turn on notifications.',
+          'Pickup coordination (Go Get, Drop off, Meet up, and claim-at-pin) only works in the Sacramento Buy Nothing Android app (APK or Play Store). On the website or home-screen shortcut, message the neighbor and mark the listing when you are done.',
         okLabel: 'Got it',
       };
     case 'need_notifications':

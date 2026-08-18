@@ -70,6 +70,7 @@ import GoGetShareLocationToggle from './goget/GoGetShareLocationToggle';
 import ReportGoGetViolationDialog from './goget/ReportGoGetViolationDialog';
 import { confirmGoGetAsRequester, confirmGoGetTripStart, confirmDropOffAsFulfiller, confirmMeetUp } from './goget/goGetSafetyConfirm';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 
 interface ItemDetailNavigationProps {
   item: ItemPost;
@@ -118,6 +119,7 @@ async function applyCompletionForItemType(
 
 export default function ItemDetailNavigation({ item, currentUserId, userProfile, onOpenChat }: ItemDetailNavigationProps) {
   const { confirm, alert } = useConfirm();
+  const goGetAvailable = supportsGoGetCoordination();
 
   const [session, setSession] = useState<GoGetSession | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
@@ -404,7 +406,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
 
   const handleListingNavigation = useCallback(() => {
-    if (isOwner) {
+    if (isOwner || !goGetAvailable) {
       openNavigation();
       return;
     }
@@ -417,7 +419,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       return;
     }
     void handleStartGoGet();
-  }, [isOwner, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
+  }, [goGetAvailable, isOwner, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
 
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
@@ -910,7 +912,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
               routeOnMap={isRoadGeometry(routeCoords)}
               hasLiveGps={!!userLocation}
               canNavigate={!!userLocation}
-              navigateLabel={isOwner ? 'Navigate' : getListingNavigateLabel(item)}
+              navigateLabel={isOwner || !goGetAvailable ? 'Navigate' : getListingNavigateLabel(item)}
               onStartNavigation={() => (isOwner ? openNavigation() : void handleListingNavigation())}
               onOpenExternalMaps={() => {
                 if (!routeEndpoints) {
@@ -922,7 +924,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
             />
 
             {/* Contactless pickup: optional arrived / left notifications — no GPS to poster */}
-            {isContactless && !isOwner && contactlessNavActive && (
+            {goGetAvailable && isContactless && !isOwner && contactlessNavActive && (
               <div className="mt-3 sbn-card p-4 space-y-3">
                 {contactlessArrived ? (
                   <>
