@@ -81,6 +81,16 @@ html.capacitor-native {
   --sbn-inset-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
 }
 
+/* Tablet + staff-mobile shells (no fixed sbn-mobile-header/nav band) */
+html.capacitor-native #tablet_device_workspace,
+html.capacitor-native #mobile_device_workspace.flex.h-screen {
+  box-sizing: border-box;
+  height: 100svh;
+  max-height: 100svh;
+  padding-top: var(--sbn-inset-top);
+  padding-bottom: var(--sbn-inset-bottom);
+}
+
 html,
 body {
   background-color: var(--color-bg);
@@ -799,6 +809,7 @@ option {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-x: none;
+  scroll-padding-bottom: var(--sbn-inset-bottom, 0px);
 }
 
 .sbn-scroll-page-body {
