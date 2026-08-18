@@ -21,6 +21,8 @@ All files are **1080×1920**, 24-bit PNG (Play phone size). Upload in this order
 | 4 | `04-map.png` | Neighborhood map |
 | 5 | `05-messages.png` | Messages |
 | 6 | `06-account.png` | Account / profile |
+| 7 | `07-listing.png` | Listing details |
+| 8 | `08-event.png` | Event details |
 
 ## Feature graphic (required)
 

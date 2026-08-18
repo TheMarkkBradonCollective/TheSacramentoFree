@@ -145,7 +145,7 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 |-------|------|
 | App icon (512×512) | `play-store-assets/icon-512.png` |
 | Feature graphic (1024×500) | `play-store-assets/feature-graphic-1024x500.png` |
-| Phone screenshots | `play-store-assets/screenshots/01-home.png` through `06-account.png` (1080×1920) |
+| Phone screenshots | `play-store-assets/screenshots/01-home.png` through `08-event.png` (1080×1920) |
 
 ### Category
 - **Primary:** Social (or Lifestyle)

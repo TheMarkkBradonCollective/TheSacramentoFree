@@ -142,9 +142,13 @@ async function main() {
   page.setDefaultTimeout(45000);
 
   try {
-    await page.goto(`${ORIGIN}/#/`, { waitUntil: 'networkidle2', timeout: 60000 });
-    await wait(1500);
-    await shot(page, '01-home');
+    const onlyExtra = process.env.PLAY_SCREENSHOT_SET === 'extra';
+
+    if (!onlyExtra) {
+      await page.goto(`${ORIGIN}/#/`, { waitUntil: 'networkidle2', timeout: 60000 });
+      await wait(1500);
+      await shot(page, '01-home');
+    }
 
     await page.goto(`${ORIGIN}/#/login`, { waitUntil: 'networkidle2', timeout: 60000 });
     await wait(800);
@@ -165,34 +169,59 @@ async function main() {
     await openTab(page, 'feed');
     await page.waitForSelector('#item_feed_wrapper', { timeout: 20000 }).catch(() => null);
     await wait(1500);
-    await shot(page, '02-feed');
+    if (!onlyExtra) await shot(page, '02-feed');
 
-    const listing = await page.$('[id^="item_card_"]');
-    if (listing) {
-      await listing.click();
-      await page.waitForSelector('#item_detail_fullscreen', { timeout: 10000 }).catch(() => null);
-      await wait(1200);
-      await shot(page, '07-listing');
-      await page.goBack({ waitUntil: 'networkidle2' }).catch(() => null);
-      await page.waitForSelector('#mobile_sticky_footer_nav', { timeout: 15000 }).catch(() => null);
-      await wait(800);
-    }
+    await page.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll('[id^="item_card_"]'));
+      const withPhoto = cards.find((card) => card.querySelector('img'));
+      const card = withPhoto || cards[0];
+      const btn = card?.querySelector('button');
+      if (btn instanceof HTMLElement) btn.click();
+    });
+    await page.waitForSelector('#item_detail_fullscreen', { timeout: 12000 });
+    await wait(1500);
+    await shot(page, '07-listing');
+    await page.evaluate(() => {
+      const back = document.querySelector('#item_detail_fullscreen [aria-label="Back"]');
+      if (back instanceof HTMLElement) back.click();
+    });
+    await wait(800);
 
     await openTab(page, 'events');
     await wait(1500);
-    await shot(page, '03-events');
+    if (!onlyExtra) await shot(page, '03-events');
 
-    await openTab(page, 'map');
-    await wait(2500);
-    await shot(page, '04-map');
-
-    await openTab(page, 'chats');
+    await page.evaluate(() => {
+      const card = document.querySelector('[id^="event_card_"]');
+      const btn = card?.querySelector('button');
+      if (btn instanceof HTMLElement) btn.click();
+    });
+    await page.waitForFunction(
+      () => {
+        const back = document.querySelector('[aria-label="Back"]');
+        const sheet = document.querySelector('.sbn-app-sheet');
+        return !!(back && sheet);
+      },
+      { timeout: 12000 },
+    );
     await wait(1500);
-    await shot(page, '05-messages');
+    await shot(page, '08-event');
+    await page.click('[aria-label="Back"]').catch(() => null);
+    await wait(800);
 
-    await openTab(page, 'profile');
-    await wait(1500);
-    await shot(page, '06-account');
+    if (!onlyExtra) {
+      await openTab(page, 'map');
+      await wait(2500);
+      await shot(page, '04-map');
+
+      await openTab(page, 'chats');
+      await wait(1500);
+      await shot(page, '05-messages');
+
+      await openTab(page, 'profile');
+      await wait(1500);
+      await shot(page, '06-account');
+    }
   } finally {
     await browser.close();
   }
