@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import PageScrollFooter from '../PageScrollFooter';
+import PageScrollFooter, { ScrollPage } from '../PageScrollFooter';
 import { usePublicRoute } from '../../public/usePublicRoute';
 import PublicNav from './PublicNav';
 import HomePage from './pages/HomePage';
@@ -47,7 +47,7 @@ export default function PublicSite({
   onRequireSignIn,
 }: PublicSiteProps) {
   const { route, navigate } = usePublicRoute();
-  const mainRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (window.location.hash) return;
@@ -119,9 +119,10 @@ export default function PublicSite({
   return (
     <div className="min-h-screen h-dvh bg-app text-app font-sans flex flex-col overflow-hidden">
       <PublicNav route={route} onNavigate={navigate} />
-      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto">
-        {renderPage()}
-        <PageScrollFooter />
+      <main className="flex-1 min-h-0 overflow-hidden">
+        <ScrollPage ref={mainRef} footer={<PageScrollFooter />}>
+          {renderPage()}
+        </ScrollPage>
       </main>
     </div>
   );

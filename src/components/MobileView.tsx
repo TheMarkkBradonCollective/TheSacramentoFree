@@ -15,7 +15,7 @@ import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
 import BrandLogo from './BrandLogo';
 import CommunityStatsBar from './CommunityStatsBar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
-import PageScrollFooter from './PageScrollFooter';
+import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 import { isStaffRole, roleTheme } from '../lib/roles';
 import { isNativeApp } from '../lib/nativePlatform';
 import AppSidebar from './AppSidebar';
@@ -265,29 +265,35 @@ export default function MobileView({
                 <div className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'map'}>
                   <SacramentoMapView items={items} events={events} userProfile={userProfile} selectedType={selectedMobileType} selectedCategory={selectedMobileCategory} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} isFullScreenMobile mapVisible={communityTab === 'map'} colorGuideOpen={colorGuideOpen} onColorGuideOpenChange={setColorGuideOpen} onOpenNewPost={onOpenNewPost} onImmersiveModeChange={setMapImmersiveNav} itemsHydrated={itemsHydrated} eventsHydrated={eventsHydrated} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} />
                 </div>
-                <div className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 flex flex-col ${communityTab === 'feed' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'feed'}>
-                  <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col">
-                    <div className="sbn-page-header"><h2>{IN_APP.feedTitle}</h2><p>{IN_APP.feedDescription} · {items.length} listings</p></div>
-                    <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
-                    <PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-                  </div>
-                </div>
-                <div className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 flex flex-col ${communityTab === 'events' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'events'}>
-                  <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col">
-                    <div className="sbn-page-header"><h2>{IN_APP.eventsTitle}</h2></div>
-                    <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
-                    <PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-                  </div>
-                </div>
+                <ScrollPage
+                  className={communityTab === 'feed' ? '' : 'hidden'}
+                  aria-hidden={communityTab !== 'feed'}
+                  contentClassName="max-w-2xl mx-auto w-full p-4"
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+                >
+                  <div className="sbn-page-header"><h2>{IN_APP.feedTitle}</h2><p>{IN_APP.feedDescription} · {items.length} listings</p></div>
+                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
+                </ScrollPage>
+                <ScrollPage
+                  className={communityTab === 'events' ? '' : 'hidden'}
+                  aria-hidden={communityTab !== 'events'}
+                  contentClassName="max-w-2xl mx-auto w-full p-4"
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+                >
+                  <div className="sbn-page-header"><h2>{IN_APP.eventsTitle}</h2></div>
+                  <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
+                </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
                   <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} fullBleed className="h-full min-h-0" />
                 </div>
-                <div className={`h-full w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none bg-app flex flex-col ${communityTab === 'profile' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'profile'}>
-                  <div className="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden flex-1 flex flex-col">
-                    <UserProfileView userProfile={userProfile} userPosts={items.filter((item) => item.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} fullBleed />
-                    <PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-                  </div>
-                </div>
+                <ScrollPage
+                  className={`bg-app ${communityTab === 'profile' ? '' : 'hidden'}`}
+                  aria-hidden={communityTab !== 'profile'}
+                  contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+                >
+                  <UserProfileView userProfile={userProfile} userPosts={items.filter((item) => item.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} fullBleed />
+                </ScrollPage>
               </main>
           )}
         </div>
@@ -374,12 +380,13 @@ export default function MobileView({
           )}
         </div>
 
-        <div
-          className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 flex flex-col ${communityTab === 'feed' ? '' : 'hidden'}`}
+        <ScrollPage
+          className={communityTab === 'feed' ? '' : 'hidden'}
           id="mobile_directory_drawer"
           aria-hidden={communityTab !== 'feed'}
+          contentClassName="max-w-2xl mx-auto w-full px-4 pt-4"
+          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
-          <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col">
             {isNative && (
               <div className="sbn-native-hero mb-4">
                 <p className="relative text-[11px] font-bold uppercase tracking-widest text-white/75">
@@ -411,8 +418,6 @@ export default function MobileView({
               onRefresh={onRefresh}
               isLoading={!itemsHydrated}
             />
-            <PageScrollFooter className="-mx-4" pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-          </div>
           <button
             type="button"
             onClick={onOpenNewPost}
@@ -422,14 +427,15 @@ export default function MobileView({
           >
             <Plus className="w-6 h-6" />
           </button>
-        </div>
+        </ScrollPage>
 
-        <div
-          className={`relative h-full w-full min-h-0 overflow-y-auto p-4 pb-8 flex flex-col ${communityTab === 'events' ? '' : 'hidden'}`}
+        <ScrollPage
+          className={communityTab === 'events' ? '' : 'hidden'}
           id="mobile_events_dock"
           aria-hidden={communityTab !== 'events'}
+          contentClassName="max-w-2xl mx-auto w-full px-4 pt-4"
+          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
-          <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col">
             <div className="sbn-page-header">
               <h2>{IN_APP.eventsTitle}</h2>
               <p>
@@ -446,8 +452,6 @@ export default function MobileView({
               onRefresh={onRefreshEvents}
               isLoading={isEventsLoading}
             />
-            <PageScrollFooter className="-mx-4" pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-          </div>
           {canAccessEvents && (
           <button
             type="button"
@@ -459,7 +463,7 @@ export default function MobileView({
             <Plus className="w-6 h-6" />
           </button>
           )}
-        </div>
+        </ScrollPage>
 
         <div
           className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`}
@@ -491,12 +495,13 @@ export default function MobileView({
           />
         </div>
 
-        <div
-          className={`h-full w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none bg-app flex flex-col ${communityTab === 'profile' ? '' : 'hidden'}`}
+        <ScrollPage
+          className={`bg-app ${communityTab === 'profile' ? '' : 'hidden'}`}
           id="mobile_profile_dock"
           aria-hidden={communityTab !== 'profile'}
+          contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
+          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
-          <div className="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden flex-1 flex flex-col">
             <div className="sbn-page-header px-4 pt-4 pb-2">
               <h2>{IN_APP.profileTitle}</h2>
             </div>
@@ -516,9 +521,7 @@ export default function MobileView({
               onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
               fullBleed
             />
-            <PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-          </div>
-        </div>
+        </ScrollPage>
       </main>
 
       <footer id="mobile_sticky_footer_nav" className={`sbn-mobile-nav${mapImmersiveNav ? ' sbn-mobile-chrome-hidden' : ''}`}>

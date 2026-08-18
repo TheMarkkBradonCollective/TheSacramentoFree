@@ -41,7 +41,7 @@ import {
   messageBubbleClass,
   messageGroupSpacing,
 } from '../lib/chatMessageLayout';
-import PageScrollFooter from './PageScrollFooter';
+import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { PresenceUserAvatar } from './UserAvatar';
 import { useTrackPresence } from '../contexts/PresenceContext';
@@ -1036,27 +1036,32 @@ export default function ChatSystem({
           onOpenFeedbackPanel={setFeedbackPanel}
           staffReportCount={newStaffReportCount}
         />
-        <div className="flex-1 min-h-0 overflow-y-auto" id="chat_rooms_scrollable">
-          <ChatInboxList
-            entries={inboxEntries}
-            loading={isChatsLoading || supportTicketsLoading}
-            isStaffSupportInbox={isStaffSupportInbox}
-            selectedChatId={selectedChat?.id ?? null}
-            supportOpenTicketId={supportOpenTicketId}
-            supportActive={!!supportView}
-            requestBusyId={requestBusyId}
-            getFormattedChatTitle={getFormattedChatTitle}
-            getRecipientInfo={getRecipientInfo}
-            formatTime={formatTime}
-            onViewProfile={onViewProfile}
-            onSelectChat={selectChat}
-            onOpenSupportTicket={openSupportTicket}
-            onAcceptRequest={handleAcceptRequest}
-            onDeclineRequest={handleDeclineRequest}
-          />
-          {fullBleed && !selectedChat && !supportView && (
-            <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
-          )}
+        <div className="flex-1 min-h-0 overflow-hidden" id="chat_rooms_scrollable">
+          <ScrollPage
+            footer={
+              fullBleed && !selectedChat && !supportView ? (
+                <PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
+              ) : null
+            }
+          >
+            <ChatInboxList
+              entries={inboxEntries}
+              loading={isChatsLoading || supportTicketsLoading}
+              isStaffSupportInbox={isStaffSupportInbox}
+              selectedChatId={selectedChat?.id ?? null}
+              supportOpenTicketId={supportOpenTicketId}
+              supportActive={!!supportView}
+              requestBusyId={requestBusyId}
+              getFormattedChatTitle={getFormattedChatTitle}
+              getRecipientInfo={getRecipientInfo}
+              formatTime={formatTime}
+              onViewProfile={onViewProfile}
+              onSelectChat={selectChat}
+              onOpenSupportTicket={openSupportTicket}
+              onAcceptRequest={handleAcceptRequest}
+              onDeclineRequest={handleDeclineRequest}
+            />
+          </ScrollPage>
         </div>
       </div>
 
