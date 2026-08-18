@@ -32,6 +32,15 @@ export function applyEventRealtimeChange(
   if (eventType === 'UPDATE') {
     const exists = prev.some((e) => e.id === event.id);
     if (!exists) return sortEventsByStartDate([...prev, event]);
+    const current = prev.find((e) => e.id === event.id);
+    if (
+      current &&
+      current.updatedAt === event.updatedAt &&
+      current.status === event.status &&
+      current.title === event.title
+    ) {
+      return prev;
+    }
     return sortEventsByStartDate(prev.map((e) => (e.id === event.id ? event : e)));
   }
 

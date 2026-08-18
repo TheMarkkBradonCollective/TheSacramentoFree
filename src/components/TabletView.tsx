@@ -53,6 +53,7 @@ interface TabletViewProps {
   onRefreshEvents: () => void;
   isEventsLoading?: boolean;
   itemsHydrated?: boolean;
+  eventsHydrated?: boolean;
   onViewEvent: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
@@ -116,6 +117,7 @@ export default function TabletView({
   onRefreshEvents,
   isEventsLoading = false,
   itemsHydrated = true,
+  eventsHydrated = true,
   onViewEvent,
   engagement,
   eventsEngagement,
@@ -273,7 +275,7 @@ export default function TabletView({
                 onEditItem={onEditItem}
                 mapVisible={communityTab === 'map'}
                 itemsHydrated={itemsHydrated}
-                eventsHydrated={!isEventsLoading}
+                eventsHydrated={eventsHydrated}
                 eventsEngagement={eventsEngagement}
                 commentsLocked={!canAccessEvents}
               />

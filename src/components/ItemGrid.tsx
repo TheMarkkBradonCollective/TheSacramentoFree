@@ -551,7 +551,7 @@ export default function ItemGrid({
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && items.length === 0 ? (
         <div className="sbn-card text-center py-16 px-8 border-dashed" id="feed_loading_state">
           <p className="text-sm text-muted">Loading community listings…</p>
         </div>

@@ -2126,8 +2126,8 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Fallback Empty Guide - Beautiful, non-blocking friendly popup overlay */}
-        {((showingEvents && eventBlipPositions.length === 0) ||
-          (showItemsOnMap && blipPositions.length === 0 && (!showEventsOnMap || eventBlipPositions.length === 0))) && (
+        {((itemsHydrated && showItemsOnMap && blipPositions.length === 0 && (!showEventsOnMap || eventBlipPositions.length === 0)) ||
+          (eventsHydrated && showingEvents && eventBlipPositions.length === 0)) && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md border border-[#FF4500]/30 p-3.5 shadow-2xl rounded-2xl z-20 w-[90%] max-w-sm text-center animate-pulse-short">
             <div className="flex items-start space-x-3 text-left">
               <div className="p-2 bg-[#FF4500]/10 text-accent rounded-xl shrink-0 mt-0.5">

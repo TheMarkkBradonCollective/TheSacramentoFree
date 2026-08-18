@@ -13,7 +13,7 @@ self.addEventListener('install', (event) => {
       })
     )
   );
-  self.skipWaiting();
+  // Do not skipWaiting here — taking over a visible tab flashes the live UI.
 });
 
 self.addEventListener('activate', (event) => {
@@ -22,7 +22,6 @@ self.addEventListener('activate', (event) => {
       Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)))
     )
   );
-  self.clients.claim();
 });
 
 self.addEventListener('message', (event) => {

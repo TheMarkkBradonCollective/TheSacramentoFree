@@ -18,24 +18,39 @@ async function unregisterLegacyServiceWorkers(): Promise<void> {
   );
 }
 
-function setupServiceWorker(registration: ServiceWorkerRegistration) {
-  const skipWaiting = (worker: ServiceWorker) => {
+function activateWhenQuiet(worker: ServiceWorker) {
+  const skipWaiting = () => {
     worker.postMessage({ type: 'SKIP_WAITING' });
   };
+  if (document.visibilityState === 'hidden') {
+    skipWaiting();
+    return;
+  }
+  const onHidden = () => {
+    if (document.visibilityState !== 'hidden') return;
+    document.removeEventListener('visibilitychange', onHidden);
+    skipWaiting();
+  };
+  document.addEventListener('visibilitychange', onHidden);
+}
 
+function setupServiceWorker(registration: ServiceWorkerRegistration) {
   registration.addEventListener('updatefound', () => {
     const incoming = registration.installing;
     if (!incoming) return;
 
     incoming.addEventListener('statechange', () => {
-      if (incoming.state === 'installed' && navigator.serviceWorker.controller) {
-        skipWaiting(incoming);
+      if (incoming.state !== 'installed') return;
+      if (navigator.serviceWorker.controller) {
+        activateWhenQuiet(incoming);
+      } else {
+        incoming.postMessage({ type: 'SKIP_WAITING' });
       }
     });
   });
 
   if (registration.waiting && navigator.serviceWorker.controller) {
-    skipWaiting(registration.waiting);
+    activateWhenQuiet(registration.waiting);
   }
 
   const checkForUpdates = () => {
@@ -61,6 +76,9 @@ export async function registerServiceWorker() {
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return;
+    // Stay on the current map/feed while the user is looking. The new worker
+    // applies on the next visit or after the tab is backgrounded.
+    if (document.visibilityState === 'visible') return;
     refreshing = true;
     window.location.reload();
   });
