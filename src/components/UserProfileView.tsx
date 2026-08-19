@@ -614,7 +614,7 @@ export default function UserProfileView({
             className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
           >
             <Store className="w-4 h-4 shrink-0" />
-            <span>Download from Play Store</span>
+            <span>Get it from Play Store</span>
           </a>
 
           <button

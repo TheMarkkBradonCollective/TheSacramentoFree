@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Smartphone, Store } from 'lucide-react';
-import TrackedDownloadLink from '../TrackedDownloadLink';
-import { useInstallVersions } from '../../hooks/useInstallVersions';
+import { Smartphone, Store } from 'lucide-react';
 import { detectInstallKind } from '../../lib/installContext';
 import { isNativeApp } from '../../lib/nativePlatform';
 import type { PublicRoute } from '../../public/routes';
@@ -17,7 +15,6 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsProps) {
-  const { latestApk, apkDownloadHref, canDownloadApkFromWebsite } = useInstallVersions(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
   const isStandalone = installKind === 'pwa' || installKind === 'ios-pwa';
@@ -58,19 +55,8 @@ export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsP
           className="sbn-btn sbn-btn-primary inline-flex items-center justify-center gap-2"
         >
           <Store className="w-4 h-4" />
-          Download from Play Store
+          Get it from Play Store
         </a>
-
-        {canDownloadApkFromWebsite && apkDownloadHref ? (
-          <TrackedDownloadLink
-            href={apkDownloadHref}
-            download={latestApk?.fileName || 'sac-buy-nothing.apk'}
-            className="sbn-btn sbn-btn-secondary inline-flex items-center justify-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            {latestApk?.betaLabel ? `Download ${latestApk.betaLabel}` : 'Download APK'}
-          </TrackedDownloadLink>
-        ) : null}
 
         {!isStandalone ? (
           <button

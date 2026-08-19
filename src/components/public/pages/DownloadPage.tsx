@@ -113,12 +113,15 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
 
   const usingApk = installKind === 'android-apk';
   const usingHomeScreen = installKind === 'pwa' || installKind === 'ios-pwa';
+  const isPublicDownloadPage = !onBack;
+  /** APK sideload only inside the signed-in app for joiners 1–500 — never on the public /download page. */
+  const showApkSection = !isPublicDownloadPage && canDownloadApkFromWebsite;
   const showApkHint =
-    canDownloadApkFromWebsite &&
+    showApkSection &&
     !usingApk &&
     apkStatus === 'not-installed' &&
     (installKind === 'browser' || usingHomeScreen);
-  const apkAccessMessage = apkWebsiteAccessMessage(userProfile);
+  const apkAccessMessage = !isPublicDownloadPage ? apkWebsiteAccessMessage(userProfile) : '';
 
   const shell = onBack ? (
     <div className="sbn-download-in-app min-h-screen min-h-[100dvh] overflow-y-auto overflow-x-hidden bg-app text-app">
@@ -137,7 +140,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
   ) : (
     <PublicPageShell
       title="Download the app"
-      subtitle={`Get ${SITE.shortName} on your phone — Google Play, home screen install, or APK if you joined in the first 500.`}
+      subtitle={`Get ${SITE.shortName} on your phone — Google Play on Android or add to your home screen.`}
       className="min-w-0 overflow-x-hidden"
     >
       {renderBody()}
@@ -176,43 +179,79 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         ) : null}
 
-        <PublicCard>
-          <div className="flex items-start gap-3 mb-4">
-            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25">
-              <Store className="w-5 h-5 text-emerald-400" />
+        {!isPublicDownloadPage ? (
+          <PublicCard>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25">
+                <Store className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-black text-app">Google Play (Android)</h2>
+                <p className="text-[11px] text-muted mt-0.5">Native app for neighbors on the invite list</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h2 className="text-sm font-black text-app">Google Play (Android)</h2>
-              <p className="text-[11px] text-muted mt-0.5">For neighbors after the first 500 — or anyone on the invite list</p>
-            </div>
-          </div>
 
-          <p className="text-xs text-muted mb-4 leading-relaxed">
-            Open on your <strong className="text-app">Android phone</strong> while signed into the{' '}
-            <strong className="text-app">Gmail on your tester list</strong> (if invited). Tap{' '}
-            <strong className="text-app">Become a tester</strong>, then install. Sign in to the app with your usual
-            SacramentoBuyNothing email and password.
-          </p>
+            <p className="text-xs text-muted mb-4 leading-relaxed">
+              Open on your <strong className="text-app">Android phone</strong> while signed into the{' '}
+              <strong className="text-app">Gmail on your tester list</strong> (if invited). Tap{' '}
+              <strong className="text-app">Become a tester</strong>, then install.
+            </p>
 
-          <a
-            href={SITE.playStoreBetaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black uppercase tracking-wide rounded-xl transition-colors"
-          >
-            <Store className="w-4 h-4" />
-            Download from Play Store
-          </a>
-        </PublicCard>
+            <a
+              href={SITE.playStoreBetaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black uppercase tracking-wide rounded-xl transition-colors"
+            >
+              <Store className="w-4 h-4" />
+              Get it from Play Store
+            </a>
+          </PublicCard>
+        ) : null}
 
-        {!canDownloadApkFromWebsite && apkAccessMessage ? (
+        {!isPublicDownloadPage && !showApkSection && apkAccessMessage ? (
           <p className="text-xs text-muted bg-inset border border-app rounded-xl px-4 py-3 leading-relaxed">
             {apkAccessMessage}
           </p>
         ) : null}
 
-        <div className={`grid gap-4 ${canDownloadApkFromWebsite ? 'md:grid-cols-2' : ''}`}>
-          {canDownloadApkFromWebsite ? (
+        <div className={`grid gap-4 ${isPublicDownloadPage || showApkSection ? 'md:grid-cols-2' : ''}`}>
+          {isPublicDownloadPage ? (
+            <PublicCard className="h-full">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25">
+                  <Store className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-black text-app">Google Play (Android)</h2>
+                  <p className="text-[11px] text-muted mt-0.5">Native app — sign in with your community account after install</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted mb-4 leading-relaxed">
+                On your <strong className="text-app">Android phone</strong>, open the link while signed into the{' '}
+                <strong className="text-app">Gmail on your tester list</strong>. Tap{' '}
+                <strong className="text-app">Become a tester</strong>, then install from Play Store.
+              </p>
+
+              <a
+                href={SITE.playStoreBetaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black uppercase tracking-wide rounded-xl transition-colors"
+              >
+                <Store className="w-4 h-4" />
+                Get it from Play Store
+              </a>
+
+              <p className="text-[11px] text-subtle mt-3 leading-relaxed">
+                Free APK sideload is not offered on this public page. Sign in and open Account → Install if you joined
+                in the first 500 neighbors.
+              </p>
+            </PublicCard>
+          ) : null}
+
+          {showApkSection ? (
           <PublicCard className="h-full">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
@@ -372,9 +411,9 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
         <PublicCard>
           <h2 className="text-sm font-black text-app mb-1">Which should you use?</h2>
           <p className="text-xs text-muted mb-4 leading-relaxed">
-            All options connect to the same Sacramento community. Home screen works everywhere. Google Play is the native
-            Android path for neighbors who joined after our first 500. Free APK sideload on this website is only for
-            those early joiners.
+            {isPublicDownloadPage
+              ? 'Both connect to the same Sacramento community. Use Google Play on Android if you are on the invite list, or add to your home screen on any phone — no file download required for home screen.'
+              : 'All options connect to the same Sacramento community. Home screen works everywhere. Google Play is the native Android path for most neighbors. Free APK sideload in Account is only for our first 500 joiners.'}
           </p>
 
           <div className="overflow-x-auto -mx-1">
@@ -382,7 +421,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
               <thead>
                 <tr className="text-[10px] font-black uppercase tracking-widest text-subtle">
                   <th className="pb-2 pr-4">Feature</th>
-                  <th className="pb-2 pr-4 text-accent">Play / APK</th>
+                  <th className="pb-2 pr-4 text-accent">{isPublicDownloadPage ? 'Google Play' : 'Play / APK'}</th>
                   <th className="pb-2">Home screen / PWA</th>
                 </tr>
               </thead>
@@ -390,9 +429,11 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
                 <ComparisonRow
                   label="Install"
                   apk={
-                    canDownloadApkFromWebsite
-                      ? 'Google Play (most) or free APK sideload (first 500)'
-                      : 'Google Play on Android (if invited)'
+                    isPublicDownloadPage
+                      ? 'Get it from Play Store on Android (if invited)'
+                      : showApkSection
+                        ? 'Google Play or free APK sideload (first 500, in Account)'
+                        : 'Get it from Play Store on Android (if invited)'
                   }
                   homeScreen="Add to Home Screen from browser"
                 />
@@ -419,9 +460,11 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
                 <ComparisonRow
                   label="Best for"
                   apk={
-                    canDownloadApkFromWebsite
-                      ? 'Early neighbors (APK) or Play invite list'
-                      : 'Android neighbors on the Play tester list'
+                    isPublicDownloadPage
+                      ? 'Android neighbors on the Play tester list'
+                      : showApkSection
+                        ? 'Early neighbors (APK in Account) or Play invite list'
+                        : 'Android neighbors on the Play tester list'
                   }
                   homeScreen="Quick install, auto-updates, iPhone + Android"
                 />
@@ -435,10 +478,11 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
             <div className="flex gap-3">
               <Bell className="w-5 h-5 text-accent shrink-0" />
               <div>
-                <p className="font-bold text-app">Native Android alerts</p>
+                <p className="font-bold text-app">{isPublicDownloadPage ? 'Play Store alerts' : 'Native Android alerts'}</p>
                 <p className="text-muted mt-1 leading-relaxed">
-                  Google Play or APK installs use Firebase push — stronger when your phone is asleep or the app is swiped
-                  away.
+                  {isPublicDownloadPage
+                    ? 'Google Play installs use Firebase push — stronger when your phone is asleep or the app is swiped away.'
+                    : 'Google Play or APK installs use Firebase push — stronger when your phone is asleep or the app is swiped away.'}
                 </p>
               </div>
             </div>
