@@ -93,6 +93,7 @@ import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
 import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath, normalizePublicPath } from './public/routes';
 import DownloadPage from './components/public/pages/DownloadPage';
+import { canDownloadApkFromWebsite } from './lib/apkWebsiteAccess';
 import { isPlayReviewBrowseOnly } from './lib/playReviewAccount';
 import { BrowseOnlyProvider } from './contexts/BrowseOnlyContext';
 
@@ -1610,6 +1611,7 @@ export default function App() {
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {showDownloadPage && sessionUser ? (
         <DownloadPage
+          userProfile={userProfile}
           onBack={() => {
             setShowDownloadPage(false);
             const tab = readPersistedTab(userProfile?.uid);
@@ -2157,13 +2159,24 @@ export default function App() {
           
           {!isIOS && (
             <div className="mt-3 flex items-center justify-end flex-wrap gap-2 pt-2.5 border-t border-app">
-              <button
-                type="button"
-                onClick={handleOpenDownload}
-                className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all cursor-pointer"
-              >
-                ANDROID APK
-              </button>
+              {canDownloadApkFromWebsite(userProfile) ? (
+                <button
+                  type="button"
+                  onClick={handleOpenDownload}
+                  className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all cursor-pointer"
+                >
+                  ANDROID APK
+                </button>
+              ) : (
+                <a
+                  href={SITE.playStoreBetaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 text-[11px] font-extrabold text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
+                >
+                  GOOGLE PLAY
+                </a>
+              )}
               <button
                 onClick={handleDismissPrompt}
                 className="px-3.5 py-1.5 text-[11px] font-extrabold text-muted hover:text-app rounded-lg transition-all cursor-pointer"

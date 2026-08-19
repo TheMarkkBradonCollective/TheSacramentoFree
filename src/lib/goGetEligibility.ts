@@ -77,7 +77,7 @@ export function goGetBlockAlert(eligibility: Extract<GoGetEligibility, { ok: fal
       return {
         title: 'Install the app to use Go Get',
         message:
-          'Pickup coordination (Go Get, Drop off, Meet up, and claim-at-pin) only works in the installed app — Android APK or Add to Home Screen. Open Download from the home page or Account to install, then turn on notifications.',
+          'Pickup coordination (Go Get, Drop off, Meet up, and claim-at-pin) only works in the installed app — Add to Home Screen, Google Play, or free APK sideload for our first 500 neighbors. Open Download from Account to install, then turn on notifications.',
         okLabel: 'Got it',
       };
     case 'need_notifications':

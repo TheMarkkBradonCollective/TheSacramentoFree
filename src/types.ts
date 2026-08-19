@@ -56,6 +56,8 @@ export interface UserProfile {
    * coordination and uses listing + chat only. Default true when unset.
    */
   goGetEnabled?: boolean;
+  /** 1 = earliest neighbor; used for milestone awards and APK website access. */
+  joinRank?: number | null;
   createdAt: any;
   lastActiveAt?: string | null;
 }
