@@ -9,6 +9,7 @@ import {
   Bell,
   Zap,
   Globe,
+  Store,
 } from 'lucide-react';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
@@ -120,7 +121,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
         </button>
         <header className="sbn-page-header">
           <h1>Download the app</h1>
-          <p>Choose the Android APK or add {SITE.shortName} to your home screen — compare both below.</p>
+          <p>Choose Google Play (beta testers), the Android APK, or add {SITE.shortName} to your home screen — compare options below.</p>
         </header>
         <div className="space-y-4 min-w-0">{renderBody()}</div>
       </div>
@@ -128,7 +129,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
   ) : (
     <PublicPageShell
       title="Download the app"
-      subtitle={`Get ${SITE.shortName} on your phone — Android APK or home screen install. Compare both options below.`}
+      subtitle={`Get ${SITE.shortName} on your phone — Google Play beta, Android APK, or home screen install.`}
       className="min-w-0 overflow-x-hidden"
     >
       {renderBody()}
@@ -166,6 +167,40 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
         {error ? (
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         ) : null}
+
+        <PublicCard>
+          <div className="flex items-start gap-3 mb-4">
+            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25">
+              <Store className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-black text-app">Google Play (beta testers)</h2>
+              <p className="text-[11px] text-muted mt-0.5">Recommended if you were invited to the Play beta</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted mb-4 leading-relaxed">
+            Open this on your <strong className="text-app">Android phone</strong> while signed into the{' '}
+            <strong className="text-app">same Gmail</strong> we have on your SacramentoBuyNothing account. Tap{' '}
+            <strong className="text-app">Become a tester</strong>, then install from the Play Store. Sign in to the app
+            with your usual community email and password.
+          </p>
+
+          <a
+            href={SITE.playStoreBetaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black uppercase tracking-wide rounded-xl transition-colors"
+          >
+            <Store className="w-4 h-4" />
+            Download from Play Store
+          </a>
+
+          <p className="text-[11px] text-subtle mt-3 leading-relaxed">
+            Not on the invite list, or install fails? Use the APK below or ask for help in Chat → Support — fake signup
+            emails cannot be added to Play testing.
+          </p>
+        </PublicCard>
 
         <div className="grid md:grid-cols-2 gap-4">
           <PublicCard className="h-full">
@@ -342,7 +377,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
               <tbody>
                 <ComparisonRow
                   label="Install"
-                  apk="Download APK file, install once"
+                  apk="Play Store beta, APK file, or sideload"
                   homeScreen="Add to Home Screen from browser"
                 />
                 <ComparisonRow

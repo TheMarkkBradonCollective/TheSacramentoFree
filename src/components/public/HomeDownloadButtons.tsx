@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Smartphone } from 'lucide-react';
+import { Download, Smartphone, Store } from 'lucide-react';
 import TrackedDownloadLink from '../TrackedDownloadLink';
 import { useInstallVersions } from '../../hooks/useInstallVersions';
 import { detectInstallKind } from '../../lib/installContext';
@@ -51,7 +51,17 @@ export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsP
   return (
     <div className="mt-4 space-y-2">
       <p className="text-xs font-semibold text-muted uppercase tracking-wider">Get the app</p>
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <a
+          href={SITE.playStoreBetaUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="sbn-btn sbn-btn-primary inline-flex items-center justify-center gap-2"
+        >
+          <Store className="w-4 h-4" />
+          Download from Play Store
+        </a>
+
         {apkUrl ? (
           <TrackedDownloadLink
             href={apkUrl}
