@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Smartphone } from 'lucide-react';
+import { Download, Smartphone, Store } from 'lucide-react';
 import TrackedDownloadLink from '../TrackedDownloadLink';
 import { useInstallVersions } from '../../hooks/useInstallVersions';
 import { detectInstallKind } from '../../lib/installContext';
@@ -17,7 +17,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsProps) {
-  const { latestApk, apkDownloadHref } = useInstallVersions();
+  const { latestApk, apkDownloadHref, canDownloadApkFromWebsite } = useInstallVersions(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
   const isStandalone = installKind === 'pwa' || installKind === 'ios-pwa';
@@ -45,32 +45,32 @@ export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsP
 
   if (isNativeApp()) return null;
 
-  const apkUrl = apkDownloadHref;
   const pwaLabel = deferredPrompt ? 'Install app' : 'Add to Home Screen';
 
   return (
     <div className="mt-4 space-y-2">
       <p className="text-xs font-semibold text-muted uppercase tracking-wider">Get the app</p>
-      <div className="flex flex-col sm:flex-row gap-3">
-        {apkUrl ? (
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <a
+          href={SITE.playStoreBetaUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="sbn-btn sbn-btn-primary inline-flex items-center justify-center gap-2"
+        >
+          <Store className="w-4 h-4" />
+          Download from Play Store
+        </a>
+
+        {canDownloadApkFromWebsite && apkDownloadHref ? (
           <TrackedDownloadLink
-            href={apkUrl}
+            href={apkDownloadHref}
             download={latestApk?.fileName || 'sac-buy-nothing.apk'}
             className="sbn-btn sbn-btn-secondary inline-flex items-center justify-center gap-2"
           >
             <Download className="w-4 h-4" />
             {latestApk?.betaLabel ? `Download ${latestApk.betaLabel}` : 'Download APK'}
           </TrackedDownloadLink>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onNavigate('download')}
-            className="sbn-btn sbn-btn-secondary inline-flex items-center justify-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Download APK
-          </button>
-        )}
+        ) : null}
 
         {!isStandalone ? (
           <button

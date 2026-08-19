@@ -12,7 +12,9 @@ export const SITE = {
     'Sacramento Buy Nothing — free local gifting. No selling, no bidding, no flipping. Neighbors helping neighbors across Sacramento.',
   principles: ['No selling.', 'No bidding.', 'No flipping.', 'Just neighbors helping neighbors.'],
   freeRule: 'Everything posted must be 100% free.',
-  downloadHelper: 'Get the SacramentoBuyNothing app — Android or add to your home screen.',
+  downloadHelper: 'Get the SacramentoBuyNothing app — Google Play, home screen install, or APK for our first 500 neighbors.',
+  /** Google Play Internal testing / store opt-in — neighbors need matching Gmail on the tester list. */
+  playStoreBetaUrl: 'https://play.google.com/apps/internaltest/4701336413298152827/join',
   joinCta: {
     title: 'Join The Community',
     lines: [

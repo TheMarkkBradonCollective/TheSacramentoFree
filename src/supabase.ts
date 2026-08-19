@@ -403,6 +403,12 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     suspendedUntil,
     // Default true when column missing / null — only explicit false opts out.
     goGetEnabled: row.goGetEnabled === false || row.go_get_enabled === false ? false : true,
+    joinRank:
+      typeof row.joinRank === 'number'
+        ? row.joinRank
+        : typeof row.join_rank === 'number'
+          ? row.join_rank
+          : null,
     createdAt: row.createdAt ?? row.created_at,
     lastActiveAt:
       typeof row.lastActiveAt === 'string'

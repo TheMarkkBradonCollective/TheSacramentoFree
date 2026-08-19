@@ -9,16 +9,20 @@ import {
   Bell,
   Zap,
   Globe,
+  Store,
 } from 'lucide-react';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
 import TrackedDownloadLink from '../../TrackedDownloadLink';
 import { useInstallVersions, type VersionStatus } from '../../../hooks/useInstallVersions';
+import { apkWebsiteAccessMessage } from '../../../lib/apkWebsiteAccess';
 import { SITE } from '../../../siteContent';
+import type { UserProfile } from '../../../types';
 
 interface DownloadPageProps {
   /** When set, show a back control for signed-in app users instead of public nav back. */
   onBack?: () => void;
+  userProfile?: UserProfile | null;
 }
 
 function StatusBadge({ status, optional = false }: { status: VersionStatus; optional?: boolean }) {
@@ -88,7 +92,7 @@ function ComparisonRow({
   );
 }
 
-function DownloadPageContent({ onBack }: DownloadPageProps) {
+function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
   const {
     installKind,
     installLabel,
@@ -103,13 +107,18 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
     currentApkVersionName,
     currentApkVersionCode,
     apkStatus,
+    canDownloadApkFromWebsite,
     refresh,
-  } = useInstallVersions();
+  } = useInstallVersions(userProfile);
 
   const usingApk = installKind === 'android-apk';
   const usingHomeScreen = installKind === 'pwa' || installKind === 'ios-pwa';
   const showApkHint =
-    !usingApk && apkStatus === 'not-installed' && (installKind === 'browser' || usingHomeScreen);
+    canDownloadApkFromWebsite &&
+    !usingApk &&
+    apkStatus === 'not-installed' &&
+    (installKind === 'browser' || usingHomeScreen);
+  const apkAccessMessage = apkWebsiteAccessMessage(userProfile);
 
   const shell = onBack ? (
     <div className="sbn-download-in-app min-h-screen min-h-[100dvh] overflow-y-auto overflow-x-hidden bg-app text-app">
@@ -120,7 +129,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
         </button>
         <header className="sbn-page-header">
           <h1>Download the app</h1>
-          <p>Choose the Android APK or add {SITE.shortName} to your home screen — compare both below.</p>
+          <p>Google Play for most neighbors, home screen for everyone, and free APK sideload for our first 500 joiners.</p>
         </header>
         <div className="space-y-4 min-w-0">{renderBody()}</div>
       </div>
@@ -128,7 +137,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
   ) : (
     <PublicPageShell
       title="Download the app"
-      subtitle={`Get ${SITE.shortName} on your phone — Android APK or home screen install. Compare both options below.`}
+      subtitle={`Get ${SITE.shortName} on your phone — Google Play, home screen install, or APK if you joined in the first 500.`}
       className="min-w-0 overflow-x-hidden"
     >
       {renderBody()}
@@ -167,7 +176,43 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         ) : null}
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <PublicCard>
+          <div className="flex items-start gap-3 mb-4">
+            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25">
+              <Store className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-black text-app">Google Play (Android)</h2>
+              <p className="text-[11px] text-muted mt-0.5">For neighbors after the first 500 — or anyone on the invite list</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted mb-4 leading-relaxed">
+            Open on your <strong className="text-app">Android phone</strong> while signed into the{' '}
+            <strong className="text-app">Gmail on your tester list</strong> (if invited). Tap{' '}
+            <strong className="text-app">Become a tester</strong>, then install. Sign in to the app with your usual
+            SacramentoBuyNothing email and password.
+          </p>
+
+          <a
+            href={SITE.playStoreBetaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black uppercase tracking-wide rounded-xl transition-colors"
+          >
+            <Store className="w-4 h-4" />
+            Download from Play Store
+          </a>
+        </PublicCard>
+
+        {!canDownloadApkFromWebsite && apkAccessMessage ? (
+          <p className="text-xs text-muted bg-inset border border-app rounded-xl px-4 py-3 leading-relaxed">
+            {apkAccessMessage}
+          </p>
+        ) : null}
+
+        <div className={`grid gap-4 ${canDownloadApkFromWebsite ? 'md:grid-cols-2' : ''}`}>
+          {canDownloadApkFromWebsite ? (
           <PublicCard className="h-full">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
@@ -252,6 +297,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
               SacramentoBuyNothing app first, then try again.
             </p>
           </PublicCard>
+          ) : null}
 
           <PublicCard className="h-full">
             <div className="flex items-start justify-between gap-3 mb-4">
@@ -289,7 +335,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
               </p>
             ) : usingHomeScreen ? (
               <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4">
-                You are on the home screen version — it refreshes itself in the background. No manual APK download
+                You are on the home screen version — it refreshes itself in the background. No manual file download
                 needed unless you want the benefits listed below.
               </p>
             ) : null}
@@ -326,8 +372,9 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
         <PublicCard>
           <h2 className="text-sm font-black text-app mb-1">Which should you use?</h2>
           <p className="text-xs text-muted mb-4 leading-relaxed">
-            Both connect to the same Sacramento community. Stay on home screen if you prefer zero maintenance. Switch to
-            the APK if you want stronger background notifications and a Play-Store-style install on Android.
+            All options connect to the same Sacramento community. Home screen works everywhere. Google Play is the native
+            Android path for neighbors who joined after our first 500. Free APK sideload on this website is only for
+            those early joiners.
           </p>
 
           <div className="overflow-x-auto -mx-1">
@@ -335,14 +382,18 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
               <thead>
                 <tr className="text-[10px] font-black uppercase tracking-widest text-subtle">
                   <th className="pb-2 pr-4">Feature</th>
-                  <th className="pb-2 pr-4 text-accent">Android APK</th>
+                  <th className="pb-2 pr-4 text-accent">Play / APK</th>
                   <th className="pb-2">Home screen / PWA</th>
                 </tr>
               </thead>
               <tbody>
                 <ComparisonRow
                   label="Install"
-                  apk="Download APK file, install once"
+                  apk={
+                    canDownloadApkFromWebsite
+                      ? 'Google Play (most) or free APK sideload (first 500)'
+                      : 'Google Play on Android (if invited)'
+                  }
                   homeScreen="Add to Home Screen from browser"
                 />
                 <ComparisonRow
@@ -367,7 +418,11 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
                 />
                 <ComparisonRow
                   label="Best for"
-                  apk="Android neighbors who want reliable alerts & an app icon"
+                  apk={
+                    canDownloadApkFromWebsite
+                      ? 'Early neighbors (APK) or Play invite list'
+                      : 'Android neighbors on the Play tester list'
+                  }
                   homeScreen="Quick install, auto-updates, iPhone + Android"
                 />
               </tbody>
@@ -380,9 +435,10 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
             <div className="flex gap-3">
               <Bell className="w-5 h-5 text-accent shrink-0" />
               <div>
-                <p className="font-bold text-app">APK = stronger alerts</p>
+                <p className="font-bold text-app">Native Android alerts</p>
                 <p className="text-muted mt-1 leading-relaxed">
-                  Native Firebase notifications are more reliable when your phone is asleep or the app is swiped away.
+                  Google Play or APK installs use Firebase push — stronger when your phone is asleep or the app is swiped
+                  away.
                 </p>
               </div>
             </div>
@@ -391,7 +447,7 @@ function DownloadPageContent({ onBack }: DownloadPageProps) {
               <div>
                 <p className="font-bold text-app">Home screen = zero hassle</p>
                 <p className="text-muted mt-1 leading-relaxed">
-                  No APK files to manage. Site deploys flow to you automatically — optional refresh if you are eager.
+                  No install files to manage. Site deploys flow to you automatically — optional refresh if you are eager.
                 </p>
               </div>
             </div>
