@@ -61,6 +61,7 @@ const APK_0032_PUBLISHED_AT = '2026-08-20T13:28:00.000Z';
 const APK_0034_PUBLISHED_AT = '2026-08-20T14:10:00.000Z';
 const APK_0035_PUBLISHED_AT = '2026-08-20T14:55:00.000Z';
 const APK_0036_PUBLISHED_AT = '2026-08-20T15:40:00.000Z';
+const APK_0037_PUBLISHED_AT = '2026-08-20T16:10:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -115,6 +116,37 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0037',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0037',
+    'Live neighbor Feed, Chat makeover, map route zoom-to-fit, lower map controls.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0037 (versionCode 37).
+
+Since 0036:
+• Neighbor Feed — posts (text/photos), nested comments, emoji reactions, votes, report/delete
+• Chat tab (was Messages) — messenger-style inbox header and bubbles
+• Map — route line zooms to fit when you select a listing; GPS/+ buttons sit lower
+• Square Map button centered in footer
+
+Supabase: run scripts/supabase-migration-aug-20-2026-neighbor-feed.sql for Feed tables.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0037.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 37
+- play-store-assets/release-notes-v0.1.0-0037.txt
+- src/components/FeedView.tsx — live neighbor feed
+- src/components/SacramentoMapView.tsx — route fit + control placement
+
+HISTORY
+2026-08-20 — /runit release; Android beta 0037 built.`,
+    APK_0037_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0036',
     '2026-08-20',
@@ -1177,6 +1209,28 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0037',
+    '2026-08-20',
+    'New Android beta 0037 — live Feed, Chat makeover, map route fit',
+    'Neighbor wall with posts and comments, Chat tab, map zooms to route. Play Store: upload AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0037: live neighbor Feed, Chat makeover, map route zoom-to-fit, lower map controls.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-20-2026-neighbor-feed.sql in Supabase for Feed.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0037.
+
+HISTORY
+2026-08-20 — Android beta 0037 /runit release.`,
+    APK_0037_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0036',
     '2026-08-20',
