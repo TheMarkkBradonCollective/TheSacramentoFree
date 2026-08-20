@@ -2508,7 +2508,20 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 }
 
 .sbn-map-edge-bottom {
-  bottom: calc(1rem + var(--sbn-safe-area-bottom, var(--sbn-inset-bottom, 0px)));
+  bottom: 0.5rem;
+}
+
+.sbn-map-selection-dock {
+  bottom: 0.5rem;
+}
+
+.sbn-map-float-btn {
+  bottom: 0.5rem;
+  z-index: 25;
+}
+
+.sbn-map-has-selection .sbn-map-float-btn {
+  bottom: calc(var(--sbn-map-card-stack, 11rem) + 0.5rem);
 }
 
 .sbn-map-edge-top {
