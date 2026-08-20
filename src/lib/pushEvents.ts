@@ -11,6 +11,7 @@ import {
   pushUrlForMessageRequests,
   pushUrlForRequest,
   pushUrlForDirectorOverview,
+  pushUrlForFeedPost,
 } from './pushDeepLink';
 
 function itemCoords(item: ItemPost): { lat: number; lng: number } | null {
@@ -232,6 +233,74 @@ export async function notifyListingDownvote(params: {
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
     tag: `vote-down-${params.item.id}-${params.voterUserId}`,
+  });
+}
+
+export async function notifyFeedComment(params: {
+  postId: string;
+  authorUserId: string;
+  commenterName: string;
+  preview: string;
+  commentId?: string;
+}) {
+  const tag = params.commentId
+    ? `feed-comment-${params.commentId}`
+    : `feed-comment-${params.postId}-${Date.now()}`;
+
+  await sendPushNotification({
+    eventType: 'feed_comment',
+    title: 'New comment on your feed post',
+    body: `${params.commenterName}: ${params.preview.slice(0, 120)}`,
+    url: pushUrlForFeedPost(params.postId),
+    listingId: params.postId,
+    recipientUserIds: [params.authorUserId],
+    tag,
+    data: { feedPostId: params.postId },
+  });
+}
+
+export async function notifyFeedReaction(params: {
+  postId: string;
+  authorUserId: string;
+  reactorUserId: string;
+  emoji: string;
+  preview: string;
+}) {
+  await sendPushNotification({
+    eventType: 'feed_reaction',
+    title: 'New reaction on your feed post',
+    body: `Someone reacted ${params.emoji} to "${params.preview.slice(0, 80)}"`,
+    url: pushUrlForFeedPost(params.postId),
+    listingId: params.postId,
+    recipientUserIds: [params.authorUserId],
+    tag: `feed-react-${params.postId}-${params.reactorUserId}-${params.emoji}`,
+    data: { feedPostId: params.postId, emoji: params.emoji },
+  });
+}
+
+export async function notifyFeedUpvote(params: { postId: string; authorUserId: string; voterUserId: string }) {
+  await sendPushNotification({
+    eventType: 'feed_upvote',
+    title: 'New upvote on your feed post',
+    body: 'Someone upvoted your feed post',
+    url: pushUrlForFeedPost(params.postId),
+    listingId: params.postId,
+    recipientUserIds: [params.authorUserId],
+    tag: `feed-vote-up-${params.postId}-${params.voterUserId}`,
+    data: { feedPostId: params.postId },
+  });
+}
+
+export async function notifyFeedDownvote(params: { postId: string; authorUserId: string; voterUserId: string }) {
+  await sendPushNotification({
+    eventType: 'feed_downvote',
+    title: 'Feedback on your feed post',
+    body: 'Someone downvoted your feed post',
+    url: pushUrlForFeedPost(params.postId),
+    listingId: params.postId,
+    recipientUserIds: [params.authorUserId],
+    tag: `feed-vote-down-${params.postId}-${params.voterUserId}`,
+    data: { feedPostId: params.postId },
   });
 }
 

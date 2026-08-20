@@ -305,7 +305,9 @@ export async function pushAfterItemStatusChange(
   if (!item) return;
 
   // pending_pickup uses the dedicated pickup_scheduled alert (pushAfterPendingPickup).
-  if (newStatus !== 'pending_pickup') {
+  const skipGenericStatus =
+    newStatus === 'completed' && item.type !== 'looking';
+  if (newStatus !== 'pending_pickup' && !skipGenericStatus) {
     await notifyListingStatus({
       item: { ...item, status: newStatus as ItemPost['status'] },
       statusLabel: listingStatusLabelForItem(newStatus, item.type),

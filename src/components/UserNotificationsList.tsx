@@ -45,6 +45,8 @@ function formatWhen(iso: string): string {
 function kindIcon(kind: UserNotificationKind) {
   switch (kind) {
     case 'comment':
+    case 'feed_comment':
+    case 'feed_reaction':
       return MessageSquare;
     case 'message':
     case 'message_request':
@@ -66,8 +68,10 @@ function kindIcon(kind: UserNotificationKind) {
     case 'saved_item':
       return Heart;
     case 'upvote':
+    case 'feed_upvote':
       return ArrowUp;
     case 'downvote':
+    case 'feed_downvote':
       return ArrowDown;
     case 'claim':
     case 'gift':
@@ -93,8 +97,10 @@ function kindIcon(kind: UserNotificationKind) {
 function kindColor(kind: UserNotificationKind): string {
   switch (kind) {
     case 'upvote':
+    case 'feed_upvote':
       return 'text-emerald-400 bg-emerald-500/10';
     case 'downvote':
+    case 'feed_downvote':
       return 'text-amber-400 bg-amber-500/10';
     case 'claim':
     case 'claim_request':
@@ -105,6 +111,9 @@ function kindColor(kind: UserNotificationKind): string {
     case 'message':
     case 'message_request':
     case 'community_chat':
+    case 'comment':
+    case 'feed_comment':
+    case 'feed_reaction':
       return 'text-sky-400 bg-sky-500/10';
     case 'announcement':
     case 'app_update':
@@ -122,7 +131,20 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
   }
   if (
     item.itemId &&
+    (item.kind === 'feed_comment' ||
+      item.kind === 'feed_reaction' ||
+      item.kind === 'feed_upvote' ||
+      item.kind === 'feed_downvote')
+  ) {
+    return { tab: 'feed', feedPostId: item.itemId };
+  }
+  if (
+    item.itemId &&
     (item.kind === 'comment' ||
+      item.kind === 'feed_comment' ||
+      item.kind === 'feed_reaction' ||
+      item.kind === 'feed_upvote' ||
+      item.kind === 'feed_downvote' ||
       item.kind === 'upvote' ||
       item.kind === 'downvote' ||
       item.kind === 'new_listing' ||

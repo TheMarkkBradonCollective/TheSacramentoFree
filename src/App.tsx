@@ -13,7 +13,7 @@ import PostItemModal from './components/PostItemModal';
 import NewListingModal, { type NewListingModalMode } from './components/NewListingModal';
 import FeedPostDetailView from './components/feed/FeedPostDetailView';
 import ItemDetailView from './components/ItemDetailView';
-import { deleteFeedPost } from './lib/feedApi';
+import { deleteFeedPost, getFeedPostById } from './lib/feedApi';
 import { isStaffRole } from './lib/roles';
 import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
@@ -1592,6 +1592,22 @@ export default function App() {
         }
         tabForUrl = 'events';
         navigateToTab('events');
+      }
+      if (target.feedPostId) {
+        const openFeedPost = (post: FeedPost | null | undefined) => {
+          if (!post) {
+            void alert({ message: 'This feed post is no longer available.' });
+            return;
+          }
+          if (blockedUserIds.has(post.userId)) {
+            void alert({ message: 'This post is unavailable.' });
+            return;
+          }
+          setDetailFeedPost(post);
+        };
+        void getFeedPostById(target.feedPostId).then((post) => openFeedPost(post));
+        tabForUrl = 'feed';
+        navigateToTab('feed');
       }
       if (target.requestId) {
         void getClaimRequestById(target.requestId).then((request) => {
