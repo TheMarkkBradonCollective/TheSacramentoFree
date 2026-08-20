@@ -10,7 +10,7 @@ import { supabase } from '../supabase';
 import { canManageAwards } from './roles';
 import { getCommunityUnlockStatus } from './communityUnlock';
 
-export const AWARDS_UNLOCK_TARGET = 500;
+export const AWARDS_UNLOCK_TARGET = 250;
 
 function normalizeAwardDefinitionRow(row: Record<string, unknown>): AwardDefinition {
   const autoRuleRaw = row.autoRule as Record<string, unknown> | null | undefined;

@@ -414,13 +414,13 @@ export const TERMS = {
 
 export const AWARDS = {
   panelTitle: 'Neighbor Awards',
-  panelSubtitle: 'Fun badges for generous neighbors — unlock at 500 members!',
+  panelSubtitle: 'Fun badges for generous neighbors — unlock at 250 members!',
   panelIntro:
     'Celebrate the free gifts, fulfilled requests, trades, and neighborly moments you have built over time.',
   unlockBadge: 'Almost party time',
   unlockTitle: 'Let\'s unlock awards together!',
   unlockBody:
-    'We need 500 neighbors before the badge party starts. Copy your invite link and share it with friends, family, and folks in your neighborhood — every new neighbor helps!',
+    'We need 250 neighbors before the badge party starts. Copy your invite link and share it with friends, family, and folks in your neighborhood — every new neighbor helps!',
   unlockNote:
     'Early joiners (the first 100, 200, 300, 400, and 500 members) get special founding badges. Lots more badges unlock automatically as you give, claim, chat, and show up for the community.',
   shareButton: 'Copy link & spread the word',
