@@ -7,6 +7,8 @@ import { effectivePastRsvp } from '../lib/eventRsvp';
 import RoleBadge from './RoleBadge';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
+import { useUserDisplayInfo } from '../hooks/useUserDisplayInfo';
+import { PresenceUserAvatar } from './UserAvatar';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmRemoveComment } from '../lib/destructiveConfirm';
 
@@ -58,6 +60,7 @@ export default function EventEngagement({
   const { userRsvp, going, maybe, notGoing, gone, missed } = rsvpState;
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
+  const commenterInfo = useUserDisplayInfo(comments.map((comment) => comment.userId));
   const { confirm } = useConfirm();
 
   const requestDeleteComment = async (commentId: string) => {
@@ -157,7 +160,7 @@ export default function EventEngagement({
                   const isOwnComment = comment.userId === currentUserId;
                   const canReport =
                     userProfile && !isOwnComment && comment.userId !== hostUserId && !isStaffActingOfficial(userProfile);
-                  const commenterRole = commenterRoles?.[comment.userId];
+                  const commenterRole = commenterRoles?.[comment.userId] ?? commenterInfo[comment.userId]?.role;
                   const commenterIsStaff = shouldShowStaffBadgeOnComment(commenterRole, comment);
                   return (
                     <li
@@ -173,14 +176,12 @@ export default function EventEngagement({
                           className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-90 cursor-pointer"
                           disabled={!onViewProfile}
                         >
-                          <img
-                            src={
-                              comment.userPhoto ||
-                              `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(comment.userName)}`
-                            }
-                            alt=""
-                            className="w-6 h-6 rounded-full border border-app shrink-0"
-                            referrerPolicy="no-referrer"
+                          <PresenceUserAvatar
+                            uid={comment.userId}
+                            src={commenterInfo[comment.userId]?.photoURL ?? comment.userPhoto}
+                            name={comment.userName}
+                            size="xs"
+                            showStatus={false}
                           />
                           <span className="text-xs font-bold text-app">{comment.userName}</span>
                           {commenterIsStaff && commenterRole ? (

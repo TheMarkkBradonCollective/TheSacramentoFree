@@ -262,7 +262,7 @@ export default function DirectMessageRequestModal({
                     active ? 'bg-accent-soft' : 'hover:bg-inset'
                   }`}
                 >
-                  <UserAvatar src={neighbor.photoURL} name={neighbor.displayName} size="sm" />
+                  <UserAvatar uid={neighbor.uid} src={neighbor.photoURL} name={neighbor.displayName} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-app truncate">{neighbor.displayName}</p>
                     <NeighborRoleLine role={neighbor.role} />
@@ -280,7 +280,7 @@ export default function DirectMessageRequestModal({
         {selectedNeighbor && (
           <div className="rounded-xl border border-app bg-inset/40 p-4 space-y-3">
             <div className="flex items-center gap-3">
-              <UserAvatar src={selectedNeighbor.photoURL} name={selectedNeighbor.displayName} size="md" />
+              <UserAvatar uid={selectedNeighbor.uid} src={selectedNeighbor.photoURL} name={selectedNeighbor.displayName} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-app truncate">{selectedNeighbor.displayName}</p>
                 <NeighborRoleLine role={selectedNeighbor.role} />

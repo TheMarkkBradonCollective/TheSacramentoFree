@@ -271,7 +271,7 @@ export default function PickupAttributionModal({
                       active ? 'bg-accent-soft' : 'hover:bg-inset'
                     }`}
                   >
-                    <UserAvatar src={neighbor.photoURL} name={neighbor.displayName} size="sm" />
+                    <UserAvatar uid={neighbor.uid} src={neighbor.photoURL} name={neighbor.displayName} size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-app truncate">{neighbor.displayName}</p>
                       <p className="text-[10px] text-muted truncate">

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Flag, MessageSquare, Trash2 } from 'lucide-react';
 import { DiscussionComment, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
+import { useUserDisplayInfo } from '../hooks/useUserDisplayInfo';
+import { PresenceUserAvatar } from './UserAvatar';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmRemoveComment } from '../lib/destructiveConfirm';
 
@@ -34,6 +36,7 @@ export default function DiscussionComments({
 }: DiscussionCommentsProps) {
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
+  const commenterInfo = useUserDisplayInfo(comments.map((comment) => comment.userId));
   const { confirm } = useConfirm();
   const inputName = `${scope}Comment-${entityId}`;
   const headingId = `${scope}-comments-${entityId}`;
@@ -80,14 +83,12 @@ export default function DiscussionComments({
                       className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-90 cursor-pointer"
                       disabled={!onViewProfile}
                     >
-                      <img
-                        src={
-                          comment.userPhoto ||
-                          `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(comment.userName)}`
-                        }
-                        alt=""
-                        className="w-6 h-6 rounded-full border border-app shrink-0"
-                        referrerPolicy="no-referrer"
+                      <PresenceUserAvatar
+                        uid={comment.userId}
+                        src={commenterInfo[comment.userId]?.photoURL ?? comment.userPhoto}
+                        name={comment.userName}
+                        size="xs"
+                        showStatus={false}
                       />
                       <span className="text-xs font-bold text-app">{comment.userName}</span>
                       <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>

@@ -7,11 +7,11 @@ import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
 import StaffEventActions from './StaffEventActions';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
-import { getUserDisplayInfoByIds } from '../supabase';
 import { isEventEditable, isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
 import EventStatusBadge from './EventStatusBadge';
 import EventDetailNavigation from './EventDetailNavigation';
+import { PresenceUserAvatar } from './UserAvatar';
 import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface EventDetailViewProps {
@@ -93,7 +93,6 @@ export default function EventDetailView({
   onStartNavigationConsumed,
 }: EventDetailViewProps) {
   const [showPinModal, setShowPinModal] = useState(false);
-  const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const eventStatus = resolveEventStatus(event);
   const isOwner = event.userId === currentUserId;
   const isStaffViewer = isStaffActingOfficial(userProfile);
@@ -106,18 +105,6 @@ export default function EventDetailView({
   const upcomingInSeries =
     event.seriesId ? getUpcomingSeriesOccurrences(allEvents, event.seriesId) : [];
   const pastSiblings = seriesSiblings.filter((sibling) => !isEventUpcoming(sibling));
-
-  useEffect(() => {
-    const uniqueIds = [...new Set(comments.map((c) => c.userId))];
-    if (uniqueIds.length === 0) return;
-    void getUserDisplayInfoByIds(uniqueIds).then((info) => {
-      const roles: Record<string, UserProfile['role']> = {};
-      for (const [uid, data] of Object.entries(info)) {
-        if (data.role) roles[uid] = data.role;
-      }
-      setCommenterRoles(roles);
-    });
-  }, [comments]);
 
   useDismissOnEscape(onClose);
 
@@ -319,14 +306,11 @@ export default function EventDetailView({
               onClick={() => onViewProfile(event.userId)}
               className="flex items-center gap-3 w-full text-left hover:opacity-90 transition-opacity"
             >
-              <img
-                src={
-                  event.userPhotoURL ||
-                  `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(event.userDisplayName)}`
-                }
-                alt=""
-                className="w-10 h-10 rounded-full border border-app"
-                referrerPolicy="no-referrer"
+              <PresenceUserAvatar
+                uid={event.userId}
+                src={event.userPhotoURL}
+                name={event.userDisplayName}
+                size="md"
               />
               <div>
                 <p className="text-xs text-muted">Posted by</p>
@@ -364,7 +348,6 @@ export default function EventDetailView({
             rsvpDisabled={isCancelled}
             commentsLocked={commentsLocked}
             isPast={isPast}
-            commenterRoles={commenterRoles}
           />
         </div>
       </div>

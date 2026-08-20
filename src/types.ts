@@ -223,6 +223,7 @@ export interface SupportTicket {
   id: string;
   openerUserId: string;
   openerName: string;
+  openerPhotoURL?: string;
   openerRole: UserProfile['role'];
   minStaffRank: number;
   subject: string;

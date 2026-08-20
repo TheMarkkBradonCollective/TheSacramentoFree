@@ -214,6 +214,7 @@ export default function EventCard({
             className="flex items-center gap-1.5 sm:gap-2 min-w-0 text-left hover:opacity-90 cursor-pointer"
           >
             <UserAvatar
+              uid={event.userId}
               src={event.userPhotoURL}
               name={event.userDisplayName}
               size="sm"

@@ -9,6 +9,7 @@ import {
   type StaffApplicationDecision,
 } from '../../lib/staffApplications';
 import UserAvatar from '../UserAvatar';
+import { useUserDisplayInfo } from '../../hooks/useUserDisplayInfo';
 
 interface StaffApplicationQueueProps {
   actor: UserProfile;
@@ -48,6 +49,7 @@ export default function StaffApplicationQueue({
   onReviewed,
 }: StaffApplicationQueueProps) {
   const [busy, setBusy] = useState<StaffApplicationDecision | null>(null);
+  const applicantInfo = useUserDisplayInfo(current ? [current.applicantUserId] : []);
   const [err, setErr] = useState('');
 
   const handleDecision = async (decision: StaffApplicationDecision) => {
@@ -88,7 +90,12 @@ export default function StaffApplicationQueue({
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => onViewProfile(current.applicantUserId)} className="shrink-0">
-              <UserAvatar name={current.applicantName} size="sm" />
+              <UserAvatar
+                uid={current.applicantUserId}
+                src={applicantInfo[current.applicantUserId]?.photoURL}
+                name={current.applicantName}
+                size="sm"
+              />
             </button>
             <div className="min-w-0">
               <button

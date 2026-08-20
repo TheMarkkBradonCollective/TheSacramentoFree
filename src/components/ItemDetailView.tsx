@@ -25,6 +25,7 @@ import {
 } from '../lib/listingContent';
 import ListingPhotoGallery from './ListingPhotoGallery';
 import ListingEngagement from './ListingEngagement';
+import { PresenceUserAvatar } from './UserAvatar';
 import ItemDetailNavigation from './ItemDetailNavigation';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 import { SubItemAvailabilityList } from './SubItemPicker';
@@ -34,7 +35,7 @@ import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { isListingOpenForCoordination } from '../lib/roles';
 import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import { isStaffRole } from '../lib/roles';
-import { getListingSubitems, itemHasRecordedAppClaim, getUserDisplayInfoByIds } from '../supabase';
+import { getListingSubitems, itemHasRecordedAppClaim } from '../supabase';
 import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useSavedItems } from '../hooks/useSavedItems';
@@ -98,7 +99,6 @@ export default function ItemDetailView({
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [hasAppClaim, setHasAppClaim] = useState(false);
-  const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const isOwner = item.userId === currentUserId;
   const isStaffViewer = isStaffActingOfficial(userProfile);
   const isOpenForCoordination = isListingOpenForCoordination(item.status);
@@ -115,19 +115,6 @@ export default function ItemDetailView({
     void getListingSubitems(item.id).then(setSubitems);
     void itemHasRecordedAppClaim(item.id).then(setHasAppClaim);
   }, [item.id]);
-
-  // Fetch commenter roles so staff badges can be displayed on comments.
-  useEffect(() => {
-    const uniqueIds = [...new Set(comments.map((c) => c.userId))];
-    if (uniqueIds.length === 0) return;
-    void getUserDisplayInfoByIds(uniqueIds).then((info) => {
-      const roles: Record<string, UserProfile['role']> = {};
-      for (const [uid, data] of Object.entries(info)) {
-        if (data.role) roles[uid] = data.role;
-      }
-      setCommenterRoles(roles);
-    });
-  }, [comments]);
 
   useDismissOnEscape(onClose);
 
@@ -409,7 +396,6 @@ export default function ItemDetailView({
             userProfile={userProfile}
             onViewProfile={onViewProfile}
             variant="detail"
-            commenterRoles={commenterRoles}
           />
 
           <button
@@ -417,14 +403,11 @@ export default function ItemDetailView({
             onClick={() => onViewProfile(item.userId)}
             className="flex items-center gap-3 p-4 rounded-2xl bg-inset border border-app w-full text-left hover:bg-surface-hover transition-colors cursor-pointer"
           >
-            <img
-              src={
-                item.userPhotoURL ||
-                `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(item.userDisplayName)}`
-              }
-              alt=""
-              className="w-12 h-12 rounded-full border border-app"
-              referrerPolicy="no-referrer"
+            <PresenceUserAvatar
+              uid={item.userId}
+              src={item.userPhotoURL}
+              name={item.userDisplayName}
+              size="lg"
             />
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-app">{item.userDisplayName}</p>

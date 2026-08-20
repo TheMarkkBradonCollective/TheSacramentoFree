@@ -261,7 +261,7 @@ export default function UserProfileView({
       if (!uploadedUrl) {
         setPhotoURL(previousPhoto);
         setErrorMsg(
-          'Could not upload profile photo. Check your connection and Supabase storage (items bucket), then try again.',
+          'Could not upload profile photo. Check your connection and Supabase storage (avatars bucket), then try again.',
         );
         return;
       }
@@ -356,6 +356,7 @@ export default function UserProfileView({
           className={`${fullBleed ? sectionShell : 'sbn-section'} flex flex-col items-center text-center h-fit`}
         >
           <UserAvatar
+            uid={userProfile.uid}
             src={photoURL}
             name={userProfile.displayName}
             size="xl"
