@@ -966,9 +966,7 @@ export default function MapNavigationView({
       if (document.visibilityState === 'visible') {
         void requestWakeLock();
         touchActiveNavSession();
-        if (typeof window !== 'undefined' && window.speechSynthesis?.paused) {
-          window.speechSynthesis.resume();
-        }
+        voiceRef.current.unlock();
       }
     };
     const onPageHide = () => {
@@ -1606,7 +1604,7 @@ export default function MapNavigationView({
       voiceRef.current.setEnabled(next);
       if (next) {
         voiceRef.current.unlock();
-        voiceRef.current.speak('Voice guidance on.', `voice-on-${Date.now()}`);
+        speakGuidanceCard(`voice-on-${Date.now()}`, { prefix: 'Voice guidance on' });
       }
       writeNavigationSettings({ voiceEnabled: next });
       return next;
