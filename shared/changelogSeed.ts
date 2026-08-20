@@ -59,6 +59,7 @@ const APK_0030_PUBLISHED_AT = '2026-08-20T11:05:00.000Z';
 const APK_0031_PUBLISHED_AT = '2026-08-20T13:10:00.000Z';
 const APK_0032_PUBLISHED_AT = '2026-08-20T13:28:00.000Z';
 const APK_0034_PUBLISHED_AT = '2026-08-20T14:10:00.000Z';
+const APK_0035_PUBLISHED_AT = '2026-08-20T14:55:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -113,6 +114,36 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0035',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0035',
+    'Events toolbar + scoped New modals, filter master toggles, Everything/Giving/Looking/Trading, News vs Updates split.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0035 (versionCode 35).
+
+Since 0034:
+• Events page toolbar — New, Nearest/Newest, All/Upcoming/Past, filters, grid/list
+• New on Map opens Stuff or Event; Stuff feed = stuff only; Events feed = event only
+• Filter drawer master toggles expand/collapse each group
+• Feed type cycle: Everything / Giving / Looking / Trading (before Nearest/Newest)
+• News tab = releases + director posts; Updates tab = product changes only
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0035.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 35
+- play-store-assets/release-notes-v0.1.0-0035.txt
+- src/components/CollapsibleFilterSection.tsx — master filter toggles
+- src/components/EventsView.tsx — events toolbar
+
+HISTORY
+2026-08-20 — /runit release merging PRs #266, #269, #270; Android beta 0035 built.`,
+    APK_0035_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0034',
     '2026-08-20',
@@ -1118,6 +1149,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0035',
+    '2026-08-20',
+    'New Android beta 0035 — Events toolbar, filter toggles, News/Updates split',
+    'Events New button, scoped modals per page, collapsible filter groups, Everything/Giving/Looking/Trading. Play Store: upload AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0035: Events toolbar, page-specific New modals, filter master toggles, feed type labels, News vs Updates tabs.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0035.
+
+HISTORY
+2026-08-20 — Android beta 0035 /runit release (PRs #266, #269, #270).`,
+    APK_0035_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0034',
     '2026-08-20',
