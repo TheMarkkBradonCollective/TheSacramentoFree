@@ -12,7 +12,6 @@ import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import AppSidebar from './AppSidebar';
 import AppTopbar from './AppTopbar';
-import CommunityStatsBar from './CommunityStatsBar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import { isStaffRole, roleTheme } from '../lib/roles';
 import StaffUsersView from './staff/StaffUsersView';
@@ -243,10 +242,9 @@ export default function TabletView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="tablet_feed_pane"
-                contentClassName="sbn-tablet-content space-y-4"
+                contentClassName="sbn-tablet-content"
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
-                  <CommunityStatsBar items={items} variant="compact" />
                   <ItemGrid
                     items={items}
                     userProfile={userProfile}
@@ -266,10 +264,9 @@ export default function TabletView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="tablet_events_pane"
-                contentClassName="sbn-tablet-content space-y-4"
+                contentClassName="sbn-tablet-content"
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
-                  <CommunityStatsBar items={items} variant="compact" />
                   <EventsPanel
                     events={events}
                     userProfile={userProfile}
