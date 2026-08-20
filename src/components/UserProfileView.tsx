@@ -231,7 +231,7 @@ export default function UserProfileView({
       };
 
       // Sync to Supabase
-      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile);
+      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile, { scope: 'identity' });
       if (!ok) {
         throw new Error(errorMessage || 'Profile save failed');
       }
@@ -292,7 +292,7 @@ export default function UserProfileView({
         photoURL: uploadedUrl,
       };
 
-      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile);
+      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile, { scope: 'identity' });
       if (!ok) {
         setPhotoURL(previousPhoto);
         throw new Error(errorMessage || 'Profile photo could not be saved.');

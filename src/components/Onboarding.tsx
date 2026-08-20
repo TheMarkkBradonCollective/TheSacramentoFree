@@ -44,7 +44,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     };
 
     try {
-      const { ok, errorMessage } = await upsertSupabaseProfile(newProfile);
+      const { ok, errorMessage } = await upsertSupabaseProfile(newProfile, { scope: 'identity', forceIdentity: true });
 
       if (!ok) {
         setSaveWarning(

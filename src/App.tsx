@@ -105,6 +105,7 @@ import { isNativeApp } from './lib/nativePlatform';
 import { applyUserPreferencesToDevice } from './lib/appPreferences';
 import {
   clearLocalNativeSessionId,
+  readLocalNativeSessionId,
   registerNativeAppSession,
   subscribeNativeAppSessionGuard,
   verifyNativeAppSession,
@@ -829,6 +830,7 @@ export default function App() {
   /** Enter the app immediately from auth metadata — DB sync runs in background. */
   const applySession = useCallback((user: any) => {
     if (user?.id && lastSignedInUserIdRef.current && lastSignedInUserIdRef.current !== user.id) {
+      clearLocalNativeSessionId(lastSignedInUserIdRef.current);
       clearAuthenticatedUiState();
     }
     if (user?.id) lastSignedInUserIdRef.current = user.id;
@@ -889,7 +891,7 @@ export default function App() {
       }
 
       const seed = profileFromAuthUser(user);
-      await upsertSupabaseProfile(seed);
+      await upsertSupabaseProfile(seed, { scope: 'bootstrap' });
     } catch (err) {
       console.warn('Background profile sync failed:', err);
     } finally {
@@ -959,6 +961,11 @@ export default function App() {
           }
         }, 0);
         if (event === 'SIGNED_IN' && isNativeApp()) {
+          setTimeout(() => {
+            if (!cancelled) void registerNativeAppSession(session.user.id);
+          }, 0);
+        }
+        if (event === 'INITIAL_SESSION' && isNativeApp() && !readLocalNativeSessionId(session.user.id)) {
           setTimeout(() => {
             if (!cancelled) void registerNativeAppSession(session.user.id);
           }, 0);
@@ -1254,7 +1261,7 @@ export default function App() {
           createdAt: new Date().toISOString()
         };
 
-        await upsertSupabaseProfile(newProfile);
+        await upsertSupabaseProfile(newProfile, { scope: 'identity', forceIdentity: true });
 
         // Signup checkbox already covered privacy + terms — persist so gates don't re-prompt.
         if (acceptedLegal) {
@@ -1310,27 +1317,42 @@ export default function App() {
 
   // Native APK/AAB: one active install per account — signing in elsewhere signs this device out.
   useEffect(() => {
+    if (authBootstrapping) return;
+
     const userId = sessionUser?.id;
     if (!userId || !isNativeApp()) return;
 
     let cancelled = false;
+    const revokedMessage = 'You signed in on another device. This app was signed out.';
 
-    void verifyNativeAppSession(userId).then((status) => {
+    const handleNativeSessionRevoked = () => {
+      void (async () => {
+        await alert({ message: revokedMessage });
+        if (!cancelled) void handleLogOutRef.current?.();
+      })();
+    };
+
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || session?.user?.id !== userId) return;
+
+      const status = await verifyNativeAppSession(userId);
       if (cancelled || status !== 'revoked') return;
-      setErrorMsg('You signed in on another device. This app was signed out.');
-      void handleLogOutRef.current?.();
-    });
+      handleNativeSessionRevoked();
+    })();
 
-    const unsub = subscribeNativeAppSessionGuard(userId, () => {
-      setErrorMsg('You signed in on another device. This app was signed out.');
-      void handleLogOutRef.current?.();
-    });
+    let unsub = () => undefined;
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || session?.user?.id !== userId) return;
+      unsub = subscribeNativeAppSessionGuard(userId, handleNativeSessionRevoked);
+    })();
 
     return () => {
       cancelled = true;
       unsub();
     };
-  }, [sessionUser?.id]);
+  }, [sessionUser?.id, authBootstrapping, alert]);
 
   // Onboarding Complete Handler
   const handleOnboardingComplete = (newProfile: UserProfile) => {
