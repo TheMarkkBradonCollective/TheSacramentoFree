@@ -15,6 +15,7 @@ import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRs
 import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
+import CollapsibleFilterSection from './CollapsibleFilterSection';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
 import { EventGridSkeleton } from './Skeleton';
 import EventCard from './EventCard';
@@ -95,6 +96,7 @@ function FilterSelect({
   icon: Icon,
   value,
   onChange,
+  hideLabel = false,
   children,
 }: {
   id: string;
@@ -102,14 +104,17 @@ function FilterSelect({
   icon: typeof MapPin;
   value: string;
   onChange: (value: string) => void;
+  hideLabel?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block space-y-1.5" htmlFor={id}>
-      <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
-        <Icon className="w-3 h-3 shrink-0" aria-hidden />
-        {label}
-      </span>
+      {!hideLabel ? (
+        <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
+          <Icon className="w-3 h-3 shrink-0" aria-hidden />
+          {label}
+        </span>
+      ) : null}
       <div className="flex items-center rounded-xl border border-app bg-inset px-3 py-2.5">
         <select
           id={id}
@@ -402,8 +407,12 @@ export default function EventsView({
         </div>
 
         <div className="space-y-3" id="events_filter_switches">
-          <div className="space-y-1.5" id="events_sort_bar">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort events</p>
+          <CollapsibleFilterSection
+            id="events_sort_bar"
+            title="Sort events"
+            activeCount={sortBy !== null ? 1 : 0}
+            defaultOpen={sortBy !== null}
+          >
             <div className="flex flex-wrap gap-2">
               {SORT_OPTIONS.map(({ value, label }) => (
                 <span key={value} className="contents">
@@ -416,11 +425,16 @@ export default function EventsView({
                 </span>
               ))}
             </div>
-          </div>
+          </CollapsibleFilterSection>
 
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">When</p>
-            <div className="flex flex-wrap gap-2" id="events_time_filter">
+          <CollapsibleFilterSection
+            id="events_time_filter"
+            title="When"
+            icon={Calendar}
+            activeCount={timeFilter !== null ? 1 : 0}
+            defaultOpen={timeFilter !== null}
+          >
+            <div className="flex flex-wrap gap-2">
               {TIME_FILTER_OPTIONS.map(({ value, label }) => (
                 <span key={value} className="contents">
                   <FilterLabeledSwitch
@@ -432,10 +446,14 @@ export default function EventsView({
                 </span>
               ))}
             </div>
-          </div>
+          </CollapsibleFilterSection>
 
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+          <CollapsibleFilterSection
+            id="events_quick_picks"
+            title="Quick picks"
+            activeCount={activeQuickPicks.size}
+            defaultOpen={activeQuickPicks.size > 0}
+          >
             <div className="flex flex-wrap gap-2">
               {EVENT_QUICK_PICKS.map(({ id, label }) => (
                 <span key={id} className="contents">
@@ -448,24 +466,33 @@ export default function EventsView({
                 </span>
               ))}
             </div>
-          </div>
+          </CollapsibleFilterSection>
         </div>
 
         <div className="pt-3 border-t border-app">
-          <FilterSelect
-            id="events_filter_neighborhood_select"
-            label="Neighborhood"
+          <CollapsibleFilterSection
+            id="events_neighborhood_section"
+            title="Neighborhood"
             icon={MapPin}
-            value={selectedNeighborhood}
-            onChange={setSelectedNeighborhood}
+            activeCount={selectedNeighborhood !== 'All Neighborhoods' ? 1 : 0}
+            defaultOpen={selectedNeighborhood !== 'All Neighborhoods'}
           >
-            <option value="All Neighborhoods">All neighborhoods</option>
-            {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </FilterSelect>
+            <FilterSelect
+              id="events_filter_neighborhood_select"
+              label="Neighborhood"
+              icon={MapPin}
+              hideLabel
+              value={selectedNeighborhood}
+              onChange={setSelectedNeighborhood}
+            >
+              <option value="All Neighborhoods">All neighborhoods</option>
+              {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </FilterSelect>
+          </CollapsibleFilterSection>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">
