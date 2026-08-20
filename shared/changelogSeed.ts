@@ -64,7 +64,7 @@ const APK_0036_PUBLISHED_AT = '2026-08-20T15:40:00.000Z';
 const APK_0037_PUBLISHED_AT = '2026-08-20T16:10:00.000Z';
 const APK_0038_PUBLISHED_AT = '2026-08-20T16:35:00.000Z';
 const APK_0039_PUBLISHED_AT = '2026-08-20T16:55:00.000Z';
-const APK_0040_PUBLISHED_AT = '2026-08-20T17:15:00.000Z';
+const APK_0040_PUBLISHED_AT = '2026-08-20T17:40:00.000Z';
 const APK_0041_PUBLISHED_AT = '2026-08-20T17:25:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
@@ -156,17 +156,22 @@ HISTORY
     '2026-08-20_apk-0040',
     '2026-08-20',
     'New Android download — beta v0.1.0.0040',
-    'Feed card engagement, feed push notifications, hands-and-money notification icon, listing alert fix.',
+    'Feed engagement, notification deep links, map route preview, listing Request button, feed polish.',
     `WHAT NEIGHBORS SEE
 Play Store testers and sideload installs: beta v0.1.0.0040 (versionCode 40).
 
 Since 0039:
-• Feed cards — votes, reactions, and comment count on the card; tap for full post
+• Feed cards — votes, reactions, comment count; tap for full post
 • Push when someone comments, reacts, or votes on your feed post
-• Notification bar icon — hands + money logo (replaces placeholder heart)
-• No more double alert when marking a listing gifted
+• Notification bar icon — hands + money logo
+• Notification taps land on the right screen — feed, chats, listings, message requests
+• Message-request alerts open pending-requests inbox (not a fake chat)
+• Listing contact button says Request on giveaways and asks; post-submit check-back reminder
+• Map route preview fills the screen; compass and + hide while route is showing
+• Removed redundant Post badge on neighbor feed cards
+• Welcome feed post — founder intro to kick off chit-chat
 
-Configure Supabase webhooks for feed_post_comments, feed_post_reactions, and community_content_votes for background push.
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase if the welcome post is not live yet.
 
 Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0040.aab
 Sideload: https://www.sacramentobuynothing.com/download
@@ -176,12 +181,13 @@ Sideload: https://www.sacramentobuynothing.com/download
 WHERE TO LOOK IN CODE
 - android/app/build.gradle — versionCode 40
 - play-store-assets/release-notes-v0.1.0-0040.txt
-- drawable-*/ic_stat_notification.png — logo silhouette
-- api/push/_server/feedNotify.ts — feed push handlers
-- src/components/feed/FeedPostCard.tsx — card engagement
+- src/lib/pushDeepLink.ts — notification URL parsing
+- src/components/SacramentoMapView.tsx — route preview fit
+- src/components/feed/FeedPostCard.tsx — feed card engagement
+- scripts/seed-welcome-feed-post-2026.sql — welcome post copy
 
 HISTORY
-2026-08-20 — /runit release (PRs #279–#281); Android beta 0040 built.`,
+2026-08-20 — /runit release (consolidated PRs #279–#287); Android beta 0040 rebuilt.`,
     APK_0040_PUBLISHED_AT,
   ),
   update(
@@ -1363,10 +1369,10 @@ HISTORY
   news(
     '2026-08-20_apk-0040',
     '2026-08-20',
-    'New Android beta 0040 — feed alerts, card engagement, logo notification icon',
-    'Feed votes/reactions on cards, push for feed activity, hands-and-money status bar icon.',
+    'New Android beta 0040 — feed, notifications, map route preview, listing Request',
+    'Consolidated release: feed engagement, notification deep links, map UX, listing Request button.',
     `WHAT NEIGHBORS SEE
-Beta v0.1.0.0040: feed card engagement, feed push notifications, correct notification bar logo, listing gifted alert fix.
+Beta v0.1.0.0040: feed card engagement and push, notification deep links, map route preview fit, listing Request button, feed polish.
 
 Play Store: upload the new AAB to Internal testing and roll out to testers.
 Sideload: https://www.sacramentobuynothing.com/download
@@ -1377,7 +1383,7 @@ WHERE TO LOOK IN CODE
 See Update 2026-08-20_apk-0040.
 
 HISTORY
-2026-08-20 — Android beta 0040 /runit release (PRs #279–#281).`,
+2026-08-20 — Android beta 0040 /runit release (consolidated PRs #279–#287).`,
     APK_0040_PUBLISHED_AT,
   ),
   news(
