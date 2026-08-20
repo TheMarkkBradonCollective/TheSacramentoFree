@@ -7,6 +7,9 @@ import {
 } from '../supabase';
 import { readHubTabSeenAt, writeHubTabSeenAt } from '../lib/notificationsHubSeen';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { STAFF_MODE_NOTIFICATION_KINDS } from '../../shared/staffInteractionMode';
+import type { UserProfile } from '../types';
+import { receivesStaffNotifications } from '../lib/staffInteractionMode';
 
 function countUnseenSince(
   rows: { updatedAt: string }[],
@@ -22,7 +25,10 @@ function countUnseenSince(
   }).length;
 }
 
-export function useNotificationsHubUnread(userId?: string | null) {
+export function useNotificationsHubUnread(
+  userId?: string | null,
+  profile?: Pick<UserProfile, 'role' | 'staffInteractionMode'> | null,
+) {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [unreadUpdates, setUnreadUpdates] = useState(0);
@@ -37,8 +43,12 @@ export function useNotificationsHubUnread(userId?: string | null) {
       return;
     }
 
+    const excludeStaffKinds = profile && !receivesStaffNotifications(profile)
+      ? [...STAFF_MODE_NOTIFICATION_KINDS]
+      : undefined;
+
     const [notifCount, announcements, updates] = await Promise.all([
-      getUnreadUserNotificationCount(userId),
+      getUnreadUserNotificationCount(userId, { excludeKinds: excludeStaffKinds }),
       getSupabaseHelpAnnouncements(),
       getSupabaseAppUpdates(),
     ]);
@@ -50,7 +60,7 @@ export function useNotificationsHubUnread(userId?: string | null) {
     setUnreadAnnouncements(countUnseenSince(announcements, seenAnnouncementsAt));
     setUnreadUpdates(countUnseenSince(updates, seenUpdatesAt));
     setReady(true);
-  }, [userId]);
+  }, [profile, userId]);
 
   useEffect(() => {
     void reload();

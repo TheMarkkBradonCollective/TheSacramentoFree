@@ -11,12 +11,14 @@ import {
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { isAndroidApp } from '../lib/nativePlatform';
 import { isDirectorRole, isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 
 export type NotificationSettingsScope = 'alerts' | 'listings' | 'all';
 
 interface NotificationSettingsProps {
   userId: string;
   userRole?: UserProfile['role'];
+  staffInteractionMode?: UserProfile['staffInteractionMode'];
   fullBleed?: boolean;
   /** Inside the navbar bell panel — no outer card chrome. */
   embedded?: boolean;
@@ -214,6 +216,7 @@ const DIRECTOR_CATEGORY_PREFS = [
 export default function NotificationSettings({
   userId,
   userRole,
+  staffInteractionMode,
   fullBleed = false,
   embedded = false,
   scope = 'all',
@@ -241,6 +244,10 @@ export default function NotificationSettings({
   } = usePushNotifications(userId);
 
   const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
+
+  const actingOfficial = isStaffActingOfficial({ role: userRole, staffInteractionMode });
+  const showStaffNotificationPrefs = isStaffRole(userRole) && actingOfficial;
+  const showDirectorNotificationPrefs = isDirectorRole(userRole) && actingOfficial;
 
   const shell = embedded
     ? ''
@@ -531,7 +538,7 @@ export default function NotificationSettings({
                 </div>
               </div>
 
-              {isStaffRole(userRole) && (
+              {showStaffNotificationPrefs && (
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
                     {STAFF_PREF_SECTION.title}
@@ -551,7 +558,7 @@ export default function NotificationSettings({
                 </div>
               )}
 
-              {isDirectorRole(userRole) && (
+              {showDirectorNotificationPrefs && (
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
                     Director oversight

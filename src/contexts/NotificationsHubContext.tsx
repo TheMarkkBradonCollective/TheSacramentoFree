@@ -140,7 +140,7 @@ export function NotificationsHubProvider({
     unreadAnnouncements,
     unreadUpdates,
     markTabSeen,
-  } = useNotificationsHubUnread(userProfile?.uid);
+  } = useNotificationsHubUnread(userProfile?.uid, userProfile);
 
   useEffect(() => {
     if (!userProfile || isStaffRole(userProfile.role)) {
@@ -253,6 +253,7 @@ export function NotificationsHubProvider({
               <NotificationSettings
                 userId={userProfile.uid}
                 userRole={userProfile.role}
+                staffInteractionMode={userProfile.staffInteractionMode}
                 embedded
                 scope="alerts"
               />

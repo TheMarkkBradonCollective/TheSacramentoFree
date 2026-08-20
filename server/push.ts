@@ -2,6 +2,7 @@ import { supabaseAdmin } from './auth';
 import { configureVapidAsync, getVapidPublicKey, getWebPushModuleAsync, isVapidConfigured } from '../api/push/_server/webPushLoader';
 import { isFcmConfigured, isFcmSubscription, sendFcmToSubscription } from '../api/push/_server/fcmDelivery';
 import { filterSubscriptionsForPickupPush } from '../api/push/_server/pickupPushEvents';
+import { isStaffModePushEvent, receivesStaffModeNotifications } from '../shared/staffInteractionMode';
 
 export type PushEventType =
   | 'new_item'
@@ -199,6 +200,26 @@ export function userAllowsDirectorAlert(prefs: NotificationPreferencesRow, categ
   return prefs[key] !== false;
 }
 
+export async function getStaffInteractionModesForUsers(userIds: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!userIds.length) return map;
+
+  const { data } = await supabaseAdmin
+    .from('users')
+    .select('uid, staffInteractionMode, staff_interaction_mode')
+    .in('uid', userIds);
+
+  for (const row of data || []) {
+    const uid = String((row as { uid: string }).uid);
+    const mode =
+      (row as { staffInteractionMode?: string; staff_interaction_mode?: string }).staffInteractionMode ??
+      (row as { staff_interaction_mode?: string }).staff_interaction_mode;
+    map.set(uid, mode === 'neighbor' ? 'neighbor' : 'staff');
+  }
+
+  return map;
+}
+
 export async function getPreferencesForUsers(userIds: string[]): Promise<Map<string, NotificationPreferencesRow>> {
   const map = new Map<string, NotificationPreferencesRow>();
   if (!userIds.length) return map;
@@ -365,6 +386,11 @@ export async function sendPushToUsers(
       }
       return userAllowsEvent(prefs, payload.eventType);
     });
+  }
+
+  if (isStaffModePushEvent(payload.eventType)) {
+    const modeMap = await getStaffInteractionModesForUsers(allowed);
+    allowed = allowed.filter((uid) => receivesStaffModeNotifications(modeMap.get(uid)));
   }
 
   const subscriptions = filterSubscriptionsForPickupPush(
