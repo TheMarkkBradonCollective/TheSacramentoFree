@@ -351,7 +351,10 @@ export default function UserProfileView({
       </div>
 
       {activeTab === 'profile' ? (
-        <div className={fullBleed ? 'flex flex-col min-w-0 w-full' : 'space-y-6'} id="profile_tab_panel_profile">
+        <div
+          className={fullBleed ? 'flex flex-col min-w-0 w-full gap-6' : 'space-y-6'}
+          id="profile_tab_panel_profile"
+        >
         <div
           className={`${fullBleed ? sectionShell : 'sbn-section'} flex flex-col items-center text-center h-fit`}
         >
@@ -449,9 +452,111 @@ export default function UserProfileView({
             </p>
           ) : (
             <p className="mt-4 text-xs font-semibold text-subtle italic text-left w-full bg-inset p-3 rounded-xl border border-dashed border-app">
-              No biography yet. Add one under Settings to tell neighbors what you like to share or receive.
+              No biography yet. Add one below to tell neighbors what you like to share or receive.
             </p>
           )}
+        </div>
+
+        {(errorMsg || successMsg) && (
+          <div className={fullBleed ? sectionShell : ''}>
+            {errorMsg ? (
+              <div
+                className="p-3 bg-red-950/50 border border-red-900 text-red-400 text-xs font-bold rounded-xl flex items-start gap-1.5 min-w-0"
+                id="profile_save_error"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span className="min-w-0 break-words">{errorMsg}</span>
+              </div>
+            ) : null}
+            {successMsg ? (
+              <div
+                className="p-3 bg-green-950/50 border border-green-900 text-green-400 text-xs font-bold rounded-xl flex items-start gap-1.5 min-w-0"
+                id="profile_save_success"
+              >
+                <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                <span className="min-w-0 break-words">{successMsg}</span>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        <div className={fullBleed ? sectionShell : 'sbn-section'} id="profile_edit_section">
+          <form onSubmit={handleSave} className="space-y-5" id="profile_edit_form">
+            <div className="space-y-1.5">
+              <label className="text-sm font-bold text-muted uppercase block">My Email Address (Private)</label>
+              <input
+                type="text"
+                value={userProfile.email}
+                disabled
+                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-mono text-subtle cursor-not-allowed opacity-60"
+              />
+              <p className="text-xs text-subtle leading-relaxed">
+                Your email is kept confidential and only used for your secure sign-in.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" id="profile_inputs_row">
+              <div className="space-y-1.5">
+                <label htmlFor="pref_display_name" className="text-xs font-bold text-muted uppercase block">
+                  My Friendly Display Name
+                </label>
+                <input
+                  type="text"
+                  id="pref_display_name"
+                  required
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-semibold focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors focus:outline-hidden"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="pref_neighborhood" className="text-xs font-bold text-muted uppercase block">
+                  My Home Neighborhood
+                </label>
+                <select
+                  id="pref_neighborhood"
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-bold cursor-pointer focus:border-accent focus:outline-hidden"
+                >
+                  {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                    <option key={n} value={n} className="bg-surface text-app select-dark-opt">
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="pref_bio" className="text-xs font-bold text-muted uppercase block">
+                About Me / What I Love to Share
+              </label>
+              <textarea
+                id="pref_bio"
+                rows={4}
+                maxLength={500}
+                placeholder="Tell your neighbors who you are and why sharing matters to your household."
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="block w-full p-3 bg-inset border border-app rounded-xl text-xs text-app placeholder:text-subtle font-semibold resize-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors focus:outline-hidden"
+              />
+              <div className="text-right text-[10px] text-subtle font-mono font-medium">{bio.length}/500 chars</div>
+            </div>
+
+            <button
+              type="submit"
+              id="profile_save_btn"
+              disabled={isSaving}
+              className="w-full flex items-center justify-center space-x-2 py-3.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              <Save className="w-4 h-4 text-app" />
+              <span>{isSaving ? 'Saving Changes...' : 'Save Profile Changes'}</span>
+            </button>
+          </form>
+
+          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
         </div>
 
       {usingApk && (
@@ -502,92 +607,8 @@ export default function UserProfileView({
           id="profile_tab_panel_settings"
         >
           <p className="text-xs text-muted mb-5 leading-relaxed">
-            Update how neighbors see you and tune app preferences.
+            Permissions, theme, navigation voice, and other app preferences.
           </p>
-
-          <form onSubmit={handleSave} className="space-y-5" id="profile_edit_form">
-            {errorMsg && (
-              <div className="p-3 bg-red-950/50 border border-red-900 text-red-400 text-xs font-bold rounded-xl flex items-start gap-1.5 min-w-0" id="profile_save_error">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span className="min-w-0 break-words">{errorMsg}</span>
-              </div>
-            )}
-
-            {successMsg && (
-              <div className="p-3 bg-green-950/50 border border-green-900 text-green-400 text-xs font-bold rounded-xl flex items-start gap-1.5 min-w-0" id="profile_save_success">
-                <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
-                <span className="min-w-0 break-words">{successMsg}</span>
-              </div>
-            )}
-
-            {/* Email PII restricted - Non Editable */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold text-muted uppercase block">My Email Address (Private)</label>
-              <input
-                type="text"
-                value={userProfile.email}
-                disabled
-                className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-xs font-mono text-subtle cursor-not-allowed opacity-60"
-              />
-              <p className="text-xs text-subtle leading-relaxed">Your email is kept confidential and only used for your secure sign-in.</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" id="profile_inputs_row">
-              {/* Display Name */}
-              <div className="space-y-1.5">
-                <label htmlFor="pref_display_name" className="text-xs font-bold text-muted uppercase block">My Friendly Display Name</label>
-                <input
-                  type="text"
-                  id="pref_display_name"
-                  required
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-semibold focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors focus:outline-hidden"
-                />
-              </div>
-
-              {/* Neighborhood select */}
-              <div className="space-y-1.5">
-                <label htmlFor="pref_neighborhood" className="text-xs font-bold text-muted uppercase block">My Home Neighborhood</label>
-                <select
-                  id="pref_neighborhood"
-                  value={neighborhood}
-                  onChange={(e) => setNeighborhood(e.target.value)}
-                  className="block w-full px-3.5 py-3 bg-inset border border-app rounded-xl text-app text-xs font-bold cursor-pointer focus:border-accent focus:outline-hidden"
-                >
-                  {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                    <option key={n} value={n} className="bg-surface text-app select-dark-opt">{n}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Bio text */}
-            <div className="space-y-1.5">
-              <label htmlFor="pref_bio" className="text-xs font-bold text-muted uppercase block">About Me / What I Love to Share</label>
-              <textarea
-                id="pref_bio"
-                rows={4}
-                maxLength={500}
-                placeholder="Tell your neighbors who you are and why sharing matters to your household."
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                className="block w-full p-3 bg-inset border border-app rounded-xl text-xs text-app placeholder:text-subtle font-semibold resize-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors focus:outline-hidden"
-              />
-              <div className="text-right text-[10px] text-subtle font-mono font-medium">{bio.length}/500 chars</div>
-            </div>
-
-            {/* Save Button */}
-            <button
-              type="submit"
-              id="profile_save_btn"
-              disabled={isSaving}
-              className="w-full flex items-center justify-center space-x-2 py-3.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              <Save className="w-4 h-4 text-app" />
-              <span>{isSaving ? 'Saving Changes...' : 'Save Profile Changes'}</span>
-            </button>
-          </form>
 
           <SystemPermissionsSettings />
           <ThemeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
@@ -600,7 +621,6 @@ export default function UserProfileView({
 
       {activeTab === 'account' ? (
         <div id="profile_tab_panel_account" className={fullBleed ? 'flex flex-col min-w-0 w-full gap-6' : 'space-y-6'}>
-      <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
       <div
         className={`${fullBleed ? `${sectionShell} shadow-none` : 'sbn-section'} animate-fade-in min-w-0 overflow-hidden`}
         id="pwa_installs_section"
