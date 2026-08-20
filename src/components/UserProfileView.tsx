@@ -7,6 +7,7 @@ import {
   upsertSupabaseProfile,
   uploadProfilePhoto,
   getSupabaseProfile,
+  isDicebearAvatarUrl,
 } from '../supabase';
 import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import RoleBadge from './RoleBadge';
@@ -188,21 +189,32 @@ export default function UserProfileView({
       setErrorMsg('Display name is required.');
       return;
     }
+    if (isPhotoUploading) {
+      setErrorMsg('Please wait for your photo upload to finish.');
+      return;
+    }
 
     setIsSaving(true);
     setErrorMsg('');
     setSuccessMsg('');
 
-    const photoForSave =
-      photoURL.startsWith('data:') || photoURL.startsWith('blob:')
-        ? (sanitizeRemotePhoto(userProfile.photoURL) ?? undefined)
-        : photoURL;
+    const resolvePhotoForSave = (): string | undefined => {
+      if (photoURL.startsWith('data:') || photoURL.startsWith('blob:')) {
+        return sanitizeRemotePhoto(userProfile.photoURL);
+      }
+      if (isDicebearAvatarUrl(photoURL)) {
+        return sanitizeRemotePhoto(userProfile.photoURL);
+      }
+      return sanitizeRemotePhoto(photoURL);
+    };
+
+    const photoForSave = resolvePhotoForSave();
 
     const updateData = {
       displayName: displayName.trim(),
       neighborhood,
       bio: bio.trim(),
-      photoURL: photoForSave,
+      ...(photoForSave !== undefined ? { photoURL: photoForSave } : {}),
     };
 
     try {

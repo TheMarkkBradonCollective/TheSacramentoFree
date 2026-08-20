@@ -356,6 +356,19 @@ function sanitizePhotoUrlForDb(url?: string | null): string | null {
   return null;
 }
 
+export function isDicebearAvatarUrl(url?: string | null): boolean {
+  if (!url) return false;
+  return url.includes('api.dicebear.com/');
+}
+
+/** Real uploaded/OAuth photos only — omit dicebear and invalid URLs so upsert preserves existing DB photo. */
+function photoUrlForProfileUpsert(profile: UserProfile): string | undefined {
+  if (profile.photoURL == null || profile.photoURL === '') return undefined;
+  const sanitized = sanitizePhotoUrlForDb(profile.photoURL);
+  if (!sanitized || isDicebearAvatarUrl(sanitized)) return undefined;
+  return sanitized;
+}
+
 function normalizeAccountStatus(
   row: Record<string, unknown>,
 ): { accountStatus: AccountStatus; suspendedUntil: string | null } {
@@ -569,7 +582,7 @@ export function profileFromAuthUser(user: {
         ? meta.picture
         : undefined;
   const photoURL =
-    providerPhoto && sanitizePhotoUrlForDb(providerPhoto)
+    providerPhoto && sanitizePhotoUrlForDb(providerPhoto) && !isDicebearAvatarUrl(providerPhoto)
       ? sanitizePhotoUrlForDb(providerPhoto)!
       : `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.id)}`;
 
@@ -733,17 +746,18 @@ export async function upsertSupabaseProfile(
       return { ok: false, errorMessage: 'Profile email is missing. Sign out and sign in again.' };
     }
 
-    const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
     const profileForSave = mergeStoredAppPreferencesIntoProfile(
       mergeStaffInteractionModeIntoProfile(
         mergeNavigationPrefsIntoProfile(mergeGoGetPrefsIntoProfile(profile)),
       ),
     );
 
+    const photoURL = photoUrlForProfileUpsert(profileForSave);
+
     const payload = {
       uid: profileForSave.uid,
       displayName: profileForSave.displayName.trim(),
-      photoURL,
+      ...(photoURL !== undefined ? { photoURL } : {}),
       email,
       neighborhood: profileForSave.neighborhood,
       bio: profileForSave.bio?.trim() || null,
@@ -1253,13 +1267,9 @@ function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
 
 export async function createSupabaseItem(
   item: ItemPost,
-  author?: UserProfile,
+  _author?: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
-    if (author?.email) {
-      await upsertSupabaseProfile(author);
-    }
-
     let payload = buildItemInsertPayload(item, true);
     let { error } = await supabase.from('items').insert(payload);
 
@@ -3913,10 +3923,6 @@ export async function createSupabaseEvent(
       }
     }
 
-    if (author?.email) {
-      await upsertSupabaseProfile(author);
-    }
-
     const payload = buildCommunityEventInsertPayload(event);
     const { error } = await supabase.from('community_events').insert(payload);
 
@@ -3978,10 +3984,6 @@ export async function createSupabaseEventSeries(
             'Community events unlock at 500 neighbors. Share the invite link to help us get there!',
         };
       }
-    }
-
-    if (author?.email) {
-      await upsertSupabaseProfile(author);
     }
 
     const payloads = events.map((event) => buildCommunityEventInsertPayload(event));
@@ -5398,10 +5400,6 @@ export async function upsertSupabaseAppReview(
   }
 
   try {
-    if (author.email) {
-      await upsertSupabaseProfile(author);
-    }
-
     const payload = {
       id: review.id || `review_${author.uid}`,
       userId: author.uid,
