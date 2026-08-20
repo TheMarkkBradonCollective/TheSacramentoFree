@@ -71,6 +71,7 @@ const NOTIFICATION_RELIABILITY_PUBLISHED_AT = '2026-08-20T19:12:00.000Z';
 const APK_0042_PUBLISHED_AT = '2026-08-20T19:45:00.000Z';
 const APK_0043_PUBLISHED_AT = '2026-08-20T20:30:00.000Z';
 const APK_0044_PUBLISHED_AT = '2026-08-20T21:00:00.000Z';
+const APK_0045_PUBLISHED_AT = '2026-08-20T21:30:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -125,6 +126,38 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0045',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0045',
+    'Cross-device settings persistence, Install app on Settings, brand orange UI.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0045 (versionCode 45).
+
+Since 0044:
+• Go Get, navigation, and staff/user mode settings sync to your account
+• Feed and Events filter toggles remember your choices across sessions and devices
+• Install app shortcut sits at the top of the Settings tab
+• Active toggles and toolbar buttons use brand orange instead of pale yellow
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0045.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run the user-preferences and Go Get ring migrations in Supabase before neighbors rely on synced settings.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 45
+- play-store-assets/release-notes-v0.1.0-0045.txt
+- src/lib/goGetPrefs.ts, navPrefs.ts, staffModePrefs.ts, feedFilterPrefs.ts, eventsFilterPrefs.ts
+- scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql
+- scripts/supabase-migration-aug-20-2026-go-get-ring-availability.sql
+
+HISTORY
+2026-08-20 — /runit release (PRs #320–#322); Android beta 0045 built.`,
+    APK_0045_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0044',
     '2026-08-20',
@@ -1485,6 +1518,28 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0045',
+    '2026-08-20',
+    'New Android beta 0045 — settings sync + brand orange',
+    'Go Get, navigation, filters, and staff mode persist across devices; Install app on Settings.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0045: account settings and filter toggles follow you across devices, Install app at top of Settings, brand orange accents.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run user-preferences and Go Get ring migrations in Supabase before rollout.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0045.
+
+HISTORY
+2026-08-20 — Android beta 0045 /runit release (PRs #320–#322).`,
+    APK_0045_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0044',
     '2026-08-20',

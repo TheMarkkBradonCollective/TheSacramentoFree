@@ -1,0 +1,8 @@
+Android beta v0.1.0.0045 (versionCode 45)
+
+What's new:
+• Settings save across devices — Go Get, navigation, staff mode, feed & Events filters
+• Install app moved to top of Settings tab
+• Brand orange accents on toggles and active toolbar buttons
+
+Download (sideload): https://www.sacramentobuynothing.com/download

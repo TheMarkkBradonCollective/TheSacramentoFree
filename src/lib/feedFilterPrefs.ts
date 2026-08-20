@@ -63,7 +63,7 @@ function isFeedVoteFilter(value: unknown): value is FeedVoteFilter {
 }
 
 function isNeighborhoodValue(value: unknown): value is string {
-  return value === 'All Neighborhoods' || (typeof value === 'string' && SACRAMENTO_NEIGHBORHOODS.includes(value));
+  return value === 'All Neighborhoods' || (typeof value === 'string' && (SACRAMENTO_NEIGHBORHOODS as readonly string[]).includes(value));
 }
 
 function isCategoryValue(value: unknown): value is string {

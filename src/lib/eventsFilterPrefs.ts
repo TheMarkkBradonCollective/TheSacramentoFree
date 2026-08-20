@@ -54,7 +54,7 @@ function isEventQuickPickFilter(value: unknown): value is EventQuickPickFilter {
 }
 
 function isNeighborhoodValue(value: unknown): value is string {
-  return value === 'All Neighborhoods' || (typeof value === 'string' && SACRAMENTO_NEIGHBORHOODS.includes(value));
+  return value === 'All Neighborhoods' || (typeof value === 'string' && (SACRAMENTO_NEIGHBORHOODS as readonly string[]).includes(value));
 }
 
 export function normalizeEventsFilterPreferences(raw: unknown): EventsFilterPreferences {
