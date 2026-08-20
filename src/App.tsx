@@ -15,6 +15,7 @@ import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
 import PostEventModal from './components/PostEventModal';
 import NeighborProfileView from './components/NeighborProfileView';
+import DirectMessageRequestModal from './components/DirectMessageRequestModal';
 import MobileView from './components/MobileView';
 import TabletView from './components/TabletView';
 import DesktopView from './components/DesktopView';
@@ -202,6 +203,7 @@ export default function App() {
   const [pickupAttributionItem, setPickupAttributionItem] = useState<ItemPost | null>(null);
   const [pickupAttributionMode, setPickupAttributionMode] = useState<'complete' | 'edit'>('complete');
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
+  const [showDirectMessageModal, setShowDirectMessageModal] = useState(false);
   const [showDownloadPage, setShowDownloadPage] = useState(() => isDownloadRoute());
   const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
     'reviews' | 'report' | 'staffReports' | null
@@ -1468,6 +1470,11 @@ export default function App() {
     setActiveTab('chats');
   }, []);
 
+  const handleStartDirectMessage = useCallback(() => {
+    setActiveTab('chats');
+    setShowDirectMessageModal(true);
+  }, []);
+
   const handleViewListingId = useCallback(
     async (itemId: string) => {
       const fromFeed = items.find((i) => i.id === itemId);
@@ -1823,6 +1830,7 @@ export default function App() {
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
                   onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -1882,6 +1890,7 @@ export default function App() {
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
                   onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               ) : (
                 <DesktopView
@@ -1941,6 +1950,7 @@ export default function App() {
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
                   onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               )}
 
@@ -2004,12 +2014,29 @@ export default function App() {
                   currentUserId={userProfile.uid}
                   currentUserProfile={userProfile}
                   listingHints={visibleItems}
+                  nested={Boolean(detailItem || detailEvent)}
                   onClose={() => setViewProfileUid(null)}
                   onOpenChat={handleOpenChatFromProfile}
                   onViewPost={handleViewItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onBlockListChanged={handleBlockListChanged}
+                />
+              )}
+
+              {showDirectMessageModal && (
+                <DirectMessageRequestModal
+                  currentUser={userProfile}
+                  blockedUserIds={blockedUserIds}
+                  onClose={() => setShowDirectMessageModal(false)}
+                  onViewProfile={(uid) => {
+                    setShowDirectMessageModal(false);
+                    handleViewProfile(uid);
+                  }}
+                  onOpenChat={(chatId) => {
+                    setShowDirectMessageModal(false);
+                    handleOpenChatFromProfile(chatId);
+                  }}
                 />
               )}
 

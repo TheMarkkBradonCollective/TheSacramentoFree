@@ -79,6 +79,7 @@ interface DesktopViewProps {
   onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
   onViewEventId?: (eventId: string) => void;
+  onStartDirectMessage?: () => void;
 }
 
 const TAB_TITLES: Record<AppTab, string> = {
@@ -143,6 +144,7 @@ export default function DesktopView({
   onOpenTicketById,
   onViewListingId,
   onViewEventId,
+  onStartDirectMessage,
 }: DesktopViewProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => hasStaffConsoleAccess(userProfile));
   const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
@@ -344,7 +346,7 @@ export default function DesktopView({
                   onOpenGoFundMe={onOpenGoFundMe}
                   onOpenPrivacy={onOpenPrivacy}
                   onOpenTerms={onOpenTerms}
-                  onStartDirectMessage={() => setActiveTab('feed')}
+                  onStartDirectMessage={onStartDirectMessage}
                   onViewRelatedListing={onViewListingId}
                   onViewRelatedEvent={onViewEventId}
                   className="h-full min-h-0 rounded-2xl border border-app overflow-hidden bg-surface"

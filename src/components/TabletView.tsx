@@ -80,6 +80,7 @@ interface TabletViewProps {
   onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
   onViewEventId?: (eventId: string) => void;
+  onStartDirectMessage?: () => void;
 }
 
 const TAB_TITLES: Record<AppTab, string> = {
@@ -150,6 +151,7 @@ export default function TabletView({
   onOpenTicketById,
   onViewListingId,
   onViewEventId,
+  onStartDirectMessage,
 }: TabletViewProps) {
   useScrollInputOnFocus();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => hasStaffConsoleAccess(userProfile));
@@ -323,7 +325,7 @@ export default function TabletView({
                   onOpenGoFundMe={onOpenGoFundMe}
                   onOpenPrivacy={onOpenPrivacy}
                   onOpenTerms={onOpenTerms}
-                  onStartDirectMessage={() => setActiveTab('feed')}
+                  onStartDirectMessage={onStartDirectMessage}
                   onViewRelatedListing={onViewListingId}
                   onViewRelatedEvent={onViewEventId}
                   className="h-full min-h-0 rounded-2xl border border-app overflow-hidden bg-surface"
