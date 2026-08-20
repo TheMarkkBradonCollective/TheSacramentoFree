@@ -22,8 +22,8 @@ import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
 import {
-  readFeedViewMode,
-  writeFeedViewMode,
+  readEventsViewMode,
+  writeEventsViewMode,
   type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
 
@@ -143,7 +143,7 @@ export default function EventsView({
   const [sortBy, setSortBy] = useState<EventSortMode>('soonest');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<EventQuickPick>>(() => new Set());
-  const [viewMode, setViewMode] = useState<FeedViewMode>(() => readFeedViewMode());
+  const [viewMode, setViewMode] = useState<FeedViewMode>(() => readEventsViewMode());
   const [gridSortMode, setGridSortMode] = useState<'nearest' | 'newest'>('nearest');
   const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
 
@@ -181,7 +181,7 @@ export default function EventsView({
 
   const handleViewModeChange = (mode: FeedViewMode) => {
     setViewMode(mode);
-    writeFeedViewMode(mode);
+    writeEventsViewMode(mode);
   };
 
   const activeFilterCount = [
