@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { ArrowLeft, Bell } from 'lucide-react';
 import type { UserProfile } from '../types';
 import FullScreenPanel from '../components/FullScreenPanel';
 import NotificationSettings from '../components/NotificationSettings';
@@ -210,14 +210,20 @@ export function NotificationsHubProvider({
     <NotificationsHubContext.Provider value={value}>
       {children}
       {open && userProfile ? (
-        <FullScreenPanel
-          wide
-          title={HUB_TAB_META[tab].title}
-          subtitle={HUB_TAB_META[tab].subtitle}
-          onClose={() => setOpen(false)}
-        >
+        <FullScreenPanel wide onClose={() => setOpen(false)}>
           <div className="space-y-5">
-            <div className="flex gap-1 p-1 rounded-xl bg-inset border border-app w-full">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="sbn-back-btn !mb-0 shrink-0"
+                aria-label="Close notifications"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+            </div>
+            <div className="flex gap-1 p-1 rounded-xl bg-inset border border-app w-full -mt-2">
               {HUB_TABS.map((hubTab) => {
                 const unread = tabUnreadCount(hubTab.id, unreadCounts);
                 return (
