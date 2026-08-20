@@ -18,6 +18,7 @@ function inboxKind(eventType: PushEventType): string {
       return 'claim_request';
     case 'listing_status':
     case 'listing_expiring':
+    case 'listing_expired':
     case 'listing_approved':
     case 'listing_denied':
     case 'request_fulfilled':

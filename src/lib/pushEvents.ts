@@ -2,6 +2,10 @@ import { convertPercentToLatLng, extractGPSCoordinates } from '../types';
 import type { DirectorAlertCategory, ItemPost } from '../types';
 import { sendPushNotification } from './pushNotifications';
 import {
+  isListingInExpiryWarningWindow,
+  listingExpiryDaysRemaining,
+} from '../../shared/listingExpiry';
+import {
   pushUrlForConversation,
   pushUrlForListing,
   pushUrlForMessageRequests,
@@ -311,14 +315,31 @@ export async function notifyListingDenied(item: ItemPost, reason?: string) {
 }
 
 export async function notifyListingExpiringSoon(item: ItemPost) {
+  const daysLeft = listingExpiryDaysRemaining(item);
+  const body = isListingInExpiryWarningWindow(item)
+    ? `"${item.title}" expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} — edit it to reset the timer, or mark it gifted`
+    : `"${item.title}" will expire soon — edit it to reset the timer, or mark it gifted`;
+
   await sendPushNotification({
     eventType: 'listing_expiring',
     title: 'Listing expiring soon',
-    body: `"${item.title}" will expire soon — renew or mark as gifted`,
+    body,
     url: pushUrlForListing(item.id),
     listingId: item.id,
     recipientUserIds: [item.userId],
     tag: `expiring-${item.id}`,
+  });
+}
+
+export async function notifyListingExpired(item: Pick<ItemPost, 'id' | 'title' | 'userId'>) {
+  await sendPushNotification({
+    eventType: 'listing_expired',
+    title: 'Listing expired',
+    body: `"${item.title}" was withdrawn after 30 days — edit and repost from your profile to relist`,
+    url: pushUrlForListing(item.id),
+    listingId: item.id,
+    recipientUserIds: [item.userId],
+    tag: `expired-${item.id}`,
   });
 }
 

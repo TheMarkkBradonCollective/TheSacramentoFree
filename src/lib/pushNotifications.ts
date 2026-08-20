@@ -492,6 +492,7 @@ export type PushEventType =
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
+  | 'listing_expired'
   | 'nearby_item'
   | 'nearby_request'
   | 'claim_request'

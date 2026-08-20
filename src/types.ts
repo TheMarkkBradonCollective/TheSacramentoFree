@@ -240,6 +240,9 @@ export interface ItemPost {
   status: PostStatus;
   createdAt: any;
   updatedAt: any;
+  /** Auto-withdraw when past this time unless owner edits or reposts (resets timer). */
+  expiresAt?: string | null;
+  expiryWarnedAt?: string | null;
   imageUrl?: string;
   /** All photos (first matches imageUrl). Parsed from description when not set. */
   imageUrls?: string[];

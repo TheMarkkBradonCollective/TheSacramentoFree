@@ -6,6 +6,7 @@ import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatSel
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia, plainListingDescription } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
+import { listingExpiresAtIso } from '../shared/listingExpiry';
 import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import type { PickupAvailabilitySchedule } from './types';
@@ -803,7 +804,7 @@ export async function upsertSupabaseProfile(
  * --- ITEMS / LISTINGS ---
  */
 const ITEM_FEED_COLUMNS =
-  'id,title,type,category,userId,userDisplayName,userPhotoURL,neighborhood,status,imageUrl,createdAt,updatedAt,pickupAttributionType,pickupAttributionUserId,pickupAttributionLabel';
+  'id,title,type,category,userId,userDisplayName,userPhotoURL,neighborhood,status,imageUrl,createdAt,updatedAt,expiresAt,expiryWarnedAt,pickupAttributionType,pickupAttributionUserId,pickupAttributionLabel';
 
 function mapItemRows(rows: unknown[]): ItemPost[] {
   const items: ItemPost[] = [];
@@ -1160,7 +1161,25 @@ function isMissingImageUrlColumnError(error: { code?: string; message?: string }
   );
 }
 
+function isMissingExpiryColumnError(error: { code?: string; message?: string } | null): boolean {
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    error?.code === 'PGRST204' ||
+    error?.code === '42703' ||
+    msg.includes('expiresat') ||
+    msg.includes('expirywarnedat')
+  );
+}
+
+function stripExpiryFields(payload: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...payload };
+  delete next.expiresAt;
+  delete next.expiryWarnedAt;
+  return next;
+}
+
 function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
+  const nowIso = new Date().toISOString();
   const payload: Record<string, unknown> = {
     id: item.id,
     title: item.title,
@@ -1172,8 +1191,10 @@ function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
     userPhotoURL: item.userPhotoURL || null,
     neighborhood: item.neighborhood,
     status: item.status || 'active',
-    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
-    updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : new Date().toISOString(),
+    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : nowIso,
+    updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : nowIso,
+    expiresAt: listingExpiresAtIso(Date.now()),
+    expiryWarnedAt: null,
   };
 
   if (includeImageUrl && item.imageUrl) {
@@ -1197,6 +1218,11 @@ export async function createSupabaseItem(
 
     let payload = buildItemInsertPayload(item, true);
     let { error } = await supabase.from('items').insert(payload);
+
+    if (error && isMissingExpiryColumnError(error)) {
+      payload = stripExpiryFields(payload);
+      ({ error } = await supabase.from('items').insert(payload));
+    }
 
     if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
       const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
@@ -1228,6 +1254,7 @@ function buildItemUpdatePayload(
   includeImageUrl: boolean,
   options?: { repost?: boolean },
 ) {
+  const nowIso = new Date().toISOString();
   const payload: Record<string, unknown> = {
     title: item.title,
     description: item.description,
@@ -1236,12 +1263,14 @@ function buildItemUpdatePayload(
     neighborhood: item.neighborhood,
     userDisplayName: item.userDisplayName,
     userPhotoURL: item.userPhotoURL || null,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso,
+    expiresAt: listingExpiresAtIso(Date.now()),
+    expiryWarnedAt: null,
   };
 
   if (options?.repost) {
     payload.status = 'active';
-    payload.createdAt = new Date().toISOString();
+    payload.createdAt = nowIso;
   }
 
   if (includeImageUrl && item.imageUrl) {
@@ -1261,6 +1290,11 @@ export async function updateSupabaseItem(
     const repost = options?.repost === true;
     let payload = buildItemUpdatePayload(item, true, repost ? { repost: true } : undefined);
     let { error } = await supabase.from('items').update(payload).eq('id', item.id);
+
+    if (error && isMissingExpiryColumnError(error)) {
+      payload = stripExpiryFields(payload);
+      ({ error } = await supabase.from('items').update(payload).eq('id', item.id));
+    }
 
     if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
       const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
@@ -1310,14 +1344,24 @@ export async function updateSupabaseItemStatus(
     const now = new Date().toISOString();
     const isRepost = previousStatus === 'withdrawn' && status === 'active';
 
-    const { error } = await supabase
-      .from('items')
-      .update({
-        status,
-        updatedAt: now,
-        ...(isRepost ? { createdAt: now } : {}),
-      })
-      .eq('id', itemId);
+    let updatePayload: Record<string, unknown> = {
+      status,
+      updatedAt: now,
+      ...(isRepost
+        ? {
+            createdAt: now,
+            expiresAt: listingExpiresAtIso(Date.now()),
+            expiryWarnedAt: null,
+          }
+        : {}),
+    };
+
+    let { error } = await supabase.from('items').update(updatePayload).eq('id', itemId);
+
+    if (error && isMissingExpiryColumnError(error) && isRepost) {
+      updatePayload = { status, updatedAt: now, createdAt: now };
+      ({ error } = await supabase.from('items').update(updatePayload).eq('id', itemId));
+    }
 
     if (error) {
       handleSupabaseError(error, 'items');
