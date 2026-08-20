@@ -186,54 +186,55 @@ export default function ItemDetailView({
       className="sbn-app-sheet flex flex-col min-h-0 font-sans"
       role="dialog"
       aria-modal="true"
+      aria-label={item.title}
     >
-      <header className="sticky top-0 z-10 shrink-0 sbn-glass-nav sbn-safe-top border-b border-app">
-        <div className="px-4 min-h-14 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 rounded-full hover:bg-inset text-app"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="font-display font-bold text-base text-app truncate flex-1">Listing details</h1>
-        <button
-          type="button"
-          onClick={() => toggleSaved(item.id)}
-          title={isSaved(item.id) ? 'Remove from saved' : 'Save this listing'}
-          className={`p-2 rounded-full transition-colors shrink-0 ${
-            isSaved(item.id)
-              ? 'text-accent bg-accent-soft'
-              : 'text-muted hover:text-accent hover:bg-inset'
-          }`}
-          aria-label={isSaved(item.id) ? 'Remove from saved' : 'Save listing'}
-        >
-          <Bookmark className={`w-5 h-5 ${isSaved(item.id) ? 'fill-current' : ''}`} />
-        </button>
-        {isOwner && isOpenForCoordination ? (
-          <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
-        ) : !isOwner ? (
-          isStaffViewer && onStaffChat ? (
-            <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-              <LifeBuoy className="w-4 h-4" />
-              Staff chat
-            </button>
-          ) : (
-            isOpenForCoordination &&
-            onMessage && (
-              <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-                <MessageSquare className="w-4 h-4" />
-                Message
-              </button>
-            )
-          )
-        ) : null}
-        </div>
-      </header>
-
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
-      <div className="sbn-page-content pb-6">
+        <header className="sbn-glass-nav sbn-safe-top border-b border-app">
+          <div className="px-4 min-h-14 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-inset text-app"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1 min-w-0" />
+            <button
+              type="button"
+              onClick={() => toggleSaved(item.id)}
+              title={isSaved(item.id) ? 'Remove from saved' : 'Save this listing'}
+              className={`p-2 rounded-full transition-colors shrink-0 ${
+                isSaved(item.id)
+                  ? 'text-accent bg-accent-soft'
+                  : 'text-muted hover:text-accent hover:bg-inset'
+              }`}
+              aria-label={isSaved(item.id) ? 'Remove from saved' : 'Save listing'}
+            >
+              <Bookmark className={`w-5 h-5 ${isSaved(item.id) ? 'fill-current' : ''}`} />
+            </button>
+            {isOwner && isOpenForCoordination ? (
+              <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
+            ) : !isOwner ? (
+              isStaffViewer && onStaffChat ? (
+                <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+                  <LifeBuoy className="w-4 h-4" />
+                  Staff chat
+                </button>
+              ) : (
+                isOpenForCoordination &&
+                onMessage && (
+                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+                    <MessageSquare className="w-4 h-4" />
+                    Message
+                  </button>
+                )
+              )
+            ) : null}
+          </div>
+        </header>
+
+        <div className="sbn-page-content pb-6">
         <ListingPhotoGallery urls={photos} title={item.title} />
 
         <div className="p-5 sm:p-6 space-y-5">
@@ -427,7 +428,7 @@ export default function ItemDetailView({
             </div>
           </button>
         </div>
-      </div>
+        </div>
       </div>
 
       <div className="shrink-0 p-4 sbn-glass-nav border-t border-app safe-area-pb">
@@ -559,32 +560,24 @@ export default function ItemDetailView({
                   )}
                 </div>
               ) : null}
-              <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary w-full">
-                Back
-              </button>
             </>
           ) : (
             <div className="flex flex-col gap-2">
-              <div className="flex gap-3">
-                <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
-                  Back
+              {isStaffViewer && onStaffChat ? (
+                <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary w-full">
+                  <LifeBuoy className="w-4 h-4" />
+                  Staff chat
                 </button>
-                {isStaffViewer && onStaffChat ? (
-                  <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary flex-1">
-                    <LifeBuoy className="w-4 h-4" />
-                    Staff chat
+              ) : (
+                isOpenForCoordination &&
+                onMessage &&
+                !showNeighborNavigate && (
+                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary w-full">
+                    <MessageSquare className="w-4 h-4" />
+                    Message
                   </button>
-                ) : (
-                  isOpenForCoordination &&
-                  onMessage &&
-                  !showNeighborNavigate && (
-                    <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
-                      <MessageSquare className="w-4 h-4" />
-                      Message
-                    </button>
-                  )
-                )}
-              </div>
+                )
+              )}
               {item.status === 'active' &&
                 userProfile &&
                 onClaimSubmitted &&
