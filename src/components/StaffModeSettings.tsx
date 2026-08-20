@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { UserProfile } from '../types';
-import { upsertSupabaseProfile } from '../supabase';
 import { isStaffRole } from '../lib/roles';
 import {
   DEFAULT_STAFF_INTERACTION_MODE,
   normalizeStaffInteractionMode,
   type StaffInteractionMode,
 } from '../lib/staffInteractionMode';
-import { writeStaffInteractionModePref } from '../lib/staffModePrefs';
+import { persistUserStaffInteractionMode } from '../lib/staffModePrefs';
 import { writeCachedProfile } from '../lib/sessionCache';
 import LabeledSwitch from './LabeledSwitch';
 
@@ -37,20 +36,17 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
     const previous = mode;
     setSaving(true);
     setErr('');
-    const updated: UserProfile = { ...userProfile, staffInteractionMode: next };
     setMode(next);
-    onUpdateProfile(updated);
-    writeStaffInteractionModePref(userProfile.uid, next);
-    writeCachedProfile(updated);
-    const result = await upsertSupabaseProfile(updated);
+    const result = await persistUserStaffInteractionMode(userProfile, next);
     setSaving(false);
     if (!result.ok) {
       setErr(result.errorMessage || 'Could not save this setting.');
       setMode(previous);
-      onUpdateProfile(userProfile);
-      writeStaffInteractionModePref(userProfile.uid, previous);
-      writeCachedProfile(userProfile);
       return;
+    }
+    if (result.profile) {
+      onUpdateProfile(result.profile);
+      writeCachedProfile(result.profile);
     }
   };
 
@@ -68,7 +64,8 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
               : 'User mode — browse and message like any neighbor. New comments and messages use your profile name only.'}
           </p>
           <p className="text-[10px] text-subtle mt-1 leading-snug">
-            Whatever mode you are in when you send stays that way — switching later does not change past posts.
+            Saved to your account and follows you on any device. Whatever mode you are in when you send stays
+            that way — switching later does not change past posts.
           </p>
         </div>
         <LabeledSwitch

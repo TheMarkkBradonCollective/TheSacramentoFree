@@ -15,6 +15,7 @@ import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './lib/goG
 import { normalizePickupAvailability } from './lib/pickupAvailability';
 import { mergeGoGetPrefsIntoProfile } from './lib/goGetPrefs';
 import { mergeNavigationPrefsIntoProfile } from './lib/navPrefs';
+import { mergeStaffInteractionModeIntoProfile } from './lib/staffModePrefs';
 import { normalizeNavigationSettings, type NavigationSettings } from './lib/navigationSettings';
 import { normalizeAppPreferences } from './lib/appPreferences';
 import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
@@ -732,7 +733,9 @@ export async function upsertSupabaseProfile(
     }
 
     const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
-    const profileForSave = mergeNavigationPrefsIntoProfile(mergeGoGetPrefsIntoProfile(profile));
+    const profileForSave = mergeStaffInteractionModeIntoProfile(
+      mergeNavigationPrefsIntoProfile(mergeGoGetPrefsIntoProfile(profile)),
+    );
 
     const payload = {
       uid: profileForSave.uid,
@@ -777,6 +780,13 @@ export async function upsertSupabaseProfile(
           ok: false,
           errorMessage:
             'Navigation settings could not be saved. Run scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql in the Supabase SQL editor, then try again.',
+        };
+      }
+      if (/staffInteractionMode/i.test(`${error.code || ''} ${error.message || ''}`) && isStaffRole(profileForSave.role)) {
+        return {
+          ok: false,
+          errorMessage:
+            'Staff/user mode could not be saved. Run scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql in the Supabase SQL editor, then try again.',
         };
       }
       const {

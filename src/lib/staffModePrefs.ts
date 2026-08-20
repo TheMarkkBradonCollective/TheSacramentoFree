@@ -1,5 +1,11 @@
-import type { StaffInteractionMode } from './staffInteractionMode';
-import { normalizeStaffInteractionMode } from './staffInteractionMode';
+import type { UserProfile } from '../types';
+import { upsertSupabaseProfile } from '../supabase';
+import { isStaffRole } from './roles';
+import {
+  DEFAULT_STAFF_INTERACTION_MODE,
+  normalizeStaffInteractionMode,
+  type StaffInteractionMode,
+} from './staffInteractionMode';
 
 const KEY_PREFIX = 'sbn_staff_interaction_mode_v1:';
 
@@ -59,4 +65,35 @@ export function mergeStaffInteractionModePref(profile: {
   const fromProfile = profile.staffInteractionMode;
   if (fromProfile === 'staff' || fromProfile === 'neighbor') return fromProfile;
   return readStaffInteractionModePref(profile.uid) ?? undefined;
+}
+
+/** Prefer saved device prefs so profile edits cannot wipe staff/user mode before DB sync. */
+export function mergeStaffInteractionModeIntoProfile(profile: UserProfile): UserProfile {
+  if (!isStaffRole(profile.role)) return profile;
+  const local = readStaffInteractionModePref(profile.uid);
+  if (local) {
+    return { ...profile, staffInteractionMode: local };
+  }
+  return {
+    ...profile,
+    staffInteractionMode: normalizeStaffInteractionMode(
+      profile.staffInteractionMode ?? DEFAULT_STAFF_INTERACTION_MODE,
+    ),
+  };
+}
+
+export function applyStoredStaffModeToProfile(profile: UserProfile): UserProfile {
+  return mergeStaffInteractionModeIntoProfile(profile);
+}
+
+export async function persistUserStaffInteractionMode(
+  profile: UserProfile,
+  mode: StaffInteractionMode,
+): Promise<{ ok: boolean; profile?: UserProfile; errorMessage?: string }> {
+  const next = normalizeStaffInteractionMode(mode);
+  writeStaffInteractionModePref(profile.uid, next);
+  const updated: UserProfile = { ...profile, staffInteractionMode: next };
+  const result = await upsertSupabaseProfile(updated);
+  if (!result.ok) return result;
+  return { ok: true, profile: updated };
 }

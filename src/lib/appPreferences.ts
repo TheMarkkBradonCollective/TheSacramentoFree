@@ -3,6 +3,12 @@ import { upsertSupabaseProfile } from '../supabase';
 import { writeStoredGoGetPrefs, profileToStoredGoGetPrefs } from './goGetPrefs';
 import { writeStoredNavPrefs, profileToStoredNavPrefs } from './navPrefs';
 import { writeEventsViewMode, writeFeedViewMode } from './feedDisplayPrefs';
+import { isStaffRole } from './roles';
+import {
+  DEFAULT_STAFF_INTERACTION_MODE,
+  normalizeStaffInteractionMode,
+} from './staffInteractionMode';
+import { writeStaffInteractionModePref } from './staffModePrefs';
 
 const THEME_SYNC_EVENT = 'sbn-theme-sync';
 
@@ -36,6 +42,12 @@ export function mergeAppPreferences(
 export function applyUserPreferencesToDevice(profile: UserProfile): void {
   writeStoredNavPrefs(profileToStoredNavPrefs(profile));
   writeStoredGoGetPrefs(profileToStoredGoGetPrefs(profile));
+  if (isStaffRole(profile.role)) {
+    writeStaffInteractionModePref(
+      profile.uid,
+      normalizeStaffInteractionMode(profile.staffInteractionMode ?? DEFAULT_STAFF_INTERACTION_MODE),
+    );
+  }
 
   const prefs = normalizeAppPreferences(profile.appPreferences);
   if (prefs.feedViewMode) writeFeedViewMode(prefs.feedViewMode);
