@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Flag, MapPin, MessageSquare, Trash2 } from 'lucide-react';
+import { Flag, MapPin, MessageSquare, Trash2 } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
 import { isStaffRole } from '../../lib/roles';
@@ -24,13 +24,6 @@ function timeLabel(iso: string): string {
   }
 }
 
-const voteBtnClass = (active: boolean) =>
-  `flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-    active
-      ? 'bg-accent-soft border-accent text-accent'
-      : 'border-app text-muted hover:border-accent'
-  }`;
-
 export default function FeedPostCard({
   post,
   userProfile,
@@ -42,12 +35,10 @@ export default function FeedPostCard({
   const [reportOpen, setReportOpen] = useState(false);
   const isOwn = post.userId === userProfile.uid;
   const isStaff = isStaffRole(userProfile.role);
-  const votes = engagement.getVoteState(post.id);
   const comments = engagement.getComments(post.id);
   const cover = post.imageUrls[0];
   const extraPhotos = Math.max(0, post.imageUrls.length - 1);
 
-  const canVote = !isOwn;
   const canDelete = isOwn || isStaff;
   const canReport = !isOwn;
 
@@ -126,42 +117,14 @@ export default function FeedPostCard({
           className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-app"
           onClick={(event) => event.stopPropagation()}
         >
-          {canVote ? (
-            <>
-              <button
-                type="button"
-                onClick={() => engagement.handleVote(post.id, 'up', post.userId)}
-                className={voteBtnClass(votes.userVote === 'up')}
-                title="Upvote"
-                aria-label="Upvote"
-              >
-                <ChevronUp className="w-4 h-4" />
-                <span className="tabular-nums">{votes.upvotes}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => engagement.handleVote(post.id, 'down', post.userId)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                  votes.userVote === 'down'
-                    ? 'bg-inset border-app text-app'
-                    : 'border-app text-muted hover:border-app'
-                }`}
-                title="Not for me"
-                aria-label="Downvote"
-              >
-                <ChevronDown className="w-4 h-4" />
-                <span className="tabular-nums">{votes.downvotes}</span>
-              </button>
-            </>
-          ) : null}
-
           <button
             type="button"
             onClick={openPost}
-            className={`${canVote ? '' : 'mr-auto'} ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors`}
-            aria-label={`${comments.length} comments`}
+            className="mr-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors"
+            aria-label={`Comment, ${comments.length} ${comments.length === 1 ? 'comment' : 'comments'}`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
+            <span>Comment</span>
             <span className="tabular-nums">{comments.length}</span>
           </button>
 
