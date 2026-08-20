@@ -10,6 +10,7 @@ export interface PushDeepLinkTarget {
   notificationsTab?: 'announcements' | 'updates' | 'notifications' | 'alerts' | 'listings';
   staffPanel?: 'tickets' | 'reports';
   chatFeedbackPanel?: 'reviews' | 'report' | 'staffReports';
+  feedPostId?: string;
   /** Neighbor staff application page. */
   staffApply?: boolean;
   /** @deprecated tickets — opens Messages → Support inbox */
@@ -34,6 +35,9 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (path === 'feed' || path === 'stuff' || path === 'events' || path === 'map' || path === 'chats' || path === 'profile') {
     return { tab: path as AppTab };
   }
+
+  const feedPostMatch = path.match(/^feed\/post\/([^/]+)/);
+  if (feedPostMatch) return { tab: 'feed', feedPostId: feedPostMatch[1] };
 
   if (path === 'notifications' || path === 'notifications/listings') return { notificationsTab: 'notifications' };
   if (path === 'notifications/alerts' || path === 'alerts') return { notificationsTab: 'alerts' };
@@ -97,12 +101,17 @@ export function shouldPreservePushDeepLink(target: PushDeepLinkTarget | null): b
       target.directorOverview ||
       target.staffApply ||
       target.supportTicketId ||
+      target.feedPostId ||
       target.chatSupportView,
   );
 }
 
 export function pushUrlForListing(listingId: string): string {
   return `/listing/${listingId}`;
+}
+
+export function pushUrlForFeedPost(postId: string): string {
+  return `/feed/post/${postId}`;
 }
 
 export function pushUrlForEvent(eventId: string): string {

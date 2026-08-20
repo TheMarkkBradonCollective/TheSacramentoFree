@@ -48,7 +48,11 @@ export type PushEventType =
   | 'go_get_completed'
   | 'go_get_cancelled'
   | 'contactless_pickup_arrived'
-  | 'contactless_pickup_left';
+  | 'contactless_pickup_left'
+  | 'feed_comment'
+  | 'feed_reaction'
+  | 'feed_upvote'
+  | 'feed_downvote';
 
 export interface PushPayload {
   title: string;
@@ -160,6 +164,10 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   go_get_cancelled: 'pickupReminders',
   contactless_pickup_arrived: 'pickupReminders',
   contactless_pickup_left: 'pickupReminders',
+  feed_comment: 'comments',
+  feed_reaction: 'comments',
+  feed_upvote: 'listingUpvotes',
+  feed_downvote: 'listingDownvotes',
 };
 
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {

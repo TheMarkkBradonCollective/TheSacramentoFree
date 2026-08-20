@@ -422,6 +422,22 @@ export async function validateClientPush(
       return { ok: true, recipientUserIds: userIds };
     }
 
+    case 'feed_comment':
+    case 'feed_reaction':
+    case 'feed_upvote':
+    case 'feed_downvote': {
+      const postId = String(body.listingId || body.data?.feedPostId || '').trim();
+      if (!postId) return { ok: false, error: 'feedPostId is required' };
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin.from('feed_posts').select('userId').eq('id', postId).maybeSingle();
+      const ownerId = String((data as { userId?: string } | null)?.userId || '');
+      if (!ownerId || ownerId === callerId) return { ok: false, error: 'No feed post owner to notify' };
+      if (eventType === 'feed_upvote' || eventType === 'feed_downvote') {
+        return { ok: true, recipientUserIds: [ownerId] };
+      }
+      return { ok: true, recipientUserIds: [ownerId] };
+    }
+
     default:
       return { ok: false, error: 'Unsupported client notification type' };
   }

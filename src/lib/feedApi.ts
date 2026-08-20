@@ -104,6 +104,28 @@ export async function getFeedPosts(limit = 50): Promise<FeedPost[]> {
   }
 }
 
+export async function getFeedPostById(postId: string): Promise<FeedPost | null> {
+  try {
+    const { data, error } = await supabase
+      .from('feed_posts')
+      .select('*')
+      .eq('id', postId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (error) {
+      handleSupabaseError(error, 'feed_posts');
+      return null;
+    }
+    if (!data) return null;
+    setSupabaseConfigurationState(true);
+    return normalizeFeedPost(data as Record<string, unknown>);
+  } catch (err) {
+    handleSupabaseError(err, 'feed_posts');
+    return null;
+  }
+}
+
 export async function createFeedPost(
   profile: UserProfile,
   input: { text: string; imageFiles: File[] },
@@ -236,6 +258,15 @@ export async function createFeedPostComment(
       createdAt: comment.createdAt,
     });
     if (error) return { ok: false, errorMessage: error.message };
+    void import('./pushFeedIntegration').then((m) =>
+      m.pushAfterFeedComment({
+        id: comment.id,
+        postId: comment.postId,
+        userId: comment.userId,
+        userName: comment.userName,
+        text: comment.text,
+      }),
+    );
     return { ok: true, comment };
   } catch (err) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not post comment.' };
@@ -324,6 +355,11 @@ export async function toggleFeedPostReaction(
       emoji,
       createdAt: new Date().toISOString(),
     });
+    if (!error) {
+      void import('./pushFeedIntegration').then((m) =>
+        m.pushAfterFeedReaction({ postId, reactorUserId: userId, emoji, added: true }),
+      );
+    }
     return !error;
   } catch {
     return false;

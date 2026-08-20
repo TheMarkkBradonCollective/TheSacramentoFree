@@ -61,6 +61,14 @@ function inboxKind(eventType: PushEventType): string {
       return 'staff_report';
     case 'director_alert':
       return 'director_alert';
+    case 'feed_comment':
+      return 'feed_comment';
+    case 'feed_reaction':
+      return 'feed_reaction';
+    case 'feed_upvote':
+      return 'feed_upvote';
+    case 'feed_downvote':
+      return 'feed_downvote';
     default:
       return eventType;
   }
