@@ -14,6 +14,7 @@ import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../l
 import { EVENTS } from '../siteContent';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
 import CollapsibleFilterSection from './CollapsibleFilterSection';
+import { EventGridSkeleton } from './Skeleton';
 import EventCard from './EventCard';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
@@ -264,12 +265,7 @@ export default function EventsView({
   ]);
 
   if (isLoading && events.length === 0) {
-    return (
-      <div className="sbn-card text-center py-16 px-8 border-dashed">
-        <Calendar className="w-10 h-10 text-muted mx-auto mb-3 animate-pulse" />
-        <p className="text-sm text-muted">Loading community events…</p>
-      </div>
-    );
+    return <EventGridSkeleton />;
   }
 
   return (
