@@ -1938,6 +1938,12 @@ button {
   z-index: 80;
   background: var(--color-bg);
   min-height: 0;
+  box-sizing: border-box;
+}
+
+.sbn-app-sheet.flex.flex-col {
+  min-height: 0;
+  max-height: 100%;
 }
 
 .sbn-mobile-shell:not(.sbn-immersive-nav) .sbn-app-sheet,
@@ -1958,6 +1964,20 @@ html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet .sbn-safe-top
 html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet.sbn-safe-bottom,
 html:has(.sbn-mobile-shell:not(.sbn-immersive-nav)) .sbn-app-sheet .sbn-safe-bottom {
   padding-bottom: 0;
+}
+
+/* Full-viewport sheets (desktop / tablet) — keep content above system bars */
+html:not(:has(.sbn-mobile-shell)) .sbn-app-sheet {
+  padding-top: var(--sbn-safe-area-top, 0px);
+  padding-bottom: var(--sbn-safe-area-bottom, 0px);
+}
+
+html:not(:has(.sbn-mobile-shell)) .sbn-app-sheet .sbn-safe-top {
+  padding-top: 0;
+}
+
+html:not(:has(.sbn-mobile-shell)) .sbn-app-sheet .sbn-safe-bottom {
+  padding-bottom: max(0.75rem, var(--sbn-keyboard-inset, 0px));
 }
 
 /* Full-screen map navigation — hide app chrome */

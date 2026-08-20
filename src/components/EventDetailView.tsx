@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, Calendar, LifeBuoy, MapPin, Pencil, Repeat } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
@@ -114,52 +115,73 @@ export default function EventDetailView({
     });
   }, [comments]);
 
-  return (
-    <div className="sbn-app-sheet flex flex-col">
-      <header className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-app bg-surface/95 backdrop-blur">
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 -ml-2 rounded-full hover:bg-inset text-muted"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="font-display font-bold text-app flex-1 truncate">Event details</h1>
-        <div className="flex items-center gap-2 shrink-0">
-          {canAddDates && (
-            <button
-              type="button"
-              onClick={onAddDates}
-              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-              disabled={updating}
-            >
-              <Repeat className="w-3.5 h-3.5" />
-              Add dates
-            </button>
-          )}
-          {canEdit && onEdit && (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-              disabled={updating}
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit
-            </button>
-          )}
-          {isStaffViewer && !isOwner && onStaffChat && (
-            <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm">
-              <LifeBuoy className="w-3.5 h-3.5" />
-              Staff chat
-            </button>
-          )}
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const panel = (
+    <div
+      id="event_detail_fullscreen"
+      className="sbn-app-sheet flex flex-col min-h-0 font-sans"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="event_detail_title"
+    >
+      <header className="sticky top-0 z-10 shrink-0 sbn-glass-nav sbn-safe-top border-b border-app">
+        <div className="px-4 min-h-14 flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 -ml-2 rounded-full hover:bg-inset text-muted shrink-0"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1
+            id="event_detail_title"
+            className="font-display font-bold text-app flex-1 min-w-0 truncate text-base"
+          >
+            Event details
+          </h1>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {canAddDates && (
+              <button
+                type="button"
+                onClick={onAddDates}
+                className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                disabled={updating}
+              >
+                <Repeat className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline ml-1">Add dates</span>
+              </button>
+            )}
+            {canEdit && onEdit && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                disabled={updating}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline ml-1">Edit</span>
+              </button>
+            )}
+            {isStaffViewer && !isOwner && onStaffChat && (
+              <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+                <LifeBuoy className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline ml-1">Staff chat</span>
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto p-4 space-y-5">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
+        <div className="max-w-2xl mx-auto p-4 pb-10 space-y-5">
           {event.imageUrl && (
             <img
               src={event.imageUrl}
@@ -351,4 +373,6 @@ export default function EventDetailView({
       )}
     </div>
   );
+
+  return createPortal(panel, document.body);
 }
