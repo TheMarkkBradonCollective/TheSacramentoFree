@@ -10,6 +10,12 @@ import {
   type NavigationRouteResult,
 } from './navigationRoute';
 import type { NavTravelMode } from './navigationSettings';
+import {
+  speakNativeNavigationTts,
+  stopNativeNavigationTts,
+  warmupNativeNavigationTts,
+} from './nativeNavigationTts';
+import { isAndroidApp } from './nativePlatform';
 
 export type VoiceCueKind = 'start' | 'far' | 'medium' | 'near' | 'now' | 'step' | 'arrival' | 'reroute';
 
@@ -147,20 +153,21 @@ export function buildStartBriefingVoice(options: {
   ]);
 }
 
-/** Android WebView drops TTS unless it is unlocked from a tap. Never cancel() after this. */
+/** Android WebView speechSynthesis is often silent. Native TTS does not need a tap. */
 let navigationSpeechUnlocked = false;
 
 export function unlockNavigationSpeech(): void {
+  void warmupNativeNavigationTts();
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   window.speechSynthesis.getVoices();
   window.speechSynthesis.resume();
-  if (navigationSpeechUnlocked) return;
+  if (isAndroidApp() || navigationSpeechUnlocked) return;
+  navigationSpeechUnlocked = true;
   const warmup = new SpeechSynthesisUtterance('.');
   warmup.volume = 0.01;
   warmup.rate = 2;
   warmup.lang = 'en-US';
   window.speechSynthesis.speak(warmup);
-  navigationSpeechUnlocked = true;
 }
 
 export class NavigationVoice {
@@ -216,7 +223,7 @@ export class NavigationVoice {
   private startKeepAlive(): void {
     if (this.keepAliveTimer != null || typeof window === 'undefined') return;
     this.keepAliveTimer = window.setInterval(() => {
-      if (!this.enabled || !window.speechSynthesis) return;
+      if (!this.enabled || isAndroidApp() || !window.speechSynthesis) return;
       if (window.speechSynthesis.paused) window.speechSynthesis.resume();
     }, 8000);
   }
@@ -231,6 +238,7 @@ export class NavigationVoice {
     this.queue = [];
     this.processing = false;
     this.stopKeepAlive();
+    void stopNativeNavigationTts();
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -258,8 +266,6 @@ export class NavigationVoice {
       this.spokenKeys.add(key);
     }
 
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-
     this.queue.push(text.trim());
     this.processQueue();
   }
@@ -276,48 +282,72 @@ export class NavigationVoice {
 
   private processQueue(): void {
     if (this.processing || !this.enabled || this.queue.length === 0) return;
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
     const text = this.queue.shift();
     if (!text) return;
 
     this.processing = true;
-    window.speechSynthesis.resume();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.98;
-    utterance.pitch = 1;
-    utterance.volume = 1;
     this.setSpeaking(true, text);
-
-    const preferred = this.pickVoice();
-    if (preferred) utterance.voice = preferred;
-
-    let settled = false;
-    const onDone = () => {
-      if (settled) return;
-      settled = true;
+    void this.speakNow(text).finally(() => {
       this.processing = false;
       this.utterance = null;
       if (this.queue.length === 0) {
         this.setSpeaking(false);
       }
       this.processQueue();
-    };
+    });
+  }
 
-    utterance.onend = onDone;
-    utterance.onerror = onDone;
+  private async speakNow(text: string): Promise<void> {
+    if (await speakNativeNavigationTts(text)) return;
+    await this.speakWeb(text);
+  }
 
-    this.utterance = utterance;
-    window.speechSynthesis.speak(utterance);
+  private speakWeb(text: string): Promise<void> {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      return Promise.resolve();
+    }
 
-    // Android WebView often swallows the first speak() unless we retry after resume.
-    window.setTimeout(() => {
-      if (settled || this.utterance !== utterance) return;
-      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
+    return new Promise((resolve) => {
       window.speechSynthesis.resume();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.98;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      const preferred = this.pickVoice();
+      if (preferred) utterance.voice = preferred;
+
+      let settled = false;
+      const onDone = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+
+      utterance.onend = onDone;
+      utterance.onerror = onDone;
+      this.utterance = utterance;
       window.speechSynthesis.speak(utterance);
-    }, 280);
+
+      window.setTimeout(() => {
+        if (settled || this.utterance !== utterance) return;
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
+        window.speechSynthesis.resume();
+        const retry = new SpeechSynthesisUtterance(text);
+        retry.lang = utterance.lang;
+        retry.rate = utterance.rate;
+        retry.pitch = utterance.pitch;
+        retry.volume = utterance.volume;
+        if (preferred) retry.voice = preferred;
+        retry.onend = onDone;
+        retry.onerror = onDone;
+        this.utterance = retry;
+        window.speechSynthesis.speak(retry);
+      }, 280);
+
+      window.setTimeout(onDone, Math.min(45_000, 4_000 + text.length * 90));
+    });
   }
 
   /**
@@ -327,16 +357,27 @@ export class NavigationVoice {
   unlock(): void {
     unlockNavigationSpeech();
     this.startKeepAlive();
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    if (!this.voicesListener) {
+    if (typeof window !== 'undefined' && window.speechSynthesis && !this.voicesListener) {
       this.voicesListener = () => this.pickVoice();
       window.speechSynthesis.addEventListener('voiceschanged', this.voicesListener);
     }
     this.processQueue();
   }
 
-  /** Prime voices on iOS/Safari (must run after a user gesture). */
+  /** Prime voices after a user gesture (web) or immediately (Android TTS). */
   prime(): void {
     this.unlock();
   }
+}
+
+const sampleVoice = new NavigationVoice();
+
+/** Speaks a short sample from a tap so neighbors can confirm the speaker works. */
+export function speakNavigationVoiceSample(): void {
+  sampleVoice.setEnabled(true);
+  sampleVoice.unlock();
+  sampleVoice.speak(
+    'Voice guidance is on. I will speak upcoming turns while you navigate.',
+    `voice-sample-${Date.now()}`,
+  );
 }

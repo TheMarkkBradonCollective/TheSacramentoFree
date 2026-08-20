@@ -6,6 +6,7 @@ import {
   type NavigationSettings,
   type NavTravelMode,
 } from '../lib/navigationSettings';
+import { speakNavigationVoiceSample } from '../lib/navigationVoice';
 
 const MODE_ICONS: Record<NavTravelMode, typeof Car> = {
   driving: Car,
@@ -126,12 +127,27 @@ export default function NavigationSettingsForm({
         <ToggleRow
           id={variant === 'nav' ? 'nav_setting_voice' : 'profile_nav_voice'}
           title="Voice guidance"
-          description="Speak upcoming turns, including when you recenter on yourself."
+          description="Speak upcoming turns out loud, including when you recenter on yourself. Uses your phone speaker — turn media volume up if it is quiet."
           checked={settings.voiceEnabled}
           onChange={(voiceEnabled) => onChange({ voiceEnabled })}
           icon={Volume2}
           variant={variant}
         />
+        <button
+          type="button"
+          onClick={() => {
+            onChange({ voiceEnabled: true });
+            speakNavigationVoiceSample();
+          }}
+          className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border ${
+            variant === 'nav'
+              ? 'border-[var(--sbn-nav-glass-border)] bg-[var(--sbn-nav-surface)] text-[var(--sbn-nav-text)]'
+              : 'border-app bg-inset text-app hover:bg-surface-hover'
+          }`}
+        >
+          <Volume2 className="w-4 h-4 text-accent" />
+          Test voice
+        </button>
         <ToggleRow
           id={variant === 'nav' ? 'nav_setting_recenter_voice' : 'profile_nav_recenter_voice'}
           title="Speak when centered"
