@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigation2 } from 'lucide-react';
 import type { UserProfile } from '../../types';
-import { upsertSupabaseProfile } from '../../supabase';
+import { persistUserGoGetSettings } from '../../lib/goGetPrefs';
 import { markGoGetFirstRunPromptSeen } from '../../lib/goGetFirstRunState';
 
 interface GoGetFirstRunPromptProps {
@@ -21,15 +21,14 @@ export default function GoGetFirstRunPrompt({
   const saveChoice = async (enabled: boolean) => {
     setSaving(true);
     setErr('');
-    const updated: UserProfile = { ...userProfile, goGetEnabled: enabled };
-    const result = await upsertSupabaseProfile(updated);
+    const result = await persistUserGoGetSettings(userProfile, { goGetEnabled: enabled });
     setSaving(false);
     if (!result.ok) {
       setErr(result.errorMessage || 'Could not save your choice. Try again in Account.');
       return;
     }
     markGoGetFirstRunPromptSeen();
-    onUpdateProfile(updated);
+    if (result.profile) onUpdateProfile(result.profile);
     if (enabled) onOpenNotificationSettings?.();
   };
 

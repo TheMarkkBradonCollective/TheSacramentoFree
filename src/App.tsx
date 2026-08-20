@@ -78,6 +78,7 @@ import {
   clearSessionCache,
   sessionStubFromProfile,
 } from './lib/sessionCache';
+import { applyStoredGoGetPrefsToProfile } from './lib/goGetPrefs';
 import { readStaffInteractionModePref } from './lib/staffModePrefs';
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
@@ -836,7 +837,7 @@ export default function App() {
       const base = profileFromAuthUser(user);
       const cached = readCachedProfile();
       if (cached?.uid === user.id) {
-        return {
+        return applyStoredGoGetPrefsToProfile({
           ...base,
           displayName: cached.displayName || base.displayName,
           photoURL: cached.photoURL || base.photoURL,
@@ -844,9 +845,13 @@ export default function App() {
           bio: cached.bio ?? base.bio,
           role: cached.role ?? base.role,
           staffInteractionMode: cached.staffInteractionMode ?? base.staffInteractionMode,
-        };
+          goGetEnabled: cached.goGetEnabled === true,
+          pickupAvailability: cached.pickupAvailability,
+          goGetRingDurationSeconds: cached.goGetRingDurationSeconds,
+          goGetRingPattern: cached.goGetRingPattern,
+        });
       }
-      return base;
+      return applyStoredGoGetPrefsToProfile(base);
     });
     setIsAuthLoading(false);
     setAuthBootstrapping(false);

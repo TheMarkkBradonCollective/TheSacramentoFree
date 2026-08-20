@@ -1,5 +1,6 @@
 import type { AppPreferences, FeedViewMode, UserProfile } from '../types';
 import { upsertSupabaseProfile } from '../supabase';
+import { writeStoredGoGetPrefs, profileToStoredGoGetPrefs } from './goGetPrefs';
 import { writeEventsViewMode, writeFeedViewMode } from './feedDisplayPrefs';
 import {
   normalizeNavigationSettings,
@@ -40,6 +41,8 @@ export function applyUserPreferencesToDevice(profile: UserProfile): void {
   if (profile.navigationSettings) {
     writeNavigationSettings(profile.navigationSettings, { localOnly: true });
   }
+
+  writeStoredGoGetPrefs(profileToStoredGoGetPrefs(profile));
 
   const prefs = normalizeAppPreferences(profile.appPreferences);
   if (prefs.feedViewMode) writeFeedViewMode(prefs.feedViewMode);

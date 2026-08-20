@@ -13,6 +13,7 @@ import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import type { AppPreferences, PickupAvailabilitySchedule } from './types';
 import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './lib/goGetRing';
 import { normalizePickupAvailability } from './lib/pickupAvailability';
+import { mergeGoGetPrefsIntoProfile } from './lib/goGetPrefs';
 import { normalizeNavigationSettings, type NavigationSettings } from './lib/navigationSettings';
 import { normalizeAppPreferences } from './lib/appPreferences';
 import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
@@ -730,23 +731,24 @@ export async function upsertSupabaseProfile(
     }
 
     const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
+    const profileForSave = mergeGoGetPrefsIntoProfile(profile);
 
     const payload = {
-      uid: profile.uid,
-      displayName: profile.displayName.trim(),
+      uid: profileForSave.uid,
+      displayName: profileForSave.displayName.trim(),
       photoURL,
       email,
-      neighborhood: profile.neighborhood,
-      bio: profile.bio?.trim() || null,
-      goGetEnabled: profile.goGetEnabled === true,
-      pickupAvailability: profile.pickupAvailability ?? null,
-      goGetRingDurationSeconds: normalizeGoGetRingDuration(profile.goGetRingDurationSeconds),
-      goGetRingPattern: normalizeGoGetRingPattern(profile.goGetRingPattern),
-      navigationSettings: profile.navigationSettings ?? null,
-      appPreferences: profile.appPreferences ?? null,
+      neighborhood: profileForSave.neighborhood,
+      bio: profileForSave.bio?.trim() || null,
+      goGetEnabled: profileForSave.goGetEnabled === true,
+      pickupAvailability: profileForSave.pickupAvailability ?? null,
+      goGetRingDurationSeconds: normalizeGoGetRingDuration(profileForSave.goGetRingDurationSeconds),
+      goGetRingPattern: normalizeGoGetRingPattern(profileForSave.goGetRingPattern),
+      navigationSettings: profileForSave.navigationSettings ?? null,
+      appPreferences: profileForSave.appPreferences ?? null,
       staffInteractionMode:
-        profile.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
-      createdAt: coerceToIsoDate(profile.createdAt),
+        profileForSave.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
+      createdAt: coerceToIsoDate(profileForSave.createdAt),
     };
 
     let { data, error } = await supabase
@@ -755,8 +757,20 @@ export async function upsertSupabaseProfile(
       .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, navigationSettings, appPreferences, createdAt')
       .single();
 
-    // Older DBs may not have goGetEnabled / staffInteractionMode yet — retry without missing columns.
+    // Older DBs may not have optional profile columns yet — retry without missing columns.
     if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+      const wantsGoGetPrefs =
+        payload.goGetEnabled === true ||
+        payload.pickupAvailability != null ||
+        payload.goGetRingDurationSeconds !== 140 ||
+        payload.goGetRingPattern !== 'ring';
+      if (/pickupAvailability|goGetRing/i.test(`${error.code || ''} ${error.message || ''}`) && wantsGoGetPrefs) {
+        return {
+          ok: false,
+          errorMessage:
+            'Go Get settings could not be saved. Run scripts/supabase-migration-aug-20-2026-go-get-ring-availability.sql in the Supabase SQL editor, then try again.',
+        };
+      }
       const {
         goGetEnabled: _goGet,
         staffInteractionMode: _mode,

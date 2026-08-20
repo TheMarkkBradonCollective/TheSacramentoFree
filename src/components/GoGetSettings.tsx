@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigation2, Volume2 } from 'lucide-react';
 import type { GoGetRingPattern, PickupAvailabilitySchedule, UserProfile } from '../types';
-import { upsertSupabaseProfile } from '../supabase';
 import {
   GO_GET_RING_PATTERN_LABELS,
   MAX_GO_GET_RING_DURATION,
@@ -10,6 +9,11 @@ import {
   normalizeGoGetRingPattern,
 } from '../lib/goGetRing';
 import { getPickupAvailability } from '../lib/pickupAvailability';
+import {
+  mergeGoGetPrefsIntoProfile,
+  persistUserGoGetSettings,
+  readStoredGoGetPrefs,
+} from '../lib/goGetPrefs';
 import PickupAvailabilityEditor from './goget/PickupAvailabilityEditor';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -18,41 +22,55 @@ interface GoGetSettingsProps {
   onUpdateProfile: (profile: UserProfile) => void;
 }
 
+function resolveGoGetProfile(userProfile: UserProfile): UserProfile {
+  return mergeGoGetPrefsIntoProfile(userProfile);
+}
+
 export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSettingsProps) {
   const { alert } = useConfirm();
-  const [enabled, setEnabled] = useState(userProfile.goGetEnabled === true);
+  const profileWithPrefs = resolveGoGetProfile(userProfile);
+  const [enabled, setEnabled] = useState(profileWithPrefs.goGetEnabled === true);
   const [availability, setAvailability] = useState<PickupAvailabilitySchedule>(() =>
-    getPickupAvailability(userProfile),
+    getPickupAvailability(profileWithPrefs),
   );
   const [ringDuration, setRingDuration] = useState(
-    normalizeGoGetRingDuration(userProfile.goGetRingDurationSeconds),
+    normalizeGoGetRingDuration(profileWithPrefs.goGetRingDurationSeconds),
   );
   const [ringPattern, setRingPattern] = useState<GoGetRingPattern>(
-    normalizeGoGetRingPattern(userProfile.goGetRingPattern),
+    normalizeGoGetRingPattern(profileWithPrefs.goGetRingPattern),
   );
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    setEnabled(userProfile.goGetEnabled === true);
-    setAvailability(getPickupAvailability(userProfile));
-    setRingDuration(normalizeGoGetRingDuration(userProfile.goGetRingDurationSeconds));
-    setRingPattern(normalizeGoGetRingPattern(userProfile.goGetRingPattern));
+    const merged = resolveGoGetProfile(userProfile);
+    setEnabled(merged.goGetEnabled === true);
+    setAvailability(getPickupAvailability(merged));
+    setRingDuration(normalizeGoGetRingDuration(merged.goGetRingDurationSeconds));
+    setRingPattern(normalizeGoGetRingPattern(merged.goGetRingPattern));
   }, [userProfile.uid, userProfile.goGetEnabled, userProfile.pickupAvailability, userProfile.goGetRingDurationSeconds, userProfile.goGetRingPattern]);
+
+  useEffect(() => {
+    const stored = readStoredGoGetPrefs(userProfile.uid);
+    if (!stored) return;
+    setEnabled(stored.goGetEnabled);
+    setAvailability(stored.pickupAvailability);
+    setRingDuration(stored.goGetRingDurationSeconds);
+    setRingPattern(stored.goGetRingPattern);
+  }, [userProfile.uid]);
 
   const persist = async (patch: Partial<UserProfile>, successMsg?: string) => {
     setSaving(true);
     setMsg('');
     setErr('');
-    const updated: UserProfile = { ...userProfile, ...patch };
-    const result = await upsertSupabaseProfile(updated);
+    const result = await persistUserGoGetSettings(userProfile, patch);
     setSaving(false);
     if (!result.ok) {
       setErr(result.errorMessage || 'Could not save this setting.');
       return false;
     }
-    onUpdateProfile(updated);
+    if (result.profile) onUpdateProfile(result.profile);
     if (successMsg) setMsg(successMsg);
     return true;
   };
