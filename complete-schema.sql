@@ -4135,11 +4135,13 @@ VALUES (
     (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
     'Midtown'
   ),
-  'What''s up y''all — Feed is live!
+  'Hey guys — glad to have y''all here!
 
-Not just for listing stuff anymore. Drop a photo, say hey, talk about a pickup that went smooth, ask the neighborhood something… whatever.
+I was thinking… what''s an app like this without somewhere to chit-chat? So Feed is live.
 
-Comment, react, vote — same as everywhere else in the app. I wanted a spot where we''re not ONLY talking about free couches 😂
+Not just listing stuff. Drop a photo, say hey, talk about a pickup that went smooth, ask the neighborhood something — whatever.
+
+Comment, react, vote — same as everywhere else. I wanted a spot where we''re not ONLY talking about free couches 😂
 
 Say hi when you get a minute. Let me know what you think.',
   '[]'::jsonb,
