@@ -165,7 +165,20 @@ export async function createFeedPost(
       return { ok: false, errorMessage: error.message };
     }
     setSupabaseConfigurationState(true);
-    return { ok: true, post: normalizeFeedPost(data as Record<string, unknown>) };
+    const post = normalizeFeedPost(data as Record<string, unknown>);
+    try {
+      const push = await import('./pushFeedIntegration');
+      await push.pushAfterFeedPost({
+        id: post.id,
+        userId: post.userId,
+        userDisplayName: post.userDisplayName,
+        text: post.text,
+        neighborhood: post.neighborhood,
+      });
+    } catch (err) {
+      console.warn('[push] feed post notify failed:', err);
+    }
+    return { ok: true, post };
   } catch (err) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not create post.' };
   }
@@ -258,15 +271,19 @@ export async function createFeedPostComment(
       createdAt: comment.createdAt,
     });
     if (error) return { ok: false, errorMessage: error.message };
-    void import('./pushFeedIntegration').then((m) =>
-      m.pushAfterFeedComment({
+    try {
+      const push = await import('./pushFeedIntegration');
+      await push.pushAfterFeedComment({
         id: comment.id,
         postId: comment.postId,
+        parentCommentId: comment.parentCommentId,
         userId: comment.userId,
         userName: comment.userName,
         text: comment.text,
-      }),
-    );
+      });
+    } catch (err) {
+      console.warn('[push] feed comment notify failed:', err);
+    }
     return { ok: true, comment };
   } catch (err) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not post comment.' };

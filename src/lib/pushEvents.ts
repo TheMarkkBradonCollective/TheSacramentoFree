@@ -242,6 +242,8 @@ export async function notifyFeedComment(params: {
   commenterName: string;
   preview: string;
   commentId?: string;
+  title?: string;
+  parentCommentId?: string;
 }) {
   const tag = params.commentId
     ? `feed-comment-${params.commentId}`
@@ -249,12 +251,34 @@ export async function notifyFeedComment(params: {
 
   await sendPushNotification({
     eventType: 'feed_comment',
-    title: 'New comment on your feed post',
+    title: params.title || 'New comment on your feed post',
     body: `${params.commenterName}: ${params.preview.slice(0, 120)}`,
     url: pushUrlForFeedPost(params.postId),
     recipientUserIds: [params.authorUserId],
     tag,
+    data: {
+      feedPostId: params.postId,
+      ...(params.parentCommentId ? { parentCommentId: params.parentCommentId } : {}),
+    },
+  });
+}
+
+export async function notifyFeedPost(params: {
+  postId: string;
+  authorUserId: string;
+  authorName: string;
+  preview: string;
+  neighborhood: string;
+}) {
+  await sendPushNotification({
+    eventType: 'feed_post',
+    title: 'New community feed post',
+    body: `${params.authorName} in ${params.neighborhood}: ${params.preview.slice(0, 120)}`,
+    url: pushUrlForFeedPost(params.postId),
+    excludeUserIds: [params.authorUserId],
+    tag: `feed-post-${params.postId}`,
     data: { feedPostId: params.postId },
+    neighborhood: params.neighborhood,
   });
 }
 

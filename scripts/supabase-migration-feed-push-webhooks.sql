@@ -1,0 +1,10 @@
+-- Feed push webhooks (run in Supabase Dashboard → Database → Webhooks if not already configured)
+-- URL: https://www.sacramentobuynothing.com/api/webhooks/supabase-push
+-- Auth: Authorization: Bearer <SUPABASE_PUSH_WEBHOOK_SECRET>
+--
+-- | Webhook name        | Table                   | Events         | Purpose                          |
+-- |---------------------|-------------------------|----------------|----------------------------------|
+-- | push-feed-posts     | feed_posts              | INSERT         | New feed post alerts             |
+-- | push-feed-comments  | feed_post_comments      | INSERT         | Comment + reply notifications    |
+-- | push-feed-reactions | feed_post_reactions     | INSERT         | Reaction notifications           |
+-- | push-feed-votes     | community_content_votes | INSERT, UPDATE | Upvote/downvote (targetType=feed_post) |

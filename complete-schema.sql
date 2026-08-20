@@ -4231,6 +4231,10 @@ ON CONFLICT (id) DO UPDATE SET
 -- | push-support          | support_ticket_messages | INSERT         | Support + staff inbox            |
 -- | push-app-updates      | app_updates             | INSERT         | Director changelog (app updates) |
 -- | push-announcements    | help_announcements      | INSERT         | Staff help announcements         |
+-- | push-feed-posts       | feed_posts              | INSERT         | Neighbors: new feed posts        |
+-- | push-feed-comments    | feed_post_comments      | INSERT         | Post author + reply targets      |
+-- | push-feed-reactions   | feed_post_reactions     | INSERT         | Post author                      |
+-- | push-feed-votes       | community_content_votes | INSERT, UPDATE | Post author (feed_post votes)    |
 --
 -- items UPDATE covers: status changes, owner listing-status alerts, saved-item
 -- status alerts, pickup-scheduled alerts (pending_pickup), and saved-item alerts

@@ -53,6 +53,7 @@ export type PushEventType =
   | 'feed_reaction'
   | 'feed_upvote'
   | 'feed_downvote'
+  | 'feed_post'
   | 'violation_filed'
   | 'violation_decision'
   | 'account_locked'
@@ -172,6 +173,7 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   feed_reaction: 'comments',
   feed_upvote: 'listingUpvotes',
   feed_downvote: 'listingDownvotes',
+  feed_post: 'newListings',
   violation_filed: 'accountUpdates',
   violation_decision: 'accountUpdates',
   account_locked: 'accountUpdates',
