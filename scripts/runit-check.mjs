@@ -57,6 +57,11 @@ const migrationMarkers = [
     markers: ['staffInteractionMode', 'postedAsNeighbor'],
     label: 'Staff interaction mode',
   },
+  {
+    file: 'scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql',
+    markers: ['navigationSettings', 'appPreferences', 'native_app_sessions'],
+    label: 'User prefs + native app session',
+  },
 ];
 
 for (const { file, markers, label: migrationLabel } of migrationMarkers) {

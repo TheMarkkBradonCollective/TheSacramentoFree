@@ -10,9 +10,11 @@ import { listingExpiresAtIso } from '../shared/listingExpiry';
 import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
 import { filterNews, filterUpdates } from '../shared/changelogFilters';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
-import type { PickupAvailabilitySchedule } from './types';
+import type { AppPreferences, PickupAvailabilitySchedule } from './types';
 import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './lib/goGetRing';
 import { normalizePickupAvailability } from './lib/pickupAvailability';
+import { normalizeNavigationSettings, type NavigationSettings } from './lib/navigationSettings';
+import { normalizeAppPreferences } from './lib/appPreferences';
 import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
 import { getEventsUnlockStatus } from './lib/eventsApi';
 import {
@@ -426,6 +428,10 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
       row.goGetRingDurationSeconds ?? row.go_get_ring_duration_seconds,
     ),
     goGetRingPattern: normalizeGoGetRingPattern(row.goGetRingPattern ?? row.go_get_ring_pattern),
+    navigationSettings: normalizeNavigationSettings(
+      row.navigationSettings ?? row.navigation_settings,
+    ),
+    appPreferences: normalizeAppPreferences(row.appPreferences ?? row.app_preferences),
     staffInteractionMode:
       row.staffInteractionMode === 'neighbor' || row.staff_interaction_mode === 'neighbor'
         ? 'neighbor'
@@ -724,6 +730,8 @@ export async function upsertSupabaseProfile(
       pickupAvailability: profile.pickupAvailability ?? null,
       goGetRingDurationSeconds: normalizeGoGetRingDuration(profile.goGetRingDurationSeconds),
       goGetRingPattern: normalizeGoGetRingPattern(profile.goGetRingPattern),
+      navigationSettings: profile.navigationSettings ?? null,
+      appPreferences: profile.appPreferences ?? null,
       staffInteractionMode:
         profile.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
       createdAt: coerceToIsoDate(profile.createdAt),
@@ -732,17 +740,19 @@ export async function upsertSupabaseProfile(
     let { data, error } = await supabase
       .from('users')
       .upsert(payload, { onConflict: 'uid' })
-      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, createdAt')
+      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, navigationSettings, appPreferences, createdAt')
       .single();
 
     // Older DBs may not have goGetEnabled / staffInteractionMode yet — retry without missing columns.
-    if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+    if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
       const {
         goGetEnabled: _goGet,
         staffInteractionMode: _mode,
         pickupAvailability: _avail,
         goGetRingDurationSeconds: _ringDur,
         goGetRingPattern: _ringPat,
+        navigationSettings: _nav,
+        appPreferences: _prefs,
         ...legacyPayload
       } = payload;
       ({ data, error } = await supabase

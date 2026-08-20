@@ -94,6 +94,13 @@ import { useReviewPrompt } from './hooks/useReviewPrompt';
 import ReviewPromptModal from './components/ReviewPromptModal';
 import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
 import { isNativeApp } from './lib/nativePlatform';
+import { applyUserPreferencesToDevice } from './lib/appPreferences';
+import {
+  clearLocalNativeSessionId,
+  registerNativeAppSession,
+  subscribeNativeAppSessionGuard,
+  verifyNativeAppSession,
+} from './lib/nativeAppSession';
 import { hasSeenGoGetFirstRunPrompt } from './lib/goGetFirstRunState';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
@@ -180,6 +187,7 @@ export default function App() {
   const eventsCountRef = useRef(0);
   const itemsLoadGenRef = useRef(0);
   const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
+  const handleLogOutRef = useRef<(() => Promise<void>) | null>(null);
   const logoutCleanupDoneRef = useRef(false);
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const pathnameSeededRef = useRef(false);
@@ -736,6 +744,7 @@ export default function App() {
             localMode != null ? { ...fromDb, staffInteractionMode: localMode } : fromDb;
           setUserProfile(merged);
           writeCachedProfile(merged);
+          applyUserPreferencesToDevice(merged);
           return;
         }
 
@@ -809,6 +818,11 @@ export default function App() {
             void syncProfileFromDb(session.user);
           }
         }, 0);
+        if (event === 'SIGNED_IN' && isNativeApp()) {
+          setTimeout(() => {
+            if (!cancelled) void registerNativeAppSession(session.user.id);
+          }, 0);
+        }
         if (event === 'SIGNED_IN' && !alreadyInApp) {
           const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
           const hasDeepLink = Boolean(pendingPath && parsePushDeepLink(pendingPath));
@@ -1137,6 +1151,7 @@ export default function App() {
   const handleLogOut = async () => {
     const signedOutUserId =
       userProfile?.uid || sessionUser?.id || lastSignedInUserIdRef.current;
+    if (signedOutUserId) clearLocalNativeSessionId(signedOutUserId);
     try {
       logoutCleanupDoneRef.current = true;
       await clearNotificationDataOnLogout(signedOutUserId);
@@ -1151,6 +1166,31 @@ export default function App() {
     setItems([]);
     resetTabStateForSignOut();
   };
+  handleLogOutRef.current = handleLogOut;
+
+  // Native APK/AAB: one active install per account — signing in elsewhere signs this device out.
+  useEffect(() => {
+    const userId = sessionUser?.id;
+    if (!userId || !isNativeApp()) return;
+
+    let cancelled = false;
+
+    void verifyNativeAppSession(userId).then((status) => {
+      if (cancelled || status !== 'revoked') return;
+      setErrorMsg('You signed in on another device. This app was signed out.');
+      void handleLogOutRef.current?.();
+    });
+
+    const unsub = subscribeNativeAppSessionGuard(userId, () => {
+      setErrorMsg('You signed in on another device. This app was signed out.');
+      void handleLogOutRef.current?.();
+    });
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [sessionUser?.id]);
 
   // Onboarding Complete Handler
   const handleOnboardingComplete = (newProfile: UserProfile) => {
