@@ -830,6 +830,7 @@ export default function App() {
   /** Enter the app immediately from auth metadata — DB sync runs in background. */
   const applySession = useCallback((user: any) => {
     if (user?.id && lastSignedInUserIdRef.current && lastSignedInUserIdRef.current !== user.id) {
+      clearLocalNativeSessionId(lastSignedInUserIdRef.current);
       clearAuthenticatedUiState();
     }
     if (user?.id) lastSignedInUserIdRef.current = user.id;
@@ -1316,6 +1317,8 @@ export default function App() {
 
   // Native APK/AAB: one active install per account — signing in elsewhere signs this device out.
   useEffect(() => {
+    if (authBootstrapping) return;
+
     const userId = sessionUser?.id;
     if (!userId || !isNativeApp()) return;
 
@@ -1329,18 +1332,27 @@ export default function App() {
       })();
     };
 
-    void verifyNativeAppSession(userId).then((status) => {
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || session?.user?.id !== userId) return;
+
+      const status = await verifyNativeAppSession(userId);
       if (cancelled || status !== 'revoked') return;
       handleNativeSessionRevoked();
-    });
+    })();
 
-    const unsub = subscribeNativeAppSessionGuard(userId, handleNativeSessionRevoked);
+    let unsub = () => undefined;
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || session?.user?.id !== userId) return;
+      unsub = subscribeNativeAppSessionGuard(userId, handleNativeSessionRevoked);
+    })();
 
     return () => {
       cancelled = true;
       unsub();
     };
-  }, [sessionUser?.id, alert]);
+  }, [sessionUser?.id, authBootstrapping, alert]);
 
   // Onboarding Complete Handler
   const handleOnboardingComplete = (newProfile: UserProfile) => {

@@ -54,6 +54,15 @@ function isRegistrationPending(userId: string, sessionId?: string | null): boole
   return sessionId ? pendingId === sessionId : true;
 }
 
+async function authUserIdOrNull(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Claim the sole native app slot for this account (signs out other APK/AAB installs). */
 export async function registerNativeAppSession(userId: string): Promise<string | null> {
   if (!isNativeApp() || !userId) return null;
@@ -93,6 +102,9 @@ export async function verifyNativeAppSession(userId: string): Promise<'valid' | 
   if (!isNativeApp() || !userId) return 'skip';
   if (isRegistrationPending(userId)) return 'valid';
 
+  const authUserId = await authUserIdOrNull();
+  if (!authUserId || authUserId !== userId) return 'skip';
+
   const localId = readLocalNativeSessionId(userId);
   const localDeviceId = getOrCreateDeviceId();
   const { data, error } = await supabase
@@ -110,7 +122,8 @@ export async function verifyNativeAppSession(userId: string): Promise<'valid' | 
   const remoteDeviceId = typeof data?.deviceId === 'string' ? data.deviceId : null;
 
   if (!remoteId) {
-    if (localId) return 'revoked';
+    // Stale local id (e.g. shared phone, account switched) — clear, don't sign out.
+    if (localId) clearLocalNativeSessionId(userId);
     return 'valid';
   }
 
@@ -146,6 +159,14 @@ export function subscribeNativeAppSessionGuard(
       },
       (payload) => {
         if (isRegistrationPending(userId)) return;
+
+        const payloadUserId =
+          typeof (payload.new as { userId?: string } | null)?.userId === 'string'
+            ? (payload.new as { userId: string }).userId
+            : typeof (payload.old as { userId?: string } | null)?.userId === 'string'
+              ? (payload.old as { userId: string }).userId
+              : null;
+        if (payloadUserId && payloadUserId !== userId) return;
 
         const nextId =
           typeof (payload.new as { sessionId?: string } | null)?.sessionId === 'string'
