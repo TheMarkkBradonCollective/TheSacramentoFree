@@ -417,51 +417,34 @@ html.sbn-session-restore #root:empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--sbn-nav-bg) 72%, transparent);
+  background: color-mix(in srgb, var(--sbn-nav-bg) 55%, transparent);
 }
 
-#map_navigation_view .sbn-nav-loading-card {
-  width: min(18rem, calc(100% - 2rem));
-  border-radius: 1.5rem;
-  padding: 1.5rem 1.25rem 1.25rem;
-  text-align: center;
-  position: relative;
+#map_navigation_view .sbn-nav-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
 }
 
-#map_navigation_view .sbn-nav-loading-ring {
-  position: absolute;
-  inset: 0.85rem;
+#map_navigation_view .sbn-nav-loading-spinner {
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 9999px;
-  border: 2px solid transparent;
+  border: 3px solid color-mix(in srgb, var(--sbn-nav-text) 14%, transparent);
   border-top-color: var(--color-accent);
-  border-right-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
-  animation: sbn-nav-spin 0.9s linear infinite;
+  animation: sbn-nav-spin 0.7s linear infinite;
+}
+
+#map_navigation_view .sbn-nav-loading-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--sbn-nav-text);
 }
 
 @keyframes sbn-nav-spin {
   to { transform: rotate(360deg); }
-}
-
-#map_navigation_view .sbn-nav-loading-steps {
-  display: flex;
-  justify-content: center;
-  gap: 0.4rem;
-  margin-top: 1rem;
-}
-
-#map_navigation_view .sbn-nav-loading-steps span {
-  width: 1.6rem;
-  height: 0.22rem;
-  border-radius: 9999px;
-  background: var(--sbn-nav-lane-inactive);
-}
-
-#map_navigation_view .sbn-nav-loading-steps span.active {
-  background: var(--color-accent);
-}
-
-#map_navigation_view .sbn-nav-loading-steps span.done {
-  background: color-mix(in srgb, var(--color-accent) 55%, white);
 }
 
 #map_navigation_view .sbn-nav-error-overlay {

@@ -193,22 +193,15 @@ function NavSpeedCard({
   );
 }
 
-function NavLoadingOverlay({ stage, destinationLabel }: { stage: NavLoadingStage; destinationLabel: string }) {
+function NavLoadingOverlay({ stage }: { stage: NavLoadingStage }) {
   const label =
-    stage === 'locating' ? 'Acquiring GPS signal…' : stage === 'routing' ? 'Calculating best route…' : 'Starting guidance…';
+    stage === 'locating' ? 'Getting your location…' : stage === 'routing' ? 'Finding route…' : 'Starting…';
 
   return (
-    <div className="sbn-nav-loading-overlay pointer-events-none">
-      <div className="sbn-nav-loading-card sbn-nav-glass">
-        <div className="sbn-nav-loading-ring" aria-hidden />
-        <Navigation className="w-8 h-8 text-accent" />
-        <p className="text-sm font-bold text-[var(--sbn-nav-text)] mt-4">{label}</p>
-        <p className="text-xs text-[var(--sbn-nav-text-secondary)] mt-1 truncate max-w-[16rem]">To {destinationLabel}</p>
-        <div className="sbn-nav-loading-steps" aria-hidden>
-          <span className={stage === 'locating' ? 'active' : 'done'} />
-          <span className={stage === 'routing' ? 'active' : stage === 'ready' ? 'done' : ''} />
-          <span className={stage === 'ready' ? 'active' : ''} />
-        </div>
+    <div className="sbn-nav-loading-overlay pointer-events-none" role="status" aria-live="polite" aria-label={label}>
+      <div className="sbn-nav-loading">
+        <div className="sbn-nav-loading-spinner" aria-hidden />
+        <p className="sbn-nav-loading-label">{label}</p>
       </div>
     </div>
   );
@@ -1771,7 +1764,7 @@ export default function MapNavigationView({
           </div>
         </div>
 
-        {loading && !route && <NavLoadingOverlay stage={loadingStage} destinationLabel={destinationLabel} />}
+        {loading && !route && <NavLoadingOverlay stage={loadingStage} />}
 
         {showFatalError && (
           <div className="sbn-nav-error-overlay safe-area-pb">
