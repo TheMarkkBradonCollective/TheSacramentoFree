@@ -449,18 +449,6 @@ export default function ItemGrid({
             <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
               <button
                 type="button"
-                id="feed_sort_toggle"
-                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
-                aria-pressed={gridSortMode === 'nearest'}
-                aria-label={feedSortToolbarLabel(gridSortMode, false)}
-              >
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-                <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
-                <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
-              </button>
-              <button
-                type="button"
                 id="feed_type_toggle"
                 onClick={cycleTypeFilter}
                 className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
@@ -472,6 +460,18 @@ export default function ItemGrid({
                 aria-label={`Listing type: ${feedTypeToolbarLabel(selectedType)}`}
               >
                 <span>{feedTypeToolbarLabel(selectedType)}</span>
+              </button>
+              <button
+                type="button"
+                id="feed_sort_toggle"
+                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
+                aria-pressed={gridSortMode === 'nearest'}
+                aria-label={feedSortToolbarLabel(gridSortMode, false)}
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
+                <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
+                <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
               </button>
             </div>
           </div>
