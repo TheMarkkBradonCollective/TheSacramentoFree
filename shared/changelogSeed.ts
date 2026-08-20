@@ -54,6 +54,7 @@ const APK_0024_PUBLISHED_AT = '2026-08-20T08:00:00.000Z';
 const APK_0026_PUBLISHED_AT = '2026-08-20T09:30:00.000Z';
 const APK_0027_PUBLISHED_AT = '2026-08-20T09:45:00.000Z';
 const APK_0028_PUBLISHED_AT = '2026-08-20T10:20:00.000Z';
+const APK_0029_PUBLISHED_AT = '2026-08-20T10:40:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
@@ -108,6 +109,40 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0029',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0029',
+    'Turn-by-turn navigation now has heading-up, real lanes, walk/bike/drive, and voice that reads the same details as the screen.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0029 (versionCode 29).
+
+Since 0028:
+• Heading-up map that follows you, with a Compass heading you can trust
+• Real lane guidance from the road data — not a fake two-lane guess
+• Walk, bike, or drive: walking and biking ignore car one-ways
+• Voice reads the same turn, distance, street, then-next, and lanes as the banner
+• Recenter announces the next turn
+• Navigation settings in Account and the in-nav gear (theme follows the app)
+
+Android app only: in-app Navigate and Go Get. Website stays message + mark.
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0029 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 29
+- src/components/MapNavigationView.tsx — banner + voice share one instruction card
+- play-store-assets/release-notes-v0.1.0-0029.txt
+
+HISTORY
+2026-08-20 — Navigation rework merged (PR #240); Android beta 0029 built.`,
+    APK_0029_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0028',
     '2026-08-20',
@@ -944,6 +979,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0029',
+    '2026-08-20',
+    'New Android beta 0029 — turn-by-turn navigation',
+    'Heading-up map, real lanes, walk/bike/drive, and voice that matches the screen. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0029 rebuilds in-app navigation: heading-up, real lane guidance, walk/bike/drive, and spoken instructions that match what is on screen.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0029.
+
+HISTORY
+2026-08-20 — Android beta 0029 with navigation rework.`,
+    APK_0029_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0028',
     '2026-08-20',
