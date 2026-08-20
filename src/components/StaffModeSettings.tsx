@@ -62,8 +62,10 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
         <LabeledSwitch
           id="profile_staff_mode_switch"
           checked={isStaffMode}
+          onLabel="Staff"
+          offLabel="User"
           disabled={saving}
-          ariaLabel={isStaffMode ? 'Staff mode on' : 'User mode on'}
+          ariaLabel={isStaffMode ? 'Staff mode' : 'User mode'}
           onChange={(checked) => void handleToggle(checked)}
         />
       </div>

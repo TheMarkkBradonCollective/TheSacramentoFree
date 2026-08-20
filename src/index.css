@@ -1886,6 +1886,27 @@ option {
   transform: translateX(2.25rem);
 }
 
+.sbn-labeled-switch-custom {
+  width: 5.5rem;
+}
+
+.sbn-labeled-switch-custom .sbn-labeled-switch-label {
+  font-size: 0.625rem;
+  letter-spacing: 0.02em;
+}
+
+.sbn-labeled-switch-custom .sbn-labeled-switch-label-on {
+  left: 0.5rem;
+}
+
+.sbn-labeled-switch-custom .sbn-labeled-switch-label-off {
+  right: 0.45rem;
+}
+
+.sbn-labeled-switch-custom.sbn-labeled-switch-on .sbn-labeled-switch-thumb {
+  transform: translateX(3.5rem);
+}
+
 /* Compact feed filter pill — label on track; ON/OFF only in the thumb */
 .sbn-filter-switch {
   position: relative;
