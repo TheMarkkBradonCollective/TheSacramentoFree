@@ -12,7 +12,8 @@ import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
-import { isStaffRole, roleTheme } from '../lib/roles';
+import { roleTheme } from '../lib/roles';
+import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
@@ -143,10 +144,10 @@ export default function DesktopView({
   onViewListingId,
   onViewEventId,
 }: DesktopViewProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => isStaffRole(userProfile.role));
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => hasStaffConsoleAccess(userProfile));
   const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
   const onStaffTab = isStaffTab(activeTab);
-  const isStaff = isStaffRole(userProfile.role);
+  const showStaffConsole = hasStaffConsoleAccess(userProfile);
   const communityTab: AppTab = (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
     ? (activeTab as AppTab)
     : 'feed';
@@ -163,7 +164,7 @@ export default function DesktopView({
     ) : null
   ) : null;
 
-  const theme = roleTheme(userProfile.role);
+  const theme = roleTheme(profileUiRole(userProfile));
 
   return (
     <div
@@ -177,10 +178,10 @@ export default function DesktopView({
         onTabChange={setActiveTab}
         variant="expanded"
         collapsed={sidebarCollapsed}
-        onToggleCollapse={isStaff ? undefined : () => setSidebarCollapsed((c) => !c)}
-        fullyHiddenWhenCollapsed={isStaff}
+        onToggleCollapse={showStaffConsole ? undefined : () => setSidebarCollapsed((c) => !c)}
+        fullyHiddenWhenCollapsed={showStaffConsole}
         onCollapse={() => setSidebarCollapsed(true)}
-        autoCollapseOnNavigate={isStaff}
+        autoCollapseOnNavigate={showStaffConsole}
       />
 
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
@@ -191,7 +192,7 @@ export default function DesktopView({
           onOpenAwards={onOpenAwards ?? (() => {})}
           awardsButtonGlow={awardsButtonGlow}
           action={topbarAction}
-          onToggleSidebar={isStaff ? () => setSidebarCollapsed((c) => !c) : undefined}
+          onToggleSidebar={showStaffConsole ? () => setSidebarCollapsed((c) => !c) : undefined}
         />
 
         {onStaffTab ? (

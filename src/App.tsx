@@ -38,7 +38,6 @@ import {
   findOrCreateStaffEventOutreachTicket,
 } from './supabase';
 import { confirmStaffEventOutreach, confirmStaffListingOutreach } from './lib/staffChatSafety';
-import { isStaffRole } from './lib/roles';
 import { isStaffActingOfficial } from './lib/staffInteractionMode';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
 import GoGetRingCoordinator from './components/goget/GoGetRingCoordinator';
@@ -51,7 +50,7 @@ import StaffApplyView from './components/StaffApplyView';
 import { registerStaffApplyOpener } from './lib/staffApplyOpen';
 import { detectInstallKind } from './lib/installContext';
 import { reportAppInstall } from './lib/deviceTracking';
-import { type AnyTab, type AppTab } from './lib/appTabs';
+import { type AnyTab, type AppTab, isStaffTab } from './lib/appTabs';
 import {
   appTabPath,
   parseStoredTab,
@@ -315,6 +314,16 @@ export default function App() {
       persistActiveTab(tab as AppTab, userProfile?.uid);
     },
     [closeTransientOverlays, userProfile?.uid],
+  );
+
+  const handleUpdateProfile = useCallback(
+    (updated: UserProfile) => {
+      setUserProfile(updated);
+      if (!isStaffActingOfficial(updated) && isStaffTab(activeTab)) {
+        handleTabChange('profile');
+      }
+    },
+    [activeTab, handleTabChange],
   );
 
   const navigateToTab = useCallback(
@@ -1258,7 +1267,7 @@ export default function App() {
 
   const handleStaffListingOutreach = useCallback(
     async (item: ItemPost) => {
-      if (!userProfile || !isStaffRole(userProfile.role)) return;
+      if (!userProfile || !isStaffActingOfficial(userProfile)) return;
       if (blockedUserIds.has(item.userId)) return;
 
       const confirmed = await confirmStaffListingOutreach(
@@ -1285,7 +1294,7 @@ export default function App() {
 
   const handleStaffEventOutreach = useCallback(
     async (event: CommunityEvent) => {
-      if (!userProfile || !isStaffRole(userProfile.role)) return;
+      if (!userProfile || !isStaffActingOfficial(userProfile)) return;
       if (blockedUserIds.has(event.userId)) return;
 
       const confirmed = await confirmStaffEventOutreach(
@@ -1767,7 +1776,7 @@ export default function App() {
                   onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   pendingChatCompose={pendingChatCompose}
@@ -1826,7 +1835,7 @@ export default function App() {
                   onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   pendingChatCompose={pendingChatCompose}
@@ -1885,7 +1894,7 @@ export default function App() {
                   onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
                   pendingChatCompose={pendingChatCompose}
@@ -2332,7 +2341,7 @@ export default function App() {
         !termsGateOpen && (
           <GoGetFirstRunPrompt
             userProfile={userProfile}
-            onUpdateProfile={setUserProfile}
+            onUpdateProfile={handleUpdateProfile}
             onOpenNotificationSettings={() => openNotificationsHub('alerts')}
           />
         )}

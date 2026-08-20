@@ -8,6 +8,7 @@ import {
   getSupportTicketLastMessages,
 } from '../supabase';
 import { canViewStaffTicketInbox } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import SupportTicketThread from './SupportTicketThread';
 import SupportTicketRow from './SupportTicketRow';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
@@ -53,7 +54,7 @@ export default function ChatSupportSection({
   compact = false,
   className = '',
 }: ChatSupportSectionProps) {
-  const isStaffInbox = canViewStaffTicketInbox(user.role);
+  const isStaffInbox = canViewStaffTicketInbox(user.role) && isStaffActingOfficial(user);
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
   const [ticketCreating, setTicketCreating] = useState(false);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ClipboardList, Edit, Flag, LifeBuoy, MoreHorizontal, Star } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { canViewStaffReports } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import type { ChatFeedbackPanel } from './ChatFeedbackSection';
 
 interface ChatInboxHeaderProps {
@@ -21,7 +22,7 @@ export default function ChatInboxHeader({
 }: ChatInboxHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const canStaffReports = canViewStaffReports(userProfile.role);
+  const canStaffReports = canViewStaffReports(userProfile.role) && isStaffActingOfficial(userProfile);
 
   useEffect(() => {
     if (!menuOpen) return;

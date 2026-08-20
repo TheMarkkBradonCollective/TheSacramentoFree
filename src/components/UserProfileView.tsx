@@ -41,6 +41,7 @@ import AccountNavigationSettings from './AccountNavigationSettings';
 import SystemPermissionsSettings from './SystemPermissionsSettings';
 import GoGetSettings from './GoGetSettings';
 import StaffModeSettings from './StaffModeSettings';
+import { isStaffActingOfficial, profileUiRole } from '../lib/staffInteractionMode';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 import TermsOfUseModal from './TermsOfUseModal';
@@ -385,7 +386,8 @@ export default function UserProfileView({
           />
           <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{userProfile.displayName}</h3>
           
-          <RoleBadge role={userProfile.role} showForUser />
+          <RoleBadge role={profileUiRole(userProfile)} showForUser />
+          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
 
           <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-xs font-bold text-accent mt-3">
             <MapPin className="w-3.5 h-3.5 text-accent" />
@@ -423,7 +425,7 @@ export default function UserProfileView({
           <ProfileAwardsRow
             userId={userProfile.uid}
             onOpenAwards={onOpenAwards}
-            viewerIsStaff={Boolean(userProfile.role && userProfile.role !== 'user')}
+            viewerIsStaff={isStaffActingOfficial(userProfile)}
           />
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
@@ -547,7 +549,6 @@ export default function UserProfileView({
           <SystemPermissionsSettings />
           <ThemeSettings />
           <AccountNavigationSettings />
-          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           {usingApk && (
             <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           )}

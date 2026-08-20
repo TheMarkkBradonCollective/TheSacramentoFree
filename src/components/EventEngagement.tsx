@@ -5,7 +5,7 @@ import ReportNeighborModal from './ReportNeighborModal';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import { effectivePastRsvp } from '../lib/eventRsvp';
 import RoleBadge from './RoleBadge';
-import { isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
 
 interface EventEngagementProps {
@@ -146,7 +146,7 @@ export default function EventEngagement({
                 {visibleComments.map((comment) => {
                   const isOwnComment = comment.userId === currentUserId;
                   const canReport =
-                    userProfile && !isOwnComment && comment.userId !== hostUserId && !isStaffRole(userProfile.role);
+                    userProfile && !isOwnComment && comment.userId !== hostUserId && !isStaffActingOfficial(userProfile);
                   const commenterRole = commenterRoles?.[comment.userId];
                   const commenterIsStaff = shouldShowStaffBadgeOnComment(commenterRole, comment);
                   return (

@@ -149,7 +149,8 @@ export default function ChatSystem({
   const [supportTicketsLoading, setSupportTicketsLoading] = useState(false);
   const [supportOpenTicketId, setSupportOpenTicketId] = useState<string | null>(null);
   const [feedbackPanel, setFeedbackPanel] = useState<ChatFeedbackPanel>(null);
-  const isStaffSupportInbox = canViewStaffTicketInbox(userProfile.role);
+  const isStaffSupportInbox =
+    canViewStaffTicketInbox(userProfile.role) && isStaffActingOfficial(userProfile);
   const [messages, setMessages] = useState<Message[]>([]);
   const [senderNames, setSenderNames] = useState<Record<string, { displayName: string; photoURL?: string; role?: import('../types').UserProfile['role'] }>>({});
   const [inputText, setInputText] = useState('');
@@ -158,12 +159,20 @@ export default function ChatSystem({
   const [errorMsg, setErrorMsg] = useState('');
   const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
-  const userIsStaff = isStaffRole(userProfile.role);
+  const userIsStaff = isStaffRole(userProfile.role) && isStaffActingOfficial(userProfile);
   const staffActingOfficial = isStaffActingOfficial(userProfile);
-  const canStaffReports = canViewStaffReports(userProfile.role);
+  const canStaffReports = canViewStaffReports(userProfile.role) && isStaffActingOfficial(userProfile);
   const { reports: staffReports } = useStaffUserReports(canStaffReports, userProfile);
   const newStaffReportCount = staffReports.filter((report) => report.status === 'new').length;
   const { confirm, alert } = useConfirm();
+
+  const chatFetchOptions = useMemo(
+    () => ({
+      userRole: userProfile.role,
+      staffInteractionMode: userProfile.staffInteractionMode,
+    }),
+    [userProfile.role, userProfile.staffInteractionMode],
+  );
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLInputElement | null>(null);
@@ -388,7 +397,7 @@ export default function ChatSystem({
     const loadChats = async () => {
       try {
         const [loadedChats, requests] = await Promise.all([
-          getSupabaseChats(userProfile.uid, { userRole: userProfile.role }),
+          getSupabaseChats(userProfile.uid, chatFetchOptions),
           getIncomingMessageRequests(userProfile.uid),
         ]);
         if (!active) return;
@@ -408,7 +417,7 @@ export default function ChatSystem({
 
         if (initialSelectedChatId) {
           let target = visibleChats.find((c) => c.id === initialSelectedChatId);
-          if (!target && isStaffRole(userProfile.role)) {
+          if (!target && staffActingOfficial) {
             const fetched = await getSupabaseChatById(initialSelectedChatId);
             if (fetched) {
               target = fetched;
@@ -517,7 +526,7 @@ export default function ChatSystem({
     const chatId = selectedChat.id;
 
     const refreshChatMeta = debounceRealtime(() => {
-      void getSupabaseChats(userProfile.uid, { userRole: userProfile.role }).then((loadedChats) => {
+      void getSupabaseChats(userProfile.uid, chatFetchOptions).then((loadedChats) => {
         if (!active) return;
         loadedChats.sort((a, b) => {
           const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
@@ -631,7 +640,7 @@ export default function ChatSystem({
     if (!ok) return false;
 
     onClearPendingChatCompose?.();
-    const loadedChats = await getSupabaseChats(userProfile.uid);
+    const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
     const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
     visible.sort((a, b) => {
       const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
@@ -678,7 +687,7 @@ export default function ChatSystem({
     setSelectedChat(null);
     setMessages([]);
     onClearPendingChatCompose?.();
-    const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+    const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
     const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
     setChats(visible);
   };
@@ -710,7 +719,7 @@ export default function ChatSystem({
       setErrorMsg(result.errorMessage || 'Could not unsend message.');
     } else {
       restoreUnsentMessageToInput(message.text);
-      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+      const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
       const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
       setChats(visible);
       setSelectedChat((prev) => {
@@ -745,7 +754,7 @@ export default function ChatSystem({
       setMessages(previousMessages);
       setErrorMsg(result.errorMessage || 'Could not remove message.');
     } else {
-      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+      const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
       const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
       setChats(visible);
       setSelectedChat((prev) => {
@@ -1091,7 +1100,7 @@ export default function ChatSystem({
         setErrorMsg(result.errorMessage || 'Could not accept request.');
         return;
       }
-      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+      const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
       const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
       visible.sort((a, b) => {
         const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;

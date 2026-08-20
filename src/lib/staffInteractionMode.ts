@@ -18,6 +18,21 @@ export function isStaffActingOfficial(
   return normalizeStaffInteractionMode(profile.staffInteractionMode) !== 'neighbor';
 }
 
+/** Staff console, sidebar, and moderation tools — only in staff mode. */
+export function hasStaffConsoleAccess(
+  profile: Pick<UserProfile, 'role' | 'staffInteractionMode'> | null | undefined,
+): boolean {
+  return isStaffActingOfficial(profile);
+}
+
+/** Role used for chrome (badges, theme) — user mode presents as a neighbor. */
+export function profileUiRole(
+  profile: Pick<UserProfile, 'role' | 'staffInteractionMode'> | null | undefined,
+): UserProfile['role'] {
+  if (!profile) return 'user';
+  return isStaffActingOfficial(profile) ? profile.role : 'user';
+}
+
 /** Whether a new comment should be stored without a staff badge. */
 export function commentPostedAsNeighbor(
   profile: Pick<UserProfile, 'role' | 'staffInteractionMode'> | null | undefined,

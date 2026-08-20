@@ -1520,9 +1520,12 @@ async function fetchCommunityChatRows(includeStaffChat: boolean): Promise<Chat[]
 
 export async function getSupabaseChats(
   userId: string,
-  options?: { userRole?: UserProfile['role'] },
+  options?: { userRole?: UserProfile['role']; staffInteractionMode?: UserProfile['staffInteractionMode'] },
 ): Promise<Chat[]> {
-  const includeStaffChat = isStaffRole(options?.userRole);
+  const includeStaffChat =
+    isStaffRole(options?.userRole) &&
+    (options?.staffInteractionMode === undefined ||
+      options.staffInteractionMode !== 'neighbor');
   try {
     // Filter server-side using JSONB containment so we only fetch this user's chats.
     const { data, error } = await supabase

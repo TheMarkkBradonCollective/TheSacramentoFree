@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Shield, UserRound } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { upsertSupabaseProfile } from '../supabase';
 import { isStaffRole } from '../lib/roles';
@@ -8,6 +7,7 @@ import {
   normalizeStaffInteractionMode,
   type StaffInteractionMode,
 } from '../lib/staffInteractionMode';
+import LabeledSwitch from './LabeledSwitch';
 
 interface StaffModeSettingsProps {
   userProfile: UserProfile;
@@ -19,7 +19,6 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
     normalizeStaffInteractionMode(userProfile.staffInteractionMode ?? DEFAULT_STAFF_INTERACTION_MODE),
   );
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
   useEffect(() => {
@@ -28,10 +27,12 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
 
   if (!isStaffRole(userProfile.role)) return null;
 
-  const handleSelect = async (next: StaffInteractionMode) => {
+  const isStaffMode = mode === 'staff';
+
+  const handleToggle = async (nextStaffMode: boolean) => {
+    const next: StaffInteractionMode = nextStaffMode ? 'staff' : 'neighbor';
     if (next === mode || saving) return;
     setSaving(true);
-    setMsg('');
     setErr('');
     const updated: UserProfile = { ...userProfile, staffInteractionMode: next };
     const result = await upsertSupabaseProfile(updated);
@@ -42,68 +43,31 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
     }
     setMode(next);
     onUpdateProfile(updated);
-    setMsg(
-      next === 'staff'
-        ? 'Staff mode on — comments show your title and neighbor pickup flows stay off.'
-        : 'Neighbor mode on — you can message, navigate, and Go Get like any neighbor. Your staff tools stay available.',
-    );
   };
 
   return (
-    <section className="space-y-3 border-t border-app pt-5 mt-5" id="profile_staff_mode_settings">
-      <div className="flex items-start gap-2">
-        <Shield className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+    <div
+      className="w-full mt-3 p-3 rounded-xl border border-app bg-inset text-left"
+      id="profile_staff_mode_settings"
+    >
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h4 className="text-xs font-bold text-muted uppercase tracking-wider">Staff participation mode</h4>
-          <p className="text-xs text-muted mt-1 leading-relaxed">
-            Choose how you show up in the community feed, listings, events, and chats. Staff tools and the
-            moderation sidebar stay available either way.
+          <p className="text-xs font-bold text-app">Staff mode</p>
+          <p className="text-[10px] text-muted mt-0.5 leading-snug">
+            {isStaffMode
+              ? 'Staff tools, sidebar, and official outreach are on.'
+              : 'User mode — browse and message like any neighbor. Staff tools are hidden.'}
           </p>
         </div>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-2">
-        <button
-          type="button"
+        <LabeledSwitch
+          id="profile_staff_mode_switch"
+          checked={isStaffMode}
           disabled={saving}
-          onClick={() => void handleSelect('staff')}
-          className={`text-left p-3 rounded-xl border transition-colors disabled:opacity-60 ${
-            mode === 'staff' ? 'border-accent/40 bg-accent/10' : 'border-app bg-inset hover:border-accent/30'
-          }`}
-          id="profile_staff_mode_official"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Shield className="w-4 h-4 text-accent shrink-0" />
-            <p className="text-xs font-bold text-app">Staff mode</p>
-          </div>
-          <p className="text-[10px] text-muted leading-snug">
-            Comments show your staff title. Use Staff chat on listings and events. No private neighbor DMs,
-            navigate, or Go Get.
-          </p>
-        </button>
-
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void handleSelect('neighbor')}
-          className={`text-left p-3 rounded-xl border transition-colors disabled:opacity-60 ${
-            mode === 'neighbor' ? 'border-accent/40 bg-accent/10' : 'border-app bg-inset hover:border-accent/30'
-          }`}
-          id="profile_staff_mode_neighbor"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <UserRound className="w-4 h-4 text-accent shrink-0" />
-            <p className="text-xs font-bold text-app">Neighbor mode</p>
-          </div>
-          <p className="text-[10px] text-muted leading-snug">
-            Participate like a regular neighbor — message, navigate, claim, and Go Get. Comments post
-            without your staff badge.
-          </p>
-        </button>
+          ariaLabel={isStaffMode ? 'Staff mode on' : 'User mode on'}
+          onChange={(checked) => void handleToggle(checked)}
+        />
       </div>
-
-      {msg ? <p className="text-xs text-emerald-400">{msg}</p> : null}
-      {err ? <p className="text-xs text-red-400">{err}</p> : null}
-    </section>
+      {err ? <p className="text-[10px] text-red-400 mt-2">{err}</p> : null}
+    </div>
   );
 }
