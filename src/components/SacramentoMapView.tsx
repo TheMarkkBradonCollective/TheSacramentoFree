@@ -51,7 +51,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 import { getPostTypeMapDetailLabel, getPostTypeMapLabel, getListingContactButtonLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
 import { pickSoonestPerEventSeries } from '../lib/eventSeries';
-import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
 function MapCreateFab({
   onOpenNewPost,
@@ -551,30 +551,56 @@ export default function SacramentoMapView({
       if (!map || !mapEl || !coords || coords.length < 2) return;
       if (!options?.force && !routeAutoFitEnabledRef.current) return;
 
-      const padding = measureMapFitPadding({
+      const measured = measureMapFitPadding({
         mapElement: mapEl,
         obstructingElements: [selectionCardRef.current],
         defaults: {
-          top: isFullScreenMobile ? 72 : 48,
-          bottom: isFullScreenMobile ? 48 : 56,
+          top: isFullScreenMobile ? 80 : 56,
+          bottom: isFullScreenMobile ? 56 : 48,
           left: 48,
           right: 56,
         },
-        margin: 20,
+        margin: 16,
       });
 
+      const cardStack = hasMapSelection ? selectionCardHeight : 0;
+      const floatControls = isFullScreenMobile ? 56 : 0;
+      const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 72 : 48);
+      const bottom = Math.max(measured.bottomRight[1], cardStack + floatControls + 20);
+
+      const start = userLocationRef.current ?? userLocation;
+      const dest = routeEndpointsRef.current?.end;
+      const padding = {
+        topLeft: [measured.topLeft[0], top] as [number, number],
+        bottomRight: [measured.bottomRight[0], bottom] as [number, number],
+      };
+
       isProgrammaticMapMoveRef.current = true;
-      map.fitBounds(coords, {
-        paddingTopLeft: padding.topLeft,
-        paddingBottomRight: padding.bottomRight,
-        maxZoom: 16,
-        animate: false,
-      });
+      if (start && dest) {
+        fitRoutePreviewToViewport({
+          map,
+          routeCoords: coords,
+          start,
+          end: dest,
+          padding,
+          maxZoom: 17,
+        });
+      } else {
+        const bounds = L.latLngBounds(coords);
+        if (start) bounds.extend([start.lat, start.lng]);
+        if (dest) bounds.extend([dest.lat, dest.lng]);
+        map.fitBounds(bounds, {
+          paddingTopLeft: padding.topLeft,
+          paddingBottomRight: padding.bottomRight,
+          maxZoom: 17,
+          animate: false,
+        });
+      }
       window.requestAnimationFrame(() => {
         isProgrammaticMapMoveRef.current = false;
       });
     },
-    [isFullScreenMobile],
+    [hasMapSelection, isFullScreenMobile, selectionCardHeight, userLocation],
   );
 
   const lockNavOrigin = useCallback(() => {
@@ -1514,7 +1540,8 @@ export default function SacramentoMapView({
   useEffect(() => {
     if (!hasMapSelection || selectionCardHeight <= 0) return;
     if (!routeCoordsRef.current || routeCoordsRef.current.length < 2) return;
-    const id = window.requestAnimationFrame(() => fitRouteToAvailableView());
+    routeAutoFitEnabledRef.current = true;
+    const id = window.requestAnimationFrame(() => fitRouteToAvailableView({ force: true }));
     return () => window.cancelAnimationFrame(id);
   }, [selectionCardHeight, hasMapSelection, fitRouteToAvailableView]);
 
