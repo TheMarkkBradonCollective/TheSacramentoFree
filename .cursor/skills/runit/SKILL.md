@@ -39,7 +39,7 @@ npm run runit:check        # pre-flight only
 | 7 | Remind agent to verify release notes + changelog seed |
 | 8 | Commit binaries + manifests, push branch |
 | 9 | Merge branch → `main`, push (triggers Vercel deploy) |
-| 10 | Print AAB public URL + Play Console copy-paste block |
+| 10 | Print + save Play Console copy-paste block (`play-store-assets/play-console-paste.txt`) |
 
 ## Flags
 
@@ -52,21 +52,32 @@ npm run runit:check        # pre-flight only
 
 ## Output the user needs
 
-After a successful run, always show:
+After a successful run, always show the full block from `node scripts/runit-play-console-summary.mjs` (also saved to `play-store-assets/play-console-paste.txt`).
 
-### Public AAB download
+### Release title (Play Console → Release name)
+
+```
+{versionName} ({versionCode})
+```
+
+Example: `0.1.0 (29)`
+
+### Public AAB download link
 
 ```
 https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v{versionName}.{build}.aab
 ```
 
+Example: `https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab`
+
 ### Google Play Console
 
 | Field | Value |
 |-------|-------|
+| Release title | `{versionName} ({versionCode})` — paste into **Release name** |
 | Package | `org.sacramentobuynothing.app` |
 | Upload file | `public/downloads/sac-buy-nothing-beta-v{versionName}.{build}.aab` |
-| Release name | `{versionName} ({versionCode})` |
+| Public AAB URL | `https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v{versionName}.{build}.aab` |
 | Release notes | `play-store-assets/release-notes-v{versionName}-{build}.txt` |
 | Path | Testing → Internal testing → Create release |
 
@@ -85,5 +96,5 @@ When user says `/runit`:
 2. Confirm version bump and release notes exist.
 3. **Merge all open PRs first** — this is Step 0 of the pipeline (or run `bash scripts/runit-merge-open-prs.sh` alone).
 4. Ask user to confirm before running full `npm run runit` (merges PRs, large binaries, push to main).
-5. After run, paste the Play Console summary from script output.
+5. After run, paste the full Play Console block from script output (release title, public AAB link, upload path, release notes).
 6. Remind user to run Supabase incremental migrations if any are new.

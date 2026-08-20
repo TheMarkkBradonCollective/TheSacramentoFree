@@ -145,6 +145,7 @@ if [[ "$DRY_RUN" == false ]]; then
     public/buynothing*.apk \
     dist/ \
     play-store-assets/current-release.json \
+    play-store-assets/play-console-paste.txt \
     play-store-assets/release-notes-*.txt \
     shared/changelogSeed.ts \
     android/app/build.gradle 2>/dev/null || true
@@ -178,36 +179,9 @@ fi
 
 # ── 10. Play Console summary ────────────────────────────────────
 echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "  RELEASE SUMMARY — copy to Google Play Console"
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "Package:     org.sacramentobuynothing.app"
-echo "Release:     ${RELEASE_NAME}"
-echo "AAB upload:  public/downloads/${AAB_FILE}"
-echo "             dist/android/sac-buy-nothing-release.aab"
-echo ""
-echo "Public AAB download link:"
-echo "  ${AAB_URL}"
-echo ""
-echo "Public APK download link:"
-echo "  ${APK_URL}"
-echo ""
-echo "Play Console steps:"
-echo "  1. Testing → Internal testing → Create release"
-echo "  2. Upload: public/downloads/${AAB_FILE}"
-echo "  3. Release name: ${RELEASE_NAME}"
-if [[ -f "$RELEASE_NOTES" ]]; then
-  echo "  4. Release notes (from ${RELEASE_NOTES}):"
-  echo "────────────────────────────────────────"
-  sed 's/^/     /' "$RELEASE_NOTES"
-  echo "────────────────────────────────────────"
-else
-  echo "  4. Release notes: CREATE ${RELEASE_NOTES} first"
-fi
-echo ""
-echo "  5. Save → Review → Start rollout"
-echo "  6. Verify on internal tester opt-in link"
+node scripts/runit-play-console-summary.mjs --write
+
+# ── 11. Supabase reminder ───────────────────────────────────────
 echo ""
 echo "Supabase SQL:"
 echo "  Run any new scripts/supabase-migration-*.sql in SQL editor"
