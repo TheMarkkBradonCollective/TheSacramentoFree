@@ -84,6 +84,7 @@ export default function SendUserReportPanel({ user, onClose }: SendUserReportPan
             file={reportProof.file}
             previewUrl={reportProof.previewUrl}
             onChange={reportProof.setFile}
+            onInvalidFile={setErr}
             disabled={reportSending}
           />
           <button

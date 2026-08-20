@@ -12,6 +12,7 @@ import {
 import { isEventEditable } from '../lib/eventRsvp';
 import { generateSeriesId, getUpcomingSeriesOccurrences } from '../lib/eventSeries';
 import EventLocationMapPicker from './EventLocationMapPicker';
+import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 
 interface PostEventModalProps {
   userProfile: UserProfile;
@@ -116,8 +117,13 @@ export default function PostEventModal({
 
   const handleImagePick = (file: File | null) => {
     if (!file) return;
+    if (!isLikelyImageFile(file)) {
+      setErrorMsg(INVALID_IMAGE_FILE_MESSAGE);
+      return;
+    }
     if (pendingImage?.preview) URL.revokeObjectURL(pendingImage.preview);
     setPendingImage({ file, preview: URL.createObjectURL(file) });
+    setErrorMsg('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -201,9 +207,12 @@ export default function PostEventModal({
 
     if (pendingImage) {
       const uploaded = await uploadItemImage(pendingImage.file, uploadKey);
-      if (uploaded?.startsWith('http')) {
-        finalImageUrl = uploaded;
+      if (!uploaded?.startsWith('http')) {
+        setIsSubmitting(false);
+        setErrorMsg('Could not upload photo. Check your connection and try again.');
+        return;
       }
+      finalImageUrl = uploaded;
     }
 
     const imagePayload =

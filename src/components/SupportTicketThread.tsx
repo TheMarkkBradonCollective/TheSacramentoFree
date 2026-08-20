@@ -371,6 +371,7 @@ export default function SupportTicketThread({
             file={replyImage.file}
             previewUrl={replyImage.previewUrl}
             onChange={replyImage.setFile}
+            onInvalidFile={setErr}
             disabled={sending}
           />
           <div className="flex gap-2">

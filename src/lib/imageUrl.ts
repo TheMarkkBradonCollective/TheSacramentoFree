@@ -26,11 +26,19 @@ export function avatarImageUrl(url: string | undefined | null, displayName: stri
 
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif', 'bmp']);
 
+export const INVALID_IMAGE_FILE_MESSAGE = 'Please select a photo (JPG, PNG, or WEBP).';
+
 /** Android WebView often returns an empty type or application/octet-stream for gallery picks. */
 export function isLikelyImageFile(file: File): boolean {
   if (file.type.startsWith('image/')) return true;
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
   return IMAGE_EXTENSIONS.has(ext);
+}
+
+/** Accept gallery picks from Android where MIME type is missing. */
+export function normalizeImageUploadFile(file: File | null | undefined): File | null {
+  if (!file) return null;
+  return isLikelyImageFile(file) ? file : null;
 }
 
 export function guessImageContentType(file: File): string {

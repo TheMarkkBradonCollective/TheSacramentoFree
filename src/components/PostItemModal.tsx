@@ -12,7 +12,7 @@ import {
   isPersistableListingImageUrl,
   MAX_LISTING_PHOTOS,
 } from '../lib/listingContent';
-import { isLikelyImageFile } from '../lib/imageUrl';
+import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil, Plus, ArrowLeftRight } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
@@ -141,7 +141,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
   const addImageFiles = (files: FileList | File[]) => {
     const list = Array.from(files).filter((f) => isLikelyImageFile(f));
     if (list.length === 0) {
-      setErrorMsg('Please select a photo (JPG, PNG, or WEBP).');
+      setErrorMsg(INVALID_IMAGE_FILE_MESSAGE);
       return;
     }
 

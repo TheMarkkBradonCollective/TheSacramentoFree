@@ -296,6 +296,7 @@ export default function ChatSupportSection({
               file={ticketImage.file}
               previewUrl={ticketImage.previewUrl}
               onChange={ticketImage.setFile}
+              onInvalidFile={setErr}
               disabled={ticketCreating}
             />
             <button
