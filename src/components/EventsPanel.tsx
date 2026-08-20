@@ -45,25 +45,24 @@ export default function EventsPanel({
   const sneakPeek = !canAccessEvents && events.length === 0;
 
   return (
-    <div className="space-y-3">
-      {!isCommunityUnlocked && unlockStatus && (
-        <EventsSharePrompt unlockStatus={unlockStatus} variant="compact" />
-      )}
-
-      <EventsView
-        events={events}
-        userProfile={userProfile}
-        engagement={engagement}
-        onViewEvent={onViewEvent}
-        onNavigateEvent={onNavigateEvent}
-        onStaffEventChat={onStaffEventChat}
-        onViewProfile={onViewProfile}
-        onRefresh={onRefresh}
-        isLoading={isLoading}
-        commentsLocked={!canAccessEvents}
-        sneakPeek={sneakPeek}
-        onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
-      />
-    </div>
+    <EventsView
+      events={events}
+      userProfile={userProfile}
+      engagement={engagement}
+      onViewEvent={onViewEvent}
+      onNavigateEvent={onNavigateEvent}
+      onStaffEventChat={onStaffEventChat}
+      onViewProfile={onViewProfile}
+      onRefresh={onRefresh}
+      isLoading={isLoading}
+      commentsLocked={!canAccessEvents}
+      sneakPeek={sneakPeek}
+      onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
+      belowToolbar={
+        !isCommunityUnlocked && unlockStatus ? (
+          <EventsSharePrompt unlockStatus={unlockStatus} variant="compact" />
+        ) : null
+      }
+    />
   );
 }

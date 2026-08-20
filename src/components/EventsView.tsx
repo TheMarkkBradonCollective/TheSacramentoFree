@@ -42,6 +42,8 @@ interface EventsViewProps {
   commentsLocked?: boolean;
   sneakPeek?: boolean;
   onOpenNewEvent?: () => void;
+  /** Rendered below the toolbar (e.g. community unlock progress). */
+  belowToolbar?: React.ReactNode;
 }
 
 type EventTimeFilter = 'upcoming' | 'past';
@@ -129,6 +131,7 @@ export default function EventsView({
   commentsLocked = false,
   sneakPeek = false,
   onOpenNewEvent,
+  belowToolbar,
 }: EventsViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [timeFilter, setTimeFilter] = useState<EventTimeFilter | null>(null);
@@ -392,6 +395,8 @@ export default function EventsView({
           </div>
         </div>
       </div>
+
+      {belowToolbar}
 
       {filtersPanelOpen && (
       <div className="sbn-card p-4 sm:p-5 space-y-4" id="events_filter_panel">
