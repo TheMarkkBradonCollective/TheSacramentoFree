@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
@@ -28,7 +28,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_TYPE_FILTERS, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
@@ -77,16 +77,22 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
 
-const FEED_TYPE_OPTIONS: { value: ListingTypeFilter; label: string; id: string }[] = [
-  { value: 'all', label: 'Everything', id: 'feed_type_all' },
-  { value: 'giveaway', label: 'Giving', id: 'feed_type_giving' },
-  { value: 'looking', label: 'Looking', id: 'feed_type_looking' },
-  { value: 'trade', label: 'Trading', id: 'feed_type_trading' },
-];
-
 function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string {
   if (compact) return mode === 'nearest' ? 'Near' : 'New';
   return mode === 'nearest' ? 'Nearest' : 'Newest';
+}
+
+function feedTypeToolbarLabel(type: ListingTypeFilter): string {
+  switch (type) {
+    case 'all':
+      return 'All';
+    case 'giveaway':
+      return 'Give';
+    case 'looking':
+      return 'Look';
+    case 'trade':
+      return 'Trade';
+  }
 }
 
 function needsPickupListing(item: ItemPost): boolean {
@@ -94,38 +100,51 @@ function needsPickupListing(item: ItemPost): boolean {
   return /pickup|curb|porch/i.test(item.category);
 }
 
-function FilterSelect({
+const ALL_FEED_SORT_OPTIONS: { value: FeedSortMode; label: string }[] = [
+  ...PRIMARY_FEED_SORTS.map(({ value, label }) => ({ value, label })),
+  ...MORE_FEED_SORTS,
+];
+
+function filterToggleOptionId(prefix: string, value: string): string {
+  const slug = value.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return `${prefix}_${slug || 'option'}`;
+}
+
+function FilterPanelToggleSection<T extends string>({
   id,
   label,
   icon: Icon,
+  ariaLabel,
+  options,
   value,
   onChange,
-  children,
 }: {
   id: string;
   label: string;
   icon: typeof Tag;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
+  ariaLabel: string;
+  options: { value: T; label: string; id?: string }[];
+  value: T;
+  onChange: (value: T) => void;
 }) {
   return (
-    <label className="block space-y-1.5" htmlFor={id}>
-      <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
+    <div className="space-y-1.5" id={id}>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
         <Icon className="w-3 h-3 shrink-0" aria-hidden />
         {label}
-      </span>
-      <div className="flex items-center rounded-xl border border-app bg-inset px-3 py-2.5">
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
-        >
-          {children}
-        </select>
-      </div>
-    </label>
+      </p>
+      <FilterToggleGroup
+        id={`${id}_group`}
+        ariaLabel={ariaLabel}
+        options={options.map((opt) => ({
+          ...opt,
+          id: opt.id ?? filterToggleOptionId(`${id}_group`, opt.value),
+        }))}
+        value={value}
+        onChange={onChange}
+        wrap
+      />
+    </div>
   );
 }
 
@@ -255,18 +274,6 @@ export default function ItemGrid({
     if (sortBy === value) setSortBy(null);
   };
 
-  const handleTypeSwitch = (type: ListingTypeFilter) => (checked: boolean) => {
-    if (checked) {
-      setSelectedType(type);
-      if (type !== 'all') setSelectedCategory('All Categories');
-      return;
-    }
-    if (selectedType === type) {
-      setSelectedType('all');
-      setSelectedCategory('All Categories');
-    }
-  };
-
   const handleQuickPickSwitch = (pick: QuickPick) => (checked: boolean) => {
     setActiveQuickPicks((prev) => {
       const next = new Set(prev);
@@ -300,10 +307,49 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set());
   };
 
-  const handleToolbarTypeChange = (type: ListingTypeFilter) => {
-    setSelectedType(type);
-    if (type !== 'all') setSelectedCategory('All Categories');
+  const cycleTypeFilter = () => {
+    setSelectedType((current) => {
+      const idx = LISTING_TYPE_FILTERS.indexOf(current);
+      const next = LISTING_TYPE_FILTERS[(idx + 1) % LISTING_TYPE_FILTERS.length];
+      if (next !== 'all') setSelectedCategory('All Categories');
+      return next;
+    });
   };
+
+  const categoryFilterOptions = useMemo(() => {
+    const allOption = { value: 'All Categories', label: 'All categories' };
+    if (selectedType === 'giveaway' || selectedType === 'trade') {
+      return [allOption, ...ITEM_CATEGORIES.map((c) => ({ value: c, label: c }))];
+    }
+    if (selectedType === 'looking') {
+      return [allOption, ...ISO_CATEGORIES.map((c) => ({ value: c, label: c }))];
+    }
+    const merged = [...ITEM_CATEGORIES, ...ISO_CATEGORIES.filter((c) => !ITEM_CATEGORIES.includes(c))];
+    return [allOption, ...merged.map((c) => ({ value: c, label: c }))];
+  }, [selectedType]);
+
+  const neighborhoodFilterOptions = useMemo(
+    () => [
+      { value: 'All Neighborhoods', label: 'All neighborhoods' },
+      ...SACRAMENTO_NEIGHBORHOODS.map((n) => ({ value: n, label: n })),
+    ],
+    [],
+  );
+
+  const statusFilterOptions = useMemo(
+    () => STATUS_FILTER_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+    [],
+  );
+
+  const voteFilterOptions = useMemo(
+    () => VOTE_FILTER_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+    [],
+  );
+
+  const sortFilterOptions = useMemo(
+    () => ALL_FEED_SORT_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+    [],
+  );
 
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) => {
@@ -407,14 +453,20 @@ export default function ItemGrid({
                 <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
                 <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
               </button>
-              <FilterToggleGroup
-                id="feed_type_group"
-                ariaLabel="Listing type"
-                options={FEED_TYPE_OPTIONS}
-                value={selectedType}
-                onChange={handleToolbarTypeChange}
-                compact
-              />
+              <button
+                type="button"
+                id="feed_type_toggle"
+                onClick={cycleTypeFilter}
+                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
+                  selectedType !== 'all'
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-app bg-inset text-app hover:border-accent/40'
+                }`}
+                aria-pressed={selectedType !== 'all'}
+                aria-label={`Listing type: ${feedTypeToolbarLabel(selectedType)}`}
+              >
+                <span>{feedTypeToolbarLabel(selectedType)}</span>
+              </button>
             </div>
           </div>
 
@@ -512,18 +564,6 @@ export default function ItemGrid({
                 </span>
               ))}
             </div>
-            <div className="grid grid-cols-3 gap-2 pt-1" id="feed_type_filter">
-              {LISTING_POST_TYPES.map((type) => (
-                <span key={type} className="contents">
-                  <FilterLabeledSwitch
-                    id={`type_${type}_switch`}
-                    label={getPostTypeFilterLabel(type)}
-                    checked={selectedType === type}
-                    onChange={handleTypeSwitch(type)}
-                  />
-                </span>
-              ))}
-            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -543,121 +583,56 @@ export default function ItemGrid({
           </div>
         </div>
 
-        <div className="pt-3 border-t border-app space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FilterSelect
-              id="filter_category_select"
-              label="Category"
-              icon={Tag}
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-            >
-              <option value="All Categories">All categories</option>
-              {selectedType === 'all' ? (
-                <>
-                  <optgroup label="Giving">
-                    {ITEM_CATEGORIES.map((c) => (
-                      <option key={`all_giveaway_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Looking for">
-                    {ISO_CATEGORIES.map((c) => (
-                      <option key={`all_looking_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Trade & Barter">
-                    {ITEM_CATEGORIES.map((c) => (
-                      <option key={`all_trade_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                </>
-              ) : selectedType === 'giveaway' || selectedType === 'trade' ? (
-                ITEM_CATEGORIES.map((c) => (
-                  <option key={`${selectedType}_only_${c}`} value={c}>
-                    {c}
-                  </option>
-                ))
-              ) : (
-                ISO_CATEGORIES.map((c) => (
-                  <option key={`looking_only_${c}`} value={c}>
-                    {c}
-                  </option>
-                ))
-              )}
-            </FilterSelect>
+        <div className="pt-3 border-t border-app space-y-4">
+          <FilterPanelToggleSection
+            id="filter_category_section"
+            label="Category"
+            icon={Tag}
+            ariaLabel="Category"
+            options={categoryFilterOptions}
+            value={selectedCategory}
+            onChange={setSelectedCategory}
+          />
 
-            <FilterSelect
-              id="filter_neighborhood_select"
-              label="Neighborhood"
-              icon={MapPin}
-              value={selectedNeighborhood}
-              onChange={setSelectedNeighborhood}
-            >
-              <option value="All Neighborhoods">All neighborhoods</option>
-              {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </FilterSelect>
+          <FilterPanelToggleSection
+            id="filter_neighborhood_section"
+            label="Neighborhood"
+            icon={MapPin}
+            ariaLabel="Neighborhood"
+            options={neighborhoodFilterOptions}
+            value={selectedNeighborhood}
+            onChange={setSelectedNeighborhood}
+          />
 
-            <FilterSelect
-              id="filter_status_select"
-              label="Listing status"
-              icon={CircleDot}
-              value={selectedStatus}
-              onChange={(v) => setSelectedStatus(v as StatusFilter)}
-            >
-              {STATUS_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </FilterSelect>
+          <FilterPanelToggleSection
+            id="filter_status_section"
+            label="Listing status"
+            icon={CircleDot}
+            ariaLabel="Listing status"
+            options={statusFilterOptions}
+            value={selectedStatus}
+            onChange={(v) => setSelectedStatus(v as StatusFilter)}
+          />
 
-            <FilterSelect
-              id="filter_vote_select"
-              label="Interest & comments"
-              icon={ThumbsUp}
-              value={selectedVoteFilter}
-              onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
-            >
-              {VOTE_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </FilterSelect>
-          </div>
+          <FilterPanelToggleSection
+            id="filter_vote_section"
+            label="Interest & comments"
+            icon={ThumbsUp}
+            ariaLabel="Interest and comments"
+            options={voteFilterOptions}
+            value={selectedVoteFilter}
+            onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
+          />
 
-          <FilterSelect
-            id="filter_sort_select"
+          <FilterPanelToggleSection
+            id="filter_sort_section"
             label="More sort options"
             icon={ArrowDownUp}
+            ariaLabel="More sort options"
+            options={sortFilterOptions}
             value={sortBy ?? 'new'}
             onChange={(v) => setSortBy(v as FeedSortMode)}
-          >
-            <optgroup label="Popular">
-              {PRIMARY_FEED_SORTS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="More">
-              {MORE_FEED_SORTS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </optgroup>
-          </FilterSelect>
+          />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">
