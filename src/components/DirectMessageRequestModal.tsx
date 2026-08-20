@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MessageSquare, Search, UserRound, X } from 'lucide-react';
+import { MessageSquare, Search, UserPlus, UserRound, X } from 'lucide-react';
 import { UserProfile } from '../types';
-import type { MessageRequest } from '../types';
+import type { FriendRequest, MessageRequest } from '../types';
 import {
+  acceptFriendRequest,
   chatIdForUsers,
+  declineFriendRequest,
+  getLatestFriendRequestBetween,
   getLatestMessageRequestBetween,
   searchPickupNeighbors,
+  sendFriendRequest,
   sendMessageRequest,
 } from '../supabase';
 import type { PickupNeighborCandidate } from '../lib/pickupAttribution';
@@ -46,9 +50,13 @@ export default function DirectMessageRequestModal({
   const [searchResults, setSearchResults] = useState<PickupNeighborCandidate[]>([]);
   const [selectedNeighbor, setSelectedNeighbor] = useState<PickupNeighborCandidate | null>(null);
   const [requestNote, setRequestNote] = useState('');
+  const [friendNote, setFriendNote] = useState('');
   const [dmRequest, setDmRequest] = useState<MessageRequest | null>(null);
+  const [friendRequest, setFriendRequest] = useState<FriendRequest | null>(null);
   const [loadingRequest, setLoadingRequest] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [friendSubmitting, setFriendSubmitting] = useState(false);
+  const [friendBusy, setFriendBusy] = useState(false);
   const [err, setErr] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -71,6 +79,7 @@ export default function DirectMessageRequestModal({
   useEffect(() => {
     if (!selectedNeighbor) {
       setDmRequest(null);
+      setFriendRequest(null);
       return;
     }
 
@@ -79,9 +88,13 @@ export default function DirectMessageRequestModal({
     setErr('');
     setSuccessMsg('');
 
-    void getLatestMessageRequestBetween(currentUser.uid, selectedNeighbor.userId).then((request) => {
+    void Promise.all([
+      getLatestMessageRequestBetween(currentUser.uid, selectedNeighbor.userId),
+      getLatestFriendRequestBetween(currentUser.uid, selectedNeighbor.userId),
+    ]).then(([messageRequest, latestFriendRequest]) => {
       if (!active) return;
-      setDmRequest(request);
+      setDmRequest(messageRequest);
+      setFriendRequest(latestFriendRequest);
       setLoadingRequest(false);
     });
 
@@ -96,6 +109,12 @@ export default function DirectMessageRequestModal({
     dmRequest?.status === 'pending' && dmRequest.fromUserId === currentUser.uid;
   const canMessage = dmRequest?.status === 'accepted';
   const canRequest = !dmRequest || dmRequest.status === 'declined';
+  const areFriends = friendRequest?.status === 'accepted';
+  const friendPendingOutgoing =
+    friendRequest?.status === 'pending' && friendRequest.fromUserId === currentUser.uid;
+  const friendPendingIncoming =
+    friendRequest?.status === 'pending' && friendRequest.toUserId === currentUser.uid;
+  const canSendFriendRequest = !areFriends && !friendPendingOutgoing && !friendPendingIncoming;
 
   const handleSendRequest = async () => {
     if (!selectedNeighbor) return;
@@ -118,6 +137,58 @@ export default function DirectMessageRequestModal({
       setDmRequest(updated);
     } else {
       setErr(result.errorMessage || 'Could not send request.');
+    }
+  };
+
+  const handleSendFriendRequest = async () => {
+    if (!selectedNeighbor) return;
+    setFriendSubmitting(true);
+    setErr('');
+    setSuccessMsg('');
+
+    const result = await sendFriendRequest({
+      fromUser: currentUser,
+      toUserId: selectedNeighbor.userId,
+      message: friendNote,
+    });
+
+    setFriendSubmitting(false);
+
+    if (result.ok) {
+      setSuccessMsg(`Friend request sent to ${selectedNeighbor.displayName}.`);
+      setFriendNote('');
+      const updated = await getLatestFriendRequestBetween(currentUser.uid, selectedNeighbor.userId);
+      setFriendRequest(updated);
+    } else {
+      setErr(result.errorMessage || 'Could not send friend request.');
+    }
+  };
+
+  const handleAcceptFriendRequest = async () => {
+    if (!selectedNeighbor || !friendRequest) return;
+    setFriendBusy(true);
+    setErr('');
+    const result = await acceptFriendRequest(friendRequest.id, currentUser);
+    setFriendBusy(false);
+    if (result.ok) {
+      setSuccessMsg(`You and ${selectedNeighbor.displayName} are now friends.`);
+      const updated = await getLatestFriendRequestBetween(currentUser.uid, selectedNeighbor.userId);
+      setFriendRequest(updated);
+    } else {
+      setErr(result.errorMessage || 'Could not accept friend request.');
+    }
+  };
+
+  const handleDeclineFriendRequest = async () => {
+    if (!friendRequest) return;
+    setFriendBusy(true);
+    const result = await declineFriendRequest(friendRequest.id, currentUser.uid);
+    setFriendBusy(false);
+    if (result.ok) {
+      setSuccessMsg('Friend request declined.');
+      setFriendRequest(null);
+    } else {
+      setErr(result.errorMessage || 'Could not decline friend request.');
     }
   };
 
@@ -224,39 +295,99 @@ export default function DirectMessageRequestModal({
             </div>
 
             {loadingRequest ? (
-              <p className="text-xs text-muted">Checking message status…</p>
-            ) : canMessage ? (
-              <button type="button" onClick={handleOpenChat} className="sbn-btn sbn-btn-primary w-full">
-                <MessageSquare className="w-4 h-4" />
-                Open messages
-              </button>
-            ) : pendingOutgoing ? (
-              <p className="text-xs text-muted text-center py-1">
-                Message request sent — waiting for {selectedNeighbor.displayName} to accept.
-              </p>
-            ) : canRequest ? (
-              <>
-                <textarea
-                  value={requestNote}
-                  onChange={(e) => setRequestNote(e.target.value)}
-                  placeholder="Optional: say hello or mention what you're reaching out about…"
-                  className="sbn-input w-full text-sm min-h-[4.5rem] resize-y"
-                  maxLength={280}
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleSendRequest()}
-                  disabled={submitting}
-                  className="sbn-btn sbn-btn-primary w-full"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  {submitting ? 'Sending…' : 'Request to message'}
-                </button>
-              </>
+              <p className="text-xs text-muted">Checking connection status…</p>
             ) : (
-              <p className="text-xs text-muted text-center py-1">
-                View their profile to respond to their message request.
-              </p>
+              <>
+                {friendPendingIncoming && friendRequest ? (
+                  <div className="rounded-xl border border-accent/30 bg-accent-soft/40 p-3 space-y-2">
+                    <p className="text-sm font-semibold text-app">
+                      {friendRequest.fromUserName} wants to be friends
+                    </p>
+                    {friendRequest.message && (
+                      <p className="text-xs text-muted italic">&ldquo;{friendRequest.message}&rdquo;</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleAcceptFriendRequest()}
+                        disabled={friendBusy}
+                        className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
+                      >
+                        Accept friend
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeclineFriendRequest()}
+                        disabled={friendBusy}
+                        className="sbn-btn sbn-btn-secondary sbn-btn-sm flex-1"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ) : areFriends ? (
+                  <p className="text-xs font-semibold text-emerald-400 text-center py-1">
+                    You are friends with {selectedNeighbor.displayName}.
+                  </p>
+                ) : friendPendingOutgoing ? (
+                  <p className="text-xs text-muted text-center py-1">
+                    Friend request sent — waiting for {selectedNeighbor.displayName} to accept.
+                  </p>
+                ) : canSendFriendRequest ? (
+                  <>
+                    <textarea
+                      value={friendNote}
+                      onChange={(e) => setFriendNote(e.target.value)}
+                      placeholder="Optional: say why you'd like to connect…"
+                      className="sbn-input w-full text-sm min-h-[3.5rem] resize-y"
+                      maxLength={280}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleSendFriendRequest()}
+                      disabled={friendSubmitting}
+                      className="sbn-btn sbn-btn-secondary w-full"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      {friendSubmitting ? 'Sending…' : 'Send friend request'}
+                    </button>
+                  </>
+                ) : null}
+
+                {canMessage ? (
+                  <button type="button" onClick={handleOpenChat} className="sbn-btn sbn-btn-primary w-full">
+                    <MessageSquare className="w-4 h-4" />
+                    Open messages
+                  </button>
+                ) : pendingOutgoing ? (
+                  <p className="text-xs text-muted text-center py-1">
+                    Message request sent — waiting for {selectedNeighbor.displayName} to accept.
+                  </p>
+                ) : canRequest ? (
+                  <>
+                    <textarea
+                      value={requestNote}
+                      onChange={(e) => setRequestNote(e.target.value)}
+                      placeholder="Optional: say hello or mention what you're reaching out about…"
+                      className="sbn-input w-full text-sm min-h-[4.5rem] resize-y"
+                      maxLength={280}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleSendRequest()}
+                      disabled={submitting}
+                      className="sbn-btn sbn-btn-primary w-full"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      {submitting ? 'Sending…' : 'Request to message'}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted text-center py-1">
+                    View their profile to respond to their message request.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}

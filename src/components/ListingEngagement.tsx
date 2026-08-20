@@ -6,6 +6,8 @@ import { PostVoteState } from '../hooks/useItemsEngagement';
 import RoleBadge from './RoleBadge';
 import { isStaffRole } from '../lib/roles';
 import { commentPostedAsNeighbor, shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmRemoveComment } from '../lib/destructiveConfirm';
 
 interface ListingEngagementProps {
   posterUserId: string;
@@ -46,6 +48,14 @@ export default function ListingEngagement({
   const netScore = upvotes - downvotes;
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
+  const { confirm } = useConfirm();
+
+  const requestDeleteComment = async (commentId: string) => {
+    if (!onDeleteComment) return;
+    const ok = await confirmRemoveComment(confirm);
+    if (!ok) return;
+    onDeleteComment(commentId);
+  };
 
   const visibleComments = useMemo(() => {
     if (variant !== 'detail') return comments;
@@ -161,7 +171,7 @@ export default function ListingEngagement({
                           {isOwnComment && onDeleteComment && (
                             <button
                               type="button"
-                              onClick={() => onDeleteComment(comment.id)}
+                              onClick={() => void requestDeleteComment(comment.id)}
                               className="p-1.5 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
                               title="Remove your comment"
                               aria-label="Remove your comment"

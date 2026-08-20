@@ -237,6 +237,26 @@ ALTER TABLE public.message_requests ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS message_requests_to_idx ON public.message_requests ("toUserId", status);
 CREATE INDEX IF NOT EXISTS message_requests_from_idx ON public.message_requests ("fromUserId", status);
 
+-- 9b. Friend requests (mutual connection for Friends feed scope + profile)
+CREATE TABLE IF NOT EXISTS public.friend_requests (
+  id TEXT PRIMARY KEY,
+  "fromUserId" TEXT NOT NULL,
+  "toUserId" TEXT NOT NULL,
+  "fromUserName" TEXT NOT NULL,
+  "fromUserPhoto" TEXT,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.friend_requests DROP CONSTRAINT IF EXISTS friend_requests_status_check;
+ALTER TABLE public.friend_requests ADD CONSTRAINT friend_requests_status_check
+  CHECK (status IN ('pending', 'accepted', 'declined'));
+
+ALTER TABLE public.friend_requests ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS friend_requests_to_idx ON public.friend_requests ("toUserId", status);
+CREATE INDEX IF NOT EXISTS friend_requests_from_idx ON public.friend_requests ("fromUserId", status);
+
 -- =========================================================
 -- STORAGE: public bucket for listing photos
 -- =========================================================
@@ -1520,6 +1540,9 @@ BEGIN
   WHERE "blockerUserId" = target_uid OR "blockedUserId" = target_uid;
 
   DELETE FROM public.message_requests
+  WHERE "fromUserId" = target_uid OR "toUserId" = target_uid;
+
+  DELETE FROM public.friend_requests
   WHERE "fromUserId" = target_uid OR "toUserId" = target_uid;
 
   DELETE FROM public.user_reports
@@ -2992,6 +3015,23 @@ CREATE POLICY "message_requests_write" ON public.message_requests
     auth.uid()::text IN ("fromUserId", "toUserId")
   );
 
+DROP POLICY IF EXISTS "friend_requests_select" ON public.friend_requests;
+DROP POLICY IF EXISTS "friend_requests_write" ON public.friend_requests;
+
+CREATE POLICY "friend_requests_select" ON public.friend_requests
+  FOR SELECT USING (
+    auth.uid()::text IN ("fromUserId", "toUserId")
+    OR public.is_staff()
+  );
+
+CREATE POLICY "friend_requests_write" ON public.friend_requests
+  FOR ALL USING (
+    auth.uid()::text IN ("fromUserId", "toUserId")
+  )
+  WITH CHECK (
+    auth.uid()::text IN ("fromUserId", "toUserId")
+  );
+
 -- ---------------------------------------------------------
 -- 8. MODERATION, REPORTS, SUPPORT
 -- ---------------------------------------------------------
@@ -4059,6 +4099,7 @@ BEGIN
     'users',
     'user_blocks',
     'message_requests',
+    'friend_requests',
     'moderation_audit_log',
     'user_reports',
     'support_tickets',
@@ -4231,6 +4272,10 @@ ON CONFLICT (id) DO UPDATE SET
 -- | push-support          | support_ticket_messages | INSERT         | Support + staff inbox            |
 -- | push-app-updates      | app_updates             | INSERT         | Director changelog (app updates) |
 -- | push-announcements    | help_announcements      | INSERT         | Staff help announcements         |
+-- | push-feed-posts       | feed_posts              | INSERT         | Neighbors: new feed posts        |
+-- | push-feed-comments    | feed_post_comments      | INSERT         | Post author + reply targets      |
+-- | push-feed-reactions   | feed_post_reactions     | INSERT         | Post author                      |
+-- | push-feed-votes       | community_content_votes | INSERT, UPDATE | Post author (feed_post votes)    |
 --
 -- items UPDATE covers: status changes, owner listing-status alerts, saved-item
 -- status alerts, pickup-scheduled alerts (pending_pickup), and saved-item alerts

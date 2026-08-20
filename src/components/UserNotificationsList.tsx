@@ -47,6 +47,7 @@ function kindIcon(kind: UserNotificationKind) {
     case 'comment':
     case 'feed_comment':
     case 'feed_reaction':
+    case 'feed_post':
       return MessageSquare;
     case 'message':
     case 'message_request':
@@ -131,7 +132,7 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
     if (fromUrl) return fromUrl;
   }
 
-  const feedKinds = ['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote'] as const;
+  const feedKinds = ['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote', 'feed_post'] as const;
   if (item.itemId && feedKinds.includes(item.kind as (typeof feedKinds)[number])) {
     return { tab: 'feed', feedPostId: item.itemId };
   }

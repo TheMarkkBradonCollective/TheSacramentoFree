@@ -4,6 +4,7 @@ import type { ItemPost, UserProfile } from '../types';
 import { staffDeleteListing, staffWithdrawListing } from '../supabase';
 import { canStaffDeleteAccount, isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmStaffCancelEvent, confirmStaffDeleteEvent, confirmStaffDeleteListing, confirmStaffWithdrawListing } from '../lib/destructiveConfirm';
 
 interface StaffListingActionsProps {
   item: ItemPost;
@@ -28,12 +29,7 @@ export default function StaffListingActions({
   const canDelete = canStaffDeleteAccount(actor.role);
 
   const handleWithdraw = async () => {
-    const ok = await confirm({
-      title: 'Withdraw listing?',
-      message: `Withdraw "${item.title}" as staff? The poster will see it as withdrawn.`,
-      confirmLabel: 'Withdraw',
-      variant: 'danger',
-    });
+    const ok = await confirmStaffWithdrawListing(confirm, item.title);
     if (!ok) return;
     setBusy('withdraw');
     const result = await staffWithdrawListing(item, actor);
@@ -46,12 +42,7 @@ export default function StaffListingActions({
   };
 
   const handleDelete = async () => {
-    const ok = await confirm({
-      title: 'Delete listing?',
-      message: `Permanently delete "${item.title}"? This cannot be undone.`,
-      confirmLabel: 'Delete',
-      variant: 'danger',
-    });
+    const ok = await confirmStaffDeleteListing(confirm, item.title);
     if (!ok) return;
     setBusy('delete');
     const result = await staffDeleteListing(item, actor);

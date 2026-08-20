@@ -28,7 +28,7 @@ export function useItemsEngagement(
   const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
 
   const uid = userProfile?.uid ?? '';
-  const { confirm, alert } = useConfirm();
+  const { alert } = useConfirm();
   const itemIdSetRef = useRef(new Set<string>());
 
   const getVotesForPost = useCallback(
@@ -225,12 +225,6 @@ export function useItemsEngagement(
 
   const handleDeleteComment = async (itemId: string, commentId: string) => {
     if (!uid) return;
-    const confirmed = await confirm({
-      message: 'Remove your comment?',
-      confirmLabel: 'Remove',
-      variant: 'danger',
-    });
-    if (!confirmed) return;
 
     const current = getCommentsForPost(itemId);
     const next = current.filter((c) => c.id !== commentId);

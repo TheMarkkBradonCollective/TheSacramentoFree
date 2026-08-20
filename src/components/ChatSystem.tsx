@@ -33,6 +33,11 @@ import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
+import {
+  confirmDeleteConversation,
+  confirmRemoveCommunityMessage,
+  confirmUnsendMessage,
+} from '../lib/destructiveConfirm';
 import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
@@ -735,13 +740,7 @@ export default function ChatSystem({
     if (!canDeleteDirectChat(userProfile, selectedChat, listingContext, eventContext)) return;
 
     const isPostChat = Boolean(selectedChat.itemId?.trim() || selectedChat.eventId?.trim());
-    const confirmed = await confirm({
-      message: isPostChat
-        ? 'Delete this coordination chat for both neighbors? The thread will be removed from Messages.'
-        : 'Delete this conversation for both neighbors? You will need to send a new message request to chat again.',
-      confirmLabel: 'Delete conversation',
-      variant: 'danger',
-    });
+    const confirmed = await confirmDeleteConversation(confirm, isPostChat);
     if (!confirmed) return;
 
     setDeletingChat(true);
@@ -778,6 +777,9 @@ export default function ChatSystem({
     if (message.senderId !== userProfile.uid) return;
     if (!canDeleteChatMessage(userProfile, message, selectedChat.id)) return;
 
+    const confirmed = await confirmUnsendMessage(confirm);
+    if (!confirmed) return;
+
     setUnsendingMessageId(message.id);
     setErrorMsg('');
 
@@ -807,11 +809,7 @@ export default function ChatSystem({
     if (!canDeleteChatMessage(userProfile, message, selectedChat.id)) return;
     if (message.senderId === userProfile.uid) return;
 
-    const confirmed = await confirm({
-      message: 'Remove this message from community chat?',
-      confirmLabel: 'Remove',
-      variant: 'danger',
-    });
+    const confirmed = await confirmRemoveCommunityMessage(confirm);
     if (!confirmed) return;
 
     setUnsendingMessageId(message.id);
