@@ -1376,6 +1376,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
   news(
+    '2026-08-20_apk-0042',
+    '2026-08-20',
+    'New Android beta 0042 — notification bar icon artwork',
+    'Status bar and web push now show the 3D hands-and-bill logo.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0042: notification bar icon uses the 3D hands + dollar bill artwork.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0042.
+
+HISTORY
+2026-08-20 — Android beta 0042 /runit release (PR #302).`,
+    APK_0042_PUBLISHED_AT,
+  ),
+  news(
     '2026-08-20_apk-0041',
     '2026-08-20',
     'New Android beta 0041 — notification deep links, welcome feed post',
