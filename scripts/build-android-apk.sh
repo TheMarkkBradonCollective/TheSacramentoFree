@@ -81,6 +81,15 @@ cp "$APK_PATH" "public/downloads/sac-buy-nothing.apk"
 cp "$APK_PATH" "public/buynothing.apk"
 cp "$APK_PATH" "public/buynothing-v${VERSION_NAME}.apk"
 node scripts/sync-android-version.mjs
+if compgen -G "$APK_STAGING_DIR/*.apk" > /dev/null; then
+  mv "$APK_STAGING_DIR"/*.apk public/downloads/ 2>/dev/null || true
+  for f in public/downloads/buynothing*.apk; do
+    [[ -f "$f" ]] && mv "$f" public/ 2>/dev/null || true
+  done
+fi
+if compgen -G "$APK_STAGING_DIR/*.aab" > /dev/null; then
+  mv "$APK_STAGING_DIR"/*.aab public/downloads/ 2>/dev/null || true
+fi
 rm -rf "$APK_STAGING_DIR"
 
 echo "APK ready: dist/android/sac-buy-nothing-${BUILD_TYPE}.apk"
