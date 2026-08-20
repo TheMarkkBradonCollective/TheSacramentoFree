@@ -216,7 +216,7 @@ export function NotificationsHubProvider({
       {children}
       {open && userProfile ? (
         <FullScreenPanel wide onClose={() => setOpen(false)}>
-          <div className="space-y-5">
+          <div className="space-y-5 min-h-0">
             <div className="flex items-center gap-2">
               <button
                 type="button"

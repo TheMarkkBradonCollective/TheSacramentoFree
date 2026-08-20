@@ -60,14 +60,29 @@ const PREF_SECTIONS: {
     ],
   },
   {
-    title: 'Discover',
+    title: 'Discover listings',
     items: [
-      { key: 'newListings', label: 'New listings', description: 'New free items in areas you follow' },
+      { key: 'newListings', label: 'New listings', description: 'New free items in categories you follow' },
       { key: 'nearbyListings', label: 'Nearby listings', description: 'Free items near your neighborhood' },
       {
-        key: 'requests',
-        label: 'Requests',
-        description: 'Neighbors seeking items, nearby ISO posts, and claim requests on your listings',
+        key: 'neighborRequests',
+        label: 'Neighbor requests (ISO)',
+        description: 'When someone posts a looking-for or trade request',
+      },
+      {
+        key: 'nearbyRequests',
+        label: 'Nearby requests',
+        description: 'ISO posts near your neighborhood',
+      },
+      {
+        key: 'claimRequests',
+        label: 'Claim requests',
+        description: 'When someone asks to pick up your listing',
+      },
+      {
+        key: 'requestFulfilled',
+        label: 'Request fulfilled',
+        description: 'When a neighbor fulfills your ISO or request post',
       },
       {
         key: 'savedItems',
@@ -77,7 +92,37 @@ const PREF_SECTIONS: {
     ],
   },
   {
-    title: 'Community',
+    title: 'Community feed',
+    items: [
+      {
+        key: 'feedPosts',
+        label: 'New feed posts',
+        description: 'When neighbors share new community feed posts',
+      },
+      {
+        key: 'feedComments',
+        label: 'Feed comments',
+        description: 'Comments on your feed posts',
+      },
+      {
+        key: 'feedReactions',
+        label: 'Feed reactions',
+        description: 'Emoji reactions on your feed posts',
+      },
+      {
+        key: 'feedUpvotes',
+        label: 'Feed upvotes',
+        description: 'When someone upvotes your feed post (anonymous)',
+      },
+      {
+        key: 'feedDownvotes',
+        label: 'Feed downvotes',
+        description: 'When someone downvotes your feed post (anonymous)',
+      },
+    ],
+  },
+  {
+    title: 'Community news',
     items: [
       { key: 'appUpdates', label: 'App updates', description: 'Push when new changelog entries ship (bell → Updates)' },
       { key: 'announcements', label: 'Announcements', description: 'Push when staff post news (bell → Announcements)' },
@@ -85,35 +130,73 @@ const PREF_SECTIONS: {
   },
 ];
 
-const LISTING_PREF_ITEMS = [
-  { key: 'claims' as const, label: 'Claims', description: 'When someone claims your item' },
-  { key: 'gifts' as const, label: 'Gifts', description: 'When an item is marked gifted' },
-  { key: 'comments' as const, label: 'Comments', description: 'New comments on your listings and feed posts' },
-  { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When someone upvotes your listing or feed post (anonymous)' },
-  { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When someone downvotes your listing or feed post (anonymous)' },
+const YOUR_POSTS_SECTIONS: {
+  title: string;
+  items: { key: BooleanPrefKey; label: string; description: string }[];
+}[] = [
   {
-    key: 'listingStatus' as const,
-    label: 'Listing status',
-    description: 'Expiring soon, gifted, withdrawn, and other status changes',
+    title: 'Your listings',
+    items: [
+      { key: 'claims', label: 'Claims', description: 'When someone claims your item' },
+      { key: 'gifts', label: 'Gifts', description: 'When an item is marked gifted' },
+      {
+        key: 'listingComments',
+        label: 'Listing comments',
+        description: 'New comments on your giveaways, requests, and trades',
+      },
+      {
+        key: 'listingUpvotes',
+        label: 'Listing upvotes',
+        description: 'When someone upvotes your listing (anonymous)',
+      },
+      {
+        key: 'listingDownvotes',
+        label: 'Listing downvotes',
+        description: 'When someone downvotes your listing (anonymous)',
+      },
+      {
+        key: 'listingModeration',
+        label: 'Staff listing review',
+        description: 'When staff approve or deny a listing you posted',
+      },
+      {
+        key: 'listingExpiry',
+        label: 'Listing expiry & status',
+        description: 'Expiring soon, expired, withdrawn, and other status changes',
+      },
+    ],
   },
   {
-    key: 'pickupReminders' as const,
-    label: 'Pickup reminders',
-    description: 'Go Get, pending pickup, on-the-way alerts — Android app only',
-    nativeAppOnly: true,
+    title: 'Pickup & Go Get',
+    items: [
+      {
+        key: 'goGetAlerts',
+        label: 'Go Get handoff',
+        description: 'Ring alerts, schedule proposals, on-the-way, and Go Get milestones (Android app)',
+      },
+      {
+        key: 'pickupCoordination',
+        label: 'Pickup coordination',
+        description: 'Scheduled pickup, reminders, on-the-way, and contactless handoff (Android app)',
+      },
+    ],
   },
-  { key: 'accountUpdates' as const, label: 'Account updates', description: 'Profile and account notices' },
-] as const;
-
-const LISTING_PREF_SECTION = {
-  title: 'Your posts & profile',
-  get items() {
-    return LISTING_PREF_ITEMS.filter((item) => {
-      if ('nativeAppOnly' in item && item.nativeAppOnly) return isAndroidApp();
-      return true;
-    });
+  {
+    title: 'Account & safety',
+    items: [
+      {
+        key: 'violations',
+        label: 'Violations & appeals',
+        description: 'Go Get strikes, account locks, violation decisions, and appeal outcomes',
+      },
+      {
+        key: 'accountUpdates',
+        label: 'Account updates',
+        description: 'Profile changes and general account notices',
+      },
+    ],
   },
-};
+];
 
 function SwitchRow({
   label,
@@ -476,23 +559,25 @@ export default function NotificationSettings({
 
           {showListingsScope && !showAlertsScope ? (
             <div className={`space-y-5 ${masterDisabled || prefsLoading ? 'opacity-50 pointer-events-none' : ''}`}>
-              <div>
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
-                  {LISTING_PREF_SECTION.title}
-                </h4>
-                <div className="rounded-xl border border-app bg-inset/30 px-3">
-                  {LISTING_PREF_SECTION.items.map((toggle) => (
-                    <Fragment key={toggle.key}>
-                      <SwitchRow
-                        label={toggle.label}
-                        description={toggle.description}
-                        checked={Boolean(preferences[toggle.key])}
-                        onChange={(value) => setPref(toggle.key, value)}
-                      />
-                    </Fragment>
-                  ))}
+              {YOUR_POSTS_SECTIONS.map((section) => (
+                <div key={section.title}>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
+                    {section.title}
+                  </h4>
+                  <div className="rounded-xl border border-app bg-inset/30 px-3">
+                    {section.items.map((toggle) => (
+                      <Fragment key={toggle.key}>
+                        <SwitchRow
+                          label={toggle.label}
+                          description={toggle.description}
+                          checked={Boolean(preferences[toggle.key])}
+                          onChange={(value) => setPref(toggle.key, value)}
+                        />
+                      </Fragment>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           ) : null}
 
@@ -520,23 +605,25 @@ export default function NotificationSettings({
                 </div>
               ))}
 
-              <div>
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
-                  {LISTING_PREF_SECTION.title}
-                </h4>
-                <div className="rounded-xl border border-app bg-inset/30 px-3">
-                  {LISTING_PREF_SECTION.items.map((toggle) => (
-                    <Fragment key={toggle.key}>
-                      <SwitchRow
-                        label={toggle.label}
-                        description={toggle.description}
-                        checked={Boolean(preferences[toggle.key])}
-                        onChange={(value) => setPref(toggle.key, value)}
-                      />
-                    </Fragment>
-                  ))}
+              {YOUR_POSTS_SECTIONS.map((section) => (
+                <div key={section.title}>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
+                    {section.title}
+                  </h4>
+                  <div className="rounded-xl border border-app bg-inset/30 px-3">
+                    {section.items.map((toggle) => (
+                      <Fragment key={toggle.key}>
+                        <SwitchRow
+                          label={toggle.label}
+                          description={toggle.description}
+                          checked={Boolean(preferences[toggle.key])}
+                          onChange={(value) => setPref(toggle.key, value)}
+                        />
+                      </Fragment>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ))}
 
               {showStaffNotificationPrefs && (
                 <div>
@@ -625,7 +712,7 @@ export default function NotificationSettings({
                 <p className="text-[11px] text-muted mb-3">
                   Get alerts when new items are posted in categories you care about (any neighborhood).
                 </p>
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1">
+                <div className="flex flex-wrap gap-2 pr-1">
                   {allCategories.map((category) => {
                     const active = preferences.followedCategories.includes(category);
                     return (
@@ -648,6 +735,7 @@ export default function NotificationSettings({
                   })}
                 </div>
               </div>
+              {embedded ? <div className="h-8 shrink-0" aria-hidden /> : null}
             </>
           ) : null}
         </>

@@ -31,25 +31,63 @@ async function fetchPushApi(input: string, init?: RequestInit): Promise<Response
   }
 }
 
-const OPTIONAL_PREF_COLUMNS = ['communityChat', 'staffChat'] as const;
+const LEGACY_OPTIONAL_PREF_COLUMNS = ['communityChat', 'staffChat'] as const;
+
+const GRANULAR_PREF_COLUMNS = [
+  'feedPosts',
+  'feedComments',
+  'feedReactions',
+  'feedUpvotes',
+  'feedDownvotes',
+  'listingComments',
+  'goGetAlerts',
+  'pickupCoordination',
+  'listingModeration',
+  'listingExpiry',
+  'violations',
+  'claimRequests',
+  'nearbyRequests',
+  'requestFulfilled',
+  'neighborRequests',
+] as const;
 
 function isMissingPrefColumnError(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;
   const message = (error.message || '').toLowerCase();
   return (
     error.code === 'PGRST204' ||
-    message.includes('communitychat') ||
-    message.includes('staffchat') ||
-    message.includes('schema cache')
+    message.includes('schema cache') ||
+    message.includes('could not find') ||
+    LEGACY_OPTIONAL_PREF_COLUMNS.some((key) => message.includes(key.toLowerCase())) ||
+    GRANULAR_PREF_COLUMNS.some((key) => message.includes(key.toLowerCase()))
   );
 }
 
 function prefsWithoutOptionalColumns(prefs: NotificationPreferences): NotificationPreferences {
   const next = { ...prefs };
-  for (const key of OPTIONAL_PREF_COLUMNS) {
+  for (const key of [...LEGACY_OPTIONAL_PREF_COLUMNS, ...GRANULAR_PREF_COLUMNS]) {
     delete (next as Record<string, unknown>)[key];
   }
   return next;
+}
+
+function boolPref(row: Record<string, unknown>, key: string, fallbackKey?: string): boolean {
+  if (row[key] !== undefined && row[key] !== null) return row[key] !== false;
+  if (fallbackKey && row[fallbackKey] !== undefined) return row[fallbackKey] !== false;
+  return true;
+}
+
+/** Keep legacy bundled columns in sync for older server builds. */
+export function syncLegacyNotificationPrefs(prefs: NotificationPreferences): NotificationPreferences {
+  return {
+    ...prefs,
+    comments: prefs.listingComments || prefs.feedComments || prefs.feedReactions,
+    listingStatus: prefs.listingModeration || prefs.listingExpiry,
+    pickupReminders: prefs.goGetAlerts || prefs.pickupCoordination,
+    requests:
+      prefs.claimRequests || prefs.nearbyRequests || prefs.requestFulfilled || prefs.neighborRequests,
+    accountUpdates: prefs.accountUpdates || prefs.violations,
+  };
 }
 
 export const NOTIFICATION_SESSION_CLEARED_EVENT = 'sbn-notification-session-cleared';
@@ -822,6 +860,21 @@ export const CLEARED_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   newListings: false,
   savedItems: false,
   accountUpdates: false,
+  feedPosts: false,
+  feedComments: false,
+  feedReactions: false,
+  feedUpvotes: false,
+  feedDownvotes: false,
+  listingComments: false,
+  goGetAlerts: false,
+  pickupCoordination: false,
+  listingModeration: false,
+  listingExpiry: false,
+  violations: false,
+  claimRequests: false,
+  nearbyRequests: false,
+  requestFulfilled: false,
+  neighborRequests: false,
   staffSupport: false,
   staffReports: false,
   directorAlerts: false,
@@ -858,6 +911,21 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   newListings: true,
   savedItems: true,
   accountUpdates: true,
+  feedPosts: true,
+  feedComments: true,
+  feedReactions: true,
+  feedUpvotes: true,
+  feedDownvotes: true,
+  listingComments: true,
+  goGetAlerts: true,
+  pickupCoordination: true,
+  listingModeration: true,
+  listingExpiry: true,
+  violations: true,
+  claimRequests: true,
+  nearbyRequests: true,
+  requestFulfilled: true,
+  neighborRequests: true,
   staffSupport: true,
   staffReports: true,
   directorAlerts: true,
@@ -874,7 +942,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
 };
 
 function normalizePreferencesRow(row: Record<string, unknown>): NotificationPreferences {
-  return {
+  const prefs: NotificationPreferences = {
     enabled: row.enabled !== false,
     messages: row.messages !== false,
     messageRequests: row.messageRequests !== false,
@@ -895,6 +963,21 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     newListings: row.newListings !== false,
     savedItems: row.savedItems !== false,
     accountUpdates: row.accountUpdates !== false,
+    feedPosts: boolPref(row, 'feedPosts', 'newListings'),
+    feedComments: boolPref(row, 'feedComments', 'comments'),
+    feedReactions: boolPref(row, 'feedReactions', 'comments'),
+    feedUpvotes: boolPref(row, 'feedUpvotes', 'listingUpvotes'),
+    feedDownvotes: boolPref(row, 'feedDownvotes', 'listingDownvotes'),
+    listingComments: boolPref(row, 'listingComments', 'comments'),
+    goGetAlerts: boolPref(row, 'goGetAlerts', 'pickupReminders'),
+    pickupCoordination: boolPref(row, 'pickupCoordination', 'pickupReminders'),
+    listingModeration: boolPref(row, 'listingModeration', 'listingStatus'),
+    listingExpiry: boolPref(row, 'listingExpiry', 'listingStatus'),
+    violations: boolPref(row, 'violations', 'accountUpdates'),
+    claimRequests: boolPref(row, 'claimRequests', 'requests'),
+    nearbyRequests: boolPref(row, 'nearbyRequests', 'requests'),
+    requestFulfilled: boolPref(row, 'requestFulfilled', 'requests'),
+    neighborRequests: boolPref(row, 'neighborRequests', 'requests'),
     staffSupport: row.staffSupport !== false,
     staffReports: row.staffReports !== false,
     directorAlerts: row.directorAlerts !== false,
@@ -909,6 +992,7 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     nearbyRadiusMiles: (Number(row.nearbyRadiusMiles) || 10) as NearbyRadiusMiles,
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
   };
+  return syncLegacyNotificationPrefs(prefs);
 }
 
 export async function getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
@@ -928,7 +1012,7 @@ export async function saveNotificationPreferences(
 ): Promise<boolean> {
   const payload = {
     userId,
-    ...prefs,
+    ...syncLegacyNotificationPrefs(prefs),
     updatedAt: new Date().toISOString(),
   };
 

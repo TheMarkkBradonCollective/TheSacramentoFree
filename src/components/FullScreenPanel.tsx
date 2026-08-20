@@ -73,8 +73,12 @@ export default function FullScreenPanel({
           </div>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto sbn-safe-bottom">
-          <div className={`mx-auto w-full px-4 py-5 pb-10 ${contentMax}`}>{children}</div>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
+          <div
+            className={`mx-auto w-full px-4 py-5 pb-[max(2.5rem,env(safe-area-inset-bottom,0px))] ${contentMax}`}
+          >
+            {children}
+          </div>
         </div>
       )}
     </div>
