@@ -49,7 +49,7 @@ import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRs
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
-import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
+import { getPostTypeMapDetailLabel, getPostTypeMapLabel, getListingContactButtonLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
 import { pickSoonestPerEventSeries } from '../lib/eventSeries';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
@@ -2507,7 +2507,7 @@ export default function SacramentoMapView({
                           ) : (
                             <>
                               <MessageSquare className="w-3 h-3" />
-                              <span>Message</span>
+                              <span>{getListingContactButtonLabel(selectedPost.type)}</span>
                             </>
                           )}
                         </button>

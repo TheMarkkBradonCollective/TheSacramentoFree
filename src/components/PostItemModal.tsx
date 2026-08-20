@@ -17,6 +17,8 @@ import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil,
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
 import { getPostTypeModalTitle } from '../lib/postType';
+import ListingPostedReminderModal from './ListingPostedReminderModal';
+import { openNotificationsHub } from '../contexts/NotificationsHubContext';
 
 interface PostItemModalProps {
   userProfile: UserProfile;
@@ -60,6 +62,7 @@ export default function PostItemModal({
   const [pickupAddress, setPickupAddress] = useState('');
   const [multipleItems, setMultipleItems] = useState(false);
   const [subItemLabels, setSubItemLabels] = useState<string[]>(['']);
+  const [postedListing, setPostedListing] = useState<ItemPost | null>(null);
 
   const activeCategory = type === 'looking' ? isoCategory : category;
 
@@ -340,6 +343,12 @@ export default function PostItemModal({
           setErrorMsg(subResult.errorMessage || 'Listing saved but items list failed to save.');
           return;
         }
+      }
+
+      if (!isEditing && !isReposting) {
+        setPostedListing(listing);
+        setIsSubmitting(false);
+        return;
       }
 
       onSuccess(listing);
@@ -934,11 +943,30 @@ export default function PostItemModal({
         </form>
   );
 
+  const postedReminderModal = postedListing ? (
+    <ListingPostedReminderModal
+      listingTitle={postedListing.title}
+      listingType={postedListing.type}
+      onDismiss={() => {
+        onSuccess(postedListing);
+        onClose();
+        setPostedListing(null);
+      }}
+      onOpenNotifications={() => openNotificationsHub('alerts')}
+    />
+  ) : null;
+
   if (embedded) {
-    return formBody;
+    return (
+      <>
+        {formBody}
+        {postedReminderModal}
+      </>
+    );
   }
 
   return (
+    <>
     <div id="post_modal_overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 py-8">
         <div className="relative w-full max-w-lg sbn-card-elevated overflow-hidden" id="post_modal_box">
@@ -972,5 +1000,7 @@ export default function PostItemModal({
         </div>
       </div>
     </div>
+    {postedReminderModal}
+    </>
   );
 }
