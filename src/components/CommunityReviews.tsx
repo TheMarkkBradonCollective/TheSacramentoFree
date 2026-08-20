@@ -7,6 +7,7 @@ import StarRating from './StarRating';
 import ContentVoteButtons, { OWN_CONTENT_VOTE_DISABLED_REASON } from './ContentVoteButtons';
 import HorizontalSnapRow, { SnapSlide } from './HorizontalSnapRow';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmRemoveReview } from '../lib/destructiveConfirm';
 
 interface CommunityReviewsProps {
   userProfile?: UserProfile | null;
@@ -271,11 +272,7 @@ export default function CommunityReviews({
   };
 
   const handleRemove = async () => {
-    const confirmed = await confirm({
-      message: 'Remove your review?',
-      confirmLabel: 'Remove',
-      variant: 'danger',
-    });
+    const confirmed = await confirmRemoveReview(confirm);
     if (!confirmed) return;
     await removeMyReview();
     setText('');

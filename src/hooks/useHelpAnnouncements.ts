@@ -34,10 +34,20 @@ export function useHelpAnnouncements(userProfile?: UserProfile | null) {
       void reload();
     }, 150);
 
-    return subscribePostgresChanges<HelpAnnouncementRecord>(
+    const onChangelogRefresh = () => {
+      void reload();
+    };
+    window.addEventListener('sbn-refresh-changelog', onChangelogRefresh);
+
+    const unsubscribe = subscribePostgresChanges<HelpAnnouncementRecord>(
       { channelName: 'live-help-announcements', table: 'help_announcements', event: '*' },
       refresh,
     );
+
+    return () => {
+      window.removeEventListener('sbn-refresh-changelog', onChangelogRefresh);
+      unsubscribe();
+    };
   }, [reload]);
 
   const createAnnouncement = async (input: HelpAnnouncementInput) => {

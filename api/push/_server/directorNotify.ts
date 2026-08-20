@@ -1,7 +1,25 @@
 import type { PushSendBody } from './runPushSend';
 import { isDirectorRole } from './directorIdentity';
 import { runPushSend } from './runPushSend';
+import { getSupabaseAdmin } from './supabaseAdmin';
 import { getUserRole, roleLabelFor } from './staffRoles';
+
+/** Join alerts should only fire for brand-new auth accounts — not sign-in backfills. */
+const FRESH_SIGNUP_MAX_AGE_MS = 15 * 60 * 1000;
+
+async function isFreshAuthSignup(uid: string): Promise<boolean> {
+  try {
+    const supabaseAdmin = await getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(uid);
+    if (error || !data?.user?.created_at) return false;
+
+    const createdMs = Date.parse(data.user.created_at);
+    if (!Number.isFinite(createdMs)) return false;
+    return Date.now() - createdMs <= FRESH_SIGNUP_MAX_AGE_MS;
+  } catch {
+    return false;
+  }
+}
 
 export type DirectorAlertCategory =
   | 'join'
@@ -47,6 +65,10 @@ export async function runDirectorJoinNotify(
   const uid = String(profile.uid || '');
   if (!uid || isDirectorRole((profile as { role?: string }).role)) {
     return { status: 200, body: { ok: true, skipped: 'not a join alert candidate' } };
+  }
+
+  if (!(await isFreshAuthSignup(uid))) {
+    return { status: 200, body: { ok: true, skipped: 'not a fresh signup' } };
   }
 
   const displayName = String(profile.displayName || 'A neighbor').trim() || 'A neighbor';

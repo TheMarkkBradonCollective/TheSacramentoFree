@@ -10,6 +10,7 @@ import AppUpdateComments from './AppUpdateComments';
 import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmDeleteAppUpdate } from '../lib/destructiveConfirm';
 
 interface UpdatesListProps {
   userProfile?: UserProfile | null;
@@ -195,11 +196,7 @@ export default function UpdatesList({
                         <button
                           type="button"
                           onClick={async () => {
-                            const confirmed = await confirm({
-                              message: 'Delete this update?',
-                              confirmLabel: 'Delete',
-                              variant: 'danger',
-                            });
+                            const confirmed = await confirmDeleteAppUpdate(confirm);
                             if (!confirmed) return;
                             await removeUpdate(update.id);
                           }}

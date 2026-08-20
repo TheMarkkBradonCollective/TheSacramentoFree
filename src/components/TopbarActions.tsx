@@ -21,7 +21,7 @@ export default function TopbarActions({
   showNeighborhood = false,
 }: TopbarActionsProps) {
   return (
-    <div className={`flex items-center shrink-0${compact ? ' gap-1' : ' gap-2'}`} id="app_topbar_actions">
+    <div className="flex items-center shrink-0 gap-2 sm:gap-3" id="app_topbar_actions">
       {showNeighborhood && (
         <div
           className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-inset border border-app text-accent text-xs font-semibold"
@@ -30,12 +30,13 @@ export default function TopbarActions({
           {userProfile.neighborhood}
         </div>
       )}
-      <NotificationsHubButton compact={compact} />
+      <NotificationsHubButton compact={compact} className="-mr-0.5" />
       <ProfileHeaderButton
         userProfile={userProfile}
         active={accountActive}
         onClick={onOpenAccount}
         compact={compact}
+        className="ml-0.5 sm:ml-1"
       />
     </div>
   );

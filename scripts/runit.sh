@@ -185,6 +185,6 @@ node scripts/runit-play-console-summary.mjs --write
 echo ""
 echo "Supabase SQL:"
 echo "  Run any new scripts/supabase-migration-*.sql in SQL editor"
-echo "  (or wait for cron /api/cron/publish-changelog for neighbor Updates)"
+echo "  (or wait for cron /api/cron/publish-changelog every 4h for neighbor Updates/News)"
 echo ""
 echo "Done."

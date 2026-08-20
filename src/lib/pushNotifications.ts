@@ -525,7 +525,8 @@ export type PushEventType =
   | 'feed_comment'
   | 'feed_reaction'
   | 'feed_upvote'
-  | 'feed_downvote';
+  | 'feed_downvote'
+  | 'feed_post';
 
 export interface SendPushOptions {
   eventType: PushEventType;

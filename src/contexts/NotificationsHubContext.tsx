@@ -110,6 +110,7 @@ export function NotificationsHubButton({
       label="Notify"
       glow={shouldGlow}
       compact={compact}
+      unboxed
       title={shouldGlow ? 'You have unread notifications' : 'Notify, news, updates, and alerts'}
       ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notify, news, updates, and alerts'}
       id="notifications_hub_btn"
@@ -170,6 +171,9 @@ export function NotificationsHubProvider({
     const resolved = resolveHubTab(initialTab);
     setTab(resolved);
     setOpen(true);
+    if (resolved === 'announcements' || resolved === 'updates') {
+      window.dispatchEvent(new CustomEvent('sbn-refresh-changelog'));
+    }
   }, []);
 
   useEffect(() => {
@@ -204,6 +208,9 @@ export function NotificationsHubProvider({
 
   const selectTab = (next: NotificationsHubTab) => {
     setTab(next);
+    if (next === 'announcements' || next === 'updates') {
+      window.dispatchEvent(new CustomEvent('sbn-refresh-changelog'));
+    }
   };
 
   return (

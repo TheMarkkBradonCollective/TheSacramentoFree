@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, ChevronDown, ChevronUp, Flag, MapPin, Trash2 } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../../types';
 import { useFeedEngagement } from '../../hooks/useFeedEngagement';
+import { useDismissOnEscape } from '../../hooks/useDismissOnEscape';
 import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from '../../lib/feedReactions';
 import { isStaffRole } from '../../lib/roles';
 import { PresenceUserAvatar } from '../UserAvatar';
@@ -53,6 +54,8 @@ export default function FeedPostDetailView({
   const votes = engagement.getVoteState(post.id);
   const reactions = engagement.getReactionState(post.id);
   const comments = engagement.getComments(post.id);
+
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;

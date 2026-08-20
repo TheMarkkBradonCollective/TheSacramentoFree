@@ -38,6 +38,7 @@ import { getListingSubitems, itemHasRecordedAppClaim, getUserDisplayInfoByIds } 
 import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useSavedItems } from '../hooks/useSavedItems';
+import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface ItemDetailViewProps {
   item: ItemPost;
@@ -127,6 +128,8 @@ export default function ItemDetailView({
       setCommenterRoles(roles);
     });
   }, [comments]);
+
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;

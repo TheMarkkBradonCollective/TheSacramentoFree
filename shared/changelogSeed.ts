@@ -66,6 +66,9 @@ const APK_0038_PUBLISHED_AT = '2026-08-20T16:35:00.000Z';
 const APK_0039_PUBLISHED_AT = '2026-08-20T16:55:00.000Z';
 const APK_0040_PUBLISHED_AT = '2026-08-20T17:40:00.000Z';
 const APK_0041_PUBLISHED_AT = '2026-08-20T17:25:00.000Z';
+const FEED_FULLSCREEN_NAV_PUBLISHED_AT = '2026-08-20T19:10:00.000Z';
+const NOTIFICATION_RELIABILITY_PUBLISHED_AT = '2026-08-20T19:12:00.000Z';
+const APK_0042_PUBLISHED_AT = '2026-08-20T19:45:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -120,6 +123,78 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_notification-reliability',
+    '2026-08-20',
+    'Notification reliability — feed comments, signup alerts, new posts',
+    'Feed comments and replies notify reliably; false signup alerts fixed; new feed posts broadcast to neighbors.',
+    `WHAT NEIGHBORS SEE
+• Comments on your feed post push + show in the bell inbox
+• Replies to your comment notify you (not just the post author)
+• New community feed posts alert neighbors (same area + announcements prefs)
+• Directors no longer get false "new neighbor joined" when someone signs into an existing account
+
+Turn categories off anytime in bell → Notification settings if it is too chatty.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- api/push/_server/feedNotify.ts — comment, reply, reaction, vote, new-post alerts
+- api/push/_server/directorNotify.ts — fresh-signup-only join alerts
+- src/lib/pushFeedIntegration.ts — client-side feed push dispatch
+
+HISTORY
+2026-08-20 — Notification audit (PR #298).`,
+    NOTIFICATION_RELIABILITY_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_feed-fullscreen-navigation',
+    '2026-08-20',
+    'Feed full-screen posts dismiss when you change tabs',
+    'Tap Feed, Map, Chats, or any bottom tab to close a full-screen feed post — no more getting stuck behind the overlay.',
+    `WHAT NEIGHBORS SEE
+• Open a feed post full-screen, then tap any tab — the overlay closes and that tab opens
+• Escape / Android back also dismiss stacked overlays in order
+• Report-post modal stacks above mobile chrome correctly
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/App.tsx — closeTransientOverlays clears feed post detail
+- src/components/feed/FeedPostDetailView.tsx — full-screen sheet + Escape dismiss
+
+HISTORY
+2026-08-20 — Feed overlay navigation fix (PR #297).`,
+    FEED_FULLSCREEN_NAV_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0042',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0042',
+    'Notification bar icon now uses the 3D hands-and-bill artwork.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0042 (versionCode 42).
+
+Since 0041:
+• Notification bar icon — 3D hands + dollar bill artwork (matches the app logo)
+• Web push notifications use the same artwork on black
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0042.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 42
+- play-store-assets/release-notes-v0.1.0-0042.txt
+- public/notification-icon.png — web push icon
+- android/app/src/main/res/drawable-*/ic_stat_notification.png — status bar glyph
+- scripts/generate-android-assets.mjs — icon generation
+
+HISTORY
+2026-08-20 — /runit release (PR #302); Android beta 0042 built.`,
+    APK_0042_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0041',
     '2026-08-20',
@@ -1346,6 +1421,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0042',
+    '2026-08-20',
+    'New Android beta 0042 — notification bar icon artwork',
+    'Status bar and web push now show the 3D hands-and-bill logo.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0042: notification bar icon uses the 3D hands + dollar bill artwork.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0042.
+
+HISTORY
+2026-08-20 — Android beta 0042 /runit release (PR #302).`,
+    APK_0042_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0041',
     '2026-08-20',

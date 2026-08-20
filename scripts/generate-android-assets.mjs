@@ -9,6 +9,12 @@
  * This script paints the white/shadow canvas with the logo's orange, writes
  * full-bleed mipmaps, and replaces the adaptive-icon XML so both layers fill
  * the 108dp canvas with no inset.
+ *
+ * Notification icons keep the 3D hands-and-bill artwork on black for web push
+ * (public/notification-icon.png). Android status-bar glyphs must be white on
+ * transparent, so the same artwork is written as an alpha mask at
+ * drawable-{density}/ic_stat_notification.png. Interior white pixels are the
+ * hands, not the JPEG canvas - only edge-connected paper is treated as background.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
@@ -85,47 +91,42 @@ const NOTIFICATION_DENSITIES = {
   xxxhdpi: 96,
 };
 
-function isNotificationSubject(r, g, b, fill) {
-  if (isCanvasPixel(r, g, b)) return false;
+function isLogoOrange(r, g, b, fill) {
   const dr = Math.abs(r - fill[0]);
   const dg = Math.abs(g - fill[1]);
   const db = Math.abs(b - fill[2]);
-  if (dr < 42 && dg < 42 && db < 42) return false;
-  return true;
+  if (dr < 48 && dg < 48 && db < 48) return true;
+  return r > 170 && r > g + 50 && r > b + 70 && g < 185 && b < 150;
 }
 
-function writeNotificationSilhouettePng(srcJpeg, destPng) {
+function isOrangeFringe(r, g, b, fill) {
+  if (isLogoOrange(r, g, b, fill)) return true;
+  const sat = Math.max(r, g, b) - Math.min(r, g, b);
+  return r > 80 && r > g + 25 && r > b + 35 && sat > 30;
+}
+
+function readRgbFrame(src) {
   const probe = execFileSync(
     'ffprobe',
-    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', srcJpeg],
+    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', src],
     { encoding: 'utf8' },
   ).trim();
   const [width, height] = probe.split(',').map(Number);
   if (!width || !height) {
-    throw new Error(`Could not read dimensions for ${srcJpeg}`);
+    throw new Error(`Could not read dimensions for ${src}`);
   }
-
   const pixels = Uint8Array.from(
-    execFileSync('ffmpeg', ['-v', 'error', '-i', srcJpeg, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'], {
+    execFileSync('ffmpeg', ['-v', 'error', '-i', src, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'], {
       maxBuffer: width * height * 3 + 1024 * 1024,
     }),
   );
-  const fill = sampleOrange(pixels, width, height);
-  const rgba = new Uint8Array(width * height * 4);
-
-  for (let i = 0; i < width * height; i++) {
-    const r = pixels[i * 3];
-    const g = pixels[i * 3 + 1];
-    const b = pixels[i * 3 + 2];
-    const o = i * 4;
-    if (isNotificationSubject(r, g, b, fill)) {
-      rgba[o] = 255;
-      rgba[o + 1] = 255;
-      rgba[o + 2] = 255;
-      rgba[o + 3] = 255;
-    }
+  if (pixels.length !== width * height * 3) {
+    throw new Error(`Unexpected raw frame size for ${src}`);
   }
+  return { width, height, pixels };
+}
 
+function writeRgbaPng(destPng, rgba, width, height) {
   execFileSync(
     'ffmpeg',
     [
@@ -150,10 +151,181 @@ function writeNotificationSilhouettePng(srcJpeg, destPng) {
   );
 }
 
+function floodFillCanvasMask(pixels, width, height) {
+  const n = width * height;
+  const seen = new Uint8Array(n);
+  const canvas = new Uint8Array(n);
+  const queue = new Int32Array(n);
+  let head = 0;
+  let tail = 0;
+
+  const seed = (x, y) => {
+    const idx = y * width + x;
+    if (seen[idx]) return;
+    seen[idx] = 1;
+    queue[tail++] = idx;
+  };
+
+  for (let x = 0; x < width; x++) {
+    seed(x, 0);
+    seed(x, height - 1);
+  }
+  for (let y = 0; y < height; y++) {
+    seed(0, y);
+    seed(width - 1, y);
+  }
+
+  while (head < tail) {
+    const idx = queue[head++];
+    const i = idx * 3;
+    if (!isCanvasPixel(pixels[i], pixels[i + 1], pixels[i + 2])) continue;
+    canvas[idx] = 1;
+    const x = idx % width;
+    const y = (idx / width) | 0;
+    if (x > 0 && !seen[idx - 1]) {
+      seen[idx - 1] = 1;
+      queue[tail++] = idx - 1;
+    }
+    if (x + 1 < width && !seen[idx + 1]) {
+      seen[idx + 1] = 1;
+      queue[tail++] = idx + 1;
+    }
+    if (y > 0 && !seen[idx - width]) {
+      seen[idx - width] = 1;
+      queue[tail++] = idx - width;
+    }
+    if (y + 1 < height && !seen[idx + width]) {
+      seen[idx + width] = 1;
+      queue[tail++] = idx + width;
+    }
+  }
+
+  return canvas;
+}
+
+function orangeBounds(pixels, width, height, fill) {
+  let x0 = width;
+  let y0 = height;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 3;
+      if (!isLogoOrange(pixels[i], pixels[i + 1], pixels[i + 2], fill)) continue;
+      if (x < x0) x0 = x;
+      if (y < y0) y0 = y;
+      if (x > x1) x1 = x;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) {
+    throw new Error('Could not find the logo orange squircle for the notification icon.');
+  }
+  return { x0, y0, x1, y1 };
+}
+
+function extractNotificationArtwork(srcJpeg) {
+  const { width, height, pixels } = readRgbFrame(srcJpeg);
+  const fill = sampleOrange(pixels, width, height);
+  const canvas = floodFillCanvasMask(pixels, width, height);
+  const orange = orangeBounds(pixels, width, height, fill);
+  const inset = Math.round(0.16 * (orange.x1 - orange.x0));
+  const ix0 = orange.x0 + inset;
+  const iy0 = orange.y0 + inset;
+  const ix1 = orange.x1 - inset;
+  const iy1 = orange.y1 - inset;
+
+  const color = new Uint8Array(width * height * 4);
+  let sx0 = width;
+  let sy0 = height;
+  let sx1 = -1;
+  let sy1 = -1;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const i = idx * 3;
+      const o = idx * 4;
+      const r = pixels[i];
+      const g = pixels[i + 1];
+      const b = pixels[i + 2];
+      const keep =
+        x >= ix0 &&
+        x <= ix1 &&
+        y >= iy0 &&
+        y <= iy1 &&
+        !canvas[idx] &&
+        !isOrangeFringe(r, g, b, fill);
+      if (!keep) continue;
+      color[o] = r;
+      color[o + 1] = g;
+      color[o + 2] = b;
+      color[o + 3] = 255;
+      if (x < sx0) sx0 = x;
+      if (y < sy0) sy0 = y;
+      if (x > sx1) sx1 = x;
+      if (y > sy1) sy1 = y;
+    }
+  }
+
+  if (sx1 < 0) {
+    throw new Error('Could not extract the hands-and-bill artwork for the notification icon.');
+  }
+
+  const pad = Math.round(0.12 * Math.max(sx1 - sx0 + 1, sy1 - sy0 + 1));
+  let side = Math.max(sx1 - sx0 + 1, sy1 - sy0 + 1) + pad * 2;
+  const cx = (sx0 + sx1) >> 1;
+  const cy = (sy0 + sy1) >> 1;
+  let x0 = Math.max(0, Math.min(width - side, cx - (side >> 1)));
+  let y0 = Math.max(0, Math.min(height - side, cy - (side >> 1)));
+  side = Math.min(side, width - x0, height - y0);
+
+  const cropped = new Uint8Array(side * side * 4);
+  const alpha = new Uint8Array(side * side * 4);
+  for (let y = 0; y < side; y++) {
+    const srcRow = ((y0 + y) * width + x0) * 4;
+    cropped.set(color.subarray(srcRow, srcRow + side * 4), y * side * 4);
+  }
+
+  for (let i = 0; i < side * side; i++) {
+    const r = cropped[i * 4];
+    const g = cropped[i * 4 + 1];
+    const b = cropped[i * 4 + 2];
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) | 0;
+    const a = lum < 14 ? 0 : Math.min(255, Math.round(40 + lum * 0.9));
+    alpha[i * 4] = 255;
+    alpha[i * 4 + 1] = 255;
+    alpha[i * 4 + 2] = 255;
+    alpha[i * 4 + 3] = a;
+  }
+
+  return { color: cropped, alpha, size: side };
+}
+
+function scaleRgbaPng(src, dest, size) {
+  execFileSync('ffmpeg', [
+    '-y',
+    '-loglevel',
+    'error',
+    '-i',
+    src,
+    '-frames:v',
+    '1',
+    '-vf',
+    `scale=${size}:${size}:flags=lanczos,format=rgba`,
+    dest,
+  ]);
+}
+
 function writeNotificationIcons(srcJpeg) {
-  const silhouetteSrc = join(assetsDir, 'notification-silhouette.png');
+  const artwork = extractNotificationArtwork(srcJpeg);
+  const colorSrc = join(assetsDir, 'notification-icon-source.png');
+  const alphaSrc = join(assetsDir, 'notification-silhouette.png');
   const publicIcon = join(root, 'public', 'notification-icon.png');
-  writeNotificationSilhouettePng(srcJpeg, silhouetteSrc);
+
+  mkdirSync(assetsDir, { recursive: true });
+  writeRgbaPng(colorSrc, artwork.color, artwork.size, artwork.size);
+  writeRgbaPng(alphaSrc, artwork.alpha, artwork.size, artwork.size);
 
   const vectorIcon = join(resDir, 'drawable', 'ic_stat_notification.xml');
   if (existsSync(vectorIcon)) {
@@ -163,11 +335,13 @@ function writeNotificationIcons(srcJpeg) {
   for (const [density, size] of Object.entries(NOTIFICATION_DENSITIES)) {
     const dir = join(resDir, `drawable-${density}`);
     mkdirSync(dir, { recursive: true });
-    scalePng(silhouetteSrc, join(dir, 'ic_stat_notification.png'), size);
+    scaleRgbaPng(alphaSrc, join(dir, 'ic_stat_notification.png'), size);
   }
 
-  scalePng(silhouetteSrc, publicIcon, 192);
-  console.log(`Notification silhouette → drawable-*/ic_stat_notification.png + ${publicIcon}`);
+  scaleRgbaPng(colorSrc, publicIcon, 512);
+  assertNotificationColorIcon(publicIcon);
+  assertNotificationStatusIcon(join(resDir, 'drawable-xxxhdpi', 'ic_stat_notification.png'));
+  console.log(`Notification artwork → drawable-*/ic_stat_notification.png + ${publicIcon}`);
 }
 
 function generateSplashScreens(iconBackgroundColor) {
@@ -436,6 +610,75 @@ function assertCornersAreFill(pngPath, hex) {
 function hexToRgb(hex) {
   const n = hex.replace('#', '');
   return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
+
+function readRgbaFrame(pngPath) {
+  const probe = execFileSync(
+    'ffprobe',
+    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', pngPath],
+    { encoding: 'utf8' },
+  ).trim();
+  const [width, height] = probe.split(',').map(Number);
+  const pixels = Uint8Array.from(
+    execFileSync('ffmpeg', ['-v', 'error', '-i', pngPath, '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1'], {
+      maxBuffer: width * height * 4 + 1024 * 1024,
+    }),
+  );
+  return { width, height, pixels };
+}
+
+function assertNotificationColorIcon(pngPath) {
+  const { width, height, pixels } = readRgbaFrame(pngPath);
+  const corners = [
+    [0, 0],
+    [width - 1, 0],
+    [0, height - 1],
+    [width - 1, height - 1],
+  ];
+  for (const [x, y] of corners) {
+    const i = (y * width + x) * 4;
+    if (pixels[i] > 28 || pixels[i + 1] > 28 || pixels[i + 2] > 28) {
+      throw new Error(
+        `Expected black corners on ${pngPath}, got rgb(${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}) at ${x},${y}`,
+      );
+    }
+  }
+
+  let bright = 0;
+  const mid = (width / 2) | 0;
+  for (let y = Math.round(height * 0.25); y < Math.round(height * 0.75); y++) {
+    for (let x = Math.round(width * 0.2); x < Math.round(width * 0.8); x++) {
+      const i = (y * width + x) * 4;
+      if (pixels[i] > 180 && pixels[i + 1] > 180 && pixels[i + 2] > 180) bright += 1;
+    }
+  }
+  if (bright < 80) {
+    throw new Error(`Expected the white hands on ${pngPath}, found ${bright} bright pixels (center x=${mid}).`);
+  }
+}
+
+function assertNotificationStatusIcon(pngPath) {
+  const { width, height, pixels } = readRgbaFrame(pngPath);
+  const corners = [
+    [0, 0],
+    [width - 1, 0],
+    [0, height - 1],
+    [width - 1, height - 1],
+  ];
+  for (const [x, y] of corners) {
+    const i = (y * width + x) * 4;
+    if (pixels[i + 3] > 24) {
+      throw new Error(`Expected transparent corners on ${pngPath}, got alpha ${pixels[i + 3]} at ${x},${y}`);
+    }
+  }
+
+  let opaque = 0;
+  for (let i = 0; i < width * height; i++) {
+    if (pixels[i * 4 + 3] > 160) opaque += 1;
+  }
+  if (opaque < 80) {
+    throw new Error(`Expected a white status-bar silhouette on ${pngPath}, found ${opaque} opaque pixels.`);
+  }
 }
 
 writeNotificationIcons(logoSrc);
