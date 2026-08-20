@@ -87,6 +87,8 @@ interface ChatSystemProps {
   userProfile: UserProfile;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialFocusMessageRequests?: boolean;
+  onClearInitialFocusMessageRequests?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;
   initialChatSupportView?: 'list' | 'new' | null;
@@ -115,6 +117,8 @@ export default function ChatSystem({
   userProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialFocusMessageRequests = false,
+  onClearInitialFocusMessageRequests,
   initialSupportTicketId = null,
   onClearInitialSupportTicket,
   initialChatSupportView = null,
@@ -383,6 +387,15 @@ export default function ChatSystem({
   };
 
   useEffect(() => {
+    if (!initialFocusMessageRequests) return;
+    setSelectedChat(null);
+    setSupportView(null);
+    setSupportOpenTicketId(null);
+    setMessages([]);
+    onClearInitialFocusMessageRequests?.();
+  }, [initialFocusMessageRequests, onClearInitialFocusMessageRequests]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages, selectedChat]);
 
@@ -415,7 +428,9 @@ export default function ChatSystem({
         setIncomingRequests(visibleRequests);
         setIsChatsLoading(false);
 
-        if (initialSelectedChatId) {
+        if (initialFocusMessageRequests) {
+          setSelectedChat(null);
+        } else if (initialSelectedChatId) {
           let target = visibleChats.find((c) => c.id === initialSelectedChatId);
           if (!target && staffActingOfficial) {
             const fetched = await getSupabaseChatById(initialSelectedChatId);

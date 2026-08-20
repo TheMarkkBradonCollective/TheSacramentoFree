@@ -214,6 +214,7 @@ export default function App() {
   >(null);
   const [initialSupportTicketId, setInitialSupportTicketId] = useState<string | null>(null);
   const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
+  const [initialFocusMessageRequests, setInitialFocusMessageRequests] = useState(false);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
   useEffect(() => {
@@ -1542,10 +1543,18 @@ export default function App() {
 
   const handlePushDeepLink = useCallback(
     (target: PushDeepLinkTarget) => {
+      // Close stacked overlays so notification navigation lands on the intended screen.
+      setDetailItem(null);
+      setDetailFeedPost(null);
+      setDetailEvent(null);
+      setViewProfileUid(null);
+      setShowDirectMessageModal(false);
+
       let tabForUrl: AppTab = target.tab ?? 'map';
       if (target.tab) navigateToTab(target.tab);
       if (target.conversationId) {
         setInitialSelectedChatId(target.conversationId);
+        setInitialFocusMessageRequests(false);
         navigateToTab('chats');
         tabForUrl = 'chats';
       }
@@ -1613,10 +1622,33 @@ export default function App() {
         void getClaimRequestById(target.requestId).then((request) => {
           if (request?.chatId) {
             setInitialSelectedChatId(request.chatId);
-          } else {
-            void alert({ message: 'That claim request is no longer available.' });
+            setInitialFocusMessageRequests(false);
+            navigateToTab('chats');
+            return;
           }
+          if (request?.itemId) {
+            void getSupabaseItemById(request.itemId).then((item) => {
+              if (!item) {
+                void alert({ message: 'That claim request is no longer available.' });
+                return;
+              }
+              if (blockedUserIds.has(item.userId)) {
+                void alert({ message: 'This listing is unavailable.' });
+                return;
+              }
+              setDetailItem(item);
+              navigateToTab('stuff');
+            });
+            return;
+          }
+          void alert({ message: 'That claim request is no longer available.' });
         });
+        tabForUrl = 'chats';
+        navigateToTab('chats');
+      }
+      if (target.messageRequests) {
+        setInitialSelectedChatId(null);
+        setInitialFocusMessageRequests(true);
         navigateToTab('chats');
         tabForUrl = 'chats';
       }
@@ -1852,6 +1884,8 @@ export default function App() {
                   onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
@@ -1913,6 +1947,8 @@ export default function App() {
                   onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
@@ -1974,6 +2010,8 @@ export default function App() {
                   onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}

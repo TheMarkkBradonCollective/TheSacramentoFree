@@ -51,6 +51,8 @@ interface TabletViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialFocusMessageRequests?: boolean;
+  onClearInitialFocusMessageRequests?: () => void;
   pendingChatCompose?: PendingChatCompose | null;
   onClearPendingChatCompose?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
@@ -124,6 +126,8 @@ export default function TabletView({
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialFocusMessageRequests = false,
+  onClearInitialFocusMessageRequests,
   pendingChatCompose = null,
   onClearPendingChatCompose,
   onDeleteAccount,
@@ -322,6 +326,8 @@ export default function TabletView({
                   userProfile={userProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={onClearInitialChat}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={onClearInitialFocusMessageRequests}
                   initialSupportTicketId={initialSupportTicketId}
                   onClearInitialSupportTicket={onClearInitialSupportTicket}
                   initialChatSupportView={initialChatSupportView}

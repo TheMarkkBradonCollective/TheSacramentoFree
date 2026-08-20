@@ -75,7 +75,6 @@ export async function runFeedCommentNotify(
     title: 'New comment on your feed post',
     body: `${commenterName}: ${preview}`,
     url: feedPostUrl(postId),
-    listingId: postId,
     recipientUserIds: [ownerId],
     tag: `feed-comment-${commentId}`,
     data: {
@@ -125,7 +124,6 @@ export async function runFeedReactionNotify(
     title: 'New reaction on your feed post',
     body: `${reactorName} reacted ${emoji} to "${preview}"`,
     url: feedPostUrl(postId),
-    listingId: postId,
     recipientUserIds: [ownerId],
     tag: `feed-react-${postId}-${reactorId}-${emoji}`,
     data: {
@@ -174,7 +172,6 @@ export async function runFeedVoteNotify(
     title: isUp ? 'New upvote on your feed post' : 'Feedback on your feed post',
     body: `Someone ${isUp ? 'upvoted' : 'downvoted'} "${preview}"`,
     url: feedPostUrl(postId),
-    listingId: postId,
     recipientUserIds: [ownerId],
     tag: `feed-vote-${voteType}-${postId}-${voterUserId}`,
     data: { feedPostId: postId },

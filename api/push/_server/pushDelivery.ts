@@ -52,7 +52,11 @@ export type PushEventType =
   | 'feed_comment'
   | 'feed_reaction'
   | 'feed_upvote'
-  | 'feed_downvote';
+  | 'feed_downvote'
+  | 'violation_filed'
+  | 'violation_decision'
+  | 'account_locked'
+  | 'appeal_decision';
 
 export interface PushPayload {
   title: string;
@@ -168,6 +172,10 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   feed_reaction: 'comments',
   feed_upvote: 'listingUpvotes',
   feed_downvote: 'listingDownvotes',
+  violation_filed: 'accountUpdates',
+  violation_decision: 'accountUpdates',
+  account_locked: 'accountUpdates',
+  appeal_decision: 'accountUpdates',
 };
 
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {

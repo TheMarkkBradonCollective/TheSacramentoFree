@@ -127,28 +127,73 @@ function kindColor(kind: UserNotificationKind): string {
 
 function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget | null {
   if (item.url) {
-    return parsePushDeepLink(item.url);
+    const fromUrl = parsePushDeepLink(item.url);
+    if (fromUrl) return fromUrl;
   }
-  if (
-    item.itemId &&
-    (item.kind === 'feed_comment' ||
-      item.kind === 'feed_reaction' ||
-      item.kind === 'feed_upvote' ||
-      item.kind === 'feed_downvote')
-  ) {
+
+  const feedKinds = ['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote'] as const;
+  if (item.itemId && feedKinds.includes(item.kind as (typeof feedKinds)[number])) {
     return { tab: 'feed', feedPostId: item.itemId };
   }
+
+  if (item.kind === 'claim_request') {
+    if (item.url) {
+      const requestMatch = item.url.match(/\/requests\/([^/?#]+)/);
+      if (requestMatch) return { tab: 'chats', requestId: requestMatch[1] };
+    }
+    if (item.itemId) return { tab: 'stuff', listingId: item.itemId };
+    return { tab: 'chats' };
+  }
+
+  if (item.kind === 'message_request') {
+    return { tab: 'chats', messageRequests: true };
+  }
+
+  if (item.kind === 'message') {
+    return { tab: 'chats' };
+  }
+
+  if (item.kind === 'community_chat') {
+    return { tab: 'chats', conversationId: 'community-global' };
+  }
+
+  if (item.kind === 'staff_chat') {
+    return { tab: 'chats', conversationId: 'community-staff' };
+  }
+
+  if (item.kind === 'director_alert') {
+    return { tab: 'profile', directorOverview: true };
+  }
+
+  if (item.kind === 'staff_report') {
+    return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
+  }
+
+  if (item.kind === 'app_update') {
+    return { notificationsTab: 'updates' };
+  }
+
+  if (item.kind === 'announcement') {
+    return { notificationsTab: 'announcements' };
+  }
+
+  if (item.kind === 'support' || item.kind === 'staff_support') {
+    return { tab: 'chats', chatSupportView: 'list' };
+  }
+
+  if (item.kind === 'staff_apply') {
+    return { tab: 'profile', staffApply: true };
+  }
+
   if (
     item.itemId &&
     (item.kind === 'comment' ||
-      item.kind === 'feed_comment' ||
-      item.kind === 'feed_reaction' ||
-      item.kind === 'feed_upvote' ||
-      item.kind === 'feed_downvote' ||
       item.kind === 'upvote' ||
       item.kind === 'downvote' ||
       item.kind === 'new_listing' ||
       item.kind === 'nearby_listing' ||
+      item.kind === 'new_request' ||
+      item.kind === 'nearby_request' ||
       item.kind === 'saved_item' ||
       item.kind === 'claim' ||
       item.kind === 'gift' ||
@@ -158,27 +203,7 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
   ) {
     return { tab: 'stuff', listingId: item.itemId };
   }
-  if (item.kind === 'message' || item.kind === 'message_request') {
-    return { tab: 'chats' };
-  }
-  if (item.kind === 'community_chat') {
-    return { tab: 'chats', conversationId: 'community-global' };
-  }
-  if (item.kind === 'staff_chat') {
-    return { tab: 'chats', conversationId: 'community-staff' };
-  }
-  if (item.kind === 'app_update') {
-    return { notificationsTab: 'updates' };
-  }
-  if (item.kind === 'announcement') {
-    return { notificationsTab: 'announcements' };
-  }
-  if (item.kind === 'support' || item.kind === 'staff_support') {
-    return { tab: 'chats', chatSupportView: 'list' };
-  }
-  if (item.kind === 'staff_apply') {
-    return { tab: 'profile', staffApply: true };
-  }
+
   return null;
 }
 
