@@ -1,9 +1,41 @@
-import type { ItemPost } from '../types';
+import type { FeedPost, ItemPost } from '../types';
 
 const VIEW_MODE_KEY = 'sbn_feed_view_mode_v1';
 const EVENTS_VIEW_MODE_KEY = 'sbn_events_view_mode_v1';
 
 export type FeedViewMode = 'list' | 'grid';
+
+export type FeedContentFilter = 'all' | 'text' | 'pictures';
+
+const FEED_CONTENT_FILTER_KEY = 'sbn_feed_content_filter_v1';
+
+export function readFeedContentFilter(): FeedContentFilter {
+  try {
+    const raw = localStorage.getItem(FEED_CONTENT_FILTER_KEY);
+    if (raw === 'all' || raw === 'text' || raw === 'pictures') return raw;
+  } catch {
+    /* ignore */
+  }
+  return 'all';
+}
+
+export function writeFeedContentFilter(value: FeedContentFilter): void {
+  try {
+    localStorage.setItem(FEED_CONTENT_FILTER_KEY, value);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function feedPostMatchesContentFilter(
+  post: Pick<FeedPost, 'imageUrls'>,
+  filter: FeedContentFilter,
+): boolean {
+  const hasPictures = post.imageUrls.length > 0;
+  if (filter === 'text') return !hasPictures;
+  if (filter === 'pictures') return hasPictures;
+  return true;
+}
 
 export function readFeedViewMode(): FeedViewMode {
   try {
