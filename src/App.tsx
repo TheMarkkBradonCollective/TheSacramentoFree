@@ -192,7 +192,9 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [addEventDatesMode, setAddEventDatesMode] = useState(false);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
+  const [detailNavigateOnOpen, setDetailNavigateOnOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<CommunityEvent | null>(null);
+  const [detailEventNavigateOnOpen, setDetailEventNavigateOnOpen] = useState(false);
   const [detailEventUpdating, setDetailEventUpdating] = useState(false);
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [pickupAttributionItem, setPickupAttributionItem] = useState<ItemPost | null>(null);
@@ -253,7 +255,9 @@ export default function App() {
     setItemsHydrated(false);
     setIsItemsLoading(false);
     setDetailItem(null);
+    setDetailNavigateOnOpen(false);
     setDetailEvent(null);
+    setDetailEventNavigateOnOpen(false);
     setViewProfileUid(null);
     setShowPostModal(false);
     setShowPostEventModal(false);
@@ -291,7 +295,9 @@ export default function App() {
 
   const closeTransientOverlays = useCallback(() => {
     setDetailItem(null);
+    setDetailNavigateOnOpen(false);
     setDetailEvent(null);
+    setDetailEventNavigateOnOpen(false);
     setViewProfileUid(null);
     setLegalPanel(null);
     setShowAwardsPanel(false);
@@ -1353,7 +1359,8 @@ export default function App() {
     [blockedUserIds],
   );
 
-  const handleViewItem = useCallback((item: ItemPost) => {
+  const openDetailItem = useCallback((item: ItemPost, startNavigation = false) => {
+    setDetailNavigateOnOpen(startNavigation);
     setDetailItem(item);
     if (item.description) return;
     void getSupabaseItemById(item.id).then((full) => {
@@ -1381,6 +1388,36 @@ export default function App() {
     });
   }, []);
 
+  const handleViewItem = useCallback((item: ItemPost) => {
+    openDetailItem(item, false);
+  }, [openDetailItem]);
+
+  const handleNavigateItem = useCallback(
+    (item: ItemPost) => {
+      openDetailItem(item, true);
+    },
+    [openDetailItem],
+  );
+
+  const openDetailEvent = useCallback((event: CommunityEvent, startNavigation = false) => {
+    setDetailEventNavigateOnOpen(startNavigation);
+    setDetailEvent(event);
+  }, []);
+
+  const handleViewEvent = useCallback(
+    (event: CommunityEvent) => {
+      openDetailEvent(event, false);
+    },
+    [openDetailEvent],
+  );
+
+  const handleNavigateEvent = useCallback(
+    (event: CommunityEvent) => {
+      openDetailEvent(event, true);
+    },
+    [openDetailEvent],
+  );
+
   const handleOpenChatFromProfile = useCallback((chatId: string) => {
     setViewProfileUid(null);
     setInitialSelectedChatId(chatId);
@@ -1405,9 +1442,9 @@ export default function App() {
   const handleViewEventId = useCallback(
     (eventId: string) => {
       const event = events.find((e) => e.id === eventId);
-      if (event) setDetailEvent(event);
+      if (event) handleViewEvent(event);
     },
-    [events],
+    [events, handleViewEvent],
   );
 
   const handleClaimSubmitted = useCallback((chatId: string) => {
@@ -1712,9 +1749,11 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1768,9 +1807,11 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1824,9 +1865,11 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1930,7 +1973,10 @@ export default function App() {
                   item={detailItem}
                   currentUserId={userProfile.uid}
                   updating={detailUpdating}
-                  onClose={() => setDetailItem(null)}
+                  onClose={() => {
+                    setDetailItem(null);
+                    setDetailNavigateOnOpen(false);
+                  }}
                   onEdit={() => {
                     setEditingItem(detailItem);
                     setDetailItem(null);
@@ -1984,6 +2030,8 @@ export default function App() {
                     setPickupAttributionMode('edit');
                     setPickupAttributionItem(detailItem);
                   }}
+                  startNavigationOnOpen={detailNavigateOnOpen}
+                  onStartNavigationConsumed={() => setDetailNavigateOnOpen(false)}
                 />
               )}
 
@@ -2021,7 +2069,10 @@ export default function App() {
                   onDeleteComment={(commentId) =>
                     void eventsEngagement.handleDeleteComment(detailEvent.id, commentId)
                   }
-                  onClose={() => setDetailEvent(null)}
+                  onClose={() => {
+                    setDetailEvent(null);
+                    setDetailEventNavigateOnOpen(false);
+                  }}
                   onEdit={() => {
                     if (!isEventEditable(detailEvent)) return;
                     setAddEventDatesMode(false);
@@ -2065,6 +2116,8 @@ export default function App() {
                   }}
                   updating={detailEventUpdating}
                   commentsLocked={!canAccessEvents}
+                  startNavigationOnOpen={detailEventNavigateOnOpen}
+                  onStartNavigationConsumed={() => setDetailEventNavigateOnOpen(false)}
                 />
               )}
 

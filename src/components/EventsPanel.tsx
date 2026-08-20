@@ -10,6 +10,7 @@ interface EventsPanelProps {
   events: CommunityEvent[];
   engagement: EventsEngagementApi;
   onViewEvent: (event: CommunityEvent) => void;
+  onNavigateEvent?: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
@@ -20,6 +21,7 @@ export default function EventsPanel({
   events,
   engagement,
   onViewEvent,
+  onNavigateEvent,
   onViewProfile,
   onRefresh,
   isLoading = false,
@@ -61,6 +63,7 @@ export default function EventsPanel({
         userProfile={userProfile}
         engagement={engagement}
         onViewEvent={onViewEvent}
+        onNavigateEvent={onNavigateEvent}
         onViewProfile={onViewProfile}
         onRefresh={onRefresh}
         isLoading={isLoading}

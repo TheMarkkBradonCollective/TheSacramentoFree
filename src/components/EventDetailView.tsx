@@ -33,6 +33,9 @@ interface EventDetailViewProps {
   onEventUpdated?: (event: CommunityEvent) => void;
   updating?: boolean;
   commentsLocked?: boolean;
+  /** Open event detail and auto-start in-app navigation (events Navigate button). */
+  startNavigationOnOpen?: boolean;
+  onStartNavigationConsumed?: () => void;
 }
 
 function formatEventDate(iso: string): string {
@@ -82,6 +85,8 @@ export default function EventDetailView({
   onEventUpdated,
   updating = false,
   commentsLocked = false,
+  startNavigationOnOpen = false,
+  onStartNavigationConsumed,
 }: EventDetailViewProps) {
   const [showPinModal, setShowPinModal] = useState(false);
   const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
@@ -258,7 +263,14 @@ export default function EventDetailView({
             </div>
           )}
 
-          {!isStaffViewer && <EventDetailNavigation event={event} currentUserId={currentUserId} />}
+          {!isStaffViewer && (
+            <EventDetailNavigation
+              event={event}
+              currentUserId={currentUserId}
+              autoStartNavigation={startNavigationOnOpen}
+              onAutoStartNavigationConsumed={onStartNavigationConsumed}
+            />
+          )}
 
           {isStaffViewer && !isOwner && userProfile && (
             <section className="sbn-card p-4 border border-role-accent/20">

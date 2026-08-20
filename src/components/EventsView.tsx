@@ -23,6 +23,7 @@ interface EventsViewProps {
   userProfile: UserProfile;
   engagement: EventsEngagementApi;
   onViewEvent: (event: CommunityEvent) => void;
+  onNavigateEvent?: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
@@ -104,6 +105,7 @@ export default function EventsView({
   userProfile,
   engagement,
   onViewEvent,
+  onNavigateEvent,
   onViewProfile,
   onRefresh,
   isLoading = false,
@@ -429,7 +431,7 @@ export default function EventsView({
                   event.seriesId ? seriesUpcomingCounts.get(event.seriesId) : undefined
                 }
                 distanceMeters={getEventDistance(event)}
-                onNavigate={() => onViewEvent(event)}
+                onNavigate={() => (onNavigateEvent ?? onViewEvent)(event)}
               />
             </div>
           ))}

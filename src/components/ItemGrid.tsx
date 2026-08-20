@@ -121,6 +121,7 @@ interface ItemGridProps {
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onStaffListingChat?: (item: ItemPost) => void;
   onViewItem: (item: ItemPost) => void;
+  onNavigateItem?: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
@@ -133,6 +134,7 @@ export default function ItemGrid({
   onInitiateChat,
   onStaffListingChat,
   onViewItem,
+  onNavigateItem,
   onViewProfile,
   onRefresh,
   isLoading = false,
@@ -653,7 +655,7 @@ export default function ItemGrid({
                 distanceMeters={getItemDistance(item)}
                 onNavigate={
                   item.userId !== userProfile.uid && !isStaffActingOfficial(userProfile)
-                    ? () => onViewItem(item)
+                    ? () => (onNavigateItem ?? onViewItem)(item)
                     : undefined
                 }
               />

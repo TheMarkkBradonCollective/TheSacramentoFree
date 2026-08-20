@@ -42,6 +42,7 @@ interface MobileViewProps {
   onStaffListingChat?: (item: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
+  onNavigateItem?: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
   onDeletePost?: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
@@ -59,6 +60,7 @@ interface MobileViewProps {
   itemsHydrated?: boolean;
   eventsHydrated?: boolean;
   onViewEvent: (event: CommunityEvent) => void;
+  onNavigateEvent?: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
@@ -107,6 +109,7 @@ export default function MobileView({
   onStaffListingChat,
   onClaimSubmitted,
   onViewItem,
+  onNavigateItem,
   onRepostPost,
   onDeletePost,
   onViewProfile,
@@ -124,6 +127,7 @@ export default function MobileView({
   itemsHydrated = true,
   eventsHydrated = true,
   onViewEvent,
+  onNavigateEvent,
   engagement,
   eventsEngagement,
   blockedUserIds = new Set(),
@@ -279,7 +283,7 @@ export default function MobileView({
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <div className="sbn-page-header"><h2>{IN_APP.feedTitle}</h2><p>{IN_APP.feedDescription} · {items.length} listings</p></div>
-                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
+                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
                 </ScrollPage>
                 <ScrollPage
                   className={communityTab === 'events' ? '' : 'hidden'}
@@ -288,7 +292,7 @@ export default function MobileView({
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <div className="sbn-page-header"><h2>{IN_APP.eventsTitle}</h2></div>
-                  <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
+                  <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
                 </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
                   <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
@@ -425,6 +429,7 @@ export default function MobileView({
               engagement={engagement}
               onInitiateChat={onInitiateChat}
               onViewItem={onViewItem}
+              onNavigateItem={onNavigateItem}
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
               isLoading={!itemsHydrated}
@@ -460,6 +465,7 @@ export default function MobileView({
               userProfile={userProfile}
               engagement={eventsEngagement}
               onViewEvent={onViewEvent}
+              onNavigateEvent={onNavigateEvent}
               onViewProfile={onViewProfile}
               onRefresh={onRefreshEvents}
               isLoading={isEventsLoading}

@@ -58,6 +58,9 @@ interface ItemDetailViewProps {
   onDelete?: () => void;
   updating?: boolean;
   onEditPickupAttribution?: () => void;
+  /** Open listing detail and auto-start in-app navigation (feed Navigate button). */
+  startNavigationOnOpen?: boolean;
+  onStartNavigationConsumed?: () => void;
 }
 
 export default function ItemDetailView({
@@ -83,6 +86,8 @@ export default function ItemDetailView({
   onDelete,
   updating = false,
   onEditPickupAttribution,
+  startNavigationOnOpen = false,
+  onStartNavigationConsumed,
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [hasAppClaim, setHasAppClaim] = useState(false);
@@ -325,6 +330,8 @@ export default function ItemDetailView({
                 currentUserId={currentUserId}
                 userProfile={userProfile}
                 onOpenChat={onOpenChat}
+                autoStartNavigation={startNavigationOnOpen}
+                onAutoStartNavigationConsumed={onStartNavigationConsumed}
               />
             )}
 

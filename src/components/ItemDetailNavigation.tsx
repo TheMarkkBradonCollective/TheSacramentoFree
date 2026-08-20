@@ -75,6 +75,9 @@ interface ItemDetailNavigationProps {
   currentUserId: string;
   userProfile?: UserProfile;
   onOpenChat?: (chatId: string) => void;
+  /** When true, start in-app navigation once GPS and session state are ready. */
+  autoStartNavigation?: boolean;
+  onAutoStartNavigationConsumed?: () => void;
 }
 
 /** Applies the pickup completion for whichever post type this session is for, reusing the existing claim/fulfill/trade paths. */
@@ -112,7 +115,14 @@ async function applyCompletionForItemType(
   });
 }
 
-export default function ItemDetailNavigation({ item, currentUserId, userProfile, onOpenChat }: ItemDetailNavigationProps) {
+export default function ItemDetailNavigation({
+  item,
+  currentUserId,
+  userProfile,
+  onOpenChat,
+  autoStartNavigation = false,
+  onAutoStartNavigationConsumed,
+}: ItemDetailNavigationProps) {
   const { confirm, alert } = useConfirm();
 
   const [session, setSession] = useState<GoGetSession | null>(null);
@@ -150,8 +160,13 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   const [fulfillerLiveLocation, setFulfillerLiveLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const arrivalHandledRef = useRef(false);
+  const autoStartAttemptedRef = useRef(false);
 
   const isOwner = item.userId === currentUserId;
+
+  useEffect(() => {
+    autoStartAttemptedRef.current = false;
+  }, [item.id]);
 
   useEffect(() => {
     if (!destination) return;
@@ -414,6 +429,25 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     }
     void handleStartGoGet();
   }, [isOwner, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
+
+  useEffect(() => {
+    if (!autoStartNavigation || autoStartAttemptedRef.current || !sessionLoaded) return;
+    if (!destination) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
+    if (!userLocation) return;
+    autoStartAttemptedRef.current = true;
+    onAutoStartNavigationConsumed?.();
+    handleListingNavigation();
+  }, [
+    autoStartNavigation,
+    sessionLoaded,
+    destination,
+    userLocation,
+    handleListingNavigation,
+    onAutoStartNavigationConsumed,
+  ]);
 
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {

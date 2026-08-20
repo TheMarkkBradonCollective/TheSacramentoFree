@@ -39,6 +39,7 @@ interface TabletViewProps {
   onStaffListingChat?: (item: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
+  onNavigateItem?: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
   onDeletePost?: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
@@ -56,6 +57,7 @@ interface TabletViewProps {
   itemsHydrated?: boolean;
   eventsHydrated?: boolean;
   onViewEvent: (event: CommunityEvent) => void;
+  onNavigateEvent?: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
@@ -106,6 +108,7 @@ export default function TabletView({
   onStaffListingChat,
   onClaimSubmitted,
   onViewItem,
+  onNavigateItem,
   onRepostPost,
   onDeletePost,
   onViewProfile,
@@ -123,6 +126,7 @@ export default function TabletView({
   itemsHydrated = true,
   eventsHydrated = true,
   onViewEvent,
+  onNavigateEvent,
   engagement,
   eventsEngagement,
   blockedUserIds = new Set(),
@@ -248,6 +252,7 @@ export default function TabletView({
                     onInitiateChat={onInitiateChat}
                     onStaffListingChat={onStaffListingChat}
                     onViewItem={onViewItem}
+                    onNavigateItem={onNavigateItem}
                     onViewProfile={onViewProfile}
                     onRefresh={onRefresh}
                     isLoading={!itemsHydrated}
@@ -268,6 +273,7 @@ export default function TabletView({
                     userProfile={userProfile}
                     engagement={eventsEngagement}
                     onViewEvent={onViewEvent}
+                    onNavigateEvent={onNavigateEvent}
                     onViewProfile={onViewProfile}
                     onRefresh={onRefreshEvents}
                     isLoading={isEventsLoading}

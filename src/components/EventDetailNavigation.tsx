@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CommunityEvent } from '../types';
 import {
@@ -21,9 +21,17 @@ import MapSelectionRouteRow from './MapSelectionRouteRow';
 interface EventDetailNavigationProps {
   event: CommunityEvent;
   currentUserId: string;
+  /** When true, start in-app navigation once GPS is ready. */
+  autoStartNavigation?: boolean;
+  onAutoStartNavigationConsumed?: () => void;
 }
 
-export default function EventDetailNavigation({ event, currentUserId }: EventDetailNavigationProps) {
+export default function EventDetailNavigation({
+  event,
+  currentUserId,
+  autoStartNavigation = false,
+  onAutoStartNavigationConsumed,
+}: EventDetailNavigationProps) {
   const destination = useMemo<LatLng | null>(() => {
     if (
       typeof event.locationLat !== 'number' ||
@@ -39,6 +47,11 @@ export default function EventDetailNavigation({ event, currentUserId }: EventDet
   const [userLocation, setUserLocation] = useState<LatLng | null>(() => getLastLiveLatLng());
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [lockedOrigin, setLockedOrigin] = useState<LatLng | null>(null);
+  const autoStartAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    autoStartAttemptedRef.current = false;
+  }, [event.id]);
 
   useEffect(() => {
     if (!destination) return;
@@ -115,6 +128,24 @@ export default function EventDetailNavigation({ event, currentUserId }: EventDet
       startedAt: sameTarget?.startedAt ?? Date.now(),
     });
   }, [navigationOpen, destination, currentUserId, event.id, event.title]);
+
+  useEffect(() => {
+    if (!autoStartNavigation || autoStartAttemptedRef.current) return;
+    if (!destination) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
+    if (!userLocation) return;
+    autoStartAttemptedRef.current = true;
+    onAutoStartNavigationConsumed?.();
+    openNavigation();
+  }, [
+    autoStartNavigation,
+    destination,
+    userLocation,
+    openNavigation,
+    onAutoStartNavigationConsumed,
+  ]);
 
   if (!destination) {
     return (
