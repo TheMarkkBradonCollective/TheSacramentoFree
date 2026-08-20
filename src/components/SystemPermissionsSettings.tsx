@@ -33,15 +33,15 @@ function PermissionToggle({ id, icon: Icon, title, description, state, busy, onT
       disabled={busy || state === 'unsupported'}
       onClick={onToggle}
       className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border transition-colors disabled:opacity-60 ${
-        enabled ? 'border-accent/40 bg-accent/10' : blocked ? 'border-red-500/30 bg-red-500/5' : 'border-app bg-inset'
+        enabled ? 'border-accent bg-accent text-on-accent' : blocked ? 'border-red-500/30 bg-red-500/5' : 'border-app bg-inset'
       }`}
       id={id}
     >
       <div className="flex items-start gap-2.5 min-w-0 text-left">
-        <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${enabled ? 'text-accent' : blocked ? 'text-red-400' : 'text-muted'}`} />
+        <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${enabled ? 'text-on-accent' : blocked ? 'text-red-400' : 'text-muted'}`} />
         <div className="min-w-0">
-          <p className="text-xs font-bold text-app">{title}</p>
-          <p className="text-[10px] text-muted mt-0.5 leading-snug">{description}</p>
+          <p className={`text-xs font-bold ${enabled ? 'text-on-accent' : 'text-app'}`}>{title}</p>
+          <p className={`text-[10px] mt-0.5 leading-snug ${enabled ? 'text-on-accent/80' : 'text-muted'}`}>{description}</p>
           <p className={`text-[10px] font-bold uppercase tracking-wide mt-1 ${enabled ? 'text-emerald-500' : blocked ? 'text-red-400' : 'text-subtle'}`}>
             System: {permissionStatusLabel(state)}
           </p>

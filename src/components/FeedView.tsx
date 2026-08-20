@@ -141,7 +141,7 @@ export default function FeedView({
               onClick={() => setComposerOpen((open) => !open)}
               className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
                 composerOpen
-                  ? 'border-accent bg-accent-soft text-accent'
+                  ? 'border-accent bg-accent text-on-accent'
                   : 'border-accent bg-accent text-on-accent hover:bg-accent-hover'
               }`}
               aria-expanded={composerOpen}
@@ -161,7 +161,7 @@ export default function FeedView({
                 onClick={handleCycleContentFilter}
                 className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
                   hasActiveContentFilter
-                    ? 'border-accent bg-accent-soft text-accent'
+                    ? 'border-accent bg-accent text-on-accent'
                     : 'border-app bg-inset text-app hover:border-accent/40'
                 }`}
                 aria-pressed={hasActiveContentFilter}
@@ -177,7 +177,7 @@ export default function FeedView({
                 onClick={handleCycleAudienceScope}
                 className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
                   hasActiveAudienceScope
-                    ? 'border-accent bg-accent-soft text-accent'
+                    ? 'border-accent bg-accent text-on-accent'
                     : 'border-app bg-inset text-app hover:border-accent/40'
                 }`}
                 aria-pressed={hasActiveAudienceScope}
