@@ -231,6 +231,7 @@ export default function DesktopView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="desktop_feed_view_root"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                 <div className="sbn-tablet-content max-w-2xl mx-auto w-full">
@@ -243,6 +244,7 @@ export default function DesktopView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="desktop_stuff_view_root"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                 <div className="sbn-dash-grid">
@@ -276,6 +278,7 @@ export default function DesktopView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="desktop_events_view_root"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                 <div className="sbn-dash-grid">
@@ -364,6 +367,7 @@ export default function DesktopView({
                 className="sbn-workspace-scroll"
                 id="desktop_profile_view_root"
                 contentClassName="max-w-4xl mx-auto px-6 py-6"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                   <div className="sbn-card p-6 md:p-8">

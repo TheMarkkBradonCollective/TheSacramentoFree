@@ -1137,7 +1137,8 @@ option {
 }
 
 /* Scrollable tab/page: chrome stays fixed; legal footer lives in the document
-   flow at the bottom of this column (not a third locked bar). */
+   flow. Short pages add extra height so the legal strip is below the fold —
+   you scroll to it instead of seeing a tacky grey band over empty space. */
 .sbn-scroll-page {
   height: 100%;
   min-height: 0;
@@ -1154,14 +1155,23 @@ option {
   flex-direction: column;
 }
 
+/* Short pages: extend scroll height so the legal strip is below the fold. */
+.sbn-scroll-page-body--below-fold {
+  min-height: calc(100% + max(50vh, 20rem));
+}
+
 .sbn-scroll-page-content {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   min-width: 0;
+  padding-bottom: 1rem;
 }
 
 .sbn-page-end-footer {
   flex-shrink: 0;
   width: 100%;
+}
+
+.sbn-page-end-footer--below-fold {
   margin-top: auto;
 }
 
@@ -1407,23 +1417,16 @@ option {
 }
 
 .chat-inbox-scroll {
-  padding: 0.35rem 0.65rem 1rem;
+  padding: 0 0.75rem 1rem;
 }
 
 .chat-inbox-panel {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-surface) 96%, var(--color-accent) 4%) 0%,
-      var(--color-bg) 28%,
-      var(--color-bg) 100%
-    );
+  background: var(--color-bg);
 }
 
 .chat-inbox-header {
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  backdrop-filter: blur(10px) saturate(1.15);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .chat-inbox-row {
@@ -1433,38 +1436,34 @@ option {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  border-radius: 1.1rem;
-  border: 1px solid transparent;
-  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
-    transform 0.12s ease,
     box-shadow 0.15s ease;
   cursor: pointer;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
 }
 
 .chat-inbox-row:hover {
   background: var(--color-surface-hover);
-}
-
-.chat-inbox-row:active {
-  transform: scale(0.995);
+  border-color: var(--color-border-strong);
 }
 
 .chat-inbox-row--selected {
   background: var(--color-accent-soft);
-  border-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .chat-inbox-request {
-  margin: 0 0.75rem 0.65rem;
+  margin: 0 0 0.5rem;
   padding: 0.9rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 22%, transparent);
-  background: color-mix(in srgb, var(--color-accent-soft) 65%, var(--color-surface));
+  border-radius: var(--radius-card);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: var(--color-surface);
 }
 
 .chat-thread-header {

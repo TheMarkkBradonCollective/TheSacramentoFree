@@ -268,6 +268,7 @@ export default function ChatSupportSection({
         </header>
         <div className="flex-1 min-h-0 overflow-hidden">
           <ScrollPage
+            pinToBottom
             contentClassName="p-4"
             footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
           >
@@ -391,7 +392,7 @@ export default function ChatSupportSection({
         </div>
       </header>
       <div className="flex-1 min-h-0 overflow-hidden">
-        <ScrollPage footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}>
+        <ScrollPage pinToBottom footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}>
         {!isStaffInbox ? (
           <ChatSidebarRow
             id="chat_support_row_new"

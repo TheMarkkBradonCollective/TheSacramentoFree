@@ -282,6 +282,7 @@ export default function MobileView({
                   className={communityTab === 'feed' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'feed'}
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} />
@@ -290,6 +291,7 @@ export default function MobileView({
                   className={communityTab === 'stuff' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'stuff'}
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} onOpenNewPost={onOpenNewStuff} />
@@ -298,6 +300,7 @@ export default function MobileView({
                   className={communityTab === 'events' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'events'}
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onStaffEventChat={onStaffEventChat} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} onOpenNewEvent={onOpenNewEvent} canAccessEvents={canAccessEvents} />
@@ -309,6 +312,7 @@ export default function MobileView({
                   className={`bg-app ${communityTab === 'profile' ? '' : 'hidden'}`}
                   aria-hidden={communityTab !== 'profile'}
                   contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <UserProfileView userProfile={userProfile} userPosts={items.filter((item) => item.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} onOpenDownload={onOpenDownload} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} fullBleed />
@@ -408,7 +412,8 @@ export default function MobileView({
           id="mobile_feed_dock"
           aria-hidden={communityTab !== 'feed'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
           <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} />
         </ScrollPage>
@@ -418,7 +423,8 @@ export default function MobileView({
           id="mobile_directory_drawer"
           aria-hidden={communityTab !== 'stuff'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <ItemGrid
               items={items}
@@ -439,7 +445,8 @@ export default function MobileView({
           id="mobile_events_dock"
           aria-hidden={communityTab !== 'events'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <EventsPanel
               events={events}
@@ -494,7 +501,8 @@ export default function MobileView({
           id="mobile_profile_dock"
           aria-hidden={communityTab !== 'profile'}
           contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <div className="sbn-page-header px-4 pt-4 pb-2">
               <h2>{IN_APP.profileTitle}</h2>

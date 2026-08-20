@@ -51,6 +51,18 @@ export function getPostTypeCardColumnLabel(type: PostType): string {
   }
 }
 
+/** Short single-line labels for compact grid/tile badges (3-column Stuff feed). */
+export function getPostTypeGridBadgeLabel(type: PostType): string {
+  switch (type) {
+    case 'giveaway':
+      return 'Giving';
+    case 'looking':
+      return 'Looking';
+    case 'trade':
+      return 'Trade';
+  }
+}
+
 export function getMapContentFilterLabel(filter: MapContentFilter): string {
   if (filter === 'events') return 'Events';
   return getPostTypeFilterLabel(filter);

@@ -1,12 +1,12 @@
 {
   "versionName": "0.1.0",
-  "versionCode": 37,
-  "betaLabel": "beta v0.1.0.0037",
-  "releaseName": "0.1.0 (37)",
-  "aabFile": "public/downloads/sac-buy-nothing-beta-v0.1.0.0037.aab",
+  "versionCode": 38,
+  "betaLabel": "beta v0.1.0.0038",
+  "releaseName": "0.1.0 (38)",
+  "aabFile": "public/downloads/sac-buy-nothing-beta-v0.1.0.0038.aab",
   "aabLegacyFile": "public/downloads/sac-buy-nothing.aab",
-  "aabDownloadUrl": "https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0037.aab",
-  "releaseNotesFile": "play-store-assets/release-notes-v0.1.0-0037.txt",
-  "sideloadApk": "public/downloads/sac-buy-nothing-beta-v0.1.0.0037.apk",
-  "builtAt": "2026-08-20T16:09:12.712Z"
+  "aabDownloadUrl": "https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0038.aab",
+  "releaseNotesFile": "play-store-assets/release-notes-v0.1.0-0038.txt",
+  "sideloadApk": "public/downloads/sac-buy-nothing-beta-v0.1.0.0038.apk",
+  "builtAt": "2026-08-20T16:30:26.299Z"
 }
