@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import ProfilePostList from './ProfilePostList';
 import ProfileAwardsRow from './ProfileAwardsRow';
+import ProfileFriendsRow from './ProfileFriendsRow';
 import ProfileAwardsSection from './ProfileAwardsSection';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -389,6 +390,13 @@ export default function UserProfileView({
             userId={userProfile.uid}
             onOpenAwards={onOpenAwards}
             viewerIsStaff={isStaffActingOfficial(userProfile)}
+          />
+
+          <ProfileFriendsRow
+            userId={userProfile.uid}
+            viewerUserId={userProfile.uid}
+            isOwnProfile
+            onViewProfile={onViewProfile}
           />
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">

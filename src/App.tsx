@@ -2166,6 +2166,7 @@ export default function App() {
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onBlockListChanged={handleBlockListChanged}
+                  onViewNeighborProfile={handleViewProfile}
                 />
               )}
 
