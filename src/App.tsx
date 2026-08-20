@@ -12,6 +12,7 @@ import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
 import NewListingModal, { type NewListingModalMode } from './components/NewListingModal';
 import FeedPostDetailView from './components/feed/FeedPostDetailView';
+import ItemDetailView from './components/ItemDetailView';
 import { deleteFeedPost } from './lib/feedApi';
 import { isStaffRole } from './lib/roles';
 import PickupAttributionModal from './components/PickupAttributionModal';
