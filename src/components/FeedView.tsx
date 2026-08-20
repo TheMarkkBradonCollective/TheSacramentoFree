@@ -1,15 +1,24 @@
 import { useMemo, useState, Fragment } from 'react';
-import { ImageIcon, Newspaper, Plus, Sparkles, Type } from 'lucide-react';
+import { ImageIcon, Newspaper, Plus, Sparkles, Type, Users } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../types';
 import { useFeedEngagement } from '../hooks/useFeedEngagement';
 import { useFeedPosts } from '../hooks/useFeedPosts';
+import { useFriendIds } from '../hooks/useFriendIds';
 import FeedPostComposer from './feed/FeedPostComposer';
 import FeedPostCard from './feed/FeedPostCard';
 import { ItemGridSkeleton } from './Skeleton';
 import {
+  cycleFeedAudienceScope,
+  cycleFeedContentFilter,
+  feedAudienceScopeLabel,
+  feedContentFilterLabel,
+  feedPostMatchesAudienceScope,
   feedPostMatchesContentFilter,
+  readFeedAudienceScope,
   readFeedContentFilter,
+  writeFeedAudienceScope,
   writeFeedContentFilter,
+  type FeedAudienceScope,
   type FeedContentFilter,
 } from '../lib/feedDisplayPrefs';
 
@@ -20,24 +29,35 @@ interface FeedViewProps {
   onViewFeedPost?: (post: FeedPost) => void;
 }
 
-const FEED_CONTENT_TABS: Array<{
-  value: FeedContentFilter;
-  label: string;
-  icon: typeof Type;
-}> = [
-  { value: 'all', label: 'All', icon: Newspaper },
-  { value: 'text', label: 'Text', icon: Type },
-  { value: 'pictures', label: 'Pictures', icon: ImageIcon },
-];
+const FEED_CONTENT_ICONS: Record<FeedContentFilter, typeof Type> = {
+  all: Newspaper,
+  text: Type,
+  pictures: ImageIcon,
+};
 
-function emptyFeedMessage(filter: FeedContentFilter): { title: string; body: string } {
-  if (filter === 'text') {
+function emptyFeedMessage(
+  contentFilter: FeedContentFilter,
+  audienceScope: FeedAudienceScope,
+): { title: string; body: string } {
+  if (audienceScope === 'friends') {
+    return {
+      title: 'No friend posts yet',
+      body: 'Posts from neighbors you are friends with will show up here. Send friend requests from their profile.',
+    };
+  }
+  if (audienceScope === 'neighbors') {
+    return {
+      title: 'No neighborhood posts yet',
+      body: 'Posts from neighbors in your area will show up here.',
+    };
+  }
+  if (contentFilter === 'text') {
     return {
       title: 'No text posts yet',
       body: 'Text-only neighbor posts will show up here.',
     };
   }
-  if (filter === 'pictures') {
+  if (contentFilter === 'pictures') {
     return {
       title: 'No picture posts yet',
       body: 'Posts with photos will show up here.',
@@ -56,8 +76,19 @@ export default function FeedView({
   onViewFeedPost,
 }: FeedViewProps) {
   const { posts, loading, creating, publishPost, removePost } = useFeedPosts(userProfile);
+  const { friendIds, loading: friendsLoading } = useFriendIds(userProfile.uid);
   const [composerOpen, setComposerOpen] = useState(false);
   const [contentFilter, setContentFilter] = useState<FeedContentFilter>(() => readFeedContentFilter());
+  const [audienceScope, setAudienceScope] = useState<FeedAudienceScope>(() => readFeedAudienceScope());
+
+  const audienceContext = useMemo(
+    () => ({
+      viewerUserId: userProfile.uid,
+      viewerNeighborhood: userProfile.neighborhood,
+      friendIds,
+    }),
+    [userProfile.uid, userProfile.neighborhood, friendIds],
+  );
 
   const visiblePosts = useMemo(
     () => posts.filter((p) => !blockedUserIds.has(p.userId)),
@@ -65,53 +96,43 @@ export default function FeedView({
   );
 
   const filteredPosts = useMemo(
-    () => visiblePosts.filter((post) => feedPostMatchesContentFilter(post, contentFilter)),
-    [visiblePosts, contentFilter],
+    () =>
+      visiblePosts.filter(
+        (post) =>
+          feedPostMatchesContentFilter(post, contentFilter) &&
+          feedPostMatchesAudienceScope(post, audienceScope, audienceContext),
+      ),
+    [visiblePosts, contentFilter, audienceScope, audienceContext],
   );
 
   const postIds = useMemo(() => filteredPosts.map((p) => p.id), [filteredPosts]);
   const engagement = useFeedEngagement(postIds, userProfile, blockedUserIds);
 
-  const handleContentFilterChange = (filter: FeedContentFilter) => {
-    setContentFilter(filter);
-    writeFeedContentFilter(filter);
+  const handleCycleContentFilter = () => {
+    setContentFilter((current) => {
+      const next = cycleFeedContentFilter(current);
+      writeFeedContentFilter(next);
+      return next;
+    });
   };
 
-  const emptyCopy = emptyFeedMessage(contentFilter);
-  const showEmpty = !loading && filteredPosts.length === 0 && !composerOpen;
+  const handleCycleAudienceScope = () => {
+    setAudienceScope((current) => {
+      const next = cycleFeedAudienceScope(current);
+      writeFeedAudienceScope(next);
+      return next;
+    });
+  };
+
+  const emptyCopy = emptyFeedMessage(contentFilter, audienceScope);
+  const showEmpty = !loading && !friendsLoading && filteredPosts.length === 0 && !composerOpen;
+  const ContentIcon = FEED_CONTENT_ICONS[contentFilter];
+  const hasActiveContentFilter = contentFilter !== 'all';
+  const hasActiveAudienceScope = audienceScope !== 'everyone';
 
   return (
     <div className="space-y-3" id="community_feed_view">
       <div className="space-y-2 min-w-0" id="feed_view_mode_bar">
-        <div
-          className="inline-flex w-full rounded-xl border border-app bg-inset p-0.5"
-          role="tablist"
-          aria-label="Feed content"
-          id="feed_content_tabs"
-        >
-          {FEED_CONTENT_TABS.map(({ value, label, icon: Icon }) => {
-            const selected = contentFilter === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                id={`feed_content_tab_${value}`}
-                aria-selected={selected}
-                onClick={() => handleContentFilterChange(value)}
-                className={`flex-1 inline-flex items-center justify-center gap-1 rounded-[0.65rem] px-2 py-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
-                  selected
-                    ? 'bg-accent text-on-accent'
-                    : 'text-muted hover:text-app hover:bg-surface-hover'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                <span>{label}</span>
-              </button>
-            );
-          })}
-        </div>
-
         <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
           <div className="shrink-0">
             <button
@@ -131,13 +152,42 @@ export default function FeedView({
               <span>New</span>
             </button>
           </div>
-          <div className="flex-1 min-w-0 flex justify-center px-0.5">
-            <span
-              className="inline-flex items-center justify-center rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 text-[11px] sm:text-xs font-bold text-app whitespace-nowrap"
-              id="feed_scope_label"
-            >
-              Neighbors
-            </span>
+
+          <div className="flex-1 min-w-0 flex justify-center px-0.5 overflow-x-auto sbn-feed-toolbar-scroll">
+            <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
+              <button
+                type="button"
+                id="feed_content_toggle"
+                onClick={handleCycleContentFilter}
+                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
+                  hasActiveContentFilter
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-app bg-inset text-app hover:border-accent/40'
+                }`}
+                aria-pressed={hasActiveContentFilter}
+                aria-label={`Feed content: ${feedContentFilterLabel(contentFilter)}`}
+                title={`Show ${feedContentFilterLabel(contentFilter).toLowerCase()} posts — tap to change`}
+              >
+                <ContentIcon className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <span>{feedContentFilterLabel(contentFilter)}</span>
+              </button>
+              <button
+                type="button"
+                id="feed_scope_toggle"
+                onClick={handleCycleAudienceScope}
+                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
+                  hasActiveAudienceScope
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-app bg-inset text-app hover:border-accent/40'
+                }`}
+                aria-pressed={hasActiveAudienceScope}
+                aria-label={`Feed audience: ${feedAudienceScopeLabel(audienceScope)}`}
+                title={`Showing ${feedAudienceScopeLabel(audienceScope).toLowerCase()} — tap to change`}
+              >
+                <Users className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
+                <span>{feedAudienceScopeLabel(audienceScope)}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -155,7 +205,7 @@ export default function FeedView({
         />
       )}
 
-      {loading && visiblePosts.length === 0 && !composerOpen ? (
+      {(loading || friendsLoading) && visiblePosts.length === 0 && !composerOpen ? (
         <ItemGridSkeleton count={3} />
       ) : showEmpty ? (
         <div className="sbn-card text-center py-12 px-6 border-dashed" id="empty_neighbor_feed_state">
@@ -168,21 +218,26 @@ export default function FeedView({
           </p>
           <h3 className="font-display text-lg font-bold text-app mt-2">{emptyCopy.title}</h3>
           <p className="text-sm text-muted mt-2 max-w-sm mx-auto">{emptyCopy.body}</p>
-          {contentFilter === 'all' ? (
+          {contentFilter !== 'all' || audienceScope !== 'everyone' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setContentFilter('all');
+                setAudienceScope('everyone');
+                writeFeedContentFilter('all');
+                writeFeedAudienceScope('everyone');
+              }}
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm mt-4"
+            >
+              Show all posts
+            </button>
+          ) : (
             <button
               type="button"
               onClick={() => setComposerOpen(true)}
               className="sbn-btn sbn-btn-primary sbn-btn-sm mt-4"
             >
               Say hi
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleContentFilterChange('all')}
-              className="sbn-btn sbn-btn-secondary sbn-btn-sm mt-4"
-            >
-              Show all posts
             </button>
           )}
         </div>
