@@ -5,8 +5,8 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 ## What is already done
 
 - Release signing keystore: `android/app/sac-buynothing-release.keystore`
-- `versionCode` **23**, `versionName` **0.1.0**
-- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0023.aab` (and legacy `sac-buy-nothing.aab`)
+- `versionCode` **25**, `versionName` **0.1.0**
+- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0025.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`
 - Firebase push configured (client + server)
@@ -72,7 +72,7 @@ npm run android:aab
 Upload file (same build as the sideload APK):
 
 ```
-public/downloads/sac-buy-nothing-beta-v0.1.0.0023.aab
+public/downloads/sac-buy-nothing-beta-v0.1.0.0025.aab
 ```
 
 Legacy alias: `public/downloads/sac-buy-nothing.aab`
@@ -249,27 +249,28 @@ After saving the list, copy the **opt-in link** and share it — testers must op
 
 ---
 
-## Step 6 — Release (current: beta v0.1.0.0023)
+## Step 6 — Release (current: beta v0.1.0.0025)
 
 1. **Testing → Internal testing → Create release** (or Production when ready)
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0023.aab` (or `sac-buy-nothing.aab`)
-3. Release name: `0.1.0 (22)`
-4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0023.txt`:
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0025.aab` (or `sac-buy-nothing.aab`)
+3. Release name: `0.1.0 (25)`
+4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0025.txt`:
 
 ```
-Android beta v0.1.0.0023 (versionCode 23)
+Android beta v0.1.0.0025 (versionCode 25)
 
 What's new:
-• Photo uploads fixed when posting listings, events, and profile photos on Android
-• Gallery picks from Android phones no longer fail silently on missing file types
-• Report and support ticket screenshot uploads fixed
-• Play Store download page prioritizes Google Play over sideload APK
+• Navigate / Go Get / Pick Up on Stuff and Events cards opens in-app turn-by-turn navigation
+• Events follow staff vs neighbor rules (Staff chat in official mode; Navigate in neighbor mode)
+• Message and claim-notify hidden when navigation is primary on active listings
+• Event detail fits the screen (status bar and system navigation safe areas)
+• Sidebar tab: Stuff (was Feed)
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ```
 
 5. Add yourself as an internal tester → install from opt-in link
-6. Verify: sign-in, feed, map, status bar spacing, navigation bar spacing, push, account deletion
+6. Verify: sign-in, Stuff tab, map Navigate, event detail safe areas, status bar / nav bar spacing, push
 7. Promote to **Production** when ready → **Send for review**
 
 **Current release manifest:** `play-store-assets/current-release.json`
@@ -281,7 +282,7 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 For reference — first Play upload used versionCode 8:
 
 1. **Testing → Internal testing → Create release**
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0023.aab` (or `sac-buy-nothing.aab`)
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0025.aab` (or `sac-buy-nothing.aab`)
 3. Release name: `0.1.0 (8)`
 4. Release notes:
 

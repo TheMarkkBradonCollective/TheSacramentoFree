@@ -1,0 +1,10 @@
+Android beta v0.1.0.0025 (versionCode 25)
+
+What's new:
+• Navigate / Go Get / Pick Up on Stuff and Events cards now opens in-app turn-by-turn navigation
+• Events follow the same staff vs neighbor rules as listings (Staff chat in official mode; Navigate in neighbor mode)
+• Active listings: Message and claim-notify buttons hidden when navigation is the primary action
+• Event detail fits the screen — no longer under the status bar or system navigation buttons
+• Sidebar tab label: Stuff (was Feed)
+
+Download (sideload): https://www.sacramentobuynothing.com/download
