@@ -1289,17 +1289,6 @@ export default function ChatSystem({
           fullBleed ? 'bg-app' : 'bg-surface/80'
         } ${selectedChat || supportView ? 'hidden md:flex' : 'flex'}`}
       >
-        <ChatInboxHeader
-          userProfile={userProfile}
-          categoryFilter={categoryFilter}
-          statusFilter={statusFilter}
-          onCategoryFilterChange={handleCategoryFilterChange}
-          onStatusFilterChange={handleStatusFilterChange}
-          onStartConversation={onStartDirectMessage}
-          onNewSupport={!isStaffSupportInbox ? () => openSupport('new') : undefined}
-          onOpenFeedbackPanel={setFeedbackPanel}
-          staffReportCount={newStaffReportCount}
-        />
         <div className="flex-1 min-h-0 overflow-hidden" id="chat_rooms_scrollable">
           <ScrollPage
             pinToBottom={fullBleed && !selectedChat && !supportView}
@@ -1309,6 +1298,17 @@ export default function ChatSystem({
               ) : null
             }
           >
+            <ChatInboxHeader
+              userProfile={userProfile}
+              categoryFilter={categoryFilter}
+              statusFilter={statusFilter}
+              onCategoryFilterChange={handleCategoryFilterChange}
+              onStatusFilterChange={handleStatusFilterChange}
+              onStartConversation={onStartDirectMessage}
+              onNewSupport={!isStaffSupportInbox ? () => openSupport('new') : undefined}
+              onOpenFeedbackPanel={setFeedbackPanel}
+              staffReportCount={newStaffReportCount}
+            />
             <ChatInboxList
               entries={filteredInboxEntries}
               loading={isChatsLoading || supportTicketsLoading}
