@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
-  ArrowLeft,
   ArrowLeftRight,
   CircleDot,
   Gift,
   LayoutGrid,
   LayoutList,
+  Plus,
   Search as SearchIcon,
   MapPin,
   SlidersHorizontal,
@@ -81,13 +81,13 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
 function feedTypeToolbarLabel(type: ListingTypeFilter): string {
   switch (type) {
     case 'all':
-      return 'All types';
+      return 'All';
     case 'giveaway':
-      return 'Giving';
+      return 'Give';
     case 'looking':
-      return 'Looking';
+      return 'Look';
     case 'trade':
-      return 'Trades';
+      return 'Trade';
   }
 }
 
@@ -149,6 +149,7 @@ interface ItemGridProps {
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
+  onOpenNewPost?: () => void;
 }
 
 export default function ItemGrid({
@@ -162,6 +163,7 @@ export default function ItemGrid({
   onViewProfile,
   onRefresh,
   isLoading = false,
+  onOpenNewPost,
 }: ItemGridProps) {
   const [coordByUid, setCoordByUid] = useState<
     Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
@@ -307,14 +309,6 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set());
   };
 
-  const showBackToStuff =
-    selectedType !== 'all' || selectedCategory !== 'All Categories';
-
-  const handleBackToStuff = () => {
-    setSelectedType('all');
-    setSelectedCategory('All Categories');
-  };
-
   const cycleTypeFilter = () => {
     setSelectedType((current) => {
       const idx = LISTING_TYPE_FILTERS.indexOf(current);
@@ -396,15 +390,17 @@ export default function ItemGrid({
     <div className="space-y-3" id="item_feed_wrapper">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3" id="feed_view_mode_bar">
         <div className="flex justify-start min-w-0">
-          {showBackToStuff ? (
+          {onOpenNewPost ? (
             <button
               type="button"
-              id="feed_back_to_stuff_btn"
-              onClick={handleBackToStuff}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer"
+              id="feed_new_listing_btn"
+              onClick={onOpenNewPost}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-accent bg-accent px-2.5 py-1.5 text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer shrink-0"
+              aria-label="New listing"
+              title="New listing"
             >
-              <ArrowLeft className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-              <span>Back to Stuff</span>
+              <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+              <span>New</span>
             </button>
           ) : null}
         </div>

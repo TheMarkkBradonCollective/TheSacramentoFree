@@ -279,7 +279,7 @@ export default function MobileView({
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
+                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} onOpenNewPost={onOpenNewPost} />
                 </ScrollPage>
                 <ScrollPage
                   className={communityTab === 'events' ? '' : 'hidden'}
@@ -407,6 +407,7 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
               isLoading={!itemsHydrated}
+              onOpenNewPost={onOpenNewPost}
             />
         </ScrollPage>
 
