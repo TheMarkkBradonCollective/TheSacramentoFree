@@ -87,10 +87,14 @@ interface MobileViewProps {
   onStartDirectMessage?: () => void;
 }
 
-const MOBILE_FOOTER_NAV = [
+const MOBILE_NAV_LEFT = [
   { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: Newspaper },
   { id: 'stuff' as const, label: IN_APP.stuffTabLabel, icon: List },
-  { id: 'map' as const, label: 'Map', icon: Map },
+] as const;
+
+const MOBILE_NAV_MAP = { id: 'map' as const, label: 'Map', icon: Map };
+
+const MOBILE_NAV_RIGHT = [
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
 ] as const;
@@ -516,24 +520,57 @@ export default function MobileView({
       </main>
 
       <footer id="mobile_sticky_footer_nav" className={`sbn-mobile-nav${mapImmersiveNav ? ' sbn-mobile-chrome-hidden' : ''}`}>
-        <div className="sbn-mobile-nav-bar sbn-mobile-nav-bar-flat">
-          {MOBILE_FOOTER_NAV.map(({ id, label, icon: Icon }) => {
-            const isActive = communityTab === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                id={`mobile_nav_${id}`}
-                onClick={() => setActiveTab(id)}
-                aria-label={label}
-                aria-current={isActive ? 'page' : undefined}
-                className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
-              >
-                <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                <span>{label}</span>
-              </button>
-            );
-          })}
+        <div className="sbn-mobile-nav-bar">
+          <div className="sbn-mobile-nav-side">
+            {MOBILE_NAV_LEFT.map(({ id, label, icon: Icon }) => {
+              const isActive = communityTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  id={`mobile_nav_${id}`}
+                  onClick={() => setActiveTab(id)}
+                  aria-label={label}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
+                >
+                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            id="mobile_nav_map"
+            onClick={() => setActiveTab(MOBILE_NAV_MAP.id)}
+            aria-label={MOBILE_NAV_MAP.label}
+            aria-current={communityTab === MOBILE_NAV_MAP.id ? 'page' : undefined}
+            className={`sbn-mobile-nav-map ${communityTab === MOBILE_NAV_MAP.id ? 'sbn-mobile-nav-map-active' : ''}`}
+          >
+            <Map className="w-6 h-6" strokeWidth={communityTab === MOBILE_NAV_MAP.id ? 2.5 : 2} />
+          </button>
+
+          <div className="sbn-mobile-nav-side">
+            {MOBILE_NAV_RIGHT.map(({ id, label, icon: Icon }) => {
+              const isActive = communityTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  id={`mobile_nav_${id}`}
+                  onClick={() => setActiveTab(id)}
+                  aria-label={label}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
+                >
+                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </footer>
     </div>

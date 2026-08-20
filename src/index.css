@@ -2457,7 +2457,7 @@ html.sbn-keyboard-open .sbn-mobile-nav {
   padding: 0 0.25rem;
 }
 
-/* Equal-width 5-tab footer — Feed | Stuff | Map | Events | Messages */
+/* Mobile footer — Feed | Stuff · [Map square] · Events | Chat */
 .sbn-mobile-nav-bar-flat {
   align-items: stretch;
   justify-content: stretch;
