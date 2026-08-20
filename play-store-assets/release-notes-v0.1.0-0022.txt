@@ -1,0 +1,9 @@
+Android beta v0.1.0.0022 (versionCode 22)
+
+What's new:
+• Photo uploads fixed when posting listings, events, and profile photos on Android
+• Gallery picks from Android phones no longer fail silently on missing file types
+• Report and support ticket screenshot uploads fixed
+• Play Store download page prioritizes Google Play over sideload APK
+
+Download (sideload): https://www.sacramentobuynothing.com/download

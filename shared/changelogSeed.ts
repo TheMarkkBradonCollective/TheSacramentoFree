@@ -46,6 +46,7 @@ const APK_0018_PUBLISHED_AT = '2026-08-18T14:00:00.000Z';
 const APK_0019_PUBLISHED_AT = '2026-08-18T14:15:00.000Z';
 const APK_0020_PUBLISHED_AT = '2026-08-18T21:35:00.000Z';
 const PHOTO_UPLOAD_FIX_PUBLISHED_AT = '2026-08-20T03:30:00.000Z';
+const APK_0022_PUBLISHED_AT = '2026-08-20T03:35:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -99,6 +100,36 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0022',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0022',
+    'Photo uploads when posting are fixed on Android. Grab the new Play Store bundle or sideload APK if you install outside Google Play.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0022 (versionCode 22).
+
+Since 0021:
+• Photo uploads work when posting listings, events, and profile photos
+• Android gallery picks no longer fail on missing file types
+• Report and support ticket screenshots upload reliably
+• Download page points neighbors to Google Play first
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0022 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0022.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 22
+- play-store-assets/release-notes-v0.1.0-0022.txt — Play Console release notes
+- src/supabase.ts + src/lib/imageUrl.ts — photo upload fix (PR #232)
+
+HISTORY
+2026-08-20 — Photo upload fix merged (PR #232), then Android beta 0022 AAB built for Play Console.`,
+    APK_0022_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_photo-upload-fix',
     '2026-08-20',
@@ -668,6 +699,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0022',
+    '2026-08-20',
+    'New Android beta 0022 — photo uploads fixed',
+    'Posting with photos works again on Android. Play Store testers get the update on the next release; sideload neighbors can grab 0022 from Download.',
+    `WHAT NEIGHBORS SEE
+If adding photos while posting failed, that is fixed in beta v0.1.0.0022.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0022.
+
+HISTORY
+2026-08-20 — Android beta 0022 with photo upload fix.`,
+    APK_0022_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_photo-upload-fix',
     '2026-08-20',

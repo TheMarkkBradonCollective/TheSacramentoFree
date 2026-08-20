@@ -5,8 +5,8 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 ## What is already done
 
 - Release signing keystore: `android/app/sac-buynothing-release.keystore`
-- `versionCode` **21**, `versionName` **0.1.0**
-- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0021.aab` (and legacy `sac-buy-nothing.aab`)
+- `versionCode` **22**, `versionName` **0.1.0**
+- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0022.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`
 - Firebase push configured (client + server)
@@ -72,7 +72,7 @@ npm run android:aab
 Upload file (same build as the sideload APK):
 
 ```
-public/downloads/sac-buy-nothing-beta-v0.1.0.0021.aab
+public/downloads/sac-buy-nothing-beta-v0.1.0.0022.aab
 ```
 
 Legacy alias: `public/downloads/sac-buy-nothing.aab`
@@ -249,20 +249,21 @@ After saving the list, copy the **opt-in link** and share it — testers must op
 
 ---
 
-## Step 6 — Release (current: beta v0.1.0.0021)
+## Step 6 — Release (current: beta v0.1.0.0022)
 
 1. **Testing → Internal testing → Create release** (or Production when ready)
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0021.aab` (or `sac-buy-nothing.aab`)
-3. Release name: `0.1.0 (21)`
-4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0021.txt`:
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0022.aab` (or `sac-buy-nothing.aab`)
+3. Release name: `0.1.0 (22)`
+4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0022.txt`:
 
 ```
-Android beta v0.1.0.0021 (versionCode 21)
+Android beta v0.1.0.0022 (versionCode 22)
 
 What's new:
-• Play Store listing assets and delete-account page for Google Play compliance
-• Public /delete-account URL for Data safety form requirements
-• Updated signed release APK and AAB for Play Console upload
+• Photo uploads fixed when posting listings, events, and profile photos on Android
+• Gallery picks from Android phones no longer fail silently on missing file types
+• Report and support ticket screenshot uploads fixed
+• Play Store download page prioritizes Google Play over sideload APK
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ```
@@ -280,7 +281,7 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 For reference — first Play upload used versionCode 8:
 
 1. **Testing → Internal testing → Create release**
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0021.aab` (or `sac-buy-nothing.aab`)
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0022.aab` (or `sac-buy-nothing.aab`)
 3. Release name: `0.1.0 (8)`
 4. Release notes:
 
