@@ -243,10 +243,9 @@ export default function TabletView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="tablet_feed_pane"
-                contentClassName="sbn-tablet-content space-y-4"
+                contentClassName="sbn-tablet-content"
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
-                  <CommunityStatsBar items={items} variant="compact" />
                   <ItemGrid
                     items={items}
                     userProfile={userProfile}

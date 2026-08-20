@@ -368,7 +368,7 @@ export default function ItemGrid({
 
   return (
     <>
-    <div className="space-y-6" id="item_feed_wrapper">
+    <div className="space-y-3" id="item_feed_wrapper">
       <div className="flex items-center justify-between gap-3" id="feed_view_mode_bar">
         <div className="min-w-0">
           {viewMode === 'grid' ? (
