@@ -1157,13 +1157,14 @@ option {
 
 /* Short pages: extend scroll height so the legal strip is below the fold. */
 .sbn-scroll-page-body--below-fold {
-  min-height: calc(100% + max(50vh, 20rem));
+  min-height: calc(100% + max(55vh, 22rem));
 }
 
 .sbn-scroll-page-content {
   flex: 0 0 auto;
   min-width: 0;
-  padding-bottom: 1rem;
+  overflow-x: hidden;
+  padding-bottom: 1.5rem;
 }
 
 .sbn-page-end-footer {
@@ -1566,6 +1567,7 @@ option {
 .sbn-feed-composer {
   border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border));
   box-shadow: 0 2px 12px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  max-width: 100%;
 }
 
 .sbn-feed-post {
