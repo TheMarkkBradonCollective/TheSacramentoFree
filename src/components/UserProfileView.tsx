@@ -510,8 +510,8 @@ export default function UserProfileView({
           </form>
 
           <SystemPermissionsSettings />
-          <ThemeSettings />
-          <AccountNavigationSettings />
+          <ThemeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          <AccountNavigationSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           {usingApk && (
             <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           )}

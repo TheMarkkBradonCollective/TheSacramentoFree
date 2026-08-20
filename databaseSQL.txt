@@ -1,5 +1,10 @@
 -- Sacramento Buy Nothing — database SQL
 --
+-- CATCH-UP FROM BETA 0030 (run once if DB last synced at versionCode 30):
+--   scripts/supabase-migration-from-build-0030.sql
+--   All incremental migrations for builds 0031–0040 (Feed, listing expiry,
+--   News/Updates split, chat event context). Safe to re-run.
+--
 -- EXISTING PRODUCTION DATABASE (run once after deploying July 2026 release):
 --   scripts/supabase-migration-july-2026.sql
 --   Adds Go Get tables, pickup attribution, violation lockout, updates + news.
