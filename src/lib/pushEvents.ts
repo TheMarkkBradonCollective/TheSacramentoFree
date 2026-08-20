@@ -12,6 +12,11 @@ import {
   pushUrlForRequest,
   pushUrlForDirectorOverview,
   pushUrlForFeedPost,
+  pushUrlForEvent,
+  pushUrlForNeighborProfile,
+  pushUrlForAwards,
+  pushUrlForAnnouncement,
+  pushUrlForAppUpdate,
 } from './pushDeepLink';
 
 function itemCoords(item: ItemPost): { lat: number; lng: number } | null {
@@ -187,6 +192,25 @@ export async function notifyNewComment(params: {
   });
 }
 
+export async function notifyListingCommentReply(params: {
+  item: ItemPost;
+  commenterName: string;
+  preview: string;
+  commentId: string;
+  recipientUserIds: string[];
+}) {
+  if (!params.recipientUserIds.length) return;
+  await sendPushNotification({
+    eventType: 'new_comment',
+    title: 'New reply on a listing you commented on',
+    body: `${params.commenterName} on "${params.item.title}": ${params.preview.slice(0, 120)}`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: params.recipientUserIds,
+    tag: `listing-thread-${params.commentId}`,
+  });
+}
+
 /** Notify neighbors who bookmarked this listing (comments, edits, status). */
 export async function notifySavedListingActivity(params: {
   item: ItemPost;
@@ -244,20 +268,23 @@ export async function notifyFeedComment(params: {
   commentId?: string;
   title?: string;
   parentCommentId?: string;
+  eventType?: 'feed_comment' | 'feed_reply';
 }) {
+  const eventType = params.eventType || 'feed_comment';
   const tag = params.commentId
     ? `feed-comment-${params.commentId}`
     : `feed-comment-${params.postId}-${Date.now()}`;
 
   await sendPushNotification({
-    eventType: 'feed_comment',
-    title: params.title || 'New comment on your feed post',
+    eventType,
+    title: params.title || (eventType === 'feed_reply' ? 'New reply to your comment' : 'New comment on your feed post'),
     body: `${params.commenterName}: ${params.preview.slice(0, 120)}`,
     url: pushUrlForFeedPost(params.postId),
     recipientUserIds: [params.authorUserId],
     tag,
     data: {
       feedPostId: params.postId,
+      actorName: params.commenterName,
       ...(params.parentCommentId ? { parentCommentId: params.parentCommentId } : {}),
     },
   });
@@ -846,5 +873,138 @@ export async function notifyAppealDecision(params: {
     url: '/profile',
     recipientUserIds: [params.userId],
     tag: `appeal-decision-${params.violationId}`,
+  });
+}
+
+export async function notifyFriendRequest(params: {
+  requestId: string;
+  toUserId: string;
+  fromUserId: string;
+  fromUserName: string;
+}) {
+  await sendPushNotification({
+    eventType: 'friend_request',
+    title: 'New friend request',
+    body: `${params.fromUserName} wants to be friends`,
+    url: pushUrlForNeighborProfile(params.fromUserId),
+    recipientUserIds: [params.toUserId],
+    tag: `friend-req-${params.requestId}`,
+    data: { profileUserId: params.fromUserId, actorUserId: params.fromUserId, actorName: params.fromUserName },
+  });
+}
+
+export async function notifyFriendRequestAccepted(params: {
+  requestId: string;
+  fromUserId: string;
+  accepterUserId: string;
+  accepterName: string;
+}) {
+  await sendPushNotification({
+    eventType: 'friend_request_accepted',
+    title: 'Friend request accepted',
+    body: `${params.accepterName} accepted your friend request`,
+    url: pushUrlForNeighborProfile(params.accepterUserId),
+    recipientUserIds: [params.fromUserId],
+    tag: `friend-accepted-${params.requestId}`,
+    data: {
+      profileUserId: params.accepterUserId,
+      actorUserId: params.accepterUserId,
+      actorName: params.accepterName,
+    },
+  });
+}
+
+export async function notifyEventRsvp(params: {
+  eventId: string;
+  eventTitle: string;
+  hostUserId: string;
+  rsvpUserId: string;
+  rsvpName: string;
+  statusLabel: string;
+  rsvpStatus?: string;
+}) {
+  await sendPushNotification({
+    eventType: 'event_rsvp',
+    title: 'New RSVP on your event',
+    body: `${params.rsvpName} ${params.statusLabel} to "${params.eventTitle}"`,
+    url: pushUrlForEvent(params.eventId),
+    recipientUserIds: [params.hostUserId],
+    tag: `event-rsvp-${params.eventId}-${params.rsvpUserId}-${params.rsvpStatus || params.statusLabel}`,
+    data: { eventId: params.eventId, actorUserId: params.rsvpUserId, actorName: params.rsvpName },
+  });
+}
+
+export async function notifyEventComment(params: {
+  eventId: string;
+  eventTitle: string;
+  hostUserId: string;
+  commenterName: string;
+  commenterUserId: string;
+  preview: string;
+  commentId?: string;
+  recipientUserIds?: string[];
+  title?: string;
+  tagSuffix?: string;
+}) {
+  const recipients = params.recipientUserIds?.length ? params.recipientUserIds : [params.hostUserId];
+  if (!recipients.length) return;
+  await sendPushNotification({
+    eventType: 'event_comment',
+    title: params.title || 'New comment on your event',
+    body: `${params.commenterName} on "${params.eventTitle}": ${params.preview.slice(0, 120)}`,
+    url: pushUrlForEvent(params.eventId),
+    recipientUserIds: recipients,
+    tag: `event-comment-${params.commentId || `${params.eventId}-${Date.now()}`}-${params.tagSuffix || 'host'}`,
+    data: { eventId: params.eventId, actorUserId: params.commenterUserId, actorName: params.commenterName },
+  });
+}
+
+export async function notifyAnnouncementComment(params: {
+  announcementId: string;
+  title: string;
+  authorUserId: string;
+  commenterName: string;
+  commenterUserId: string;
+  preview: string;
+  commentId?: string;
+  recipientUserIds?: string[];
+  notificationTitle?: string;
+  tagSuffix?: string;
+}) {
+  const recipients = params.recipientUserIds?.length ? params.recipientUserIds : [params.authorUserId];
+  if (!recipients.length) return;
+  await sendPushNotification({
+    eventType: 'announcement_comment',
+    title: params.notificationTitle || 'New comment on your news post',
+    body: `${params.commenterName} on "${params.title}": ${params.preview.slice(0, 120)}`,
+    url: pushUrlForAnnouncement(params.announcementId),
+    recipientUserIds: recipients,
+    tag: `announcement-comment-${params.commentId || params.announcementId}-${params.tagSuffix || 'owner'}`,
+    data: { announcementId: params.announcementId, actorUserId: params.commenterUserId, actorName: params.commenterName },
+  });
+}
+
+export async function notifyUpdateComment(params: {
+  updateId: string;
+  title: string;
+  authorUserId: string;
+  commenterName: string;
+  commenterUserId: string;
+  preview: string;
+  commentId?: string;
+  recipientUserIds?: string[];
+  notificationTitle?: string;
+  tagSuffix?: string;
+}) {
+  const recipients = params.recipientUserIds?.length ? params.recipientUserIds : [params.authorUserId];
+  if (!recipients.length) return;
+  await sendPushNotification({
+    eventType: 'update_comment',
+    title: params.notificationTitle || 'New comment on your update',
+    body: `${params.commenterName} on "${params.title}": ${params.preview.slice(0, 120)}`,
+    url: pushUrlForAppUpdate(params.updateId),
+    recipientUserIds: recipients,
+    tag: `update-comment-${params.commentId || params.updateId}-${params.tagSuffix || 'owner'}`,
+    data: { updateId: params.updateId, actorUserId: params.commenterUserId, actorName: params.commenterName },
   });
 }

@@ -7,6 +7,10 @@ export interface PushDeepLinkTarget {
   conversationId?: string;
   requestId?: string;
   feedPostId?: string;
+  viewProfileUid?: string;
+  awardsPanel?: boolean;
+  announcementId?: string;
+  updateId?: string;
   /** Open Chat inbox focused on pending message requests (not a chat id). */
   messageRequests?: boolean;
   notifications?: boolean;
@@ -57,7 +61,18 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (path === 'notifications' || path === 'notifications/listings') return { notificationsTab: 'notifications' };
   if (path === 'notifications/alerts' || path === 'alerts') return { notificationsTab: 'alerts' };
   if (path === 'updates' || path === 'notifications/updates') return { notificationsTab: 'updates' };
-  if (path === 'notifications/awards' || path === 'awards') return { notificationsTab: 'awards' };
+  if (path === 'notifications/awards' || path === 'awards') return { awardsPanel: true };
+
+  const updateIdMatch = path.match(/^updates\/([^/]+)/);
+  if (updateIdMatch) return { notificationsTab: 'updates', updateId: updateIdMatch[1] };
+
+  const newsIdMatch = path.match(/^help\/announcements\/([^/]+)/);
+  if (newsIdMatch) return { notificationsTab: 'announcements', announcementId: newsIdMatch[1] };
+
+  const neighborMatch = path.match(/^profile\/([^/]+)/);
+  if (neighborMatch && neighborMatch[1] !== 'apply') {
+    return { tab: 'profile', viewProfileUid: neighborMatch[1] };
+  }
   if (
     path === 'help/announcements' ||
     path === 'announcements' ||
@@ -116,6 +131,10 @@ export function shouldPreservePushDeepLink(target: PushDeepLinkTarget | null): b
       target.conversationId ||
       target.requestId ||
       target.feedPostId ||
+      target.viewProfileUid ||
+      target.awardsPanel ||
+      target.announcementId ||
+      target.updateId ||
       target.messageRequests ||
       target.staffPanel ||
       target.chatFeedbackPanel ||
@@ -176,6 +195,22 @@ export function pushUrlForDirectorOverview(): string {
 
 export function pushUrlForProfile(): string {
   return '/profile';
+}
+
+export function pushUrlForNeighborProfile(userId: string): string {
+  return `/profile/${userId}`;
+}
+
+export function pushUrlForAwards(): string {
+  return '/awards';
+}
+
+export function pushUrlForAnnouncement(announcementId: string): string {
+  return `/help/announcements/${announcementId}`;
+}
+
+export function pushUrlForAppUpdate(updateId: string): string {
+  return `/updates/${updateId}`;
 }
 
 export function pushUrlForNotificationsInbox(): string {

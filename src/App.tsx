@@ -1713,6 +1713,7 @@ export default function App() {
       setDetailEvent(null);
       setViewProfileUid(null);
       setShowDirectMessageModal(false);
+      setShowAwardsPanel(false);
 
       let tabForUrl: AppTab = target.tab ?? 'map';
       if (target.tab) navigateToTab(target.tab);
@@ -1829,8 +1830,20 @@ export default function App() {
         setInitialChatSupportView('list');
         tabForUrl = 'chats';
       }
+      if (target.viewProfileUid) {
+        setViewProfileUid(target.viewProfileUid);
+        navigateToTab('profile');
+        tabForUrl = 'profile';
+      }
+      if (target.awardsPanel) {
+        markAwardsSeen();
+        setShowAwardsPanel(true);
+      }
       if (target.notificationsTab) {
-        openNotificationsHub(target.notificationsTab);
+        openNotificationsHub(target.notificationsTab, {
+          announcementId: target.announcementId,
+          updateId: target.updateId,
+        });
       } else if (target.notifications) {
         openNotificationsHub('notifications');
       }
@@ -1857,7 +1870,7 @@ export default function App() {
       clearPendingDeepLinkPath();
       clearAppPathname(tabForUrl);
     },
-    [items, events, navigateToTab, blockedUserIds, alert],
+    [items, events, navigateToTab, blockedUserIds, alert, markAwardsSeen],
   );
 
   usePushDeepLinkNavigation(handlePushDeepLink);

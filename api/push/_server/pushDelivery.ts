@@ -54,6 +54,14 @@ export type PushEventType =
   | 'feed_upvote'
   | 'feed_downvote'
   | 'feed_post'
+  | 'feed_reply'
+  | 'friend_request'
+  | 'friend_request_accepted'
+  | 'award_unlocked'
+  | 'event_rsvp'
+  | 'event_comment'
+  | 'announcement_comment'
+  | 'update_comment'
   | 'violation_filed'
   | 'violation_decision'
   | 'account_locked'
@@ -105,6 +113,12 @@ export interface NotificationPreferencesRow {
   nearbyRequests: boolean;
   requestFulfilled: boolean;
   neighborRequests: boolean;
+  feedReplies: boolean;
+  friendRequests: boolean;
+  awards: boolean;
+  eventRsvps: boolean;
+  eventComments: boolean;
+  discussionComments: boolean;
   staffSupport: boolean;
   staffReports: boolean;
   directorAlerts: boolean;
@@ -189,6 +203,14 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   feed_upvote: 'feedUpvotes',
   feed_downvote: 'feedDownvotes',
   feed_post: 'feedPosts',
+  feed_reply: 'feedReplies',
+  friend_request: 'friendRequests',
+  friend_request_accepted: 'friendRequests',
+  award_unlocked: 'awards',
+  event_rsvp: 'eventRsvps',
+  event_comment: 'eventComments',
+  announcement_comment: 'discussionComments',
+  update_comment: 'discussionComments',
   violation_filed: 'violations',
   violation_decision: 'violations',
   account_locked: 'violations',
@@ -211,6 +233,12 @@ const LEGACY_PREF_FALLBACK: Partial<Record<keyof NotificationPreferencesRow, key
   nearbyRequests: 'requests',
   requestFulfilled: 'requests',
   neighborRequests: 'requests',
+  feedReplies: 'feedComments',
+  friendRequests: 'messages',
+  awards: 'enabled',
+  eventRsvps: 'comments',
+  eventComments: 'comments',
+  discussionComments: 'announcements',
 };
 
 function prefAllows(prefs: NotificationPreferencesRow, key: keyof NotificationPreferencesRow): boolean {
@@ -267,6 +295,12 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     nearbyRequests: boolPref(row, 'nearbyRequests', 'requests'),
     requestFulfilled: boolPref(row, 'requestFulfilled', 'requests'),
     neighborRequests: boolPref(row, 'neighborRequests', 'requests'),
+    feedReplies: boolPref(row, 'feedReplies', 'comments'),
+    friendRequests: boolPref(row, 'friendRequests', 'messages'),
+    awards: boolPref(row, 'awards'),
+    eventRsvps: boolPref(row, 'eventRsvps', 'comments'),
+    eventComments: boolPref(row, 'eventComments', 'comments'),
+    discussionComments: boolPref(row, 'discussionComments', 'announcements'),
     staffSupport: row.staffSupport !== false,
     staffReports: row.staffReports !== false,
     directorAlerts: row.directorAlerts !== false,
@@ -370,6 +404,12 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         nearbyRequests: true,
         requestFulfilled: true,
         neighborRequests: true,
+        feedReplies: true,
+        friendRequests: true,
+        awards: true,
+        eventRsvps: true,
+        eventComments: true,
+        discussionComments: true,
         staffSupport: true,
         staffReports: true,
         directorAlerts: true,

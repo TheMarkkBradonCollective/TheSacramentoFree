@@ -49,6 +49,12 @@ export interface NotificationPreferences {
   nearbyRequests: boolean;
   requestFulfilled: boolean;
   neighborRequests: boolean;
+  feedReplies: boolean;
+  friendRequests: boolean;
+  awards: boolean;
+  eventRsvps: boolean;
+  eventComments: boolean;
+  discussionComments: boolean;
   staffSupport: boolean;
   staffReports: boolean;
   directorAlerts: boolean;

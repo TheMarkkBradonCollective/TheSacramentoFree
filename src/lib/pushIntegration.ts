@@ -5,6 +5,7 @@ import {
   notifyItemGifted,
   notifyListingExpiringSoon,
   notifyNewComment,
+  notifyListingCommentReply,
   notifyListingDownvote,
   notifyListingUpvote,
   notifyNewListingPosted,
@@ -268,6 +269,24 @@ export async function pushAfterComment(comment: {
       commenterName,
       preview,
       commentId,
+    });
+  }
+
+  const { data: commentRows } = await supabase.from('item_comments').select('userId').eq('itemId', comment.itemId);
+  const threadIds = [
+    ...new Set(
+      (commentRows || [])
+        .map((row) => String((row as { userId?: string }).userId || ''))
+        .filter((id) => id && id !== comment.userId && id !== item.userId),
+    ),
+  ];
+  if (threadIds.length) {
+    await notifyListingCommentReply({
+      item,
+      commenterName,
+      preview,
+      commentId,
+      recipientUserIds: threadIds,
     });
   }
 

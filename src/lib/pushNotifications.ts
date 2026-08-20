@@ -49,6 +49,12 @@ const GRANULAR_PREF_COLUMNS = [
   'nearbyRequests',
   'requestFulfilled',
   'neighborRequests',
+  'feedReplies',
+  'friendRequests',
+  'awards',
+  'eventRsvps',
+  'eventComments',
+  'discussionComments',
 ] as const;
 
 function isMissingPrefColumnError(error: { code?: string; message?: string } | null): boolean {
@@ -81,7 +87,7 @@ function boolPref(row: Record<string, unknown>, key: string, fallbackKey?: strin
 export function syncLegacyNotificationPrefs(prefs: NotificationPreferences): NotificationPreferences {
   return {
     ...prefs,
-    comments: prefs.listingComments || prefs.feedComments || prefs.feedReactions,
+    comments: prefs.listingComments || prefs.feedComments || prefs.feedReactions || prefs.feedReplies || prefs.eventComments || prefs.discussionComments,
     listingStatus: prefs.listingModeration || prefs.listingExpiry,
     pickupReminders: prefs.goGetAlerts || prefs.pickupCoordination,
     requests:
@@ -564,7 +570,15 @@ export type PushEventType =
   | 'feed_reaction'
   | 'feed_upvote'
   | 'feed_downvote'
-  | 'feed_post';
+  | 'feed_post'
+  | 'feed_reply'
+  | 'friend_request'
+  | 'friend_request_accepted'
+  | 'award_unlocked'
+  | 'event_rsvp'
+  | 'event_comment'
+  | 'announcement_comment'
+  | 'update_comment';
 
 export interface SendPushOptions {
   eventType: PushEventType;
@@ -875,6 +889,12 @@ export const CLEARED_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   nearbyRequests: false,
   requestFulfilled: false,
   neighborRequests: false,
+  feedReplies: false,
+  friendRequests: false,
+  awards: false,
+  eventRsvps: false,
+  eventComments: false,
+  discussionComments: false,
   staffSupport: false,
   staffReports: false,
   directorAlerts: false,
@@ -926,6 +946,12 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   nearbyRequests: true,
   requestFulfilled: true,
   neighborRequests: true,
+  feedReplies: true,
+  friendRequests: true,
+  awards: true,
+  eventRsvps: true,
+  eventComments: true,
+  discussionComments: true,
   staffSupport: true,
   staffReports: true,
   directorAlerts: true,
@@ -978,6 +1004,12 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     nearbyRequests: boolPref(row, 'nearbyRequests', 'requests'),
     requestFulfilled: boolPref(row, 'requestFulfilled', 'requests'),
     neighborRequests: boolPref(row, 'neighborRequests', 'requests'),
+    feedReplies: boolPref(row, 'feedReplies', 'comments'),
+    friendRequests: boolPref(row, 'friendRequests', 'messages'),
+    awards: boolPref(row, 'awards'),
+    eventRsvps: boolPref(row, 'eventRsvps', 'comments'),
+    eventComments: boolPref(row, 'eventComments', 'comments'),
+    discussionComments: boolPref(row, 'discussionComments', 'announcements'),
     staffSupport: row.staffSupport !== false,
     staffReports: row.staffReports !== false,
     directorAlerts: row.directorAlerts !== false,

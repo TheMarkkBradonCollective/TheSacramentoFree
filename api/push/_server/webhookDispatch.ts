@@ -27,6 +27,14 @@ import { runReportNotify } from './reportNotify';
 import { runSupportNotify, type SupportNotifyEvent } from './supportNotify';
 import { isStaffRole } from './staffRoles';
 import { runFeedCommentNotify, runFeedPostNotify, runFeedReactionNotify, runFeedVoteNotify } from './feedNotify';
+import {
+  runAnnouncementCommentNotify,
+  runAwardUnlockedNotify,
+  runEventCommentNotify,
+  runEventRsvpNotify,
+  runFriendRequestNotify,
+  runUpdateCommentNotify,
+} from './engagementNotify';
 import { getSupabaseAdmin } from './supabaseAdmin';
 
 type WebhookPayload = {
@@ -201,6 +209,26 @@ export async function runSupabasePushWebhook(
         postId: String(record.targetId || ''),
         userId: String(record.userId || ''),
         voteType: voteType as 'up' | 'down',
+      });
+    }
+
+    if (table === 'friend_requests' && body.record) {
+      const record = body.record;
+      return runFriendRequestNotify(String(record.toUserId || record.fromUserId || 'system'), {
+        id: String(record.id || ''),
+        fromUserId: String(record.fromUserId || ''),
+        toUserId: String(record.toUserId || ''),
+        fromUserName: String(record.fromUserName || ''),
+        status: String(record.status || ''),
+      }, String(body.old_record?.status || ''));
+    }
+
+    if (table === 'event_rsvps' && body.record) {
+      const record = body.record;
+      return runEventRsvpNotify(String(record.userId || 'system'), {
+        eventId: String(record.eventId || ''),
+        userId: String(record.userId || ''),
+        rsvpStatus: String(record.rsvpStatus || ''),
       });
     }
 
@@ -444,6 +472,63 @@ export async function runSupabasePushWebhook(
       id: announcementId,
       title: String(record.title || 'Community announcement'),
       body: String(record.body || ''),
+    });
+  }
+
+  if (table === 'friend_requests') {
+    return runFriendRequestNotify(String(record.fromUserId || 'system'), {
+      id: String(record.id || ''),
+      fromUserId: String(record.fromUserId || ''),
+      toUserId: String(record.toUserId || ''),
+      fromUserName: String(record.fromUserName || ''),
+      status: String(record.status || 'pending'),
+    });
+  }
+
+  if (table === 'user_awards') {
+    return runAwardUnlockedNotify(String(record.userId || 'system'), {
+      id: String(record.id || ''),
+      userId: String(record.userId || ''),
+      awardId: String(record.awardId || ''),
+      revokedAt: record.revokedAt == null ? null : String(record.revokedAt),
+    });
+  }
+
+  if (table === 'event_rsvps') {
+    return runEventRsvpNotify(String(record.userId || 'system'), {
+      eventId: String(record.eventId || ''),
+      userId: String(record.userId || ''),
+      rsvpStatus: String(record.rsvpStatus || ''),
+    });
+  }
+
+  if (table === 'event_comments') {
+    return runEventCommentNotify(String(record.userId || 'system'), {
+      id: String(record.id || ''),
+      eventId: String(record.eventId || ''),
+      userId: String(record.userId || ''),
+      userName: String(record.userName || 'A neighbor'),
+      text: String(record.text || ''),
+    });
+  }
+
+  if (table === 'help_announcement_comments') {
+    return runAnnouncementCommentNotify(String(record.userId || 'system'), {
+      id: String(record.id || ''),
+      announcementId: String(record.announcementId || ''),
+      userId: String(record.userId || ''),
+      userName: String(record.userName || 'A neighbor'),
+      text: String(record.text || ''),
+    });
+  }
+
+  if (table === 'app_update_comments') {
+    return runUpdateCommentNotify(String(record.userId || 'system'), {
+      id: String(record.id || ''),
+      updateId: String(record.updateId || ''),
+      userId: String(record.userId || ''),
+      userName: String(record.userName || 'A neighbor'),
+      text: String(record.text || ''),
     });
   }
 

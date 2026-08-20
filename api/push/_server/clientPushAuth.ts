@@ -11,6 +11,7 @@ export const WEBHOOK_ONLY_PUSH_EVENTS = new Set<PushEventType>([
   'staff_report',
   'pickup_reminder',
   'support_reply',
+  'award_unlocked',
 ]);
 
 /** Fan-out events: recipients are resolved server-side, never from the client payload. */
@@ -502,11 +503,22 @@ export async function validateClientPush(
     case 'new_comment': {
       const listingId = String(body.listingId || '').trim();
       if (!listingId) return { ok: false, error: 'listingId is required' };
-      const ownerId = await (async () => {
-        const supabaseAdmin = await getSupabaseAdmin();
-        const { data } = await supabaseAdmin.from('items').select('userId').eq('id', listingId).maybeSingle();
-        return String((data as { userId?: string } | null)?.userId || '');
-      })();
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin.from('items').select('userId').eq('id', listingId).maybeSingle();
+      const ownerId = String((data as { userId?: string } | null)?.userId || '');
+      const requested = body.recipientUserIds?.filter(Boolean) || [];
+      const allowed = new Set<string>();
+      if (ownerId && ownerId !== callerId) allowed.add(ownerId);
+      const { data: commentRows } = await supabaseAdmin.from('item_comments').select('userId').eq('itemId', listingId);
+      for (const row of commentRows || []) {
+        const uid = String((row as { userId?: string }).userId || '');
+        if (uid && uid !== callerId) allowed.add(uid);
+      }
+      if (requested.length) {
+        const valid = requested.filter((uid) => allowed.has(uid));
+        if (!valid.length) return { ok: false, error: 'Invalid comment recipients' };
+        return { ok: true, recipientUserIds: valid };
+      }
       if (!ownerId || ownerId === callerId) return { ok: false, error: 'No listing owner to notify' };
       return { ok: true, recipientUserIds: [ownerId] };
     }
@@ -527,6 +539,7 @@ export async function validateClientPush(
     }
 
     case 'feed_comment':
+    case 'feed_reply':
     case 'feed_reaction':
     case 'feed_upvote':
     case 'feed_downvote': {
@@ -535,32 +548,33 @@ export async function validateClientPush(
       const supabaseAdmin = await getSupabaseAdmin();
       const { data } = await supabaseAdmin.from('feed_posts').select('userId').eq('id', postId).maybeSingle();
       const ownerId = String((data as { userId?: string } | null)?.userId || '');
-      if (!ownerId || ownerId === callerId) return { ok: false, error: 'No feed post owner to notify' };
       if (eventType === 'feed_upvote' || eventType === 'feed_downvote' || eventType === 'feed_reaction') {
+        if (!ownerId || ownerId === callerId) return { ok: false, error: 'No feed post owner to notify' };
         return { ok: true, recipientUserIds: [ownerId] };
       }
 
       const requested = body.recipientUserIds?.filter(Boolean) || [];
+      const allowed = new Set<string>();
+      if (ownerId && ownerId !== callerId) allowed.add(ownerId);
+
+      const parentCommentId = String(body.data?.parentCommentId || '').trim();
+      if (parentCommentId) {
+        const { data: parent } = await supabaseAdmin
+          .from('feed_post_comments')
+          .select('userId')
+          .eq('id', parentCommentId)
+          .maybeSingle();
+        const parentAuthorId = String((parent as { userId?: string } | null)?.userId || '');
+        if (parentAuthorId && parentAuthorId !== callerId) allowed.add(parentAuthorId);
+      }
+
       if (requested.length) {
-        const allowed = new Set<string>();
-        if (ownerId !== callerId) allowed.add(ownerId);
-
-        const parentCommentId = String(body.data?.parentCommentId || '').trim();
-        if (parentCommentId) {
-          const { data: parent } = await supabaseAdmin
-            .from('feed_post_comments')
-            .select('userId')
-            .eq('id', parentCommentId)
-            .maybeSingle();
-          const parentAuthorId = String((parent as { userId?: string } | null)?.userId || '');
-          if (parentAuthorId && parentAuthorId !== callerId) allowed.add(parentAuthorId);
-        }
-
         const valid = requested.filter((uid) => allowed.has(uid));
         if (!valid.length) return { ok: false, error: 'Invalid feed comment recipients' };
         return { ok: true, recipientUserIds: valid };
       }
 
+      if (!ownerId || ownerId === callerId) return { ok: false, error: 'No feed post owner to notify' };
       return { ok: true, recipientUserIds: [ownerId] };
     }
 
@@ -574,6 +588,106 @@ export async function validateClientPush(
         return { ok: false, error: 'Only the feed post author can broadcast this alert' };
       }
       return { ok: true };
+    }
+
+    case 'friend_request': {
+      const toUserId = body.recipientUserIds?.[0] || '';
+      if (!toUserId || toUserId === callerId) return { ok: false, error: 'Invalid friend request recipient' };
+      return { ok: true, recipientUserIds: [toUserId] };
+    }
+
+    case 'friend_request_accepted': {
+      const fromUserId = body.recipientUserIds?.[0] || '';
+      if (!fromUserId || fromUserId === callerId) return { ok: false, error: 'Invalid friend-accept recipient' };
+      return { ok: true, recipientUserIds: [fromUserId] };
+    }
+
+    case 'event_rsvp':
+    case 'event_comment': {
+      const eventId = String(body.data?.eventId || '').trim();
+      const requested = (body.recipientUserIds || []).filter(Boolean);
+      if (!eventId || !requested.length || requested.includes(callerId)) {
+        return { ok: false, error: 'Invalid event notification' };
+      }
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin.from('community_events').select('userId').eq('id', eventId).maybeSingle();
+      const hostId = String((data as { userId?: string } | null)?.userId || '');
+      const allowed = new Set<string>();
+      if (hostId && hostId !== callerId) allowed.add(hostId);
+      if (eventType === 'event_comment') {
+        const [{ data: rsvpRows }, { data: commentRows }] = await Promise.all([
+          supabaseAdmin.from('event_rsvps').select('userId, rsvpStatus').eq('eventId', eventId),
+          supabaseAdmin.from('event_comments').select('userId').eq('eventId', eventId),
+        ]);
+        for (const row of rsvpRows || []) {
+          const status = String((row as { rsvpStatus?: string }).rsvpStatus || '');
+          const uid = String((row as { userId?: string }).userId || '');
+          if (uid && uid !== callerId && (status === 'going' || status === 'maybe')) allowed.add(uid);
+        }
+        for (const row of commentRows || []) {
+          const uid = String((row as { userId?: string }).userId || '');
+          if (uid && uid !== callerId) allowed.add(uid);
+        }
+      }
+      const valid = requested.filter((uid) => allowed.has(uid));
+      if (!valid.length) return { ok: false, error: 'Event recipient mismatch' };
+      return { ok: true, recipientUserIds: valid };
+    }
+
+    case 'announcement_comment': {
+      const announcementId = String(body.data?.announcementId || '').trim();
+      const requested = (body.recipientUserIds || []).filter(Boolean);
+      if (!announcementId || !requested.length || requested.includes(callerId)) {
+        return { ok: false, error: 'Invalid announcement comment notification' };
+      }
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin
+        .from('help_announcements')
+        .select('postedByUserId')
+        .eq('id', announcementId)
+        .maybeSingle();
+      const ownerId = String((data as { postedByUserId?: string } | null)?.postedByUserId || '');
+      const allowed = new Set<string>();
+      if (ownerId && ownerId !== callerId) allowed.add(ownerId);
+      const { data: commentRows } = await supabaseAdmin
+        .from('help_announcement_comments')
+        .select('userId')
+        .eq('announcementId', announcementId);
+      for (const row of commentRows || []) {
+        const uid = String((row as { userId?: string }).userId || '');
+        if (uid && uid !== callerId) allowed.add(uid);
+      }
+      const valid = requested.filter((uid) => allowed.has(uid));
+      if (!valid.length) return { ok: false, error: 'Announcement comment recipient mismatch' };
+      return { ok: true, recipientUserIds: valid };
+    }
+
+    case 'update_comment': {
+      const updateId = String(body.data?.updateId || '').trim();
+      const requested = (body.recipientUserIds || []).filter(Boolean);
+      if (!updateId || !requested.length || requested.includes(callerId)) {
+        return { ok: false, error: 'Invalid update comment notification' };
+      }
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin
+        .from('app_updates')
+        .select('postedByUserId')
+        .eq('id', updateId)
+        .maybeSingle();
+      const ownerId = String((data as { postedByUserId?: string } | null)?.postedByUserId || '');
+      const allowed = new Set<string>();
+      if (ownerId && ownerId !== callerId) allowed.add(ownerId);
+      const { data: commentRows } = await supabaseAdmin
+        .from('app_update_comments')
+        .select('userId')
+        .eq('updateId', updateId);
+      for (const row of commentRows || []) {
+        const uid = String((row as { userId?: string }).userId || '');
+        if (uid && uid !== callerId) allowed.add(uid);
+      }
+      const valid = requested.filter((uid) => allowed.has(uid));
+      if (!valid.length) return { ok: false, error: 'Update comment recipient mismatch' };
+      return { ok: true, recipientUserIds: valid };
     }
 
     default:

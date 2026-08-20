@@ -16,7 +16,13 @@ ALTER TABLE public.notification_preferences
   ADD COLUMN IF NOT EXISTS "claimRequests" BOOLEAN,
   ADD COLUMN IF NOT EXISTS "nearbyRequests" BOOLEAN,
   ADD COLUMN IF NOT EXISTS "requestFulfilled" BOOLEAN,
-  ADD COLUMN IF NOT EXISTS "neighborRequests" BOOLEAN;
+  ADD COLUMN IF NOT EXISTS "neighborRequests" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "feedReplies" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "friendRequests" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS awards BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "eventRsvps" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "eventComments" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "discussionComments" BOOLEAN;
 
 UPDATE public.notification_preferences SET
   "feedPosts" = COALESCE("feedPosts", "newListings"),
@@ -33,7 +39,13 @@ UPDATE public.notification_preferences SET
   "claimRequests" = COALESCE("claimRequests", requests),
   "nearbyRequests" = COALESCE("nearbyRequests", requests),
   "requestFulfilled" = COALESCE("requestFulfilled", requests),
-  "neighborRequests" = COALESCE("neighborRequests", requests);
+  "neighborRequests" = COALESCE("neighborRequests", requests),
+  "feedReplies" = COALESCE("feedReplies", comments),
+  "friendRequests" = COALESCE("friendRequests", messages),
+  awards = COALESCE(awards, true),
+  "eventRsvps" = COALESCE("eventRsvps", comments),
+  "eventComments" = COALESCE("eventComments", comments),
+  "discussionComments" = COALESCE("discussionComments", announcements);
 
 ALTER TABLE public.notification_preferences
   ALTER COLUMN "feedPosts" SET DEFAULT true,
@@ -50,4 +62,10 @@ ALTER TABLE public.notification_preferences
   ALTER COLUMN "claimRequests" SET DEFAULT true,
   ALTER COLUMN "nearbyRequests" SET DEFAULT true,
   ALTER COLUMN "requestFulfilled" SET DEFAULT true,
-  ALTER COLUMN "neighborRequests" SET DEFAULT true;
+  ALTER COLUMN "neighborRequests" SET DEFAULT true,
+  ALTER COLUMN "feedReplies" SET DEFAULT true,
+  ALTER COLUMN "friendRequests" SET DEFAULT true,
+  ALTER COLUMN awards SET DEFAULT true,
+  ALTER COLUMN "eventRsvps" SET DEFAULT true,
+  ALTER COLUMN "eventComments" SET DEFAULT true,
+  ALTER COLUMN "discussionComments" SET DEFAULT true;

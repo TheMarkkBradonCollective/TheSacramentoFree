@@ -56,6 +56,11 @@ const PREF_SECTIONS: {
         label: 'Community chat',
         description: 'New messages in the all-neighbors channel',
       },
+      {
+        key: 'friendRequests',
+        label: 'Friend requests',
+        description: 'When someone sends or accepts a friend request',
+      },
       { key: 'support', label: 'Support tickets', description: 'Staff replies on your help tickets' },
     ],
   },
@@ -105,6 +110,11 @@ const PREF_SECTIONS: {
         description: 'Comments on your feed posts',
       },
       {
+        key: 'feedReplies',
+        label: 'Feed comment replies',
+        description: 'When someone replies to your comment on a feed post',
+      },
+      {
         key: 'feedReactions',
         label: 'Feed reactions',
         description: 'Emoji reactions on your feed posts',
@@ -126,6 +136,36 @@ const PREF_SECTIONS: {
     items: [
       { key: 'appUpdates', label: 'App updates', description: 'Push when new changelog entries ship (bell → Updates)' },
       { key: 'announcements', label: 'Announcements', description: 'Push when staff post news (bell → Announcements)' },
+      {
+        key: 'discussionComments',
+        label: 'News & Updates comments',
+        description: 'When someone comments on a news post or update you published',
+      },
+    ],
+  },
+  {
+    title: 'Events',
+    items: [
+      {
+        key: 'eventRsvps',
+        label: 'Event RSVPs',
+        description: 'When neighbors RSVP going, maybe, or can’t go to your event',
+      },
+      {
+        key: 'eventComments',
+        label: 'Event comments',
+        description: 'Comments on community events you host',
+      },
+    ],
+  },
+  {
+    title: 'Awards',
+    items: [
+      {
+        key: 'awards',
+        label: 'Awards unlocked',
+        description: 'When you earn a neighbor badge',
+      },
     ],
   },
 ];

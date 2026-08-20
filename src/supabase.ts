@@ -4234,6 +4234,36 @@ export async function setSupabaseEventRsvp(
     }
 
     setSupabaseConfigurationState(true);
+    await runPushTask(async () => {
+      const [{ data: event }, { data: rsvpUser }] = await Promise.all([
+        supabase.from('community_events').select('userId, title').eq('id', eventId).maybeSingle(),
+        supabase.from('users').select('displayName').eq('uid', userId).maybeSingle(),
+      ]);
+      const hostUserId = String((event as { userId?: string } | null)?.userId || '');
+      if (!hostUserId || hostUserId === userId) return;
+      const statusLabel =
+        rsvpStatus === 'going'
+          ? 'is going'
+          : rsvpStatus === 'maybe'
+            ? 'might go'
+            : rsvpStatus === 'not_going'
+              ? "can't go"
+              : rsvpStatus === 'gone'
+                ? 'went'
+                : rsvpStatus === 'missed'
+                  ? 'missed'
+                  : `RSVP’d (${rsvpStatus})`;
+      const { notifyEventRsvp } = await import('./lib/pushEvents');
+      await notifyEventRsvp({
+        eventId,
+        eventTitle: String((event as { title?: string } | null)?.title || 'your event'),
+        hostUserId,
+        rsvpUserId: userId,
+        rsvpName: String((rsvpUser as { displayName?: string } | null)?.displayName || 'A neighbor'),
+        statusLabel,
+        rsvpStatus,
+      });
+    });
     return true;
   } catch (err: unknown) {
     handleSupabaseError(err, 'event_rsvps');
@@ -4277,6 +4307,62 @@ export async function createSupabaseEventComment(comment: EventComment): Promise
     }
 
     setSupabaseConfigurationState(true);
+    await runPushTask(async () => {
+      const { data: event } = await supabase
+        .from('community_events')
+        .select('userId, title')
+        .eq('id', comment.eventId)
+        .maybeSingle();
+      const hostUserId = String((event as { userId?: string } | null)?.userId || '');
+      if (!hostUserId) return;
+      const { notifyEventComment } = await import('./lib/pushEvents');
+      const eventTitle = String((event as { title?: string } | null)?.title || 'your event');
+      const commenterName = comment.userName || 'A neighbor';
+      const preview = String(comment.text || '').trim();
+      if (hostUserId !== comment.userId) {
+        await notifyEventComment({
+          eventId: comment.eventId,
+          eventTitle,
+          hostUserId,
+          commenterName,
+          commenterUserId: comment.userId,
+          preview,
+          commentId: comment.id,
+        });
+      }
+      const [{ data: rsvpRows }, { data: commentRows }] = await Promise.all([
+        supabase.from('event_rsvps').select('userId, rsvpStatus').eq('eventId', comment.eventId),
+        supabase.from('event_comments').select('userId').eq('eventId', comment.eventId),
+      ]);
+      const exclude = new Set([comment.userId, hostUserId]);
+      const threadIds = [
+        ...new Set(
+          [
+            ...(rsvpRows || [])
+              .filter((row) => {
+                const status = String((row as { rsvpStatus?: string }).rsvpStatus || '');
+                return status === 'going' || status === 'maybe';
+              })
+              .map((row) => String((row as { userId?: string }).userId || '')),
+            ...(commentRows || []).map((row) => String((row as { userId?: string }).userId || '')),
+          ].filter((id) => id && !exclude.has(id)),
+        ),
+      ];
+      if (threadIds.length) {
+        await notifyEventComment({
+          eventId: comment.eventId,
+          eventTitle,
+          hostUserId,
+          commenterName,
+          commenterUserId: comment.userId,
+          preview,
+          commentId: comment.id,
+          recipientUserIds: threadIds,
+          title: 'New comment on an event you follow',
+          tagSuffix: 'thread',
+        });
+      }
+    });
     return true;
   } catch (err: unknown) {
     handleSupabaseError(err, 'event_comments');
@@ -4757,6 +4843,55 @@ export async function createSupabaseAppUpdateComment(comment: AppUpdateComment):
     }
 
     setSupabaseConfigurationState(true);
+    await runPushTask(async () => {
+      const { data } = await supabase
+        .from('app_updates')
+        .select('postedByUserId, title')
+        .eq('id', comment.updateId)
+        .maybeSingle();
+      const authorUserId = String((data as { postedByUserId?: string } | null)?.postedByUserId || '');
+      if (!authorUserId) return;
+      const { notifyUpdateComment } = await import('./lib/pushEvents');
+      const title = String((data as { title?: string } | null)?.title || 'your update');
+      const commenterName = comment.userName || 'A neighbor';
+      const preview = String(comment.text || '').trim();
+      if (authorUserId !== comment.userId) {
+        await notifyUpdateComment({
+          updateId: comment.updateId,
+          title,
+          authorUserId,
+          commenterName,
+          commenterUserId: comment.userId,
+          preview,
+          commentId: comment.id,
+        });
+      }
+      const { data: commentRows } = await supabase
+        .from('app_update_comments')
+        .select('userId')
+        .eq('updateId', comment.updateId);
+      const threadIds = [
+        ...new Set(
+          (commentRows || [])
+            .map((row) => String((row as { userId?: string }).userId || ''))
+            .filter((id) => id && id !== comment.userId && id !== authorUserId),
+        ),
+      ];
+      if (threadIds.length) {
+        await notifyUpdateComment({
+          updateId: comment.updateId,
+          title,
+          authorUserId,
+          commenterName,
+          commenterUserId: comment.userId,
+          preview,
+          commentId: comment.id,
+          recipientUserIds: threadIds,
+          notificationTitle: 'New reply on an update you commented on',
+          tagSuffix: 'thread',
+        });
+      }
+    });
     return true;
   } catch (err) {
     handleSupabaseError(err, 'app_update_comments');
@@ -5073,6 +5208,55 @@ export async function createSupabaseHelpAnnouncementComment(comment: HelpAnnounc
     }
 
     setSupabaseConfigurationState(true);
+    await runPushTask(async () => {
+      const { data } = await supabase
+        .from('help_announcements')
+        .select('postedByUserId, title')
+        .eq('id', comment.announcementId)
+        .maybeSingle();
+      const authorUserId = String((data as { postedByUserId?: string } | null)?.postedByUserId || '');
+      if (!authorUserId) return;
+      const { notifyAnnouncementComment } = await import('./lib/pushEvents');
+      const title = String((data as { title?: string } | null)?.title || 'your announcement');
+      const commenterName = comment.userName || 'A neighbor';
+      const preview = String(comment.text || '').trim();
+      if (authorUserId !== comment.userId) {
+        await notifyAnnouncementComment({
+          announcementId: comment.announcementId,
+          title,
+          authorUserId,
+          commenterName,
+          commenterUserId: comment.userId,
+          preview,
+          commentId: comment.id,
+        });
+      }
+      const { data: commentRows } = await supabase
+        .from('help_announcement_comments')
+        .select('userId')
+        .eq('announcementId', comment.announcementId);
+      const threadIds = [
+        ...new Set(
+          (commentRows || [])
+            .map((row) => String((row as { userId?: string }).userId || ''))
+            .filter((id) => id && id !== comment.userId && id !== authorUserId),
+        ),
+      ];
+      if (threadIds.length) {
+        await notifyAnnouncementComment({
+          announcementId: comment.announcementId,
+          title,
+          authorUserId,
+          commenterName,
+          commenterUserId: comment.userId,
+          preview,
+          commentId: comment.id,
+          recipientUserIds: threadIds,
+          notificationTitle: 'New reply on a news post you commented on',
+          tagSuffix: 'thread',
+        });
+      }
+    });
     return true;
   } catch (err: unknown) {
     handleSupabaseError(err, 'help_announcement_comments');
@@ -5861,6 +6045,16 @@ export async function sendFriendRequest(params: {
       return { ok: false, errorMessage: error.message };
     }
 
+    await runPushTask(() =>
+      import('./lib/pushEvents').then((m) =>
+        m.notifyFriendRequest({
+          requestId,
+          toUserId,
+          fromUserId: fromUser.uid,
+          fromUserName: fromUser.displayName,
+        }),
+      ),
+    );
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send friend request.' };
@@ -5899,6 +6093,16 @@ export async function acceptFriendRequest(
       return { ok: false, errorMessage: updateError.message };
     }
 
+    await runPushTask(() =>
+      import('./lib/pushEvents').then((m) =>
+        m.notifyFriendRequestAccepted({
+          requestId,
+          fromUserId: req.fromUserId,
+          accepterUserId: accepter.uid,
+          accepterName: accepter.displayName,
+        }),
+      ),
+    );
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not accept request.' };

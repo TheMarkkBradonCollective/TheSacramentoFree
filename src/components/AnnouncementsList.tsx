@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { HelpAnnouncementInput, HelpAnnouncementRecord, UserProfile } from '../types';
 import { useHelpAnnouncements } from '../hooks/useHelpAnnouncements';
@@ -17,6 +17,7 @@ interface AnnouncementsListProps {
   onViewProfile?: (userId: string) => void;
   showVotes?: boolean;
   showComments?: boolean;
+  focusId?: string | null;
 }
 
 function formatAnnouncementDate(iso: string): string {
@@ -38,6 +39,7 @@ export default function AnnouncementsList({
   onViewProfile,
   showVotes = true,
   showComments = true,
+  focusId = null,
 }: AnnouncementsListProps) {
   const {
     announcements,
@@ -67,6 +69,15 @@ export default function AnnouncementsList({
   const [creating, setCreating] = useState(false);
   const { confirm } = useConfirm();
   const signedIn = Boolean(userProfile);
+
+  useEffect(() => {
+    if (!focusId) return;
+    setExpandedId(focusId);
+    const timer = window.setTimeout(() => {
+      document.getElementById(`announcement-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [focusId, announcements.length]);
 
   const emptyDraft = (): HelpAnnouncementInput => ({
     date: todayIsoDate(),
@@ -108,7 +119,11 @@ export default function AnnouncementsList({
             const isOwnAnnouncement = signedIn && announcement.postedByUserId === userProfile?.uid;
 
             return (
-              <li key={announcement.id}>
+              <li
+                key={announcement.id}
+                id={`announcement-${announcement.id}`}
+                className={focusId === announcement.id ? 'scroll-mt-4 ring-2 ring-accent/60 rounded-2xl' : 'scroll-mt-4'}
+              >
                 <PublicCard>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 text-left min-w-0">

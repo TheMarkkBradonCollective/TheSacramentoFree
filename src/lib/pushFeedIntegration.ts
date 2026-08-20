@@ -39,17 +39,10 @@ export async function pushAfterFeedComment(comment: {
   text: string;
 }) {
   const authorId = await getFeedPostAuthorId(comment.postId);
-  if (!authorId || authorId === comment.userId) return;
-
   const preview = comment.text.trim();
   if (!preview) return;
 
-  const recipients: Array<{ userId: string; title: string; tagSuffix: string }> = [];
-  recipients.push({
-    userId: authorId,
-    title: 'New comment on your feed post',
-    tagSuffix: 'owner',
-  });
+  const recipients: Array<{ userId: string; title: string; tagSuffix: string; eventType: 'feed_comment' | 'feed_reply' }> = [];
 
   if (comment.parentCommentId) {
     const { data: parent } = await supabase
@@ -58,13 +51,23 @@ export async function pushAfterFeedComment(comment: {
       .eq('id', comment.parentCommentId)
       .maybeSingle();
     const parentAuthorId = parent?.userId ? String(parent.userId) : '';
-    if (parentAuthorId && parentAuthorId !== comment.userId && parentAuthorId !== authorId) {
+    if (parentAuthorId && parentAuthorId !== comment.userId) {
       recipients.push({
         userId: parentAuthorId,
         title: 'New reply to your comment',
         tagSuffix: 'reply',
+        eventType: 'feed_reply',
       });
     }
+  }
+
+  if (authorId && authorId !== comment.userId && !recipients.some((r) => r.userId === authorId)) {
+    recipients.push({
+      userId: authorId,
+      title: 'New comment on your feed post',
+      tagSuffix: 'owner',
+      eventType: 'feed_comment',
+    });
   }
 
   for (const recipient of recipients) {
@@ -76,6 +79,7 @@ export async function pushAfterFeedComment(comment: {
       commentId: comment.id ? `${comment.id}-${recipient.tagSuffix}` : undefined,
       title: recipient.title,
       parentCommentId: comment.parentCommentId ?? undefined,
+      eventType: recipient.eventType,
     });
   }
 }
