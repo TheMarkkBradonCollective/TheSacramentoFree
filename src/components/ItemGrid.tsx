@@ -45,6 +45,7 @@ import {
   writeFeedViewMode,
   type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
+import { persistUserAppPreferences } from '../lib/appPreferences';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
@@ -213,6 +214,7 @@ export default function ItemGrid({
   const handleViewModeChange = (mode: FeedViewMode) => {
     setViewMode(mode);
     writeFeedViewMode(mode);
+    void persistUserAppPreferences(userProfile, { feedViewMode: mode });
   };
 
   const {

@@ -70,7 +70,10 @@ function emitSettings(next: NavigationSettings): void {
   window.dispatchEvent(new CustomEvent<NavigationSettings>(NAV_SETTINGS_EVENT, { detail: next }));
 }
 
-export function writeNavigationSettings(patch: Partial<NavigationSettings>): NavigationSettings {
+export function writeNavigationSettings(
+  patch: Partial<NavigationSettings>,
+  options?: { localOnly?: boolean },
+): NavigationSettings {
   const next = normalizeNavigationSettings({ ...readNavigationSettings(), ...patch });
   if (typeof window !== 'undefined') {
     try {
@@ -80,6 +83,7 @@ export function writeNavigationSettings(patch: Partial<NavigationSettings>): Nav
     }
     emitSettings(next);
   }
+  void options;
   return next;
 }
 

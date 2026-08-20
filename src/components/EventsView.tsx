@@ -27,6 +27,7 @@ import {
   writeEventsViewMode,
   type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
+import { persistUserAppPreferences } from '../lib/appPreferences';
 
 interface EventsViewProps {
   events: CommunityEvent[];
@@ -172,6 +173,7 @@ export default function EventsView({
   const handleViewModeChange = (mode: FeedViewMode) => {
     setViewMode(mode);
     writeEventsViewMode(mode);
+    void persistUserAppPreferences(userProfile, { eventsViewMode: mode });
   };
 
   /** Filters panel only — toolbar when/sort toggles have their own active styling. */
