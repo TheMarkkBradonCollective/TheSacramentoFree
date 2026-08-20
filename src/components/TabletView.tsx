@@ -32,7 +32,7 @@ interface TabletViewProps {
   activeTab: AnyTab;
   setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
-  onOpenNewEvent: () => void;
+  onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onStaffListingChat?: (item: ItemPost) => void;
