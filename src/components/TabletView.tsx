@@ -239,6 +239,7 @@ export default function TabletView({
                 className="sbn-workspace-scroll"
                 id="tablet_feed_pane"
                 contentClassName="sbn-tablet-content"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                 <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} />
@@ -250,6 +251,7 @@ export default function TabletView({
                 className="sbn-workspace-scroll"
                 id="tablet_stuff_pane"
                 contentClassName="sbn-tablet-content"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                   <ItemGrid
@@ -273,6 +275,7 @@ export default function TabletView({
                 className="sbn-workspace-scroll"
                 id="tablet_events_pane"
                 contentClassName="sbn-tablet-content"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                   <EventsPanel
@@ -346,6 +349,7 @@ export default function TabletView({
                 className="sbn-workspace-scroll"
                 id="tablet_profile_pane"
                 contentClassName="sbn-tablet-content"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                   <div className="sbn-card p-5">

@@ -7,9 +7,15 @@ interface FeedPostComposerProps {
   userProfile: UserProfile;
   creating?: boolean;
   onPublish: (input: { text: string; imageFiles: File[] }) => Promise<boolean>;
+  onCancel?: () => void;
 }
 
-export default function FeedPostComposer({ userProfile, creating = false, onPublish }: FeedPostComposerProps) {
+export default function FeedPostComposer({
+  userProfile,
+  creating = false,
+  onPublish,
+  onCancel,
+}: FeedPostComposerProps) {
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -98,6 +104,15 @@ export default function FeedPostComposer({ userProfile, creating = false, onPubl
           {err && <p className="text-xs text-red-400">{err}</p>}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1">
+              {onCancel ? (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-muted hover:text-app hover:bg-inset"
+                >
+                  Cancel
+                </button>
+              ) : null}
               <input
                 ref={fileRef}
                 type="file"
@@ -109,7 +124,7 @@ export default function FeedPostComposer({ userProfile, creating = false, onPubl
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-muted hover:text-app hover:bg-inset"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-app bg-inset text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:border-accent/40"
               >
                 <ImagePlus className="w-4 h-4" />
                 Photo
@@ -127,7 +142,7 @@ export default function FeedPostComposer({ userProfile, creating = false, onPubl
               type="button"
               disabled={creating || (!text.trim() && files.length === 0)}
               onClick={() => void handleSubmit()}
-              className="sbn-btn sbn-btn-primary sbn-btn-sm inline-flex items-center gap-1.5"
+              className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2.5 py-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover disabled:opacity-50"
               id="feed_compose_submit"
             >
               {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

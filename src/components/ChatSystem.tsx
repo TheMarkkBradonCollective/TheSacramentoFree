@@ -1156,6 +1156,7 @@ export default function ChatSystem({
         />
         <div className="flex-1 min-h-0 overflow-hidden" id="chat_rooms_scrollable">
           <ScrollPage
+            pinToBottom={fullBleed && !selectedChat && !supportView}
             footer={
               fullBleed && !selectedChat && !supportView ? (
                 <PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />

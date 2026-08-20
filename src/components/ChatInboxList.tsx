@@ -47,11 +47,11 @@ export default function ChatInboxList({
 
   if (entries.length === 0) {
     return (
-      <div className="px-3 py-8 flex justify-center">
+      <div className="sbn-card text-center py-16 px-8 border-dashed mx-3 mt-2" id="empty_chat_inbox_state">
         <ChatSectionEmptyState
           icon={MessageSquare}
           title="No chats yet"
-          description="Browse Stuff or Events and message a neighbor from any listing, or start a new chat from the compose button."
+          description="Browse Stuff or Events and message a neighbor from any listing, or tap New to start a chat."
         />
       </div>
     );
