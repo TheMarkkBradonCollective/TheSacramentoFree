@@ -7,6 +7,8 @@ import {
   normalizeStaffInteractionMode,
   type StaffInteractionMode,
 } from '../lib/staffInteractionMode';
+import { writeStaffInteractionModePref } from '../lib/staffModePrefs';
+import { writeCachedProfile } from '../lib/sessionCache';
 import LabeledSwitch from './LabeledSwitch';
 
 interface StaffModeSettingsProps {
@@ -32,17 +34,24 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
   const handleToggle = async (nextStaffMode: boolean) => {
     const next: StaffInteractionMode = nextStaffMode ? 'staff' : 'neighbor';
     if (next === mode || saving) return;
+    const previous = mode;
     setSaving(true);
     setErr('');
     const updated: UserProfile = { ...userProfile, staffInteractionMode: next };
+    setMode(next);
+    onUpdateProfile(updated);
+    writeStaffInteractionModePref(userProfile.uid, next);
+    writeCachedProfile(updated);
     const result = await upsertSupabaseProfile(updated);
     setSaving(false);
     if (!result.ok) {
       setErr(result.errorMessage || 'Could not save this setting.');
+      setMode(previous);
+      onUpdateProfile(userProfile);
+      writeStaffInteractionModePref(userProfile.uid, previous);
+      writeCachedProfile(userProfile);
       return;
     }
-    setMode(next);
-    onUpdateProfile(updated);
   };
 
   return (

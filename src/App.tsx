@@ -72,6 +72,7 @@ import {
   clearSessionCache,
   sessionStubFromProfile,
 } from './lib/sessionCache';
+import { readStaffInteractionModePref } from './lib/staffModePrefs';
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
@@ -729,8 +730,11 @@ export default function App() {
     try {
       const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
         if (fromDb) {
-          setUserProfile(fromDb);
-          writeCachedProfile(fromDb);
+          const localMode = readStaffInteractionModePref(fromDb.uid);
+          const merged =
+            localMode != null ? { ...fromDb, staffInteractionMode: localMode } : fromDb;
+          setUserProfile(merged);
+          writeCachedProfile(merged);
           return;
         }
 
