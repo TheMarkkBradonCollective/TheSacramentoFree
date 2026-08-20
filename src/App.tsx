@@ -78,7 +78,9 @@ import {
   clearSessionCache,
   sessionStubFromProfile,
 } from './lib/sessionCache';
-import { readStaffInteractionModePref } from './lib/staffModePrefs';
+import { applyStoredGoGetPrefsToProfile } from './lib/goGetPrefs';
+import { applyStoredNavPrefsToProfile } from './lib/navPrefs';
+import { applyStoredStaffModeToProfile } from './lib/staffModePrefs';
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
@@ -836,17 +838,28 @@ export default function App() {
       const base = profileFromAuthUser(user);
       const cached = readCachedProfile();
       if (cached?.uid === user.id) {
-        return {
-          ...base,
-          displayName: cached.displayName || base.displayName,
-          photoURL: cached.photoURL || base.photoURL,
-          neighborhood: cached.neighborhood || base.neighborhood,
-          bio: cached.bio ?? base.bio,
-          role: cached.role ?? base.role,
-          staffInteractionMode: cached.staffInteractionMode ?? base.staffInteractionMode,
-        };
+        return applyStoredStaffModeToProfile(
+          applyStoredNavPrefsToProfile(
+            applyStoredGoGetPrefsToProfile({
+              ...base,
+              displayName: cached.displayName || base.displayName,
+              photoURL: cached.photoURL || base.photoURL,
+              neighborhood: cached.neighborhood || base.neighborhood,
+              bio: cached.bio ?? base.bio,
+              role: cached.role ?? base.role,
+              staffInteractionMode: cached.staffInteractionMode ?? base.staffInteractionMode,
+              goGetEnabled: cached.goGetEnabled === true,
+              pickupAvailability: cached.pickupAvailability,
+              goGetRingDurationSeconds: cached.goGetRingDurationSeconds,
+              goGetRingPattern: cached.goGetRingPattern,
+              navigationSettings: cached.navigationSettings,
+            }),
+          ),
+        );
       }
-      return base;
+      return applyStoredStaffModeToProfile(
+        applyStoredNavPrefsToProfile(applyStoredGoGetPrefsToProfile(base)),
+      );
     });
     setIsAuthLoading(false);
     setAuthBootstrapping(false);
@@ -868,12 +881,9 @@ export default function App() {
       if (data) {
         const fromDb = await getSupabaseProfile(user.id);
         if (fromDb) {
-          const localMode = readStaffInteractionModePref(fromDb.uid);
-          const merged =
-            localMode != null ? { ...fromDb, staffInteractionMode: localMode } : fromDb;
-          setUserProfile(merged);
-          writeCachedProfile(merged);
-          applyUserPreferencesToDevice(merged);
+          setUserProfile(fromDb);
+          writeCachedProfile(fromDb);
+          applyUserPreferencesToDevice(fromDb);
         }
         return;
       }

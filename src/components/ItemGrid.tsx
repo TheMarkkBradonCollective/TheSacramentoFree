@@ -52,11 +52,20 @@ import {
   type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
 import { persistUserAppPreferences } from '../lib/appPreferences';
+import {
+  readFeedFilterState,
+  persistUserFeedFilters,
+  writeFeedFilterStateLocally,
+  type FeedListingQuickPick,
+  type FeedStatusFilter,
+  type FeedVoteFilter,
+} from '../lib/feedFilterPrefs';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
-type StatusFilter = 'all' | Exclude<PostStatus, 'withdrawn'>;
-type VoteFilter = 'all' | 'i_interested' | 'has_interest' | 'has_comments';
+type StatusFilter = FeedStatusFilter;
+type VoteFilter = FeedVoteFilter;
+type QuickPick = FeedListingQuickPick;
 
 const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All statuses' },
@@ -71,8 +80,6 @@ const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
   { value: 'has_interest', label: 'Has upvotes' },
   { value: 'has_comments', label: 'Has comments' },
 ];
-
-type QuickPick = 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
 
 const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'saved', label: 'Saved' },
@@ -196,18 +203,67 @@ export default function ItemGrid({
     void getUserPickupCoordinationByIds(posterIds).then(setCoordByUid);
   }, [items, userProfile.uid]);
 
+  const initialFilters = useMemo(() => readFeedFilterState(userProfile), [userProfile.uid]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<ListingTypeFilter>('all');
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
-  const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
-  const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
-  const [sortBy, setSortBy] = useState<FeedSortMode | null>(null);
-  const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
+  const [selectedType, setSelectedType] = useState<ListingTypeFilter>(() => initialFilters.selectedType);
+  const [selectedCategory, setSelectedCategory] = useState(() => initialFilters.selectedCategory);
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState(() => initialFilters.selectedNeighborhood);
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilter>(() => initialFilters.selectedStatus);
+  const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>(() => initialFilters.selectedVoteFilter);
+  const [sortBy, setSortBy] = useState<FeedSortMode | null>(() => initialFilters.sortBy);
+  const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(
+    () => new Set(initialFilters.activeQuickPicks),
+  );
   const [viewMode, setViewMode] = useState<FeedViewMode>(() => readFeedViewMode());
-  const [gridSortMode, setGridSortMode] = useState<'nearest' | 'new'>('nearest');
+  const [gridSortMode, setGridSortMode] = useState<'nearest' | 'new'>(() => initialFilters.gridSortMode);
   const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
+  const filtersBootstrappedRef = useRef(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const next = readFeedFilterState(userProfile);
+    setSelectedType(next.selectedType);
+    setSelectedCategory(next.selectedCategory);
+    setSelectedNeighborhood(next.selectedNeighborhood);
+    setSelectedStatus(next.selectedStatus);
+    setSelectedVoteFilter(next.selectedVoteFilter);
+    setSortBy(next.sortBy);
+    setActiveQuickPicks(new Set(next.activeQuickPicks));
+    setGridSortMode(next.gridSortMode);
+    filtersBootstrappedRef.current = false;
+  }, [userProfile.uid]);
+
+  useEffect(() => {
+    if (!filtersBootstrappedRef.current) {
+      filtersBootstrappedRef.current = true;
+      return;
+    }
+    const state = {
+      selectedType,
+      selectedCategory,
+      selectedNeighborhood,
+      selectedStatus,
+      selectedVoteFilter,
+      sortBy,
+      activeQuickPicks,
+      gridSortMode,
+    };
+    writeFeedFilterStateLocally(userProfile, state);
+    const timer = window.setTimeout(() => {
+      void persistUserFeedFilters(userProfile, state);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [
+    selectedType,
+    selectedCategory,
+    selectedNeighborhood,
+    selectedStatus,
+    selectedVoteFilter,
+    sortBy,
+    activeQuickPicks,
+    gridSortMode,
+    userProfile,
+  ]);
 
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [attributionItem, setAttributionItem] = useState<ItemPost | null>(null);
@@ -328,6 +384,8 @@ export default function ItemGrid({
     setSelectedVoteFilter('all');
     setSortBy(null);
     setActiveQuickPicks(new Set());
+    setSelectedType('all');
+    setGridSortMode('nearest');
   };
 
   const cycleTypeFilter = () => {

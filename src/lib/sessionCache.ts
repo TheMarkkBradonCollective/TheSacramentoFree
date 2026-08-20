@@ -3,6 +3,12 @@ import {
   isPersistableListingImageUrl,
   plainListingDescription,
 } from './listingContent';
+import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './goGetRing';
+import { normalizePickupAvailability } from './pickupAvailability';
+import { clearStoredGoGetPrefs } from './goGetPrefs';
+import { clearStoredNavPrefs } from './navPrefs';
+import { clearStoredAppPrefs } from './appPrefsCache';
+import { normalizeNavigationSettings } from './navigationSettings';
 import { isStaffRole, normalizeUserRole } from './roles';
 import { mergeStaffInteractionModePref, clearAllStaffInteractionModePrefs } from './staffModePrefs';
 
@@ -10,10 +16,20 @@ const PROFILE_KEY = 'sbn_profile_cache_v2';
 const LEGACY_PROFILE_KEY = 'sbn_profile_cache_v1';
 const ITEMS_KEY = 'sbn_items_cache_v1';
 
-/** Fields safe to cache offline — staff role + mode for instant shell restore. */
+/** Fields safe to cache offline — staff role + Go Get prefs for instant shell restore. */
 type CachedProfile = Pick<
   UserProfile,
-  'uid' | 'displayName' | 'photoURL' | 'neighborhood' | 'bio' | 'createdAt'
+  | 'uid'
+  | 'displayName'
+  | 'photoURL'
+  | 'neighborhood'
+  | 'bio'
+  | 'createdAt'
+  | 'goGetEnabled'
+  | 'pickupAvailability'
+  | 'goGetRingDurationSeconds'
+  | 'goGetRingPattern'
+  | 'navigationSettings'
 > & {
   role?: UserProfile['role'];
   staffInteractionMode?: UserProfile['staffInteractionMode'];
@@ -38,6 +54,11 @@ function toCachedProfile(profile: UserProfile): CachedProfile {
     neighborhood: profile.neighborhood,
     bio: profile.bio,
     createdAt: profile.createdAt,
+    goGetEnabled: profile.goGetEnabled === true,
+    pickupAvailability: normalizePickupAvailability(profile.pickupAvailability),
+    goGetRingDurationSeconds: normalizeGoGetRingDuration(profile.goGetRingDurationSeconds),
+    goGetRingPattern: normalizeGoGetRingPattern(profile.goGetRingPattern),
+    navigationSettings: normalizeNavigationSettings(profile.navigationSettings),
   };
   if (isStaffRole(profile.role)) {
     cached.role = normalizeUserRole(profile.role);
@@ -59,6 +80,11 @@ function fromCachedProfile(cached: CachedProfile): UserProfile {
     role,
     staffInteractionMode,
     accountStatus: 'active',
+    goGetEnabled: cached.goGetEnabled === true,
+    pickupAvailability: normalizePickupAvailability(cached.pickupAvailability),
+    goGetRingDurationSeconds: normalizeGoGetRingDuration(cached.goGetRingDurationSeconds),
+    goGetRingPattern: normalizeGoGetRingPattern(cached.goGetRingPattern),
+    navigationSettings: normalizeNavigationSettings(cached.navigationSettings),
   };
 }
 
@@ -112,6 +138,9 @@ export function clearSessionCache(): void {
     localStorage.removeItem(LEGACY_PROFILE_KEY);
     localStorage.removeItem(ITEMS_KEY);
     clearAllStaffInteractionModePrefs();
+    clearStoredGoGetPrefs();
+    clearStoredNavPrefs();
+    clearStoredAppPrefs();
   } catch {
     /* ignore */
   }
