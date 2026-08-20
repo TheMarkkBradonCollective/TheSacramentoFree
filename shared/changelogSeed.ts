@@ -47,6 +47,7 @@ const APK_0019_PUBLISHED_AT = '2026-08-18T14:15:00.000Z';
 const APK_0020_PUBLISHED_AT = '2026-08-18T21:35:00.000Z';
 const PHOTO_UPLOAD_FIX_PUBLISHED_AT = '2026-08-20T03:30:00.000Z';
 const APK_0022_PUBLISHED_AT = '2026-08-20T03:35:00.000Z';
+const APK_0023_PUBLISHED_AT = '2026-08-20T07:30:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -100,6 +101,38 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0023',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0023',
+    'Staff can now switch between Staff mode and Neighbor mode in Account settings — participate officially or like a regular neighbor.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0023 (versionCode 23).
+
+Since 0022:
+• Account → Staff participation mode: Staff mode vs Neighbor mode
+• Staff mode: comments show your title, Staff chat on listings/events, no private neighbor DMs or Go Get
+• Neighbor mode: message, navigate, claim, and Go Get like any neighbor; comments post without staff badge
+• Moderation sidebar and staff tools stay available in both modes
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0023 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0023.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/StaffModeSettings.tsx — Account settings toggle
+- src/lib/staffInteractionMode.ts — staff vs neighbor acting helpers
+- scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql — DB columns
+- android/app/build.gradle — versionCode 23
+- play-store-assets/release-notes-v0.1.0-0023.txt — Play Console release notes
+
+HISTORY
+2026-08-20 — Staff participation mode toggle shipped in web + Android beta 0023.`,
+    APK_0023_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0022',
     '2026-08-20',
@@ -699,6 +732,28 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_staff-participation-mode',
+    '2026-08-20',
+    'Staff can switch between official and neighbor mode',
+    'Community staff now choose how they participate — official Staff mode with your title on comments, or Neighbor mode to message and coordinate pickups like anyone else.',
+    `WHAT NEIGHBORS SEE
+Staff accounts now have Account → Staff participation mode:
+
+• Staff mode (default): comments show the staff title, listings use Staff chat, and neighbor pickup/DM flows stay off.
+• Neighbor mode: participate like any neighbor — message, navigate, claim, Go Get — and comments post without a staff badge.
+
+Moderation tools stay available either way. Your profile may still show you are on the team.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0023.
+
+HISTORY
+2026-08-20 — Staff participation mode toggle.`,
+    APK_0023_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0022',
     '2026-08-20',

@@ -56,6 +56,11 @@ export interface UserProfile {
    * coordination and uses listing + chat only. Default true when unset.
    */
   goGetEnabled?: boolean;
+  /**
+   * Staff only: `staff` = official capacity (badge, support threads, restricted neighbor flows).
+   * `neighbor` = participate like a regular neighbor. Default staff when unset.
+   */
+  staffInteractionMode?: 'staff' | 'neighbor';
   /** 1 = earliest neighbor; used for milestone awards and APK website access. */
   joinRank?: number | null;
   createdAt: any;
@@ -268,6 +273,8 @@ export interface ItemComment {
   userNeighborhood: string;
   text: string;
   createdAt: any;
+  /** True when staff posted while in neighbor mode — hide staff badge. */
+  postedAsNeighbor?: boolean;
 }
 
 export type SubItemStatus = 'available' | 'pending_pickup' | 'claimed';
@@ -476,6 +483,8 @@ export interface EventComment {
   userNeighborhood: string;
   text: string;
   createdAt: any;
+  /** True when staff posted while in neighbor mode — hide staff badge. */
+  postedAsNeighbor?: boolean;
 }
 
 export interface DirectorMessageContent {

@@ -39,6 +39,7 @@ import {
 } from './supabase';
 import { confirmStaffEventOutreach, confirmStaffListingOutreach } from './lib/staffChatSafety';
 import { isStaffRole } from './lib/roles';
+import { isStaffActingOfficial } from './lib/staffInteractionMode';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
@@ -1305,7 +1306,7 @@ export default function App() {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
 
-    if (isStaffRole(userProfile.role) && item) {
+    if (isStaffActingOfficial(userProfile) && item) {
       void handleStaffListingOutreach(item);
       return;
     }
@@ -1949,7 +1950,7 @@ export default function App() {
                     void engagement.handleDeleteComment(detailItem.id, commentId)
                   }
                   onMessage={
-                    blockedUserIds.has(detailItem.userId) || isStaffRole(userProfile.role)
+                    blockedUserIds.has(detailItem.userId) || isStaffActingOfficial(userProfile)
                       ? undefined
                       : () => {
                           handleInitiateChat(
@@ -1962,7 +1963,7 @@ export default function App() {
                         }
                   }
                   onStaffChat={
-                    isStaffRole(userProfile.role) && !blockedUserIds.has(detailItem.userId)
+                    isStaffActingOfficial(userProfile) && !blockedUserIds.has(detailItem.userId)
                       ? () => {
                           void handleStaffListingOutreach(detailItem);
                         }
@@ -2052,7 +2053,7 @@ export default function App() {
                   }}
                   onViewProfile={handleViewProfile}
                   onStaffChat={
-                    isStaffRole(userProfile.role) && !blockedUserIds.has(detailEvent.userId)
+                    isStaffActingOfficial(userProfile) && !blockedUserIds.has(detailEvent.userId)
                       ? () => void handleStaffEventOutreach(detailEvent)
                       : undefined
                   }

@@ -6,6 +6,7 @@ import { EventRsvpState } from '../hooks/useEventsEngagement';
 import { effectivePastRsvp } from '../lib/eventRsvp';
 import RoleBadge from './RoleBadge';
 import { isStaffRole } from '../lib/roles';
+import { shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
 
 interface EventEngagementProps {
   hostUserId: string;
@@ -147,7 +148,7 @@ export default function EventEngagement({
                   const canReport =
                     userProfile && !isOwnComment && comment.userId !== hostUserId && !isStaffRole(userProfile.role);
                   const commenterRole = commenterRoles?.[comment.userId];
-                  const commenterIsStaff = isStaffRole(commenterRole);
+                  const commenterIsStaff = shouldShowStaffBadgeOnComment(commenterRole, comment);
                   return (
                     <li
                       key={comment.id}

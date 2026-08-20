@@ -28,6 +28,7 @@ import {
   communityChatSubtitle,
 } from '../lib/communityChats';
 import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffReports, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -152,6 +153,7 @@ export default function ChatSystem({
   const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
   const userIsStaff = isStaffRole(userProfile.role);
+  const staffActingOfficial = isStaffActingOfficial(userProfile);
   const canStaffReports = canViewStaffReports(userProfile.role);
   const { reports: staffReports } = useStaffUserReports(canStaffReports, userProfile);
   const newStaffReportCount = staffReports.filter((report) => report.status === 'new').length;
@@ -879,7 +881,7 @@ export default function ChatSystem({
 
   const selectChat = async (chat: Chat) => {
     if (
-      isStaffRole(userProfile.role) &&
+      staffActingOfficial &&
       chat.itemId &&
       !staffCoordinationAckRef.current.has(chat.id)
     ) {
@@ -1420,7 +1422,7 @@ export default function ChatSystem({
                   id="input_tray"
                 >
                   {!isCommunity &&
-                  !userIsStaff &&
+                  !staffActingOfficial &&
                   (showSendLocationBtn ||
                     showMarkPendingPickupBtn ||
                     showRequestHoldBtn ||
@@ -1512,7 +1514,7 @@ export default function ChatSystem({
                       ) : null}
                     </div>
                   ) : null}
-                  {!isCommunity && showMarkClaimedBtn && claimerUserId && !userIsStaff ? (
+                  {!isCommunity && showMarkClaimedBtn && claimerUserId && !staffActingOfficial ? (
                     <ChatClaimActions
                       chatId={selectedChat.id}
                       linkedItem={linkedItem}
@@ -1530,7 +1532,7 @@ export default function ChatSystem({
                       Go Get in progress — open "{linkedItem?.title}" to follow along.
                     </p>
                   )}
-                  {userIsStaff && linkedItem && !isCommunity && (
+                  {staffActingOfficial && linkedItem && !isCommunity && (
                     <p className="text-[11px] text-amber-500/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-center leading-snug">
                       Staff oversight — neighbor coordination chat. Use Staff chat on the listing for official
                       outreach; reply here only when needed for safety or moderation.
