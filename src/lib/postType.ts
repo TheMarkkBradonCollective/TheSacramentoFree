@@ -32,7 +32,7 @@ export function getPostTypeFilterLabel(filter: ListingTypeFilter): string {
     case 'all':
       return 'All';
     case 'giveaway':
-      return 'Given';
+      return 'Giving';
     case 'looking':
       return 'Looking';
     case 'trade':
@@ -43,7 +43,7 @@ export function getPostTypeFilterLabel(filter: ListingTypeFilter): string {
 export function getPostTypeCardColumnLabel(type: PostType): string {
   switch (type) {
     case 'giveaway':
-      return 'Given';
+      return 'Giving';
     case 'looking':
       return 'Looking';
     case 'trade':
