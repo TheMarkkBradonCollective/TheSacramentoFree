@@ -3,22 +3,22 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.1.0 (41)
+  0.1.0 (43)
 
 Beta label (for your records / changelog):
-  beta v0.1.0.0041
+  beta v0.1.0.0043
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0043.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0041.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0043.apk
 
 Package name:
   org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
+  public/downloads/sac-buy-nothing-beta-v0.1.0.0043.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -26,12 +26,13 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta v0.1.0.0041 (versionCode 41)
+Android beta v0.1.0.0043 (versionCode 43)
 
 What's new:
-• Notification taps land on the right screen — feed, inbox, chats, listings
-• Message-request alerts open your inbox (not a ghost chat)
-• Welcome feed post — founder intro for neighbor chit-chat
+• Friends + feed filters (Everyone / Neighbors / Friends)
+• Profile tabs + chat inbox filters
+• Delete confirmations; profile photo fixes
+• Notification and UI polish
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ───────────────────────────────────────────────────────────────
@@ -39,8 +40,8 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 Steps:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Internal testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
-  4. Release name: 0.1.0 (41)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0043.aab
+  4. Release name: 0.1.0 (43)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Internal testing
 
