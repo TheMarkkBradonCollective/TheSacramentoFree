@@ -72,6 +72,7 @@ import {
   buildStartBriefingVoice,
   distanceCueKeysForStep,
   NavigationVoice,
+  unlockNavigationSpeech,
   voiceCueThresholdsForMode,
 } from '../lib/navigationVoice';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
@@ -446,8 +447,6 @@ function ManeuverIcon({ kind, className = 'w-10 h-10' }: { kind: ManeuverIconKin
   }
 }
 
-const NAV_LOOKAHEAD_SCREEN_RATIO = 0.22;
-
 function createNavUserIcon(heading: number): L.DivIcon {
   return L.divIcon({
     html: `<div class="sbn-nav-user-puck" style="transform: rotate(${heading}deg)"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-core"></span><span class="sbn-nav-user-puck-arrow"></span></div>`,
@@ -543,33 +542,73 @@ function debounceMapInvalidate(map: L.Map, delayMs = 160): () => void {
   };
 }
 
-function centerMapWithLookahead(map: L.Map, center: LatLng, zoom: number): void {
+/** True while we pan/zoom in code so Leaflet zoomstart does not drop follow-user. */
+let programmaticNavCamera = false;
+
+function withProgrammaticNavCamera(fn: () => void): void {
+  programmaticNavCamera = true;
+  try {
+    fn();
+  } finally {
+    window.requestAnimationFrame(() => {
+      programmaticNavCamera = false;
+    });
+  }
+}
+
+/** Pixel offset so the user sits in the visible map hole between banner and sheet. */
+function visibleMapCenterOffsetPx(map: L.Map): { x: number; y: number } {
+  const size = map.getSize();
+  if (size.x <= 0 || size.y <= 0) return { x: 0, y: 0 };
+  const mapRect = map.getContainer().getBoundingClientRect();
+  let top = 0;
+  let bottom = 0;
+  for (const id of ['nav_top_stack', 'nav_instruction_banner', 'nav_details_sheet']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom <= mapRect.top || rect.top >= mapRect.bottom) continue;
+    const fromTop = rect.bottom - mapRect.top;
+    const fromBottom = mapRect.bottom - rect.top;
+    if (rect.top <= mapRect.top + 8) {
+      top = Math.max(top, fromTop);
+    } else if (rect.bottom >= mapRect.bottom - 8) {
+      bottom = Math.max(bottom, fromBottom);
+    }
+  }
+  const usable = Math.max(80, size.y - top - bottom);
+  const visibleMidY = top + usable / 2;
+  return { x: 0, y: size.y / 2 - visibleMidY };
+}
+
+/** Keep the puck in the center of the uncovered map, not the full canvas. */
+function centerMapOnUser(map: L.Map, center: LatLng, zoom: number): void {
   if (!map.getContainer()?.isConnected) return;
 
   const mapSize = map.getSize();
   if (mapSize.x <= 0 || mapSize.y <= 0) {
-    map.setView([center.lat, center.lng], zoom, { animate: false });
+    withProgrammaticNavCamera(() => {
+      map.setView([center.lat, center.lng], zoom, { animate: false });
+    });
     return;
   }
 
   try {
-    const lookaheadPx = Math.round(mapSize.y * NAV_LOOKAHEAD_SCREEN_RATIO);
+    const offset = visibleMapCenterOffsetPx(map);
     const targetPoint = map.project([center.lat, center.lng], zoom);
-    // Shifting the *center* up (negative y) moves the user's own position DOWN on
-    // screen, which is what reveals more map area ahead of them — this was
-    // previously shifted the other way, pushing the user toward the top of the
-    // screen and leaving the actual route/destination rendered mostly off-screen.
-    const shiftedCenter = map.unproject(L.point(targetPoint.x, targetPoint.y - lookaheadPx), zoom);
-
-    if (map.getZoom() !== zoom) {
-      map.setView(shiftedCenter, zoom, { animate: false });
-      return;
-    }
-
-    map.panTo(shiftedCenter, { animate: false, noMoveStart: true });
+    const shiftedCenter = map.unproject(L.point(targetPoint.x + offset.x, targetPoint.y + offset.y), zoom);
+    withProgrammaticNavCamera(() => {
+      if (map.getZoom() !== zoom) {
+        map.setView(shiftedCenter, zoom, { animate: false });
+        return;
+      }
+      map.panTo(shiftedCenter, { animate: false, noMoveStart: true });
+    });
   } catch (error) {
-    console.warn('Could not apply navigation lookahead:', error);
-    map.setView([center.lat, center.lng], zoom, { animate: false });
+    console.warn('Could not center navigation map on user:', error);
+    withProgrammaticNavCamera(() => {
+      map.setView([center.lat, center.lng], zoom, { animate: false });
+    });
   }
 }
 
@@ -664,14 +703,14 @@ export default function MapNavigationView({
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS_DRIVING = 10;
-  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 4;
-  const NAV_UI_TICK_MS = 900;
-  const NAV_MAP_SYNC_MS = 450;
+  const NAV_GPS_FOLLOW_METERS_DRIVING = 8;
+  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 3;
+  const NAV_UI_TICK_MS = 700;
+  const NAV_MAP_SYNC_MS = 220;
   const NAV_ROUTE_DRAW_MIN_METERS = 14;
   const NAV_ROUTE_DRAW_MIN_MS = 1400;
   const NAV_HEADING_ICON_DEG = 12;
-  const NAV_DISPLAY_SMOOTH_ALPHA = 0.38;
+  const NAV_DISPLAY_SMOOTH_ALPHA = 0.72;
   const NAV_OFF_ROUTE_THRESHOLD_M = 55;
   const NAV_OFF_ROUTE_EVAL_MS = 900;
   const NAV_OFF_ROUTE_TICKS = 4;
@@ -785,13 +824,6 @@ export default function MapNavigationView({
     return Math.max(0, Math.round(route.durationSeconds * ratio));
   }, [route, remainingMeters, arrived]);
 
-  const bannerScale = useMemo(() => {
-    if (arrived) return 1;
-    if (distanceToManeuver < 80) return 1.05;
-    if (distanceToManeuver < 250) return 1.025;
-    return 1;
-  }, [distanceToManeuver, arrived]);
-
   const speakGuidanceCard = useCallback(
     (
       key: string,
@@ -876,7 +908,7 @@ export default function MapNavigationView({
     if (!options?.force && followUserRef.current) return;
 
     const sheet = document.getElementById('nav_details_sheet');
-    const banner = document.getElementById('nav_instruction_banner');
+    const banner = document.getElementById('nav_top_stack') ?? document.getElementById('nav_instruction_banner');
     const padding = measureMapFitPadding({
       mapElement: mapEl,
       obstructingElements: [sheet, banner],
@@ -1124,11 +1156,11 @@ export default function MapNavigationView({
     const debouncedInvalidate = debounceMapInvalidate(map);
 
     const onUserMapInteraction = () => {
-      if (isProgrammaticMapMoveRef.current) return;
+      if (programmaticNavCamera || isProgrammaticMapMoveRef.current) return;
       routeOverviewLockedRef.current = true;
-      // Stop camera follow so the user can pan/zoom without GPS yanking them back.
       followUserRef.current = false;
       setFollowUser(false);
+      applyHeadingUpRotation(mapRotatorRef.current, map, userPosRef.current, headingRef.current, true);
     };
     map.on('dragstart', onUserMapInteraction);
     map.on('zoomstart', onUserMapInteraction);
@@ -1249,8 +1281,16 @@ export default function MapNavigationView({
         setHeading(initialHeading);
       }
 
-      centerMapWithLookahead(map, start, 17);
+      followUserRef.current = true;
+      setFollowUser(true);
+      centerMapOnUser(map, start, 17);
       applyHeadingUpRotation(mapRotatorRef.current, map, start, headingRef.current, northUpRef.current);
+      window.requestAnimationFrame(() => {
+        const live = mapRef.current;
+        if (!live || !followUserRef.current) return;
+        centerMapOnUser(live, userPosRef.current, Math.max(live.getZoom(), 17));
+        applyHeadingUpRotation(mapRotatorRef.current, live, userPosRef.current, headingRef.current, northUpRef.current);
+      });
       if (userMarkerRef.current) {
         const markerHeading = northUpRef.current ? headingRef.current : 0;
         userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
@@ -1345,7 +1385,7 @@ export default function MapNavigationView({
       const target = pendingNavPanRef.current;
       const liveMap = mapRef.current;
       if (!target || !liveMap || !followUserRef.current) return;
-      centerMapWithLookahead(liveMap, target, Math.max(liveMap.getZoom(), 17));
+      centerMapOnUser(liveMap, target, Math.max(liveMap.getZoom(), 17));
       applyHeadingUpRotation(mapRotatorRef.current, liveMap, target, headingRef.current, northUpRef.current);
     });
   }, []);
@@ -1584,7 +1624,10 @@ export default function MapNavigationView({
     setVoiceOn((on) => {
       const next = !on;
       voiceRef.current.setEnabled(next);
-      if (next) voiceRef.current.prime();
+      if (next) {
+        voiceRef.current.unlock();
+        voiceRef.current.speak('Voice guidance on.', `voice-on-${Date.now()}`);
+      }
       writeNavigationSettings({ voiceEnabled: next });
       return next;
     });
@@ -1593,7 +1636,7 @@ export default function MapNavigationView({
   const speakRecenterCue = () => {
     const settings = settingsRef.current;
     if (!settings.voiceEnabled || !settings.speakOnRecenter) return;
-    voiceRef.current.prime();
+    voiceRef.current.unlock();
     voiceRef.current.setEnabled(true);
     speakGuidanceCard(`recenter-${Date.now()}`, { prefix: 'Centered on you' });
   };
@@ -1601,26 +1644,19 @@ export default function MapNavigationView({
   const handleRecenter = () => {
     setFollowUser(true);
     followUserRef.current = true;
+    routeOverviewLockedRef.current = false;
     const headingUp = settingsRef.current.headingUp;
     setNorthUp(!headingUp);
     lastNavPanRef.current = null;
     const pos = userPosRef.current;
     const map = mapRef.current;
     if (!map) return;
-    if (headingUp) {
-      map.setView([pos.lat, pos.lng], 17, { animate: false });
-      applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, false);
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setIcon(createNavUserIcon(0));
-        lastMarkerHeadingRef.current = 0;
-      }
-    } else {
-      applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, true);
-      centerMapWithLookahead(map, pos, 17);
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
-        lastMarkerHeadingRef.current = headingRef.current;
-      }
+    centerMapOnUser(map, pos, Math.max(map.getZoom(), 17));
+    applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, !headingUp);
+    if (userMarkerRef.current) {
+      const markerHeading = headingUp ? 0 : headingRef.current;
+      userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
+      lastMarkerHeadingRef.current = markerHeading;
     }
     speakRecenterCue();
   };
@@ -1712,6 +1748,19 @@ export default function MapNavigationView({
   }, [northUp]);
 
   useEffect(() => {
+    if (!followUser || !route) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const frame = window.requestAnimationFrame(() => {
+      const live = mapRef.current;
+      if (!live || !followUserRef.current) return;
+      centerMapOnUser(live, userPosRef.current, Math.max(live.getZoom(), 17));
+      applyHeadingUpRotation(mapRotatorRef.current, live, userPosRef.current, headingRef.current, northUpRef.current);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [followUser, route, sheetSnap, isCompact]);
+
+  useEffect(() => {
     if (navSettings.travelMode !== 'driving' || !navSettings.showLaneGuidance) {
       setOsmLanes(null);
       return;
@@ -1737,6 +1786,7 @@ export default function MapNavigationView({
       className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}`}
       id="map_navigation_view"
       style={{ background: 'var(--sbn-nav-bg)' }}
+      onPointerDown={() => voiceRef.current.unlock()}
     >
       <div className="relative flex-1 min-h-0 overflow-hidden">
         <div className="sbn-nav-map-stage">
@@ -1779,12 +1829,10 @@ export default function MapNavigationView({
         )}
 
         <div className="absolute inset-0 z-20 pointer-events-none flex flex-col">
-          <div className="pointer-events-auto safe-area-pt shrink-0">
+          <div id="nav_top_stack" className="pointer-events-auto shrink-0 sbn-nav-top-stack sbn-nav-glass sbn-nav-banner-accent">
             <motion.div
               id="nav_instruction_banner"
-              className={`sbn-nav-banner sbn-nav-glass sbn-nav-banner-accent ${isCompact ? 'sbn-nav-banner-compact' : ''}`}
-              animate={{ scale: bannerScale }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className={`sbn-nav-banner ${isCompact ? 'sbn-nav-banner-compact' : ''}`}
               aria-live="assertive"
               aria-atomic="true"
             >
@@ -1846,9 +1894,17 @@ export default function MapNavigationView({
                 <NavLaneGuidance lanes={displayLanes} maneuverKind={maneuverKind} />
               )}
             </motion.div>
-
-            <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
+            {!loading && route && !arrived && (
+              <div id="nav_mode_switcher" className="sbn-nav-mode-bar">
+                <NavTravelModeSwitcher
+                  variant="nav"
+                  value={navSettings.travelMode}
+                  onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
+                />
+              </div>
+            )}
           </div>
+          <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
 
           {!loading && route && (
             <div className="relative flex-1 min-h-0">
@@ -1859,15 +1915,10 @@ export default function MapNavigationView({
                   the sheet when there's little vertical room left for it. */}
               {sheetSnap === 'collapsed' && (
                 <>
-                  <div className="absolute left-3 bottom-3 pointer-events-auto flex flex-col gap-2 w-[10.75rem]">
+                  <div className="absolute left-3 bottom-3 pointer-events-auto flex flex-col gap-2 w-[4.5rem]">
                     {showSpeedCard && (
                       <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} compact={isCompact} />
                     )}
-                    <NavTravelModeSwitcher
-                      variant="nav"
-                      value={navSettings.travelMode}
-                      onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
-                    />
                   </div>
 
                   <div

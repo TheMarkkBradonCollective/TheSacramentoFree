@@ -17,6 +17,7 @@ import {
 } from '../lib/navigationSession';
 import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import MapNavigationView from './MapNavigationView';
+import { unlockNavigationSpeech } from '../lib/navigationVoice';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 
 interface EventDetailNavigationProps {
@@ -83,6 +84,7 @@ export default function EventDetailNavigation({
 
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
+    unlockNavigationSpeech();
     saveActiveNavSession({
       userId: currentUserId,
       targetType: 'event',

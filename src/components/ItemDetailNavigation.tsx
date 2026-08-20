@@ -60,6 +60,7 @@ import {
   buildGoGetNavigationFollowUpMessages,
   buildGoGetNavigationStartPhrase,
 } from '../lib/goGetNavigationVoice';
+import { unlockNavigationSpeech } from '../lib/navigationVoice';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 import GoGetAvailabilityPrompt from './goget/GoGetAvailabilityPrompt';
 import GoGetTimePicker from './goget/GoGetTimePicker';
@@ -279,6 +280,7 @@ export default function ItemDetailNavigation({
 
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
+    unlockNavigationSpeech();
     arrivalHandledRef.current = false;
     if (isContactless) {
       setContactlessNavActive(true);

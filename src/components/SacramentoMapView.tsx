@@ -37,6 +37,7 @@ import {
   saveActiveNavSession,
 } from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
+import { unlockNavigationSpeech } from '../lib/navigationVoice';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 import { MapPin, MessageSquare, LifeBuoy, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
@@ -1259,6 +1260,7 @@ export default function SacramentoMapView({
   }, [selectedPost, selectedEvent, routeDestination, userProfile.uid]);
 
   const openNavigation = useCallback(() => {
+    unlockNavigationSpeech();
     lockNavOrigin();
     persistNavigationSession();
     setNavigationOpen(true);

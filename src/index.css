@@ -193,7 +193,6 @@ html.sbn-session-restore #root:empty {
   inset: 0;
   transform-origin: 50% 50%;
   will-change: transform;
-  transition: transform 0.12s linear;
 }
 
 #map_navigation_view .sbn-nav-map-canvas {
@@ -228,20 +227,33 @@ html.sbn-session-restore #root:empty {
   color: var(--sbn-nav-text);
 }
 
-#map_navigation_view .sbn-nav-banner {
-  border-radius: 1.35rem;
-  margin: 0.65rem 0.65rem 0;
-  padding: 0.95rem 1rem 0.8rem;
+#map_navigation_view .sbn-nav-top-stack {
+  margin: 0;
+  border-radius: 0 0 1.35rem 1.35rem;
+  overflow: hidden;
   position: relative;
   z-index: 25;
+}
+
+#map_navigation_view .sbn-nav-banner {
+  border-radius: 0;
+  margin: 0;
+  padding: calc(0.55rem + var(--sbn-safe-area-top, var(--sbn-inset-top, env(safe-area-inset-top, 0px)))) 1rem 0.7rem;
+  position: relative;
+  z-index: 25;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
 }
 
 /* Landscape phones / short windows: free up vertical room so the floating
    controls below never have to overlap the details sheet. */
 #map_navigation_view .sbn-nav-banner-compact {
-  border-radius: 1rem;
-  margin: 0.4rem 0.4rem 0;
-  padding: 0.55rem 0.75rem;
+  padding: calc(0.35rem + var(--sbn-safe-area-top, var(--sbn-inset-top, env(safe-area-inset-top, 0px)))) 0.75rem 0.45rem;
+}
+
+#map_navigation_view .sbn-nav-mode-bar {
+  padding: 0 0.75rem 0.7rem;
 }
 
 #map_navigation_view .sbn-nav-banner-shimmer {
