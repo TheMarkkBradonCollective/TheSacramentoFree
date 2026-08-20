@@ -87,6 +87,7 @@ export async function sendFcmToSubscription(
         notification: {
           channelId: 'sac_buy_nothing_alerts',
           icon: 'ic_stat_notification',
+          color: '#fb6302',
         },
       },
     });
