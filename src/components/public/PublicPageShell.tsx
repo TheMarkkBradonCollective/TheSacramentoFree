@@ -1,6 +1,8 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { usePublicRoute } from '../../public/usePublicRoute';
+import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
+import { NEWSPAPER } from '../../preview/newspaperBrand';
 
 interface PublicPageShellProps {
   title: string;
@@ -13,6 +15,7 @@ interface PublicPageShellProps {
 
 export default function PublicPageShell({ title, subtitle, children, showBack = true, className = '' }: PublicPageShellProps) {
   const { route, navigate } = usePublicRoute();
+  const { enabled: newspaper } = useNewspaperSkin();
   const canGoBack = showBack && route !== 'home';
 
   const goBack = () => {
@@ -33,6 +36,7 @@ export default function PublicPageShell({ title, subtitle, children, showBack = 
           </button>
         )}
         <header className="sbn-page-header">
+          {newspaper && <p className="tsf-kicker">{NEWSPAPER.name}</p>}
           <h1>{title}</h1>
           {subtitle && <p>{subtitle}</p>}
         </header>

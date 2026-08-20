@@ -27,7 +27,10 @@ function applyThemeToDocument(theme: Theme) {
   root.style.colorScheme = theme;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute('content', theme === 'light' ? '#ffffff' : '#0b0b0c');
+    const newspaper = root.classList.contains('newspaper-preview');
+    const light = newspaper ? '#f3ead6' : '#ffffff';
+    const dark = newspaper ? '#1a1612' : '#0b0b0c';
+    meta.setAttribute('content', theme === 'light' ? light : dark);
   }
 }
 

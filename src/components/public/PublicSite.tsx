@@ -1,7 +1,11 @@
 import { useEffect, useRef } from 'react';
 import PageScrollFooter, { ScrollPage } from '../PageScrollFooter';
 import { usePublicRoute } from '../../public/usePublicRoute';
+import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
 import PublicNav from './PublicNav';
+import NewspaperNav from './newspaper/NewspaperNav';
+import NewspaperHomePage from './newspaper/NewspaperHomePage';
+import NewspaperPreviewBanner from './newspaper/NewspaperPreviewBanner';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import HowItWorksPage from './pages/HowItWorksPage';
@@ -37,7 +41,7 @@ interface PublicSiteProps {
   onRequireSignIn?: () => void;
 }
 
-export default function PublicSite({
+function PublicSiteFrame({
   onEmailSignIn,
   onEmailSignUp,
   errorMsg,
@@ -48,6 +52,7 @@ export default function PublicSite({
   onRequireSignIn,
 }: PublicSiteProps) {
   const { route, navigate } = usePublicRoute();
+  const { enabled: newspaper } = useNewspaperSkin();
   const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,7 +61,7 @@ export default function PublicSite({
     // same-document navigation that dispatches a native `popstate` event, which
     // can race with other app-level popstate handling during auth transitions.
     try {
-      window.history.replaceState(window.history.state, '', '#/');
+      window.history.replaceState(window.history.state, '', `${window.location.search}#/`);
     } catch {
       window.location.hash = '#/';
     }
@@ -107,6 +112,17 @@ export default function PublicSite({
         return <NotFoundPage onNavigate={navigate} />;
       case 'home':
       default:
+        if (newspaper) {
+          return (
+            <NewspaperHomePage
+              onNavigate={navigate}
+              items={items}
+              isItemsLoading={isItemsLoading}
+              onViewListing={onViewListing}
+              onRequireSignIn={onRequireSignIn}
+            />
+          );
+        }
         return (
           <HomePage
             onNavigate={navigate}
@@ -120,8 +136,19 @@ export default function PublicSite({
   };
 
   return (
-    <div className="min-h-screen h-dvh bg-app text-app font-sans flex flex-col overflow-hidden">
-      <PublicNav route={route} onNavigate={navigate} />
+    <div
+      className={`min-h-screen h-dvh bg-app text-app flex flex-col overflow-hidden ${
+        newspaper ? 'tsf-root' : 'font-sans'
+      }`}
+    >
+      {newspaper ? (
+        <NewspaperNav route={route} onNavigate={navigate} />
+      ) : (
+        <>
+          <NewspaperPreviewBanner />
+          <PublicNav route={route} onNavigate={navigate} />
+        </>
+      )}
       <main className="flex-1 min-h-0 overflow-hidden">
         <ScrollPage ref={mainRef} footer={<PageScrollFooter />}>
           {renderPage()}
@@ -129,4 +156,8 @@ export default function PublicSite({
       </main>
     </div>
   );
+}
+
+export default function PublicSite(props: PublicSiteProps) {
+  return <PublicSiteFrame {...props} />;
 }

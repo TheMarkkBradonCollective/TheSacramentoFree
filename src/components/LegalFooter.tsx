@@ -1,6 +1,8 @@
 import { FileText, Shield } from 'lucide-react';
-import { PRIVACY, SITE, TERMS } from '../siteContent';
+import { PRIVACY, TERMS } from '../siteContent';
 import { publicRouteHref } from '../public/routes';
+import { useBrand } from '../preview/useBrand';
+import { NEWSPAPER } from '../preview/newspaperBrand';
 
 interface LegalFooterProps {
   className?: string;
@@ -9,6 +11,7 @@ interface LegalFooterProps {
 }
 
 export default function LegalFooter({ className = '', onOpenPrivacy, onOpenTerms }: LegalFooterProps) {
+  const { newspaper, name: brandName, tagline } = useBrand();
   const openPrivacy = () => {
     if (onOpenPrivacy) {
       onOpenPrivacy();
@@ -29,7 +32,7 @@ export default function LegalFooter({ className = '', onOpenPrivacy, onOpenTerms
     <footer className={`w-full shrink-0 ${className}`.trim()}>
       <div className="w-full border-t border-app bg-inset px-4 py-5 text-center space-y-3">
         <p className="text-[10px] text-muted leading-relaxed max-w-md mx-auto">
-          {SITE.name} is run by Markeith White. Your data is stored by Supabase. By using this app you agree to
+          {brandName} is run by Markeith White. Your data is stored by Supabase. By using this app you agree to
           our terms and privacy policy.
         </p>
 
@@ -55,8 +58,8 @@ export default function LegalFooter({ className = '', onOpenPrivacy, onOpenTerms
           </button>
         </div>
 
-        <p className="text-[10px] font-bold text-muted uppercase tracking-wider">{SITE.name}</p>
-        <p className="text-[10px] text-subtle">{SITE.tagline}</p>
+        <p className="text-[10px] font-bold text-muted uppercase tracking-wider">{brandName}</p>
+        <p className="text-[10px] text-subtle">{newspaper ? NEWSPAPER.footerByline : tagline}</p>
       </div>
     </footer>
   );

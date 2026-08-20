@@ -4,6 +4,8 @@ import { detectInstallKind } from '../../lib/installContext';
 import { isNativeApp } from '../../lib/nativePlatform';
 import type { PublicRoute } from '../../public/routes';
 import { SITE } from '../../siteContent';
+import { NEWSPAPER } from '../../preview/newspaperBrand';
+import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
 
 interface HomeDownloadButtonsProps {
   onNavigate: (route: PublicRoute) => void;
@@ -15,6 +17,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsProps) {
+  const { enabled: newspaper } = useNewspaperSkin();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
   const isStandalone = installKind === 'pwa' || installKind === 'ios-pwa';
@@ -46,7 +49,9 @@ export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsP
 
   return (
     <div className="mt-4 space-y-2">
-      <p className="text-xs font-semibold text-muted uppercase tracking-wider">Get the app</p>
+      <p className="text-xs font-semibold text-muted uppercase tracking-wider">
+        {newspaper ? 'Get the paper' : 'Get the app'}
+      </p>
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <a
           href={SITE.playStoreBetaUrl}
@@ -69,7 +74,11 @@ export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsP
           </button>
         ) : null}
       </div>
-      <p className="text-xs text-subtle leading-relaxed">{SITE.downloadHelper}</p>
+      <p className="text-xs text-subtle leading-relaxed">
+        {newspaper
+          ? SITE.downloadHelper.replaceAll('SacramentoBuyNothing', NEWSPAPER.name)
+          : SITE.downloadHelper}
+      </p>
     </div>
   );
 }

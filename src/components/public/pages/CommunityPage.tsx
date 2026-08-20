@@ -8,20 +8,26 @@ import {
 import { usePublicRoute } from '../../../public/usePublicRoute';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
+import { useBrand } from '../../../preview/useBrand';
+import { NEWSPAPER } from '../../../preview/newspaperBrand';
 
 export default function CommunityPage() {
   const { navigate } = usePublicRoute();
+  const { newspaper, copy } = useBrand();
   return (
-    <PublicPageShell title="Community" subtitle={SITE.tagline}>
+    <PublicPageShell
+      title={newspaper ? 'The community gazette' : 'Community'}
+      subtitle={newspaper ? NEWSPAPER.tagline : SITE.tagline}
+    >
       <PublicCard>
-        <h2 className="text-lg font-black text-app">{WHY_IT_MATTERS.title}</h2>
-        <p className="mt-2 text-sm text-muted font-semibold">{WHY_IT_MATTERS.intro}</p>
+        <h2 className="text-lg font-black text-app">{copy(WHY_IT_MATTERS.title)}</h2>
+        <p className="mt-2 text-sm text-muted font-semibold">{copy(WHY_IT_MATTERS.intro)}</p>
         <ul className="mt-3 text-sm text-muted space-y-1.5 font-semibold">
           {WHY_IT_MATTERS.points.map((point) => (
-            <li key={point}>{point}</li>
+            <li key={point}>{copy(point)}</li>
           ))}
         </ul>
-        <p className="mt-4 text-sm text-app font-bold">{WHY_IT_MATTERS.closing}</p>
+        <p className="mt-4 text-sm text-app font-bold">{copy(WHY_IT_MATTERS.closing)}</p>
       </PublicCard>
 
       <PublicCard>
@@ -79,7 +85,7 @@ export default function CommunityPage() {
       </PublicCard>
 
       <PublicCard>
-        <h2 className="text-lg font-black text-app">{SITE.joinCta.title}</h2>
+        <h2 className="text-lg font-black text-app">{newspaper ? 'Join the paper' : SITE.joinCta.title}</h2>
         {SITE.joinCta.lines.map((line) => (
           <p key={line} className="mt-2 text-sm text-muted font-semibold">
             {line}
@@ -90,7 +96,7 @@ export default function CommunityPage() {
           onClick={() => navigate('login')}
           className="sbn-btn sbn-btn-primary sbn-btn-sm mt-4"
         >
-          Sign in or join
+          {newspaper ? NEWSPAPER.subscribeCta : 'Sign in or join'}
         </button>
       </PublicCard>
     </PublicPageShell>

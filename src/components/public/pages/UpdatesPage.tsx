@@ -1,6 +1,7 @@
 import { UserProfile } from '../../../types';
 import UpdatesList from '../../UpdatesList';
 import PublicPageShell from '../PublicPageShell';
+import { useBrand } from '../../../preview/useBrand';
 
 interface UpdatesPageProps {
   onRequireSignIn?: () => void;
@@ -8,10 +9,11 @@ interface UpdatesPageProps {
 }
 
 export default function UpdatesPage({ onRequireSignIn, userProfile }: UpdatesPageProps) {
+  const { newspaper, copy } = useBrand();
   return (
     <PublicPageShell
-      title="App updates"
-      subtitle={`What’s new in Sacramento Buy Nothing — posted by your director. Select any update to read more.`}
+      title={newspaper ? 'Dispatches' : 'App updates'}
+      subtitle={copy(`What’s new in Sacramento Buy Nothing — posted by your director. Select any update to read more.`)}
     >
       <UpdatesList
         userProfile={userProfile}

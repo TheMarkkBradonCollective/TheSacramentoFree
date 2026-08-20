@@ -2,12 +2,18 @@ import { MapPin } from 'lucide-react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../../../types';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
+import { useNewspaperSkin } from '../../../preview/NewspaperSkinContext';
 
 export default function NeighborhoodsPage() {
+  const { enabled: newspaper } = useNewspaperSkin();
   return (
     <PublicPageShell
-      title="Sacramento neighborhoods"
-      subtitle="Neighbors from across the city and surrounding areas are welcome."
+      title={newspaper ? 'The city desk' : 'Sacramento neighborhoods'}
+      subtitle={
+        newspaper
+          ? 'Correspondents from across the city and surrounding areas are welcome.'
+          : 'Neighbors from across the city and surrounding areas are welcome.'
+      }
     >
       <PublicCard>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
