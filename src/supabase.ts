@@ -1778,7 +1778,12 @@ export async function getSupabaseMessages(chatId: string): Promise<Message[]> {
     }
 
     setSupabaseConfigurationState(true);
-    return (data || []) as Message[];
+    return (data || []).map((row) => ({
+      ...(row as Message),
+      postedAsNeighbor:
+        (row as { postedAsNeighbor?: boolean; posted_as_neighbor?: boolean }).postedAsNeighbor === true ||
+        (row as { posted_as_neighbor?: boolean }).posted_as_neighbor === true,
+    }));
   } catch (err: any) {
     console.warn('Supabase messages query failed:', err);
     handleSupabaseError(err, 'messages');
@@ -3412,7 +3417,7 @@ export async function createSupabaseMessage(
   text: string,
   senderId: string,
   messageId: string,
-  options?: { skipPush?: boolean },
+  options?: { skipPush?: boolean; postedAsNeighbor?: boolean },
 ): Promise<boolean> {
   try {
     const timeIso = new Date().toISOString();
@@ -3425,6 +3430,7 @@ export async function createSupabaseMessage(
         chatId: chatId,
         senderId: senderId,
         text: text,
+        postedAsNeighbor: options?.postedAsNeighbor === true,
         createdAt: timeIso
       });
 

@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   "chatId" TEXT NOT NULL,
   "senderId" TEXT NOT NULL,
   text TEXT NOT NULL,
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false,
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -1931,7 +1932,8 @@ CREATE TABLE IF NOT EXISTS public.app_update_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX IF NOT EXISTS app_update_comments_update_id_idx
@@ -1947,7 +1949,8 @@ CREATE TABLE IF NOT EXISTS public.help_announcement_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX IF NOT EXISTS help_announcement_comments_announcement_id_idx

@@ -312,6 +312,8 @@ export interface Message {
   senderId: string;
   text: string;
   createdAt: any;
+  /** True when staff sent while in user/neighbor mode — hide staff badge. */
+  postedAsNeighbor?: boolean;
 }
 
 export interface ItemVote {
@@ -733,6 +735,7 @@ export interface HelpAnnouncementComment {
   userNeighborhood: string;
   text: string;
   createdAt: string;
+  postedAsNeighbor?: boolean;
 }
 
 export interface AppUpdateComment {
@@ -744,6 +747,7 @@ export interface AppUpdateComment {
   userNeighborhood: string;
   text: string;
   createdAt: string;
+  postedAsNeighbor?: boolean;
 }
 
 export type DiscussionComment = Pick<

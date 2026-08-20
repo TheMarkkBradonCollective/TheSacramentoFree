@@ -1,11 +1,14 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Flag, MessageSquare, Reply, Trash2 } from 'lucide-react';
 import type { FeedPost, FeedPostCommentNode, UserProfile } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
 import { buildFeedCommentTree, submitFeedContentReport } from '../../lib/feedApi';
 import { isStaffRole } from '../../lib/roles';
+import { shouldShowStaffBadgeOnComment } from '../../lib/staffInteractionMode';
+import { getUserDisplayInfoByIds } from '../../supabase';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import ReportNeighborModal from '../ReportNeighborModal';
+import RoleBadge from '../RoleBadge';
 import { PresenceUserAvatar } from '../UserAvatar';
 import { useUserDisplayInfo } from '../../hooks/useUserDisplayInfo';
 
@@ -28,6 +31,7 @@ function CommentRow({
   setReplyText,
   onSubmitReply,
   commenterInfo,
+  commenterRoles,
 }: {
   node: FeedPostCommentNode;
   post: FeedPost;
@@ -40,11 +44,14 @@ function CommentRow({
   setReplyText: (v: string) => void;
   onSubmitReply: () => void;
   commenterInfo: Record<string, { photoURL?: string }>;
+  commenterRoles: Record<string, UserProfile['role']>;
 }) {
   const { confirm, alert } = useConfirm();
   const [reportOpen, setReportOpen] = useState(false);
   const isOwn = node.userId === userProfile.uid;
   const isStaff = isStaffRole(userProfile.role);
+  const commenterRole = commenterRoles[node.userId];
+  const commenterIsStaff = shouldShowStaffBadgeOnComment(commenterRole, node);
   const isReplying = replyTargetId === node.id;
 
   const requestStaffRemoval = async () => {
@@ -74,7 +81,9 @@ function CommentRow({
   return (
     <li className="space-y-2">
       <div
-        className="item-feed-card p-3"
+        className={`item-feed-card p-3 ${
+          commenterIsStaff ? 'border border-accent/20 bg-accent/5' : ''
+        }`}
         style={{ marginLeft: `${Math.min(node.depth, 4) * 0.75}rem` }}
       >
         <div className="flex items-start gap-2">
@@ -92,7 +101,13 @@ function CommentRow({
             />
             <div className="min-w-0">
               <span className="text-xs font-bold text-app">{node.userName}</span>
-              <span className="text-[10px] text-accent font-medium ml-1.5">{node.userNeighborhood}</span>
+              {commenterIsStaff && commenterRole ? (
+                <span className="scale-[0.8] origin-left ml-1.5">
+                  <RoleBadge role={commenterRole} />
+                </span>
+              ) : (
+                <span className="text-[10px] text-accent font-medium ml-1.5">{node.userNeighborhood}</span>
+              )}
             </div>
           </button>
           <div className="flex items-center gap-0.5 shrink-0">
@@ -174,6 +189,7 @@ function CommentRow({
                 setReplyText={setReplyText}
                 onSubmitReply={onSubmitReply}
                 commenterInfo={commenterInfo}
+                commenterRoles={commenterRoles}
               />
             </Fragment>
           ))}
@@ -202,10 +218,26 @@ export default function FeedPostComments({
   const [draft, setDraft] = useState('');
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
 
   const flat = engagement.getComments(post.id);
   const tree = buildFeedCommentTree(flat);
   const commenterInfo = useUserDisplayInfo(flat.map((comment) => comment.userId));
+
+  useEffect(() => {
+    const ids = [...new Set(flat.map((comment) => comment.userId).filter(Boolean))] as string[];
+    if (ids.length === 0) {
+      setCommenterRoles({});
+      return;
+    }
+    void getUserDisplayInfoByIds(ids).then((info) => {
+      const roles: Record<string, UserProfile['role']> = {};
+      for (const [userId, row] of Object.entries(info)) {
+        if (row.role) roles[userId] = row.role;
+      }
+      setCommenterRoles(roles);
+    });
+  }, [flat]);
 
   const submitTopLevel = async () => {
     const ok = await engagement.addComment(post.id, draft, null);
@@ -251,6 +283,7 @@ export default function FeedPostComments({
                 setReplyText={setReplyText}
                 onSubmitReply={() => void submitReply()}
                 commenterInfo={commenterInfo}
+                commenterRoles={commenterRoles}
               />
             </Fragment>
           ))}

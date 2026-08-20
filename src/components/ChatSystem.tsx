@@ -100,7 +100,7 @@ import type { GoGetSession } from '../types';
 import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
-import { isStaffRole as isSenderStaff } from '../lib/roles';
+import { commentPostedAsNeighbor, shouldShowStaffBadgeOnMessage } from '../lib/staffInteractionMode';
 import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
 import ChatListingPreview from './ChatListingPreview';
 import ChatEventPreview from './ChatEventPreview';
@@ -390,7 +390,7 @@ export default function ChatSystem({
           : `🔁 ${navigatorName} is heading to the meetup spot for "${linkedItem.title}". Open the listing to follow along.`,
         userProfile.uid,
         `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-        { skipPush: true },
+        { skipPush: true, postedAsNeighbor: commentPostedAsNeighbor(userProfile) },
       );
       void getSupabaseMessages(selectedChat!.id).then(setMessages);
     },
@@ -857,6 +857,7 @@ export default function ChatSystem({
       id: messageId,
       senderId: userProfile.uid,
       text: trimmed,
+      postedAsNeighbor: commentPostedAsNeighbor(userProfile),
       createdAt: new Date().toISOString(),
     };
 
@@ -871,6 +872,7 @@ export default function ChatSystem({
         trimmed,
         userProfile.uid,
         messageId,
+        { postedAsNeighbor: commentPostedAsNeighbor(userProfile) },
       );
       if (success) {
         return true;
@@ -1673,7 +1675,8 @@ export default function ChatSystem({
                                 >
                                   {senderLabel}
                                 </button>
-                                {isCommunity && isSenderStaff(senderInfo?.role) && (
+                                {isCommunity &&
+                                  shouldShowStaffBadgeOnMessage(senderInfo?.role, msg) && (
                                   <span className="scale-[0.75] origin-left">
                                     <RoleBadge role={senderInfo?.role} />
                                   </span>
