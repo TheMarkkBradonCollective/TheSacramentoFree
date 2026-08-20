@@ -28,7 +28,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_TYPE_FILTERS, LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_TYPE_FILTERS, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
@@ -85,13 +85,13 @@ function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string
 function feedTypeToolbarLabel(type: ListingTypeFilter): string {
   switch (type) {
     case 'all':
-      return 'Everything';
+      return 'All';
     case 'giveaway':
-      return 'Giving';
+      return 'Give';
     case 'looking':
-      return 'Looking';
+      return 'Look';
     case 'trade':
-      return 'Trading';
+      return 'Trade';
   }
 }
 
@@ -272,18 +272,6 @@ export default function ItemGrid({
       return;
     }
     if (sortBy === value) setSortBy(null);
-  };
-
-  const handleTypeSwitch = (type: ListingTypeFilter) => (checked: boolean) => {
-    if (checked) {
-      setSelectedType(type);
-      if (type !== 'all') setSelectedCategory('All Categories');
-      return;
-    }
-    if (selectedType === type) {
-      setSelectedType('all');
-      setSelectedCategory('All Categories');
-    }
   };
 
   const handleQuickPickSwitch = (pick: QuickPick) => (checked: boolean) => {
@@ -572,18 +560,6 @@ export default function ItemGrid({
                     label={label}
                     checked={sortBy === value}
                     onChange={handleSortSwitch(value)}
-                  />
-                </span>
-              ))}
-            </div>
-            <div className="grid grid-cols-3 gap-2 pt-1" id="feed_type_filter">
-              {LISTING_POST_TYPES.map((type) => (
-                <span key={type} className="contents">
-                  <FilterLabeledSwitch
-                    id={`type_${type}_switch`}
-                    label={getPostTypeFilterLabel(type)}
-                    checked={selectedType === type}
-                    onChange={handleTypeSwitch(type)}
                   />
                 </span>
               ))}
