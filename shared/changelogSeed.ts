@@ -65,6 +65,7 @@ const APK_0037_PUBLISHED_AT = '2026-08-20T16:10:00.000Z';
 const APK_0038_PUBLISHED_AT = '2026-08-20T16:35:00.000Z';
 const APK_0039_PUBLISHED_AT = '2026-08-20T16:55:00.000Z';
 const APK_0040_PUBLISHED_AT = '2026-08-20T17:15:00.000Z';
+const APK_0041_PUBLISHED_AT = '2026-08-20T17:25:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -119,6 +120,38 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0041',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0041',
+    'Notification deep-link audit, message-request inbox fix, welcome feed post copy.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0041 (versionCode 41).
+
+Since 0040:
+• Notification taps land on the right screen — feed posts, chats, listings, message requests, director alerts
+• Message-request alerts open your pending-requests inbox (not a fake chat)
+• Feed notification inbox items link to feed posts correctly
+• Welcome feed post — casual founder intro to kick off neighbor chit-chat
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase if the welcome post is not live yet.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 41
+- play-store-assets/release-notes-v0.1.0-0041.txt
+- src/lib/pushDeepLink.ts — notification URL parsing
+- src/components/UserNotificationsList.tsx — inbox tap targets
+- scripts/seed-welcome-feed-post-2026.sql — welcome post copy
+
+HISTORY
+2026-08-20 — /runit release (PRs #282–#283); Android beta 0041 built.`,
+    APK_0041_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0040',
     '2026-08-20',
@@ -1307,6 +1340,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0041',
+    '2026-08-20',
+    'New Android beta 0041 — notification deep links, welcome feed post',
+    'Taps go to the right place; message requests open inbox; welcome chit-chat post.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0041: full notification navigation audit, message-request inbox fix, welcome feed post copy.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0041.
+
+HISTORY
+2026-08-20 — Android beta 0041 /runit release (PRs #282–#283).`,
+    APK_0041_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0040',
     '2026-08-20',
