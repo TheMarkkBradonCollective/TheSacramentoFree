@@ -5260,6 +5260,11 @@ export async function setSupabaseCommunityContentVote(
     }
 
     setSupabaseConfigurationState(true);
+    if (targetType === 'feed_post') {
+      void import('./lib/pushFeedIntegration').then((m) =>
+        m.pushAfterFeedVote({ postId: targetId, voterUserId: userId, voteType }),
+      );
+    }
     return { ok: true };
   } catch {
     return { ok: false, reason: 'error' };

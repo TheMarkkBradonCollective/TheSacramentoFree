@@ -49,9 +49,9 @@ import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRs
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
-import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
+import { getPostTypeMapDetailLabel, getPostTypeMapLabel, getListingContactButtonLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
 import { pickSoonestPerEventSeries } from '../lib/eventSeries';
-import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
 function MapCreateFab({
   onOpenNewPost,
@@ -551,30 +551,58 @@ export default function SacramentoMapView({
       if (!map || !mapEl || !coords || coords.length < 2) return;
       if (!options?.force && !routeAutoFitEnabledRef.current) return;
 
-      const padding = measureMapFitPadding({
+      const measured = measureMapFitPadding({
         mapElement: mapEl,
         obstructingElements: [selectionCardRef.current],
         defaults: {
-          top: isFullScreenMobile ? 72 : 48,
-          bottom: isFullScreenMobile ? 48 : 56,
+          top: isFullScreenMobile ? 80 : 56,
+          bottom: isFullScreenMobile ? 56 : 48,
           left: 48,
           right: 56,
         },
-        margin: 20,
+        margin: 16,
       });
 
+      const cardStack = hasMapSelection ? selectionCardHeight : 0;
+      const routePreviewOnMap =
+        (routeCoordsRef.current?.length ?? 0) >= 2 && Boolean(routeEndpointsRef.current?.end);
+      const floatControls = isFullScreenMobile && hasMapSelection && !routePreviewOnMap ? 56 : 0;
+      const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 72 : 48);
+      const bottom = Math.max(measured.bottomRight[1], cardStack + floatControls + 20);
+
+      const start = userLocationRef.current ?? userLocation;
+      const dest = routeEndpointsRef.current?.end;
+      const padding = {
+        topLeft: [measured.topLeft[0], top] as [number, number],
+        bottomRight: [measured.bottomRight[0], bottom] as [number, number],
+      };
+
       isProgrammaticMapMoveRef.current = true;
-      map.fitBounds(coords, {
-        paddingTopLeft: padding.topLeft,
-        paddingBottomRight: padding.bottomRight,
-        maxZoom: 16,
-        animate: false,
-      });
+      if (start && dest) {
+        fitRoutePreviewToViewport({
+          map,
+          routeCoords: coords,
+          start,
+          end: dest,
+          padding,
+          maxZoom: 17,
+        });
+      } else {
+        const bounds = L.latLngBounds(coords);
+        if (start) bounds.extend([start.lat, start.lng]);
+        if (dest) bounds.extend([dest.lat, dest.lng]);
+        map.fitBounds(bounds, {
+          paddingTopLeft: padding.topLeft,
+          paddingBottomRight: padding.bottomRight,
+          maxZoom: 17,
+          animate: false,
+        });
+      }
       window.requestAnimationFrame(() => {
         isProgrammaticMapMoveRef.current = false;
       });
     },
-    [isFullScreenMobile],
+    [hasMapSelection, isFullScreenMobile, selectionCardHeight, userLocation],
   );
 
   const lockNavOrigin = useCallback(() => {
@@ -1176,6 +1204,10 @@ export default function SacramentoMapView({
     routeCoordsRef.current = routeCoords;
   }, [routeCoords]);
 
+  const mapRoutePreviewVisible = Boolean(
+    hasMapSelection && routeDestination && routeCoords && routeCoords.length >= 2,
+  );
+
   const liveRouteDistanceMeters = useMemo(() => {
     const here = userLocationRef.current ?? userLocation;
     if (routeCoords && here && routeCoords.length >= 2) {
@@ -1514,9 +1546,18 @@ export default function SacramentoMapView({
   useEffect(() => {
     if (!hasMapSelection || selectionCardHeight <= 0) return;
     if (!routeCoordsRef.current || routeCoordsRef.current.length < 2) return;
-    const id = window.requestAnimationFrame(() => fitRouteToAvailableView());
+    routeAutoFitEnabledRef.current = true;
+    const id = window.requestAnimationFrame(() => fitRouteToAvailableView({ force: true }));
     return () => window.cancelAnimationFrame(id);
   }, [selectionCardHeight, hasMapSelection, fitRouteToAvailableView]);
+
+  useEffect(() => {
+    if (!mapRoutePreviewVisible) return;
+    if (!routeCoordsRef.current || routeCoordsRef.current.length < 2) return;
+    routeAutoFitEnabledRef.current = true;
+    const id = window.requestAnimationFrame(() => fitRouteToAvailableView({ force: true }));
+    return () => window.cancelAnimationFrame(id);
+  }, [mapRoutePreviewVisible, fitRouteToAvailableView]);
 
   useEffect(() => {
     if (!routeDestination) {
@@ -1587,24 +1628,28 @@ export default function SacramentoMapView({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleLocateUser}
-          className={`absolute sbn-map-float-btn left-4 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
-            isLocating
-              ? 'bg-accent text-on-accent border-accent'
-              : followUser
+        {!mapRoutePreviewVisible && (
+          <button
+            type="button"
+            onClick={handleLocateUser}
+            className={`absolute sbn-map-float-btn left-4 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
+              isLocating
                 ? 'bg-accent text-on-accent border-accent'
-                : 'bg-surface text-app hover:bg-surface-hover border-app'
-          }`}
-          id="mobile_floating_locator_btn"
-          title={followUser ? 'Following your location (tap to recenter)' : 'Center on my location'}
-          aria-label={followUser ? 'Following your location, tap to recenter' : 'Center on my location'}
-        >
-          <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
-        </button>
+                : followUser
+                  ? 'bg-accent text-on-accent border-accent'
+                  : 'bg-surface text-app hover:bg-surface-hover border-app'
+            }`}
+            id="mobile_floating_locator_btn"
+            title={followUser ? 'Following your location (tap to recenter)' : 'Center on my location'}
+            aria-label={followUser ? 'Following your location, tap to recenter' : 'Center on my location'}
+          >
+            <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
+          </button>
+        )}
 
-        <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute sbn-map-float-btn right-4" />
+        {!mapRoutePreviewVisible && (
+          <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute sbn-map-float-btn right-4" />
+        )}
 
         {/* Location error toast */}
         {locationError && (
@@ -2133,25 +2178,29 @@ export default function SacramentoMapView({
           </div>
 
           {/* Center to User (Locate Me) control at the bottom under the +- */}
-          <button
-            type="button"
-            onClick={handleLocateUser}
-            className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
-              isLocating
-                ? 'bg-accent text-on-accent border-accent'
-                : followUser
-                  ? 'bg-accent/15 border-accent text-accent'
-                  : 'bg-surface/95 border-app text-app hover:bg-surface-hover hover:text-accent'
-            }`}
-            title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
-            aria-label={followUser ? 'Following your location, tap to recenter' : 'Follow my location'}
-            id="custom_locate_user_btn"
-          >
-            <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
-          </button>
+          {!mapRoutePreviewVisible && (
+            <button
+              type="button"
+              onClick={handleLocateUser}
+              className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
+                isLocating
+                  ? 'bg-accent text-on-accent border-accent'
+                  : followUser
+                    ? 'bg-accent/15 border-accent text-accent'
+                    : 'bg-surface/95 border-app text-app hover:bg-surface-hover hover:text-accent'
+              }`}
+              title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
+              aria-label={followUser ? 'Following your location, tap to recenter' : 'Follow my location'}
+              id="custom_locate_user_btn"
+            >
+              <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
+            </button>
+          )}
         </div>
 
-        <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute bottom-3 left-3 z-10" />
+        {!mapRoutePreviewVisible && (
+          <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute bottom-3 left-3 z-10" />
+        )}
 
         {/* Category Color Guide Drawer Overlay */}
         <AnimatePresence>
@@ -2507,7 +2556,7 @@ export default function SacramentoMapView({
                           ) : (
                             <>
                               <MessageSquare className="w-3 h-3" />
-                              <span>Message</span>
+                              <span>{getListingContactButtonLabel(selectedPost.type)}</span>
                             </>
                           )}
                         </button>

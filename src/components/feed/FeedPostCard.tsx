@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Flag, MessageCircle, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, Flag, MapPin, MessageSquare, Trash2 } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
 import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from '../../lib/feedReactions';
 import { isStaffRole } from '../../lib/roles';
-import FeedPostComments from './FeedPostComments';
+import { PresenceUserAvatar } from '../UserAvatar';
 import ReportNeighborModal from '../ReportNeighborModal';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
@@ -12,6 +12,7 @@ interface FeedPostCardProps {
   post: FeedPost;
   userProfile: UserProfile;
   engagement: FeedEngagementApi;
+  onViewPost?: (post: FeedPost) => void;
   onViewProfile?: (userId: string) => void;
   onDeletePost: (post: FeedPost) => void;
 }
@@ -24,182 +25,190 @@ function timeLabel(iso: string): string {
   }
 }
 
+const voteBtnClass = (active: boolean) =>
+  `flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+    active
+      ? 'bg-accent-soft border-accent text-accent'
+      : 'border-app text-muted hover:border-accent'
+  }`;
+
 export default function FeedPostCard({
   post,
   userProfile,
   engagement,
+  onViewPost,
   onViewProfile,
   onDeletePost,
 }: FeedPostCardProps) {
   const [reportOpen, setReportOpen] = useState(false);
   const isOwn = post.userId === userProfile.uid;
   const isStaff = isStaffRole(userProfile.role);
+  const canEngage = !isOwn;
   const votes = engagement.getVoteState(post.id);
   const reactions = engagement.getReactionState(post.id);
   const comments = engagement.getComments(post.id);
-  const expanded = engagement.expandedComments[post.id] ?? false;
-  const score = votes.upvotes - votes.downvotes;
+  const cover = post.imageUrls[0];
+  const extraPhotos = Math.max(0, post.imageUrls.length - 1);
 
-  const canVote = !isOwn;
   const canDelete = isOwn || isStaff;
   const canReport = !isOwn;
 
-  const reactionSummary = useMemo(() => {
-    return FEED_REACTION_EMOJI.filter((emoji) => (reactions.counts[emoji] ?? 0) > 0);
-  }, [reactions.counts]);
+  const openPost = () => onViewPost?.(post);
 
   return (
-    <article className="sbn-feed-post sbn-card overflow-hidden" id={`feed_post_${post.id}`}>
-      <header className="flex items-start gap-3 p-4 pb-2">
-        <button
-          type="button"
-          onClick={() => onViewProfile?.(post.userId)}
-          className="shrink-0"
-          disabled={!onViewProfile}
-        >
+    <article
+      className="item-feed-card sbn-feed-post overflow-hidden cursor-pointer"
+      id={`feed_post_${post.id}`}
+      onClick={openPost}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openPost();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open post by ${post.userDisplayName}`}
+    >
+      {cover ? (
+        <div className="relative aspect-[16/10] overflow-hidden bg-inset pointer-events-none">
           <img
-            src={
-              post.userPhotoURL ||
-              `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(post.userDisplayName)}`
-            }
+            src={cover}
             alt=""
-            className="w-11 h-11 rounded-full border border-app object-cover"
+            className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
           />
-        </button>
-        <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={() => onViewProfile?.(post.userId)}
-            className="text-left"
-            disabled={!onViewProfile}
-          >
-            <p className="text-sm font-bold text-app leading-tight">{post.userDisplayName}</p>
-            <p className="text-[11px] text-accent font-medium">{post.neighborhood}</p>
-          </button>
-          <p className="text-[10px] text-muted mt-0.5">{timeLabel(post.createdAt)}</p>
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0">
-          {canReport && (
-            <button
-              type="button"
-              onClick={() => setReportOpen(true)}
-              className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
-              title="Report post"
-              aria-label="Report post"
-            >
-              <Flag className="w-4 h-4" />
-            </button>
-          )}
-          {canDelete && (
-            <button
-              type="button"
-              onClick={() => void onDeletePost(post)}
-              className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
-              title="Delete post"
-              aria-label="Delete post"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+          {extraPhotos > 0 && (
+            <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
+              +{extraPhotos}
+            </span>
           )}
         </div>
-      </header>
+      ) : null}
 
-      {post.text.trim() && (
-        <div className="px-4 pb-2">
-          <p className="text-sm text-app leading-relaxed whitespace-pre-wrap">{post.text}</p>
-        </div>
-      )}
-
-      {post.imageUrls.length > 0 && (
-        <div className={`px-4 pb-3 grid gap-2 ${post.imageUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {post.imageUrls.map((url) => (
-            <img
-              key={url}
-              src={url}
-              alt=""
-              className="w-full rounded-xl border border-app object-cover max-h-80"
-              referrerPolicy="no-referrer"
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="px-4 py-2 border-t border-app flex items-center gap-3 text-xs text-muted">
-        {canVote && (
-          <div className="inline-flex items-center rounded-full border border-app overflow-hidden">
-            <button
-              type="button"
-              onClick={() => engagement.handleVote(post.id, 'up', post.userId)}
-              className={`px-2.5 py-1 hover:bg-inset ${votes.userVote === 'up' ? 'text-accent bg-accent/10' : ''}`}
-              aria-label="Upvote"
-            >
-              <ChevronUp className="w-4 h-4" />
-            </button>
-            <span className="px-1.5 font-bold tabular-nums text-app min-w-[1.5rem] text-center">{score}</span>
-            <button
-              type="button"
-              onClick={() => engagement.handleVote(post.id, 'down', post.userId)}
-              className={`px-2.5 py-1 hover:bg-inset ${votes.userVote === 'down' ? 'text-accent bg-accent/10' : ''}`}
-              aria-label="Downvote"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
+      <div className="p-3 sm:p-4">
+        <header className="flex items-start gap-2.5 pointer-events-none">
+          <PresenceUserAvatar
+            uid={post.userId}
+            src={post.userPhotoURL}
+            name={post.userDisplayName}
+            size="md"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-sm font-bold text-app leading-snug truncate">{post.userDisplayName}</p>
+            <p className="text-[10px] sm:text-xs font-medium text-muted flex items-center gap-1 mt-0.5 truncate">
+              <MapPin className="w-3 h-3 text-accent shrink-0" />
+              <span className="truncate">{post.neighborhood}</span>
+              <span className="text-subtle">·</span>
+              <span className="shrink-0">{timeLabel(post.createdAt)}</span>
+            </p>
           </div>
-        )}
-        {!canVote && (
-          <span className="font-semibold tabular-nums text-app">{score} neighbor votes</span>
-        )}
-        <button
-          type="button"
-          onClick={() => engagement.toggleComments(post.id)}
-          className="inline-flex items-center gap-1 hover:text-app"
+        </header>
+
+        {post.text.trim() ? (
+          <p className="text-sm text-app leading-relaxed whitespace-pre-wrap mt-2.5 line-clamp-4 pointer-events-none">
+            {post.text}
+          </p>
+        ) : null}
+
+        <div
+          className="space-y-2 mt-3 pt-3 border-t border-app"
+          onClick={(event) => event.stopPropagation()}
         >
-          <MessageCircle className="w-4 h-4" />
-          {comments.length}
-        </button>
-        {reactionSummary.length > 0 && (
-          <span className="ml-auto inline-flex items-center gap-0.5">
-            {reactionSummary.map((emoji) => (
-              <span key={emoji} className="text-sm" title={`${reactions.counts[emoji]} reactions`}>
-                {emoji}
-              </span>
-            ))}
-          </span>
-        )}
-      </div>
+          {canEngage ? (
+            <>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  onClick={() => engagement.handleVote(post.id, 'up', post.userId)}
+                  className={voteBtnClass(votes.userVote === 'up')}
+                  title="Upvote"
+                  aria-label="Upvote"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                  <span className="tabular-nums">{votes.upvotes}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => engagement.handleVote(post.id, 'down', post.userId)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                    votes.userVote === 'down'
+                      ? 'bg-inset border-app text-app'
+                      : 'border-app text-muted hover:border-app'
+                  }`}
+                  title="Not for me"
+                  aria-label="Downvote"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  <span className="tabular-nums">{votes.downvotes}</span>
+                </button>
+              </div>
 
-      <div className="px-4 pb-3 flex flex-wrap gap-1.5">
-        {FEED_REACTION_EMOJI.map((emoji) => {
-          const active = reactions.mine.has(emoji);
-          const count = reactions.counts[emoji] ?? 0;
-          return (
+              <div className="flex flex-wrap gap-1">
+                {FEED_REACTION_EMOJI.map((emoji) => {
+                  const active = reactions.mine.has(emoji);
+                  const count = reactions.counts[emoji] ?? 0;
+                  return (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() =>
+                        void engagement.toggleReaction(post.id, emoji as FeedReactionEmoji, post.userId)
+                      }
+                      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-sm border transition-colors ${
+                        active
+                          ? 'border-accent bg-accent-soft text-accent'
+                          : 'border-app bg-inset text-muted hover:border-accent/40'
+                      }`}
+                      aria-label={`React ${emoji}`}
+                      aria-pressed={active}
+                    >
+                      <span>{emoji}</span>
+                      {count > 0 && <span className="text-[10px] font-bold tabular-nums">{count}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
-              key={emoji}
               type="button"
-              onClick={() => void engagement.toggleReaction(post.id, emoji as FeedReactionEmoji)}
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm border transition-colors ${
-                active
-                  ? 'border-accent bg-accent/15 scale-105'
-                  : 'border-app bg-inset hover:border-accent/40'
-              }`}
-              aria-label={`React ${emoji}`}
+              onClick={openPost}
+              className={`${canEngage ? '' : 'mr-auto'} flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors`}
+              aria-label={`Comment, ${comments.length} ${comments.length === 1 ? 'comment' : 'comments'}`}
             >
-              <span>{emoji}</span>
-              {count > 0 && <span className="text-[10px] font-bold text-muted">{count}</span>}
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Comment</span>
+              <span className="tabular-nums">{comments.length}</span>
             </button>
-          );
-        })}
-      </div>
 
-      {expanded && (
-        <FeedPostComments
-          post={post}
-          userProfile={userProfile}
-          engagement={engagement}
-          onViewProfile={onViewProfile}
-        />
-      )}
+            {canReport && (
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10 ml-auto"
+                title="Report post"
+                aria-label="Report post"
+              >
+                <Flag className="w-4 h-4" />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => void onDeletePost(post)}
+                className={`p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10 ${canReport ? '' : 'ml-auto'}`}
+                title="Delete post"
+                aria-label="Delete post"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {reportOpen && (
         <ReportNeighborModal

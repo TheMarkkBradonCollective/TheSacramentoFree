@@ -104,6 +104,28 @@ export async function getFeedPosts(limit = 50): Promise<FeedPost[]> {
   }
 }
 
+export async function getFeedPostById(postId: string): Promise<FeedPost | null> {
+  try {
+    const { data, error } = await supabase
+      .from('feed_posts')
+      .select('*')
+      .eq('id', postId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (error) {
+      handleSupabaseError(error, 'feed_posts');
+      return null;
+    }
+    if (!data) return null;
+    setSupabaseConfigurationState(true);
+    return normalizeFeedPost(data as Record<string, unknown>);
+  } catch (err) {
+    handleSupabaseError(err, 'feed_posts');
+    return null;
+  }
+}
+
 export async function createFeedPost(
   profile: UserProfile,
   input: { text: string; imageFiles: File[] },
@@ -236,6 +258,15 @@ export async function createFeedPostComment(
       createdAt: comment.createdAt,
     });
     if (error) return { ok: false, errorMessage: error.message };
+    void import('./pushFeedIntegration').then((m) =>
+      m.pushAfterFeedComment({
+        id: comment.id,
+        postId: comment.postId,
+        userId: comment.userId,
+        userName: comment.userName,
+        text: comment.text,
+      }),
+    );
     return { ok: true, comment };
   } catch (err) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not post comment.' };
@@ -290,15 +321,16 @@ export async function toggleFeedPostReaction(
   if (!FEED_REACTION_EMOJI.includes(emoji)) return false;
 
   try {
-    const { data: existing } = await supabase
+    const { data: existingRows } = await supabase
       .from('feed_post_reactions')
       .select('emoji')
       .eq('postId', postId)
-      .eq('userId', userId)
-      .eq('emoji', emoji)
-      .maybeSingle();
+      .eq('userId', userId);
 
-    if (existing) {
+    const existing = existingRows ?? [];
+    const hasSame = existing.some((row) => String(row.emoji) === emoji);
+
+    if (hasSame) {
       const { error } = await supabase
         .from('feed_post_reactions')
         .delete()
@@ -308,12 +340,26 @@ export async function toggleFeedPostReaction(
       return !error;
     }
 
+    if (existing.length > 0) {
+      const { error: clearError } = await supabase
+        .from('feed_post_reactions')
+        .delete()
+        .eq('postId', postId)
+        .eq('userId', userId);
+      if (clearError) return false;
+    }
+
     const { error } = await supabase.from('feed_post_reactions').insert({
       postId,
       userId,
       emoji,
       createdAt: new Date().toISOString(),
     });
+    if (!error) {
+      void import('./pushFeedIntegration').then((m) =>
+        m.pushAfterFeedReaction({ postId, reactorUserId: userId, emoji, added: true }),
+      );
+    }
     return !error;
   } catch {
     return false;

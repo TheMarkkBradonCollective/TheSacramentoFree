@@ -7,6 +7,7 @@ import {
   getPostTypeCompletedLabel,
   getPostTypeCardColumnLabel,
   getPostTypeGridBadgeLabel,
+  getListingContactButtonLabel,
 } from '../lib/postType';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { getListingNavigateLabel } from '../lib/listingMapActions';
@@ -224,9 +225,14 @@ export default function ItemCard({
           </span>
         </button>
       ) : !isStaffViewer ? (
-        <button type="button" onClick={onMessage} aria-label="Message about this listing" className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+        <button
+          type="button"
+          onClick={onMessage}
+          aria-label={`${getListingContactButtonLabel(item.type)} about this listing`}
+          className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
+        >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline ml-1">Message</span>
+          <span className="hidden sm:inline ml-1">{getListingContactButtonLabel(item.type)}</span>
         </button>
       ) : null}
     </div>
@@ -372,7 +378,6 @@ export default function ItemCard({
           comments={comments}
           commentsExpanded={commentsExpanded}
           onVote={onVote}
-          onToggleComments={onViewDetail}
           onAddComment={onAddComment}
           onDeleteComment={onDeleteComment}
           userProfile={userProfile}

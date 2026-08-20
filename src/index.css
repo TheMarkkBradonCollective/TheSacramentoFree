@@ -1157,13 +1157,14 @@ option {
 
 /* Short pages: extend scroll height so the legal strip is below the fold. */
 .sbn-scroll-page-body--below-fold {
-  min-height: calc(100% + max(50vh, 20rem));
+  min-height: calc(100% + max(55vh, 22rem));
 }
 
 .sbn-scroll-page-content {
   flex: 0 0 auto;
   min-width: 0;
-  padding-bottom: 1rem;
+  overflow-x: hidden;
+  padding-bottom: 1.5rem;
 }
 
 .sbn-page-end-footer {
@@ -1410,14 +1411,11 @@ option {
 }
 
 .chat-thread-bg {
-  background-color: var(--color-bg);
-  background-image:
-    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--color-accent) 7%, transparent) 0%, transparent 42%),
-    radial-gradient(circle at 88% 92%, color-mix(in srgb, var(--color-accent-soft) 55%, transparent) 0%, transparent 38%);
+  background: var(--color-bg);
 }
 
 .chat-inbox-scroll {
-  padding: 0 0.75rem 1rem;
+  padding: 0.5rem 0.75rem 1rem;
 }
 
 .chat-inbox-panel {
@@ -1426,23 +1424,22 @@ option {
 
 .chat-inbox-header {
   background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
 }
 
 .chat-inbox-row {
   width: 100%;
   text-align: left;
-  padding: 0.85rem 0.95rem;
+  padding: 0;
   display: flex;
-  align-items: center;
-  gap: 0.85rem;
+  align-items: stretch;
+  gap: 0;
   border-radius: var(--radius-card);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
+  overflow: hidden;
   transition:
     background 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color 0.15s ease;
   cursor: pointer;
   margin-bottom: 0.5rem;
 }
@@ -1455,27 +1452,44 @@ option {
 .chat-inbox-row--selected {
   background: var(--color-accent-soft);
   border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.chat-inbox-row__media {
+  width: 4.25rem;
+  min-height: 4.25rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-inset);
+  border-right: 1px solid var(--color-border);
+}
+
+.chat-inbox-row__body {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .chat-inbox-request {
   margin: 0 0 0.5rem;
-  padding: 0.9rem;
+  padding: 0.85rem;
   border-radius: var(--radius-card);
   border: 1px dashed color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
   background: var(--color-surface);
 }
 
 .chat-thread-header {
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
-  backdrop-filter: blur(10px) saturate(1.15);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .chat-compose-tray {
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
 }
 
 .chat-action-chips {
@@ -1564,19 +1578,16 @@ option {
 }
 
 .sbn-feed-composer {
-  border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border));
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  max-width: 100%;
 }
 
 .sbn-feed-post {
-  transition:
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
+  transition: border-color 0.12s ease, background 0.12s ease;
 }
 
 .sbn-feed-post:hover {
-  box-shadow: 0 4px 18px color-mix(in srgb, var(--color-shadow) 45%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-border));
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
 }
 
 .sbn-btn {
@@ -2551,12 +2562,12 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 }
 
 .sbn-map-float-btn {
-  bottom: 0.5rem;
+  bottom: 0.75rem;
   z-index: 25;
 }
 
 .sbn-map-has-selection .sbn-map-float-btn {
-  bottom: calc(var(--sbn-map-card-stack, 11rem) + 0.5rem);
+  bottom: calc(var(--sbn-map-card-stack, 11rem) + 1.75rem);
 }
 
 .sbn-map-edge-top {

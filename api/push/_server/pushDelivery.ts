@@ -48,7 +48,15 @@ export type PushEventType =
   | 'go_get_completed'
   | 'go_get_cancelled'
   | 'contactless_pickup_arrived'
-  | 'contactless_pickup_left';
+  | 'contactless_pickup_left'
+  | 'feed_comment'
+  | 'feed_reaction'
+  | 'feed_upvote'
+  | 'feed_downvote'
+  | 'violation_filed'
+  | 'violation_decision'
+  | 'account_locked'
+  | 'appeal_decision';
 
 export interface PushPayload {
   title: string;
@@ -160,6 +168,14 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   go_get_cancelled: 'pickupReminders',
   contactless_pickup_arrived: 'pickupReminders',
   contactless_pickup_left: 'pickupReminders',
+  feed_comment: 'comments',
+  feed_reaction: 'comments',
+  feed_upvote: 'listingUpvotes',
+  feed_downvote: 'listingDownvotes',
+  violation_filed: 'accountUpdates',
+  violation_decision: 'accountUpdates',
+  account_locked: 'accountUpdates',
+  appeal_decision: 'accountUpdates',
 };
 
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {
@@ -338,8 +354,8 @@ function buildNotificationPayload(payload: PushPayload): string {
     title: payload.title || 'SacramentoBuyNothing',
     body,
     url: payload.url,
-    icon: '/Logo.jpeg',
-    badge: '/Logo.jpeg',
+    icon: '/notification-icon.png',
+    badge: '/notification-icon.png',
     tag: payload.tag || payload.eventType,
     eventType: payload.eventType,
     data: payload.data || {},

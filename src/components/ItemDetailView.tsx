@@ -16,6 +16,7 @@ import {
   getPostTypeBadgeClass,
   getPostTypeCompletedLabel,
   getPostTypeLabel,
+  getListingContactButtonLabel,
 } from '../lib/postType';
 import {
   extractListingImageUrls,
@@ -226,7 +227,7 @@ export default function ItemDetailView({
                 onMessage && (
                   <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
                     <MessageSquare className="w-4 h-4" />
-                    Message
+                    {getListingContactButtonLabel(item.type)}
                   </button>
                 )
               )
@@ -574,7 +575,7 @@ export default function ItemDetailView({
                 !showNeighborNavigate && (
                   <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary w-full">
                     <MessageSquare className="w-4 h-4" />
-                    Message
+                    {getListingContactButtonLabel(item.type)}
                   </button>
                 )
               )}

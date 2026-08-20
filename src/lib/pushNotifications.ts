@@ -521,7 +521,11 @@ export type PushEventType =
   | 'account_locked'
   | 'appeal_decision'
   | 'contactless_pickup_arrived'
-  | 'contactless_pickup_left';
+  | 'contactless_pickup_left'
+  | 'feed_comment'
+  | 'feed_reaction'
+  | 'feed_upvote'
+  | 'feed_downvote';
 
 export interface SendPushOptions {
   eventType: PushEventType;

@@ -31,7 +31,7 @@ export async function runPushTest(params: {
   const payload = {
     title: 'SacramentoBuyNothing',
     body: 'This is a test notification!',
-    url: '/',
+    url: '/map',
     tag: `sbn-test-push-${Date.now()}`,
     eventType: 'account_update' as const,
     data: { test: 'true' },

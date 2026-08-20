@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Camera, ImagePlus, Loader2, Send, X } from 'lucide-react';
 import type { UserProfile } from '../../types';
 import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../../lib/imageUrl';
+import { PresenceUserAvatar } from '../UserAvatar';
 
 interface FeedPostComposerProps {
   userProfile: UserProfile;
@@ -64,16 +65,16 @@ export default function FeedPostComposer({
   };
 
   return (
-    <section className="sbn-feed-composer sbn-card p-4 space-y-3" id="feed_post_composer">
-      <div className="flex items-start gap-3">
-        <img
-          src={
-            userProfile.photoURL ||
-            `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`
-          }
-          alt=""
-          className="w-10 h-10 rounded-full border border-app shrink-0 object-cover"
-          referrerPolicy="no-referrer"
+    <section className="item-feed-card sbn-feed-composer p-3 sm:p-4 space-y-3 min-w-0 overflow-hidden" id="feed_post_composer">
+      <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+        Post
+      </span>
+      <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
+        <PresenceUserAvatar
+          uid={userProfile.uid}
+          src={userProfile.photoURL}
+          name={userProfile.displayName}
+          size="md"
         />
         <div className="flex-1 min-w-0 space-y-2">
           <textarea
@@ -81,7 +82,7 @@ export default function FeedPostComposer({
             onChange={(e) => setText(e.target.value)}
             placeholder="Share a thought, photo, or both with neighbors…"
             rows={3}
-            className="sbn-input w-full text-sm resize-none min-h-[4.5rem]"
+            className="sbn-input w-full min-w-0 text-sm resize-none min-h-[4.5rem]"
             id="feed_compose_text"
           />
           {previews.length > 0 && (
@@ -102,13 +103,13 @@ export default function FeedPostComposer({
             </div>
           )}
           {err && <p className="text-xs text-red-400">{err}</p>}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
+          <div className="space-y-2 min-w-0">
+            <div className="flex flex-wrap items-center gap-1 min-w-0">
               {onCancel ? (
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-muted hover:text-app hover:bg-inset"
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:bg-inset shrink-0"
                 >
                   Cancel
                 </button>
@@ -124,17 +125,17 @@ export default function FeedPostComposer({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-app bg-inset text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:border-accent/40"
+                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl border border-app bg-inset text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:border-accent/40 shrink-0"
               >
-                <ImagePlus className="w-4 h-4" />
+                <ImagePlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Photo
               </button>
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-muted hover:text-app hover:bg-inset md:hidden"
+                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl border border-app bg-inset text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:border-accent/40 shrink-0 sm:hidden"
               >
-                <Camera className="w-4 h-4" />
+                <Camera className="w-3.5 h-3.5" />
                 Camera
               </button>
             </div>
@@ -142,7 +143,7 @@ export default function FeedPostComposer({
               type="button"
               disabled={creating || (!text.trim() && files.length === 0)}
               onClick={() => void handleSubmit()}
-              className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2.5 py-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover disabled:opacity-50"
+              className="inline-flex w-full sm:w-auto sm:ml-auto items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-3 py-2 text-xs font-bold text-on-accent hover:bg-accent-hover disabled:opacity-50 shrink-0"
               id="feed_compose_submit"
             >
               {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

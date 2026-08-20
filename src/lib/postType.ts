@@ -143,3 +143,15 @@ export function getOwnerCompletedActionLabel(type: PostType): string {
       return 'Mark traded';
   }
 }
+
+/** Primary contact CTA on listings — nudges neighbors toward requests/DMs instead of public comments. */
+export function getListingContactButtonLabel(type: PostType): string {
+  switch (type) {
+    case 'trade':
+      return 'Message';
+    case 'looking':
+    case 'giveaway':
+    default:
+      return 'Request';
+  }
+}
