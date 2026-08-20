@@ -79,6 +79,7 @@ import {
   sessionStubFromProfile,
 } from './lib/sessionCache';
 import { applyStoredGoGetPrefsToProfile } from './lib/goGetPrefs';
+import { applyStoredNavPrefsToProfile } from './lib/navPrefs';
 import { readStaffInteractionModePref } from './lib/staffModePrefs';
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
@@ -837,21 +838,24 @@ export default function App() {
       const base = profileFromAuthUser(user);
       const cached = readCachedProfile();
       if (cached?.uid === user.id) {
-        return applyStoredGoGetPrefsToProfile({
-          ...base,
-          displayName: cached.displayName || base.displayName,
-          photoURL: cached.photoURL || base.photoURL,
-          neighborhood: cached.neighborhood || base.neighborhood,
-          bio: cached.bio ?? base.bio,
-          role: cached.role ?? base.role,
-          staffInteractionMode: cached.staffInteractionMode ?? base.staffInteractionMode,
-          goGetEnabled: cached.goGetEnabled === true,
-          pickupAvailability: cached.pickupAvailability,
-          goGetRingDurationSeconds: cached.goGetRingDurationSeconds,
-          goGetRingPattern: cached.goGetRingPattern,
-        });
+        return applyStoredNavPrefsToProfile(
+          applyStoredGoGetPrefsToProfile({
+            ...base,
+            displayName: cached.displayName || base.displayName,
+            photoURL: cached.photoURL || base.photoURL,
+            neighborhood: cached.neighborhood || base.neighborhood,
+            bio: cached.bio ?? base.bio,
+            role: cached.role ?? base.role,
+            staffInteractionMode: cached.staffInteractionMode ?? base.staffInteractionMode,
+            goGetEnabled: cached.goGetEnabled === true,
+            pickupAvailability: cached.pickupAvailability,
+            goGetRingDurationSeconds: cached.goGetRingDurationSeconds,
+            goGetRingPattern: cached.goGetRingPattern,
+            navigationSettings: cached.navigationSettings,
+          }),
+        );
       }
-      return applyStoredGoGetPrefsToProfile(base);
+      return applyStoredNavPrefsToProfile(applyStoredGoGetPrefsToProfile(base));
     });
     setIsAuthLoading(false);
     setAuthBootstrapping(false);

@@ -1,12 +1,8 @@
 import type { AppPreferences, FeedViewMode, UserProfile } from '../types';
 import { upsertSupabaseProfile } from '../supabase';
 import { writeStoredGoGetPrefs, profileToStoredGoGetPrefs } from './goGetPrefs';
+import { writeStoredNavPrefs, profileToStoredNavPrefs } from './navPrefs';
 import { writeEventsViewMode, writeFeedViewMode } from './feedDisplayPrefs';
-import {
-  normalizeNavigationSettings,
-  writeNavigationSettings,
-  type NavigationSettings,
-} from './navigationSettings';
 
 const THEME_SYNC_EVENT = 'sbn-theme-sync';
 
@@ -38,10 +34,7 @@ export function mergeAppPreferences(
 
 /** Apply cloud profile prefs to this device (local caches + theme event). */
 export function applyUserPreferencesToDevice(profile: UserProfile): void {
-  if (profile.navigationSettings) {
-    writeNavigationSettings(profile.navigationSettings, { localOnly: true });
-  }
-
+  writeStoredNavPrefs(profileToStoredNavPrefs(profile));
   writeStoredGoGetPrefs(profileToStoredGoGetPrefs(profile));
 
   const prefs = normalizeAppPreferences(profile.appPreferences);
@@ -66,21 +59,6 @@ export function subscribeThemeSyncFromProfile(listener: (theme: Theme) => void):
   };
   window.addEventListener(THEME_SYNC_EVENT, onSync);
   return () => window.removeEventListener(THEME_SYNC_EVENT, onSync);
-}
-
-export async function persistUserNavigationSettings(
-  profile: UserProfile,
-  patch: Partial<NavigationSettings>,
-): Promise<{ ok: boolean; profile?: UserProfile; errorMessage?: string }> {
-  const navigationSettings = normalizeNavigationSettings({
-    ...normalizeNavigationSettings(profile.navigationSettings),
-    ...patch,
-  });
-  writeNavigationSettings(navigationSettings, { localOnly: true });
-  const updated: UserProfile = { ...profile, navigationSettings };
-  const result = await upsertSupabaseProfile(updated);
-  if (!result.ok) return result;
-  return { ok: true, profile: updated };
 }
 
 export async function persistUserAppPreferences(

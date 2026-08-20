@@ -6,6 +6,8 @@ import {
 import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './goGetRing';
 import { normalizePickupAvailability } from './pickupAvailability';
 import { clearStoredGoGetPrefs } from './goGetPrefs';
+import { clearStoredNavPrefs } from './navPrefs';
+import { normalizeNavigationSettings } from './navigationSettings';
 import { isStaffRole, normalizeUserRole } from './roles';
 import { mergeStaffInteractionModePref, clearAllStaffInteractionModePrefs } from './staffModePrefs';
 
@@ -26,6 +28,7 @@ type CachedProfile = Pick<
   | 'pickupAvailability'
   | 'goGetRingDurationSeconds'
   | 'goGetRingPattern'
+  | 'navigationSettings'
 > & {
   role?: UserProfile['role'];
   staffInteractionMode?: UserProfile['staffInteractionMode'];
@@ -54,6 +57,7 @@ function toCachedProfile(profile: UserProfile): CachedProfile {
     pickupAvailability: normalizePickupAvailability(profile.pickupAvailability),
     goGetRingDurationSeconds: normalizeGoGetRingDuration(profile.goGetRingDurationSeconds),
     goGetRingPattern: normalizeGoGetRingPattern(profile.goGetRingPattern),
+    navigationSettings: normalizeNavigationSettings(profile.navigationSettings),
   };
   if (isStaffRole(profile.role)) {
     cached.role = normalizeUserRole(profile.role);
@@ -79,6 +83,7 @@ function fromCachedProfile(cached: CachedProfile): UserProfile {
     pickupAvailability: normalizePickupAvailability(cached.pickupAvailability),
     goGetRingDurationSeconds: normalizeGoGetRingDuration(cached.goGetRingDurationSeconds),
     goGetRingPattern: normalizeGoGetRingPattern(cached.goGetRingPattern),
+    navigationSettings: normalizeNavigationSettings(cached.navigationSettings),
   };
 }
 
@@ -133,6 +138,7 @@ export function clearSessionCache(): void {
     localStorage.removeItem(ITEMS_KEY);
     clearAllStaffInteractionModePrefs();
     clearStoredGoGetPrefs();
+    clearStoredNavPrefs();
   } catch {
     /* ignore */
   }

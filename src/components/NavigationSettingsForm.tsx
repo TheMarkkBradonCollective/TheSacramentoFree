@@ -186,7 +186,9 @@ export default function NavigationSettingsForm({
         />
       </div>
       <p className={`text-[10px] leading-snug ${labelClass} opacity-70`}>
-        These preferences save on this device and apply the next time you start navigation.
+        {variant === 'account'
+          ? 'Tap Save navigation settings below to store these on your account. They follow you on any device.'
+          : 'Changes here apply to this navigation session. Save in Settings to keep them on your account.'}
       </p>
     </div>
   );

@@ -1,13 +1,13 @@
 import { Navigation2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { UserProfile } from '../types';
-import { persistUserNavigationSettings } from '../lib/appPreferences';
 import NavigationSettingsForm from './NavigationSettingsForm';
 import {
-  readNavigationSettings,
-  subscribeNavigationSettings,
-  type NavigationSettings,
-} from '../lib/navigationSettings';
+  mergeNavigationPrefsIntoProfile,
+  persistUserNavigationSettings,
+  subscribeStoredNavPrefs,
+} from '../lib/navPrefs';
+import { normalizeNavigationSettings, type NavigationSettings } from '../lib/navigationSettings';
 
 interface AccountNavigationSettingsProps {
   userProfile: UserProfile;
@@ -18,12 +18,21 @@ export default function AccountNavigationSettings({
   userProfile,
   onUpdateProfile,
 }: AccountNavigationSettingsProps) {
-  const [settings, setSettings] = useState<NavigationSettings>(() => readNavigationSettings());
+  const resolveSettings = (profile: UserProfile): NavigationSettings =>
+    normalizeNavigationSettings(mergeNavigationPrefsIntoProfile(profile).navigationSettings);
+
+  const [settings, setSettings] = useState<NavigationSettings>(() => resolveSettings(userProfile));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
-  useEffect(() => subscribeNavigationSettings(setSettings), []);
+  useEffect(() => {
+    setSettings(resolveSettings(userProfile));
+  }, [userProfile.uid, userProfile.navigationSettings]);
+
+  useEffect(() => subscribeStoredNavPrefs(userProfile.uid, (stored) => {
+    if (stored) setSettings(stored.settings);
+  }), [userProfile.uid]);
 
   const handleChange = (patch: Partial<NavigationSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }));
