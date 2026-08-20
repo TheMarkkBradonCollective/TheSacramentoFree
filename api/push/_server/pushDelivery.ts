@@ -23,6 +23,7 @@ export type PushEventType =
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
+  | 'listing_expired'
   | 'nearby_item'
   | 'nearby_request'
   | 'claim_request'
@@ -133,6 +134,7 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   listing_approved: 'listingStatus',
   listing_denied: 'listingStatus',
   listing_expiring: 'listingStatus',
+  listing_expired: 'listingStatus',
   listing_status: 'listingStatus',
   nearby_item: 'nearbyListings',
   nearby_request: 'requests',

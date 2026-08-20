@@ -87,6 +87,7 @@ ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
 
 CREATE INDEX IF NOT EXISTS items_created_at_idx ON public.items ("createdAt" DESC);
 CREATE INDEX IF NOT EXISTS items_user_id_idx ON public.items ("userId");
+CREATE INDEX IF NOT EXISTS items_expires_at_active_idx ON public.items ("expiresAt") WHERE status = 'active';
 
 -- 3. Chat rooms
 CREATE TABLE IF NOT EXISTS public.chats (
@@ -403,6 +404,8 @@ CREATE INDEX IF NOT EXISTS item_claim_requests_item_idx ON public.item_claim_req
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionType" TEXT;
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionUserId" TEXT;
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionLabel" TEXT;
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMPTZ;
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "expiryWarnedAt" TIMESTAMPTZ;
 ALTER TABLE public.items DROP CONSTRAINT IF EXISTS items_pickup_attribution_type_check;
 ALTER TABLE public.items ADD CONSTRAINT items_pickup_attribution_type_check
   CHECK (
@@ -4056,4 +4059,4 @@ ON CONFLICT (id) DO NOTHING;
 -- moderation_audit_log INSERT covers director moderation alerts and account-update
 -- pushes to suspended/banned neighbors (suspend, unsuspend, ban, unban, set_role).
 --
--- Daily cron (Vercel): /api/cron/notification-jobs — listing expiry + pickup reminders.
+-- Daily cron (Vercel): /api/cron/notification-jobs — 30-day listing expiry (warn + auto-withdraw) + pickup reminders.

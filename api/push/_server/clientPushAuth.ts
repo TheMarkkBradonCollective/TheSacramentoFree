@@ -203,7 +203,8 @@ export async function validateClientPush(
       return { ok: true };
     }
 
-    case 'listing_expiring': {
+    case 'listing_expiring':
+    case 'listing_expired': {
       const listingId = String(body.listingId || '').trim();
       if (!listingId) return { ok: false, error: 'listingId is required' };
       if (!(await verifyListingOwner(listingId, callerId))) {
