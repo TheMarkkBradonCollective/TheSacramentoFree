@@ -6,6 +6,7 @@ import {
   getSupabaseHelpAnnouncementComments,
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { useConfirm } from '../contexts/ConfirmContext';
 
 export function useHelpAnnouncementComments(
@@ -101,6 +102,7 @@ export function useHelpAnnouncementComments(
       text: text.trim(),
       createdAt: new Date().toISOString(),
       userNeighborhood: userProfile.neighborhood || 'Midtown',
+      postedAsNeighbor: commentPostedAsNeighbor(userProfile) || undefined,
     };
 
     setCommentsByAnnouncement((prev) => ({

@@ -6,6 +6,7 @@ import {
   getSupabaseAppUpdateComments,
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { useConfirm } from '../contexts/ConfirmContext';
 
 export function useAppUpdateComments(
@@ -97,6 +98,7 @@ export function useAppUpdateComments(
       text: text.trim(),
       createdAt: new Date().toISOString(),
       userNeighborhood: userProfile.neighborhood || 'Midtown',
+      postedAsNeighbor: commentPostedAsNeighbor(userProfile) || undefined,
     };
 
     setCommentsByUpdate((prev) => ({

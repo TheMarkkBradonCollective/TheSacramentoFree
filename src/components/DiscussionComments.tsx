@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Flag, MessageSquare, Trash2 } from 'lucide-react';
-import { DiscussionComment, UserProfile } from '../types';
+import type { DiscussionComment, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
+import RoleBadge from './RoleBadge';
+import { getUserDisplayInfoByIds } from '../supabase';
+import { shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
 
 interface DiscussionCommentsProps {
   entityId: string;
@@ -32,6 +35,7 @@ export default function DiscussionComments({
 }: DiscussionCommentsProps) {
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
+  const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const inputName = `${scope}Comment-${entityId}`;
   const headingId = `${scope}-comments-${entityId}`;
 
@@ -42,6 +46,21 @@ export default function DiscussionComments({
 
   const hasHiddenComments = comments.length > PREVIEW_COUNT && !showAllComments;
   const signedIn = Boolean(currentUserId);
+
+  useEffect(() => {
+    const ids = [...new Set(comments.map((comment) => comment.userId).filter(Boolean))];
+    if (ids.length === 0) {
+      setCommenterRoles({});
+      return;
+    }
+    void getUserDisplayInfoByIds(ids).then((info) => {
+      const roles: Record<string, UserProfile['role']> = {};
+      for (const [userId, row] of Object.entries(info)) {
+        if (row.role) roles[userId] = row.role;
+      }
+      setCommenterRoles(roles);
+    });
+  }, [comments]);
 
   return (
     <section className="mt-4 pt-4 border-t border-app space-y-3" aria-labelledby={headingId}>
@@ -60,9 +79,16 @@ export default function DiscussionComments({
             {visibleComments.map((comment) => {
               const isOwnComment = comment.userId === currentUserId;
               const canReport = userProfile && !isOwnComment && comment.userId !== postedByUserId;
+              const commenterRole = commenterRoles[comment.userId];
+              const commenterIsStaff = shouldShowStaffBadgeOnComment(commenterRole, comment);
 
               return (
-                <li key={comment.id} className="bg-inset rounded-xl p-3 border border-app">
+                <li
+                  key={comment.id}
+                  className={`rounded-xl p-3 border ${
+                    commenterIsStaff ? 'bg-accent/5 border-accent/20' : 'bg-inset border-app'
+                  }`}
+                >
                   <div className="flex items-start gap-2">
                     <button
                       type="button"
@@ -80,7 +106,13 @@ export default function DiscussionComments({
                         referrerPolicy="no-referrer"
                       />
                       <span className="text-xs font-bold text-app">{comment.userName}</span>
-                      <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
+                      {commenterIsStaff && commenterRole ? (
+                        <span className="scale-[0.8] origin-left">
+                          <RoleBadge role={commenterRole} />
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
+                      )}
                     </button>
                     <div className="flex items-center gap-1 shrink-0">
                       {isOwnComment && onDeleteComment && (

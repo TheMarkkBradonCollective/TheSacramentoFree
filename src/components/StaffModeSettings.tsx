@@ -64,8 +64,11 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
           <p className="text-xs font-bold text-app">{isStaffMode ? 'Staff mode' : 'User mode'}</p>
           <p className="text-[10px] text-muted mt-0.5 leading-snug">
             {isStaffMode
-              ? 'Staff tools, sidebar, and official outreach are on.'
-              : 'User mode — browse and message like any neighbor. Staff tools are hidden.'}
+              ? 'Staff tools, sidebar, and official outreach are on. New comments and messages show your staff role.'
+              : 'User mode — browse and message like any neighbor. New comments and messages use your profile name only.'}
+          </p>
+          <p className="text-[10px] text-subtle mt-1 leading-snug">
+            Whatever mode you are in when you send stays that way — switching later does not change past posts.
           </p>
         </div>
         <LabeledSwitch
