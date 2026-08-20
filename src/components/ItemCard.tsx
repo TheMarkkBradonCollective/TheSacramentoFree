@@ -4,9 +4,9 @@ import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
 import {
   getPostTypeBadgeClass,
-  getPostTypeLabel,
   getPostTypeCompletedLabel,
   getPostTypeCardColumnLabel,
+  getPostTypeGridBadgeLabel,
 } from '../lib/postType';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { getListingNavigateLabel } from '../lib/listingMapActions';
@@ -268,8 +268,10 @@ export default function ItemCard({
               </div>
             )}
             <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
-              <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[9px] py-0.5 shadow-sm`}>
-                {getPostTypeLabel(item.type)}
+              <span
+                className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[8px] px-1 py-0 leading-none whitespace-nowrap shadow-sm`}
+              >
+                {getPostTypeGridBadgeLabel(item.type)}
               </span>
               {item.status === 'completed' && (
                 <span className="sbn-badge sbn-badge-done text-[9px] py-0.5 shadow-sm">

@@ -62,6 +62,7 @@ const APK_0034_PUBLISHED_AT = '2026-08-20T14:10:00.000Z';
 const APK_0035_PUBLISHED_AT = '2026-08-20T14:55:00.000Z';
 const APK_0036_PUBLISHED_AT = '2026-08-20T15:40:00.000Z';
 const APK_0037_PUBLISHED_AT = '2026-08-20T16:10:00.000Z';
+const APK_0038_PUBLISHED_AT = '2026-08-20T16:35:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -116,6 +117,35 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0038',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0038',
+    'Feed & Chat style parity with Stuff/Events, legal footer below the fold, compact Looking tags on grid.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0038 (versionCode 38).
+
+Since 0037:
+• Feed & Chat — same toolbar/card style as Stuff and Events
+• Legal footer (privacy/terms) only appears when you scroll down on short pages
+• Stuff grid — type badges say "Looking" in a compact pill (not huge "Looking for")
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0038.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 38
+- play-store-assets/release-notes-v0.1.0-0038.txt
+- src/components/FeedView.tsx, ChatInboxHeader.tsx — page style parity
+- src/components/PageScrollFooter.tsx — footer below fold
+- src/lib/postType.ts — getPostTypeGridBadgeLabel
+
+HISTORY
+2026-08-20 — /runit release (PR #275); Android beta 0038 built.`,
+    APK_0038_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0037',
     '2026-08-20',
@@ -1209,6 +1239,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0038',
+    '2026-08-20',
+    'New Android beta 0038 — Feed/Chat polish, footer scroll, compact Looking tags',
+    'Feed & Chat match other tabs; legal footer below fold; smaller Looking badges on Stuff grid.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0038: Feed & Chat UI matches Stuff/Events, scroll-to-see legal footer, compact "Looking" grid tags.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0038.
+
+HISTORY
+2026-08-20 — Android beta 0038 /runit release (PR #275).`,
+    APK_0038_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0037',
     '2026-08-20',
