@@ -2415,6 +2415,20 @@ html.sbn-keyboard-open .sbn-mobile-nav {
   padding: 0 0.25rem;
 }
 
+/* Equal-width 5-tab footer — Feed | Stuff | Map | Events | Messages */
+.sbn-mobile-nav-bar-flat {
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+.sbn-mobile-nav-bar-flat .sbn-mobile-nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 0;
+}
+
 .sbn-mobile-nav-side {
   display: flex;
   flex: 1;

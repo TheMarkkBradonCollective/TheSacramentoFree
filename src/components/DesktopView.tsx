@@ -5,6 +5,7 @@ import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import AppSidebar from './AppSidebar';
+import FeedView from './FeedView';
 import AppTopbar from './AppTopbar';
 import DashboardRail from './DashboardRail';
 import EventsPanel from './EventsPanel';
@@ -66,7 +67,6 @@ interface DesktopViewProps {
   onOpenTerms?: () => void;
   onOpenDownload?: () => void;
   onOpenAwards?: () => void;
-  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -83,7 +83,8 @@ interface DesktopViewProps {
 }
 
 const TAB_TITLES: Record<AppTab, string> = {
-  feed: IN_APP.feedTitle,
+  feed: IN_APP.communityFeedTitle,
+  stuff: IN_APP.feedTitle,
   events: IN_APP.eventsTitle,
   map: IN_APP.mapTitle,
   chats: IN_APP.chatsTabLabel,
@@ -132,7 +133,6 @@ export default function DesktopView({
   onOpenTerms,
   onOpenDownload,
   onOpenAwards,
-  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -151,9 +151,11 @@ export default function DesktopView({
   const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
   const onStaffTab = isStaffTab(activeTab);
   const showStaffConsole = hasStaffConsoleAccess(userProfile);
-  const communityTab: AppTab = (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
+  const communityTab: AppTab = (['feed', 'stuff', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
     ? (activeTab as AppTab)
-    : 'feed';
+    : 'map';
+
+  const openAccount = () => setActiveTab('profile');
 
   const topbarAction = null;
 
@@ -182,8 +184,8 @@ export default function DesktopView({
           userProfile={userProfile}
           eyebrow={onStaffTab ? 'Staff console' : 'Community'}
           title={onStaffTab ? undefined : TAB_TITLES[communityTab]}
-          onOpenAwards={onOpenAwards ?? (() => {})}
-          awardsButtonGlow={awardsButtonGlow}
+          onOpenAccount={openAccount}
+          accountActive={activeTab === 'profile'}
           action={topbarAction}
           onToggleSidebar={showStaffConsole ? () => setSidebarCollapsed((c) => !c) : undefined}
         />
@@ -229,6 +231,18 @@ export default function DesktopView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="desktop_feed_view_root"
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
+                <div className="sbn-tablet-content max-w-2xl mx-auto w-full">
+                  <FeedView />
+                </div>
+              </ScrollPage>
+            )}
+
+            {communityTab === 'stuff' && (
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="desktop_stuff_view_root"
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                 <div className="sbn-dash-grid">

@@ -31,7 +31,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
 
   path = path.replace(/^\/+/, '');
 
-  if (path === 'feed' || path === 'events' || path === 'map' || path === 'chats' || path === 'profile') {
+  if (path === 'feed' || path === 'stuff' || path === 'events' || path === 'map' || path === 'chats' || path === 'profile') {
     return { tab: path as AppTab };
   }
 
@@ -52,7 +52,7 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   if (path === 'director/overview') return { tab: 'profile', directorOverview: true };
 
   const listingMatch = path.match(/^listing\/([^/]+)/);
-  if (listingMatch) return { tab: 'feed', listingId: listingMatch[1] };
+  if (listingMatch) return { tab: 'stuff', listingId: listingMatch[1] };
 
   const eventMatch = path.match(/^events\/([^/]+)/);
   if (eventMatch) return { tab: 'events', eventId: eventMatch[1] };

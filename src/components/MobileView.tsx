@@ -5,8 +5,9 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, CalendarDays } from 'lucide-react';
+import { Map, List, MessageSquare, CalendarDays, Newspaper } from 'lucide-react';
 import EventsPanel from './EventsPanel';
+import FeedView from './FeedView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { MAP_CONTENT_FILTERS, getMapContentFilterLabel, type MapContentFilter } from '../lib/postType';
@@ -71,7 +72,6 @@ interface MobileViewProps {
   onOpenTerms?: () => void;
   onOpenDownload?: () => void;
   onOpenAwards?: () => void;
-  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -87,16 +87,12 @@ interface MobileViewProps {
   onStartDirectMessage?: () => void;
 }
 
-const MOBILE_NAV_LEFT = [
-  { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: List },
+const MOBILE_FOOTER_NAV = [
+  { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: Newspaper },
+  { id: 'stuff' as const, label: IN_APP.stuffTabLabel, icon: List },
+  { id: 'map' as const, label: 'Map', icon: Map },
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
-] as const;
-
-const MOBILE_NAV_MAP = { id: 'map' as const, label: 'Map', icon: Map };
-
-const MOBILE_NAV_RIGHT = [
   { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
-  { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ] as const;
 
 export default function MobileView({
@@ -141,7 +137,6 @@ export default function MobileView({
   onOpenTerms,
   onOpenDownload,
   onOpenAwards,
-  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -173,10 +168,12 @@ export default function MobileView({
   // We cast activeTab back to AppTab for views that only accept AppTab.
   const setActiveTab = setActiveTabRaw;
   const communityTab = showStaffConsole
-    ? (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
+    ? (['feed', 'stuff', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
       ? (activeTab as AppTab)
-      : 'feed'
+      : 'map'
     : (activeTab as AppTab);
+
+  const openAccount = () => setActiveTab('profile');
 
   if (showStaffConsole) {
     const onStaffTab = isStaffTab(activeTab);
@@ -184,14 +181,16 @@ export default function MobileView({
     const staffTitle = onStaffTab
       ? undefined
       : communityTab === 'feed'
-        ? IN_APP.feedTitle
-        : communityTab === 'events'
-          ? IN_APP.eventsTitle
-          : communityTab === 'map'
-            ? IN_APP.mapTitle
-            : communityTab === 'chats'
-              ? IN_APP.chatsTabLabel
-              : IN_APP.profileTitle;
+        ? IN_APP.communityFeedTitle
+        : communityTab === 'stuff'
+          ? IN_APP.feedTitle
+          : communityTab === 'events'
+            ? IN_APP.eventsTitle
+            : communityTab === 'map'
+              ? IN_APP.mapTitle
+              : communityTab === 'chats'
+                ? IN_APP.chatsTabLabel
+                : IN_APP.profileTitle;
 
     return (
       <div
@@ -225,8 +224,8 @@ export default function MobileView({
             title={staffTitle}
             drawerOpen={!sidebarCollapsed}
             compactActions
-            onOpenAwards={onOpenAwards ?? (() => {})}
-            awardsButtonGlow={awardsButtonGlow}
+            onOpenAccount={openAccount}
+            accountActive={activeTab === 'profile'}
             onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
           />
 
@@ -281,6 +280,14 @@ export default function MobileView({
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
+                  <FeedView />
+                </ScrollPage>
+                <ScrollPage
+                  className={communityTab === 'stuff' ? '' : 'hidden'}
+                  aria-hidden={communityTab !== 'stuff'}
+                  contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+                >
                   <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} onOpenNewPost={onOpenNewStuff} />
                 </ScrollPage>
                 <ScrollPage
@@ -327,8 +334,8 @@ export default function MobileView({
         <div className="flex items-center gap-1 shrink-0">
           <TopbarActions
             userProfile={userProfile}
-            onOpenAwards={onOpenAwards ?? (() => {})}
-            awardsButtonGlow={awardsButtonGlow}
+            onOpenAccount={openAccount}
+            accountActive={activeTab === 'profile'}
             compact
           />
         </div>
@@ -394,8 +401,18 @@ export default function MobileView({
 
         <ScrollPage
           className={communityTab === 'feed' ? '' : 'hidden'}
-          id="mobile_directory_drawer"
+          id="mobile_feed_dock"
           aria-hidden={communityTab !== 'feed'}
+          contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+        >
+          <FeedView />
+        </ScrollPage>
+
+        <ScrollPage
+          className={communityTab === 'stuff' ? '' : 'hidden'}
+          id="mobile_directory_drawer"
+          aria-hidden={communityTab !== 'stuff'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
           footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
@@ -499,57 +516,24 @@ export default function MobileView({
       </main>
 
       <footer id="mobile_sticky_footer_nav" className={`sbn-mobile-nav${mapImmersiveNav ? ' sbn-mobile-chrome-hidden' : ''}`}>
-        <div className="sbn-mobile-nav-bar">
-          <div className="sbn-mobile-nav-side">
-            {MOBILE_NAV_LEFT.map(({ id, label, icon: Icon }) => {
-              const isActive = communityTab === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  id={`mobile_nav_${id}`}
-                  onClick={() => setActiveTab(id)}
-                  aria-label={label}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
-                >
-                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            id="mobile_nav_map"
-            onClick={() => setActiveTab(MOBILE_NAV_MAP.id)}
-            aria-label={MOBILE_NAV_MAP.label}
-            aria-current={communityTab === MOBILE_NAV_MAP.id ? 'page' : undefined}
-            className={`sbn-mobile-nav-map ${communityTab === MOBILE_NAV_MAP.id ? 'sbn-mobile-nav-map-active' : ''}`}
-          >
-            <Map className="w-6 h-6" strokeWidth={communityTab === MOBILE_NAV_MAP.id ? 2.5 : 2} />
-          </button>
-
-          <div className="sbn-mobile-nav-side">
-            {MOBILE_NAV_RIGHT.map(({ id, label, icon: Icon }) => {
-              const isActive = communityTab === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  id={`mobile_nav_${id}`}
-                  onClick={() => setActiveTab(id)}
-                  aria-label={label}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
-                >
-                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
+        <div className="sbn-mobile-nav-bar sbn-mobile-nav-bar-flat">
+          {MOBILE_FOOTER_NAV.map(({ id, label, icon: Icon }) => {
+            const isActive = communityTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                id={`mobile_nav_${id}`}
+                onClick={() => setActiveTab(id)}
+                aria-label={label}
+                aria-current={isActive ? 'page' : undefined}
+                className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
+              >
+                <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </div>
       </footer>
     </div>

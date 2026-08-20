@@ -46,7 +46,7 @@ export const PUBLIC_NAV: { route: PublicRoute; label: string }[] = [
 ];
 
 /** Authenticated app tabs — never treat these as public marketing routes. */
-const APP_TAB_PATHS = new Set(['feed', 'events', 'map', 'chats', 'profile']);
+const APP_TAB_PATHS = new Set(['feed', 'stuff', 'events', 'map', 'chats', 'profile']);
 
 export function normalizePublicPath(raw: string): string {
   return raw.replace(/^\/+/, '').split('?')[0].split('#')[0].trim().toLowerCase().replace(/\/+$/, '');
