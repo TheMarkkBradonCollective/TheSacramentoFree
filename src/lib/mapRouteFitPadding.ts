@@ -1,5 +1,7 @@
 export type MapFitPadding = {
+  /** Leaflet paddingTopLeft: [left, top] */
   topLeft: [number, number];
+  /** Leaflet paddingBottomRight: [right, bottom] */
   bottomRight: [number, number];
 };
 
@@ -39,5 +41,5 @@ export function measureMapFitPadding(options: {
     }
   }
 
-  return { topLeft: [left, top], bottomRight: [bottom, right] };
+  return { topLeft: [left, top], bottomRight: [right, bottom] };
 }

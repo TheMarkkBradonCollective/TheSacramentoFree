@@ -551,30 +551,41 @@ export default function SacramentoMapView({
       if (!map || !mapEl || !coords || coords.length < 2) return;
       if (!options?.force && !routeAutoFitEnabledRef.current) return;
 
-      const padding = measureMapFitPadding({
+      const measured = measureMapFitPadding({
         mapElement: mapEl,
         obstructingElements: [selectionCardRef.current],
         defaults: {
-          top: isFullScreenMobile ? 72 : 48,
-          bottom: isFullScreenMobile ? 48 : 56,
+          top: isFullScreenMobile ? 80 : 56,
+          bottom: isFullScreenMobile ? 56 : 48,
           left: 48,
           right: 56,
         },
-        margin: 20,
+        margin: 16,
       });
 
+      const cardStack = hasMapSelection ? selectionCardHeight : 0;
+      const floatControls = isFullScreenMobile ? 52 : 0;
+      const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 72 : 48);
+      const bottom = Math.max(measured.bottomRight[1], cardStack + floatControls + 16);
+
+      const bounds = L.latLngBounds(coords);
+      const start = userLocationRef.current ?? userLocation;
+      const dest = routeEndpointsRef.current?.end;
+      if (start) bounds.extend([start.lat, start.lng]);
+      if (dest) bounds.extend([dest.lat, dest.lng]);
+
       isProgrammaticMapMoveRef.current = true;
-      map.fitBounds(coords, {
-        paddingTopLeft: padding.topLeft,
-        paddingBottomRight: padding.bottomRight,
-        maxZoom: 16,
+      map.fitBounds(bounds, {
+        paddingTopLeft: [measured.topLeft[0], top],
+        paddingBottomRight: [measured.bottomRight[0], bottom],
+        maxZoom: 17,
         animate: false,
       });
       window.requestAnimationFrame(() => {
         isProgrammaticMapMoveRef.current = false;
       });
     },
-    [isFullScreenMobile],
+    [hasMapSelection, isFullScreenMobile, selectionCardHeight, userLocation],
   );
 
   const lockNavOrigin = useCallback(() => {
@@ -1514,7 +1525,8 @@ export default function SacramentoMapView({
   useEffect(() => {
     if (!hasMapSelection || selectionCardHeight <= 0) return;
     if (!routeCoordsRef.current || routeCoordsRef.current.length < 2) return;
-    const id = window.requestAnimationFrame(() => fitRouteToAvailableView());
+    routeAutoFitEnabledRef.current = true;
+    const id = window.requestAnimationFrame(() => fitRouteToAvailableView({ force: true }));
     return () => window.cancelAnimationFrame(id);
   }, [selectionCardHeight, hasMapSelection, fitRouteToAvailableView]);
 

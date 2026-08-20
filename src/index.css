@@ -2562,12 +2562,12 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 }
 
 .sbn-map-float-btn {
-  bottom: 0.5rem;
+  bottom: 0.75rem;
   z-index: 25;
 }
 
 .sbn-map-has-selection .sbn-map-float-btn {
-  bottom: calc(var(--sbn-map-card-stack, 11rem) + 0.5rem);
+  bottom: calc(var(--sbn-map-card-stack, 11rem) + 1.25rem);
 }
 
 .sbn-map-edge-top {
