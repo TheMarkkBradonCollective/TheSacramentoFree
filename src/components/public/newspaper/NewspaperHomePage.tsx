@@ -130,7 +130,7 @@ export default function NewspaperHomePage({
       <section className="tsf-section">
         <button type="button" onClick={() => onNavigate('gofundme')} className="tsf-notice w-full text-left group">
           <p className="tsf-kicker">{NEWSPAPER.noticesHed}</p>
-          <h2 className="tsf-section-hed">{SUPPORT.gofundmeTitle}</h2>
+          <h2 className="tsf-section-hed">Keep the presses running</h2>
           <p className="tsf-section-dek">{SUPPORT.gofundmeBlurb.replace('Sacramento Buy Nothing', NEWSPAPER.name)}</p>
           <p className="mt-2 text-xs text-subtle leading-relaxed">{SUPPORT.gofundmeCostsSummary}</p>
           <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
