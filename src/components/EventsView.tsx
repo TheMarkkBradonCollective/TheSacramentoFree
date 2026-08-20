@@ -41,12 +41,11 @@ interface EventsViewProps {
   sneakPeek?: boolean;
 }
 
-type EventTimeFilter = 'all' | 'upcoming' | 'past';
+type EventTimeFilter = 'upcoming' | 'past';
 type EventSortMode = 'soonest' | 'newest' | 'most_rsvps';
 type EventQuickPick = 'my_area' | 'with_photos' | 'has_pin' | 'im_going' | 'has_rsvps' | 'series';
 
 const TIME_FILTER_OPTIONS: { value: EventTimeFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'past', label: 'Past' },
 ];
@@ -139,8 +138,8 @@ export default function EventsView({
   sneakPeek = false,
 }: EventsViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [timeFilter, setTimeFilter] = useState<EventTimeFilter>('all');
-  const [sortBy, setSortBy] = useState<EventSortMode>('soonest');
+  const [timeFilter, setTimeFilter] = useState<EventTimeFilter | null>(null);
+  const [sortBy, setSortBy] = useState<EventSortMode | null>(null);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<EventQuickPick>>(() => new Set());
   const [viewMode, setViewMode] = useState<FeedViewMode>(() => readEventsViewMode());
@@ -186,8 +185,8 @@ export default function EventsView({
 
   const activeFilterCount = [
     searchTerm.trim() !== '',
-    sortBy !== 'soonest',
-    timeFilter !== 'all',
+    sortBy !== null,
+    timeFilter !== null,
     selectedNeighborhood !== 'All Neighborhoods',
     activeQuickPicks.size > 0,
   ].filter(Boolean).length;
@@ -196,8 +195,8 @@ export default function EventsView({
 
   const clearFilters = () => {
     setSearchTerm('');
-    setTimeFilter('all');
-    setSortBy('soonest');
+    setTimeFilter(null);
+    setSortBy(null);
     setSelectedNeighborhood('All Neighborhoods');
     setActiveQuickPicks(new Set());
   };
@@ -207,7 +206,7 @@ export default function EventsView({
       setSortBy(value);
       return;
     }
-    if (sortBy === value) setSortBy('soonest');
+    if (sortBy === value) setSortBy(null);
   };
 
   const handleTimeSwitch = (value: EventTimeFilter) => (checked: boolean) => {
@@ -215,7 +214,7 @@ export default function EventsView({
       setTimeFilter(value);
       return;
     }
-    if (timeFilter === value) setTimeFilter('all');
+    if (timeFilter === value) setTimeFilter(null);
   };
 
   const handleQuickPickSwitch = (pick: EventQuickPick) => (checked: boolean) => {
