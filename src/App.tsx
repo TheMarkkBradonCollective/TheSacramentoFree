@@ -1620,6 +1620,13 @@ export default function App() {
 
   const accountRestriction = isAccountRestricted(userProfile);
 
+  const openNewPost = () => {
+    setShowPostModal(true);
+  };
+  const openNewEvent = () => {
+    setShowPostEventModal(true);
+  };
+
   const reviewPromptEnabled =
     Boolean(userProfile) &&
     !privacyGateOpen &&
