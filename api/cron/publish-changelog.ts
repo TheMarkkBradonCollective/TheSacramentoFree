@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { secureCompare } from '../push/_server/secureSecrets';
+import { filterNews, filterUpdates } from '../../shared/changelogFilters';
 import {
   SEEDED_APP_UPDATES,
   SEEDED_HELP_ANNOUNCEMENTS,
@@ -36,14 +37,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const admin = await getSupabaseAdmin();
     const now = new Date().toISOString();
 
-    const updateRows = SEEDED_APP_UPDATES.map((row) => ({
-      ...row,
-      updatedAt: now,
-    }));
-    const newsRows = SEEDED_HELP_ANNOUNCEMENTS.map((row) => ({
-      ...row,
-      updatedAt: now,
-    }));
+    const updateRows = filterUpdates(
+      SEEDED_APP_UPDATES.map((row) => ({
+        ...row,
+        updatedAt: now,
+      })),
+    );
+    const newsRows = filterNews(
+      SEEDED_HELP_ANNOUNCEMENTS.map((row) => ({
+        ...row,
+        updatedAt: now,
+      })),
+    );
 
     const { error: updatesError } = await admin.from('app_updates').upsert(updateRows, {
       onConflict: 'id',
