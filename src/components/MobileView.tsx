@@ -12,7 +12,6 @@ import { IN_APP } from '../siteContent';
 import { MAP_CONTENT_FILTERS, getMapContentFilterLabel, type MapContentFilter } from '../lib/postType';
 import BrandLogo from './BrandLogo';
 import TopbarActions from './TopbarActions';
-import CommunityStatsBar from './CommunityStatsBar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 import { isStaffRole, roleTheme } from '../lib/roles';
@@ -282,10 +281,9 @@ export default function MobileView({
                 <ScrollPage
                   className={communityTab === 'events' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'events'}
-                  contentClassName="max-w-2xl mx-auto w-full p-4"
+                  contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <div className="sbn-page-header"><h2>{IN_APP.eventsTitle}</h2></div>
                   <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onStaffEventChat={onStaffEventChat} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
                 </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
@@ -423,16 +421,9 @@ export default function MobileView({
           className={communityTab === 'events' ? '' : 'hidden'}
           id="mobile_events_dock"
           aria-hidden={communityTab !== 'events'}
-          contentClassName="max-w-2xl mx-auto w-full px-4 pt-4"
+          contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
           footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
-            <div className="sbn-page-header">
-              <h2>{IN_APP.eventsTitle}</h2>
-              <p>
-                {IN_APP.eventsDescription} · {events.length} events
-              </p>
-            </div>
-            <CommunityStatsBar items={items} variant="compact" />
             <EventsPanel
               events={events}
               userProfile={userProfile}

@@ -9,6 +9,7 @@ import { isEventPast, resolveEventStatus } from '../lib/eventRsvp';
 import { isSeriesEvent } from '../lib/eventSeries';
 import { formatRouteDistance } from '../lib/mapRoute';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import type { FeedViewMode } from '../lib/feedDisplayPrefs';
 
 interface EventCardProps {
   event: CommunityEvent;
@@ -17,6 +18,7 @@ interface EventCardProps {
   onViewEvent: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
   commentsLocked?: boolean;
+  layout?: FeedViewMode;
   /** Upcoming dates in this event's repeat series (includes this card when upcoming). */
   seriesUpcomingCount?: number;
   /** Straight-line distance from user to event location, in meters. */
@@ -55,6 +57,7 @@ export default function EventCard({
   onViewEvent,
   onViewProfile,
   commentsLocked = false,
+  layout = 'list',
   seriesUpcomingCount,
   distanceMeters,
   onNavigate,
@@ -71,17 +74,67 @@ export default function EventCard({
   const coverImage = event.imageUrl;
   const showSeriesBadge = isSeriesEvent(event) && (seriesUpcomingCount ?? 0) > 1;
 
+  if (layout === 'grid') {
+    return (
+      <article
+        id={`event_card_${event.id}`}
+        className={`item-feed-tile ${inactive ? 'opacity-75' : ''}`}
+      >
+        <button
+          type="button"
+          onClick={() => onViewEvent(event)}
+          className="item-feed-tile__hit w-full text-left cursor-pointer"
+          aria-label={`${event.title}${distanceMeters != null ? `, ${formatRouteDistance(distanceMeters)} away` : ''}`}
+        >
+          <div className="item-feed-tile__media relative aspect-square overflow-hidden bg-inset">
+            {coverImage ? (
+              <ListingImage
+                src={coverImage}
+                alt=""
+                width={320}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Calendar className="w-7 h-7 text-subtle" aria-hidden />
+              </div>
+            )}
+            <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
+              <span className="sbn-badge sbn-badge-give text-[9px] py-0.5 shadow-sm">Event</span>
+              {showSeriesBadge && (
+                <span className="sbn-badge text-[9px] py-0.5 shadow-sm inline-flex items-center gap-0.5">
+                  <Repeat className="w-2.5 h-2.5 shrink-0" aria-hidden />
+                  {seriesUpcomingCount}
+                </span>
+              )}
+            </div>
+            {distanceMeters != null && (
+              <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <Navigation className="w-3 h-3 shrink-0" aria-hidden />
+                {formatRouteDistance(distanceMeters)}
+              </span>
+            )}
+          </div>
+          <div className="item-feed-tile__body p-2">
+            <h3 className="font-display text-xs font-bold text-app leading-snug line-clamp-2">{event.title}</h3>
+            <p className="mt-0.5 text-[10px] text-muted truncate">{event.neighborhood}</p>
+          </div>
+        </button>
+      </article>
+    );
+  }
+
   return (
     <article
       id={`event_card_${event.id}`}
-      className={`item-feed-card item-feed-card--responsive flex flex-row sm:flex-col ${inactive ? 'opacity-75' : ''}`}
+      className={`item-feed-card item-feed-card--responsive item-feed-card--list flex flex-row sm:flex-row ${inactive ? 'opacity-75' : ''}`}
     >
       <button
         type="button"
         onClick={() => onViewEvent(event)}
         className={`relative shrink-0 overflow-hidden bg-inset text-left cursor-pointer
-          w-[5.25rem] h-[5.25rem] sm:w-full sm:h-auto sm:aspect-[16/10]
-          ${!coverImage ? 'flex items-center justify-center border-r sm:border-r-0 border-app' : ''}`}
+          w-[5.25rem] h-[5.25rem] sm:w-28 sm:h-28
+          ${!coverImage ? 'flex items-center justify-center border-r border-app' : ''}`}
       >
         {coverImage ? (
           <ListingImage
