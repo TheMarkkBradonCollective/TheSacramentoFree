@@ -1,5 +1,6 @@
 import { ArrowLeft, Bookmark, Calendar, ExternalLink, LifeBuoy, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ItemPost, extractGPSCoordinates, ItemComment, ListingSubItem, UserProfile } from '../types';
 import {
   canViewerSeeExactLocation,
@@ -127,6 +128,14 @@ export default function ItemDetailView({
   }, [comments]);
 
   useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
     const refresh = debounceRealtime(() => {
       void getListingSubitems(item.id).then(setSubitems);
     }, 100);
@@ -171,14 +180,15 @@ export default function ItemDetailView({
       ).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
     : 'Recently posted';
 
-  return (
+  const panel = (
     <div
       id="item_detail_fullscreen"
-      className="sbn-app-sheet overflow-y-auto"
+      className="sbn-app-sheet flex flex-col min-h-0 font-sans"
       role="dialog"
       aria-modal="true"
     >
-      <header className="sticky top-0 z-10 sbn-glass-nav sbn-safe-top px-4 min-h-14 flex items-center gap-3">
+      <header className="sticky top-0 z-10 shrink-0 sbn-glass-nav sbn-safe-top border-b border-app">
+        <div className="px-4 min-h-14 flex items-center gap-3">
         <button
           type="button"
           onClick={onClose}
@@ -219,9 +229,11 @@ export default function ItemDetailView({
             )
           )
         ) : null}
+        </div>
       </header>
 
-      <div className="sbn-page-content pb-36">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
+      <div className="sbn-page-content pb-6">
         <ListingPhotoGallery urls={photos} title={item.title} />
 
         <div className="p-5 sm:p-6 space-y-5">
@@ -416,8 +428,9 @@ export default function ItemDetailView({
           </button>
         </div>
       </div>
+      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 sbn-glass-nav border-t border-app safe-area-pb">
+      <div className="shrink-0 p-4 sbn-glass-nav border-t border-app safe-area-pb">
         <div className="max-w-2xl mx-auto flex flex-col gap-2">
           {isOwner ? (
             <>
@@ -592,4 +605,6 @@ export default function ItemDetailView({
       </div>
     </div>
   );
+
+  return createPortal(panel, document.body);
 }
