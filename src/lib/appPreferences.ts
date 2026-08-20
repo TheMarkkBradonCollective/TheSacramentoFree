@@ -1,7 +1,7 @@
-import type { AppPreferences, FeedViewMode, UserProfile } from '../types';
-import { upsertSupabaseProfile } from '../supabase';
+import type { AppPreferences, UserProfile } from '../types';
 import { writeStoredGoGetPrefs, profileToStoredGoGetPrefs } from './goGetPrefs';
 import { writeStoredNavPrefs, profileToStoredNavPrefs } from './navPrefs';
+import { writeStoredAppPrefs, profileToStoredAppPrefs, persistUserAppPreferencesCached, mergeStoredAppPreferencesIntoProfile } from './appPrefsCache';
 import { writeEventsViewMode, writeFeedViewMode } from './feedDisplayPrefs';
 import { isStaffRole } from './roles';
 import {
@@ -9,6 +9,9 @@ import {
   normalizeStaffInteractionMode,
 } from './staffInteractionMode';
 import { writeStaffInteractionModePref } from './staffModePrefs';
+import { normalizeAppPreferences } from './appPreferencesModel';
+
+export { mergeAppPreferences, normalizeAppPreferences } from './appPreferencesModel';
 
 const THEME_SYNC_EVENT = 'sbn-theme-sync';
 
@@ -18,30 +21,11 @@ function isTheme(value: unknown): value is Theme {
   return value === 'light' || value === 'dark';
 }
 
-function isFeedViewMode(value: unknown): value is FeedViewMode {
-  return value === 'list' || value === 'grid';
-}
-
-export function normalizeAppPreferences(raw: unknown): AppPreferences {
-  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const prefs: AppPreferences = {};
-  if (isFeedViewMode(source.feedViewMode)) prefs.feedViewMode = source.feedViewMode;
-  if (isFeedViewMode(source.eventsViewMode)) prefs.eventsViewMode = source.eventsViewMode;
-  if (isTheme(source.theme)) prefs.theme = source.theme;
-  return prefs;
-}
-
-export function mergeAppPreferences(
-  current: AppPreferences | null | undefined,
-  patch: Partial<AppPreferences>,
-): AppPreferences {
-  return normalizeAppPreferences({ ...normalizeAppPreferences(current), ...patch });
-}
-
 /** Apply cloud profile prefs to this device (local caches + theme event). */
 export function applyUserPreferencesToDevice(profile: UserProfile): void {
   writeStoredNavPrefs(profileToStoredNavPrefs(profile));
   writeStoredGoGetPrefs(profileToStoredGoGetPrefs(profile));
+  writeStoredAppPrefs(profileToStoredAppPrefs(profile));
   if (isStaffRole(profile.role)) {
     writeStaffInteractionModePref(
       profile.uid,
@@ -77,10 +61,10 @@ export async function persistUserAppPreferences(
   profile: UserProfile,
   patch: Partial<AppPreferences>,
 ): Promise<{ ok: boolean; profile?: UserProfile; errorMessage?: string }> {
-  const appPreferences = mergeAppPreferences(profile.appPreferences, patch);
-  applyUserPreferencesToDevice({ ...profile, appPreferences });
-  const updated: UserProfile = { ...profile, appPreferences };
-  const result = await upsertSupabaseProfile(updated);
-  if (!result.ok) return result;
-  return { ok: true, profile: updated };
+  const result = await persistUserAppPreferencesCached(profile, patch);
+  if (!result.ok || !result.profile) return result;
+  applyUserPreferencesToDevice(result.profile);
+  return result;
 }
+
+export { mergeStoredAppPreferencesIntoProfile } from './appPrefsCache';

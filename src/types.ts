@@ -7,10 +7,44 @@ export type NearbyRadiusMiles = 0 | 5 | 10 | 25 | 50;
 
 export type FeedViewMode = 'list' | 'grid';
 
+export type EventSortFilter = 'soonest' | 'newest' | 'most_rsvps';
+export type EventTimeFilterPref = 'upcoming' | 'past';
+export type EventQuickPickFilter =
+  | 'my_area'
+  | 'with_photos'
+  | 'has_pin'
+  | 'im_going'
+  | 'has_rsvps'
+  | 'series';
+
+export interface EventsFilterPreferences {
+  sortBy?: EventSortFilter | null;
+  quickPicks?: EventQuickPickFilter[];
+  selectedNeighborhood?: string;
+  timeFilter?: EventTimeFilterPref | null;
+}
+
+export type FeedListingQuickPick = 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
+export type FeedStatusFilter = 'all' | 'active' | 'pending_pickup' | 'on_hold';
+export type FeedVoteFilter = 'all' | 'i_interested' | 'has_interest' | 'has_comments';
+
+export interface FeedFilterPreferences {
+  sortBy?: string | null;
+  quickPicks?: FeedListingQuickPick[];
+  selectedType?: 'all' | 'giveaway' | 'looking' | 'trade';
+  selectedCategory?: string;
+  selectedNeighborhood?: string;
+  selectedStatus?: FeedStatusFilter;
+  selectedVoteFilter?: FeedVoteFilter;
+  gridSortMode?: 'nearest' | 'new';
+}
+
 export interface AppPreferences {
   feedViewMode?: FeedViewMode;
   eventsViewMode?: FeedViewMode;
   theme?: 'light' | 'dark';
+  eventsFilters?: EventsFilterPreferences;
+  feedFilters?: FeedFilterPreferences;
 }
 
 export interface NotificationPreferences {

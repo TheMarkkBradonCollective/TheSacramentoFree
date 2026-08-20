@@ -7,6 +7,7 @@ import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './goGetRi
 import { normalizePickupAvailability } from './pickupAvailability';
 import { clearStoredGoGetPrefs } from './goGetPrefs';
 import { clearStoredNavPrefs } from './navPrefs';
+import { clearStoredAppPrefs } from './appPrefsCache';
 import { normalizeNavigationSettings } from './navigationSettings';
 import { isStaffRole, normalizeUserRole } from './roles';
 import { mergeStaffInteractionModePref, clearAllStaffInteractionModePrefs } from './staffModePrefs';
@@ -139,6 +140,7 @@ export function clearSessionCache(): void {
     clearAllStaffInteractionModePrefs();
     clearStoredGoGetPrefs();
     clearStoredNavPrefs();
+    clearStoredAppPrefs();
   } catch {
     /* ignore */
   }

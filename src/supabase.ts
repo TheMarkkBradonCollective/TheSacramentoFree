@@ -13,6 +13,7 @@ import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import type { AppPreferences, PickupAvailabilitySchedule } from './types';
 import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './lib/goGetRing';
 import { normalizePickupAvailability } from './lib/pickupAvailability';
+import { mergeStoredAppPreferencesIntoProfile } from './lib/appPrefsCache';
 import { mergeGoGetPrefsIntoProfile } from './lib/goGetPrefs';
 import { mergeNavigationPrefsIntoProfile } from './lib/navPrefs';
 import { mergeStaffInteractionModeIntoProfile } from './lib/staffModePrefs';
@@ -733,8 +734,10 @@ export async function upsertSupabaseProfile(
     }
 
     const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
-    const profileForSave = mergeStaffInteractionModeIntoProfile(
-      mergeNavigationPrefsIntoProfile(mergeGoGetPrefsIntoProfile(profile)),
+    const profileForSave = mergeStoredAppPreferencesIntoProfile(
+      mergeStaffInteractionModeIntoProfile(
+        mergeNavigationPrefsIntoProfile(mergeGoGetPrefsIntoProfile(profile)),
+      ),
     );
 
     const payload = {

@@ -28,6 +28,14 @@ import {
   type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
 import { persistUserAppPreferences } from '../lib/appPreferences';
+import {
+  readEventsFilterState,
+  persistUserEventsFilters,
+  writeEventsFilterStateLocally,
+  type EventQuickPickFilter,
+  type EventSortFilter,
+  type EventTimeFilterPref,
+} from '../lib/eventsFilterPrefs';
 
 interface EventsViewProps {
   events: CommunityEvent[];
@@ -46,9 +54,9 @@ interface EventsViewProps {
   belowToolbar?: React.ReactNode;
 }
 
-type EventTimeFilter = 'upcoming' | 'past';
-type EventSortMode = 'soonest' | 'newest' | 'most_rsvps';
-type EventQuickPick = 'my_area' | 'with_photos' | 'has_pin' | 'im_going' | 'has_rsvps' | 'series';
+type EventTimeFilter = EventTimeFilterPref;
+type EventSortMode = EventSortFilter;
+type EventQuickPick = EventQuickPickFilter;
 
 const SORT_OPTIONS: { value: EventSortMode; label: string }[] = [
   { value: 'soonest', label: 'Soonest' },
@@ -133,13 +141,44 @@ export default function EventsView({
   onOpenNewEvent,
   belowToolbar,
 }: EventsViewProps) {
+  const initialFilters = useMemo(() => readEventsFilterState(userProfile), [userProfile.uid]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [timeFilter, setTimeFilter] = useState<EventTimeFilter | null>(null);
-  const [sortBy, setSortBy] = useState<EventSortMode | null>(null);
-  const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
-  const [activeQuickPicks, setActiveQuickPicks] = useState<Set<EventQuickPick>>(() => new Set());
+  const [timeFilter, setTimeFilter] = useState<EventTimeFilter | null>(() => initialFilters.timeFilter);
+  const [sortBy, setSortBy] = useState<EventSortMode | null>(() => initialFilters.sortBy);
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState(() => initialFilters.selectedNeighborhood);
+  const [activeQuickPicks, setActiveQuickPicks] = useState<Set<EventQuickPick>>(
+    () => new Set(initialFilters.activeQuickPicks),
+  );
   const [viewMode, setViewMode] = useState<FeedViewMode>(() => readEventsViewMode());
   const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
+  const filtersBootstrappedRef = useRef(false);
+
+  useEffect(() => {
+    const next = readEventsFilterState(userProfile);
+    setTimeFilter(next.timeFilter);
+    setSortBy(next.sortBy);
+    setSelectedNeighborhood(next.selectedNeighborhood);
+    setActiveQuickPicks(new Set(next.activeQuickPicks));
+    filtersBootstrappedRef.current = false;
+  }, [userProfile.uid]);
+
+  useEffect(() => {
+    if (!filtersBootstrappedRef.current) {
+      filtersBootstrappedRef.current = true;
+      return;
+    }
+    const state = {
+      timeFilter,
+      sortBy,
+      selectedNeighborhood,
+      activeQuickPicks,
+    };
+    writeEventsFilterStateLocally(userProfile, state);
+    const timer = window.setTimeout(() => {
+      void persistUserEventsFilters(userProfile, state);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [timeFilter, sortBy, selectedNeighborhood, activeQuickPicks, userProfile]);
 
   // Subscribe to live GPS so we can show distance badges on event cards.
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
@@ -194,6 +233,7 @@ export default function EventsView({
     setSortBy(null);
     setSelectedNeighborhood('All Neighborhoods');
     setActiveQuickPicks(new Set());
+    setTimeFilter(null);
   };
 
   const handleSortSwitch = (value: EventSortMode) => (checked: boolean) => {
@@ -491,6 +531,7 @@ export default function EventsView({
             <span className="font-semibold text-app">{filteredEvents.length}</span> event
             {filteredEvents.length === 1 ? '' : 's'}
             {hasExtraFilters ? ' match your filters' : ''}
+            . Filter choices save to your account automatically.
           </p>
           {hasExtraFilters && (
             <button
