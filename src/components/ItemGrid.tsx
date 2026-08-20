@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
-  ArrowLeft,
   ArrowLeftRight,
   CircleDot,
   Gift,
   LayoutGrid,
   LayoutList,
+  Plus,
   Search as SearchIcon,
   MapPin,
   SlidersHorizontal,
@@ -78,16 +78,21 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
 
+function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string {
+  if (compact) return mode === 'nearest' ? 'Near' : 'New';
+  return mode === 'nearest' ? 'Nearest' : 'Newest';
+}
+
 function feedTypeToolbarLabel(type: ListingTypeFilter): string {
   switch (type) {
     case 'all':
-      return 'All types';
+      return 'All';
     case 'giveaway':
-      return 'Giving';
+      return 'Give';
     case 'looking':
-      return 'Looking';
+      return 'Look';
     case 'trade':
-      return 'Trades';
+      return 'Trade';
   }
 }
 
@@ -149,6 +154,7 @@ interface ItemGridProps {
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
+  onOpenNewPost?: () => void;
 }
 
 export default function ItemGrid({
@@ -162,6 +168,7 @@ export default function ItemGrid({
   onViewProfile,
   onRefresh,
   isLoading = false,
+  onOpenNewPost,
 }: ItemGridProps) {
   const [coordByUid, setCoordByUid] = useState<
     Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
@@ -307,14 +314,6 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set());
   };
 
-  const showBackToStuff =
-    selectedType !== 'all' || selectedCategory !== 'All Categories';
-
-  const handleBackToStuff = () => {
-    setSelectedType('all');
-    setSelectedCategory('All Categories');
-  };
-
   const cycleTypeFilter = () => {
     setSelectedType((current) => {
       const idx = LISTING_TYPE_FILTERS.indexOf(current);
@@ -394,109 +393,118 @@ export default function ItemGrid({
   return (
     <>
     <div className="space-y-3" id="item_feed_wrapper">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3" id="feed_view_mode_bar">
-        <div className="flex justify-start min-w-0">
-          {showBackToStuff ? (
-            <button
-              type="button"
-              id="feed_back_to_stuff_btn"
-              onClick={handleBackToStuff}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-              <span>Back to Stuff</span>
-            </button>
-          ) : null}
-        </div>
+      <div className="space-y-1 min-w-0" id="feed_view_mode_bar">
+        <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
+          <div className="shrink-0">
+            {onOpenNewPost ? (
+              <button
+                type="button"
+                id="feed_new_listing_btn"
+                onClick={onOpenNewPost}
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
+                aria-label="New listing"
+                title="New listing"
+              >
+                <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <span>New</span>
+              </button>
+            ) : null}
+          </div>
 
-        <div className="flex flex-col items-center gap-1 min-w-0">
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex-1 min-w-0 flex justify-center px-0.5">
+            <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0 max-w-full">
+              <button
+                type="button"
+                id="feed_sort_toggle"
+                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0"
+                aria-pressed={gridSortMode === 'nearest'}
+                aria-label={feedSortToolbarLabel(gridSortMode, false)}
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
+                <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
+                <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
+              </button>
+              <button
+                type="button"
+                id="feed_type_toggle"
+                onClick={cycleTypeFilter}
+                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 ${
+                  selectedType !== 'all'
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-app bg-inset text-app hover:border-accent/40'
+                }`}
+                aria-pressed={selectedType !== 'all'}
+              >
+                <FeedTypeToolbarIcon type={selectedType} />
+                <span>{feedTypeToolbarLabel(selectedType)}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button
               type="button"
-              id="feed_sort_toggle"
-              onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer shrink-0"
-              aria-pressed={gridSortMode === 'nearest'}
-            >
-              <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-              <span>{gridSortMode === 'nearest' ? 'Nearest' : 'Newest'}</span>
-            </button>
-            <button
-              type="button"
-              id="feed_type_toggle"
-              onClick={cycleTypeFilter}
-              className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer shrink-0 ${
-                selectedType !== 'all'
+              id="feed_filters_panel_toggle"
+              onClick={() => setFiltersPanelOpen((open) => !open)}
+              aria-expanded={filtersPanelOpen}
+              aria-label="Filters"
+              className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                filtersPanelOpen
                   ? 'border-accent bg-accent-soft text-accent'
-                  : 'border-app bg-inset text-app hover:border-accent/40'
-              }`}
-              aria-pressed={selectedType !== 'all'}
-            >
-              <FeedTypeToolbarIcon type={selectedType} />
-              <span>{feedTypeToolbarLabel(selectedType)}</span>
-            </button>
-          </div>
-          {gridSortMode === 'nearest' && !userLocation && (
-            <p className="text-[10px] text-muted text-center">Turn on location for distance sorting</p>
-          )}
-        </div>
-
-        <div className="flex items-center justify-end gap-2 shrink-0">
-          <button
-            type="button"
-            id="feed_filters_panel_toggle"
-            onClick={() => setFiltersPanelOpen((open) => !open)}
-            aria-expanded={filtersPanelOpen}
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-              filtersPanelOpen
-                ? 'border-accent bg-accent-soft text-accent'
-                : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
-            }`}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-          <div
-            className="inline-flex rounded-xl border border-app bg-inset p-0.5 shrink-0"
-            role="group"
-            aria-label="Feed view"
-            id="feed_view_mode_toggle"
-          >
-            <button
-              type="button"
-              id="feed_view_grid_btn"
-              aria-pressed={viewMode === 'grid'}
-              onClick={() => handleViewModeChange('grid')}
-              className={`inline-flex items-center justify-center gap-1.5 rounded-[0.65rem] px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                viewMode === 'grid'
-                  ? 'bg-accent text-on-accent'
-                  : 'text-muted hover:text-app hover:bg-surface-hover'
+                  : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
               }`}
             >
-              <LayoutGrid className="w-4 h-4 shrink-0" aria-hidden />
-              <span className="sr-only sm:not-sr-only">Grid</span>
+              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
+              <span className="hidden md:inline">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center leading-none">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-            <button
-              type="button"
-              id="feed_view_list_btn"
-              aria-pressed={viewMode === 'list'}
-              onClick={() => handleViewModeChange('list')}
-              className={`inline-flex items-center justify-center gap-1.5 rounded-[0.65rem] px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-accent text-on-accent'
-                  : 'text-muted hover:text-app hover:bg-surface-hover'
-              }`}
+            <div
+              className="inline-flex rounded-xl border border-app bg-inset p-0.5 shrink-0"
+              role="group"
+              aria-label="Feed view"
+              id="feed_view_mode_toggle"
             >
-              <LayoutList className="w-4 h-4 shrink-0" aria-hidden />
-              <span className="hidden sm:inline">List</span>
-            </button>
+              <button
+                type="button"
+                id="feed_view_grid_btn"
+                aria-pressed={viewMode === 'grid'}
+                aria-label="Grid view"
+                onClick={() => handleViewModeChange('grid')}
+                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-accent text-on-accent'
+                    : 'text-muted hover:text-app hover:bg-surface-hover'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4 shrink-0" aria-hidden />
+                <span className="sr-only">Grid</span>
+              </button>
+              <button
+                type="button"
+                id="feed_view_list_btn"
+                aria-pressed={viewMode === 'list'}
+                aria-label="List view"
+                onClick={() => handleViewModeChange('list')}
+                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-accent text-on-accent'
+                    : 'text-muted hover:text-app hover:bg-surface-hover'
+                }`}
+              >
+                <LayoutList className="w-4 h-4 shrink-0" aria-hidden />
+                <span className="sr-only">List</span>
+              </button>
+            </div>
           </div>
         </div>
+        {gridSortMode === 'nearest' && !userLocation && (
+          <p className="text-[10px] text-muted text-center px-1">Turn on location for distance sorting</p>
+        )}
       </div>
 
       {filtersPanelOpen && (

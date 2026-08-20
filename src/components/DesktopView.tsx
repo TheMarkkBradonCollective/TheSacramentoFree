@@ -242,6 +242,7 @@ export default function DesktopView({
                       onViewProfile={onViewProfile}
                       onRefresh={onRefresh}
                       isLoading={!itemsHydrated}
+                      onOpenNewPost={onOpenNewPost}
                     />
                   </div>
                   <DashboardRail

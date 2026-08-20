@@ -248,6 +248,7 @@ export default function TabletView({
                     onViewProfile={onViewProfile}
                     onRefresh={onRefresh}
                     isLoading={!itemsHydrated}
+                    onOpenNewPost={onOpenNewPost}
                   />
               </ScrollPage>
             )}
