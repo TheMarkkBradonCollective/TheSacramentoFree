@@ -6,6 +6,7 @@ interface ProfileHeaderButtonProps {
   active?: boolean;
   onClick: () => void;
   compact?: boolean;
+  className?: string;
 }
 
 /** Header account entry — opens settings/profile (not a footer tab). */
@@ -14,6 +15,7 @@ export default function ProfileHeaderButton({
   active = false,
   onClick,
   compact = false,
+  className = '',
 }: ProfileHeaderButtonProps) {
   const size = compact ? 'xs' : 'sm';
 
@@ -27,7 +29,7 @@ export default function ProfileHeaderButton({
       title="Account"
       className={`inline-flex shrink-0 items-center justify-center rounded-full border-2 p-0.5 transition-colors cursor-pointer ${
         active ? 'border-accent ring-2 ring-accent/30' : 'border-app hover:border-accent/50'
-      }`}
+      } ${className}`}
     >
       <PresenceUserAvatar
         uid={userProfile.uid}

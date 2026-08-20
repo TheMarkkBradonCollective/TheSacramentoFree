@@ -110,6 +110,7 @@ export function NotificationsHubButton({
       label="Notify"
       glow={shouldGlow}
       compact={compact}
+      unboxed
       title={shouldGlow ? 'You have unread notifications' : 'Notify, news, updates, and alerts'}
       ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notify, news, updates, and alerts'}
       id="notifications_hub_btn"
