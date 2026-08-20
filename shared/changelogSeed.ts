@@ -63,6 +63,7 @@ const APK_0035_PUBLISHED_AT = '2026-08-20T14:55:00.000Z';
 const APK_0036_PUBLISHED_AT = '2026-08-20T15:40:00.000Z';
 const APK_0037_PUBLISHED_AT = '2026-08-20T16:10:00.000Z';
 const APK_0038_PUBLISHED_AT = '2026-08-20T16:35:00.000Z';
+const APK_0039_PUBLISHED_AT = '2026-08-20T16:55:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -117,6 +118,40 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0039',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0039',
+    'Feed post detail page, one reaction per user, separate up/down votes, own-post engagement rules.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0039 (versionCode 39).
+
+Since 0038:
+• Feed — tap a card to open the full post; comments live on the detail page
+• One emoji reaction per neighbor (picking a new one replaces the old)
+• Upvotes and downvotes shown separately (not a combined score)
+• Your own posts hide vote/reaction buttons — neighbors engage, you comment
+• Feed cards show Comment + count only; votes and reactions on the detail page
+• Feed & Chat visual polish matching Stuff and Events
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0039.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase for the founder welcome post.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 39
+- play-store-assets/release-notes-v0.1.0-0039.txt
+- src/components/feed/FeedPostDetailView.tsx — full post overlay
+- src/components/feed/FeedPostCard.tsx — card tap + comment only
+- src/lib/feedApi.ts — single reaction replace logic
+
+HISTORY
+2026-08-20 — /runit release (PR #278); Android beta 0039 built.`,
+    APK_0039_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0038',
     '2026-08-20',
@@ -1239,6 +1274,28 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0039',
+    '2026-08-20',
+    'New Android beta 0039 — Feed post detail, engagement rules',
+    'Tap feed cards for full post; one reaction, separate votes; own posts hide vote/react controls.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0039: Feed post detail page, engagement rules (one reaction, separate up/down), own-post controls hidden, Feed/Chat polish.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase for the founder welcome post.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0039.
+
+HISTORY
+2026-08-20 — Android beta 0039 /runit release (PR #278).`,
+    APK_0039_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0038',
     '2026-08-20',
