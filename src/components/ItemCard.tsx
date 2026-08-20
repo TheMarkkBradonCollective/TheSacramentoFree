@@ -1,6 +1,6 @@
 import { Bookmark, Calendar, Eye, LifeBuoy, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { ItemComment, ItemPost, UserProfile, type PostType } from '../types';
+import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
 import {
   getPostTypeBadgeClass,
@@ -101,19 +101,22 @@ export default function ItemCard({
 
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
 
-  const listingTypeColumns: PostType[] = ['giveaway', 'looking', 'trade'];
+  const typeBadgeLabel =
+    item.status === 'completed'
+      ? getPostTypeCompletedLabel(item.type)
+      : getPostTypeCardColumnLabel(item.type);
 
   const statusDetailBadge =
     item.status === 'withdrawn' ? (
-      <span className="sbn-badge sbn-badge-withdrawn text-[10px] sm:text-xs py-0.5 col-span-3 justify-self-start">
+      <span className="sbn-badge sbn-badge-withdrawn text-[10px] sm:text-xs py-0.5">
         Withdrawn
       </span>
     ) : item.status === 'pending_pickup' ? (
-      <span className="sbn-badge sbn-badge-done text-[10px] sm:text-xs py-0.5 col-span-3 justify-self-start">
+      <span className="sbn-badge sbn-badge-done text-[10px] sm:text-xs py-0.5">
         Pending pickup
       </span>
     ) : item.status === 'on_hold' ? (
-      <span className="sbn-badge text-[10px] sm:text-xs py-0.5 col-span-3 justify-self-start">On hold</span>
+      <span className="sbn-badge text-[10px] sm:text-xs py-0.5">On hold</span>
     ) : null;
 
   const actionButtons = isOwner ? (
@@ -373,24 +376,10 @@ export default function ItemCard({
           variant="card"
         />
 
-        <div className="grid grid-cols-3 gap-1.5 mt-2" id={`item_type_row_${item.id}`}>
-          {listingTypeColumns.map((type) => {
-            const isActiveType = item.type === type;
-            const label =
-              isActiveType && item.status === 'completed'
-                ? getPostTypeCompletedLabel(type)
-                : getPostTypeCardColumnLabel(type);
-            return (
-              <span
-                key={type}
-                className={`sbn-badge text-[10px] py-1 justify-center text-center truncate ${
-                  isActiveType ? getPostTypeBadgeClass(type) : 'border border-app bg-inset text-subtle opacity-60'
-                }`}
-              >
-                {label}
-              </span>
-            );
-          })}
+        <div className="flex flex-wrap items-center gap-1.5 mt-2" id={`item_type_row_${item.id}`}>
+          <span className={`sbn-badge text-[10px] py-1 ${getPostTypeBadgeClass(item.type)}`}>
+            {typeBadgeLabel}
+          </span>
           {statusDetailBadge}
         </div>
 
