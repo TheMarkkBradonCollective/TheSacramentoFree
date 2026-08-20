@@ -58,6 +58,7 @@ const APK_0029_PUBLISHED_AT = '2026-08-20T10:40:00.000Z';
 const APK_0030_PUBLISHED_AT = '2026-08-20T11:05:00.000Z';
 const APK_0031_PUBLISHED_AT = '2026-08-20T13:10:00.000Z';
 const APK_0032_PUBLISHED_AT = '2026-08-20T13:28:00.000Z';
+const APK_0034_PUBLISHED_AT = '2026-08-20T14:10:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -113,6 +114,36 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0034',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0034',
+    'Map-only New listing flow (Stuff/Event), DM compose with role labels, listing expiry, and feed polish.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0034 (versionCode 34).
+
+Since 0033:
+• Map tab + opens unified New listing — Stuff (give/look/trade) or Event with GPS default pin
+• Messages compose: search neighbors, role labels, message requests restored
+• View neighbor profile from a listing without tapping back first
+• Completed listings removed from feed; still visible on profile history
+• Listings expire after 30 days (warning, then auto-withdraw; reset on owner edit)
+• Staff Team Management hidden on neighbor profiles in User mode
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0034.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 34
+- play-store-assets/release-notes-v0.1.0-0034.txt
+- src/components/NewListingModal.tsx — Stuff/Event toggle
+
+HISTORY
+2026-08-20 — /runit release merging PRs #258–#262; Android beta 0034 built.`,
+    APK_0034_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0033',
     '2026-08-20',
@@ -1088,6 +1119,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0034',
+    '2026-08-20',
+    'New Android beta 0034 — New listing on Map, DMs, listing expiry',
+    'Post Stuff or Events from the Map tab; compose DMs with role labels; 30-day listing expiry. Play Store: upload AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0034: unified New listing on Map, restored message requests, neighbor profile fix, feed hides completed listings, 30-day listing expiry.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0034.
+
+HISTORY
+2026-08-20 — Android beta 0034 /runit release (PRs #258–#262).`,
+    APK_0034_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0033',
     '2026-08-20',
