@@ -1,0 +1,9 @@
+Android beta v0.1.0.0040 (versionCode 40)
+
+What's new:
+• Feed cards show votes, reactions, and comments — tap for full post page
+• Push alerts when neighbors comment, react, or vote on your feed posts
+• Notification bar icon is now the hands-and-money logo (not a heart)
+• Fixed duplicate "gifted" alert when marking listings completed
+
+Download (sideload): https://www.sacramentobuynothing.com/download

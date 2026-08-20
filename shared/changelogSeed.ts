@@ -64,6 +64,7 @@ const APK_0036_PUBLISHED_AT = '2026-08-20T15:40:00.000Z';
 const APK_0037_PUBLISHED_AT = '2026-08-20T16:10:00.000Z';
 const APK_0038_PUBLISHED_AT = '2026-08-20T16:35:00.000Z';
 const APK_0039_PUBLISHED_AT = '2026-08-20T16:55:00.000Z';
+const APK_0040_PUBLISHED_AT = '2026-08-20T17:15:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -118,6 +119,38 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0040',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0040',
+    'Feed card engagement, feed push notifications, hands-and-money notification icon, listing alert fix.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0040 (versionCode 40).
+
+Since 0039:
+• Feed cards — votes, reactions, and comment count on the card; tap for full post
+• Push when someone comments, reacts, or votes on your feed post
+• Notification bar icon — hands + money logo (replaces placeholder heart)
+• No more double alert when marking a listing gifted
+
+Configure Supabase webhooks for feed_post_comments, feed_post_reactions, and community_content_votes for background push.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0040.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 40
+- play-store-assets/release-notes-v0.1.0-0040.txt
+- drawable-*/ic_stat_notification.png — logo silhouette
+- api/push/_server/feedNotify.ts — feed push handlers
+- src/components/feed/FeedPostCard.tsx — card engagement
+
+HISTORY
+2026-08-20 — /runit release (PRs #279–#281); Android beta 0040 built.`,
+    APK_0040_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0039',
     '2026-08-20',
@@ -1274,6 +1307,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0040',
+    '2026-08-20',
+    'New Android beta 0040 — feed alerts, card engagement, logo notification icon',
+    'Feed votes/reactions on cards, push for feed activity, hands-and-money status bar icon.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0040: feed card engagement, feed push notifications, correct notification bar logo, listing gifted alert fix.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0040.
+
+HISTORY
+2026-08-20 — Android beta 0040 /runit release (PRs #279–#281).`,
+    APK_0040_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0039',
     '2026-08-20',
