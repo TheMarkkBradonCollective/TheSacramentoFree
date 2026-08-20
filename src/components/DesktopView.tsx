@@ -70,6 +70,7 @@ interface DesktopViewProps {
   onOpenTerms?: () => void;
   onOpenDownload?: () => void;
   onOpenAwards?: () => void;
+  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -139,6 +140,7 @@ export default function DesktopView({
   onOpenTerms,
   onOpenDownload,
   onOpenAwards,
+  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -191,6 +193,8 @@ export default function DesktopView({
           eyebrow={onStaffTab ? 'Staff console' : 'Community'}
           title={onStaffTab ? undefined : TAB_TITLES[communityTab]}
           onOpenAccount={openAccount}
+          onOpenAwards={onOpenAwards}
+          awardsButtonGlow={awardsButtonGlow}
           accountActive={activeTab === 'profile'}
           action={topbarAction}
           onToggleSidebar={showStaffConsole ? () => setSidebarCollapsed((c) => !c) : undefined}

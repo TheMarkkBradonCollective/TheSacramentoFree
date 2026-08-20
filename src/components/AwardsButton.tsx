@@ -16,6 +16,7 @@ export default function AwardsButton({ onClick, glow = false, className = '', co
       label="Badges"
       glow={glow}
       compact={compact}
+      unboxed
       title={glow ? 'New badge waiting for you!' : 'Neighbor badges'}
       ariaLabel={glow ? 'Neighbor badges — new badge!' : 'Neighbor badges'}
       id="awards_header_btn"

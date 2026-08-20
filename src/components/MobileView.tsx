@@ -75,6 +75,7 @@ interface MobileViewProps {
   onOpenTerms?: () => void;
   onOpenDownload?: () => void;
   onOpenAwards?: () => void;
+  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -147,6 +148,7 @@ export default function MobileView({
   onOpenTerms,
   onOpenDownload,
   onOpenAwards,
+  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -235,6 +237,8 @@ export default function MobileView({
             drawerOpen={!sidebarCollapsed}
             compactActions
             onOpenAccount={openAccount}
+            onOpenAwards={onOpenAwards}
+            awardsButtonGlow={awardsButtonGlow}
             accountActive={activeTab === 'profile'}
             onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
           />
@@ -349,6 +353,8 @@ export default function MobileView({
           <TopbarActions
             userProfile={userProfile}
             onOpenAccount={openAccount}
+            onOpenAwards={onOpenAwards}
+            awardsButtonGlow={awardsButtonGlow}
             accountActive={activeTab === 'profile'}
             compact
           />

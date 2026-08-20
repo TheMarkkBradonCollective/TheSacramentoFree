@@ -2025,7 +2025,6 @@ export default function App() {
               userProfile={userProfile}
               onDeepLink={handlePushDeepLink}
               onOpenAwards={handleOpenAwards}
-              awardsGlow={awardsButtonGlow}
             >
             <GoGetRingCoordinator userProfile={userProfile} />
             <PresenceProvider userId={userProfile.uid}>
@@ -2078,6 +2077,7 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
+                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -2141,6 +2141,7 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
+                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -2204,6 +2205,7 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
+                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
