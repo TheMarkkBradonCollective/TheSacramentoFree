@@ -333,10 +333,11 @@ export default function ItemGrid({
       return feedEngagementSlice(votes.upvotes, votes.downvotes, getCommentsForPost(itemId).length);
     };
 
+    if (gridSortMode === 'nearest') {
+      return [...filtered].sort((a, b) => compareFeedItemsByDistance(a, b, getItemDistance));
+    }
+
     if (viewMode === 'grid') {
-      if (gridSortMode === 'nearest') {
-        return [...filtered].sort((a, b) => compareFeedItemsByDistance(a, b, getItemDistance));
-      }
       return [...filtered].sort((a, b) => compareFeedItems(a, b, 'new', getEngagement));
     }
 
@@ -371,24 +372,17 @@ export default function ItemGrid({
     <div className="space-y-3" id="item_feed_wrapper">
       <div className="flex items-center justify-between gap-3" id="feed_view_mode_bar">
         <div className="min-w-0">
-          {viewMode === 'grid' ? (
-            <button
-              type="button"
-              id="feed_grid_sort_toggle"
-              onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer"
-              aria-pressed={gridSortMode === 'nearest'}
-            >
-              <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-              <span>{gridSortMode === 'nearest' ? 'Nearest first' : 'Newest'}</span>
-            </button>
-          ) : (
-            <p className="text-xs text-muted">
-              <span className="font-semibold text-app">List view</span>
-              <span className="hidden sm:inline"> · sorted by {PRIMARY_FEED_SORTS.find((s) => s.value === sortBy)?.label ?? sortBy}</span>
-            </p>
-          )}
-          {viewMode === 'grid' && gridSortMode === 'nearest' && !userLocation && (
+          <button
+            type="button"
+            id="feed_sort_toggle"
+            onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer"
+            aria-pressed={gridSortMode === 'nearest'}
+          >
+            <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
+            <span>{gridSortMode === 'nearest' ? 'Nearest' : 'Newest'}</span>
+          </button>
+          {gridSortMode === 'nearest' && !userLocation && (
             <p className="text-[10px] text-muted mt-1">Turn on location for distance sorting</p>
           )}
         </div>
