@@ -392,31 +392,35 @@ export default function UserProfileView({
             <span>{userProfile.neighborhood} Sector</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 w-full">
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <Gift className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.itemsGiven ?? '—'}</p>
-              <p className="text-[10px] text-muted">Items given</p>
+          <div className="space-y-2 mt-4 w-full">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Gift className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.itemsGiven ?? '—'}</p>
+                <p className="text-[10px] text-muted">Items given</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Package className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.itemsClaimed ?? '—'}</p>
+                <p className="text-[10px] text-muted">Items claimed</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Repeat2 className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.tradesCompleted ?? '—'}</p>
+                <p className="text-[10px] text-muted">Trades</p>
+              </div>
             </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <Package className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.itemsClaimed ?? '—'}</p>
-              <p className="text-[10px] text-muted">Items claimed</p>
-            </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <Repeat2 className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.tradesCompleted ?? '—'}</p>
-              <p className="text-[10px] text-muted">Trades</p>
-            </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <ChevronUp className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.upvotesReceived ?? '—'}</p>
-              <p className="text-[10px] text-muted">Upvotes received</p>
-            </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center sm:col-span-2">
-              <ChevronDown className="w-5 h-5 text-muted mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.downvotesReceived ?? '—'}</p>
-              <p className="text-[10px] text-muted">Downvotes received</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <ChevronUp className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.upvotesReceived ?? '—'}</p>
+                <p className="text-[10px] text-muted">Upvotes received</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <ChevronDown className="w-5 h-5 text-muted mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.downvotesReceived ?? '—'}</p>
+                <p className="text-[10px] text-muted">Downvotes received</p>
+              </div>
             </div>
           </div>
 
