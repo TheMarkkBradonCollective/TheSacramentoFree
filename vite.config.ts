@@ -171,5 +171,19 @@ export default defineConfig(({mode}) => {
         : undefined,
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (id.includes('/node_modules/leaflet/')) return 'vendor-leaflet';
+            if (id.includes('/node_modules/motion/') || id.includes('/node_modules/framer-motion/')) return 'vendor-motion';
+            if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase';
+            if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/')) return 'vendor-react';
+            if (id.includes('/src/components/staff/')) return 'staff-panels';
+            return undefined;
+          },
+        },
+      },
+    },
   };
 });

@@ -5,6 +5,14 @@ export type AccountStatus = 'active' | 'suspended' | 'banned' | 'locked';
 
 export type NearbyRadiusMiles = 0 | 5 | 10 | 25 | 50;
 
+export type FeedViewMode = 'list' | 'grid';
+
+export interface AppPreferences {
+  feedViewMode?: FeedViewMode;
+  eventsViewMode?: FeedViewMode;
+  theme?: 'light' | 'dark';
+}
+
 export interface NotificationPreferences {
   enabled: boolean;
   messages: boolean;
@@ -41,6 +49,15 @@ export interface NotificationPreferences {
   followedCategories: string[];
 }
 
+export interface NavigationSettingsPreference {
+  travelMode: 'driving' | 'walking' | 'cycling';
+  voiceEnabled: boolean;
+  headingUp: boolean;
+  followAppTheme: boolean;
+  showLaneGuidance: boolean;
+  speakOnRecenter: boolean;
+}
+
 export interface UserProfile {
   uid: string;
   displayName: string;
@@ -61,6 +78,10 @@ export interface UserProfile {
   /** How long incoming Go Get rings last (10–140 seconds). */
   goGetRingDurationSeconds?: number;
   goGetRingPattern?: GoGetRingPattern;
+  /** Map/navigation prefs — synced across devices. */
+  navigationSettings?: NavigationSettingsPreference | null;
+  /** Feed layout, events layout, theme — synced across devices. */
+  appPreferences?: AppPreferences | null;
   /**
    * Staff only: `staff` = official capacity (badge, support threads, restricted neighbor flows).
    * `neighbor` = participate like a regular neighbor. Default staff when unset.
