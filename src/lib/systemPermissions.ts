@@ -1,4 +1,5 @@
 import { PushNotifications } from '@capacitor/push-notifications';
+import { getLastLivePosition, getLastLivePositionAgeMs } from './liveGeolocation';
 import { getNativePushPermissionState } from './nativePush';
 import { getPushPermissionState, refreshNativePushPermissionState } from './pushNotifications';
 import { isNativeApp } from './nativePlatform';
@@ -13,6 +14,29 @@ function mapNotificationState(state: string): SystemPermissionState {
   if (state === 'denied') return 'denied';
   if (state === 'default' || state === 'prompt') return 'prompt';
   return 'unsupported';
+}
+
+function probeGeolocationAccess(options?: PositionOptions): Promise<SystemPermissionState> {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      resolve('unsupported');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      () => resolve('granted'),
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) resolve('denied');
+        else resolve('prompt');
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 300_000,
+        timeout: 8_000,
+        ...options,
+      },
+    );
+  });
 }
 
 export async function checkNotificationPermission(): Promise<SystemPermissionState> {
@@ -41,40 +65,28 @@ export async function requestNotificationPermission(): Promise<SystemPermissionS
 export async function checkLocationPermission(): Promise<SystemPermissionState> {
   if (typeof navigator === 'undefined' || !navigator.geolocation) return 'unsupported';
 
-  if ('permissions' in navigator) {
+  const lastAge = getLastLivePositionAgeMs();
+  if (lastAge != null && lastAge < 300_000 && getLastLivePosition()) {
+    return 'granted';
+  }
+
+  // Android WebView often reports geolocation as "prompt" while GPS already works.
+  if (!isNativeApp() && 'permissions' in navigator) {
     try {
       const status = await navigator.permissions.query({ name: 'geolocation' });
-      return mapNotificationState(status.state);
+      const mapped = mapNotificationState(status.state);
+      if (mapped === 'granted' || mapped === 'denied') return mapped;
     } catch {
-      // Permissions API unavailable for geolocation on this browser — probe below.
+      // Permissions API unavailable — probe below.
     }
   }
 
-  return new Promise((resolve) => {
-    navigator.geolocation.getCurrentPosition(
-      () => resolve('granted'),
-      (error) => {
-        if (error.code === error.PERMISSION_DENIED) resolve('denied');
-        else resolve('prompt');
-      },
-      { enableHighAccuracy: false, maximumAge: 60_000, timeout: 8_000 },
-    );
-  });
+  return probeGeolocationAccess();
 }
 
 export async function requestLocationPermission(): Promise<SystemPermissionState> {
   if (typeof navigator === 'undefined' || !navigator.geolocation) return 'unsupported';
-
-  return new Promise((resolve) => {
-    navigator.geolocation.getCurrentPosition(
-      () => resolve('granted'),
-      (error) => {
-        if (error.code === error.PERMISSION_DENIED) resolve('denied');
-        else resolve('prompt');
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15_000 },
-    );
-  });
+  return probeGeolocationAccess({ enableHighAccuracy: true, maximumAge: 0, timeout: 15_000 });
 }
 
 /** Open the OS screen where neighbors can allow or revoke app permissions. */
