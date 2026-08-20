@@ -14,6 +14,8 @@ interface ChatInboxListProps {
   supportOpenTicketId: string | null;
   supportActive: boolean;
   requestBusyId: string | null;
+  emptyTitle: string;
+  emptyDescription: string;
   getFormattedChatTitle: (chat: Chat) => string;
   getRecipientInfo: (chat: Chat) => { otherId: string; otherName: string; otherPhoto: string };
   formatTime: (value: unknown) => string;
@@ -32,6 +34,8 @@ export default function ChatInboxList({
   supportOpenTicketId,
   supportActive,
   requestBusyId,
+  emptyTitle,
+  emptyDescription,
   getFormattedChatTitle,
   getRecipientInfo,
   formatTime,
@@ -55,10 +59,7 @@ export default function ChatInboxList({
           <Sparkles className="w-3.5 h-3.5" />
           Chat
         </p>
-        <ChatSectionEmptyState
-          title="No chats yet"
-          description="Browse Stuff or Events and message a neighbor from any listing, or tap New to start a chat."
-        />
+        <ChatSectionEmptyState title={emptyTitle} description={emptyDescription} />
       </div>
     );
   }
@@ -229,7 +230,11 @@ export default function ChatInboxList({
               </div>
               {ticket.status === 'open' ? (
                 <span className="shrink-0 w-2 h-2 rounded-full bg-emerald-400" title="Open" />
-              ) : null}
+              ) : (
+                <span className="shrink-0 text-[9px] font-bold uppercase text-muted" title="Closed">
+                  Closed
+                </span>
+              )}
             </div>
           </button>
         );
