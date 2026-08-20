@@ -69,6 +69,7 @@ const APK_0041_PUBLISHED_AT = '2026-08-20T17:25:00.000Z';
 const FEED_FULLSCREEN_NAV_PUBLISHED_AT = '2026-08-20T19:10:00.000Z';
 const NOTIFICATION_RELIABILITY_PUBLISHED_AT = '2026-08-20T19:12:00.000Z';
 const APK_0042_PUBLISHED_AT = '2026-08-20T19:45:00.000Z';
+const APK_0043_PUBLISHED_AT = '2026-08-20T20:30:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -123,6 +124,39 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0043',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0043',
+    'Friends, feed filters, profile tabs, chat inbox toggles, staff mode attribution, and more.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0043 (versionCode 43).
+
+Since 0042:
+• Feed filters — tap to cycle All/Text/Pictures and Everyone/Neighbors/Friends
+• Friends — send requests from profiles; see friends on profile pages
+• Chat inbox — cycle Everyone/DM/Support/Groups and All/Live/Closed/Archived
+• Profile tabs — Profile, Settings, and Account
+• Staff mode — comments and messages keep the mode you sent in
+• Profile photos save and display reliably
+• Delete confirmations before destructive actions
+• Notification reliability, feed overlay tab dismiss, header bell spacing
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0043.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 43
+- play-store-assets/release-notes-v0.1.0-0043.txt
+- scripts/supabase-migration-aug-20-2026-friend-requests.sql — friends table
+- scripts/supabase-migration-aug-20-2026-message-posted-as-neighbor.sql — staff attribution
+
+HISTORY
+2026-08-20 — /runit release (PRs #297–#308); Android beta 0043 built.`,
+    APK_0043_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_notification-reliability',
     '2026-08-20',
@@ -1421,6 +1455,28 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0043',
+    '2026-08-20',
+    'New Android beta 0043 — friends, feed filters, profile tabs',
+    'Friends feature, feed/chat filters, profile tabs, staff mode attribution, and polish.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0043: friends, feed filters, chat inbox toggles, profile tabs, delete confirms, and more.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run new Supabase migrations (friend_requests, message postedAsNeighbor) before neighbors use Friends.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0043.
+
+HISTORY
+2026-08-20 — Android beta 0043 /runit release (PRs #297–#308).`,
+    APK_0043_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0042',
     '2026-08-20',

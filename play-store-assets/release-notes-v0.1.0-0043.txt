@@ -1,0 +1,16 @@
+Android beta v0.1.0.0043 (versionCode 43)
+
+What's new:
+• Feed filters — tap to cycle All/Text/Pictures and Everyone/Neighbors/Friends
+• Friends — send requests from profiles; see your friends on profile pages
+• Chat inbox — cycle Everyone/DM/Support/Groups and All/Live/Closed/Archived
+• Profile tabs — Profile, Settings, and Account sections
+• Staff mode — comments and messages keep the mode you sent in
+• Profile photos save and display reliably across the app
+• Delete confirmations before removing comments, posts, and reviews
+• Notification reliability — feed comments, replies, and new posts
+• Feed full-screen overlay closes when you switch tabs
+• Header bell spacing and unboxed notification icon
+• News/Updates stay synced with changelog seeds
+
+Download (sideload): https://www.sacramentobuynothing.com/download
