@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, FeedPost, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
 import AppSidebar from './AppSidebar';
+import FeedView from './FeedView';
 import AppTopbar from './AppTopbar';
 import DashboardRail from './DashboardRail';
 import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
-import { isStaffRole, roleTheme } from '../lib/roles';
+import { roleTheme } from '../lib/roles';
+import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
@@ -31,11 +32,16 @@ interface DesktopViewProps {
   activeTab: AnyTab;
   setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
-  onOpenNewEvent: () => void;
+  onOpenNewStuff: () => void;
+  onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
+  onStaffEventChat?: (event: CommunityEvent) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
+  onViewFeedPost?: (post: FeedPost) => void;
+  onNavigateItem?: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
   onDeletePost?: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
@@ -44,6 +50,8 @@ interface DesktopViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialFocusMessageRequests?: boolean;
+  onClearInitialFocusMessageRequests?: () => void;
   pendingChatCompose?: PendingChatCompose | null;
   onClearPendingChatCompose?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
@@ -53,6 +61,7 @@ interface DesktopViewProps {
   itemsHydrated?: boolean;
   eventsHydrated?: boolean;
   onViewEvent: (event: CommunityEvent) => void;
+  onNavigateEvent?: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
@@ -61,7 +70,6 @@ interface DesktopViewProps {
   onOpenTerms?: () => void;
   onOpenDownload?: () => void;
   onOpenAwards?: () => void;
-  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -73,10 +81,13 @@ interface DesktopViewProps {
   onOpenChatById?: (chatId: string) => void;
   onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
+  onViewEventId?: (eventId: string) => void;
+  onStartDirectMessage?: () => void;
 }
 
 const TAB_TITLES: Record<AppTab, string> = {
-  feed: IN_APP.feedTitle,
+  feed: IN_APP.communityFeedTitle,
+  stuff: IN_APP.feedTitle,
   events: IN_APP.eventsTitle,
   map: IN_APP.mapTitle,
   chats: IN_APP.chatsTabLabel,
@@ -90,11 +101,16 @@ export default function DesktopView({
   activeTab,
   setActiveTab,
   onOpenNewPost,
+  onOpenNewStuff,
   onOpenNewEvent,
   canAccessEvents = true,
   onInitiateChat,
+  onStaffListingChat,
+  onStaffEventChat,
   onClaimSubmitted,
   onViewItem,
+  onViewFeedPost,
+  onNavigateItem,
   onRepostPost,
   onDeletePost,
   onViewProfile,
@@ -103,6 +119,8 @@ export default function DesktopView({
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialFocusMessageRequests = false,
+  onClearInitialFocusMessageRequests,
   pendingChatCompose = null,
   onClearPendingChatCompose,
   onDeleteAccount,
@@ -112,6 +130,7 @@ export default function DesktopView({
   itemsHydrated = true,
   eventsHydrated = true,
   onViewEvent,
+  onNavigateEvent,
   engagement,
   eventsEngagement,
   blockedUserIds = new Set(),
@@ -120,7 +139,6 @@ export default function DesktopView({
   onOpenTerms,
   onOpenDownload,
   onOpenAwards,
-  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -132,28 +150,22 @@ export default function DesktopView({
   onOpenChatById,
   onOpenTicketById,
   onViewListingId,
+  onViewEventId,
+  onStartDirectMessage,
 }: DesktopViewProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => isStaffRole(userProfile.role));
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => hasStaffConsoleAccess(userProfile));
   const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
   const onStaffTab = isStaffTab(activeTab);
-  const isStaff = isStaffRole(userProfile.role);
-  const communityTab: AppTab = (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
+  const showStaffConsole = hasStaffConsoleAccess(userProfile);
+  const communityTab: AppTab = (['feed', 'stuff', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
     ? (activeTab as AppTab)
-    : 'feed';
+    : 'map';
 
-  const topbarAction = !onStaffTab ? (
-    communityTab === 'feed' ? (
-      <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm" id="topbar_new_post_btn">
-        <Plus className="w-4 h-4" /> {IN_APP.postButton}
-      </button>
-    ) : communityTab === 'events' && canAccessEvents ? (
-      <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary sbn-btn-sm" id="topbar_new_event_btn">
-        <Plus className="w-4 h-4" /> {IN_APP.postEventButton}
-      </button>
-    ) : null
-  ) : null;
+  const openAccount = () => setActiveTab('profile');
 
-  const theme = roleTheme(userProfile.role);
+  const topbarAction = null;
+
+  const theme = roleTheme(profileUiRole(userProfile));
 
   return (
     <div
@@ -167,10 +179,10 @@ export default function DesktopView({
         onTabChange={setActiveTab}
         variant="expanded"
         collapsed={sidebarCollapsed}
-        onToggleCollapse={isStaff ? undefined : () => setSidebarCollapsed((c) => !c)}
-        fullyHiddenWhenCollapsed={isStaff}
+        onToggleCollapse={showStaffConsole ? undefined : () => setSidebarCollapsed((c) => !c)}
+        fullyHiddenWhenCollapsed={showStaffConsole}
         onCollapse={() => setSidebarCollapsed(true)}
-        autoCollapseOnNavigate={isStaff}
+        autoCollapseOnNavigate={showStaffConsole}
       />
 
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
@@ -178,10 +190,10 @@ export default function DesktopView({
           userProfile={userProfile}
           eyebrow={onStaffTab ? 'Staff console' : 'Community'}
           title={onStaffTab ? undefined : TAB_TITLES[communityTab]}
-          onOpenAwards={onOpenAwards ?? (() => {})}
-          awardsButtonGlow={awardsButtonGlow}
+          onOpenAccount={openAccount}
+          accountActive={activeTab === 'profile'}
           action={topbarAction}
-          onToggleSidebar={isStaff ? () => setSidebarCollapsed((c) => !c) : undefined}
+          onToggleSidebar={showStaffConsole ? () => setSidebarCollapsed((c) => !c) : undefined}
         />
 
         {onStaffTab ? (
@@ -225,6 +237,20 @@ export default function DesktopView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="desktop_feed_view_root"
+                pinToBottom
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
+                <div className="sbn-tablet-content max-w-2xl mx-auto w-full">
+                  <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onViewFeedPost={onViewFeedPost} />
+                </div>
+              </ScrollPage>
+            )}
+
+            {communityTab === 'stuff' && (
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="desktop_stuff_view_root"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                 <div className="sbn-dash-grid">
@@ -234,17 +260,18 @@ export default function DesktopView({
                       userProfile={userProfile}
                       engagement={engagement}
                       onInitiateChat={onInitiateChat}
+                      onStaffListingChat={onStaffListingChat}
                       onViewItem={onViewItem}
+                      onNavigateItem={onNavigateItem}
                       onViewProfile={onViewProfile}
                       onRefresh={onRefresh}
                       isLoading={!itemsHydrated}
+                      onOpenNewPost={onOpenNewStuff}
                     />
                   </div>
                   <DashboardRail
                     items={items}
                     userProfile={userProfile}
-                    onOpenNewPost={onOpenNewPost}
-                    onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
                     canAccessEvents={canAccessEvents}
                     onOpenAwards={onOpenAwards}
                     onViewProfile={onViewProfile}
@@ -257,6 +284,7 @@ export default function DesktopView({
               <ScrollPage
                 className="sbn-workspace-scroll"
                 id="desktop_events_view_root"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                 <div className="sbn-dash-grid">
@@ -266,16 +294,18 @@ export default function DesktopView({
                       userProfile={userProfile}
                       engagement={eventsEngagement}
                       onViewEvent={onViewEvent}
+                      onNavigateEvent={onNavigateEvent}
+                      onStaffEventChat={onStaffEventChat}
                       onViewProfile={onViewProfile}
                       onRefresh={onRefreshEvents}
                       isLoading={isEventsLoading}
+                      onOpenNewEvent={onOpenNewEvent}
+                      canAccessEvents={canAccessEvents}
                     />
                   </div>
                   <DashboardRail
                     items={items}
                     userProfile={userProfile}
-                    onOpenNewPost={onOpenNewPost}
-                    onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
                     canAccessEvents={canAccessEvents}
                     onOpenAwards={onOpenAwards}
                     onViewProfile={onViewProfile}
@@ -300,6 +330,7 @@ export default function DesktopView({
                 onViewEvent={onViewEvent}
                 onEditItem={onEditItem}
                 mapVisible={communityTab === 'map'}
+                onOpenNewPost={onOpenNewPost}
                 itemsHydrated={itemsHydrated}
                 eventsHydrated={eventsHydrated}
                 eventsEngagement={eventsEngagement}
@@ -313,6 +344,8 @@ export default function DesktopView({
                   userProfile={userProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={onClearInitialChat}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={onClearInitialFocusMessageRequests}
                   initialSupportTicketId={initialSupportTicketId}
                   onClearInitialSupportTicket={onClearInitialSupportTicket}
                   initialChatSupportView={initialChatSupportView}
@@ -322,13 +355,16 @@ export default function DesktopView({
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={onClearPendingChatCompose}
                   items={items}
+                  events={events}
                   blockedUserIds={blockedUserIds}
                   onViewProfile={onViewProfile}
                   onItemsChanged={onRefresh}
                   onOpenGoFundMe={onOpenGoFundMe}
                   onOpenPrivacy={onOpenPrivacy}
                   onOpenTerms={onOpenTerms}
-                  onStartDirectMessage={() => setActiveTab('feed')}
+                  onStartDirectMessage={onStartDirectMessage}
+                  onViewRelatedListing={onViewListingId}
+                  onViewRelatedEvent={onViewEventId}
                   className="h-full min-h-0 rounded-2xl border border-app overflow-hidden bg-surface"
                 />
               </div>
@@ -339,6 +375,7 @@ export default function DesktopView({
                 className="sbn-workspace-scroll"
                 id="desktop_profile_view_root"
                 contentClassName="max-w-4xl mx-auto px-6 py-6"
+                pinToBottom
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                   <div className="sbn-card p-6 md:p-8">

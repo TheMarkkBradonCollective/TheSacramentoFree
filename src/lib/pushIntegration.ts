@@ -305,7 +305,9 @@ export async function pushAfterItemStatusChange(
   if (!item) return;
 
   // pending_pickup uses the dedicated pickup_scheduled alert (pushAfterPendingPickup).
-  if (newStatus !== 'pending_pickup') {
+  const skipGenericStatus =
+    newStatus === 'completed' && item.type !== 'looking';
+  if (newStatus !== 'pending_pickup' && !skipGenericStatus) {
     await notifyListingStatus({
       item: { ...item, status: newStatus as ItemPost['status'] },
       statusLabel: listingStatusLabelForItem(newStatus, item.type),
@@ -382,8 +384,11 @@ export async function pushAccountStatusChange(userId: string, title: string, bod
   await notifyAccountUpdate({ userId, title, body });
 }
 
-const EXPIRY_DAYS = 14;
-const EXPIRY_WARN_DAYS = 12;
+import {
+  isListingExpired,
+  isListingInExpiryWarningWindow,
+} from '../../shared/listingExpiry';
+
 const EXPIRY_STORAGE_KEY = 'sbn_expiry_push_v1';
 
 export async function pushListingExpiryReminders(userId: string, posts: ItemPost[]) {
@@ -391,17 +396,16 @@ export async function pushListingExpiryReminders(userId: string, posts: ItemPost
   const sentRaw = sessionStorage.getItem(sentKey);
   const sent = new Set<string>(sentRaw ? JSON.parse(sentRaw) : []);
 
-  const now = Date.now();
   const toNotify: ItemPost[] = [];
 
   for (const post of posts) {
     if (post.userId !== userId || post.status !== 'active') continue;
-    const created = new Date(post.createdAt).getTime();
-    const ageDays = (now - created) / (1000 * 60 * 60 * 24);
-    if (ageDays >= EXPIRY_WARN_DAYS && ageDays < EXPIRY_DAYS && !sent.has(post.id)) {
-      toNotify.push(post);
-      sent.add(post.id);
-    }
+    if (isListingExpired(post)) continue;
+    if (!isListingInExpiryWarningWindow(post)) continue;
+    if (post.expiryWarnedAt) continue;
+    if (sent.has(post.id)) continue;
+    toNotify.push(post);
+    sent.add(post.id);
   }
 
   if (!toNotify.length) return;

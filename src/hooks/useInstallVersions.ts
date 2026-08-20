@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apkDownloadUrl } from '../lib/apkDownload';
+import { aabDownloadUrl, apkDownloadUrl } from '../lib/apkDownload';
+import { canDownloadApkFromWebsite } from '../lib/apkWebsiteAccess';
+import type { UserProfile } from '../types';
 import {
   detectInstallKind,
   installKindLabel,
@@ -33,9 +35,12 @@ export interface InstallVersionsState {
   webStatus: VersionStatus;
   latestApk: AndroidVersionManifest | null;
   apkDownloadHref: string | null;
+  aabDownloadHref: string | null;
   currentApkVersionName: string | null;
   currentApkVersionCode: number | null;
   apkStatus: VersionStatus;
+  /** False when anonymous or join rank is after the first 500 neighbors. */
+  canDownloadApkFromWebsite: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -59,7 +64,7 @@ async function fetchJson<T>(path: string): Promise<T | null> {
   return (await res.json()) as T;
 }
 
-export function useInstallVersions(): InstallVersionsState {
+export function useInstallVersions(userProfile?: UserProfile | null): InstallVersionsState {
   const [installKind, setInstallKind] = useState<InstallKind>(() =>
     typeof window !== 'undefined' ? detectInstallKind() : 'browser',
   );
@@ -105,7 +110,9 @@ export function useInstallVersions(): InstallVersionsState {
 
   const webStatus = compareWebVersions(currentWebVersion, latestWebVersion);
   const apkStatus = compareApkVersions(currentApkVersionCode, latestApk?.versionCode ?? null);
-  const apkDownloadHref = apkDownloadUrl(latestApk);
+  const canDownloadApk = canDownloadApkFromWebsite(userProfile);
+  const rawApkDownloadHref = apkDownloadUrl(latestApk);
+  const rawAabDownloadHref = aabDownloadUrl(latestApk);
 
   return {
     installKind,
@@ -116,10 +123,12 @@ export function useInstallVersions(): InstallVersionsState {
     currentWebVersion,
     webStatus,
     latestApk,
-    apkDownloadHref,
+    apkDownloadHref: canDownloadApk ? rawApkDownloadHref : null,
+    aabDownloadHref: canDownloadApk ? rawAabDownloadHref : null,
     currentApkVersionName,
     currentApkVersionCode,
     apkStatus,
+    canDownloadApkFromWebsite: canDownloadApk,
     refresh,
   };
 }

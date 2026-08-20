@@ -8,6 +8,7 @@ import {
   uploadProfilePhoto,
   getSupabaseProfile,
 } from '../supabase';
+import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import RoleBadge from './RoleBadge';
 import {
   MapPin,
@@ -20,8 +21,10 @@ import {
   LogOut,
   Smartphone,
   Share2,
+  Store,
   Gift,
   Package,
+  Repeat2,
   ChevronUp,
   ChevronDown,
   Camera,
@@ -33,9 +36,13 @@ import ProfileAwardsRow from './ProfileAwardsRow';
 import ProfileAwardsSection from './ProfileAwardsSection';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
+import { usePwaInstallPrompt } from '../hooks/usePwaInstallPrompt';
 import ThemeSettings from './ThemeSettings';
+import AccountNavigationSettings from './AccountNavigationSettings';
 import SystemPermissionsSettings from './SystemPermissionsSettings';
 import GoGetSettings from './GoGetSettings';
+import StaffModeSettings from './StaffModeSettings';
+import { isStaffActingOfficial, profileUiRole } from '../lib/staffInteractionMode';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 import TermsOfUseModal from './TermsOfUseModal';
@@ -47,7 +54,10 @@ import { buildNeighborAwardSummary, type NeighborAwardSummary } from '../lib/nei
 import GoGetRecordSection from './goget/GoGetRecordSection';
 import { openStaffApplyPanel } from '../lib/staffApplyOpen';
 import { useInstallVersions } from '../hooks/useInstallVersions';
+import { apkWebsiteAccessMessage, canDownloadApkFromWebsite } from '../lib/apkWebsiteAccess';
+import { SITE } from '../siteContent';
 import { detectInstallKind } from '../lib/installContext';
+import TrackedDownloadLink from './TrackedDownloadLink';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -108,9 +118,11 @@ export default function UserProfileView({
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
   const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
-  const { apkDownloadHref, latestApk, apkStatus, loading: apkVersionLoading } = useInstallVersions();
+  const { apkDownloadHref, latestApk, apkStatus, loading: apkVersionLoading } = useInstallVersions(userProfile);
   const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
   const usingApk = installKind === 'android-apk';
+  const canDownloadApk = canDownloadApkFromWebsite(userProfile);
+  const apkAccessMessage = apkWebsiteAccessMessage(userProfile);
 
   const openDownloadPage = (event?: React.MouseEvent) => {
     event?.preventDefault();
@@ -156,51 +168,9 @@ export default function UserProfileView({
     );
   }, [userProfile.photoURL, userProfile.uid, isPhotoUploading]);
 
-  // PWA Prompt status
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isAppInstalled, setIsAppInstalled] = useState(false);
+  // PWA install status — shared listener, see usePwaInstallPrompt.
+  const { canPromptInstall, isInstalled: isAppInstalled, promptInstall } = usePwaInstallPrompt();
   const [activeManualPlatform, setActiveManualPlatform] = useState<'ios' | 'android' | 'chrome'>('ios');
-
-  useEffect(() => {
-    // 1. Listen for beforeinstallprompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      console.log('PWA installer ready inside view! 🚀');
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // 2. Check if already running inside standalone app shell
-    if (
-      window.matchMedia('(display-mode: standalone)').matches || 
-      (window.navigator as any).standalone === true
-    ) {
-      setIsAppInstalled(true);
-    }
-
-    // Capture install completion
-    const handleAppInstalled = () => {
-      setIsAppInstalled(true);
-      setDeferredPrompt(null);
-    };
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  const triggerDirectPWAInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsAppInstalled(true);
-    }
-    setDeferredPrompt(null);
-  };
 
 
   const handleSave = async (e: React.FormEvent) => {
@@ -258,8 +228,8 @@ export default function UserProfileView({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setErrorMsg('Please select an image file.');
+    if (!isLikelyImageFile(file)) {
+      setErrorMsg(INVALID_IMAGE_FILE_MESSAGE);
       event.target.value = '';
       return;
     }
@@ -375,40 +345,50 @@ export default function UserProfileView({
           />
           <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{userProfile.displayName}</h3>
           
-          <RoleBadge role={userProfile.role} showForUser />
+          <RoleBadge role={profileUiRole(userProfile)} showForUser />
+          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
 
           <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-xs font-bold text-accent mt-3">
             <MapPin className="w-3.5 h-3.5 text-accent" />
             <span>{userProfile.neighborhood} Sector</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-4 w-full">
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <Gift className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.itemsGiven ?? '—'}</p>
-              <p className="text-[10px] text-muted">Items given</p>
+          <div className="space-y-2 mt-4 w-full">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Gift className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.itemsGiven ?? '—'}</p>
+                <p className="text-[10px] text-muted">Items given</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Package className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.itemsClaimed ?? '—'}</p>
+                <p className="text-[10px] text-muted">Items claimed</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Repeat2 className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.tradesCompleted ?? '—'}</p>
+                <p className="text-[10px] text-muted">Trades</p>
+              </div>
             </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <Package className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.itemsClaimed ?? '—'}</p>
-              <p className="text-[10px] text-muted">Items claimed</p>
-            </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <ChevronUp className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.upvotesReceived ?? '—'}</p>
-              <p className="text-[10px] text-muted">Upvotes received</p>
-            </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <ChevronDown className="w-5 h-5 text-muted mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.downvotesReceived ?? '—'}</p>
-              <p className="text-[10px] text-muted">Downvotes received</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <ChevronUp className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.upvotesReceived ?? '—'}</p>
+                <p className="text-[10px] text-muted">Upvotes received</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <ChevronDown className="w-5 h-5 text-muted mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.downvotesReceived ?? '—'}</p>
+                <p className="text-[10px] text-muted">Downvotes received</p>
+              </div>
             </div>
           </div>
 
           <ProfileAwardsRow
             userId={userProfile.uid}
             onOpenAwards={onOpenAwards}
-            viewerIsStaff={Boolean(userProfile.role && userProfile.role !== 'user')}
+            viewerIsStaff={isStaffActingOfficial(userProfile)}
           />
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
@@ -531,12 +511,17 @@ export default function UserProfileView({
 
           <SystemPermissionsSettings />
           <ThemeSettings />
-          <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          <AccountNavigationSettings />
+          {usingApk && (
+            <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          )}
         </div>
       </div>
 
       {/* ── Activity ─────────────────────────────────────────── */}
-      <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
+      {usingApk && (
+        <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
+      )}
 
       {/* ── Awards ───────────────────────────────────────────── */}
       {onOpenAwards && (
@@ -589,21 +574,33 @@ export default function UserProfileView({
           <h3 className="text-sm font-bold text-app uppercase tracking-wider">Install app</h3>
         </div>
         <p className="text-xs text-muted mb-4 leading-relaxed">
-          Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience — no App Store required.
+          Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience.
+          Home screen install is free for everyone; Google Play is for native Android; free APK sideload is only for our
+          first 500 neighbors.
         </p>
 
         <div className="flex flex-col gap-2 mb-4 min-w-0">
+          <a
+            href={SITE.playStoreBetaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+          >
+            <Store className="w-4 h-4 shrink-0" />
+            <span>Get it from Play Store</span>
+          </a>
+
           <button
             type="button"
             onClick={openDownloadPage}
             className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4 shrink-0" />
-            <span>Compare APK vs home screen</span>
+            <span>{canDownloadApk ? 'Compare Play, APK & home screen' : 'Compare Play & home screen'}</span>
           </button>
 
-          {apkDownloadHref ? (
-            <a
+          {canDownloadApk && apkDownloadHref ? (
+            <TrackedDownloadLink
               href={apkDownloadHref}
               download={latestApk?.fileName || 'sac-buy-nothing.apk'}
               className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
@@ -618,18 +615,24 @@ export default function UserProfileView({
                       : `Download ${latestApk.betaLabel}`
                     : 'Download latest APK'}
               </span>
-            </a>
+            </TrackedDownloadLink>
           ) : null}
         </div>
+
+        {!canDownloadApk && apkAccessMessage ? (
+          <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4 leading-relaxed">
+            {apkAccessMessage}
+          </p>
+        ) : null}
 
         {isAppInstalled ? (
           <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl" id="pwa_installed_badge">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="text-xs font-bold text-emerald-400">App installed on this device</span>
           </div>
-        ) : deferredPrompt ? (
+        ) : canPromptInstall ? (
           <button
-            onClick={triggerDirectPWAInstall}
+            onClick={() => void promptInstall()}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
             id="pwa_install_direct_trigger"
           >
@@ -663,17 +666,24 @@ export default function UserProfileView({
               )}
               {activeManualPlatform === 'android' && (
                 <ol className="list-decimal list-inside space-y-2 pl-1">
-                  <li>
-                    <strong className="text-app">APK (recommended for alerts):</strong> open{' '}
-                    <button
-                      type="button"
-                      onClick={openDownloadPage}
-                      className="text-accent font-bold underline underline-offset-2 cursor-pointer"
-                    >
-                      download page
-                    </button>{' '}
-                    or use the download button above.
-                  </li>
+                  {canDownloadApk ? (
+                    <li>
+                      <strong className="text-app">APK (first 500 neighbors):</strong> open{' '}
+                      <button
+                        type="button"
+                        onClick={openDownloadPage}
+                        className="text-accent font-bold underline underline-offset-2 cursor-pointer"
+                      >
+                        download page
+                      </button>{' '}
+                      or use the APK button above.
+                    </li>
+                  ) : (
+                    <li>
+                      <strong className="text-app">Google Play:</strong> use{' '}
+                      <strong className="text-app">Download from Play Store</strong> above if you are on the invite list.
+                    </li>
+                  )}
                   <li>
                     <strong className="text-app">Or Chrome home screen:</strong> tap the three-dot menu{' '}
                     <strong className="text-app">(⋮)</strong> → <strong className="text-app">Install app</strong> or{' '}

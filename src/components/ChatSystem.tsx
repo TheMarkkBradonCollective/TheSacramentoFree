@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useBrowseOnly } from '../contexts/BrowseOnlyContext';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
-import { Chat, Message, UserProfile, ItemPost, MessageRequest, PendingChatCompose, SupportTicket } from '../types';
+import { Chat, Message, UserProfile, ItemPost, CommunityEvent, MessageRequest, PendingChatCompose, SupportTicket } from '../types';
 import {
   getSupabaseChats,
   getSupabaseChatById,
@@ -19,6 +18,8 @@ import {
   getSupportTicketsForUser,
   getSupportTicketsForStaff,
   getSupportTicketLastMessages,
+  getSupabaseItemById,
+  getSupabaseEventById,
 } from '../supabase';
 import {
   isCommunityChat,
@@ -28,14 +29,32 @@ import {
   communityChatSubtitle,
 } from '../lib/communityChats';
 import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffReports, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
 import ChatInboxHeader from './ChatInboxHeader';
 import ChatInboxList from './ChatInboxList';
 import { buildInboxEntries } from '../lib/chatInbox';
+import {
+  emptyInboxFilterMessage,
+  filterInboxEntries,
+  readChatCategoryFilter,
+  readChatStatusFilter,
+  writeChatCategoryFilter,
+  writeChatStatusFilter,
+  type ChatCategoryFilter,
+  type ChatStatusFilter,
+} from '../lib/chatInboxFilters';
+import {
+  archiveInboxConversation,
+  isInboxArchived,
+  readArchivedInboxKeys,
+  unarchiveInboxConversation,
+} from '../lib/chatInboxArchive';
 import {
   getMessageGroupMeta,
   messageBubbleClass,
@@ -50,7 +69,6 @@ import {
   Send,
   AlertCircle,
   MapPin,
-  Gift,
   ChevronLeft,
   Navigation,
   CheckCircle,
@@ -58,13 +76,17 @@ import {
   Shield,
   Trash2,
   Undo2,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
 import { formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import {
   markItemFulfilledFromChat,
+  markTradeCompletedFromChat,
 } from '../supabase';
 import ChatClaimActions from './ChatClaimActions';
+import ChatClaimerActions from './ChatClaimerActions';
 import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
 import { confirmGoGetAsFulfiller } from './goget/goGetSafetyConfirm';
 import { getChatCoordinationLabel } from '../lib/listingMapActions';
@@ -74,11 +96,17 @@ import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
 import { isStaffRole as isSenderStaff } from '../lib/roles';
+import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
+import ChatListingPreview from './ChatListingPreview';
+import ChatEventPreview from './ChatEventPreview';
+import { resolveEventStatus } from '../lib/eventRsvp';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialFocusMessageRequests?: boolean;
+  onClearInitialFocusMessageRequests?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;
   initialChatSupportView?: 'list' | 'new' | null;
@@ -88,6 +116,7 @@ interface ChatSystemProps {
   pendingChatCompose?: PendingChatCompose | null;
   onClearPendingChatCompose?: () => void;
   items: ItemPost[];
+  events?: CommunityEvent[];
   blockedUserIds?: Set<string>;
   className?: string;
   /** Edge-to-edge layout (mobile tab) — no outer card chrome */
@@ -98,12 +127,16 @@ interface ChatSystemProps {
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
   onStartDirectMessage?: () => void;
+  onViewRelatedListing?: (itemId: string) => void;
+  onViewRelatedEvent?: (eventId: string) => void;
 }
 
 export default function ChatSystem({
   userProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialFocusMessageRequests = false,
+  onClearInitialFocusMessageRequests,
   initialSupportTicketId = null,
   onClearInitialSupportTicket,
   initialChatSupportView = null,
@@ -113,6 +146,7 @@ export default function ChatSystem({
   pendingChatCompose = null,
   onClearPendingChatCompose,
   items,
+  events = [],
   blockedUserIds = new Set(),
   className = '',
   fullBleed = false,
@@ -122,8 +156,9 @@ export default function ChatSystem({
   onOpenPrivacy,
   onOpenTerms,
   onStartDirectMessage,
+  onViewRelatedListing,
+  onViewRelatedEvent,
 }: ChatSystemProps) {
-  const browseOnly = useBrowseOnly();
   const [chats, setChats] = useState<Chat[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<MessageRequest[]>([]);
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null);
@@ -136,7 +171,8 @@ export default function ChatSystem({
   const [supportTicketsLoading, setSupportTicketsLoading] = useState(false);
   const [supportOpenTicketId, setSupportOpenTicketId] = useState<string | null>(null);
   const [feedbackPanel, setFeedbackPanel] = useState<ChatFeedbackPanel>(null);
-  const isStaffSupportInbox = canViewStaffTicketInbox(userProfile.role);
+  const isStaffSupportInbox =
+    canViewStaffTicketInbox(userProfile.role) && isStaffActingOfficial(userProfile);
   const [messages, setMessages] = useState<Message[]>([]);
   const [senderNames, setSenderNames] = useState<Record<string, { displayName: string; photoURL?: string; role?: import('../types').UserProfile['role'] }>>({});
   const [inputText, setInputText] = useState('');
@@ -145,11 +181,28 @@ export default function ChatSystem({
   const [errorMsg, setErrorMsg] = useState('');
   const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
-  const userIsStaff = isStaffRole(userProfile.role);
-  const canStaffReports = canViewStaffReports(userProfile.role);
+  const [categoryFilter, setCategoryFilter] = useState<ChatCategoryFilter>(() => readChatCategoryFilter());
+  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>(() => readChatStatusFilter());
+  const [archivedKeys, setArchivedKeys] = useState(() => readArchivedInboxKeys(userProfile.uid));
+
+  useEffect(() => {
+    setArchivedKeys(readArchivedInboxKeys(userProfile.uid));
+  }, [userProfile.uid]);
+
+  const userIsStaff = isStaffRole(userProfile.role) && isStaffActingOfficial(userProfile);
+  const staffActingOfficial = isStaffActingOfficial(userProfile);
+  const canStaffReports = canViewStaffReports(userProfile.role) && isStaffActingOfficial(userProfile);
   const { reports: staffReports } = useStaffUserReports(canStaffReports, userProfile);
   const newStaffReportCount = staffReports.filter((report) => report.status === 'new').length;
   const { confirm, alert } = useConfirm();
+
+  const chatFetchOptions = useMemo(
+    () => ({
+      userRole: userProfile.role,
+      staffInteractionMode: userProfile.staffInteractionMode,
+    }),
+    [userProfile.role, userProfile.staffInteractionMode],
+  );
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLInputElement | null>(null);
@@ -184,6 +237,60 @@ export default function ChatSystem({
       setSelectedChat(null);
     }
   }, [blockedUserIds, pendingChatCompose, onClearPendingChatCompose]);
+
+  const linkedItemFromFeed = useMemo(() => {
+    if (!selectedChat?.itemId || isCommunityChat(selectedChat.id)) return undefined;
+    return items.find((i) => i.id === selectedChat.itemId);
+  }, [selectedChat, items]);
+
+  const [fetchedLinkedItem, setFetchedLinkedItem] = useState<ItemPost | null>(null);
+
+  useEffect(() => {
+    if (!selectedChat?.itemId || isCommunityChat(selectedChat.id)) {
+      setFetchedLinkedItem(null);
+      return;
+    }
+    if (linkedItemFromFeed) {
+      setFetchedLinkedItem(null);
+      return;
+    }
+    let cancelled = false;
+    void getSupabaseItemById(selectedChat.itemId).then((item) => {
+      if (!cancelled) setFetchedLinkedItem(item);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChat?.itemId, selectedChat?.id, linkedItemFromFeed]);
+
+  const resolvedLinkedItem = linkedItemFromFeed ?? fetchedLinkedItem ?? undefined;
+
+  const linkedEventFromFeed = useMemo(() => {
+    if (!selectedChat?.eventId || isCommunityChat(selectedChat.id)) return undefined;
+    return events.find((event) => event.id === selectedChat.eventId);
+  }, [selectedChat, events]);
+
+  const [fetchedLinkedEvent, setFetchedLinkedEvent] = useState<CommunityEvent | null>(null);
+
+  useEffect(() => {
+    if (!selectedChat?.eventId || isCommunityChat(selectedChat.id)) {
+      setFetchedLinkedEvent(null);
+      return;
+    }
+    if (linkedEventFromFeed) {
+      setFetchedLinkedEvent(null);
+      return;
+    }
+    let cancelled = false;
+    void getSupabaseEventById(selectedChat.eventId).then((event) => {
+      if (!cancelled) setFetchedLinkedEvent(event);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChat?.eventId, selectedChat?.id, linkedEventFromFeed]);
+
+  const resolvedLinkedEvent = linkedEventFromFeed ?? fetchedLinkedEvent ?? undefined;
 
   const handleStartGoGetFromChat = useCallback(
     async (linkedItem: ItemPost, otherUserId: string, otherUserName: string) => {
@@ -306,6 +413,15 @@ export default function ChatSystem({
   };
 
   useEffect(() => {
+    if (!initialFocusMessageRequests) return;
+    setSelectedChat(null);
+    setSupportView(null);
+    setSupportOpenTicketId(null);
+    setMessages([]);
+    onClearInitialFocusMessageRequests?.();
+  }, [initialFocusMessageRequests, onClearInitialFocusMessageRequests]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages, selectedChat]);
 
@@ -320,7 +436,7 @@ export default function ChatSystem({
     const loadChats = async () => {
       try {
         const [loadedChats, requests] = await Promise.all([
-          getSupabaseChats(userProfile.uid, { userRole: userProfile.role }),
+          getSupabaseChats(userProfile.uid, chatFetchOptions),
           getIncomingMessageRequests(userProfile.uid),
         ]);
         if (!active) return;
@@ -338,9 +454,11 @@ export default function ChatSystem({
         setIncomingRequests(visibleRequests);
         setIsChatsLoading(false);
 
-        if (initialSelectedChatId) {
+        if (initialFocusMessageRequests) {
+          setSelectedChat(null);
+        } else if (initialSelectedChatId) {
           let target = visibleChats.find((c) => c.id === initialSelectedChatId);
-          if (!target && isStaffRole(userProfile.role)) {
+          if (!target && staffActingOfficial) {
             const fetched = await getSupabaseChatById(initialSelectedChatId);
             if (fetched) {
               target = fetched;
@@ -350,8 +468,7 @@ export default function ChatSystem({
             }
           }
           if (target) {
-            setSelectedChat((prev) => prev ?? target);
-            setSupportView(null);
+            void selectChat(target);
           }
         } else if (pendingChatCompose) {
           const existing = visibleChats.find((c) => c.id === pendingChatCompose.chatId);
@@ -374,6 +491,8 @@ export default function ChatSystem({
               lastMessageAt: '',
               itemId: c.itemId || '',
               itemTitle: c.itemTitle || '',
+              eventId: c.eventId || '',
+              eventTitle: c.eventTitle || '',
             };
             setSelectedChat((prev) => prev ?? draft);
             setMessages([]);
@@ -431,6 +550,8 @@ export default function ChatSystem({
       lastMessageAt: '',
       itemId: c.itemId || '',
       itemTitle: c.itemTitle || '',
+      eventId: c.eventId || '',
+      eventTitle: c.eventTitle || '',
     };
     setSelectedChat(draft);
     setMessages([]);
@@ -446,7 +567,7 @@ export default function ChatSystem({
     const chatId = selectedChat.id;
 
     const refreshChatMeta = debounceRealtime(() => {
-      void getSupabaseChats(userProfile.uid, { userRole: userProfile.role }).then((loadedChats) => {
+      void getSupabaseChats(userProfile.uid, chatFetchOptions).then((loadedChats) => {
         if (!active) return;
         loadedChats.sort((a, b) => {
           const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
@@ -552,13 +673,15 @@ export default function ChatSystem({
       lastMessageSenderId: userProfile.uid,
       itemId: c.itemId || '',
       itemTitle: c.itemTitle || '',
+      eventId: c.eventId || '',
+      eventTitle: c.eventTitle || '',
     };
 
     const ok = await getOrCreateSupabaseChat(c.chatId, payload);
     if (!ok) return false;
 
     onClearPendingChatCompose?.();
-    const loadedChats = await getSupabaseChats(userProfile.uid);
+    const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
     const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
     visible.sort((a, b) => {
       const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
@@ -571,17 +694,20 @@ export default function ChatSystem({
     return true;
   };
 
-  const handleDeleteChat = async (linkedItem?: ItemPost) => {
+  const handleDeleteChat = async (linkedItem?: ItemPost, linkedEvent?: CommunityEvent) => {
     if (!selectedChat || deletingChat || isCommunityChat(selectedChat.id)) return;
     const listingContext = linkedItem
       ? { userId: linkedItem.userId, status: linkedItem.status }
       : null;
-    if (!canDeleteDirectChat(userProfile, selectedChat, listingContext)) return;
+    const eventContext = linkedEvent
+      ? { userId: linkedEvent.userId, status: linkedEvent.status }
+      : null;
+    if (!canDeleteDirectChat(userProfile, selectedChat, listingContext, eventContext)) return;
 
-    const isPostChat = Boolean(selectedChat.itemId?.trim());
+    const isPostChat = Boolean(selectedChat.itemId?.trim() || selectedChat.eventId?.trim());
     const confirmed = await confirm({
       message: isPostChat
-        ? 'Delete this post chat for both neighbors? The listing thread will be removed from Messages.'
+        ? 'Delete this coordination chat for both neighbors? The thread will be removed from Messages.'
         : 'Delete this conversation for both neighbors? You will need to send a new message request to chat again.',
       confirmLabel: 'Delete conversation',
       variant: 'danger',
@@ -602,7 +728,7 @@ export default function ChatSystem({
     setSelectedChat(null);
     setMessages([]);
     onClearPendingChatCompose?.();
-    const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+    const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
     const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
     setChats(visible);
   };
@@ -634,7 +760,7 @@ export default function ChatSystem({
       setErrorMsg(result.errorMessage || 'Could not unsend message.');
     } else {
       restoreUnsentMessageToInput(message.text);
-      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+      const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
       const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
       setChats(visible);
       setSelectedChat((prev) => {
@@ -669,7 +795,7 @@ export default function ChatSystem({
       setMessages(previousMessages);
       setErrorMsg(result.errorMessage || 'Could not remove message.');
     } else {
-      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+      const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
       const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
       setChats(visible);
       setSelectedChat((prev) => {
@@ -800,14 +926,21 @@ export default function ChatSystem({
 
     setIsSending(true);
     setErrorMsg('');
-    const statusOk = await updateSupabaseItemStatus(linkedItem.id, 'completed', userProfile.uid);
+    const result = await markTradeCompletedFromChat({
+      itemId: linkedItem.id,
+      posterUserId: userProfile.uid,
+      partnerUserId,
+      chatId: selectedChat.id,
+      message: formatTradeCompletedChatMessage(linkedItem.title, partnerName),
+    });
     setIsSending(false);
 
-    if (statusOk) {
-      await sendChatText(formatTradeCompletedChatMessage(linkedItem.title, partnerName));
+    if (result.ok) {
       onItemsChanged?.();
+      const loadedMessages = await getSupabaseMessages(selectedChat.id);
+      setMessages(loadedMessages);
     } else {
-      setErrorMsg('Could not mark trade as completed.');
+      setErrorMsg(result.errorMessage || 'Could not mark trade as completed.');
     }
   };
 
@@ -863,7 +996,18 @@ export default function ChatSystem({
   }, [chats, incomingRequests, userProfile.uid]);
   useTrackPresence(presenceUids);
 
-  const selectChat = (chat: Chat) => {
+  const staffCoordinationAckRef = useRef<Set<string>>(new Set());
+
+  const selectChat = async (chat: Chat) => {
+    if (
+      staffActingOfficial &&
+      (chat.itemId || chat.eventId) &&
+      !staffCoordinationAckRef.current.has(chat.id)
+    ) {
+      const ok = await confirmStaffCoordinationChatView(confirm, chat.eventTitle || chat.itemTitle);
+      if (!ok) return;
+      staffCoordinationAckRef.current.add(chat.id);
+    }
     setSelectedChat(chat);
     setSupportView(null);
     onClearInitialChat();
@@ -956,11 +1100,97 @@ export default function ChatSystem({
     [chats, supportTickets, supportPreviews, incomingRequests],
   );
 
+  const filteredInboxEntries = useMemo(
+    () =>
+      filterInboxEntries(inboxEntries, categoryFilter, statusFilter, {
+        archivedKeys,
+        items,
+        events,
+      }),
+    [inboxEntries, categoryFilter, statusFilter, archivedKeys, items, events],
+  );
+
+  const emptyInboxCopy = useMemo(
+    () => emptyInboxFilterMessage(categoryFilter, statusFilter),
+    [categoryFilter, statusFilter],
+  );
+
+  const handleCategoryFilterChange = (filter: ChatCategoryFilter) => {
+    setCategoryFilter(filter);
+    writeChatCategoryFilter(filter);
+  };
+
+  const handleStatusFilterChange = (filter: ChatStatusFilter) => {
+    setStatusFilter(filter);
+    writeChatStatusFilter(filter);
+  };
+
+  const handleArchiveChat = useCallback(
+    (chatId: string) => {
+      setArchivedKeys(archiveInboxConversation(userProfile.uid, 'chat', chatId));
+      setSelectedChat(null);
+      onClearInitialChat();
+      onClearPendingChatCompose?.();
+    },
+    [userProfile.uid, onClearInitialChat, onClearPendingChatCompose],
+  );
+
+  const handleUnarchiveChat = useCallback(
+    (chatId: string) => {
+      setArchivedKeys(unarchiveInboxConversation(userProfile.uid, 'chat', chatId));
+    },
+    [userProfile.uid],
+  );
+
+  const handleArchiveSupportTicket = useCallback(
+    (ticketId: string) => {
+      setArchivedKeys(archiveInboxConversation(userProfile.uid, 'support', ticketId));
+      setSupportView(null);
+      setSupportOpenTicketId(null);
+      onClearInitialSupportTicket?.();
+    },
+    [userProfile.uid, onClearInitialSupportTicket],
+  );
+
+  const handleUnarchiveSupportTicket = useCallback(
+    (ticketId: string) => {
+      setArchivedKeys(unarchiveInboxConversation(userProfile.uid, 'support', ticketId));
+    },
+    [userProfile.uid],
+  );
+
+  const selectedChatArchived =
+    selectedChat && !isCommunityChat(selectedChat.id)
+      ? isInboxArchived(userProfile.uid, 'chat', selectedChat.id)
+      : false;
+
+  const selectedSupportTicket = supportOpenTicketId
+    ? supportTickets.find((ticket) => ticket.id === supportOpenTicketId) ?? null
+    : null;
+  const selectedSupportArchived = selectedSupportTicket
+    ? isInboxArchived(userProfile.uid, 'support', selectedSupportTicket.id)
+    : false;
+
   const getFormattedChatTitle = (chat: Chat) => {
     if (isCommunityChat(chat.id)) return communityChatTitle(chat.id);
-    if (!chat.itemId || !chat.itemTitle) {
+    const contextTitle = chat.eventTitle || chat.itemTitle;
+    const contextId = chat.eventId || chat.itemId;
+    if (!contextId || !contextTitle) {
       return getRecipientInfo(chat).otherName;
     }
+
+    if (chat.eventId && chat.eventTitle) {
+      const event = events.find((row) => row.id === chat.eventId);
+      const hostId = event ? event.userId : '';
+      const messengerId = hostId
+        ? chat.participantIds.find((id) => id !== hostId)
+        : chat.participantIds.find((id) => id !== userProfile.uid);
+      const finalMessengerId =
+        messengerId || chat.participantIds.find((id) => id !== userProfile.uid) || userProfile.uid;
+      const messengerName = chat.participantNames[finalMessengerId] || 'Neighbor';
+      return `${chat.eventTitle} · ${messengerName}`;
+    }
+
     const item = items.find((i) => i.id === chat.itemId);
     const ownerId = item ? item.userId : '';
     const messengerId = ownerId
@@ -982,7 +1212,7 @@ export default function ChatSystem({
         setErrorMsg(result.errorMessage || 'Could not accept request.');
         return;
       }
-      const loadedChats = await getSupabaseChats(userProfile.uid, { userRole: userProfile.role });
+      const loadedChats = await getSupabaseChats(userProfile.uid, chatFetchOptions);
       const visible = filterChatsByBlocked(loadedChats, userProfile.uid, blockedUserIds);
       visible.sort((a, b) => {
         const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
@@ -1025,12 +1255,16 @@ export default function ChatSystem({
       {/* Conversation list */}
       <div
         id="chats_sidebar"
-        className={`flex flex-col min-h-0 shrink-0 w-full md:w-80 lg:w-[22rem] md:border-r md:border-app/30 ${
+        className={`flex flex-col min-h-0 shrink-0 w-full md:w-80 lg:w-[22rem] md:border-r md:border-app/30 chat-inbox-panel ${
           fullBleed ? 'bg-app' : 'bg-surface/80'
         } ${selectedChat || supportView ? 'hidden md:flex' : 'flex'}`}
       >
         <ChatInboxHeader
           userProfile={userProfile}
+          categoryFilter={categoryFilter}
+          statusFilter={statusFilter}
+          onCategoryFilterChange={handleCategoryFilterChange}
+          onStatusFilterChange={handleStatusFilterChange}
           onStartConversation={onStartDirectMessage}
           onNewSupport={!isStaffSupportInbox ? () => openSupport('new') : undefined}
           onOpenFeedbackPanel={setFeedbackPanel}
@@ -1038,6 +1272,7 @@ export default function ChatSystem({
         />
         <div className="flex-1 min-h-0 overflow-hidden" id="chat_rooms_scrollable">
           <ScrollPage
+            pinToBottom={fullBleed && !selectedChat && !supportView}
             footer={
               fullBleed && !selectedChat && !supportView ? (
                 <PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
@@ -1045,13 +1280,15 @@ export default function ChatSystem({
             }
           >
             <ChatInboxList
-              entries={inboxEntries}
+              entries={filteredInboxEntries}
               loading={isChatsLoading || supportTicketsLoading}
               isStaffSupportInbox={isStaffSupportInbox}
               selectedChatId={selectedChat?.id ?? null}
               supportOpenTicketId={supportOpenTicketId}
               supportActive={!!supportView}
               requestBusyId={requestBusyId}
+              emptyTitle={emptyInboxCopy.title}
+              emptyDescription={emptyInboxCopy.description}
               getFormattedChatTitle={getFormattedChatTitle}
               getRecipientInfo={getRecipientInfo}
               formatTime={formatTime}
@@ -1086,16 +1323,23 @@ export default function ChatSystem({
               setSupportOpenTicketId(null);
               onClearInitialSupportTicket?.();
             }}
+            onArchiveTicket={handleArchiveSupportTicket}
+            onUnarchiveTicket={handleUnarchiveSupportTicket}
+            supportTicketArchived={selectedSupportArchived}
+            onViewRelatedListing={onViewRelatedListing}
+            onViewRelatedEvent={onViewRelatedEvent}
             className="h-full"
           />
         ) : selectedChat ? (
           (() => {
             const isCommunity = isCommunityChat(selectedChat.id);
-            const linkedItem = isCommunity ? undefined : items.find((i) => i.id === selectedChat.itemId);
+            const linkedItem = isCommunity ? undefined : resolvedLinkedItem;
+            const linkedEvent = isCommunity ? undefined : resolvedLinkedEvent;
             const isChatDisabled =
               !isCommunity &&
-              linkedItem &&
-              (linkedItem.status === 'completed' || linkedItem.status === 'withdrawn');
+              ((linkedItem &&
+                (linkedItem.status === 'completed' || linkedItem.status === 'withdrawn')) ||
+                (linkedEvent && resolveEventStatus(linkedEvent) !== 'upcoming'));
             const displayTitleHeader = getFormattedChatTitle(selectedChat);
             const { otherName, otherPhoto } = isCommunity
               ? { otherName: communityChatTitle(selectedChat.id), otherPhoto: '' }
@@ -1118,11 +1362,19 @@ export default function ChatSystem({
               linkedItem.type === 'trade' &&
               linkedItem.status === 'active';
 
-            const showMarkClaimedBtn =
+            const showPosterHandoffActions =
               !!linkedItem &&
               !isChatDisabled &&
               isListingOwner &&
-              linkedItem.type === 'giveaway' &&
+              (linkedItem.type === 'giveaway' || linkedItem.type === 'looking') &&
+              linkedItem.status === 'active';
+
+            const showClaimerHandoffActions =
+              !supportsGoGetCoordination() &&
+              !!linkedItem &&
+              !isChatDisabled &&
+              !isListingOwner &&
+              (linkedItem.type === 'giveaway' || linkedItem.type === 'looking') &&
               linkedItem.status === 'active';
 
             const claimerUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
@@ -1137,6 +1389,7 @@ export default function ChatSystem({
             // Looking/Trade: only the non-poster starts coordination so they become the
             // navigator (requester). Poster waits as fulfiller — same as listing/map.
             const showStartGoGetBtn =
+              supportsGoGetCoordination() &&
               !!linkedItem &&
               !isChatDisabled &&
               linkedItem.status === 'active' &&
@@ -1185,6 +1438,7 @@ export default function ChatSystem({
                       onClick={() => onViewProfile?.(getRecipientInfo(selectedChat).otherId)}
                       className="shrink-0 rounded-full cursor-pointer hover:opacity-90"
                       title="View neighbor profile"
+                      aria-label="View neighbor profile"
                     >
                       <PresenceUserAvatar
                         uid={getRecipientInfo(selectedChat).otherId}
@@ -1198,49 +1452,102 @@ export default function ChatSystem({
                   <div className="min-w-0 flex-1">
                     {isCommunity ? (
                       <>
-                        <p className="font-display font-semibold text-sm text-app truncate">
+                        <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+                          Chat
+                        </span>
+                        <p className="font-display font-bold text-sm text-app truncate mt-0.5">
                           {displayTitleHeader}
                         </p>
                         <p className="text-xs text-muted mt-0.5">{communityChatSubtitle(selectedChat.id)}</p>
                       </>
                     ) : (
                       <>
+                        <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+                          Chat
+                        </span>
                         <button
                           type="button"
                           onClick={() => onViewProfile?.(getRecipientInfo(selectedChat).otherId)}
-                          className="font-display font-semibold text-sm text-app truncate text-left hover:text-accent cursor-pointer w-full"
+                          className="font-display font-bold text-sm text-app truncate text-left hover:text-accent cursor-pointer w-full mt-0.5"
                           title={displayTitleHeader}
                         >
                           {otherName}
                         </button>
-                        {selectedChat.itemTitle ? (
-                          <p className="text-xs text-accent truncate flex items-center gap-1 mt-0.5">
-                            <Gift className="w-3.5 h-3.5 shrink-0" />
-                            <span>{selectedChat.itemTitle}</span>
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3 shrink-0" />
-                            <span>Sacramento neighbor</span>
-                          </p>
-                        )}
+                        <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 shrink-0 text-accent" />
+                          <span>
+                            {selectedChat.itemId || selectedChat.eventId
+                              ? 'Coordination chat'
+                              : 'Sacramento neighbor'}
+                          </span>
+                        </p>
                       </>
                     )}
                   </div>
 
-                  {!isCommunity && canDeleteDirectChat(userProfile, selectedChat, linkedItem ?? null) ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteChat(linkedItem)}
-                      disabled={deletingChat}
-                      className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset shrink-0 disabled:opacity-50"
-                      title="Delete conversation"
-                      aria-label="Delete conversation"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  {!isCommunity ? (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {selectedChatArchived ? (
+                        <button
+                          type="button"
+                          onClick={() => handleUnarchiveChat(selectedChat.id)}
+                          className="p-2 rounded-full text-muted hover:text-accent hover:bg-inset"
+                          title="Unarchive conversation"
+                          aria-label="Unarchive conversation"
+                        >
+                          <ArchiveRestore className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void handleArchiveChat(selectedChat.id)}
+                          className="p-2 rounded-full text-muted hover:text-accent hover:bg-inset"
+                          title="Archive conversation"
+                          aria-label="Archive conversation"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canDeleteDirectChat(
+                        userProfile,
+                        selectedChat,
+                        linkedItem ?? null,
+                        linkedEvent ?? null,
+                      ) ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteChat(linkedItem, linkedEvent)}
+                          disabled={deletingChat}
+                          className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset disabled:opacity-50"
+                          title="Delete conversation"
+                          aria-label="Delete conversation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </header>
+
+                {!isCommunity && selectedChat.itemId && selectedChat.itemTitle ? (
+                  <div className="shrink-0 px-3 sm:px-4 py-3 border-b border-app">
+                    <ChatListingPreview
+                      itemId={selectedChat.itemId}
+                      itemTitle={resolvedLinkedItem?.title ?? selectedChat.itemTitle}
+                      onViewListing={onViewRelatedListing}
+                    />
+                  </div>
+                ) : null}
+
+                {!isCommunity && selectedChat.eventId && selectedChat.eventTitle ? (
+                  <div className="shrink-0 px-3 sm:px-4 py-3 border-b border-app">
+                    <ChatEventPreview
+                      eventId={selectedChat.eventId}
+                      eventTitle={resolvedLinkedEvent?.title ?? selectedChat.eventTitle}
+                      onViewEvent={onViewRelatedEvent}
+                    />
+                  </div>
+                ) : null}
 
                 <div
                   className="chat-thread-bg flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4"
@@ -1258,9 +1565,12 @@ export default function ChatSystem({
 
                   {messages.length === 0 ? (
                     <div className="flex justify-center py-10 px-4">
-                      <div className="chat-empty-card">
-                        <MessageSquare className="w-8 h-8 text-accent mx-auto mb-2" />
-                        <p className="text-sm font-display font-semibold text-app">Start the conversation</p>
+                      <div className="sbn-card text-center py-10 px-6 border-dashed max-w-xs">
+                        <span className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft border border-accent/25 text-accent mb-3">
+                          <MessageSquare className="w-6 h-6" />
+                        </span>
+                        <p className="text-xs font-bold text-accent uppercase tracking-wider">Chat</p>
+                        <p className="text-sm font-display font-bold text-app mt-1.5">Start the conversation</p>
                         <p className="text-xs text-muted mt-1.5 leading-relaxed">
                           Say hello to coordinate pickup, ask a question, or share details.
                         </p>
@@ -1296,6 +1606,7 @@ export default function ChatSystem({
                                 <button
                                   type="button"
                                   onClick={() => onViewProfile?.(msg.senderId)}
+                                  aria-label="View neighbor profile"
                                   className="rounded-full"
                                 >
                                   {isCommunity ? (
@@ -1395,6 +1706,7 @@ export default function ChatSystem({
                   id="input_tray"
                 >
                   {!isCommunity &&
+                  !staffActingOfficial &&
                   (showSendLocationBtn ||
                     showMarkPendingPickupBtn ||
                     showRequestHoldBtn ||
@@ -1486,13 +1798,27 @@ export default function ChatSystem({
                       ) : null}
                     </div>
                   ) : null}
-                  {!isCommunity && showMarkClaimedBtn && claimerUserId ? (
+                  {!isCommunity && showPosterHandoffActions && claimerUserId && linkedItem && !staffActingOfficial ? (
                     <ChatClaimActions
                       chatId={selectedChat.id}
                       linkedItem={linkedItem}
                       viewer={userProfile}
                       claimerUserId={claimerUserId}
                       disabled={isSending}
+                      onOpenSupport={() => setSupportView('list')}
+                      onChanged={() => {
+                        onItemsChanged?.();
+                        void getSupabaseMessages(selectedChat.id).then(setMessages);
+                      }}
+                    />
+                  ) : null}
+                  {!isCommunity && showClaimerHandoffActions && linkedItem ? (
+                    <ChatClaimerActions
+                      chatId={selectedChat.id}
+                      linkedItem={linkedItem}
+                      viewer={userProfile}
+                      disabled={isSending}
+                      onOpenSupport={() => setSupportView('list')}
                       onChanged={() => {
                         onItemsChanged?.();
                         void getSupabaseMessages(selectedChat.id).then(setMessages);
@@ -1504,13 +1830,23 @@ export default function ChatSystem({
                       Go Get in progress — open "{linkedItem?.title}" to follow along.
                     </p>
                   )}
+                  {staffActingOfficial && (linkedItem || linkedEvent) && !isCommunity && (
+                    <p className="text-[11px] text-amber-500/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-center leading-snug">
+                      Staff oversight — neighbor coordination chat. Use Staff chat on the listing or event for
+                      official outreach; reply here only when needed for safety or moderation.
+                    </p>
+                  )}
                   {isChatDisabled && (
                     <div
                       className="p-2.5 bg-inset/80 border border-app/60 text-muted text-xs rounded-xl flex items-center gap-2"
                       id="chat_disabled_status_banner"
                     >
                       <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>This listing is closed — chat is read-only.</span>
+                      <span>
+                        {linkedEvent
+                          ? 'This event has ended — chat is read-only.'
+                          : 'This listing is closed — chat is read-only.'}
+                      </span>
                     </div>
                   )}
                   <div className="chat-compose-field">
@@ -1522,9 +1858,7 @@ export default function ChatSystem({
                       onChange={(e) => setInputText(e.target.value)}
                       onFocus={scrollToBottom}
                       placeholder={
-                        browseOnly
-                          ? 'View-only review account'
-                          : isStaffCommunityChat(selectedChat.id) && !userIsStaff
+                        isStaffCommunityChat(selectedChat.id) && !userIsStaff
                           ? 'Staff only'
                           : isChatDisabled
                             ? 'This chat is read-only'
@@ -1535,7 +1869,6 @@ export default function ChatSystem({
                       maxLength={2000}
                       required
                       disabled={
-                        browseOnly ||
                         !!isChatDisabled ||
                         (isStaffCommunityChat(selectedChat.id) && !userIsStaff)
                       }
@@ -1545,7 +1878,6 @@ export default function ChatSystem({
                       type="submit"
                       id="message_send_btn"
                       disabled={
-                        browseOnly ||
                         !inputText.trim() ||
                         isSending ||
                         !!isChatDisabled ||

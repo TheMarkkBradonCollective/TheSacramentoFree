@@ -1,0 +1,11 @@
+Android beta v0.1.0.0027 (versionCode 27)
+
+What's new (Android app only):
+• Staff Navigate on Stuff and Events
+• Go Get ring + pickup availability (opt-in in Account)
+• List/grid feed toggle
+• Navigation and Go Get no longer appear on the website — app only
+
+Website: message and mark listings only.
+
+Download (sideload): https://www.sacramentobuynothing.com/download

@@ -48,6 +48,18 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "photoURL" TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "lastActiveAt" TIMESTAMPTZ;
 -- Opt-out of Go Get / Drop off / Meet up / claim-at-pin (listing + chat still work).
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetEnabled" BOOLEAN NOT NULL DEFAULT true;
+-- Staff: official staff mode vs neighbor mode for community participation.
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "staffInteractionMode" TEXT NOT NULL DEFAULT 'staff';
+-- Go Get ring timeout, scheduling, and pickup coordination preferences (Aug 20, 2026)
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "pickupAvailability" JSONB;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetRingDurationSeconds" INTEGER NOT NULL DEFAULT 140;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetRingPattern" TEXT NOT NULL DEFAULT 'ring';
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_go_get_ring_duration_check;
+ALTER TABLE public.users ADD CONSTRAINT users_go_get_ring_duration_check
+  CHECK ("goGetRingDurationSeconds" >= 10 AND "goGetRingDurationSeconds" <= 140);
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_go_get_ring_pattern_check;
+ALTER TABLE public.users ADD CONSTRAINT users_go_get_ring_pattern_check
+  CHECK ("goGetRingPattern" IN ('single_beep', 'double_beep', 'triple_beep', 'ring', 'vibrate', 'vibrate_only'));
 
 CREATE INDEX IF NOT EXISTS users_last_active_at_idx ON public.users ("lastActiveAt" DESC);
 
@@ -75,6 +87,7 @@ ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
 
 CREATE INDEX IF NOT EXISTS items_created_at_idx ON public.items ("createdAt" DESC);
 CREATE INDEX IF NOT EXISTS items_user_id_idx ON public.items ("userId");
+CREATE INDEX IF NOT EXISTS items_expires_at_active_idx ON public.items ("expiresAt") WHERE status = 'active';
 
 -- 3. Chat rooms
 CREATE TABLE IF NOT EXISTS public.chats (
@@ -86,11 +99,14 @@ CREATE TABLE IF NOT EXISTS public.chats (
   "lastMessageAt" TIMESTAMPTZ DEFAULT NOW(),
   "lastMessageSenderId" TEXT,
   "itemId" TEXT,
-  "itemTitle" TEXT
+  "itemTitle" TEXT,
+  "eventId" TEXT,
+  "eventTitle" TEXT
 );
 
 ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS chats_item_id_idx ON public.chats ("itemId");
+CREATE INDEX IF NOT EXISTS chats_event_id_idx ON public.chats ("eventId");
 CREATE INDEX IF NOT EXISTS chats_last_message_at_idx ON public.chats ("lastMessageAt" DESC);
 
 -- 4. Chat messages
@@ -125,7 +141,8 @@ CREATE TABLE IF NOT EXISTS public.item_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.item_comments ENABLE ROW LEVEL SECURITY;
@@ -387,6 +404,8 @@ CREATE INDEX IF NOT EXISTS item_claim_requests_item_idx ON public.item_claim_req
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionType" TEXT;
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionUserId" TEXT;
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionLabel" TEXT;
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMPTZ;
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "expiryWarnedAt" TIMESTAMPTZ;
 ALTER TABLE public.items DROP CONSTRAINT IF EXISTS items_pickup_attribution_type_check;
 ALTER TABLE public.items ADD CONSTRAINT items_pickup_attribution_type_check
   CHECK (
@@ -427,6 +446,9 @@ ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DE
 ALTER TABLE public.user_reports DROP CONSTRAINT IF EXISTS user_reports_source_check;
 ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_source_check
   CHECK (source IN ('manual', 'block'));
+
+ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS "feedPostId" TEXT;
+ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS "feedCommentId" TEXT;
 
 -- =========================================================
 -- 17. Community events (free gatherings only)
@@ -505,7 +527,8 @@ CREATE TABLE IF NOT EXISTS public.event_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.event_comments ENABLE ROW LEVEL SECURITY;
@@ -1164,6 +1187,8 @@ CREATE TABLE IF NOT EXISTS public.go_get_sessions (
 -- Poster may opt in to share their live device location during active/arrived pickup
 -- so the picker can see both the listed pickup pin and where they actually are.
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "fulfillerSharingLocation" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringExpiresAt" TIMESTAMPTZ;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringDurationSeconds" INTEGER;
 
 ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_item_type_check;
 ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_item_type_check
@@ -1176,7 +1201,7 @@ ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_handshake_chec
 ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_status_check;
 ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_status_check
   CHECK (status IN (
-    'awaiting_availability', 'window_offered', 'scheduled', 'active', 'arrived',
+    'awaiting_availability', 'awaiting_schedule', 'window_offered', 'scheduled', 'active', 'arrived',
     'completed', 'cancelled', 'expired', 'disputed'
   ));
 
@@ -1825,7 +1850,7 @@ ALTER TABLE public.help_announcements ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.community_content_votes (
   id TEXT PRIMARY KEY,
-  "targetType" TEXT NOT NULL CHECK ("targetType" IN ('update', 'review', 'leader_message', 'announcement')),
+  "targetType" TEXT NOT NULL CHECK ("targetType" IN ('update', 'review', 'leader_message', 'announcement', 'feed_post')),
   "targetId" TEXT NOT NULL,
   "userId" TEXT NOT NULL,
   "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),
@@ -1869,6 +1894,59 @@ CREATE INDEX IF NOT EXISTS help_announcement_comments_announcement_id_idx
   ON public.help_announcement_comments ("announcementId");
 
 ALTER TABLE public.help_announcement_comments ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================
+-- NEIGHBOR FEED (posts, nested comments, emoji reactions)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS public.feed_posts (
+  id TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "userDisplayName" TEXT NOT NULL,
+  "userPhotoURL" TEXT,
+  neighborhood TEXT NOT NULL,
+  text TEXT NOT NULL DEFAULT '',
+  "imageUrls" JSONB NOT NULL DEFAULT '[]'::jsonb,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'hidden', 'removed')),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS feed_posts_created_idx ON public.feed_posts ("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS feed_posts_user_idx ON public.feed_posts ("userId");
+
+ALTER TABLE public.feed_posts ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.feed_post_comments (
+  id TEXT PRIMARY KEY,
+  "postId" TEXT NOT NULL REFERENCES public.feed_posts(id) ON DELETE CASCADE,
+  "parentCommentId" TEXT REFERENCES public.feed_post_comments(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS feed_post_comments_post_idx ON public.feed_post_comments ("postId", "createdAt");
+CREATE INDEX IF NOT EXISTS feed_post_comments_parent_idx ON public.feed_post_comments ("parentCommentId");
+
+ALTER TABLE public.feed_post_comments ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.feed_post_reactions (
+  "postId" TEXT NOT NULL REFERENCES public.feed_posts(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY ("postId", "userId", emoji)
+);
+
+CREATE INDEX IF NOT EXISTS feed_post_reactions_post_idx ON public.feed_post_reactions ("postId");
+
+ALTER TABLE public.feed_post_reactions ENABLE ROW LEVEL SECURITY;
 
 
 -- =========================================================
@@ -3283,6 +3361,38 @@ CREATE POLICY "help_announcement_comments_write" ON public.help_announcement_com
   FOR ALL USING (auth.uid()::text = "userId")
   WITH CHECK (auth.uid()::text = "userId");
 
+DROP POLICY IF EXISTS "feed_posts_select" ON public.feed_posts;
+DROP POLICY IF EXISTS "feed_posts_insert" ON public.feed_posts;
+DROP POLICY IF EXISTS "feed_posts_update_own" ON public.feed_posts;
+DROP POLICY IF EXISTS "feed_posts_delete" ON public.feed_posts;
+CREATE POLICY "feed_posts_select" ON public.feed_posts
+  FOR SELECT USING (auth.uid() IS NOT NULL AND status = 'active');
+CREATE POLICY "feed_posts_insert" ON public.feed_posts
+  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
+CREATE POLICY "feed_posts_update_own" ON public.feed_posts
+  FOR UPDATE USING (auth.uid()::text = "userId" OR public.is_staff())
+  WITH CHECK (auth.uid()::text = "userId" OR public.is_staff());
+CREATE POLICY "feed_posts_delete" ON public.feed_posts
+  FOR DELETE USING (auth.uid()::text = "userId" OR public.is_staff());
+
+DROP POLICY IF EXISTS "feed_post_comments_select" ON public.feed_post_comments;
+DROP POLICY IF EXISTS "feed_post_comments_insert" ON public.feed_post_comments;
+DROP POLICY IF EXISTS "feed_post_comments_delete" ON public.feed_post_comments;
+CREATE POLICY "feed_post_comments_select" ON public.feed_post_comments
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "feed_post_comments_insert" ON public.feed_post_comments
+  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
+CREATE POLICY "feed_post_comments_delete" ON public.feed_post_comments
+  FOR DELETE USING (auth.uid()::text = "userId" OR public.is_staff());
+
+DROP POLICY IF EXISTS "feed_post_reactions_select" ON public.feed_post_reactions;
+DROP POLICY IF EXISTS "feed_post_reactions_write" ON public.feed_post_reactions;
+CREATE POLICY "feed_post_reactions_select" ON public.feed_post_reactions
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "feed_post_reactions_write" ON public.feed_post_reactions
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
 DROP POLICY IF EXISTS "Allow read community content votes" ON public.community_content_votes;
 DROP POLICY IF EXISTS "Allow write community content votes" ON public.community_content_votes;
 DROP POLICY IF EXISTS "content_votes_select" ON public.community_content_votes;
@@ -3934,6 +4044,9 @@ BEGIN
     'help_announcement_comments',
     'app_update_comments',
     'community_content_votes',
+    'feed_posts',
+    'feed_post_comments',
+    'feed_post_reactions',
     'go_get_sessions',
     'go_get_live_locations',
     'go_get_fulfiller_live_locations',
@@ -3994,6 +4107,58 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- =========================================================
+-- NEIGHBOR FEED SEED — founder welcome post
+-- =========================================================
+
+INSERT INTO public.feed_posts (
+  id,
+  "userId",
+  "userDisplayName",
+  "userPhotoURL",
+  neighborhood,
+  text,
+  "imageUrls",
+  status,
+  "postedAsNeighbor",
+  "createdAt",
+  "updatedAt"
+)
+VALUES (
+  'feed_welcome_director_2026',
+  '204b071f-100c-401d-b76d-40c594e1f132',
+  COALESCE(
+    (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    'Markeith White'
+  ),
+  (SELECT "photoURL" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  COALESCE(
+    (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    'Midtown'
+  ),
+  'Hey guys — glad to have y''all here!
+
+I was thinking… what''s an app like this without somewhere to chit-chat? So Feed is live.
+
+Not just listing stuff. Drop a photo, say hey, talk about a pickup that went smooth, ask the neighborhood something — whatever.
+
+Comment, react, vote — same as everywhere else. I wanted a spot where we''re not ONLY talking about free couches 😂
+
+Say hi when you get a minute. Let me know what you think.',
+  '[]'::jsonb,
+  'active',
+  false,
+  '2026-08-20 16:00:00-07'::timestamptz,
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  text = EXCLUDED.text,
+  "userDisplayName" = EXCLUDED."userDisplayName",
+  "userPhotoURL" = EXCLUDED."userPhotoURL",
+  neighborhood = EXCLUDED.neighborhood,
+  "updatedAt" = NOW();
+
+
+-- =========================================================
 -- PUSH WEBHOOKS (configure in Dashboard — not SQL)
 -- =========================================================
 
@@ -4037,4 +4202,4 @@ ON CONFLICT (id) DO NOTHING;
 -- moderation_audit_log INSERT covers director moderation alerts and account-update
 -- pushes to suspended/banned neighbors (suspend, unsuspend, ban, unban, set_role).
 --
--- Daily cron (Vercel): /api/cron/notification-jobs — listing expiry + pickup reminders.
+-- Daily cron (Vercel): /api/cron/notification-jobs — 30-day listing expiry (warn + auto-withdraw) + pickup reminders.

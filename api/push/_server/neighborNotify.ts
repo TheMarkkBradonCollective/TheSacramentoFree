@@ -4,6 +4,11 @@ import { runPushSend, type PushSendBody } from './runPushSend';
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { shouldThrottleVoteNotify } from './voteNotifyCooldown';
 import { listingStatusLabel, newListingPushTitle } from '../../../shared/listingStatusLabel';
+import {
+  isListingExpired,
+  isListingInExpiryWarningWindow,
+  listingExpiresAtMs,
+} from '../../../shared/listingExpiry';
 
 type ItemRow = {
   id?: string;
@@ -15,6 +20,10 @@ type ItemRow = {
   status?: string;
   description?: string;
   category?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  expiresAt?: string | null;
+  expiryWarnedAt?: string | null;
 };
 
 function listingUrl(itemId: string): string {
@@ -142,7 +151,7 @@ export async function runNeighborMessageRequestNotify(
     eventType: 'message_request',
     title: 'New message request',
     body,
-    url: '/messages',
+    url: '/messages/requests',
     recipientUserIds: [toUserId],
     tag: `dm-req-${requestId}`,
     data: { requestId },
@@ -645,39 +654,88 @@ export async function runItemCompletedNotify(
 
 export async function runListingExpiryCron(): Promise<{ status: number; body: Record<string, unknown> }> {
   const supabaseAdmin = await getSupabaseAdmin();
-  const now = Date.now();
-  const warnMs = 12 * 24 * 60 * 60 * 1000;
-  const expireMs = 14 * 24 * 60 * 60 * 1000;
-  const cutoffWarn = new Date(now - warnMs).toISOString();
-  const cutoffExpire = new Date(now - expireMs).toISOString();
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
 
-  const { data: items } = await supabaseAdmin
+  const { data: activeRows, error } = await supabaseAdmin
     .from('items')
-    .select('id, userId, title, createdAt, status')
-    .eq('status', 'active')
-    .lte('createdAt', cutoffWarn)
-    .gt('createdAt', cutoffExpire);
+    .select('id, userId, title, type, createdAt, updatedAt, expiresAt, expiryWarnedAt, status')
+    .eq('status', 'active');
 
-  let sent = 0;
-  for (const row of items || []) {
+  if (error) {
+    return { status: 500, body: { ok: false, error: error.message } };
+  }
+
+  let expiringSent = 0;
+  let expiredWithdrawn = 0;
+
+  for (const row of activeRows || []) {
     const item = row as ItemRow;
     const itemId = String(item.id || '');
     const ownerId = String(item.userId || '');
     if (!itemId || !ownerId) continue;
 
+    const title = String(item.title || 'Your listing');
+
+    if (isListingExpired(item, nowMs)) {
+      const { error: withdrawError } = await supabaseAdmin
+        .from('items')
+        .update({ status: 'withdrawn', updatedAt: nowIso })
+        .eq('id', itemId)
+        .eq('status', 'active');
+
+      if (withdrawError) continue;
+
+      const result = await sendNeighborPush('system', {
+        eventType: 'listing_expired',
+        title: 'Listing expired',
+        body: `"${title}" was withdrawn after 30 days — edit and repost from your profile to relist`,
+        url: listingUrl(itemId),
+        listingId: itemId,
+        recipientUserIds: [ownerId],
+        tag: `expired-${itemId}`,
+      });
+      if (result.status === 200 && !result.body.skipped && !result.body.deduped) expiredWithdrawn += 1;
+      continue;
+    }
+
+    if (!isListingInExpiryWarningWindow(item, nowMs)) continue;
+    if (item.expiryWarnedAt) continue;
+
+    const daysLeft = Math.max(
+      1,
+      Math.ceil((listingExpiresAtMs(item, nowMs) - nowMs) / (24 * 60 * 60 * 1000)),
+    );
+
     const result = await sendNeighborPush('system', {
       eventType: 'listing_expiring',
       title: 'Listing expiring soon',
-      body: `"${String(item.title || 'Your listing')}" will expire soon — renew or mark as gifted`,
+      body: `"${title}" expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} — edit it to reset the timer, or mark it gifted`,
       url: listingUrl(itemId),
       listingId: itemId,
       recipientUserIds: [ownerId],
       tag: `expiring-${itemId}`,
     });
-    if (result.status === 200 && !result.body.skipped && !result.body.deduped) sent += 1;
+
+    if (result.status === 200 && !result.body.skipped && !result.body.deduped) {
+      expiringSent += 1;
+      await supabaseAdmin
+        .from('items')
+        .update({ expiryWarnedAt: nowIso })
+        .eq('id', itemId)
+        .eq('status', 'active');
+    }
   }
 
-  return { status: 200, body: { ok: true, expiringSent: sent, checked: (items || []).length } };
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      expiringSent,
+      expiredWithdrawn,
+      checked: (activeRows || []).length,
+    },
+  };
 }
 
 export async function runPickupReminderCron(): Promise<{ status: number; body: Record<string, unknown> }> {

@@ -8,9 +8,9 @@ interface AppTopbarProps {
   userProfile: UserProfile;
   eyebrow?: string;
   title?: string;
-  onOpenAwards: () => void;
-  awardsButtonGlow?: boolean;
-  /** Contextual primary action, e.g. "+ Post" on Feed, "+ Post event" on Events. */
+  onOpenAccount: () => void;
+  accountActive?: boolean;
+  /** Contextual primary action, e.g. "+ Post" on Stuff, "+ Post event" on Events. */
   action?: ReactNode;
   /** Opens the staff sidebar drawer — hamburger sits top-left where the logo lives in the shell. */
   onToggleSidebar?: () => void;
@@ -27,8 +27,8 @@ export default function AppTopbar({
   userProfile,
   eyebrow,
   title,
-  onOpenAwards,
-  awardsButtonGlow = false,
+  onOpenAccount,
+  accountActive = false,
   action,
   onToggleSidebar,
   brandLockup = false,
@@ -64,8 +64,8 @@ export default function AppTopbar({
       <div className="flex items-center gap-2 shrink-0">
         <TopbarActions
           userProfile={userProfile}
-          onOpenAwards={onOpenAwards}
-          awardsButtonGlow={awardsButtonGlow}
+          onOpenAccount={onOpenAccount}
+          accountActive={accountActive}
           compact={compactActions}
           showNeighborhood
         />

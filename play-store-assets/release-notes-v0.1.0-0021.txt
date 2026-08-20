@@ -1,0 +1,8 @@
+Android beta v0.1.0.0021 (versionCode 21)
+
+What's new:
+• Play Store listing assets and delete-account page for Google Play compliance
+• Public /delete-account URL for Data safety form requirements
+• Updated signed release APK and AAB for Play Console upload
+
+Download (sideload): https://www.sacramentobuynothing.com/download

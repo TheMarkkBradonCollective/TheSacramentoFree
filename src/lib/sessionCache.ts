@@ -3,17 +3,23 @@ import {
   isPersistableListingImageUrl,
   plainListingDescription,
 } from './listingContent';
+import { isStaffRole, normalizeUserRole } from './roles';
+import { mergeStaffInteractionModePref, clearAllStaffInteractionModePrefs } from './staffModePrefs';
 
-const PROFILE_KEY = 'sbn_profile_cache_v1';
+const PROFILE_KEY = 'sbn_profile_cache_v2';
+const LEGACY_PROFILE_KEY = 'sbn_profile_cache_v1';
 const ITEMS_KEY = 'sbn_items_cache_v1';
 
-type ItemsCache = { savedAt: number; items: ItemPost[] };
-
-/** Fields safe to cache offline — never store role, email, or moderation state. */
+/** Fields safe to cache offline — staff role + mode for instant shell restore. */
 type CachedProfile = Pick<
   UserProfile,
   'uid' | 'displayName' | 'photoURL' | 'neighborhood' | 'bio' | 'createdAt'
->;
+> & {
+  role?: UserProfile['role'];
+  staffInteractionMode?: UserProfile['staffInteractionMode'];
+};
+
+type ItemsCache = { savedAt: number; items: ItemPost[] };
 
 function safeParse<T>(raw: string | null): T | null {
   if (!raw) return null;
@@ -25,7 +31,7 @@ function safeParse<T>(raw: string | null): T | null {
 }
 
 function toCachedProfile(profile: UserProfile): CachedProfile {
-  return {
+  const cached: CachedProfile = {
     uid: profile.uid,
     displayName: profile.displayName,
     photoURL: profile.photoURL,
@@ -33,20 +39,34 @@ function toCachedProfile(profile: UserProfile): CachedProfile {
     bio: profile.bio,
     createdAt: profile.createdAt,
   };
+  if (isStaffRole(profile.role)) {
+    cached.role = normalizeUserRole(profile.role);
+    cached.staffInteractionMode =
+      profile.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff';
+  }
+  return cached;
 }
 
 function fromCachedProfile(cached: CachedProfile): UserProfile {
+  const role = cached.role ? normalizeUserRole(cached.role) : 'user';
+  const staffInteractionMode = mergeStaffInteractionModePref({
+    uid: cached.uid,
+    staffInteractionMode: cached.staffInteractionMode,
+  });
   return {
     ...cached,
     email: '',
-    role: 'user',
+    role,
+    staffInteractionMode,
     accountStatus: 'active',
   };
 }
 
 export function readCachedProfile(): UserProfile | null {
   if (typeof window === 'undefined') return null;
-  const profile = safeParse<CachedProfile>(localStorage.getItem(PROFILE_KEY));
+  const profile =
+    safeParse<CachedProfile>(localStorage.getItem(PROFILE_KEY)) ??
+    safeParse<CachedProfile>(localStorage.getItem(LEGACY_PROFILE_KEY));
   return profile?.uid ? fromCachedProfile(profile) : null;
 }
 
@@ -89,7 +109,9 @@ export function writeCachedItems(items: ItemPost[]): void {
 export function clearSessionCache(): void {
   try {
     localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(LEGACY_PROFILE_KEY);
     localStorage.removeItem(ITEMS_KEY);
+    clearAllStaffInteractionModePrefs();
   } catch {
     /* ignore */
   }

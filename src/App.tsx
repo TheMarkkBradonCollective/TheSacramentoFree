@@ -6,15 +6,20 @@ import { useEventsEngagement } from './hooks/useEventsEngagement';
 import { useEventsRealtime } from './hooks/useEventsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
-import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent } from './types';
+import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent, FeedPost } from './types';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
+import NewListingModal, { type NewListingModalMode } from './components/NewListingModal';
+import FeedPostDetailView from './components/feed/FeedPostDetailView';
 import ItemDetailView from './components/ItemDetailView';
+import { deleteFeedPost, getFeedPostById } from './lib/feedApi';
+import { isStaffRole } from './lib/roles';
 import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
 import PostEventModal from './components/PostEventModal';
 import NeighborProfileView from './components/NeighborProfileView';
+import DirectMessageRequestModal from './components/DirectMessageRequestModal';
 import MobileView from './components/MobileView';
 import TabletView from './components/TabletView';
 import DesktopView from './components/DesktopView';
@@ -34,8 +39,13 @@ import {
   migrateLocalSavedItemsToDb,
   getClaimRequestById,
   staffGetListingById,
+  findOrCreateStaffListingOutreachTicket,
+  findOrCreateStaffEventOutreachTicket,
 } from './supabase';
+import { confirmStaffEventOutreach, confirmStaffListingOutreach } from './lib/staffChatSafety';
+import { isStaffActingOfficial } from './lib/staffInteractionMode';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
+import GoGetRingCoordinator from './components/goget/GoGetRingCoordinator';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
@@ -43,7 +53,9 @@ import TermsOfUseContent from './components/TermsOfUseContent';
 import AwardsPanel from './components/AwardsPanel';
 import StaffApplyView from './components/StaffApplyView';
 import { registerStaffApplyOpener } from './lib/staffApplyOpen';
-import { type AnyTab, type AppTab } from './lib/appTabs';
+import { detectInstallKind } from './lib/installContext';
+import { reportAppInstall } from './lib/deviceTracking';
+import { type AnyTab, type AppTab, isStaffTab } from './lib/appTabs';
 import {
   appTabPath,
   parseStoredTab,
@@ -65,6 +77,7 @@ import {
   clearSessionCache,
   sessionStubFromProfile,
 } from './lib/sessionCache';
+import { readStaffInteractionModePref } from './lib/staffModePrefs';
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
@@ -82,13 +95,15 @@ import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { useReviewPrompt } from './hooks/useReviewPrompt';
 import ReviewPromptModal from './components/ReviewPromptModal';
+import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
+import { isNativeApp } from './lib/nativePlatform';
+import { hasSeenGoGetFirstRunPrompt } from './lib/goGetFirstRunState';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
 import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath, normalizePublicPath } from './public/routes';
 import DownloadPage from './components/public/pages/DownloadPage';
-import { isPlayReviewBrowseOnly } from './lib/playReviewAccount';
-import { BrowseOnlyProvider } from './contexts/BrowseOnlyContext';
+import { canDownloadApkFromWebsite } from './lib/apkWebsiteAccess';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -172,8 +187,7 @@ export default function App() {
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const pathnameSeededRef = useRef(false);
   const [activeTab, setActiveTab] = useState<AnyTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
-  const [showPostModal, setShowPostModal] = useState(false);
-  const [showPostEventModal, setShowPostEventModal] = useState(false);
+  const [newListingModalMode, setNewListingModalMode] = useState<NewListingModalMode | null>(null);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
   const [legalPanel, setLegalPanel] = useState<'privacy' | 'terms' | null>(null);
   const [showAwardsPanel, setShowAwardsPanel] = useState(false);
@@ -184,18 +198,23 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [addEventDatesMode, setAddEventDatesMode] = useState(false);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
+  const [detailFeedPost, setDetailFeedPost] = useState<FeedPost | null>(null);
+  const [detailNavigateOnOpen, setDetailNavigateOnOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<CommunityEvent | null>(null);
+  const [detailEventNavigateOnOpen, setDetailEventNavigateOnOpen] = useState(false);
   const [detailEventUpdating, setDetailEventUpdating] = useState(false);
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [pickupAttributionItem, setPickupAttributionItem] = useState<ItemPost | null>(null);
   const [pickupAttributionMode, setPickupAttributionMode] = useState<'complete' | 'edit'>('complete');
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
+  const [showDirectMessageModal, setShowDirectMessageModal] = useState(false);
   const [showDownloadPage, setShowDownloadPage] = useState(() => isDownloadRoute());
   const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
     'reviews' | 'report' | 'staffReports' | null
   >(null);
   const [initialSupportTicketId, setInitialSupportTicketId] = useState<string | null>(null);
   const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
+  const [initialFocusMessageRequests, setInitialFocusMessageRequests] = useState(false);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
   useEffect(() => {
@@ -245,10 +264,11 @@ export default function App() {
     setItemsHydrated(false);
     setIsItemsLoading(false);
     setDetailItem(null);
+    setDetailNavigateOnOpen(false);
     setDetailEvent(null);
+    setDetailEventNavigateOnOpen(false);
     setViewProfileUid(null);
-    setShowPostModal(false);
-    setShowPostEventModal(false);
+    setNewListingModalMode(null);
     setShowGoFundMeDetail(false);
     setLegalPanel(null);
     setShowAwardsPanel(false);
@@ -283,7 +303,9 @@ export default function App() {
 
   const closeTransientOverlays = useCallback(() => {
     setDetailItem(null);
+    setDetailNavigateOnOpen(false);
     setDetailEvent(null);
+    setDetailEventNavigateOnOpen(false);
     setViewProfileUid(null);
     setLegalPanel(null);
     setShowAwardsPanel(false);
@@ -299,6 +321,16 @@ export default function App() {
       persistActiveTab(tab as AppTab, userProfile?.uid);
     },
     [closeTransientOverlays, userProfile?.uid],
+  );
+
+  const handleUpdateProfile = useCallback(
+    (updated: UserProfile) => {
+      setUserProfile(updated);
+      if (!isStaffActingOfficial(updated) && isStaffTab(activeTab)) {
+        handleTabChange('profile');
+      }
+    },
+    [activeTab, handleTabChange],
   );
 
   const navigateToTab = useCallback(
@@ -389,6 +421,7 @@ export default function App() {
     
     if (isStandaloneMode) {
       setIsAlreadyInstalled(true);
+      void reportAppInstall();
       return;
     }
 
@@ -414,6 +447,7 @@ export default function App() {
       setIsAlreadyInstalled(true);
       setShowInstallBanner(false);
       setDeferredPrompt(null);
+      void reportAppInstall();
     };
     window.addEventListener('appinstalled', handleAppInstalled);
 
@@ -438,6 +472,7 @@ export default function App() {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setIsAlreadyInstalled(true);
+        void reportAppInstall(userProfile?.uid);
       }
       setDeferredPrompt(null);
       setShowInstallBanner(false);
@@ -448,6 +483,11 @@ export default function App() {
     setShowInstallBanner(false);
     localStorage.setItem('pwa_banner_dismissed_v1', 'true');
   };
+
+  useEffect(() => {
+    if (detectInstallKind() === 'browser') return;
+    void reportAppInstall(userProfile?.uid);
+  }, [userProfile?.uid]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -696,8 +736,11 @@ export default function App() {
     try {
       const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
         if (fromDb) {
-          setUserProfile(fromDb);
-          writeCachedProfile(fromDb);
+          const localMode = readStaffInteractionModePref(fromDb.uid);
+          const merged =
+            localMode != null ? { ...fromDb, staffInteractionMode: localMode } : fromDb;
+          setUserProfile(merged);
+          writeCachedProfile(merged);
           return;
         }
 
@@ -1185,7 +1228,7 @@ export default function App() {
         }
         if (detailItem?.id === post.id) await refreshDetailItem();
         await loadItems(true);
-        setActiveTab('feed');
+        setActiveTab('stuff');
       } catch (err) {
         console.warn('Failed to repost listing:', err);
         setErrorMsg('Could not repost listing.');
@@ -1227,9 +1270,73 @@ export default function App() {
     [userProfile, detailItem?.id, loadItems, confirm],
   );
 
+  const handleOpenSupportTicket = useCallback((ticketId: string) => {
+    setInitialSupportTicketId(ticketId);
+    setActiveTab('chats');
+  }, []);
+
+  const handleStaffListingOutreach = useCallback(
+    async (item: ItemPost) => {
+      if (!userProfile || !isStaffActingOfficial(userProfile)) return;
+      if (blockedUserIds.has(item.userId)) return;
+
+      const confirmed = await confirmStaffListingOutreach(
+        confirm,
+        item.userDisplayName,
+        item.title,
+      );
+      if (!confirmed) return;
+
+      const result = await findOrCreateStaffListingOutreachTicket({ staff: userProfile, item });
+      if (!result.ok || !result.ticketId) {
+        await alert({
+          title: 'Could not open staff thread',
+          message: result.errorMessage || 'Could not open staff thread.',
+        });
+        return;
+      }
+
+      setDetailItem(null);
+      handleOpenSupportTicket(result.ticketId);
+    },
+    [userProfile, blockedUserIds, confirm, alert, handleOpenSupportTicket],
+  );
+
+  const handleStaffEventOutreach = useCallback(
+    async (event: CommunityEvent) => {
+      if (!userProfile || !isStaffActingOfficial(userProfile)) return;
+      if (blockedUserIds.has(event.userId)) return;
+
+      const confirmed = await confirmStaffEventOutreach(
+        confirm,
+        event.userDisplayName,
+        event.title,
+      );
+      if (!confirmed) return;
+
+      const result = await findOrCreateStaffEventOutreachTicket({ staff: userProfile, event });
+      if (!result.ok || !result.ticketId) {
+        await alert({
+          title: 'Could not open staff thread',
+          message: result.errorMessage || 'Could not open staff thread.',
+        });
+        return;
+      }
+
+      setDetailEvent(null);
+      handleOpenSupportTicket(result.ticketId);
+    },
+    [userProfile, blockedUserIds, confirm, alert, handleOpenSupportTicket],
+  );
+
   const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
+
+    if (isStaffActingOfficial(userProfile) && item) {
+      void handleStaffListingOutreach(item);
+      return;
+    }
 
     const participants = [userProfile.uid, posterUid].sort();
     const chatId = participants.join('_');
@@ -1242,6 +1349,35 @@ export default function App() {
       otherUserPhoto: posterPhoto,
       itemId: item?.id,
       itemTitle: item?.title,
+    });
+    setActiveTab('chats');
+  };
+
+  const handleInitiateEventChat = (
+    hostUid: string,
+    hostName: string,
+    hostPhoto?: string,
+    event?: CommunityEvent,
+  ) => {
+    if (!userProfile) return;
+    if (blockedUserIds.has(hostUid)) return;
+
+    if (isStaffActingOfficial(userProfile) && event) {
+      void handleStaffEventOutreach(event);
+      return;
+    }
+
+    const participants = [userProfile.uid, hostUid].sort();
+    const chatId = participants.join('_');
+
+    setInitialSelectedChatId(null);
+    setPendingChatCompose({
+      chatId,
+      otherUserId: hostUid,
+      otherUserName: hostName,
+      otherUserPhoto: hostPhoto,
+      eventId: event?.id,
+      eventTitle: event?.title,
     });
     setActiveTab('chats');
   };
@@ -1273,7 +1409,8 @@ export default function App() {
     [blockedUserIds],
   );
 
-  const handleViewItem = useCallback((item: ItemPost) => {
+  const openDetailItem = useCallback((item: ItemPost, startNavigation = false) => {
+    setDetailNavigateOnOpen(startNavigation);
     setDetailItem(item);
     if (item.description) return;
     void getSupabaseItemById(item.id).then((full) => {
@@ -1301,15 +1438,73 @@ export default function App() {
     });
   }, []);
 
+  const handleViewItem = useCallback((item: ItemPost) => {
+    openDetailItem(item, false);
+  }, [openDetailItem]);
+
+  const handleViewFeedPost = useCallback((post: FeedPost) => {
+    setDetailFeedPost(post);
+  }, []);
+
+  const handleDeleteFeedPost = useCallback(
+    async (post: FeedPost) => {
+      if (!userProfile) return;
+      const isStaff = isStaffRole(userProfile.role);
+      const ok = await confirm({
+        title: 'Delete post?',
+        message:
+          isStaff && post.userId !== userProfile.uid
+            ? 'Remove this neighbor post as staff?'
+            : 'Delete your post for everyone?',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      });
+      if (!ok) return;
+      const result = await deleteFeedPost(post.id, userProfile.uid, isStaff);
+      if (!result.ok) {
+        await alert({ title: 'Could not delete', message: result.errorMessage || 'Try again.' });
+        return;
+      }
+      setDetailFeedPost(null);
+    },
+    [userProfile, confirm, alert],
+  );
+
+  const handleNavigateItem = useCallback(
+    (item: ItemPost) => {
+      openDetailItem(item, true);
+    },
+    [openDetailItem],
+  );
+
+  const openDetailEvent = useCallback((event: CommunityEvent, startNavigation = false) => {
+    setDetailEventNavigateOnOpen(startNavigation);
+    setDetailEvent(event);
+  }, []);
+
+  const handleViewEvent = useCallback(
+    (event: CommunityEvent) => {
+      openDetailEvent(event, false);
+    },
+    [openDetailEvent],
+  );
+
+  const handleNavigateEvent = useCallback(
+    (event: CommunityEvent) => {
+      openDetailEvent(event, true);
+    },
+    [openDetailEvent],
+  );
+
   const handleOpenChatFromProfile = useCallback((chatId: string) => {
     setViewProfileUid(null);
     setInitialSelectedChatId(chatId);
     setActiveTab('chats');
   }, []);
 
-  const handleOpenSupportTicket = useCallback((ticketId: string) => {
-    setInitialSupportTicketId(ticketId);
+  const handleStartDirectMessage = useCallback(() => {
     setActiveTab('chats');
+    setShowDirectMessageModal(true);
   }, []);
 
   const handleViewListingId = useCallback(
@@ -1327,6 +1522,14 @@ export default function App() {
     [items, engagement, handleViewItem],
   );
 
+  const handleViewEventId = useCallback(
+    (eventId: string) => {
+      const event = events.find((e) => e.id === eventId);
+      if (event) handleViewEvent(event);
+    },
+    [events, handleViewEvent],
+  );
+
   const handleClaimSubmitted = useCallback((chatId: string) => {
     setDetailItem(null);
     setInitialSelectedChatId(chatId);
@@ -1340,10 +1543,18 @@ export default function App() {
 
   const handlePushDeepLink = useCallback(
     (target: PushDeepLinkTarget) => {
+      // Close stacked overlays so notification navigation lands on the intended screen.
+      setDetailItem(null);
+      setDetailFeedPost(null);
+      setDetailEvent(null);
+      setViewProfileUid(null);
+      setShowDirectMessageModal(false);
+
       let tabForUrl: AppTab = target.tab ?? 'map';
       if (target.tab) navigateToTab(target.tab);
       if (target.conversationId) {
         setInitialSelectedChatId(target.conversationId);
+        setInitialFocusMessageRequests(false);
         navigateToTab('chats');
         tabForUrl = 'chats';
       }
@@ -1365,8 +1576,8 @@ export default function App() {
         } else {
           void getSupabaseItemById(target.listingId).then((item) => openListing(item ?? undefined));
         }
-        tabForUrl = 'feed';
-        navigateToTab('feed');
+        tabForUrl = 'stuff';
+        navigateToTab('stuff');
       }
       if (target.eventId) {
         const openEvent = (event: CommunityEvent | undefined) => {
@@ -1391,14 +1602,53 @@ export default function App() {
         tabForUrl = 'events';
         navigateToTab('events');
       }
+      if (target.feedPostId) {
+        const openFeedPost = (post: FeedPost | null | undefined) => {
+          if (!post) {
+            void alert({ message: 'This feed post is no longer available.' });
+            return;
+          }
+          if (blockedUserIds.has(post.userId)) {
+            void alert({ message: 'This post is unavailable.' });
+            return;
+          }
+          setDetailFeedPost(post);
+        };
+        void getFeedPostById(target.feedPostId).then((post) => openFeedPost(post));
+        tabForUrl = 'feed';
+        navigateToTab('feed');
+      }
       if (target.requestId) {
         void getClaimRequestById(target.requestId).then((request) => {
           if (request?.chatId) {
             setInitialSelectedChatId(request.chatId);
-          } else {
-            void alert({ message: 'That claim request is no longer available.' });
+            setInitialFocusMessageRequests(false);
+            navigateToTab('chats');
+            return;
           }
+          if (request?.itemId) {
+            void getSupabaseItemById(request.itemId).then((item) => {
+              if (!item) {
+                void alert({ message: 'That claim request is no longer available.' });
+                return;
+              }
+              if (blockedUserIds.has(item.userId)) {
+                void alert({ message: 'This listing is unavailable.' });
+                return;
+              }
+              setDetailItem(item);
+              navigateToTab('stuff');
+            });
+            return;
+          }
+          void alert({ message: 'That claim request is no longer available.' });
         });
+        tabForUrl = 'chats';
+        navigateToTab('chats');
+      }
+      if (target.messageRequests) {
+        setInitialSelectedChatId(null);
+        setInitialFocusMessageRequests(true);
         navigateToTab('chats');
         tabForUrl = 'chats';
       }
@@ -1497,15 +1747,22 @@ export default function App() {
   }, [blockedUserIds, viewProfileUid, detailItem, initialSelectedChatId, userProfile]);
 
   const accountRestriction = isAccountRestricted(userProfile);
-  const browseOnlyReview = isPlayReviewBrowseOnly(userProfile?.email);
-  const openNewPost = () => {
-    if (browseOnlyReview) return;
-    setShowPostModal(true);
-  };
-  const openNewEvent = () => {
-    if (browseOnlyReview) return;
-    setShowPostEventModal(true);
-  };
+
+  const openNewListingFromMap = useCallback(() => {
+    setNewListingModalMode('both');
+  }, []);
+
+  const openNewStuff = useCallback(() => {
+    setNewListingModalMode('stuff');
+  }, []);
+
+  const openNewEvent = useCallback(() => {
+    setNewListingModalMode('event');
+  }, []);
+
+  const closeNewListingModal = useCallback(() => {
+    setNewListingModalMode(null);
+  }, []);
 
   const reviewPromptEnabled =
     Boolean(userProfile) &&
@@ -1529,6 +1786,7 @@ export default function App() {
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {showDownloadPage && sessionUser ? (
         <DownloadPage
+          userProfile={userProfile}
           onBack={() => {
             setShowDownloadPage(false);
             const tab = readPersistedTab(userProfile?.uid);
@@ -1599,8 +1857,13 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <BrowseOnlyProvider browseOnly={browseOnlyReview}>
-            <NotificationsHubProvider userProfile={userProfile} onDeepLink={handlePushDeepLink}>
+            <NotificationsHubProvider
+              userProfile={userProfile}
+              onDeepLink={handlePushDeepLink}
+              onOpenAwards={handleOpenAwards}
+              awardsGlow={awardsButtonGlow}
+            >
+            <GoGetRingCoordinator userProfile={userProfile} />
             <PresenceProvider userId={userProfile.uid}>
                {deviceType === 'mobile' ? (
                 <MobileView
@@ -1609,15 +1872,20 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewPost}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
@@ -1627,9 +1895,12 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1643,7 +1914,6 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1655,6 +1925,8 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -1663,15 +1935,20 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewPost}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
@@ -1681,9 +1958,12 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1697,7 +1977,6 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1709,6 +1988,8 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               ) : (
                 <DesktopView
@@ -1717,15 +1998,20 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewPost}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
                   onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
@@ -1735,9 +2021,12 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1751,7 +2040,6 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1763,6 +2051,8 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               )}
 
@@ -1826,6 +2116,7 @@ export default function App() {
                   currentUserId={userProfile.uid}
                   currentUserProfile={userProfile}
                   listingHints={visibleItems}
+                  nested={Boolean(detailItem || detailEvent || detailFeedPost)}
                   onClose={() => setViewProfileUid(null)}
                   onOpenChat={handleOpenChatFromProfile}
                   onViewPost={handleViewItem}
@@ -1835,12 +2126,42 @@ export default function App() {
                 />
               )}
 
+              {showDirectMessageModal && (
+                <DirectMessageRequestModal
+                  currentUser={userProfile}
+                  blockedUserIds={blockedUserIds}
+                  onClose={() => setShowDirectMessageModal(false)}
+                  onViewProfile={(uid) => {
+                    setShowDirectMessageModal(false);
+                    handleViewProfile(uid);
+                  }}
+                  onOpenChat={(chatId) => {
+                    setShowDirectMessageModal(false);
+                    handleOpenChatFromProfile(chatId);
+                  }}
+                />
+              )}
+
+              {detailFeedPost && userProfile && (
+                <FeedPostDetailView
+                  post={detailFeedPost}
+                  userProfile={userProfile}
+                  blockedUserIds={blockedUserIds}
+                  onClose={() => setDetailFeedPost(null)}
+                  onViewProfile={handleViewProfile}
+                  onDeletePost={(post) => void handleDeleteFeedPost(post)}
+                />
+              )}
+
               {detailItem && (
                 <ItemDetailView
                   item={detailItem}
                   currentUserId={userProfile.uid}
                   updating={detailUpdating}
-                  onClose={() => setDetailItem(null)}
+                  onClose={() => {
+                    setDetailItem(null);
+                    setDetailNavigateOnOpen(false);
+                  }}
                   onEdit={() => {
                     setEditingItem(detailItem);
                     setDetailItem(null);
@@ -1860,7 +2181,7 @@ export default function App() {
                     void engagement.handleDeleteComment(detailItem.id, commentId)
                   }
                   onMessage={
-                    blockedUserIds.has(detailItem.userId)
+                    blockedUserIds.has(detailItem.userId) || isStaffActingOfficial(userProfile)
                       ? undefined
                       : () => {
                           handleInitiateChat(
@@ -1872,6 +2193,17 @@ export default function App() {
                           setDetailItem(null);
                         }
                   }
+                  onStaffChat={
+                    isStaffActingOfficial(userProfile) && !blockedUserIds.has(detailItem.userId)
+                      ? () => {
+                          void handleStaffListingOutreach(detailItem);
+                        }
+                      : undefined
+                  }
+                  onListingStaffAction={async () => {
+                    await refreshDetailItem();
+                    await loadItems(true);
+                  }}
                   userProfile={userProfile}
                   onClaimSubmitted={handleClaimSubmitted}
                   onOpenChat={(chatId) => {
@@ -1882,6 +2214,11 @@ export default function App() {
                   onEditPickupAttribution={() => {
                     setPickupAttributionMode('edit');
                     setPickupAttributionItem(detailItem);
+                  }}
+                  startNavigationOnOpen={detailNavigateOnOpen}
+                  onStartNavigationConsumed={() => setDetailNavigateOnOpen(false)}
+                  onPickupCompleted={() => {
+                    void loadItems(true);
                   }}
                 />
               )}
@@ -1920,7 +2257,10 @@ export default function App() {
                   onDeleteComment={(commentId) =>
                     void eventsEngagement.handleDeleteComment(detailEvent.id, commentId)
                   }
-                  onClose={() => setDetailEvent(null)}
+                  onClose={() => {
+                    setDetailEvent(null);
+                    setDetailEventNavigateOnOpen(false);
+                  }}
                   onEdit={() => {
                     if (!isEventEditable(detailEvent)) return;
                     setAddEventDatesMode(false);
@@ -1951,6 +2291,25 @@ export default function App() {
                     }
                   }}
                   onViewProfile={handleViewProfile}
+                  onMessage={
+                    blockedUserIds.has(detailEvent.userId) || isStaffActingOfficial(userProfile)
+                      ? undefined
+                      : () => {
+                          handleInitiateEventChat(
+                            detailEvent.userId,
+                            detailEvent.userDisplayName,
+                            detailEvent.userPhotoURL,
+                            detailEvent,
+                          );
+                          setDetailEvent(null);
+                        }
+                  }
+                  onStaffChat={
+                    isStaffActingOfficial(userProfile) && !blockedUserIds.has(detailEvent.userId)
+                      ? () => void handleStaffEventOutreach(detailEvent)
+                      : undefined
+                  }
+                  onEventStaffAction={() => void loadEvents(true)}
                   onSelectOccurrence={(occurrence) => setDetailEvent(occurrence)}
                   onEventUpdated={(updatedEvent) => {
                     setDetailEvent(updatedEvent);
@@ -1958,41 +2317,55 @@ export default function App() {
                   }}
                   updating={detailEventUpdating}
                   commentsLocked={!canAccessEvents}
+                  startNavigationOnOpen={detailEventNavigateOnOpen}
+                  onStartNavigationConsumed={() => setDetailEventNavigateOnOpen(false)}
                 />
               )}
 
-              {(showPostModal || editingItem) && !browseOnlyReview && (
+              {newListingModalMode && (
+                <NewListingModal
+                  userProfile={userProfile}
+                  canAccessEvents={canAccessEvents}
+                  allEvents={events}
+                  mode={newListingModalMode}
+                  onClose={closeNewListingModal}
+                  onStuffSuccess={() => {
+                    void loadItems(true);
+                    closeNewListingModal();
+                  }}
+                  onEventSuccess={() => {
+                    void loadEvents(true);
+                    closeNewListingModal();
+                  }}
+                />
+              )}
+
+              {editingItem && (
                 <PostItemModal
                   userProfile={userProfile}
                   editItem={editingItem}
                   onClose={() => {
-                    setShowPostModal(false);
                     setEditingItem(null);
                   }}
                   onSuccess={() => {
                     void loadItems(true);
-                    setActiveTab('feed');
-                    setShowPostModal(false);
                     setEditingItem(null);
                   }}
                 />
               )}
 
-              {((showPostEventModal && canAccessEvents) || editingEvent) && !browseOnlyReview && (
+              {editingEvent && (
                 <PostEventModal
                   userProfile={userProfile}
                   editEvent={editingEvent}
                   allEvents={events}
                   addOccurrencesOnly={addEventDatesMode}
                   onClose={() => {
-                    setShowPostEventModal(false);
                     setEditingEvent(null);
                     setAddEventDatesMode(false);
                   }}
                   onSuccess={() => {
                     void loadEvents(true);
-                    setActiveTab('events');
-                    setShowPostEventModal(false);
                     setEditingEvent(null);
                     setAddEventDatesMode(false);
                   }}
@@ -2000,7 +2373,6 @@ export default function App() {
               )}
             </PresenceProvider>
             </NotificationsHubProvider>
-            </BrowseOnlyProvider>
           )}
         </>
       )}
@@ -2053,13 +2425,24 @@ export default function App() {
           
           {!isIOS && (
             <div className="mt-3 flex items-center justify-end flex-wrap gap-2 pt-2.5 border-t border-app">
-              <button
-                type="button"
-                onClick={handleOpenDownload}
-                className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all cursor-pointer"
-              >
-                ANDROID APK
-              </button>
+              {canDownloadApkFromWebsite(userProfile) ? (
+                <button
+                  type="button"
+                  onClick={handleOpenDownload}
+                  className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all cursor-pointer"
+                >
+                  ANDROID APK
+                </button>
+              ) : (
+                <a
+                  href={SITE.playStoreBetaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 text-[11px] font-extrabold text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
+                >
+                  GOOGLE PLAY
+                </a>
+              )}
               <button
                 onClick={handleDismissPrompt}
                 className="px-3.5 py-1.5 text-[11px] font-extrabold text-muted hover:text-app rounded-lg transition-all cursor-pointer"
@@ -2105,6 +2488,19 @@ export default function App() {
           onDismiss={dismissPrompt}
         />
       )}
+
+      {sessionReady &&
+        userProfile &&
+        isNativeApp() &&
+        !hasSeenGoGetFirstRunPrompt() &&
+        !privacyGateOpen &&
+        !termsGateOpen && (
+          <GoGetFirstRunPrompt
+            userProfile={userProfile}
+            onUpdateProfile={handleUpdateProfile}
+            onOpenNotificationSettings={() => openNotificationsHub('alerts')}
+          />
+        )}
     </div>
   );
 }

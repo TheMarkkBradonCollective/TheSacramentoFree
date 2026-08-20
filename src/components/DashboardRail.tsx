@@ -1,4 +1,4 @@
-import { Medal, Plus, Sparkles, Trophy } from 'lucide-react';
+import { Medal, Sparkles, Trophy } from 'lucide-react';
 import type { ItemPost, UserProfile } from '../types';
 import CommunityStatsBar from './CommunityStatsBar';
 import { useAwardsLeaderboard } from '../hooks/useAwardsLeaderboard';
@@ -6,8 +6,6 @@ import { useAwardsLeaderboard } from '../hooks/useAwardsLeaderboard';
 interface DashboardRailProps {
   items: ItemPost[];
   userProfile: UserProfile;
-  onOpenNewPost: () => void;
-  onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
   onOpenAwards?: () => void;
   onViewProfile?: (uid: string) => void;
@@ -22,9 +20,6 @@ function avatarUrl(seed: string, photo?: string): string {
 export default function DashboardRail({
   items,
   userProfile,
-  onOpenNewPost,
-  onOpenNewEvent,
-  canAccessEvents = true,
   onOpenAwards,
   onViewProfile,
 }: DashboardRailProps) {
@@ -35,20 +30,6 @@ export default function DashboardRail({
       <div className="sbn-rail-card">
         <p className="sbn-rail-card-title">Quick actions</p>
         <div className="space-y-1.5">
-          <button type="button" onClick={onOpenNewPost} className="sbn-rail-quick-btn" id="rail_new_post_btn">
-            <span className="p-1.5 rounded-md bg-accent-soft text-accent">
-              <Plus className="w-3.5 h-3.5" />
-            </span>
-            Post a listing
-          </button>
-          {canAccessEvents && onOpenNewEvent && (
-            <button type="button" onClick={onOpenNewEvent} className="sbn-rail-quick-btn" id="rail_new_event_btn">
-              <span className="p-1.5 rounded-md bg-sky-500/15 text-sky-500">
-                <Plus className="w-3.5 h-3.5" />
-              </span>
-              Post an event
-            </button>
-          )}
           {onOpenAwards && (
             <button type="button" onClick={onOpenAwards} className="sbn-rail-quick-btn" id="rail_awards_btn">
               <span className="p-1.5 rounded-md bg-amber-500/15 text-amber-500">
@@ -57,6 +38,9 @@ export default function DashboardRail({
               Your badges
             </button>
           )}
+          <p className="text-[11px] text-muted leading-snug px-1.5 pt-1">
+            Map + opens Stuff or Events. Stuff and Events tabs use New for that page only.
+          </p>
         </div>
       </div>
 

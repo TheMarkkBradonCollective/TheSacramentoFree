@@ -1,9 +1,13 @@
-import { useState } from 'react';
-import { ArrowLeft, Calendar, MapPin, Pencil, Repeat } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowLeft, Calendar, LifeBuoy, MapPin, MessageSquare, Pencil, Repeat } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
+import StaffEventActions from './StaffEventActions';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import { getUserDisplayInfoByIds } from '../supabase';
 import { isEventEditable, isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
 import EventStatusBadge from './EventStatusBadge';
@@ -23,11 +27,17 @@ interface EventDetailViewProps {
   onEdit?: () => void;
   onAddDates?: () => void;
   onCancel?: () => void;
+  onMessage?: () => void;
   onViewProfile: (userId: string) => void;
+  onStaffChat?: () => void;
+  onEventStaffAction?: () => void;
   onSelectOccurrence?: (event: CommunityEvent) => void;
   onEventUpdated?: (event: CommunityEvent) => void;
   updating?: boolean;
   commentsLocked?: boolean;
+  /** Open event detail and auto-start in-app navigation (events Navigate button). */
+  startNavigationOnOpen?: boolean;
+  onStartNavigationConsumed?: () => void;
 }
 
 function formatEventDate(iso: string): string {
@@ -70,17 +80,25 @@ export default function EventDetailView({
   onEdit,
   onAddDates,
   onCancel,
+  onMessage,
   onViewProfile,
+  onStaffChat,
+  onEventStaffAction,
   onSelectOccurrence,
   onEventUpdated,
   updating = false,
   commentsLocked = false,
+  startNavigationOnOpen = false,
+  onStartNavigationConsumed,
 }: EventDetailViewProps) {
   const [showPinModal, setShowPinModal] = useState(false);
+  const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const eventStatus = resolveEventStatus(event);
   const isOwner = event.userId === currentUserId;
+  const isStaffViewer = isStaffActingOfficial(userProfile);
   const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
+  const isOpenForCoordination = isEventUpcoming(event) && !isCancelled;
   const canEdit = isOwner && isEventEditable(event);
   const canAddDates = isOwner && !isCancelled && onAddDates;
   const seriesSiblings = getSeriesSiblings(allEvents, event);
@@ -88,46 +106,89 @@ export default function EventDetailView({
     event.seriesId ? getUpcomingSeriesOccurrences(allEvents, event.seriesId) : [];
   const pastSiblings = seriesSiblings.filter((sibling) => !isEventUpcoming(sibling));
 
-  return (
-    <div className="sbn-app-sheet flex flex-col">
-      <header className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-app bg-surface/95 backdrop-blur">
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 -ml-2 rounded-full hover:bg-inset text-muted"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="font-display font-bold text-app flex-1 truncate">Event details</h1>
-        <div className="flex items-center gap-2 shrink-0">
-          {canAddDates && (
-            <button
-              type="button"
-              onClick={onAddDates}
-              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-              disabled={updating}
-            >
-              <Repeat className="w-3.5 h-3.5" />
-              Add dates
-            </button>
-          )}
-          {canEdit && onEdit && (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-              disabled={updating}
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit
-            </button>
-          )}
-        </div>
-      </header>
+  useEffect(() => {
+    const uniqueIds = [...new Set(comments.map((c) => c.userId))];
+    if (uniqueIds.length === 0) return;
+    void getUserDisplayInfoByIds(uniqueIds).then((info) => {
+      const roles: Record<string, UserProfile['role']> = {};
+      for (const [uid, data] of Object.entries(info)) {
+        if (data.role) roles[uid] = data.role;
+      }
+      setCommenterRoles(roles);
+    });
+  }, [comments]);
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto p-4 space-y-5">
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const panel = (
+    <div
+      id="event_detail_fullscreen"
+      className="sbn-app-sheet flex flex-col min-h-0 font-sans"
+      role="dialog"
+      aria-modal="true"
+      aria-label={event.title}
+    >
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
+        <header className="sbn-glass-nav sbn-safe-top border-b border-app">
+          <div className="px-4 min-h-14 flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 -ml-2 rounded-full hover:bg-inset text-muted shrink-0"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1 min-w-0" />
+            <div className="flex items-center gap-1.5 shrink-0">
+              {canAddDates && (
+                <button
+                  type="button"
+                  onClick={onAddDates}
+                  className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                  disabled={updating}
+                >
+                  <Repeat className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline ml-1">Add dates</span>
+                </button>
+              )}
+              {canEdit && onEdit && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                  disabled={updating}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline ml-1">Edit</span>
+                </button>
+              )}
+              {isStaffViewer && !isOwner && onStaffChat ? (
+                <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+                  <LifeBuoy className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline ml-1">Staff chat</span>
+                </button>
+              ) : (
+                !isOwner &&
+                isOpenForCoordination &&
+                onMessage && (
+                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline ml-1">Message</span>
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-2xl mx-auto p-4 pb-10 space-y-5">
           {event.imageUrl && (
             <img
               src={event.imageUrl}
@@ -231,7 +292,23 @@ export default function EventDetailView({
             </div>
           )}
 
-          <EventDetailNavigation event={event} currentUserId={currentUserId} />
+          <EventDetailNavigation
+            event={event}
+            currentUserId={currentUserId}
+            autoStartNavigation={startNavigationOnOpen}
+            onAutoStartNavigationConsumed={onStartNavigationConsumed}
+          />
+
+          {isStaffViewer && !isOwner && userProfile && (
+            <section className="sbn-card p-4 border border-role-accent/20">
+              <StaffEventActions
+                event={event}
+                actor={userProfile}
+                onChanged={() => onEventStaffAction?.()}
+                onDeleted={onClose}
+              />
+            </section>
+          )}
 
           <div className="sbn-card p-3 space-y-3">
             <button
@@ -284,6 +361,7 @@ export default function EventDetailView({
             rsvpDisabled={isCancelled}
             commentsLocked={commentsLocked}
             isPast={isPast}
+            commenterRoles={commenterRoles}
           />
         </div>
       </div>
@@ -300,4 +378,6 @@ export default function EventDetailView({
       )}
     </div>
   );
+
+  return createPortal(panel, document.body);
 }

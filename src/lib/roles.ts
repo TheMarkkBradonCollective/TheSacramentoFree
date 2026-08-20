@@ -100,6 +100,13 @@ export function roleLabel(role?: UserProfile['role']): string {
   return ROLE_LABELS[normalized] ?? ROLE_LABELS.user;
 }
 
+/** Compact role label for neighbor pickers and message compose lists. */
+export function roleListLabel(role?: UserProfile['role']): string {
+  const normalized = normalizeUserRole(role);
+  if (normalized === 'user') return 'User';
+  return ROLE_THEME[normalized].shortLabel;
+}
+
 export function isStaffRole(role?: UserProfile['role']): boolean {
   const normalized = normalizeUserRole(role);
   return (
@@ -225,6 +232,11 @@ export function isListingPostChatReadOnly(status?: string): boolean {
   return status === 'completed' || status === 'withdrawn';
 }
 
+/** Event coordination chat is read-only once the event is past or cancelled. */
+export function isEventPostChatReadOnly(status?: string): boolean {
+  return status === 'past' || status === 'cancelled';
+}
+
 /**
  * Participant may delete a 1:1 direct chat (not community channels).
  * Profile DMs: either neighbor. Post (listing) chats: both users, but the poster
@@ -232,8 +244,9 @@ export function isListingPostChatReadOnly(status?: string): boolean {
  */
 export function canDeleteDirectChat(
   viewer: Pick<UserProfile, 'uid'>,
-  chat: { id: string; participantIds: string[]; itemId?: string },
+  chat: { id: string; participantIds: string[]; itemId?: string; eventId?: string },
   listing?: { userId: string; status: string } | null,
+  event?: { userId: string; status: string } | null,
 ): boolean {
   if (isCommunityChat(chat.id)) return false;
   if (!Array.isArray(chat.participantIds) || !chat.participantIds.includes(viewer.uid)) {
@@ -241,13 +254,21 @@ export function canDeleteDirectChat(
   }
 
   const itemId = String(chat.itemId || '').trim();
-  if (!itemId) return true;
+  const eventId = String(chat.eventId || '').trim();
+  if (!itemId && !eventId) return true;
 
-  if (!listing || listing.userId !== viewer.uid) {
+  if (itemId) {
+    if (!listing || listing.userId !== viewer.uid) {
+      return true;
+    }
+    return isListingPostChatReadOnly(listing.status);
+  }
+
+  if (!event || event.userId !== viewer.uid) {
     return true;
   }
 
-  return isListingPostChatReadOnly(listing.status);
+  return isEventPostChatReadOnly(event.status);
 }
 
 /** Closed tickets may be deleted by the opener or staff with access. */

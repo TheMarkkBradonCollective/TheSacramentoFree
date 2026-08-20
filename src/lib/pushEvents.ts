@@ -2,11 +2,16 @@ import { convertPercentToLatLng, extractGPSCoordinates } from '../types';
 import type { DirectorAlertCategory, ItemPost } from '../types';
 import { sendPushNotification } from './pushNotifications';
 import {
+  isListingInExpiryWarningWindow,
+  listingExpiryDaysRemaining,
+} from '../../shared/listingExpiry';
+import {
   pushUrlForConversation,
   pushUrlForListing,
   pushUrlForMessageRequests,
   pushUrlForRequest,
   pushUrlForDirectorOverview,
+  pushUrlForFeedPost,
 } from './pushDeepLink';
 
 function itemCoords(item: ItemPost): { lat: number; lng: number } | null {
@@ -231,6 +236,70 @@ export async function notifyListingDownvote(params: {
   });
 }
 
+export async function notifyFeedComment(params: {
+  postId: string;
+  authorUserId: string;
+  commenterName: string;
+  preview: string;
+  commentId?: string;
+}) {
+  const tag = params.commentId
+    ? `feed-comment-${params.commentId}`
+    : `feed-comment-${params.postId}-${Date.now()}`;
+
+  await sendPushNotification({
+    eventType: 'feed_comment',
+    title: 'New comment on your feed post',
+    body: `${params.commenterName}: ${params.preview.slice(0, 120)}`,
+    url: pushUrlForFeedPost(params.postId),
+    recipientUserIds: [params.authorUserId],
+    tag,
+    data: { feedPostId: params.postId },
+  });
+}
+
+export async function notifyFeedReaction(params: {
+  postId: string;
+  authorUserId: string;
+  reactorUserId: string;
+  emoji: string;
+  preview: string;
+}) {
+  await sendPushNotification({
+    eventType: 'feed_reaction',
+    title: 'New reaction on your feed post',
+    body: `Someone reacted ${params.emoji} to "${params.preview.slice(0, 80)}"`,
+    url: pushUrlForFeedPost(params.postId),
+    recipientUserIds: [params.authorUserId],
+    tag: `feed-react-${params.postId}-${params.reactorUserId}-${params.emoji}`,
+    data: { feedPostId: params.postId, emoji: params.emoji },
+  });
+}
+
+export async function notifyFeedUpvote(params: { postId: string; authorUserId: string; voterUserId: string }) {
+  await sendPushNotification({
+    eventType: 'feed_upvote',
+    title: 'New upvote on your feed post',
+    body: 'Someone upvoted your feed post',
+    url: pushUrlForFeedPost(params.postId),
+    recipientUserIds: [params.authorUserId],
+    tag: `feed-vote-up-${params.postId}-${params.voterUserId}`,
+    data: { feedPostId: params.postId },
+  });
+}
+
+export async function notifyFeedDownvote(params: { postId: string; authorUserId: string; voterUserId: string }) {
+  await sendPushNotification({
+    eventType: 'feed_downvote',
+    title: 'Feedback on your feed post',
+    body: 'Someone downvoted your feed post',
+    url: pushUrlForFeedPost(params.postId),
+    recipientUserIds: [params.authorUserId],
+    tag: `feed-vote-down-${params.postId}-${params.voterUserId}`,
+    data: { feedPostId: params.postId },
+  });
+}
+
 export async function notifyPickupScheduled(params: {
   item: ItemPost;
   recipientUserIds: string[];
@@ -311,14 +380,31 @@ export async function notifyListingDenied(item: ItemPost, reason?: string) {
 }
 
 export async function notifyListingExpiringSoon(item: ItemPost) {
+  const daysLeft = listingExpiryDaysRemaining(item);
+  const body = isListingInExpiryWarningWindow(item)
+    ? `"${item.title}" expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} — edit it to reset the timer, or mark it gifted`
+    : `"${item.title}" will expire soon — edit it to reset the timer, or mark it gifted`;
+
   await sendPushNotification({
     eventType: 'listing_expiring',
     title: 'Listing expiring soon',
-    body: `"${item.title}" will expire soon — renew or mark as gifted`,
+    body,
     url: pushUrlForListing(item.id),
     listingId: item.id,
     recipientUserIds: [item.userId],
     tag: `expiring-${item.id}`,
+  });
+}
+
+export async function notifyListingExpired(item: Pick<ItemPost, 'id' | 'title' | 'userId'>) {
+  await sendPushNotification({
+    eventType: 'listing_expired',
+    title: 'Listing expired',
+    body: `"${item.title}" was withdrawn after 30 days — edit and repost from your profile to relist`,
+    url: pushUrlForListing(item.id),
+    listingId: item.id,
+    recipientUserIds: [item.userId],
+    tag: `expired-${item.id}`,
   });
 }
 
@@ -461,6 +547,8 @@ export async function notifyGoGetAvailabilityRequest(params: {
   fulfillerUserId: string;
   requesterName: string;
   sessionId: string;
+  ringDurationSeconds?: number;
+  ringPattern?: string;
 }) {
   await sendPushNotification({
     eventType: 'go_get_availability_request',
@@ -470,7 +558,12 @@ export async function notifyGoGetAvailabilityRequest(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-availability-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: {
+      goGetSessionId: params.sessionId,
+      urgentGoGetRing: 'true',
+      ringDurationSeconds: String(params.ringDurationSeconds ?? 140),
+      ringPattern: params.ringPattern ?? 'ring',
+    },
   });
 }
 

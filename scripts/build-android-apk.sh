@@ -21,7 +21,10 @@ echo "Using CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL}"
 
 # APKs and AABs in public/ get copied into dist/ and then nested inside the next APK.
 # Stage them out before the web build, then restore only the fresh build at the end.
+# Stage all download binaries before web build (they get nested in dist otherwise).
 APK_STAGING_DIR="$(mktemp -d)"
+CURRENT_APK="$(node -e "const {readAppVersion}=require('./scripts/read-app-version.mjs'); const v=readAppVersion(); process.stdout.write(\`sac-buy-nothing-beta-v\${v.versionName}.\${v.build}.apk\`)")"
+CURRENT_AAB="$(node -e "const {readAppVersion}=require('./scripts/read-app-version.mjs'); const v=readAppVersion(); process.stdout.write(\`sac-buy-nothing-beta-v\${v.versionName}.\${v.build}.aab\`)")"
 if compgen -G "public/downloads/*.apk" > /dev/null; then
   mv public/downloads/*.apk "$APK_STAGING_DIR/"
 fi
@@ -77,11 +80,38 @@ VERSION_NAME="$(node -e "const m=require('./public/android-version.json'); proce
 cp "$APK_PATH" "public/downloads/${VERSIONED_FILE}"
 # Legacy URL — always points at the latest build too.
 cp "$APK_PATH" "public/downloads/sac-buy-nothing.apk"
-# MBC App Market (Findr pattern): root-level slug APK + versioned copy.
+node scripts/sync-android-version.mjs
+if compgen -G "$APK_STAGING_DIR/*.apk" > /dev/null; then
+  for staged in "$APK_STAGING_DIR"/*.apk; do
+    base="$(basename "$staged")"
+    if [[ "$base" == "$VERSIONED_FILE" || "$base" == "sac-buy-nothing.apk" ]]; then
+      continue
+    fi
+    mv "$staged" public/downloads/
+  done
+  for f in public/downloads/buynothing*.apk; do
+    [[ -f "$f" ]] && mv "$f" public/ 2>/dev/null || true
+  done
+fi
+if compgen -G "$APK_STAGING_DIR/*.aab" > /dev/null; then
+  for staged in "$APK_STAGING_DIR"/*.aab; do
+    base="$(basename "$staged")"
+    if [[ "$base" == "$CURRENT_AAB" || "$base" == "sac-buy-nothing.aab" ]]; then
+      continue
+    fi
+    mv "$staged" public/downloads/
+  done
+fi
+# Keep the current AAB (built separately) when this script only rebuilds APK.
+for keep_aab in "$CURRENT_AAB" "sac-buy-nothing.aab"; do
+  if [[ -f "$APK_STAGING_DIR/$keep_aab" ]]; then
+    mv "$APK_STAGING_DIR/$keep_aab" public/downloads/
+  fi
+done
+rm -rf "$APK_STAGING_DIR"
+# MBC App Market (Findr pattern): root-level slug APK + versioned copy — after restore.
 cp "$APK_PATH" "public/buynothing.apk"
 cp "$APK_PATH" "public/buynothing-v${VERSION_NAME}.apk"
-node scripts/sync-android-version.mjs
-rm -rf "$APK_STAGING_DIR"
 
 echo "APK ready: dist/android/sac-buy-nothing-${BUILD_TYPE}.apk"
 echo "Public download: public/downloads/${VERSIONED_FILE}"

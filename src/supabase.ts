@@ -1,13 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
-import { compressImageIfNeeded } from './lib/imageUrl';
-import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
+import { compressImageIfNeeded, guessImageContentType } from './lib/imageUrl';
+import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatSelfClaimRequestMessage, formatSelfDropOffRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia, plainListingDescription } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
+import { listingExpiresAtIso } from '../shared/listingExpiry';
 import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
+import { filterNews, filterUpdates } from '../shared/changelogFilters';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
+import type { PickupAvailabilitySchedule } from './types';
+import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './lib/goGetRing';
+import { normalizePickupAvailability } from './lib/pickupAvailability';
 import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
 import { getEventsUnlockStatus } from './lib/eventsApi';
 import {
@@ -20,7 +25,7 @@ import {
   VOTE_COOLDOWN_MAX_NEW_VOTES,
   VOTE_COOLDOWN_WINDOW_MS,
 } from './lib/voteCooldown';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, ROLE_RANK, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 import {
   deriveApplicantStaffApplyState,
   isStaffApplyRole,
@@ -187,7 +192,8 @@ CREATE TABLE IF NOT EXISTS public.item_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.item_comments ENABLE ROW LEVEL SECURITY;
@@ -379,6 +385,18 @@ function normalizeAccountStatus(
   return { accountStatus, suspendedUntil };
 }
 
+function parsePickupAvailabilityColumn(raw: unknown): PickupAvailabilitySchedule | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === 'string') {
+    try {
+      return normalizePickupAvailability(JSON.parse(raw));
+    } catch {
+      return undefined;
+    }
+  }
+  return normalizePickupAvailability(raw);
+}
+
 function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfile | null {
   if (!row) return null;
   const uid = String(row.uid ?? '');
@@ -401,8 +419,23 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     role: normalizeUserRole(row.role),
     accountStatus,
     suspendedUntil,
-    // Default true when column missing / null — only explicit false opts out.
-    goGetEnabled: row.goGetEnabled === false || row.go_get_enabled === false ? false : true,
+    // Default off until neighbor opts in explicitly.
+    goGetEnabled: row.goGetEnabled === true || row.go_get_enabled === true,
+    pickupAvailability: parsePickupAvailabilityColumn(row.pickupAvailability ?? row.pickup_availability),
+    goGetRingDurationSeconds: normalizeGoGetRingDuration(
+      row.goGetRingDurationSeconds ?? row.go_get_ring_duration_seconds,
+    ),
+    goGetRingPattern: normalizeGoGetRingPattern(row.goGetRingPattern ?? row.go_get_ring_pattern),
+    staffInteractionMode:
+      row.staffInteractionMode === 'neighbor' || row.staff_interaction_mode === 'neighbor'
+        ? 'neighbor'
+        : 'staff',
+    joinRank:
+      typeof row.joinRank === 'number'
+        ? row.joinRank
+        : typeof row.join_rank === 'number'
+          ? row.join_rank
+          : null,
     createdAt: row.createdAt ?? row.created_at,
     lastActiveAt:
       typeof row.lastActiveAt === 'string'
@@ -550,7 +583,7 @@ function listingRowToProfile(uid: string, row: Record<string, unknown>): UserPro
     neighborhood: String(row.neighborhood || 'Sacramento'),
     bio: undefined,
     role: 'user',
-    goGetEnabled: true,
+    goGetEnabled: false,
     createdAt: row.createdAt,
   };
 }
@@ -687,19 +720,31 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
-      goGetEnabled: profile.goGetEnabled !== false,
+      goGetEnabled: profile.goGetEnabled === true,
+      pickupAvailability: profile.pickupAvailability ?? null,
+      goGetRingDurationSeconds: normalizeGoGetRingDuration(profile.goGetRingDurationSeconds),
+      goGetRingPattern: normalizeGoGetRingPattern(profile.goGetRingPattern),
+      staffInteractionMode:
+        profile.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
       createdAt: coerceToIsoDate(profile.createdAt),
     };
 
     let { data, error } = await supabase
       .from('users')
       .upsert(payload, { onConflict: 'uid' })
-      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, createdAt')
+      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, createdAt')
       .single();
 
-    // Older DBs may not have goGetEnabled yet — retry without it.
-    if (error && /goGetEnabled|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
-      const { goGetEnabled: _ignored, ...legacyPayload } = payload;
+    // Older DBs may not have goGetEnabled / staffInteractionMode yet — retry without missing columns.
+    if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+      const {
+        goGetEnabled: _goGet,
+        staffInteractionMode: _mode,
+        pickupAvailability: _avail,
+        goGetRingDurationSeconds: _ringDur,
+        goGetRingPattern: _ringPat,
+        ...legacyPayload
+      } = payload;
       ({ data, error } = await supabase
         .from('users')
         .upsert(legacyPayload, { onConflict: 'uid' })
@@ -760,7 +805,7 @@ export async function upsertSupabaseProfile(
  * --- ITEMS / LISTINGS ---
  */
 const ITEM_FEED_COLUMNS =
-  'id,title,type,category,userId,userDisplayName,userPhotoURL,neighborhood,status,imageUrl,createdAt,updatedAt,pickupAttributionType,pickupAttributionUserId,pickupAttributionLabel';
+  'id,title,type,category,userId,userDisplayName,userPhotoURL,neighborhood,status,imageUrl,createdAt,updatedAt,expiresAt,expiryWarnedAt,pickupAttributionType,pickupAttributionUserId,pickupAttributionLabel';
 
 function mapItemRows(rows: unknown[]): ItemPost[] {
   const items: ItemPost[] = [];
@@ -933,18 +978,37 @@ export async function getSupabaseItemById(itemId: string): Promise<ItemPost | nu
   }
 }
 
+async function requireAuthUserId(): Promise<string | null> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  return sessionData.session?.user?.id ?? null;
+}
+
+function sanitizeStorageKey(value: string, maxLen = 120): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, maxLen) || 'upload';
+}
+
 export async function uploadItemImage(file: File, itemId: string): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) {
+      console.warn('Listing photo upload failed: not signed in');
+      return null;
+    }
+
     const compressed = await compressImageIfNeeded(file);
-    const fileExt = compressed.name.split('.').pop() || 'jpg';
-    const filePath = `${itemId}_${Date.now()}.${fileExt}`;
+    const extRaw = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
+    const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
+    const safeItemKey = sanitizeStorageKey(itemId);
+    const filePath = `${userId}/listings/${safeItemKey}_${Date.now()}.${fileExt}`;
+    const contentType = guessImageContentType(compressed);
 
     // Upload to 'items' bucket using supabase-js
     const { error } = await supabase.storage
       .from('items')
       .upload(filePath, compressed, {
         cacheControl: '3600',
-        upsert: true
+        upsert: true,
+        contentType,
       });
 
     if (error) {
@@ -969,14 +1033,20 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
 
 export async function uploadReportProofImage(file: File, reportId: string): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) return null;
+
     const compressed = await compressImageIfNeeded(file, 1400, 0.8);
     const fileExt = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
     const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
-    const filePath = `reports/${reportId}_${Date.now()}.${safeExt}`;
+    const safeReportId = sanitizeStorageKey(reportId);
+    const filePath = `${userId}/reports/${safeReportId}_${Date.now()}.${safeExt}`;
+    const contentType = guessImageContentType(compressed);
 
     const { error } = await supabase.storage.from('items').upload(filePath, compressed, {
       cacheControl: '3600',
       upsert: true,
+      contentType,
     });
 
     if (error) throw error;
@@ -999,14 +1069,21 @@ export async function uploadTicketMessageImage(
   messageId: string,
 ): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) return null;
+
     const compressed = await compressImageIfNeeded(file, 1400, 0.8);
     const fileExt = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
     const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
-    const filePath = `tickets/${ticketId}/${messageId}.${safeExt}`;
+    const safeTicketId = sanitizeStorageKey(ticketId);
+    const safeMessageId = sanitizeStorageKey(messageId);
+    const filePath = `${userId}/tickets/${safeTicketId}/${safeMessageId}.${safeExt}`;
+    const contentType = guessImageContentType(compressed);
 
     const { error } = await supabase.storage.from('items').upload(filePath, compressed, {
       cacheControl: '3600',
       upsert: true,
+      contentType,
     });
 
     if (error) throw error;
@@ -1024,15 +1101,21 @@ export async function uploadTicketMessageImage(
 }
 
 export async function uploadProfilePhoto(file: File, userId: string): Promise<string | null> {
+  const authUserId = await requireAuthUserId();
+  if (!authUserId || authUserId !== userId) {
+    console.warn('Profile photo upload failed: not signed in as profile owner');
+    return null;
+  }
+
   const compressed = await compressImageIfNeeded(file, 512, 0.85);
   const extRaw = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
   const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
-  const contentType = compressed.type.startsWith('image/') ? compressed.type : 'image/jpeg';
+  const contentType = guessImageContentType(compressed);
 
   const attempts: { bucket: string; path: string }[] = [
     { bucket: 'avatars', path: `${userId}/avatar.${fileExt}` },
-    { bucket: 'items', path: `profiles/${userId}/avatar.${fileExt}` },
-    { bucket: 'items', path: `profiles/${userId}_${Date.now()}.${fileExt}` },
+    { bucket: 'items', path: `${userId}/avatar.${fileExt}` },
+    { bucket: 'items', path: `${userId}/avatar_${Date.now()}.${fileExt}` },
   ];
 
   for (const { bucket, path } of attempts) {
@@ -1079,7 +1162,25 @@ function isMissingImageUrlColumnError(error: { code?: string; message?: string }
   );
 }
 
+function isMissingExpiryColumnError(error: { code?: string; message?: string } | null): boolean {
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    error?.code === 'PGRST204' ||
+    error?.code === '42703' ||
+    msg.includes('expiresat') ||
+    msg.includes('expirywarnedat')
+  );
+}
+
+function stripExpiryFields(payload: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...payload };
+  delete next.expiresAt;
+  delete next.expiryWarnedAt;
+  return next;
+}
+
 function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
+  const nowIso = new Date().toISOString();
   const payload: Record<string, unknown> = {
     id: item.id,
     title: item.title,
@@ -1091,8 +1192,10 @@ function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
     userPhotoURL: item.userPhotoURL || null,
     neighborhood: item.neighborhood,
     status: item.status || 'active',
-    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
-    updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : new Date().toISOString(),
+    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : nowIso,
+    updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : nowIso,
+    expiresAt: listingExpiresAtIso(Date.now()),
+    expiryWarnedAt: null,
   };
 
   if (includeImageUrl && item.imageUrl) {
@@ -1116,6 +1219,11 @@ export async function createSupabaseItem(
 
     let payload = buildItemInsertPayload(item, true);
     let { error } = await supabase.from('items').insert(payload);
+
+    if (error && isMissingExpiryColumnError(error)) {
+      payload = stripExpiryFields(payload);
+      ({ error } = await supabase.from('items').insert(payload));
+    }
 
     if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
       const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
@@ -1147,6 +1255,7 @@ function buildItemUpdatePayload(
   includeImageUrl: boolean,
   options?: { repost?: boolean },
 ) {
+  const nowIso = new Date().toISOString();
   const payload: Record<string, unknown> = {
     title: item.title,
     description: item.description,
@@ -1155,12 +1264,14 @@ function buildItemUpdatePayload(
     neighborhood: item.neighborhood,
     userDisplayName: item.userDisplayName,
     userPhotoURL: item.userPhotoURL || null,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso,
+    expiresAt: listingExpiresAtIso(Date.now()),
+    expiryWarnedAt: null,
   };
 
   if (options?.repost) {
     payload.status = 'active';
-    payload.createdAt = new Date().toISOString();
+    payload.createdAt = nowIso;
   }
 
   if (includeImageUrl && item.imageUrl) {
@@ -1180,6 +1291,11 @@ export async function updateSupabaseItem(
     const repost = options?.repost === true;
     let payload = buildItemUpdatePayload(item, true, repost ? { repost: true } : undefined);
     let { error } = await supabase.from('items').update(payload).eq('id', item.id);
+
+    if (error && isMissingExpiryColumnError(error)) {
+      payload = stripExpiryFields(payload);
+      ({ error } = await supabase.from('items').update(payload).eq('id', item.id));
+    }
 
     if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
       const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
@@ -1229,14 +1345,24 @@ export async function updateSupabaseItemStatus(
     const now = new Date().toISOString();
     const isRepost = previousStatus === 'withdrawn' && status === 'active';
 
-    const { error } = await supabase
-      .from('items')
-      .update({
-        status,
-        updatedAt: now,
-        ...(isRepost ? { createdAt: now } : {}),
-      })
-      .eq('id', itemId);
+    let updatePayload: Record<string, unknown> = {
+      status,
+      updatedAt: now,
+      ...(isRepost
+        ? {
+            createdAt: now,
+            expiresAt: listingExpiresAtIso(Date.now()),
+            expiryWarnedAt: null,
+          }
+        : {}),
+    };
+
+    let { error } = await supabase.from('items').update(updatePayload).eq('id', itemId);
+
+    if (error && isMissingExpiryColumnError(error) && isRepost) {
+      updatePayload = { status, updatedAt: now, createdAt: now };
+      ({ error } = await supabase.from('items').update(updatePayload).eq('id', itemId));
+    }
 
     if (error) {
       handleSupabaseError(error, 'items');
@@ -1439,9 +1565,12 @@ async function fetchCommunityChatRows(includeStaffChat: boolean): Promise<Chat[]
 
 export async function getSupabaseChats(
   userId: string,
-  options?: { userRole?: UserProfile['role'] },
+  options?: { userRole?: UserProfile['role']; staffInteractionMode?: UserProfile['staffInteractionMode'] },
 ): Promise<Chat[]> {
-  const includeStaffChat = isStaffRole(options?.userRole);
+  const includeStaffChat =
+    isStaffRole(options?.userRole) &&
+    (options?.staffInteractionMode === undefined ||
+      options.staffInteractionMode !== 'neighbor');
   try {
     // Filter server-side using JSONB containment so we only fetch this user's chats.
     const { data, error } = await supabase
@@ -1476,6 +1605,44 @@ export async function getSupabaseChats(
     console.warn('Supabase chats fetch failed:', err);
     handleSupabaseError(err, 'chats');
     return [];
+  }
+}
+
+export async function getUserPickupCoordinationByIds(
+  userIds: string[],
+): Promise<
+  Record<
+    string,
+    Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability' | 'goGetRingDurationSeconds' | 'goGetRingPattern'>
+  >
+> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid, goGetEnabled, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern')
+      .in('uid', unique);
+    if (error || !data) return {};
+    const map: Record<
+      string,
+      Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability' | 'goGetRingDurationSeconds' | 'goGetRingPattern'>
+    > = {};
+    for (const row of data as Record<string, unknown>[]) {
+      const uid = String(row.uid ?? '');
+      if (!uid) continue;
+      map[uid] = {
+        goGetEnabled: row.goGetEnabled === true || row.go_get_enabled === true,
+        pickupAvailability: parsePickupAvailabilityColumn(row.pickupAvailability ?? row.pickup_availability),
+        goGetRingDurationSeconds: normalizeGoGetRingDuration(
+          row.goGetRingDurationSeconds ?? row.go_get_ring_duration_seconds,
+        ),
+        goGetRingPattern: normalizeGoGetRingPattern(row.goGetRingPattern ?? row.go_get_ring_pattern),
+      };
+    }
+    return map;
+  } catch {
+    return {};
   }
 }
 
@@ -1525,7 +1692,9 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
         .update({
           lastMessageAt: new Date().toISOString(),
           itemId: initialPayload.itemId || '',
-          itemTitle: initialPayload.itemTitle || ''
+          itemTitle: initialPayload.itemTitle || '',
+          eventId: initialPayload.eventId || '',
+          eventTitle: initialPayload.eventTitle || '',
         })
         .eq('id', chatId);
 
@@ -1544,7 +1713,9 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
         lastMessageAt: initialPayload.lastMessageAt ? new Date(initialPayload.lastMessageAt).toISOString() : new Date().toISOString(),
         lastMessageSenderId: initialPayload.lastMessageSenderId || '',
         itemId: initialPayload.itemId || '',
-        itemTitle: initialPayload.itemTitle || ''
+        itemTitle: initialPayload.itemTitle || '',
+        eventId: initialPayload.eventId || '',
+        eventTitle: initialPayload.eventTitle || '',
       };
 
       const { error: insertError } = await supabase
@@ -1595,6 +1766,8 @@ export interface NeighborStats {
   itemsGiven: number;
   /** Giveaways picked up + ISO requests fulfilled (received from a neighbor) */
   itemsClaimed: number;
+  /** Completed barter trades (posted or as trade partner) */
+  tradesCompleted: number;
   /** Upvotes neighbors cast on this user's listings */
   upvotesReceived: number;
   /** Downvotes neighbors cast on this user's listings */
@@ -1945,11 +2118,13 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
   const empty = {
     itemsGiven: 0,
     itemsClaimed: 0,
+    tradesCompleted: 0,
     upvotesReceived: 0,
     downvotesReceived: 0,
   };
   try {
-    const [givenRes, claimedRes, helpedGiveRes, itemsRes] = await Promise.all([
+    const [givenRes, claimedRes, helpedGiveRes, tradesPostedRes, tradesPartnerRes, itemsRes] =
+      await Promise.all([
       supabase
         .from('items')
         .select('id', { count: 'exact', head: true })
@@ -1966,6 +2141,17 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
         .select('id', { count: 'exact', head: true })
         .eq('giverUserId', uid)
         .eq('kind', 'request_fulfilled'),
+      supabase
+        .from('items')
+        .select('id', { count: 'exact', head: true })
+        .eq('userId', uid)
+        .eq('type', 'trade')
+        .eq('status', 'completed'),
+      supabase
+        .from('item_claims')
+        .select('id', { count: 'exact', head: true })
+        .eq('claimerUserId', uid)
+        .eq('kind', 'trade_completed'),
       supabase.from('items').select('id').eq('userId', uid),
     ]);
 
@@ -1998,6 +2184,7 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
     return {
       itemsGiven: (givenRes.count ?? 0) + helpedGive,
       itemsClaimed,
+      tradesCompleted: (tradesPostedRes.count ?? 0) + (tradesPartnerRes.count ?? 0),
       upvotesReceived,
       downvotesReceived,
     };
@@ -2264,17 +2451,41 @@ export async function submitSelfClaimRequest(params: {
   claimer: UserProfile;
   subItemIds: string[];
 }): Promise<{ ok: boolean; chatId?: string; errorMessage?: string }> {
-  if (params.item.type !== 'giveaway' || params.item.status !== 'active') {
-    return { ok: false, errorMessage: 'This listing is not available to claim.' };
-  }
-  if (params.item.userId === params.claimer.uid) {
-    return { ok: false, errorMessage: 'You cannot claim your own listing.' };
+  return submitSelfHandoffRequest({
+    item: params.item,
+    actor: params.claimer,
+    subItemIds: params.subItemIds,
+    kind: 'pickup',
+  });
+}
+
+/** PWA / web handoff — claimer says "I picked up" or helper says "I dropped off"; poster confirms in chat. */
+export async function submitSelfHandoffRequest(params: {
+  item: ItemPost;
+  actor: UserProfile;
+  subItemIds: string[];
+  kind: 'pickup' | 'dropoff';
+}): Promise<{ ok: boolean; chatId?: string; errorMessage?: string }> {
+  const { item, actor, kind } = params;
+
+  if (kind === 'pickup') {
+    if (item.type !== 'giveaway' || item.status !== 'active') {
+      return { ok: false, errorMessage: 'This listing is not available to claim.' };
+    }
+  } else {
+    if (item.type !== 'looking' || item.status !== 'active') {
+      return { ok: false, errorMessage: 'This request is not open for drop-off confirmation.' };
+    }
   }
 
-  const subitems = await getListingSubitems(params.item.id);
+  if (item.userId === actor.uid) {
+    return { ok: false, errorMessage: 'You cannot confirm your own listing.' };
+  }
+
+  const subitems = await getListingSubitems(item.id);
   let targetIds = params.subItemIds;
 
-  if (subitems.length > 0) {
+  if (kind === 'pickup' && subitems.length > 0) {
     const available = subitems.filter((s) => s.status === 'available');
     if (targetIds.length !== 1) {
       return { ok: false, errorMessage: 'Pick exactly one item you picked up.' };
@@ -2285,27 +2496,30 @@ export async function submitSelfClaimRequest(params: {
       return { ok: false, errorMessage: 'That item is no longer available to claim.' };
     }
     targetIds = [subId];
+  } else if (kind === 'pickup') {
+    targetIds = [];
   } else {
     targetIds = [];
   }
 
-  const chatId = buildDmChatId(params.claimer.uid, params.item.userId);
+  const posterUserId = item.userId;
+  const chatId = buildDmChatId(actor.uid, posterUserId);
   const chatPayload = {
     id: chatId,
-    participantIds: [params.claimer.uid, params.item.userId].sort(),
+    participantIds: [actor.uid, posterUserId].sort(),
     participantNames: {
-      [params.claimer.uid]: params.claimer.displayName,
-      [params.item.userId]: params.item.userDisplayName,
+      [actor.uid]: actor.displayName,
+      [posterUserId]: item.userDisplayName,
     },
     participantPhotos: {
-      [params.claimer.uid]: params.claimer.photoURL || '',
-      [params.item.userId]: params.item.userPhotoURL || '',
+      [actor.uid]: actor.photoURL || '',
+      [posterUserId]: item.userPhotoURL || '',
     },
     lastMessageAt: new Date().toISOString(),
     lastMessageText: '',
-    lastMessageSenderId: params.claimer.uid,
-    itemId: params.item.id,
-    itemTitle: params.item.title,
+    lastMessageSenderId: actor.uid,
+    itemId: item.id,
+    itemTitle: item.title,
   };
 
   const chatOk = await getOrCreateSupabaseChat(chatId, chatPayload);
@@ -2313,13 +2527,13 @@ export async function submitSelfClaimRequest(params: {
     return { ok: false, errorMessage: 'Could not open chat with the poster.' };
   }
 
-  const requestId = `clreq_${params.item.id}_${Date.now()}`;
+  const requestId = `clreq_${item.id}_${Date.now()}`;
   const { error: reqError } = await supabase.from('item_claim_requests').insert({
     id: requestId,
-    itemId: params.item.id,
-    giverUserId: params.item.userId,
-    claimerUserId: params.claimer.uid,
-    claimerName: params.claimer.displayName,
+    itemId: item.id,
+    giverUserId: posterUserId,
+    claimerUserId: actor.uid,
+    claimerName: actor.displayName,
     subItemIds: JSON.stringify(targetIds),
     status: 'pending',
     chatId,
@@ -2333,7 +2547,7 @@ export async function submitSelfClaimRequest(params: {
     return { ok: false, errorMessage: reqError.message };
   }
 
-  if (targetIds.length === 1) {
+  if (kind === 'pickup' && targetIds.length === 1) {
     const { error: holdError } = await supabase
       .from('listing_subitems')
       .update({ status: 'pending_pickup' })
@@ -2346,27 +2560,27 @@ export async function submitSelfClaimRequest(params: {
   }
 
   const labels =
-    subitems.length > 0
+    kind === 'pickup' && subitems.length > 0
       ? subitems.filter((s) => targetIds.includes(s.id)).map((s) => s.label)
-      : [params.item.title];
+      : [item.title];
+
+  const handoffMessage =
+    kind === 'dropoff'
+      ? formatSelfDropOffRequestMessage(actor.displayName, item.title)
+      : formatSelfClaimRequestMessage(actor.displayName, labels);
 
   const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  const msgOk = await createSupabaseMessage(
-    chatId,
-    formatSelfClaimRequestMessage(params.claimer.displayName, labels),
-    params.claimer.uid,
-    messageId,
-  );
+  const msgOk = await createSupabaseMessage(chatId, handoffMessage, actor.uid, messageId);
 
   if (!msgOk) {
-    return { ok: false, errorMessage: 'Claim request saved but message failed to send.' };
+    return { ok: false, errorMessage: 'Handoff request saved but message failed to send.' };
   }
 
   await runPushTask(() =>
     import('./lib/pushIntegration').then((m) =>
       m.pushAfterClaimRequest({
-        item: params.item,
-        claimerName: params.claimer.displayName,
+        item,
+        claimerName: actor.displayName,
         requestId,
       }),
     ),
@@ -2425,7 +2639,25 @@ export async function confirmClaimRequest(params: {
       return { ok: false, errorMessage: 'This claim request was already handled.' };
     }
     if (request.giverUserId !== params.actor.uid) {
-      return { ok: false, errorMessage: 'Only the poster can confirm pickups.' };
+      return { ok: false, errorMessage: 'Only the poster can confirm handoffs.' };
+    }
+
+    const { data: itemRow } = await supabase.from('items').select('type, title').eq('id', request.itemId).maybeSingle();
+    const itemType = itemRow?.type as ItemPost['type'] | undefined;
+    const itemTitle = params.itemTitle || String(itemRow?.title ?? '');
+
+    if (itemType === 'looking') {
+      const fulfillResult = await markItemFulfilledFromChat({
+        itemId: request.itemId,
+        ownerUserId: request.giverUserId,
+        helperUserId: request.claimerUserId,
+        chatId: request.chatId,
+        message: formatItemFulfilledChatMessage(itemTitle, request.claimerName),
+      });
+      if (!fulfillResult.ok) return fulfillResult;
+
+      await supabase.from('item_claim_requests').update({ status: 'confirmed' }).eq('id', request.id);
+      return { ok: true };
     }
 
     const ids = params.subItemIds ?? request.subItemIds;
@@ -2553,6 +2785,39 @@ export async function recordItemClaimInChat(params: {
   return result;
 }
 
+/** Go Get handoff — marks giveaway claimed, listing completed, and profile stats for both neighbors. */
+export async function recordGiveawayPickupFromGoGet(params: {
+  itemId: string;
+  itemTitle: string;
+  giverUserId: string;
+  claimerUserId: string;
+  chatId: string;
+  claimMessage: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const subitems = await getListingSubitems(params.itemId);
+  const availableIds =
+    subitems.length > 0
+      ? subitems
+          .filter((s) => s.status === 'available' || s.status === 'pending_pickup')
+          .map((s) => s.id)
+      : null;
+
+  if (subitems.length > 0 && (availableIds?.length ?? 0) === 0) {
+    return { ok: false, errorMessage: 'This listing was already marked as picked up.' };
+  }
+
+  return recordPartialItemClaims({
+    itemId: params.itemId,
+    itemTitle: params.itemTitle,
+    giverUserId: params.giverUserId,
+    claimerUserId: params.claimerUserId,
+    chatId: params.chatId,
+    subItemIds: availableIds,
+    claimMessage: params.claimMessage,
+    actorUserId: params.giverUserId,
+  });
+}
+
 function buildPickupAttributionPayload(input: PickupAttributionInput | null): Record<string, unknown> {
   if (!input) {
     return {
@@ -2600,6 +2865,94 @@ export async function itemHasRecordedAppClaim(itemId: string): Promise<boolean> 
     return false;
   }
   return (count ?? 0) > 0;
+}
+
+export async function getAppClaimsForItem(
+  itemId: string,
+): Promise<{ claimerUserId: string; giverUserId: string; kind: string }[]> {
+  try {
+    const { data, error } = await supabase
+      .from('item_claims')
+      .select('claimerUserId, giverUserId, kind')
+      .eq('itemId', itemId);
+
+    if (error) return [];
+    return (data ?? []).map((row) => ({
+      claimerUserId: String((row as Record<string, unknown>).claimerUserId),
+      giverUserId: String((row as Record<string, unknown>).giverUserId),
+      kind: String((row as Record<string, unknown>).kind ?? 'giveaway'),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function submitClaimDisputeSupportTicket(params: {
+  opener: UserProfile;
+  item: ItemPost;
+  chatId: string;
+  note?: string;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  const claims = await getAppClaimsForItem(params.item.id);
+  const claimSummary =
+    claims.length > 0
+      ? claims.map((c) => `• recorded claimer uid: ${c.claimerUserId} (${c.kind})`).join('\n')
+      : '• no in-app claim record yet';
+
+  const message = [
+    `Listing: "${params.item.title}" (${params.item.id})`,
+    `Type: ${params.item.type} · Status: ${params.item.status}`,
+    `Chat: ${params.chatId}`,
+    '',
+    'I believe the wrong neighbor was marked or someone else picked up / dropped off.',
+    claimSummary,
+    '',
+    params.note?.trim() || '(Neighbor did not add extra details.)',
+    '',
+    'Please review the listing claim record and adjust if needed.',
+  ].join('\n');
+
+  return createSupportTicket({
+    opener: params.opener,
+    subject: `Wrong pickup claim — ${params.item.title}`.slice(0, 120),
+    message,
+  });
+}
+
+/** Staff: mark listing completed with off-app / unnamed attribution (no specific neighbor credited). */
+export async function staffCompleteListingWithoutClaimer(
+  item: Pick<ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>,
+  actor: Pick<UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!isStaffRole(actor.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  const { error } = await supabase
+    .from('items')
+    .update({
+      status: 'completed',
+      pickupAttributionType: 'other',
+      pickupAttributionUserId: null,
+      pickupAttributionLabel: 'Claimed (corrected by staff — no app user named)',
+      updatedAt: new Date().toISOString(),
+    })
+    .eq('id', item.id);
+
+  if (error) {
+    handleSupabaseError(error, 'items');
+    return { ok: false, errorMessage: error.message };
+  }
+
+  await markAllSubitemsClaimed(item.id);
+  await writeModerationAudit({
+    actor: actor as UserProfile,
+    target: { uid: item.userId, displayName: item.userDisplayName },
+    action: 'complete_listing_staff',
+    detail: `"${item.title}" marked completed without naming a claimer`,
+  });
+
+  return { ok: true };
 }
 
 export async function getFacebookPickupGroups(): Promise<string[]> {
@@ -2708,7 +3061,7 @@ export async function getPickupNeighborCandidates(
     if (voterIds.length > 0) {
       const { data: users } = await supabase
         .from('users_public')
-        .select('uid, displayName, photoURL, neighborhood')
+        .select('uid, displayName, photoURL, neighborhood, role')
         .in('uid', voterIds);
 
       for (const row of users || []) {
@@ -2717,6 +3070,7 @@ export async function getPickupNeighborCandidates(
           displayName: String((row as { displayName?: string }).displayName || 'Neighbor'),
           photoURL: (row as { photoURL?: string }).photoURL || undefined,
           neighborhood: (row as { neighborhood?: string }).neighborhood || undefined,
+          role: (row as { role?: UserProfile['role'] }).role,
           source: 'interest',
         });
       }
@@ -2739,7 +3093,7 @@ export async function searchPickupNeighbors(
   try {
     const { data, error } = await supabase
       .from('users_public')
-      .select('uid, displayName, photoURL, neighborhood')
+      .select('uid, displayName, photoURL, neighborhood, role')
       .neq('uid', ownerUserId)
       .ilike('displayName', `%${trimmed}%`)
       .limit(limit);
@@ -2754,6 +3108,7 @@ export async function searchPickupNeighbors(
       displayName: String((row as { displayName?: string }).displayName || 'Neighbor'),
       photoURL: (row as { photoURL?: string }).photoURL || undefined,
       neighborhood: (row as { neighborhood?: string }).neighborhood || undefined,
+      role: (row as { role?: UserProfile['role'] }).role,
       source: 'search' as const,
     }));
   } catch {
@@ -2959,6 +3314,71 @@ export async function markItemFulfilledFromChat(params: {
     return { ok: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Could not mark as fulfilled.';
+    return { ok: false, errorMessage: message };
+  }
+}
+
+export async function markTradeCompletedFromChat(params: {
+  itemId: string;
+  posterUserId: string;
+  partnerUserId: string;
+  chatId: string;
+  message: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const claimId = `trade_${params.itemId}_${Date.now()}`;
+
+    const { error: claimError } = await supabase.from('item_claims').insert({
+      id: claimId,
+      itemId: params.itemId,
+      giverUserId: params.posterUserId,
+      claimerUserId: params.partnerUserId,
+      chatId: params.chatId,
+      kind: 'trade_completed',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (claimError) {
+      const msg = String(claimError.message || '').toLowerCase();
+      if (msg.includes('duplicate') || msg.includes('unique')) {
+        return { ok: false, errorMessage: 'This trade was already marked as completed.' };
+      }
+      if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
+        return {
+          ok: false,
+          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see complete-schema.sql).',
+        };
+      }
+      if (msg.includes('kind') || msg.includes('column')) {
+        return {
+          ok: false,
+          errorMessage:
+            'Claims table needs trade_completed support — re-run section 7 in complete-schema.sql.',
+        };
+      }
+      return { ok: false, errorMessage: claimError.message || 'Could not record trade.' };
+    }
+
+    const statusOk = await updateSupabaseItemStatus(params.itemId, 'completed', params.posterUserId);
+    if (!statusOk) {
+      return { ok: false, errorMessage: 'Trade saved but listing status could not be updated.' };
+    }
+
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const msgOk = await createSupabaseMessage(
+      params.chatId,
+      params.message,
+      params.posterUserId,
+      messageId,
+      { skipPush: true },
+    );
+    if (!msgOk) {
+      return { ok: false, errorMessage: 'Trade marked complete but chat message failed.' };
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Could not mark trade as completed.';
     return { ok: false, errorMessage: message };
   }
 }
@@ -3329,6 +3749,23 @@ export async function deleteSupabaseItemComment(
 /**
  * --- COMMUNITY EVENTS ---
  */
+export async function getSupabaseEventById(eventId: string): Promise<CommunityEvent | null> {
+  if (!eventId) return null;
+  try {
+    const { data, error } = await supabase.from('community_events').select('*').eq('id', eventId).maybeSingle();
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return null;
+    }
+    if (!data) return null;
+    setSupabaseConfigurationState(true);
+    return normalizeSupabaseEvent(data as CommunityEvent);
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return null;
+  }
+}
+
 export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
   return {
     ...row,
@@ -4133,19 +4570,19 @@ export async function getSupabaseAppUpdates(): Promise<AppUpdateRecord[]> {
 
     if (error) {
       if (error.code === '42P01') {
-        return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
+        return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
       }
       handleSupabaseError(error, 'app_updates');
-      return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
+      return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
     }
 
     setSupabaseConfigurationState(true);
     const live = data?.length
       ? await enrichAppUpdatesWithAuthorProfiles(data as Record<string, unknown>[])
       : [];
-    return mergeByIdNewestFirst(SEEDED_APP_UPDATES, live) as AppUpdateRecord[];
+    return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, live) as AppUpdateRecord[]);
   } catch {
-    return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
+    return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
   }
 }
 
@@ -4351,13 +4788,23 @@ function normalizeUserNotificationRow(row: Record<string, unknown>): UserNotific
   };
 }
 
-export async function getUnreadUserNotificationCount(userId: string): Promise<number> {
+export async function getUnreadUserNotificationCount(
+  userId: string,
+  options?: { excludeKinds?: string[] },
+): Promise<number> {
   try {
-    const { count, error } = await supabase
+    let query = supabase
       .from('user_notifications')
       .select('id', { count: 'exact', head: true })
       .eq('userId', userId)
       .is('readAt', null);
+
+    const excludeKinds = options?.excludeKinds?.filter(Boolean) || [];
+    if (excludeKinds.length) {
+      query = query.not('kind', 'in', `(${excludeKinds.join(',')})`);
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       if (error.code === '42P01') return 0;
@@ -4417,17 +4864,17 @@ export async function getSupabaseHelpAnnouncements(): Promise<HelpAnnouncementRe
 
     if (error) {
       if (error.code === '42P01') {
-        return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
+        return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
       }
       handleSupabaseError(error, 'help_announcements');
-      return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
+      return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
     }
 
     setSupabaseConfigurationState(true);
     const live = (data || []).map((row) => normalizeHelpAnnouncementRow(row as Record<string, unknown>));
-    return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, live) as HelpAnnouncementRecord[];
+    return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, live) as HelpAnnouncementRecord[]);
   } catch {
-    return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
+    return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
   }
 }
 
@@ -4813,6 +5260,11 @@ export async function setSupabaseCommunityContentVote(
     }
 
     setSupabaseConfigurationState(true);
+    if (targetType === 'feed_post') {
+      void import('./lib/pushFeedIntegration').then((m) =>
+        m.pushAfterFeedVote({ postId: targetId, voterUserId: userId, voteType }),
+      );
+    }
     return { ok: true };
   } catch {
     return { ok: false, reason: 'error' };
@@ -5575,6 +6027,11 @@ export async function getUsersLastActive(uids: string[]): Promise<Record<string,
   }
 }
 
+function countFromHeadResult(result: { count?: number | null; error?: { code?: string } | null }): number {
+  if (result.error?.code === '42P01') return 0;
+  return result.count ?? 0;
+}
+
 export async function getDirectorSiteOverview(): Promise<import('./types').DirectorSiteOverview> {
   const empty: import('./types').DirectorSiteOverview = {
     totalNeighbors: 0,
@@ -5583,10 +6040,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
     activeTodayCount: 0,
     activeNeighbors: [],
     activeListings: 0,
+    upcomingEvents: 0,
     openReports: 0,
     openTickets: 0,
     suspendedCount: 0,
     bannedCount: 0,
+    downloadDevicesApk: 0,
+    downloadDevicesAab: 0,
+    downloadDevicesTotal: 0,
+    installDevicesCount: 0,
+    installDevicesApk: 0,
+    installDevicesPwa: 0,
+    installDevicesIosPwa: 0,
     recentActivity: [],
   };
 
@@ -5603,10 +6068,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       activeTodayRes,
       activeNeighborsRes,
       activeListingsRes,
+      upcomingEventsRes,
       openReportsRes,
       openTicketsRes,
       suspendedRes,
       bannedRes,
+      downloadApkRes,
+      downloadAabRes,
+      downloadAnyRes,
+      installTotalRes,
+      installApkRes,
+      installPwaRes,
+      installIosPwaRes,
       auditRes,
       reportsRes,
       ticketsRes,
@@ -5628,10 +6101,39 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
         .order('lastActiveAt', { ascending: false })
         .limit(12),
       supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase
+        .from('community_events')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['active', 'upcoming']),
       supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'new'),
       supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
       supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'suspended'),
       supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'banned'),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .not('apkDownloadedAt', 'is', null),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .not('aabDownloadedAt', 'is', null),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .or('apkDownloadedAt.not.is.null,aabDownloadedAt.not.is.null'),
+      supabase.from('app_device_installs').select('deviceId', { count: 'exact', head: true }),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'android-apk'),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'pwa'),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'ios-pwa'),
       supabase
         .from('moderation_audit_log')
         .select('*')
@@ -5719,10 +6221,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
         };
       }),
       activeListings: activeListingsRes.count ?? 0,
+      upcomingEvents: upcomingEventsRes.count ?? 0,
       openReports: openReportsRes.count ?? 0,
       openTickets: openTicketsRes.count ?? 0,
       suspendedCount: suspendedRes.count ?? 0,
       bannedCount: bannedRes.count ?? 0,
+      downloadDevicesApk: countFromHeadResult(downloadApkRes),
+      downloadDevicesAab: countFromHeadResult(downloadAabRes),
+      downloadDevicesTotal: countFromHeadResult(downloadAnyRes),
+      installDevicesCount: countFromHeadResult(installTotalRes),
+      installDevicesApk: countFromHeadResult(installApkRes),
+      installDevicesPwa: countFromHeadResult(installPwaRes),
+      installDevicesIosPwa: countFromHeadResult(installIosPwaRes),
       recentActivity: activity.slice(0, 20),
     };
   } catch {
@@ -5978,6 +6488,12 @@ function normalizeReport(row: Record<string, unknown>): UserReport {
 }
 
 function normalizeTicket(row: Record<string, unknown>): SupportTicket {
+  const ticketSourceRaw = row.ticketSource ?? row.ticket_source;
+  const ticketSource =
+    ticketSourceRaw === 'staff_listing' || ticketSourceRaw === 'staff_event' || ticketSourceRaw === 'neighbor'
+      ? ticketSourceRaw
+      : 'neighbor';
+
   return {
     id: String(row.id),
     openerUserId: String(row.openerUserId),
@@ -5987,6 +6503,12 @@ function normalizeTicket(row: Record<string, unknown>): SupportTicket {
     subject: String(row.subject),
     status: row.status === 'closed' ? 'closed' : 'open',
     closedByUserId: row.closedByUserId ? String(row.closedByUserId) : null,
+    ticketSource,
+    relatedItemId: row.relatedItemId ? String(row.relatedItemId) : null,
+    relatedItemTitle: row.relatedItemTitle ? String(row.relatedItemTitle) : null,
+    relatedEventId: row.relatedEventId ? String(row.relatedEventId) : null,
+    relatedEventTitle: row.relatedEventTitle ? String(row.relatedEventTitle) : null,
+    initiatedByUserId: row.initiatedByUserId ? String(row.initiatedByUserId) : null,
     createdAt: String(row.createdAt ?? row.created_at ?? ''),
     updatedAt: String(row.updatedAt ?? row.updated_at ?? ''),
   };
@@ -6064,6 +6586,8 @@ export async function submitUserReport(params: {
   reportedUserName?: string;
   proofImageUrl?: string | null;
   proofFile?: File | null;
+  feedPostId?: string;
+  feedCommentId?: string;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const subject = params.subject.trim();
   const body = params.body.trim();
@@ -6091,6 +6615,8 @@ export async function submitUserReport(params: {
       source: 'manual',
       status: 'new',
       createdAt: new Date().toISOString(),
+      ...(params.feedPostId ? { feedPostId: params.feedPostId } : {}),
+      ...(params.feedCommentId ? { feedCommentId: params.feedCommentId } : {}),
     });
 
     if (error) {
@@ -6223,6 +6749,150 @@ export async function createSupportTicket(params: {
     return { ok: true, ticketId };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open ticket.' };
+  }
+}
+
+export async function findOrCreateStaffListingOutreachTicket(params: {
+  staff: UserProfile;
+  item: Pick<import('./types').ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  if (!isStaffRole(params.staff.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('support_tickets')
+      .select('id')
+      .eq('openerUserId', params.item.userId)
+      .eq('relatedItemId', params.item.id)
+      .eq('ticketSource', 'staff_listing')
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (findError && findError.code !== '42P01') {
+      return { ok: false, errorMessage: findError.message };
+    }
+    if (existing?.id) return { ok: true, ticketId: String(existing.id) };
+
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const subject = `Listing: ${params.item.title}`;
+
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.item.userId,
+      openerName: params.item.userDisplayName,
+      openerRole: 'user',
+      minStaffRank: ROLE_RANK.city_moderator,
+      subject,
+      status: 'open',
+      ticketSource: 'staff_listing',
+      relatedItemId: params.item.id,
+      relatedItemTitle: params.item.title,
+      initiatedByUserId: params.staff.uid,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run staff outreach ticket migration in Supabase.' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const msgResult = await insertSupportTicketMessageRow({
+      ticketId,
+      senderUserId: params.staff.uid,
+      senderName: params.staff.displayName,
+      text: `${roleLabel(params.staff.role)} opened a staff thread about this listing. Neighbors and staff can coordinate here.`,
+      createdAt: now,
+    });
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened', messageId: msgResult.messageId });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
+
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open staff thread.' };
+  }
+}
+
+export async function findOrCreateStaffEventOutreachTicket(params: {
+  staff: UserProfile;
+  event: Pick<import('./types').CommunityEvent, 'id' | 'title' | 'userId' | 'userDisplayName'>;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  if (!isStaffRole(params.staff.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('support_tickets')
+      .select('id')
+      .eq('openerUserId', params.event.userId)
+      .eq('relatedEventId', params.event.id)
+      .eq('ticketSource', 'staff_event')
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (findError && findError.code !== '42P01') {
+      return { ok: false, errorMessage: findError.message };
+    }
+    if (existing?.id) return { ok: true, ticketId: String(existing.id) };
+
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const subject = `Event: ${params.event.title}`;
+
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.event.userId,
+      openerName: params.event.userDisplayName,
+      openerRole: 'user',
+      minStaffRank: ROLE_RANK.city_moderator,
+      subject,
+      status: 'open',
+      ticketSource: 'staff_event',
+      relatedEventId: params.event.id,
+      relatedEventTitle: params.event.title,
+      initiatedByUserId: params.staff.uid,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run staff outreach ticket migration in Supabase.' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const msgResult = await insertSupportTicketMessageRow({
+      ticketId,
+      senderUserId: params.staff.uid,
+      senderName: params.staff.displayName,
+      text: `${roleLabel(params.staff.role)} opened a staff thread about this event.`,
+      createdAt: now,
+    });
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened', messageId: msgResult.messageId });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
+
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open staff thread.' };
   }
 }
 

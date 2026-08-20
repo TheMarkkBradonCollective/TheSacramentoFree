@@ -6,8 +6,8 @@ import { canOfferContactlessClaim, isContactlessClaimCategory } from '../lib/lis
 import SubItemPicker from './SubItemPicker';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import { useBrowseOnly } from '../contexts/BrowseOnlyContext';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 
 interface ClaimAtPickupButtonProps {
   item: ItemPost;
@@ -28,9 +28,7 @@ export default function ClaimAtPickupButton({
   className = '',
   compact = false,
 }: ClaimAtPickupButtonProps) {
-  const browseOnly = useBrowseOnly();
   const { alert } = useConfirm();
-  if (browseOnly) return null;
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [loadingSubitems, setLoadingSubitems] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -86,6 +84,8 @@ export default function ClaimAtPickupButton({
       refresh,
     );
   }, [showPicker, item.id]);
+
+  if (!supportsGoGetCoordination()) return null;
 
   if (!isCurbAlert || isOwner || !hasGps) return null;
 

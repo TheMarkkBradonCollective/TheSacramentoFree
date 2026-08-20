@@ -45,6 +45,29 @@ const APK_0017_PUBLISHED_AT = '2026-08-18T13:30:00.000Z';
 const APK_0018_PUBLISHED_AT = '2026-08-18T14:00:00.000Z';
 const APK_0019_PUBLISHED_AT = '2026-08-18T14:15:00.000Z';
 const LISTING_PHOTOS_URGE_PUBLISHED_AT = '2026-08-18T14:30:00.000Z';
+const APK_0020_PUBLISHED_AT = '2026-08-18T21:35:00.000Z';
+const PHOTO_UPLOAD_FIX_PUBLISHED_AT = '2026-08-20T03:30:00.000Z';
+const APK_0022_PUBLISHED_AT = '2026-08-20T03:35:00.000Z';
+const APK_0023_PUBLISHED_AT = '2026-08-20T07:30:00.000Z';
+const EVENT_RECURRENCE_PUBLISHED_AT = '2026-08-20T07:45:00.000Z';
+const APK_0024_PUBLISHED_AT = '2026-08-20T08:00:00.000Z';
+const APK_0026_PUBLISHED_AT = '2026-08-20T09:30:00.000Z';
+const APK_0027_PUBLISHED_AT = '2026-08-20T09:45:00.000Z';
+const APK_0028_PUBLISHED_AT = '2026-08-20T10:20:00.000Z';
+const APK_0029_PUBLISHED_AT = '2026-08-20T10:40:00.000Z';
+const APK_0030_PUBLISHED_AT = '2026-08-20T11:05:00.000Z';
+const APK_0031_PUBLISHED_AT = '2026-08-20T13:10:00.000Z';
+const APK_0032_PUBLISHED_AT = '2026-08-20T13:28:00.000Z';
+const APK_0034_PUBLISHED_AT = '2026-08-20T14:10:00.000Z';
+const APK_0035_PUBLISHED_AT = '2026-08-20T14:55:00.000Z';
+const APK_0036_PUBLISHED_AT = '2026-08-20T15:40:00.000Z';
+const APK_0037_PUBLISHED_AT = '2026-08-20T16:10:00.000Z';
+const APK_0038_PUBLISHED_AT = '2026-08-20T16:35:00.000Z';
+const APK_0039_PUBLISHED_AT = '2026-08-20T16:55:00.000Z';
+const APK_0040_PUBLISHED_AT = '2026-08-20T17:40:00.000Z';
+const APK_0041_PUBLISHED_AT = '2026-08-20T17:25:00.000Z';
+const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
+const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -95,9 +118,691 @@ function news(
   };
 }
 
-/** Latest Update posts — merged with Supabase so neighbors always see current release notes.
- * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
+/** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0041',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0041',
+    'Notification deep-link audit, message-request inbox fix, welcome feed post copy.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0041 (versionCode 41).
+
+Since 0040:
+• Notification taps land on the right screen — feed posts, chats, listings, message requests, director alerts
+• Message-request alerts open your pending-requests inbox (not a fake chat)
+• Feed notification inbox items link to feed posts correctly
+• Welcome feed post — casual founder intro to kick off neighbor chit-chat
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase if the welcome post is not live yet.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 41
+- play-store-assets/release-notes-v0.1.0-0041.txt
+- src/lib/pushDeepLink.ts — notification URL parsing
+- src/components/UserNotificationsList.tsx — inbox tap targets
+- scripts/seed-welcome-feed-post-2026.sql — welcome post copy
+
+HISTORY
+2026-08-20 — /runit release (PRs #282–#283); Android beta 0041 built.`,
+    APK_0041_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0040',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0040',
+    'Feed engagement, notification deep links, map route preview, listing Request button, feed polish.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0040 (versionCode 40).
+
+Since 0039:
+• Feed cards — votes, reactions, comment count; tap for full post
+• Push when someone comments, reacts, or votes on your feed post
+• Notification bar icon — hands + money logo
+• Notification taps land on the right screen — feed, chats, listings, message requests
+• Message-request alerts open pending-requests inbox (not a fake chat)
+• Listing contact button says Request on giveaways and asks; post-submit check-back reminder
+• Map route preview fills the screen; compass and + hide while route is showing
+• Removed redundant Post badge on neighbor feed cards
+• Welcome feed post — founder intro to kick off chit-chat
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase if the welcome post is not live yet.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0040.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 40
+- play-store-assets/release-notes-v0.1.0-0040.txt
+- src/lib/pushDeepLink.ts — notification URL parsing
+- src/components/SacramentoMapView.tsx — route preview fit
+- src/components/feed/FeedPostCard.tsx — feed card engagement
+- scripts/seed-welcome-feed-post-2026.sql — welcome post copy
+
+HISTORY
+2026-08-20 — /runit release (consolidated PRs #279–#287); Android beta 0040 rebuilt.`,
+    APK_0040_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0039',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0039',
+    'Feed post detail page, one reaction per user, separate up/down votes, own-post engagement rules.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0039 (versionCode 39).
+
+Since 0038:
+• Feed — tap a card to open the full post; comments live on the detail page
+• One emoji reaction per neighbor (picking a new one replaces the old)
+• Upvotes and downvotes shown separately (not a combined score)
+• Your own posts hide vote/reaction buttons — neighbors engage, you comment
+• Feed cards show Comment + count only; votes and reactions on the detail page
+• Feed & Chat visual polish matching Stuff and Events
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0039.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase for the founder welcome post.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 39
+- play-store-assets/release-notes-v0.1.0-0039.txt
+- src/components/feed/FeedPostDetailView.tsx — full post overlay
+- src/components/feed/FeedPostCard.tsx — card tap + comment only
+- src/lib/feedApi.ts — single reaction replace logic
+
+HISTORY
+2026-08-20 — /runit release (PR #278); Android beta 0039 built.`,
+    APK_0039_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0038',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0038',
+    'Feed & Chat style parity with Stuff/Events, legal footer below the fold, compact Looking tags on grid.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0038 (versionCode 38).
+
+Since 0037:
+• Feed & Chat — same toolbar/card style as Stuff and Events
+• Legal footer (privacy/terms) only appears when you scroll down on short pages
+• Stuff grid — type badges say "Looking" in a compact pill (not huge "Looking for")
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0038.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 38
+- play-store-assets/release-notes-v0.1.0-0038.txt
+- src/components/FeedView.tsx, ChatInboxHeader.tsx — page style parity
+- src/components/PageScrollFooter.tsx — footer below fold
+- src/lib/postType.ts — getPostTypeGridBadgeLabel
+
+HISTORY
+2026-08-20 — /runit release (PR #275); Android beta 0038 built.`,
+    APK_0038_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0037',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0037',
+    'Live neighbor Feed, Chat makeover, map route zoom-to-fit, lower map controls.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0037 (versionCode 37).
+
+Since 0036:
+• Neighbor Feed — posts (text/photos), nested comments, emoji reactions, votes, report/delete
+• Chat tab (was Messages) — messenger-style inbox header and bubbles
+• Map — route line zooms to fit when you select a listing; GPS/+ buttons sit lower
+• Square Map button centered in footer
+
+Supabase: run scripts/supabase-migration-aug-20-2026-neighbor-feed.sql for Feed tables.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0037.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 37
+- play-store-assets/release-notes-v0.1.0-0037.txt
+- src/components/FeedView.tsx — live neighbor feed
+- src/components/SacramentoMapView.tsx — route fit + control placement
+
+HISTORY
+2026-08-20 — /runit release; Android beta 0037 built.`,
+    APK_0037_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0036',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0036',
+    'Feed tab shell, Stuff listings split, account in header, 5-tab footer, orange Looking/Trade badges.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0036 (versionCode 36).
+
+Since 0035:
+• Feed tab placeholder (neighbor wall coming soon); Stuff tab = listings grid
+• Header: logo, bell (badges inside), profile avatar for account/settings
+• Footer: Feed | Stuff | Map | Events | Messages
+• Bell panel — no duplicate Notifications title bar
+• Looking for and Trade tags use orange shades like Giving
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0036.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 36
+- play-store-assets/release-notes-v0.1.0-0036.txt
+- src/lib/appTabs.ts — feed/stuff tab split
+- src/components/FeedView.tsx — community feed placeholder
+
+HISTORY
+2026-08-20 — /runit release merging open PRs; Android beta 0036 built.`,
+    APK_0036_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0035',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0035',
+    'Events toolbar + scoped New modals, filter master toggles, Everything/Giving/Looking/Trading, News vs Updates split.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0035 (versionCode 35).
+
+Since 0034:
+• Events page toolbar — New, Nearest/Newest, All/Upcoming/Past, filters, grid/list
+• New on Map opens Stuff or Event; Stuff feed = stuff only; Events feed = event only
+• Filter drawer master toggles expand/collapse each group
+• Feed type cycle: Everything / Giving / Looking / Trading (before Nearest/Newest)
+• News tab = releases + director posts; Updates tab = product changes only
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0035.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 35
+- play-store-assets/release-notes-v0.1.0-0035.txt
+- src/components/CollapsibleFilterSection.tsx — master filter toggles
+- src/components/EventsView.tsx — events toolbar
+
+HISTORY
+2026-08-20 — /runit release merging PRs #266, #269, #270; Android beta 0035 built.`,
+    APK_0035_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0034',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0034',
+    'Map + New for Stuff or Events; DMs compose back; 30-day listing expiry.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0034 (versionCode 34).
+
+Since 0033:
+• Map + New — post Stuff or Events with GPS pin
+• Messages compose and message requests restored
+• Listings expire after 30 days
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0034.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 34
+- play-store-assets/release-notes-v0.1.0-0034.txt
+- src/components/NewListingModal.tsx — Stuff/Event toggle
+
+HISTORY
+2026-08-20 — /runit release merging PRs #258–#262; Android beta 0034 built.`,
+    APK_0034_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0033',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0033',
+    'Staff mode box title follows the toggle; location permission switch now shows Allowed when GPS works.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0033 (versionCode 33).
+
+Since 0032:
+• Staff mode settings card title switches between Staff mode and User mode
+• Location permission toggle correctly shows Allowed after GPS is granted on Android
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0033.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 33
+- play-store-assets/release-notes-v0.1.0-0033.txt
+
+HISTORY
+2026-08-20 — /runit release merging PRs #256–#257; Android beta 0033 built.`,
+    APK_0033_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0032',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0032',
+    'Staff/User mode now gates staff notifications; listing and event detail headers scroll with the page.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0032 (versionCode 32).
+
+Since 0031:
+• Staff/User mode switch also controls staff and director push alerts
+• Listing and event detail toolbars scroll with content — no pinned header or bottom Back button
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0032.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 32
+- play-store-assets/release-notes-v0.1.0-0032.txt
+
+HISTORY
+2026-08-20 — /runit release merging PRs #254–#255; Android beta 0032 built.`,
+    APK_0032_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0031',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0031',
+    'Launcher icon fix plus nav banner pinned to top, chat listing/event previews, profile stats layout, and listing type badges.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0031 (versionCode 31).
+
+Since 0030:
+• Nav banner stays pinned to the top; map camera keeps you centered
+• Coordination chats show the listing or event preview at the top
+• Profile stats: three cards on top, two below
+• Listing cards show only the type badge (Given / Looking / Trade)
+• Listing detail header scrolls correctly
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0031.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 31
+- play-store-assets/release-notes-v0.1.0-0031.txt
+
+HISTORY
+2026-08-20 — /runit release merging PRs #245–#252; Android beta 0031 built.`,
+    APK_0031_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0030',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0030',
+    'Launcher icon now matches the PWA — full-bleed orange with no white ring around the edges.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0030 (versionCode 30).
+
+Since 0029:
+• Home-screen launcher icon is full-bleed orange like the PWA — no white ring around the artwork
+
+Already on 0029? Reopening the app still loads the live site for web fixes, but install 0030 for the corrected launcher icon.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 30
+- scripts/generate-android-assets.mjs — full-bleed launcher icon generation
+- play-store-assets/release-notes-v0.1.0-0030.txt
+
+HISTORY
+2026-08-20 — Android launcher icon white-edge fix (PR #246); Android beta 0030 built.`,
+    APK_0030_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0029',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0029',
+    'Turn-by-turn navigation now has heading-up, real lanes, walk/bike/drive, and voice that reads the same details as the screen.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0029 (versionCode 29).
+
+Since 0028:
+• Heading-up map that follows you, with a Compass heading you can trust
+• Real lane guidance from the road data — not a fake two-lane guess
+• Walk, bike, or drive: walking and biking ignore car one-ways
+• Voice reads the same turn, distance, street, then-next, and lanes as the banner
+• Recenter announces the next turn
+• Navigation settings in Account and the in-nav gear (theme follows the app)
+
+Android app only: in-app Navigate and Go Get. Website stays message + mark.
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0029 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 29
+- src/components/MapNavigationView.tsx — banner + voice share one instruction card
+- play-store-assets/release-notes-v0.1.0-0029.txt
+
+HISTORY
+2026-08-20 — Navigation rework merged (PR #240); Android beta 0029 built.`,
+    APK_0029_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0028',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0028',
+    'App-style feed and events: default photo grid, collapsible filters, and a cleaner Messages inbox.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0028 (versionCode 28).
+
+Since 0027:
+• Community Stuff opens in photo grid view by default
+• Filters hide behind one button; tap Nearest first to switch to Newest
+• Events tab matches Stuff — grid/list toggle, filters, compact tiles
+• Messages inbox drops the duplicate title block
+• Listing cards show Given / Looking / Trade under votes
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0028 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0028.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 28
+- src/components/ItemGrid.tsx + EventsView.tsx — grid/list toolbar and filters
+- play-store-assets/release-notes-v0.1.0-0028.txt
+
+HISTORY
+2026-08-20 — Feed grid UI polish merged (PR #239); Android beta 0028 built.`,
+    APK_0028_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_feed-grid-ui',
+    '2026-08-20',
+    'Cleaner app-style feed and events',
+    'Photo grid by default, filters behind one button, and Events matches Stuff.',
+    `WHAT NEIGHBORS SEE
+Community Stuff and Events now feel more like a native app:
+
+• Photo grid is the default view — list view is one tap away
+• Filters stay hidden until you tap Filters
+• In grid view, tap Nearest first to switch to Newest
+• Events has the same toolbar and compact photo tiles
+• Messages no longer repeats the page title inside the inbox
+• Listing cards show Given / Looking / Trade in a row under votes
+
+Reopen the app or refresh the website to pick this up — no install required for web-only neighbors.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/ItemGrid.tsx, EventsView.tsx, ChatInboxHeader.tsx, ItemCard.tsx
+
+HISTORY
+2026-08-20 — PR #239.`,
+    FEED_GRID_UI_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0027',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0027',
+    'Same app features as 0026, plus a fix so navigation and Go Get stay Android-only (website is message + mark).',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0027 (versionCode 27).
+
+Since 0026:
+• Navigation and Go Get gated to the Android app only — website stays message + mark
+
+Android app only (unchanged from 0026):
+• Staff Navigate on Stuff and Events
+• Go Get ring + pickup availability (opt-in in Account)
+• List/grid feed toggle
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0027.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 27
+- src/lib/goGetCoordinationGating.ts — supportsInAppNavigation()
+- play-store-assets/release-notes-v0.1.0-0027.txt
+
+HISTORY
+2026-08-20 — Native-only navigation gating; Android beta 0027 for Play upload after 0026.`,
+    APK_0027_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0026',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0026',
+    'Android app: Staff Navigate, Go Get ring, list/grid feed. Website stays message + mark only.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0026 (versionCode 26).
+
+Android app only:
+• Staff Navigate on Stuff and Events
+• Go Get ring + pickup availability (coordination opt-in in Account)
+• List/grid feed toggle
+
+Website (browser): message neighbors and mark listings — no in-app navigation or Go Get.
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0026 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0026.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 26
+- play-store-assets/release-notes-v0.1.0-0026.txt — Play Console release notes
+- Merged PRs #237–#238, #223–#222, #229, #188, #221 (changelog), partial #157
+
+HISTORY
+2026-08-20 — Merged open PR stack; Android beta 0026 built.`,
+    APK_0026_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0024',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0024',
+    'Event posters can schedule repeats by month day, weekday position, or weekly — plus Laundry Love and City of Refuge community events.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0024 (versionCode 24).
+
+Since 0023:
+• Post Event → Repeat on a schedule: month days (4th, 20th), weekday of month (4th Saturday), or every week (Thursday)
+• Live preview shows how many dates will be created before you post
+• Laundry Love (4th Saturdays) and City of Refuge (Thursdays) community resource events added
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0024 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0024.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 24
+- src/lib/eventRecurrence.ts + src/components/EventRecurrenceEditor.tsx — schedule builder
+- scripts/seed-laundry-love-city-of-refuge-events-2026.sql — flyer event seeds
+- play-store-assets/release-notes-v0.1.0-0024.txt — Play Console release notes
+
+HISTORY
+2026-08-20 — Event recurrence + community resource seeds merged with staff mode (PR #234), Android beta 0024 built.`,
+    APK_0024_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_event-recurrence-scheduling',
+    '2026-08-20',
+    'Schedule repeat events by month day or weekday',
+    'When posting a free event, turn on Repeat on a schedule to auto-fill dates — every 4th and 20th, every 4th Saturday, every Thursday, and more.',
+    `WHAT NEIGHBORS SEE
+Posting a community event? Under Repeat on a schedule you can now:
+
+• Pick days of the month (e.g. 4th and 20th every month)
+• Pick weekday positions (e.g. 4th Saturday, or 1st/2nd/3rd Monday)
+• Pick weekly days (e.g. every Thursday)
+• Combine multiple rules and preview the dates before posting
+
+Same place, same time — neighbors still RSVP per day.
+
+New community resource events from flyers:
+• Laundry Love — 4th Saturdays at Stockridge Launderland (City Church of Sacramento)
+• City of Refuge — Thursdays, free showers, laundry, and meals
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/lib/eventRecurrence.ts — date generation
+- src/components/EventRecurrenceEditor.tsx + PostEventModal.tsx — UI
+- scripts/seed-laundry-love-city-of-refuge-events-2026.sql
+
+HISTORY
+2026-08-20 — PR #234.`,
+    EVENT_RECURRENCE_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0023',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0023',
+    'Staff can now switch between Staff mode and Neighbor mode in Account settings — participate officially or like a regular neighbor.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0023 (versionCode 23).
+
+Since 0022:
+• Account → Staff participation mode: Staff mode vs Neighbor mode
+• Staff mode: comments show your title, Staff chat on listings/events, no private neighbor DMs or Go Get
+• Neighbor mode: message, navigate, claim, and Go Get like any neighbor; comments post without staff badge
+• Moderation sidebar and staff tools stay available in both modes
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0023 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0023.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/StaffModeSettings.tsx — Account settings toggle
+- src/lib/staffInteractionMode.ts — staff vs neighbor acting helpers
+- scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql — DB columns
+- android/app/build.gradle — versionCode 23
+- play-store-assets/release-notes-v0.1.0-0023.txt — Play Console release notes
+
+HISTORY
+2026-08-20 — Staff participation mode toggle shipped in web + Android beta 0023.`,
+    APK_0023_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0022',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0022',
+    'Photo uploads when posting are fixed on Android. Grab the new Play Store bundle or sideload APK if you install outside Google Play.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0022 (versionCode 22).
+
+Since 0021:
+• Photo uploads work when posting listings, events, and profile photos
+• Android gallery picks no longer fail on missing file types
+• Report and support ticket screenshots upload reliably
+• Download page points neighbors to Google Play first
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0022 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0022.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 22
+- play-store-assets/release-notes-v0.1.0-0022.txt — Play Console release notes
+- src/supabase.ts + src/lib/imageUrl.ts — photo upload fix (PR #232)
+
+HISTORY
+2026-08-20 — Photo upload fix merged (PR #232), then Android beta 0022 AAB built for Play Console.`,
+    APK_0022_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_photo-upload-fix',
+    '2026-08-20',
+    'Photo uploads work again on Android and the website',
+    'Posting a listing with photos failed for some neighbors on the Play Store app and website. That is fixed — reopen the app and try adding photos when you post.',
+    `WHAT NEIGHBORS SEE
+If you could sign in but got "Could not upload photos" when posting a giveaway, event, or profile photo, that is fixed now.
+
+Reopen the Sacramento Buy Nothing app or refresh the website, then try posting with photos again. You do not need a new install from the Play Store — the app loads the live site.
+
+This also fixes screenshot uploads on reports and support tickets.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/supabase.ts — listing, event, profile, report, and ticket uploads now use auth-scoped storage paths ({userId}/...).
+- src/lib/imageUrl.ts — Android gallery picks with missing MIME types are accepted by file extension.
+- scripts/verify-photo-upload-paths.mjs — static audit for all eight upload surfaces.
+
+HISTORY
+2026-08-20 — PR #232. Storage RLS required user-scoped paths; uploads used flat filenames. Android WebView often omits image MIME types from gallery picks.`,
+    PHOTO_UPLOAD_FIX_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-18_apk-0020',
+    '2026-08-18',
+    'New Android download — beta v0.1.0.0020',
+    'Staff overview adds Events, Downloads, and Installs. Staff accounts now use support threads instead of neighbor pickup/DM flows, with safety prompts on sensitive chats.',
+    `WHAT NEIGHBORS SEE
+Grab beta v0.1.0.0020 from https://www.sacramentobuynothing.com/download
+
+Since 0019:
+• Staff Console overview pairs Events with Listings and tracks unique APK/AAB downloads and app installs
+• Staff on listings/events: upvote, comment with staff badge, staff actions — no navigate, go get, pickup, or private DM
+• Staff Message opens a shared support thread with a clickable listing/event preview at the top
+• Confirmations before staff open outreach or neighbor coordination chats
+• Feed listing photos fixed for legacy image storage
+
+Already on 0019? Reopening the app still loads the live site, but install 0020 for the latest native shell.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/DirectorSiteOverview.tsx — overview metrics grid
+- src/lib/staffChatSafety.ts + StaffListingActions / StaffEventActions
+- scripts/supabase-migration-aug-18-2026-app-device-stats.sql
+- scripts/supabase-migration-aug-18-2026-staff-outreach-tickets.sql
+- android/app/build.gradle — versionCode 20
+
+HISTORY
+2026-08-18 — APK 0020 ships staff overview + staff neighbor-action restrictions.`,
+    APK_0020_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_listing-feed-photos',
     '2026-08-18',
@@ -639,8 +1344,395 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
   ),
 ];
 
-/** Latest News posts — community-facing announcements. */
+/** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0041',
+    '2026-08-20',
+    'New Android beta 0041 — notification deep links, welcome feed post',
+    'Taps go to the right place; message requests open inbox; welcome chit-chat post.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0041: full notification navigation audit, message-request inbox fix, welcome feed post copy.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0041.
+
+HISTORY
+2026-08-20 — Android beta 0041 /runit release (PRs #282–#283).`,
+    APK_0041_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0040',
+    '2026-08-20',
+    'New Android beta 0040 — feed, notifications, map route preview, listing Request',
+    'Consolidated release: feed engagement, notification deep links, map UX, listing Request button.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0040: feed card engagement and push, notification deep links, map route preview fit, listing Request button, feed polish.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0040.
+
+HISTORY
+2026-08-20 — Android beta 0040 /runit release (consolidated PRs #279–#287).`,
+    APK_0040_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0039',
+    '2026-08-20',
+    'New Android beta 0039 — Feed post detail, engagement rules',
+    'Tap feed cards for full post; one reaction, separate votes; own posts hide vote/react controls.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0039: Feed post detail page, engagement rules (one reaction, separate up/down), own-post controls hidden, Feed/Chat polish.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase for the founder welcome post.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0039.
+
+HISTORY
+2026-08-20 — Android beta 0039 /runit release (PR #278).`,
+    APK_0039_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0038',
+    '2026-08-20',
+    'New Android beta 0038 — Feed/Chat polish, footer scroll, compact Looking tags',
+    'Feed & Chat match other tabs; legal footer below fold; smaller Looking badges on Stuff grid.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0038: Feed & Chat UI matches Stuff/Events, scroll-to-see legal footer, compact "Looking" grid tags.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0038.
+
+HISTORY
+2026-08-20 — Android beta 0038 /runit release (PR #275).`,
+    APK_0038_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0037',
+    '2026-08-20',
+    'New Android beta 0037 — live Feed, Chat makeover, map route fit',
+    'Neighbor wall with posts and comments, Chat tab, map zooms to route. Play Store: upload AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0037: live neighbor Feed, Chat makeover, map route zoom-to-fit, lower map controls.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-20-2026-neighbor-feed.sql in Supabase for Feed.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0037.
+
+HISTORY
+2026-08-20 — Android beta 0037 /runit release.`,
+    APK_0037_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0036',
+    '2026-08-20',
+    'New Android beta 0036 — Feed tab, header account, 5-tab footer',
+    'Feed placeholder, Stuff listings, account in header, badges in bell, orange Looking/Trade tags. Play Store: upload AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0036: Feed tab shell, Stuff for listings, account via header avatar, 5-tab footer, cleaner bell panel.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0036.
+
+HISTORY
+2026-08-20 — Android beta 0036 /runit release.`,
+    APK_0036_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0035',
+    '2026-08-20',
+    'New Android beta 0035 — Events toolbar, filter toggles, News/Updates split',
+    'Events New button, scoped modals per page, collapsible filter groups, Everything/Giving/Looking/Trading. Play Store: upload AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0035: Events toolbar, page-specific New modals, filter master toggles, feed type labels, News vs Updates tabs.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0035.
+
+HISTORY
+2026-08-20 — Android beta 0035 /runit release (PRs #266, #269, #270).`,
+    APK_0035_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0034',
+    '2026-08-20',
+    'New Android beta 0034 — New listing on Map, DMs, listing expiry',
+    'Map + New for Stuff or Events; DMs compose back; 30-day listing expiry.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0034: Map + New listing, restored DMs, 30-day listing expiry.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0034.
+
+HISTORY
+2026-08-20 — Android beta 0034 /runit release (PRs #258–#262).`,
+    APK_0034_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0033',
+    '2026-08-20',
+    'New Android beta 0033 — staff mode title, location toggle fix',
+    'Staff mode card title follows the toggle; location permission switch shows Allowed when GPS works. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0033 fixes the staff mode settings title and the location permission toggle on Android.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0033.
+
+HISTORY
+2026-08-20 — Android beta 0033 /runit release.`,
+    APK_0033_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0032',
+    '2026-08-20',
+    'New Android beta 0032 — staff mode notifications, detail headers',
+    'Staff/User mode gates staff alerts; listing and event detail headers scroll with the page. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0032 ties staff notifications to Staff/User mode and simplifies listing and event detail headers.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0032.
+
+HISTORY
+2026-08-20 — Android beta 0032 /runit release.`,
+    APK_0032_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0031',
+    '2026-08-20',
+    'New Android beta 0031 — nav, chats, profile, listings',
+    'Nav banner pinned to top, chat previews, profile stats layout, listing type badges. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0031 bundles launcher icon fix, nav improvements, chat previews, profile stats layout, and cleaner listing type badges.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0031.
+
+HISTORY
+2026-08-20 — Android beta 0031 /runit release.`,
+    APK_0031_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0030',
+    '2026-08-20',
+    'New Android beta 0030 — launcher icon fix',
+    'Home-screen icon now matches the PWA — full-bleed orange, no white ring. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0030 fixes the Android launcher icon so it matches the PWA — full-bleed orange with no white ring around the edges.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0030.
+
+HISTORY
+2026-08-20 — Android beta 0030 with launcher icon fix.`,
+    APK_0030_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0029',
+    '2026-08-20',
+    'New Android beta 0029 — turn-by-turn navigation',
+    'Heading-up map, real lanes, walk/bike/drive, and voice that matches the screen. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0029 rebuilds in-app navigation: heading-up, real lane guidance, walk/bike/drive, and spoken instructions that match what is on screen.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0029.
+
+HISTORY
+2026-08-20 — Android beta 0029 with navigation rework.`,
+    APK_0029_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0028',
+    '2026-08-20',
+    'New Android beta 0028 — app-style feed and events',
+    'Photo grid by default, filters behind one button, and Events matches Stuff. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0028 makes Community Stuff and Events feel more like a native app — grid view by default, collapsible filters, and a cleaner Messages inbox.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0028.
+
+HISTORY
+2026-08-20 — Android beta 0028 with feed grid UI polish.`,
+    APK_0028_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0024',
+    '2026-08-20',
+    'New Android beta 0024 — event scheduling + community resources',
+    'Post repeat events by month day or weekday, and Laundry Love / City of Refuge are on the calendar. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0024 adds smarter event scheduling and two new community resource series.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0024.
+
+HISTORY
+2026-08-20 — Android beta 0024 with event recurrence scheduling.`,
+    APK_0024_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_event-recurrence',
+    '2026-08-20',
+    'Laundry Love, City of Refuge, and easier repeat events',
+    'Two new free community resource events are on the calendar, and posters can schedule repeats like every 4th Saturday or every Thursday.',
+    `WHAT NEIGHBORS SEE
+Look for these on Events:
+
+• Laundry Love — free laundry help every 4th Saturday at Stockridge Launderland
+• City of Refuge — free showers, laundry, and meals every Thursday on MLK Blvd
+
+Posting an event? Use Repeat on a schedule to auto-fill monthly or weekly dates instead of typing each one.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_event-recurrence-scheduling.
+
+HISTORY
+2026-08-20 — PR #234.`,
+    EVENT_RECURRENCE_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_staff-participation-mode',
+    '2026-08-20',
+    'Staff can switch between official and neighbor mode',
+    'Community staff now choose how they participate — official Staff mode with your title on comments, or Neighbor mode to message and coordinate pickups like anyone else.',
+    `WHAT NEIGHBORS SEE
+Staff accounts now have Account → Staff participation mode:
+
+• Staff mode (default): comments show the staff title, listings use Staff chat, and neighbor pickup/DM flows stay off.
+• Neighbor mode: participate like any neighbor — message, navigate, claim, Go Get — and comments post without a staff badge.
+
+Moderation tools stay available either way. Your profile may still show you are on the team.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0023.
+
+HISTORY
+2026-08-20 — Staff participation mode toggle.`,
+    APK_0023_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0022',
+    '2026-08-20',
+    'New Android beta 0022 — photo uploads fixed',
+    'Posting with photos works again on Android. Play Store testers get the update on the next release; sideload neighbors can grab 0022 from Download.',
+    `WHAT NEIGHBORS SEE
+If adding photos while posting failed, that is fixed in beta v0.1.0.0022.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0022.
+
+HISTORY
+2026-08-20 — Android beta 0022 with photo upload fix.`,
+    APK_0022_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_photo-upload-fix',
+    '2026-08-20',
+    'Photo uploads fixed — try posting again',
+    'If adding photos while posting failed on the Android app or website, reopen the app and try again. No new install needed.',
+    `WHAT NEIGHBORS SEE
+Some neighbors could log in but could not attach photos when posting listings or events. That is fixed.
+
+Reopen the app or refresh the page, then post with photos as usual. Play Store installs pick up the fix automatically.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_photo-upload-fix (PR #232).
+
+HISTORY
+2026-08-20 — Photo upload fix for Android Play Store app and website.`,
+    PHOTO_UPLOAD_FIX_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_add-listing-photos',
     '2026-08-18',

@@ -8,6 +8,7 @@ import {
   getSupportTicketLastMessages,
 } from '../supabase';
 import { canViewStaffTicketInbox } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import SupportTicketThread from './SupportTicketThread';
 import SupportTicketRow from './SupportTicketRow';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
@@ -31,6 +32,11 @@ interface ChatSupportSectionProps {
   onOpenTerms?: () => void;
   initialTicketId?: string | null;
   onClearInitialTicketId?: () => void;
+  onViewRelatedListing?: (itemId: string) => void;
+  onViewRelatedEvent?: (eventId: string) => void;
+  onArchiveTicket?: (ticketId: string) => void;
+  onUnarchiveTicket?: (ticketId: string) => void;
+  supportTicketArchived?: boolean;
   /** Compact rows for the chat sidebar */
   compact?: boolean;
   className?: string;
@@ -46,10 +52,15 @@ export default function ChatSupportSection({
   onOpenTerms,
   initialTicketId = null,
   onClearInitialTicketId,
+  onViewRelatedListing,
+  onViewRelatedEvent,
+  onArchiveTicket,
+  onUnarchiveTicket,
+  supportTicketArchived = false,
   compact = false,
   className = '',
 }: ChatSupportSectionProps) {
-  const isStaffInbox = canViewStaffTicketInbox(user.role);
+  const isStaffInbox = canViewStaffTicketInbox(user.role) && isStaffActingOfficial(user);
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
   const [ticketCreating, setTicketCreating] = useState(false);
@@ -263,6 +274,7 @@ export default function ChatSupportSection({
         </header>
         <div className="flex-1 min-h-0 overflow-hidden">
           <ScrollPage
+            pinToBottom
             contentClassName="p-4"
             footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
           >
@@ -292,6 +304,7 @@ export default function ChatSupportSection({
               file={ticketImage.file}
               previewUrl={ticketImage.previewUrl}
               onChange={ticketImage.setFile}
+              onInvalidFile={setErr}
               disabled={ticketCreating}
             />
             <button
@@ -342,6 +355,15 @@ export default function ChatSupportSection({
             ticket={activeTicket}
             viewer={user}
             showTicketMeta={false}
+            onViewRelatedListing={onViewRelatedListing}
+            onViewRelatedEvent={onViewRelatedEvent}
+            isArchived={supportTicketArchived}
+            onArchive={
+              onArchiveTicket ? () => onArchiveTicket(activeTicket.id) : undefined
+            }
+            onUnarchive={
+              onUnarchiveTicket ? () => onUnarchiveTicket(activeTicket.id) : undefined
+            }
             onClosed={() => {
               void getSupportTicketById(activeTicket.id).then((t) => {
                 if (t) setActiveTicket(t);
@@ -383,7 +405,7 @@ export default function ChatSupportSection({
         </div>
       </header>
       <div className="flex-1 min-h-0 overflow-hidden">
-        <ScrollPage footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}>
+        <ScrollPage pinToBottom footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}>
         {!isStaffInbox ? (
           <ChatSidebarRow
             id="chat_support_row_new"

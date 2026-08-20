@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ClipboardList, Flag, Star } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { canViewStaffReports } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import CommunityReviews from './CommunityReviews';
 import SendUserReportPanel from './SendUserReportPanel';
@@ -32,7 +33,7 @@ export default function ChatFeedbackSection({
   const [internalPanel, setInternalPanel] = useState<ChatFeedbackPanel>(null);
   const panel = controlledPanel !== undefined ? controlledPanel : internalPanel;
   const setPanel = onPanelChange ?? setInternalPanel;
-  const canStaffReports = canViewStaffReports(userProfile.role);
+  const canStaffReports = canViewStaffReports(userProfile.role) && isStaffActingOfficial(userProfile);
   const { reports } = useStaffUserReports(canStaffReports, userProfile);
 
   const newReportCount = reports.filter((report) => report.status === 'new').length;

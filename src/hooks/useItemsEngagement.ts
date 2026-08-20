@@ -8,6 +8,7 @@ import {
   setSupabaseItemVote,
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -208,6 +209,7 @@ export function useItemsEngagement(
       text: text.trim(),
       createdAt: new Date().toISOString(),
       userNeighborhood: userProfile.neighborhood || 'Midtown',
+      postedAsNeighbor: commentPostedAsNeighbor(userProfile) || undefined,
     };
 
     setItemComments((prev) => ({

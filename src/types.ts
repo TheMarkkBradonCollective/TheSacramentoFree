@@ -52,12 +52,46 @@ export interface UserProfile {
   accountStatus?: AccountStatus;
   suspendedUntil?: string | null;
   /**
-   * When false, this neighbor opts out of Go Get / Drop off / Meet up / claim-at-pin
-   * coordination and uses listing + chat only. Default true when unset.
+   * When true, this neighbor opts in to Go Get / Drop off / Meet up / claim-at-pin
+   * coordination. Default false until explicitly enabled in Account.
    */
   goGetEnabled?: boolean;
+  /** Weekly pickup windows for app coordination. Null / unset = 24/7. */
+  pickupAvailability?: PickupAvailabilitySchedule | null;
+  /** How long incoming Go Get rings last (10–140 seconds). */
+  goGetRingDurationSeconds?: number;
+  goGetRingPattern?: GoGetRingPattern;
+  /**
+   * Staff only: `staff` = official capacity (badge, support threads, restricted neighbor flows).
+   * `neighbor` = participate like a regular neighbor. Default staff when unset.
+   */
+  staffInteractionMode?: 'staff' | 'neighbor';
+  /** 1 = earliest neighbor; used for milestone awards and APK website access. */
+  joinRank?: number | null;
   createdAt: any;
   lastActiveAt?: string | null;
+}
+
+export type GoGetRingPattern =
+  | 'single_beep'
+  | 'double_beep'
+  | 'triple_beep'
+  | 'ring'
+  | 'vibrate'
+  | 'vibrate_only';
+
+export interface PickupDayAvailability {
+  /** 0 = Sunday … 6 = Saturday */
+  day: number;
+  enabled: boolean;
+  /** Minutes from local midnight (0–1439). */
+  startMinute: number;
+  /** Exclusive end minute; 1440 = end of day. */
+  endMinute: number;
+}
+
+export interface PickupAvailabilitySchedule {
+  days: PickupDayAvailability[];
 }
 
 export interface StaffUserRow extends UserProfile {
@@ -105,10 +139,22 @@ export interface DirectorSiteOverview {
   activeTodayCount: number;
   activeNeighbors: DirectorActiveNeighbor[];
   activeListings: number;
+  upcomingEvents: number;
   openReports: number;
   openTickets: number;
   suspendedCount: number;
   bannedCount: number;
+  /** Unique devices that downloaded APK at least once. */
+  downloadDevicesApk: number;
+  /** Unique devices that downloaded AAB at least once. */
+  downloadDevicesAab: number;
+  /** Unique devices with any APK or AAB download. */
+  downloadDevicesTotal: number;
+  /** Unique devices with a recorded app install (APK or home screen). */
+  installDevicesCount: number;
+  installDevicesApk: number;
+  installDevicesPwa: number;
+  installDevicesIosPwa: number;
   recentActivity: DirectorActivityItem[];
 }
 
@@ -150,6 +196,8 @@ export interface UserReport {
 
 export type TicketStatus = 'open' | 'closed';
 
+export type SupportTicketSource = 'neighbor' | 'staff_listing' | 'staff_event';
+
 export interface SupportTicket {
   id: string;
   openerUserId: string;
@@ -159,6 +207,12 @@ export interface SupportTicket {
   subject: string;
   status: TicketStatus;
   closedByUserId?: string | null;
+  ticketSource?: SupportTicketSource;
+  relatedItemId?: string | null;
+  relatedItemTitle?: string | null;
+  relatedEventId?: string | null;
+  relatedEventTitle?: string | null;
+  initiatedByUserId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -186,6 +240,9 @@ export interface ItemPost {
   status: PostStatus;
   createdAt: any;
   updatedAt: any;
+  /** Auto-withdraw when past this time unless owner edits or reposts (resets timer). */
+  expiresAt?: string | null;
+  expiryWarnedAt?: string | null;
   imageUrl?: string;
   /** All photos (first matches imageUrl). Parsed from description when not set. */
   imageUrls?: string[];
@@ -212,6 +269,8 @@ export interface Chat {
   lastMessageSenderId?: string;
   itemId?: string;
   itemTitle?: string;
+  eventId?: string;
+  eventTitle?: string;
 }
 
 /** Compose UI before the chat row exists in the database (first outbound message creates it). */
@@ -222,6 +281,8 @@ export interface PendingChatCompose {
   otherUserPhoto?: string;
   itemId?: string;
   itemTitle?: string;
+  eventId?: string;
+  eventTitle?: string;
 }
 
 export interface Message {
@@ -246,6 +307,8 @@ export interface ItemComment {
   userNeighborhood: string;
   text: string;
   createdAt: any;
+  /** True when staff posted while in neighbor mode — hide staff badge. */
+  postedAsNeighbor?: boolean;
 }
 
 export type SubItemStatus = 'available' | 'pending_pickup' | 'claimed';
@@ -276,6 +339,7 @@ export type GoGetHandshakeMode = 'instant' | 'availability';
  */
 export type GoGetSessionStatus =
   | 'awaiting_availability'
+  | 'awaiting_schedule'
   | 'window_offered'
   | 'scheduled'
   | 'active'
@@ -313,6 +377,10 @@ export interface GoGetSession {
   cancelReason?: string | null;
   /** Poster opted in to share live device location so the picker can find them at the meetup. */
   fulfillerSharingLocation?: boolean;
+  /** When the live "available now?" ring ends if the poster does not answer. */
+  ringExpiresAt?: string | null;
+  /** Snapshot of poster ring duration when the session was created. */
+  ringDurationSeconds?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -454,6 +522,8 @@ export interface EventComment {
   userNeighborhood: string;
   text: string;
   createdAt: any;
+  /** True when staff posted while in neighbor mode — hide staff badge. */
+  postedAsNeighbor?: boolean;
 }
 
 export interface DirectorMessageContent {
@@ -639,7 +709,12 @@ export type DiscussionComment = Pick<
   'id' | 'userId' | 'userName' | 'userPhoto' | 'userNeighborhood' | 'text'
 >;
 
-export type CommunityContentVoteTarget = 'update' | 'review' | 'leader_message' | 'announcement';
+export type CommunityContentVoteTarget =
+  | 'update'
+  | 'review'
+  | 'leader_message'
+  | 'announcement'
+  | 'feed_post';
 
 export interface CommunityContentVote {
   id: string;
@@ -654,6 +729,51 @@ export interface ContentVoteState {
   userVote: 'up' | 'down' | null;
   upvotes: number;
   downvotes: number;
+}
+
+export interface ContentVoteState {
+  userVote: 'up' | 'down' | null;
+  upvotes: number;
+  downvotes: number;
+}
+
+export interface FeedPost {
+  id: string;
+  userId: string;
+  userDisplayName: string;
+  userPhotoURL?: string;
+  neighborhood: string;
+  text: string;
+  imageUrls: string[];
+  status: 'active' | 'hidden' | 'removed';
+  postedAsNeighbor?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedPostComment {
+  id: string;
+  postId: string;
+  parentCommentId?: string | null;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  userNeighborhood: string;
+  text: string;
+  postedAsNeighbor?: boolean;
+  createdAt: string;
+}
+
+export interface FeedPostReaction {
+  postId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+}
+
+export interface FeedPostCommentNode extends FeedPostComment {
+  replies: FeedPostCommentNode[];
+  depth: number;
 }
 
 export const SACRAMENTO_NEIGHBORHOODS = [

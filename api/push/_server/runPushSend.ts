@@ -2,6 +2,7 @@ import { assertStaffOrDirectorForPush, clampPushText, CLIENT_FAN_OUT_PUSH_EVENTS
 import { getServiceRoleKey, getSupabaseAdmin } from './supabaseAdmin';
 import {
   getPreferencesForUsers,
+  getStaffInteractionModesForUsers,
   sendPushToUsers,
   withinRadius,
   type PushEventType,
@@ -10,6 +11,7 @@ import {
 import { isDirectorAccount } from './directorIdentity';
 import { sanitizePushUrl } from './pushUrl';
 import { getUserRole, isStaffRole, normalizeUserRole, roleRank } from './staffRoles';
+import { receivesStaffModeNotifications } from '../../../shared/staffInteractionMode';
 
 export interface PushSendOptions {
   /** When false (public /api/push/send), recipients are validated server-side. Default true. */
@@ -79,6 +81,12 @@ async function validateCallerForPush(callerId: string, body: PushSendBody): Prom
   return null;
 }
 
+async function filterStaffModeRecipients(userIds: string[]): Promise<string[]> {
+  if (!userIds.length) return userIds;
+  const modeMap = await getStaffInteractionModesForUsers(userIds);
+  return userIds.filter((uid) => receivesStaffModeNotifications(modeMap.get(uid)));
+}
+
 async function resolveRecipients(body: PushSendBody, callerId: string): Promise<string[]> {
   const explicit = body.recipientUserIds?.filter(Boolean) || [];
   if (explicit.length) return explicit;
@@ -139,7 +147,7 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
       const row = u as { role?: string; email?: string };
       if (isDirectorAccount(uid, row.role)) ids.add(uid);
     }
-    return [...ids];
+    return filterStaffModeRecipients([...ids]);
   }
 
   if (eventType === 'staff_support' || eventType === 'staff_report') {
@@ -152,16 +160,18 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
 
     const { data: users } = await supabaseAdmin.from('users').select('uid, role, email');
 
-    return (users || [])
-      .filter((u) => {
-        const uid = String((u as { uid: string }).uid);
-        if (!uid || uid === callerId) return false;
-        const row = u as { role?: string; email?: string };
-        const role = normalizeUserRole(row.role);
-        if (!isStaffRole(role) || isDirectorAccount(uid, row.role)) return false;
-        return roleRank(role) >= minRank;
-      })
-      .map((u) => String((u as { uid: string }).uid));
+    return filterStaffModeRecipients(
+      (users || [])
+        .filter((u) => {
+          const uid = String((u as { uid: string }).uid);
+          if (!uid || uid === callerId) return false;
+          const row = u as { role?: string; email?: string };
+          const role = normalizeUserRole(row.role);
+          if (!isStaffRole(role) || isDirectorAccount(uid, row.role)) return false;
+          return roleRank(role) >= minRank;
+        })
+        .map((u) => String((u as { uid: string }).uid)),
+    );
   }
 
   if (eventType === 'community_chat') {
@@ -173,16 +183,18 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
     const minRank = typeof body.minStaffRank === 'number' ? body.minStaffRank : 1;
     const { data: users } = await supabaseAdmin.from('users').select('uid, role, email');
 
-    return (users || [])
-      .filter((u) => {
-        const uid = String((u as { uid: string }).uid);
-        if (!uid || uid === callerId) return false;
-        const row = u as { role?: string; email?: string };
-        const role = normalizeUserRole(row.role);
-        if (!isStaffRole(role) || isDirectorAccount(uid, row.role)) return false;
-        return roleRank(role) >= minRank;
-      })
-      .map((u) => String((u as { uid: string }).uid));
+    return filterStaffModeRecipients(
+      (users || [])
+        .filter((u) => {
+          const uid = String((u as { uid: string }).uid);
+          if (!uid || uid === callerId) return false;
+          const row = u as { role?: string; email?: string };
+          const role = normalizeUserRole(row.role);
+          if (!isStaffRole(role) || isDirectorAccount(uid, row.role)) return false;
+          return roleRank(role) >= minRank;
+        })
+        .map((u) => String((u as { uid: string }).uid)),
+    );
   }
 
   if (eventType === 'announcement' || eventType === 'app_update') {

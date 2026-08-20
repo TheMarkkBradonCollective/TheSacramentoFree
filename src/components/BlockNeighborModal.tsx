@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { UserProfile } from '../types';
 import { blockUser } from '../supabase';
 import { BLOCK_REASON_OPTIONS } from '../lib/blockReasons';
+import { INVALID_IMAGE_FILE_MESSAGE, isLikelyImageFile } from '../lib/imageUrl';
 import { Ban, Camera, X } from 'lucide-react';
 
 interface BlockNeighborModalProps {
@@ -30,9 +31,15 @@ export default function BlockNeighborModal({
   const needsDetails = reasonCode === 'other';
 
   const handleProofChange = (file: File | null) => {
+    if (file && !isLikelyImageFile(file)) {
+      setErr(INVALID_IMAGE_FILE_MESSAGE);
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
     if (proofPreview) URL.revokeObjectURL(proofPreview);
     setProofFile(file);
     setProofPreview(file ? URL.createObjectURL(file) : null);
+    if (file) setErr('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,7 +93,7 @@ export default function BlockNeighborModal({
               reason{proofFile ? ' and screenshot' : ''}.
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-inset shrink-0">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1.5 rounded-full hover:bg-inset shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -142,6 +149,7 @@ export default function BlockNeighborModal({
                     handleProofChange(null);
                     if (fileRef.current) fileRef.current.value = '';
                   }}
+                  aria-label="Remove screenshot"
                   className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white"
                 >
                   <X className="w-3.5 h-3.5" />

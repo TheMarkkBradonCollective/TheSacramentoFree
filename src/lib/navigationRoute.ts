@@ -1,6 +1,11 @@
 import type { LatLng } from './mapRoute';
 import { haversineMeters } from './mapRoute';
 import { apiUrl } from './appOrigin';
+import { lanesFromOsrmIntersections, type NavLane } from './navLanes';
+import type { NavTravelMode } from './navigationSettings';
+
+export type { NavLane };
+export type { NavTravelMode };
 
 export interface NavigationStep {
   id: string;
@@ -11,6 +16,7 @@ export interface NavigationStep {
   maneuverType: string;
   maneuverModifier?: string;
   location: LatLng;
+  lanes?: NavLane[];
 }
 
 export interface NavigationRouteResult {
@@ -18,12 +24,14 @@ export interface NavigationRouteResult {
   distanceMeters: number;
   durationSeconds: number;
   steps: NavigationStep[];
+  travelMode: NavTravelMode;
 }
 
-const OSRM_ENDPOINTS = [
-  'https://router.project-osrm.org',
-  'https://routing.openstreetmap.de/routed-car',
-] as const;
+const OSRM_PROFILE_ENDPOINTS: Record<NavTravelMode, readonly string[]> = {
+  driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
+  cycling: ['https://routing.openstreetmap.de/routed-bike'],
+  walking: ['https://routing.openstreetmap.de/routed-foot'],
+};
 
 export function bearingModifierToPhrase(modifier?: string): string | null {
   if (!modifier) return null;
@@ -61,7 +69,7 @@ function formatManeuverInstruction(
   isArrival = false,
 ): string {
   const street = name?.trim() || 'your route';
-  if (isArrival || type === 'arrive') return 'Arrive at pickup';
+  if (isArrival || type === 'arrive') return 'Arrive at your destination';
   switch (type) {
     case 'depart':
       return formatDepartInstruction(modifier, name);
@@ -111,6 +119,7 @@ function parseOsrmSteps(data: unknown): NavigationStep[] {
       duration?: number;
       name?: string;
       maneuver?: { type?: string; modifier?: string; location?: [number, number] };
+      intersections?: unknown;
     };
     const maneuver = s.maneuver ?? {};
     const coords = maneuver.location;
@@ -122,6 +131,7 @@ function parseOsrmSteps(data: unknown): NavigationStep[] {
     const maneuverModifier = maneuver.modifier ? String(maneuver.modifier) : undefined;
     const name = String(s.name ?? '');
     const isArrival = maneuverType === 'arrive' || index === rawSteps.length - 1;
+    const lanes = lanesFromOsrmIntersections(s.intersections);
 
     return {
       id: `step-${index}`,
@@ -132,18 +142,36 @@ function parseOsrmSteps(data: unknown): NavigationStep[] {
       maneuverModifier,
       location,
       instruction: formatManeuverInstruction(maneuverType, maneuverModifier, name, isArrival),
+      ...(lanes.length > 0 ? { lanes } : {}),
     };
   });
 }
 
-/** Fetch turn-by-turn driving route with OSRM steps (API-first, OSRM mirror fallback). */
-export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<NavigationRouteResult | null> {
-  const viaApi = await fetchNavigationRouteFromApi(from, to);
+function normalizeFetchedRoute(data: NavigationRouteResult, travelMode: NavTravelMode): NavigationRouteResult | null {
+  if (!Array.isArray(data.coords) || data.coords.length < 2 || !Array.isArray(data.steps) || data.steps.length === 0) {
+    return null;
+  }
+  return {
+    coords: data.coords,
+    distanceMeters: Number(data.distanceMeters),
+    durationSeconds: Number(data.durationSeconds),
+    steps: data.steps,
+    travelMode: data.travelMode === 'walking' || data.travelMode === 'cycling' ? data.travelMode : travelMode,
+  };
+}
+
+/** Fetch turn-by-turn route with OSRM steps (API-first, profile-aware OSRM fallback). */
+export async function fetchNavigationRoute(
+  from: LatLng,
+  to: LatLng,
+  travelMode: NavTravelMode = 'driving',
+): Promise<NavigationRouteResult | null> {
+  const viaApi = await fetchNavigationRouteFromApi(from, to, travelMode);
   if (viaApi) return viaApi;
 
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
-  for (const base of OSRM_ENDPOINTS) {
+  for (const base of OSRM_PROFILE_ENDPOINTS[travelMode]) {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 16_000);
 
@@ -165,6 +193,7 @@ export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<Na
         distanceMeters: Number(route.distance),
         durationSeconds: Number(route.duration),
         steps,
+        travelMode,
       };
     } catch {
       // try next mirror
@@ -176,7 +205,11 @@ export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<Na
   return null;
 }
 
-async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<NavigationRouteResult | null> {
+async function fetchNavigationRouteFromApi(
+  from: LatLng,
+  to: LatLng,
+  travelMode: NavTravelMode,
+): Promise<NavigationRouteResult | null> {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 16_000);
 
@@ -186,6 +219,7 @@ async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<Na
       fromLng: String(from.lng),
       toLat: String(to.lat),
       toLng: String(to.lng),
+      mode: travelMode,
     });
     const res = await fetch(apiUrl(`/api/map/navigation?${params.toString()}`), {
       signal: controller.signal,
@@ -194,16 +228,7 @@ async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<Na
     if (!res.ok) return null;
 
     const data = (await res.json()) as NavigationRouteResult;
-    if (!Array.isArray(data.coords) || data.coords.length < 2 || !Array.isArray(data.steps) || data.steps.length === 0) {
-      return null;
-    }
-
-    return {
-      coords: data.coords,
-      distanceMeters: Number(data.distanceMeters),
-      durationSeconds: Number(data.durationSeconds),
-      steps: data.steps,
-    };
+    return normalizeFetchedRoute(data, travelMode);
   } catch {
     return null;
   } finally {
@@ -218,6 +243,22 @@ export function formatNavDistance(meters: number): string {
   return `${Math.round(miles)} mi`;
 }
 
+/** Spoken form of `formatNavDistance` — same rounding, no abbreviations. */
+export function spokenNavDistance(meters: number): string {
+  const formatted = formatNavDistance(meters);
+  const feet = formatted.match(/^(\d+) ft$/);
+  if (feet) {
+    const n = Number(feet[1]);
+    return n === 1 ? '1 foot' : `${n} feet`;
+  }
+  const miles = formatted.match(/^([\d.]+) mi$/);
+  if (miles) {
+    const n = Number(miles[1]);
+    return n === 1 ? '1 mile' : `${miles[1]} miles`;
+  }
+  return formatted;
+}
+
 export function formatNavDuration(seconds: number): string {
   if (seconds < 45) return '< 1 min';
   const mins = Math.max(1, Math.round(seconds / 60));
@@ -225,6 +266,19 @@ export function formatNavDuration(seconds: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
+}
+
+/** Spoken form of `formatNavDuration` — same rounding, no abbreviations. */
+export function spokenNavDuration(seconds: number): string {
+  if (seconds < 45) return 'less than 1 minute';
+  const mins = Math.max(1, Math.round(seconds / 60));
+  if (mins < 60) return mins === 1 ? '1 minute' : `${mins} minutes`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const hours = h === 1 ? '1 hour' : `${h} hours`;
+  if (m === 0) return hours;
+  const minutes = m === 1 ? '1 minute' : `${m} minutes`;
+  return `${hours} ${minutes}`;
 }
 
 export function formatArrivalTime(durationSeconds: number): string {
@@ -244,14 +298,148 @@ export function bearingDegrees(from: LatLng, to: LatLng): number {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
+function isConnectorManeuver(type: string | undefined): boolean {
+  return type === 'depart' || type === 'continue' || type === 'new name';
+}
+
+/** Index of the step shown on the instruction banner (depart/continue cue the next turn). */
+export function getActiveVoiceCueIndex(steps: NavigationStep[], index: number): number {
+  const current = steps[index];
+  if (!current) return Math.max(0, Math.min(index, Math.max(0, steps.length - 1)));
+  if (isConnectorManeuver(current.maneuverType) && steps[index + 1]) return index + 1;
+  return index;
+}
+
 /** Step used for distance-based voice cues (depart/continue cue the next turn). */
 export function getActiveVoiceCueStep(steps: NavigationStep[], index: number): NavigationStep | undefined {
-  const current = steps[index];
-  if (!current) return undefined;
-  if ((current.maneuverType === 'depart' || current.maneuverType === 'continue') && steps[index + 1]) {
-    return steps[index + 1];
-  }
-  return current;
+  return steps[getActiveVoiceCueIndex(steps, index)];
+}
+
+export type ManeuverIconKind =
+  | 'straight'
+  | 'left'
+  | 'right'
+  | 'slight-left'
+  | 'slight-right'
+  | 'uturn'
+  | 'arrive'
+  | 'roundabout';
+
+export function maneuverIconKind(step: NavigationStep | undefined): ManeuverIconKind {
+  if (!step) return 'straight';
+  if (step.maneuverType === 'arrive') return 'arrive';
+  const mod = step.maneuverModifier ?? '';
+  if (step.maneuverType === 'roundabout' || step.maneuverType === 'rotary') return 'roundabout';
+  if (mod.includes('uturn')) return 'uturn';
+  if (mod.includes('sharp left') || mod === 'left') return 'left';
+  if (mod.includes('sharp right') || mod === 'right') return 'right';
+  if (mod.includes('slight left')) return 'slight-left';
+  if (mod.includes('slight right')) return 'slight-right';
+  if (mod.includes('left')) return 'left';
+  if (mod.includes('right')) return 'right';
+  return 'straight';
+}
+
+export interface DisplayedNavGuidance {
+  arrived: boolean;
+  maneuverKind: ManeuverIconKind;
+  instruction: string | null;
+  street: string;
+  currentRoad: string;
+  nowOnRoad: string | null;
+  thenInstruction: string | null;
+  thenLine: string | null;
+  distanceMeters: number;
+  destinationLabel: string;
+  lanes: NavLane[];
+  cueStep: NavigationStep | undefined;
+  currentStep: NavigationStep | undefined;
+}
+
+function lowercaseFirst(text: string): string {
+  return text.replace(/^./, (ch) => ch.toLowerCase());
+}
+
+/** Banner + voice share this card so TTS matches what is on screen. */
+export function getDisplayedNavGuidance(options: {
+  route: NavigationRouteResult | null;
+  stepIndex: number;
+  arrived: boolean;
+  destinationLabel: string;
+  userPos: LatLng;
+  travelMode: NavTravelMode;
+  showLaneGuidance: boolean;
+  osmLanes?: NavLane[] | null;
+}): DisplayedNavGuidance {
+  const { route, stepIndex, arrived, destinationLabel, userPos, travelMode, showLaneGuidance, osmLanes } = options;
+  const currentStep = route?.steps[stepIndex];
+  const cueIndex = route ? getActiveVoiceCueIndex(route.steps, stepIndex) : 0;
+  const cueStep = arrived ? currentStep : route?.steps[cueIndex] ?? currentStep;
+  const onConnectorStep = isConnectorManeuver(currentStep?.maneuverType);
+  const maneuverKind: ManeuverIconKind = route
+    ? arrived
+      ? 'arrive'
+      : maneuverIconKind(cueStep)
+    : 'arrive';
+
+  const street = arrived
+    ? destinationLabel
+    : onConnectorStep
+      ? currentStep?.name?.trim() || cueStep?.name?.trim() || 'Continue on route'
+      : cueStep?.name?.trim() ||
+        currentStep?.name?.trim() ||
+        (maneuverKind === 'arrive' ? destinationLabel : 'Continue on route');
+
+  const instruction = arrived
+    ? null
+    : onConnectorStep
+      ? cueStep?.instruction ?? null
+      : cueStep?.instruction || currentStep?.instruction || null;
+
+  const currentRoad = arrived
+    ? destinationLabel
+    : onConnectorStep
+      ? currentStep?.name?.trim() || cueStep?.name?.trim() || street
+      : cueStep?.name?.trim() || currentStep?.name?.trim() || street;
+
+  const thenStep =
+    route && !arrived && cueStep
+      ? route.steps[Math.min(cueIndex + 1, route.steps.length - 1)]
+      : undefined;
+  const thenInstruction =
+    thenStep && thenStep !== cueStep && thenStep.maneuverType !== 'arrive'
+      ? thenStep.instruction
+      : thenStep?.maneuverType === 'arrive'
+        ? `Arrive at ${destinationLabel}`
+        : null;
+  const thenLine = thenInstruction ? `Then ${lowercaseFirst(thenInstruction)}` : null;
+
+  const laneStep = cueStep ?? currentStep;
+  const lanes =
+    travelMode === 'driving' && showLaneGuidance
+      ? laneStep?.lanes && laneStep.lanes.length > 0
+        ? laneStep.lanes
+        : osmLanes ?? []
+      : [];
+
+  const distanceMeters =
+    !route || arrived || !cueStep ? 0 : haversineMeters(userPos, cueStep.location);
+
+  return {
+    arrived,
+    maneuverKind,
+    instruction,
+    street,
+    currentRoad,
+    nowOnRoad: currentRoad && currentRoad !== street ? currentRoad : null,
+    thenInstruction,
+    thenLine,
+    distanceMeters,
+    destinationLabel,
+    lanes,
+    cueStep,
+    currentStep,
+  };
 }
 
 /** Find the next step index based on user position. Advances at most one step per call. */
@@ -439,15 +627,19 @@ export function estimateSpeedLimitMph(step?: NavigationStep | null): number {
   }
 }
 
-/** Best-effort lane count from street type (OSRM does not provide real lane data). */
+/**
+ * Last-resort lane count when OSM/OSRM did not provide lanes.
+ * Prefer real `step.lanes` over this estimate.
+ */
 export function estimateLaneCount(step?: NavigationStep | null): number {
+  if (step?.lanes && step.lanes.length > 0) return step.lanes.length;
   switch (roadClassFromStep(step)) {
     case 'freeway':
       return 4;
     case 'arterial':
       return 3;
     case 'local':
-      return 2;
+      return 0;
   }
 }
 
@@ -518,29 +710,4 @@ export function shouldFireVoiceCue(
     default:
       return false;
   }
-}
-
-export type ManeuverIconKind =
-  | 'straight'
-  | 'left'
-  | 'right'
-  | 'slight-left'
-  | 'slight-right'
-  | 'uturn'
-  | 'arrive'
-  | 'roundabout';
-
-export function maneuverIconKind(step: NavigationStep | undefined): ManeuverIconKind {
-  if (!step) return 'straight';
-  if (step.maneuverType === 'arrive') return 'arrive';
-  const mod = step.maneuverModifier ?? '';
-  if (step.maneuverType === 'roundabout' || step.maneuverType === 'rotary') return 'roundabout';
-  if (mod.includes('uturn')) return 'uturn';
-  if (mod.includes('sharp left') || mod === 'left') return 'left';
-  if (mod.includes('sharp right') || mod === 'right') return 'right';
-  if (mod.includes('slight left')) return 'slight-left';
-  if (mod.includes('slight right')) return 'slight-right';
-  if (mod.includes('left')) return 'left';
-  if (mod.includes('right')) return 'right';
-  return 'straight';
 }

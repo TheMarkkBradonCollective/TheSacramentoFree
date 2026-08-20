@@ -1,0 +1,10 @@
+Android beta v0.1.0.0035 (versionCode 35)
+
+What's new:
+• Events page toolbar matches Stuff feed — New, sort, All/Upcoming/Past, filters, grid/list
+• New button on Map (Stuff or Event), Stuff feed (stuff only), Events feed (event only)
+• Filter drawer master toggles — expand/collapse each filter group
+• Feed type cycle: Everything / Giving / Looking / Trading
+• News vs Updates split — releases in News, product changes in Updates
+
+Download (sideload): https://www.sacramentobuynothing.com/download

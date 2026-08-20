@@ -48,11 +48,10 @@ import {
 } from '../lib/goGetSessions';
 import { fileGoGetViolation } from '../lib/violations';
 import {
-  recordItemClaimInChat,
   markItemFulfilledFromChat,
-  updateSupabaseItemStatus,
-  createSupabaseMessage,
+  markTradeCompletedFromChat,
   getListingSubitems,
+  recordGiveawayPickupFromGoGet,
 } from '../supabase';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import type { GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
@@ -61,6 +60,7 @@ import {
   buildGoGetNavigationFollowUpMessages,
   buildGoGetNavigationStartPhrase,
 } from '../lib/goGetNavigationVoice';
+import { unlockNavigationSpeech } from '../lib/navigationVoice';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 import GoGetAvailabilityPrompt from './goget/GoGetAvailabilityPrompt';
 import GoGetTimePicker from './goget/GoGetTimePicker';
@@ -69,13 +69,24 @@ import GoGetMeetingMap from './goget/GoGetMeetingMap';
 import GoGetShareLocationToggle from './goget/GoGetShareLocationToggle';
 import ReportGoGetViolationDialog from './goget/ReportGoGetViolationDialog';
 import { confirmGoGetAsRequester, confirmGoGetTripStart, confirmDropOffAsFulfiller, confirmMeetUp } from './goget/goGetSafetyConfirm';
+import GoGetRingWaitingPanel from './goget/GoGetRingWaitingPanel';
+import GoGetScheduleMeetPanel from './goget/GoGetScheduleMeetPanel';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import { getSupabaseProfile } from '../supabase';
+import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 
 interface ItemDetailNavigationProps {
   item: ItemPost;
   currentUserId: string;
   userProfile?: UserProfile;
   onOpenChat?: (chatId: string) => void;
+  /** When true, start in-app navigation once GPS and session state are ready. */
+  autoStartNavigation?: boolean;
+  onAutoStartNavigationConsumed?: () => void;
+  /** Feed + profile stats refresh after a confirmed Go Get handoff. */
+  onPickupCompleted?: () => void;
 }
 
 /** Applies the pickup completion for whichever post type this session is for, reusing the existing claim/fulfill/trade paths. */
@@ -84,7 +95,7 @@ async function applyCompletionForItemType(
   session: GoGetSession,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   if (item.type === 'giveaway') {
-    return recordItemClaimInChat({
+    return recordGiveawayPickupFromGoGet({
       itemId: item.id,
       itemTitle: item.title,
       giverUserId: session.fulfillerUserId,
@@ -103,21 +114,27 @@ async function applyCompletionForItemType(
       message: formatItemFulfilledChatMessage(item.title, session.requesterName),
     });
   }
-  // trade
-  const ok = await updateSupabaseItemStatus(item.id, 'completed', session.fulfillerUserId);
-  if (!ok) return { ok: false, errorMessage: 'Could not mark trade as completed.' };
-  await createSupabaseMessage(
-    session.chatId,
-    formatTradeCompletedChatMessage(item.title, session.requesterName),
-    session.fulfillerUserId,
-    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-    { skipPush: true },
-  );
-  return { ok: true };
+  // trade — fulfiller is the listing poster; requester is the trade partner
+  return markTradeCompletedFromChat({
+    itemId: item.id,
+    posterUserId: session.fulfillerUserId,
+    partnerUserId: session.requesterUserId,
+    chatId: session.chatId,
+    message: formatTradeCompletedChatMessage(item.title, session.requesterName),
+  });
 }
 
-export default function ItemDetailNavigation({ item, currentUserId, userProfile, onOpenChat }: ItemDetailNavigationProps) {
+export default function ItemDetailNavigation({
+  item,
+  currentUserId,
+  userProfile,
+  onOpenChat,
+  autoStartNavigation = false,
+  onAutoStartNavigationConsumed,
+  onPickupCompleted,
+}: ItemDetailNavigationProps) {
   const { confirm, alert } = useConfirm();
+  const goGetAvailable = supportsGoGetCoordination();
 
   const [session, setSession] = useState<GoGetSession | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
@@ -153,9 +170,31 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   const [reportOpen, setReportOpen] = useState(false);
   const [fulfillerLiveLocation, setFulfillerLiveLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
+  const [posterProfile, setPosterProfile] = useState<UserProfile | null>(null);
   const arrivalHandledRef = useRef(false);
+  const autoStartAttemptedRef = useRef(false);
 
   const isOwner = item.userId === currentUserId;
+  const isStaffOfficial = isStaffActingOfficial(userProfile);
+
+  const coordinationGate = useMemo(() => {
+    if (isOwner || !userProfile) return { ok: true as const };
+    if (isStaffOfficial) return { ok: true as const };
+    return canShowAppPickupCoordination({
+      item,
+      posterProfile: posterProfile ?? { uid: item.userId, goGetEnabled: false },
+      pickerProfile: userProfile,
+    });
+  }, [isOwner, userProfile, item, posterProfile]);
+
+  useEffect(() => {
+    if (item.userId === currentUserId) return;
+    void getSupabaseProfile(item.userId).then((p) => setPosterProfile(p));
+  }, [item.userId, currentUserId]);
+
+  useEffect(() => {
+    autoStartAttemptedRef.current = false;
+  }, [item.id]);
 
   useEffect(() => {
     if (!destination) return;
@@ -241,6 +280,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
 
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
+    unlockNavigationSpeech();
     arrivalHandledRef.current = false;
     if (isContactless) {
       setContactlessNavActive(true);
@@ -404,7 +444,11 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
   }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
 
   const handleListingNavigation = useCallback(() => {
-    if (isOwner) {
+    if (isOwner || !goGetAvailable) {
+      openNavigation();
+      return;
+    }
+    if (isStaffOfficial) {
       openNavigation();
       return;
     }
@@ -417,7 +461,37 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       return;
     }
     void handleStartGoGet();
-  }, [isOwner, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
+  }, [goGetAvailable, isOwner, isStaffOfficial, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
+
+  useEffect(() => {
+    if (!autoStartNavigation || autoStartAttemptedRef.current || !sessionLoaded) return;
+    if (!coordinationGate.ok) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
+    if (session && session.status !== 'active' && !navigatesDirectlyToPin(item)) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
+    if (!destination) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
+    if (!userLocation) return;
+    autoStartAttemptedRef.current = true;
+    onAutoStartNavigationConsumed?.();
+    handleListingNavigation();
+  }, [
+    autoStartNavigation,
+    sessionLoaded,
+    session,
+    destination,
+    userLocation,
+    handleListingNavigation,
+    onAutoStartNavigationConsumed,
+    coordinationGate.ok,
+    item,
+  ]);
 
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
@@ -542,7 +616,16 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
     setSession(sessionResult.session);
     if (!completionResult.ok) {
       setErr(completionResult.errorMessage || 'Pickup confirmed, but the listing could not be updated.');
+      return;
     }
+    void import('../lib/pushEvents').then((m) =>
+      m.notifyGoGetCompleted({
+        item,
+        requesterUserId: session.requesterUserId,
+        sessionId: session.id,
+      }),
+    );
+    onPickupCompleted?.();
   };
 
   const handleDisputeCompletion = async () => {
@@ -641,12 +724,36 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
         );
       }
       return (
+        <GoGetRingWaitingPanel
+          session={session}
+          item={item}
+          posterName={session.fulfillerName}
+          onSessionChange={setSession}
+          onCancel={() => void handleCancel()}
+          onRingExpired={() => {}}
+        />
+      );
+    }
+
+    if (session.status === 'awaiting_schedule' && isRequester && userProfile && posterProfile) {
+      return (
+        <GoGetScheduleMeetPanel
+          session={session}
+          item={item}
+          posterName={session.fulfillerName}
+          posterProfile={posterProfile}
+          requesterProfile={userProfile}
+          onSessionChange={setSession}
+          onCancel={() => void handleCancel()}
+        />
+      );
+    }
+
+    if (session.status === 'awaiting_schedule') {
+      return (
         <div className="sbn-card p-4 space-y-2">
           {errorBanner}
-          <p className="text-sm text-app flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-accent" />
-            Waiting for {otherUserName} to respond…
-          </p>
+          <p className="text-sm text-app">Waiting for {otherUserName} to schedule a pickup time…</p>
           {cancelLink}
         </div>
       );
@@ -899,7 +1006,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
       {!sessionLoaded ? null : session ? (
         renderSessionCard()
       ) : (
-        destination && (
+        destination && coordinationGate.ok && (
           <>
             <MapSelectionRouteRow
               locationHint={locationHint}
@@ -910,7 +1017,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
               routeOnMap={isRoadGeometry(routeCoords)}
               hasLiveGps={!!userLocation}
               canNavigate={!!userLocation}
-              navigateLabel={isOwner ? 'Navigate' : getListingNavigateLabel(item)}
+              navigateLabel={isOwner || isStaffOfficial || !goGetAvailable ? 'Navigate' : getListingNavigateLabel(item)}
               onStartNavigation={() => (isOwner ? openNavigation() : void handleListingNavigation())}
               onOpenExternalMaps={() => {
                 if (!routeEndpoints) {
@@ -922,7 +1029,7 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
             />
 
             {/* Contactless pickup: optional arrived / left notifications — no GPS to poster */}
-            {isContactless && !isOwner && contactlessNavActive && (
+            {goGetAvailable && isContactless && !isOwner && contactlessNavActive && (
               <div className="mt-3 sbn-card p-4 space-y-3">
                 {contactlessArrived ? (
                   <>
@@ -983,6 +1090,12 @@ export default function ItemDetailNavigation({ item, currentUserId, userProfile,
             )}
           </>
         )
+      )}
+      {!session && destination && !coordinationGate.ok && !isOwner && (
+        <p className="text-sm text-muted sbn-card p-3">
+          App pickup coordination isn&apos;t available for this listing right now (neighbor opted out or outside
+          pickup hours). Message the poster to arrange pickup manually.
+        </p>
       )}
 
       {session && !isOwner && !['completed', 'cancelled', 'disputed'].includes(session.status) && (

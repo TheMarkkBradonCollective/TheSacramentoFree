@@ -12,7 +12,9 @@ export const SITE = {
     'Sacramento Buy Nothing — free local gifting. No selling, no bidding, no flipping. Neighbors helping neighbors across Sacramento.',
   principles: ['No selling.', 'No bidding.', 'No flipping.', 'Just neighbors helping neighbors.'],
   freeRule: 'Everything posted must be 100% free.',
-  downloadHelper: 'Get the SacramentoBuyNothing app — Android or add to your home screen.',
+  downloadHelper: 'Google Play on Android (if invited) or add SacramentoBuyNothing to your home screen — free for everyone.',
+  /** Google Play Internal testing / store opt-in — neighbors need matching Gmail on the tester list. */
+  playStoreBetaUrl: 'https://play.google.com/apps/internaltest/4701336413298152827/join',
   joinCta: {
     title: 'Join The Community',
     lines: [
@@ -208,8 +210,12 @@ export const STAFF_MESSAGE_DEFAULT = {
 
 export const IN_APP = {
   brandSubtitle: 'Neighbors helping neighbors',
-  feedTabLabel: 'Stuff',
+  feedTabLabel: 'Feed',
+  stuffTabLabel: 'Stuff',
   feedTitle: 'Community Stuff',
+  communityFeedTitle: 'Neighbor feed',
+  communityFeedDescription:
+    'Share thoughts and photos with neighbors — comment, react, and vote on posts.',
   feedDescription: 'Give away items, request what you need, trade with neighbors, and connect across Sacramento — 100% free.',
   mapTitle: 'Sacramento Neighborhood Map',
   mapDescription: 'Explore free gifts and requests across Sacramento. Message neighbors to arrange porch pickup.',
@@ -218,10 +224,10 @@ export const IN_APP = {
     'Neighborhood potlucks, swaps, and meetups — always 100% free. Unlocks for everyone when we reach 500 neighbors.',
   eventsTabLabel: 'Events',
   postEventButton: 'Post Event',
-  chatsTabLabel: 'Messages',
-  chatsTitle: 'Messages',
+  chatsTabLabel: 'Chat',
+  chatsTitle: 'Chat',
   chatsDescription:
-    'Group chats, reviews, support, and direct messages — coordinate pickups and get help from staff.',
+    'Direct messages, group chats, and support — coordinate pickups and talk with neighbors.',
   profileTitle: 'Your Community Profile',
   accountTabLabel: 'Account',
   onboardingTitle: 'Join Sacramento Buy Nothing',
@@ -294,6 +300,35 @@ export const PRIVACY = {
   acceptLabel: 'I have read and understand this privacy policy',
   acceptButton: 'Accept & continue',
   viewAgainNote: 'You can read this policy anytime from the home page or your Account tab.',
+} as const;
+
+export const DELETE_ACCOUNT = {
+  title: 'Delete your SacramentoBuyNothing account',
+  shortTitle: 'Delete account',
+  lastUpdated: 'August 2026',
+  summary:
+    'You can permanently delete your SacramentoBuyNothing account and associated data at any time from inside the app. Deletion is immediate and cannot be undone.',
+  steps: [
+    'Open SacramentoBuyNothing and sign in.',
+    'Go to the Account tab (bottom navigation).',
+    'Scroll to the Delete account section at the bottom.',
+    'Tap Delete my account and confirm when prompted.',
+  ],
+  deletedData: [
+    'Your email, display name, neighborhood, bio, and profile photo.',
+    'Your listings, comments, messages, events, reviews, and reports.',
+    'Your push notification tokens and in-app notification preferences.',
+    'Your sign-in credentials (you will not be able to sign in again with the same account).',
+  ],
+  retainedData: [
+    'Staff safety and moderation records may be kept when required to investigate reports or enforce community rules.',
+    'Anonymized or aggregate community statistics (for example, total items given) may remain without identifying you.',
+  ],
+  retentionNote:
+    'Most personal data is removed immediately when you confirm deletion. Any safety-related records kept for moderation are retained only as long as needed for community safety, then deleted or anonymized.',
+  supportNote:
+    'Questions about deletion? Contact staff through Chat → Support in the app, or email support@sacbuynothing.org.',
+  privacyLinkLabel: 'Read the full privacy policy',
 } as const;
 
 export const TERMS = {

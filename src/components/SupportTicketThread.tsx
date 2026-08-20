@@ -11,6 +11,7 @@ import {
 import { canDeleteSupportTicket, canUnsendSupportTicketMessage, canViewerAccessTicket } from '../lib/roles';
 import RoleBadge from './RoleBadge';
 import ListingImage from './ListingImage';
+import SupportTicketRelatedPreview from './SupportTicketRelatedPreview';
 import { safeHttpUrl } from '../lib/safeUrl';
 import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
@@ -28,8 +29,13 @@ interface SupportTicketThreadProps {
   onClosed?: () => void;
   onDeleted?: () => void;
   onUpdated?: () => void;
+  onArchive?: () => void;
+  onUnarchive?: () => void;
+  isArchived?: boolean;
   /** Hide ticket meta bar when the parent header already shows context */
   showTicketMeta?: boolean;
+  onViewRelatedListing?: (itemId: string) => void;
+  onViewRelatedEvent?: (eventId: string) => void;
 }
 
 export default function SupportTicketThread({
@@ -38,7 +44,12 @@ export default function SupportTicketThread({
   onClosed,
   onDeleted,
   onUpdated,
+  onArchive,
+  onUnarchive,
+  isArchived = false,
   showTicketMeta = true,
+  onViewRelatedListing,
+  onViewRelatedEvent,
 }: SupportTicketThreadProps) {
   const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,6 +252,16 @@ export default function SupportTicketThread({
       </div>
       ) : null}
 
+      {(ticket.relatedItemId || ticket.relatedEventId) && (
+        <div className="shrink-0 px-4 py-3 border-b border-app">
+          <SupportTicketRelatedPreview
+            ticket={ticket}
+            onViewListing={onViewRelatedListing}
+            onViewEvent={onViewRelatedEvent}
+          />
+        </div>
+      )}
+
       {err && <p className="px-4 py-2 text-xs font-semibold text-red-400">{err}</p>}
 
       <div className="chat-thread-bg flex-1 min-h-0 overflow-y-auto p-4">
@@ -356,6 +377,7 @@ export default function SupportTicketThread({
             file={replyImage.file}
             previewUrl={replyImage.previewUrl}
             onChange={replyImage.setFile}
+            onInvalidFile={setErr}
             disabled={sending}
           />
           <div className="flex gap-2">
@@ -377,18 +399,39 @@ export default function SupportTicketThread({
             </button>
           </div>
         </div>
-      ) : canDeleteSupportTicket(viewer, ticket) ? (
-        <div className="shrink-0 p-4 border-t border-app bg-surface">
-          <button
-            type="button"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
-            className="sbn-btn sbn-btn-secondary w-full text-sm text-red-400 border-red-500/30 hover:bg-red-500/10"
-          >
-            {deleting ? 'Deleting…' : 'Delete closed ticket'}
-          </button>
+      ) : (
+        <div className="shrink-0 p-4 border-t border-app bg-surface space-y-2">
+          {isArchived ? (
+            onUnarchive ? (
+              <button
+                type="button"
+                onClick={onUnarchive}
+                className="sbn-btn sbn-btn-secondary w-full text-sm"
+              >
+                Unarchive ticket
+              </button>
+            ) : null
+          ) : onArchive ? (
+            <button
+              type="button"
+              onClick={onArchive}
+              className="sbn-btn sbn-btn-secondary w-full text-sm"
+            >
+              Archive ticket
+            </button>
+          ) : null}
+          {canDeleteSupportTicket(viewer, ticket) ? (
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={deleting}
+              className="sbn-btn sbn-btn-secondary w-full text-sm text-red-400 border-red-500/30 hover:bg-red-500/10"
+            >
+              {deleting ? 'Deleting…' : 'Delete closed ticket'}
+            </button>
+          ) : null}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -7,6 +7,8 @@ import {
   checkSelfGoGetEligibility,
   isGoGetCoordinationEnabled,
 } from './goGetEligibility';
+import { getGoGetRingDuration } from './goGetRing';
+import { getPickupAvailability, isProfileWithinPickupAvailability, isTimeInSharedAvailability } from './pickupAvailability';
 
 /** Curb Alert / Porch Pickup — first-come items meant to be grabbed with no handshake. */
 export const INSTANT_CLAIM_CATEGORIES = ['Curb Alert', 'Porch Pickup'];
@@ -78,6 +80,8 @@ function normalizeGoGetSession(row: Record<string, unknown>): GoGetSession {
     cancelledByUserId: nullableStr(row.cancelledByUserId),
     cancelReason: nullableStr(row.cancelReason),
     fulfillerSharingLocation: row.fulfillerSharingLocation === true,
+    ringExpiresAt: nullableStr(row.ringExpiresAt),
+    ringDurationSeconds: nullableNum(row.ringDurationSeconds),
     createdAt: str(row.createdAt, new Date().toISOString()),
     updatedAt: str(row.updatedAt, new Date().toISOString()),
   };
@@ -179,7 +183,7 @@ export async function createGoGetSession(
           return {
             ok: false,
             errorMessage:
-              'Go Get only works in the installed app (APK or Add to Home Screen). Open Download to install, then enable notifications.',
+              'Go Get only works in the Sacramento Buy Nothing Android app (APK or Play Store). On the website, message the neighbor to arrange pickup.',
           };
         }
         if (selfOk.reason === 'need_notifications') {
@@ -215,6 +219,18 @@ export async function createGoGetSession(
       errorMessage: `${requesterName} isn’t using app pickup coordination. Message them to arrange pickup independently.`,
     };
   }
+  if (fulfillerProfile && !isProfileWithinPickupAvailability(fulfillerProfile)) {
+    return {
+      ok: false,
+      errorMessage: `${fulfillerName} isn’t available for app pickup coordination right now.`,
+    };
+  }
+  if (requesterProfile && !isProfileWithinPickupAvailability(requesterProfile)) {
+    return {
+      ok: false,
+      errorMessage: 'You’re outside your pickup availability hours. Adjust Account settings or message the poster.',
+    };
+  }
 
   const existing = await getActiveGoGetSession(item.id, requesterUserId);
   if (existing) {
@@ -242,6 +258,11 @@ export async function createGoGetSession(
   const instant = handshakeMode === 'instant';
 
   const id = `ggs_${item.id}_${requesterUserId}_${Date.now()}`;
+  const ringDurationSeconds = fulfillerProfile ? getGoGetRingDuration(fulfillerProfile) : 140;
+  const ringExpiresAt = instant
+    ? null
+    : new Date(Date.now() + ringDurationSeconds * 1000).toISOString();
+
   const payload: Record<string, unknown> = {
     id,
     itemId: item.id,
@@ -257,6 +278,8 @@ export async function createGoGetSession(
     destinationLng: destination.lng,
     destinationLabel,
     startedAt: instant ? now : null,
+    ringExpiresAt,
+    ringDurationSeconds: instant ? null : ringDurationSeconds,
     createdAt: now,
     updatedAt: now,
   };
@@ -283,12 +306,93 @@ export async function createGoGetSession(
   if (!instant) {
     await runGoGetPushTask(() =>
       import('./pushEvents').then((m) =>
-        m.notifyGoGetAvailabilityRequest({ item, fulfillerUserId, requesterName, sessionId: id }),
+        m.notifyGoGetAvailabilityRequest({
+          item,
+          fulfillerUserId,
+          requesterName,
+          sessionId: id,
+          ringDurationSeconds,
+          ringPattern: fulfillerProfile?.goGetRingPattern,
+        }),
       ),
     );
   }
 
   return { ok: true, session };
+}
+
+export function isGoGetRingActive(session: GoGetSession): boolean {
+  if (session.status !== 'awaiting_availability') return false;
+  if (!session.ringExpiresAt) return true;
+  return Date.now() < new Date(session.ringExpiresAt).getTime();
+}
+
+/** Move a timed-out live ring into async scheduling for the requester. */
+export async function expireGoGetRing(
+  session: GoGetSession,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (session.status !== 'awaiting_availability') {
+    return { ok: false, errorMessage: 'This request is no longer ringing.' };
+  }
+  if (isGoGetRingActive(session)) {
+    return { ok: false, errorMessage: 'Still waiting for a response.' };
+  }
+  const result = await updateSession(session.id, { status: 'awaiting_schedule' });
+  if (!result.ok || !result.session) return result;
+  return { ok: true, session: result.session };
+}
+
+/** Requester picks a meet time after the live ring timed out (no urgent ring). */
+export async function requesterProposeScheduledMeet(
+  session: GoGetSession,
+  item: ItemPost,
+  scheduledAt: string,
+  schedules: {
+    poster: Pick<UserProfile, 'pickupAvailability'>;
+    requester: Pick<UserProfile, 'pickupAvailability'>;
+  },
+): Promise<Result<{ session: GoGetSession }>> {
+  if (session.status !== 'awaiting_schedule') {
+    return { ok: false, errorMessage: 'This pickup is not awaiting a scheduled time.' };
+  }
+  const chosen = new Date(scheduledAt);
+  if (Number.isNaN(chosen.getTime())) {
+    return { ok: false, errorMessage: 'Pick a valid time.' };
+  }
+  const posterSchedule = getPickupAvailability(schedules.poster);
+  const requesterSchedule = getPickupAvailability(schedules.requester);
+  if (!isTimeInSharedAvailability(posterSchedule, requesterSchedule, scheduledAt)) {
+    return { ok: false, errorMessage: 'Pick a time when both of you are within your pickup availability.' };
+  }
+
+  const result = await updateSession(session.id, { status: 'scheduled', scheduledAt });
+  if (!result.ok || !result.session) return result;
+
+  const whenLabel = chosen.toLocaleString(undefined, {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  await createSupabaseMessage(
+    session.chatId,
+    `📅 ${session.requesterName} scheduled pickup for ${whenLabel}.`,
+    session.requesterUserId,
+    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
+  await runGoGetPushTask(() =>
+    import('./pushEvents').then((m) =>
+      m.notifyGoGetScheduleConfirmed({
+        item,
+        fulfillerUserId: session.fulfillerUserId,
+        requesterName: session.requesterName,
+        whenLabel,
+        sessionId: session.id,
+      }),
+    ),
+  );
+  return { ok: true, session: result.session };
 }
 
 async function updateSession(

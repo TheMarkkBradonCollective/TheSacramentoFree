@@ -1,4 +1,5 @@
 import { apiUrl } from './appOrigin';
+import { readNavigationSettings, type NavTravelMode } from './navigationSettings';
 
 export interface LatLng {
   lat: number;
@@ -15,10 +16,11 @@ export interface DrivingRouteResult {
 
 const EARTH_RADIUS_M = 6_371_000;
 
-const OSRM_ENDPOINTS = [
-  'https://router.project-osrm.org',
-  'https://routing.openstreetmap.de/routed-car',
-] as const;
+const OSRM_PROFILE_ENDPOINTS: Record<NavTravelMode, readonly string[]> = {
+  driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
+  cycling: ['https://routing.openstreetmap.de/routed-bike'],
+  walking: ['https://routing.openstreetmap.de/routed-foot'],
+};
 
 /** Straight-line distance in meters (Haversine). */
 export function haversineMeters(from: LatLng, to: LatLng): number {
@@ -80,22 +82,47 @@ export function formatRouteDuration(seconds: number): string {
   return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
 }
 
-/** Open Google Maps or Apple Maps for turn-by-turn driving directions. */
-export function openDrivingDirections(dest: LatLng, origin?: LatLng): void {
+function appleDirFlag(mode: NavTravelMode): string {
+  if (mode === 'walking') return 'w';
+  if (mode === 'cycling') return 'b';
+  return 'd';
+}
+
+export function googleTravelModeParam(mode: NavTravelMode): string {
+  if (mode === 'walking') return 'walking';
+  if (mode === 'cycling') return 'bicycling';
+  return 'driving';
+}
+
+export function googleMapsDirectionsUrl(
+  dest: LatLng,
+  origin?: LatLng,
+  travelMode: NavTravelMode = typeof window !== 'undefined' ? readNavigationSettings().travelMode : 'driving',
+): string {
+  const destParam = `${dest.lat},${dest.lng}`;
+  const originParam = origin ? `${origin.lat},${origin.lng}` : undefined;
+  const googleMode = googleTravelModeParam(travelMode);
+  return originParam
+    ? `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destParam}&travelmode=${googleMode}`
+    : `https://www.google.com/maps/dir/?api=1&destination=${destParam}&travelmode=${googleMode}`;
+}
+
+/** Open Google Maps or Apple Maps for turn-by-turn directions. */
+export function openDrivingDirections(
+  dest: LatLng,
+  origin?: LatLng,
+  travelMode: NavTravelMode = typeof window !== 'undefined' ? readNavigationSettings().travelMode : 'driving',
+): void {
   const destParam = `${dest.lat},${dest.lng}`;
   const originParam = origin ? `${origin.lat},${origin.lng}` : undefined;
   const isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent);
+  const dirflg = appleDirFlag(travelMode);
 
-  let url: string;
-  if (isIOS) {
-    url = originParam
-      ? `https://maps.apple.com/?saddr=${originParam}&daddr=${destParam}&dirflg=d`
-      : `https://maps.apple.com/?daddr=${destParam}&dirflg=d`;
-  } else {
-    url = originParam
-      ? `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destParam}&travelmode=driving`
-      : `https://www.google.com/maps/dir/?api=1&destination=${destParam}&travelmode=driving`;
-  }
+  const url = isIOS
+    ? originParam
+      ? `https://maps.apple.com/?saddr=${originParam}&daddr=${destParam}&dirflg=${dirflg}`
+      : `https://maps.apple.com/?daddr=${destParam}&dirflg=${dirflg}`
+    : googleMapsDirectionsUrl(dest, origin, travelMode);
 
   window.open(url, '_blank', 'noopener,noreferrer');
 }
@@ -151,10 +178,15 @@ function buildStatsFallback(from: LatLng, to: LatLng): DrivingRouteResult {
   };
 }
 
-async function fetchOsrmDirect(from: LatLng, to: LatLng, signal: AbortSignal): Promise<DrivingRouteResult | null> {
+async function fetchOsrmDirect(
+  from: LatLng,
+  to: LatLng,
+  signal: AbortSignal,
+  travelMode: NavTravelMode,
+): Promise<DrivingRouteResult | null> {
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
-  for (const base of OSRM_ENDPOINTS) {
+  for (const base of OSRM_PROFILE_ENDPOINTS[travelMode]) {
     try {
       const url = `${base}/route/v1/driving/${coordPath}?overview=full&geometries=geojson&steps=false`;
       const res = await fetch(url, { signal, headers: { Accept: 'application/json' } });
@@ -183,12 +215,18 @@ async function fetchOsrmDirect(from: LatLng, to: LatLng, signal: AbortSignal): P
   return null;
 }
 
-async function fetchRouteFromApi(from: LatLng, to: LatLng, signal: AbortSignal): Promise<DrivingRouteResult | null> {
+async function fetchRouteFromApi(
+  from: LatLng,
+  to: LatLng,
+  signal: AbortSignal,
+  travelMode: NavTravelMode,
+): Promise<DrivingRouteResult | null> {
   const params = new URLSearchParams({
     fromLat: String(from.lat),
     fromLng: String(from.lng),
     toLat: String(to.lat),
     toLng: String(to.lng),
+    mode: travelMode,
   });
   const res = await fetch(apiUrl(`/api/map/route?${params.toString()}`), { signal });
   if (!res.ok) return null;
@@ -206,18 +244,22 @@ async function fetchRouteFromApi(from: LatLng, to: LatLng, signal: AbortSignal):
 }
 
 /**
- * Fetch a driving route from the user's GPS to a listing pin.
- * Draws road geometry only when OSRM succeeds; otherwise returns stats without a line.
+ * Fetch a road route from the user's GPS to a listing pin.
+ * Draws geometry only when OSRM succeeds; otherwise returns stats without a line.
  */
-export async function fetchDrivingRoute(from: LatLng, to: LatLng): Promise<DrivingRouteResult> {
+export async function fetchDrivingRoute(
+  from: LatLng,
+  to: LatLng,
+  travelMode: NavTravelMode = 'driving',
+): Promise<DrivingRouteResult> {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 14_000);
 
   try {
-    const viaApi = await fetchRouteFromApi(from, to, controller.signal);
+    const viaApi = await fetchRouteFromApi(from, to, controller.signal, travelMode);
     if (viaApi) return viaApi;
 
-    const viaOsrm = await fetchOsrmDirect(from, to, controller.signal);
+    const viaOsrm = await fetchOsrmDirect(from, to, controller.signal, travelMode);
     if (viaOsrm) return viaOsrm;
 
     return buildStatsFallback(from, to);

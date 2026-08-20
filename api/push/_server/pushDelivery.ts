@@ -1,5 +1,7 @@
+import { isStaffModePushEvent, receivesStaffModeNotifications } from '../../../shared/staffInteractionMode';
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { isFcmConfigured, isFcmSubscription, sendFcmToSubscription } from './fcmDelivery';
+import { filterSubscriptionsForPickupPush } from './pickupPushEvents';
 import { configureVapidAsync, getWebPushModuleAsync } from './webPushLoader';
 
 export type PushEventType =
@@ -21,6 +23,7 @@ export type PushEventType =
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
+  | 'listing_expired'
   | 'nearby_item'
   | 'nearby_request'
   | 'claim_request'
@@ -33,7 +36,27 @@ export type PushEventType =
   | 'staff_report'
   | 'director_alert'
   | 'saved_item_update'
-  | 'listing_status';
+  | 'listing_status'
+  | 'go_get_availability_request'
+  | 'go_get_available_now'
+  | 'go_get_schedule_proposed'
+  | 'go_get_schedule_confirmed'
+  | 'go_get_ready_reminder'
+  | 'go_get_fulfiller_ready'
+  | 'go_get_started'
+  | 'go_get_arrived'
+  | 'go_get_completed'
+  | 'go_get_cancelled'
+  | 'contactless_pickup_arrived'
+  | 'contactless_pickup_left'
+  | 'feed_comment'
+  | 'feed_reaction'
+  | 'feed_upvote'
+  | 'feed_downvote'
+  | 'violation_filed'
+  | 'violation_decision'
+  | 'account_locked'
+  | 'appeal_decision';
 
 export interface PushPayload {
   title: string;
@@ -119,6 +142,7 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   listing_approved: 'listingStatus',
   listing_denied: 'listingStatus',
   listing_expiring: 'listingStatus',
+  listing_expired: 'listingStatus',
   listing_status: 'listingStatus',
   nearby_item: 'nearbyListings',
   nearby_request: 'requests',
@@ -132,6 +156,26 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   staff_report: 'staffReports',
   director_alert: 'directorAlerts',
   saved_item_update: 'savedItems',
+  go_get_availability_request: 'pickupReminders',
+  go_get_available_now: 'pickupReminders',
+  go_get_schedule_proposed: 'pickupReminders',
+  go_get_schedule_confirmed: 'pickupReminders',
+  go_get_ready_reminder: 'pickupReminders',
+  go_get_fulfiller_ready: 'pickupReminders',
+  go_get_started: 'pickupReminders',
+  go_get_arrived: 'pickupReminders',
+  go_get_completed: 'pickupReminders',
+  go_get_cancelled: 'pickupReminders',
+  contactless_pickup_arrived: 'pickupReminders',
+  contactless_pickup_left: 'pickupReminders',
+  feed_comment: 'comments',
+  feed_reaction: 'comments',
+  feed_upvote: 'listingUpvotes',
+  feed_downvote: 'listingDownvotes',
+  violation_filed: 'accountUpdates',
+  violation_decision: 'accountUpdates',
+  account_locked: 'accountUpdates',
+  appeal_decision: 'accountUpdates',
 };
 
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {
@@ -188,6 +232,27 @@ export function userAllowsDirectorAlert(prefs: NotificationPreferencesRow, categ
   const key = DIRECTOR_CATEGORY_PREF_MAP[category];
   if (!key) return true;
   return prefs[key] !== false;
+}
+
+export async function getStaffInteractionModesForUsers(userIds: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!userIds.length) return map;
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data } = await supabaseAdmin
+    .from('users')
+    .select('uid, staffInteractionMode, staff_interaction_mode')
+    .in('uid', userIds);
+
+  for (const row of data || []) {
+    const uid = String((row as { uid: string }).uid);
+    const mode =
+      (row as { staffInteractionMode?: string; staff_interaction_mode?: string }).staffInteractionMode ??
+      (row as { staff_interaction_mode?: string }).staff_interaction_mode;
+    map.set(uid, mode === 'neighbor' ? 'neighbor' : 'staff');
+  }
+
+  return map;
 }
 
 export async function getPreferencesForUsers(userIds: string[]): Promise<Map<string, NotificationPreferencesRow>> {
@@ -289,8 +354,8 @@ function buildNotificationPayload(payload: PushPayload): string {
     title: payload.title || 'SacramentoBuyNothing',
     body,
     url: payload.url,
-    icon: '/Logo.jpeg',
-    badge: '/Logo.jpeg',
+    icon: '/notification-icon.png',
+    badge: '/notification-icon.png',
     tag: payload.tag || payload.eventType,
     eventType: payload.eventType,
     data: payload.data || {},
@@ -375,10 +440,18 @@ export async function sendPushToUsers(
     });
   }
 
+  if (isStaffModePushEvent(payload.eventType)) {
+    const modeMap = await getStaffInteractionModesForUsers(allowed);
+    allowed = allowed.filter((uid) => receivesStaffModeNotifications(modeMap.get(uid)));
+  }
+
   const { logUserNotifications } = await import('./userNotificationLog');
   await logUserNotifications(allowed, payload);
 
-  const subscriptions = await getSubscriptionsForUsers(allowed);
+  const subscriptions = filterSubscriptionsForPickupPush(
+    await getSubscriptionsForUsers(allowed),
+    payload.eventType,
+  );
   let sent = 0;
   let failed = 0;
   let removed = 0;

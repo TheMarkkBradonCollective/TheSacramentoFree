@@ -50,7 +50,7 @@ export async function runDirectorBroadcastTest(
   const payload = {
     title: title.slice(0, 120),
     body: body.slice(0, 240),
-    url: '/',
+    url: '/map',
     tag: `sbn-director-broadcast-${Date.now()}`,
     eventType: 'account_update' as const,
     data: { test: 'director_broadcast' },

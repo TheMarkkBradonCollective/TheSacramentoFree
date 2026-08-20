@@ -10,8 +10,16 @@ import {
   uploadItemImage,
 } from '../supabase';
 import { isEventEditable } from '../lib/eventRsvp';
+import {
+  emptyRecurrenceConfig,
+  generateRecurrenceOccurrences,
+  isRecurrenceConfigValid,
+  type RecurrenceConfig,
+} from '../lib/eventRecurrence';
 import { generateSeriesId, getUpcomingSeriesOccurrences } from '../lib/eventSeries';
 import EventLocationMapPicker from './EventLocationMapPicker';
+import EventRecurrenceEditor from './EventRecurrenceEditor';
+import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 
 interface PostEventModalProps {
   userProfile: UserProfile;
@@ -20,6 +28,8 @@ interface PostEventModalProps {
   allEvents?: CommunityEvent[];
   /** Add new upcoming dates only (e.g. from a past occurrence). */
   addOccurrencesOnly?: boolean;
+  /** Render form body only — used inside NewListingModal. */
+  embedded?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -57,11 +67,49 @@ function generateEventId(): string {
   return `event_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function occurrenceDayKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function filterNewSeriesOccurrences(
+  occurrences: { startDate: Date; endIso: string | null }[],
+  existingEvents: CommunityEvent[],
+  seriesId?: string | null,
+): { startDate: Date; endIso: string | null }[] {
+  if (!seriesId?.trim()) return occurrences;
+  const existingDays = new Set(
+    existingEvents
+      .filter((event) => event.seriesId === seriesId)
+      .map((event) => occurrenceDayKey(new Date(event.eventStartAt))),
+  );
+  return occurrences.filter((row) => !existingDays.has(occurrenceDayKey(row.startDate)));
+}
+
+function mergeOccurrenceInputs(
+  primary: { startDate: Date; endIso: string | null } | null,
+  manual: { startDate: Date; endIso: string | null }[],
+  scheduled: { start: Date; end: Date | null }[],
+): { startDate: Date; endIso: string | null }[] {
+  const byDay = new Map<string, { startDate: Date; endIso: string | null }>();
+
+  const add = (startDate: Date, endIso: string | null) => {
+    const key = occurrenceDayKey(startDate);
+    if (!byDay.has(key)) byDay.set(key, { startDate, endIso });
+  };
+
+  if (primary) add(primary.startDate, primary.endIso);
+  for (const row of manual) add(row.startDate, row.endIso);
+  for (const row of scheduled) add(row.start, row.end?.toISOString() ?? null);
+
+  return [...byDay.values()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+}
+
 export default function PostEventModal({
   userProfile,
   editEvent = null,
   allEvents = [],
   addOccurrencesOnly = false,
+  embedded = false,
   onClose,
   onSuccess,
 }: PostEventModalProps) {
@@ -79,6 +127,7 @@ export default function PostEventModal({
   const [eventStartAt, setEventStartAt] = useState('');
   const [eventEndAt, setEventEndAt] = useState('');
   const [extraOccurrences, setExtraOccurrences] = useState<OccurrenceSlot[]>([]);
+  const [recurrenceConfig, setRecurrenceConfig] = useState<RecurrenceConfig>(emptyRecurrenceConfig);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<{ file: File; preview: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,15 +158,38 @@ export default function PostEventModal({
     setEventStartAt(toDatetimeLocalValue(editEvent.eventStartAt));
     setEventEndAt(editEvent.eventEndAt ? toDatetimeLocalValue(editEvent.eventEndAt) : '');
     setExtraOccurrences(addOccurrencesOnly ? [newOccurrenceSlot()] : []);
+    setRecurrenceConfig(emptyRecurrenceConfig());
     setImageUrl(editEvent.imageUrl || null);
     setPendingImage(null);
     setErrorMsg('');
   }, [editEvent, addOccurrencesOnly]);
 
+  useEffect(() => {
+    if (editEvent || !navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocationLat(latitude);
+        setLocationLng(longitude);
+        const closest = findClosestNeighborhoodByLatLng(latitude, longitude);
+        setNeighborhood(closest);
+        setLocation((current) => (current.trim() ? current : closest));
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+    );
+  }, [editEvent]);
+
   const handleImagePick = (file: File | null) => {
     if (!file) return;
+    if (!isLikelyImageFile(file)) {
+      setErrorMsg(INVALID_IMAGE_FILE_MESSAGE);
+      return;
+    }
     if (pendingImage?.preview) URL.revokeObjectURL(pendingImage.preview);
     setPendingImage({ file, preview: URL.createObjectURL(file) });
+    setErrorMsg('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,7 +238,7 @@ export default function PostEventModal({
       newOccurrenceInputs.push(parsed);
     }
 
-    if (addOccurrencesOnly && newOccurrenceInputs.length === 0) {
+    if (addOccurrencesOnly && newOccurrenceInputs.length === 0 && !recurrenceConfig.enabled) {
       setErrorMsg('Add at least one upcoming date.');
       return;
     }
@@ -181,7 +253,61 @@ export default function PostEventModal({
       primary = parsedPrimary;
     }
 
-    if (editBlocked && newOccurrenceInputs.length === 0) {
+    let scheduledOccurrences: { start: Date; end: Date | null }[] = [];
+    if (recurrenceConfig.enabled) {
+      if (!isRecurrenceConfigValid(recurrenceConfig)) {
+        setErrorMsg('Complete your repeat schedule — pick days, weekdays, or week positions.');
+        return;
+      }
+
+      const templateStart =
+        primary?.startDate ??
+        (eventStartAt ? new Date(eventStartAt) : null) ??
+        (editEvent ? new Date(editEvent.eventStartAt) : null);
+      if (!templateStart || Number.isNaN(templateStart.getTime())) {
+        setErrorMsg('Set a start date/time first — it sets the clock time for every repeat.');
+        return;
+      }
+
+      const templateEnd = primary?.endIso
+        ? new Date(primary.endIso)
+        : eventEndAt
+          ? new Date(eventEndAt)
+          : editEvent?.eventEndAt
+            ? new Date(editEvent.eventEndAt)
+            : null;
+      if (templateEnd && Number.isNaN(templateEnd.getTime())) {
+        setErrorMsg('Invalid end date/time.');
+        return;
+      }
+
+      scheduledOccurrences = generateRecurrenceOccurrences(
+        recurrenceConfig,
+        templateStart,
+        templateEnd,
+      );
+
+      if (scheduledOccurrences.length === 0) {
+        setErrorMsg('Your repeat schedule did not produce any upcoming dates. Adjust the rules or start date.');
+        return;
+      }
+    }
+
+    const mergedOccurrences = recurrenceConfig.enabled
+      ? mergeOccurrenceInputs(null, newOccurrenceInputs, scheduledOccurrences)
+      : mergeOccurrenceInputs(primary, newOccurrenceInputs, []);
+
+    if (addOccurrencesOnly && mergedOccurrences.length === 0) {
+      setErrorMsg('Add at least one upcoming date.');
+      return;
+    }
+
+    if (!addOccurrencesOnly && !primary && mergedOccurrences.length === 0) {
+      setErrorMsg('Please fill in start date/time.');
+      return;
+    }
+
+    if (editBlocked && mergedOccurrences.length === 0 && !canEditCurrentOccurrence) {
       setErrorMsg('Add at least one upcoming date, or edit an upcoming occurrence.');
       return;
     }
@@ -189,21 +315,25 @@ export default function PostEventModal({
     setIsSubmitting(true);
 
     const needsSeries =
-      newOccurrenceInputs.length > 0 ||
+      mergedOccurrences.length > 1 ||
+      recurrenceConfig.enabled ||
       Boolean(editEvent?.seriesId) ||
       (!isEditing && (primary ? 1 : 0) + newOccurrenceInputs.length > 1);
     const seriesId =
       editEvent?.seriesId?.trim() ||
-      (needsSeries && newOccurrenceInputs.length > 0 ? generateSeriesId() : null);
+      (needsSeries && mergedOccurrences.length > 0 ? generateSeriesId() : null);
 
     const uploadKey = seriesId || editEvent?.id || generateEventId();
     let finalImageUrl = imageUrl;
 
     if (pendingImage) {
       const uploaded = await uploadItemImage(pendingImage.file, uploadKey);
-      if (uploaded?.startsWith('http')) {
-        finalImageUrl = uploaded;
+      if (!uploaded?.startsWith('http')) {
+        setIsSubmitting(false);
+        setErrorMsg('Could not upload photo. Check your connection and try again.');
+        return;
       }
+      finalImageUrl = uploaded;
     }
 
     const imagePayload =
@@ -247,7 +377,7 @@ export default function PostEventModal({
         }
       }
 
-      if (activeSeriesId && !editEvent.seriesId && newOccurrenceInputs.length > 0) {
+      if (activeSeriesId && !editEvent.seriesId && mergedOccurrences.length > 0) {
         const linkResult = await assignSupabaseEventSeriesId(editEvent.id, userProfile.uid, activeSeriesId);
         if (!linkResult.ok) {
           setIsSubmitting(false);
@@ -274,10 +404,22 @@ export default function PostEventModal({
         }
       }
 
-      if (newOccurrenceInputs.length > 0) {
+      const datesToCreate = filterNewSeriesOccurrences(
+        mergedOccurrences,
+        allEvents,
+        activeSeriesId ?? editEvent.seriesId,
+      );
+
+      if (recurrenceConfig.enabled && datesToCreate.length === 0) {
+        setIsSubmitting(false);
+        setErrorMsg('Those dates are already on the schedule.');
+        return;
+      }
+
+      if (datesToCreate.length > 0) {
         const nowIso = new Date().toISOString();
         const resolvedSeriesId = activeSeriesId ?? generateSeriesId();
-        const newEvents: CommunityEvent[] = newOccurrenceInputs.map((occurrence) => ({
+        const newEvents: CommunityEvent[] = datesToCreate.map((occurrence) => ({
           ...sharedFields,
           id: generateEventId(),
           seriesId: resolvedSeriesId,
@@ -305,7 +447,11 @@ export default function PostEventModal({
       return;
     }
 
-    const occurrenceInputs = primary ? [primary, ...newOccurrenceInputs] : newOccurrenceInputs;
+    const occurrenceInputs = recurrenceConfig.enabled
+      ? mergedOccurrences
+      : primary
+        ? mergeOccurrenceInputs(primary, newOccurrenceInputs, [])
+        : newOccurrenceInputs;
     const createSeriesId =
       occurrenceInputs.length > 1 ? generateSeriesId() : null;
 
@@ -336,6 +482,11 @@ export default function PostEventModal({
     onSuccess();
   };
 
+  const recurrenceStartTemplate =
+    eventStartAt || (editEvent ? toDatetimeLocalValue(editEvent.eventStartAt) : '');
+  const recurrenceEndTemplate =
+    eventEndAt || (editEvent?.eventEndAt ? toDatetimeLocalValue(editEvent.eventEndAt) : '');
+
   const previewSrc = pendingImage?.preview || imageUrl;
   const showRepeatSection = !isEditing || canEditCurrentOccurrence || addOccurrencesOnly;
   const modalTitle = addOccurrencesOnly
@@ -350,34 +501,13 @@ export default function PostEventModal({
       : 'Post event';
   const canSubmit =
     !isSubmitting &&
-    (addOccurrencesOnly || canEditCurrentOccurrence || extraOccurrences.some((s) => s.start.trim()));
+    (addOccurrencesOnly ||
+      canEditCurrentOccurrence ||
+      extraOccurrences.some((s) => s.start.trim()) ||
+      recurrenceConfig.enabled);
   const metadataLocked = editBlocked && !addOccurrencesOnly;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
-      <div
-        className="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto bg-surface border border-app rounded-t-2xl sm:rounded-2xl shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="post_event_modal_title"
-      >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3 border-b border-app bg-surface/95 backdrop-blur">
-          <div>
-            <h2 id="post_event_modal_title" className="font-display font-bold text-app">
-              {modalTitle}
-            </h2>
-            <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-              <Sparkles className="w-3 h-3 text-accent" />
-              {addOccurrencesOnly
-                ? 'New dates use the same location and details — neighbors RSVP per day.'
-                : 'All events must be 100% free — no tickets or fees'}
-            </p>
-          </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-inset text-muted">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
+  const formBody = (
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {editBlocked && !addOccurrencesOnly && (
             <p className="text-sm text-muted bg-inset border border-app rounded-lg px-3 py-2">
@@ -388,6 +518,13 @@ export default function PostEventModal({
           {errorMsg && (
             <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
               {errorMsg}
+            </p>
+          )}
+
+          {embedded && !isEditing && (
+            <p className="text-xs text-muted flex items-center gap-1 bg-inset border border-app rounded-lg px-3 py-2">
+              <Sparkles className="w-3 h-3 text-accent shrink-0" />
+              All events must be 100% free — no tickets or fees
             </p>
           )}
 
@@ -448,6 +585,10 @@ export default function PostEventModal({
                   setLocationLat(lat);
                   setLocationLng(lng);
                   setNeighborhood(findClosestNeighborhoodByLatLng(lat, lng));
+                }}
+                onClear={() => {
+                  setLocationLat(null);
+                  setLocationLng(null);
                 }}
               />
             </div>
@@ -565,6 +706,13 @@ export default function PostEventModal({
                 </div>
               )}
 
+              <EventRecurrenceEditor
+                config={recurrenceConfig}
+                onChange={setRecurrenceConfig}
+                startTemplate={recurrenceStartTemplate}
+                endTemplate={recurrenceEndTemplate}
+              />
+
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-semibold text-muted uppercase tracking-wide">
@@ -654,6 +802,37 @@ export default function PostEventModal({
             </button>
           </div>
         </form>
+  );
+
+  if (embedded) {
+    return formBody;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
+      <div
+        className="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto bg-surface border border-app rounded-t-2xl sm:rounded-2xl shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="post_event_modal_title"
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3 border-b border-app bg-surface/95 backdrop-blur">
+          <div>
+            <h2 id="post_event_modal_title" className="font-display font-bold text-app">
+              {modalTitle}
+            </h2>
+            <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+              <Sparkles className="w-3 h-3 text-accent" />
+              {addOccurrencesOnly
+                ? 'New dates use the same location and details — neighbors RSVP per day.'
+                : 'All events must be 100% free — no tickets or fees'}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="p-2 rounded-full hover:bg-inset text-muted">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        {formBody}
       </div>
     </div>
   );

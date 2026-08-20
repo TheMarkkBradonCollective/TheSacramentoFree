@@ -47,6 +47,8 @@ export default function ListingPhotoGallery({ urls, title, className = '' }: Lis
               key={`${url}_${i}`}
               type="button"
               onClick={() => setActiveIndex(i)}
+              aria-label={`Show photo ${i + 1} of ${urls.length}`}
+              aria-current={i === activeIndex}
               className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${
                 i === activeIndex ? 'border-accent' : 'border-app opacity-80 hover:opacity-100'
               }`}

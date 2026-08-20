@@ -17,10 +17,10 @@ function createPickupIcon(): L.DivIcon {
     className: 'go-get-meeting-pickup-pin',
     html: `
       <div class="flex flex-col items-center pointer-events-none">
-        <span class="w-7 h-7 rounded-full bg-white border-2 border-[#FF4500] shadow-md flex items-center justify-center">
-          <span class="w-2 h-2 rounded-full bg-[#FF4500]"></span>
+        <span class="w-7 h-7 rounded-full bg-white border-2 border-[var(--color-accent)] shadow-md flex items-center justify-center">
+          <span class="w-2 h-2 rounded-full bg-[var(--color-accent)]"></span>
         </span>
-        <span class="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-[#FF4500] -mt-0.5"></span>
+        <span class="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-[var(--color-accent)] -mt-0.5"></span>
       </div>
     `,
     iconSize: [28, 35],

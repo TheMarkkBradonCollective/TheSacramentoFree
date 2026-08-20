@@ -1,5 +1,6 @@
 import type { UserProfile } from '../types';
-import { detectInstallKind } from './installContext';
+import { isNativeApp } from './nativePlatform';
+import { isProfileWithinPickupAvailability } from './pickupAvailability';
 import {
   getNotificationPreferences,
   getPushPermissionState,
@@ -11,17 +12,23 @@ export type GoGetBlockReason =
   | 'need_install'
   | 'need_notifications'
   | 'opted_out'
-  | 'other_opted_out';
+  | 'other_opted_out'
+  | 'outside_availability';
 
 export type GoGetEligibility = { ok: true } | { ok: false; reason: GoGetBlockReason; otherName?: string };
 
-/** PWA (home screen) or Android APK — not a regular browser tab. */
+/** Go Get / pickup coordination — Android APK & AAB only (not browser or PWA). */
+export function supportsGoGetCoordination(): boolean {
+  return isNativeApp();
+}
+
+/** @deprecated Use supportsGoGetCoordination — kept for existing call sites. */
 export function isInstalledApp(): boolean {
-  return detectInstallKind() !== 'browser';
+  return supportsGoGetCoordination();
 }
 
 export function isGoGetCoordinationEnabled(profile: Pick<UserProfile, 'goGetEnabled'> | null | undefined): boolean {
-  return profile?.goGetEnabled !== false;
+  return profile?.goGetEnabled === true;
 }
 
 export async function hasNotificationsReadyForGoGet(userId: string): Promise<boolean> {
@@ -33,10 +40,13 @@ export async function hasNotificationsReadyForGoGet(userId: string): Promise<boo
 
 /** Local device + account checks for the current user. */
 export async function checkSelfGoGetEligibility(
-  profile: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'displayName'>,
+  profile: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'displayName' | 'pickupAvailability'>,
 ): Promise<GoGetEligibility> {
   if (!isGoGetCoordinationEnabled(profile)) {
     return { ok: false, reason: 'opted_out' };
+  }
+  if (!isProfileWithinPickupAvailability(profile)) {
+    return { ok: false, reason: 'outside_availability' };
   }
   if (!isInstalledApp()) {
     return { ok: false, reason: 'need_install' };
@@ -49,7 +59,7 @@ export async function checkSelfGoGetEligibility(
 
 /** Full check including the other neighbor’s opt-out preference. */
 export async function checkGoGetCoordinationEligibility(params: {
-  self: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'displayName'>;
+  self: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'displayName' | 'pickupAvailability'>;
   otherUserId: string;
   otherDisplayName?: string;
 }): Promise<GoGetEligibility> {
@@ -66,6 +76,13 @@ export async function checkGoGetCoordinationEligibility(params: {
         otherName: other.displayName || params.otherDisplayName || 'This neighbor',
       };
     }
+    if (other && !isProfileWithinPickupAvailability(other)) {
+      return {
+        ok: false,
+        reason: 'outside_availability',
+        otherName: other.displayName || params.otherDisplayName || 'This neighbor',
+      };
+    }
   }
 
   return { ok: true };
@@ -75,9 +92,9 @@ export function goGetBlockAlert(eligibility: Extract<GoGetEligibility, { ok: fal
   switch (eligibility.reason) {
     case 'need_install':
       return {
-        title: 'Install the app to use Go Get',
+        title: 'Install the Android app to use Go Get',
         message:
-          'Pickup coordination (Go Get, Drop off, Meet up, and claim-at-pin) only works in the installed app — Android APK or Add to Home Screen. Open Download from the home page or Account to install, then turn on notifications.',
+          'Pickup coordination (Go Get, Drop off, Meet up, and claim-at-pin) only works in the Sacramento Buy Nothing Android app (APK or Play Store). Install from Download in Account, turn on notifications, then enable coordination in Account settings.',
         okLabel: 'Got it',
       };
     case 'need_notifications':
@@ -100,12 +117,18 @@ export function goGetBlockAlert(eligibility: Extract<GoGetEligibility, { ok: fal
         message: `${eligibility.otherName || 'This neighbor'} isn’t using app pickup coordination. Message them to arrange pickup on your own — listing and chat still work as usual.`,
         okLabel: 'Got it',
       };
+    case 'outside_availability':
+      return {
+        title: 'Outside pickup hours',
+        message: `${eligibility.otherName || 'This neighbor'} isn’t available for app pickup coordination right now (or you’re outside your own pickup hours). Message them to coordinate manually, or try again during their availability window.`,
+        okLabel: 'Got it',
+      };
   }
 }
 
 /** Run eligibility check and show a blocking alert when not allowed. Returns true if allowed. */
 export async function ensureGoGetAllowed(params: {
-  self: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'displayName'>;
+  self: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'displayName' | 'pickupAvailability'>;
   otherUserId: string;
   otherDisplayName?: string;
   alert: (options: AlertOptions) => Promise<void>;

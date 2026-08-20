@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { AlertCircle, Eye, MapPin, Search } from 'lucide-react';
 import { ItemPost } from '../../types';
 import { stripListingMetadata } from '../../lib/itemLocation';
-import { getPostTypeBadgeClass, getPostTypeLabel } from '../../lib/postType';
+import { getPostTypeBadgeClass, getPostTypeGridBadgeLabel } from '../../lib/postType';
 import { extractListingImageUrls } from '../../lib/listingContent';
 import ListingImage from '../ListingImage';
 import HorizontalSnapRow, { SnapSlide } from '../HorizontalSnapRow';
@@ -89,6 +89,7 @@ export default function GuestListingPreview({
                   <button
                     type="button"
                     onClick={() => onViewItem(item)}
+                    aria-label={`View ${item.title || 'listing'}`}
                     className="relative aspect-[16/10] bg-inset w-full cursor-pointer"
                   >
                     {cover ? (
@@ -99,9 +100,9 @@ export default function GuestListingPreview({
                       </div>
                     )}
                     <span
-                      className={`absolute top-2 left-2 sbn-badge text-[10px] ${getPostTypeBadgeClass(item.type)}`}
+                      className={`absolute top-2 left-2 sbn-badge text-[8px] px-1 py-0 leading-none whitespace-nowrap ${getPostTypeBadgeClass(item.type)}`}
                     >
-                      {getPostTypeLabel(item.type)}
+                      {getPostTypeGridBadgeLabel(item.type)}
                     </span>
                   </button>
 

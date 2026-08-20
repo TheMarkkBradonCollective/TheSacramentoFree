@@ -1,0 +1,7 @@
+Android beta v0.1.0.0032 (versionCode 32)
+
+What's new:
+• Staff/User mode now controls staff and director notifications
+• Listing and event detail headers scroll with the page; no duplicate back button
+
+Download (sideload): https://www.sacramentobuynothing.com/download

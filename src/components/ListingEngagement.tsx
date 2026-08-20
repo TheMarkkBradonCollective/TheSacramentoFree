@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useBrowseOnly } from '../contexts/BrowseOnlyContext';
 import { ChevronDown, ChevronUp, Flag, MessageSquare, Trash2 } from 'lucide-react';
 import { ItemComment, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 import RoleBadge from './RoleBadge';
 import { isStaffRole } from '../lib/roles';
+import { commentPostedAsNeighbor, shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
 
 interface ListingEngagementProps {
   posterUserId: string;
@@ -40,7 +40,6 @@ export default function ListingEngagement({
   variant = 'card',
   commenterRoles,
 }: ListingEngagementProps) {
-  const browseOnly = useBrowseOnly();
   const DETAIL_PREVIEW_COUNT = 5;
   const isOwner = posterUserId === currentUserId;
   const { userVote, upvotes, downvotes } = voteState;
@@ -78,9 +77,9 @@ export default function ListingEngagement({
       <div className={`flex items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2 sm:mt-4' : ''}`}>
         <button
           type="button"
-          disabled={isOwner || browseOnly}
+          disabled={isOwner}
           onClick={() => onVote('up')}
-          className={voteBtnClass(userVote === 'up', isOwner || browseOnly)}
+          className={voteBtnClass(userVote === 'up', isOwner)}
           title={isOwner ? "You can't vote on your own listing" : 'Interested'}
         >
           <ChevronUp className="w-4 h-4" />
@@ -91,10 +90,10 @@ export default function ListingEngagement({
         </span>
         <button
           type="button"
-          disabled={isOwner || browseOnly}
+          disabled={isOwner}
           onClick={() => onVote('down')}
           className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-            isOwner || browseOnly
+            isOwner
               ? 'opacity-50 cursor-not-allowed border-app text-muted'
               : userVote === 'down'
                 ? 'bg-inset border-app text-app'
@@ -105,17 +104,6 @@ export default function ListingEngagement({
           <ChevronDown className="w-4 h-4" />
           {downvotes}
         </button>
-        {variant === 'card' && onToggleComments && (
-          <button
-            type="button"
-            onClick={onToggleComments}
-            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors border-app text-muted hover:border-accent"
-            title="Open listing to view all comments"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            {comments.length}
-          </button>
-        )}
         {variant === 'detail' && (
           <span className="ml-auto text-xs text-muted flex items-center gap-1">
             <MessageSquare className="w-3.5 h-3.5" />
@@ -141,7 +129,7 @@ export default function ListingEngagement({
                   const isOwnComment = comment.userId === currentUserId;
                   const canReport = userProfile && !isOwnComment && comment.userId !== posterUserId;
                   const commenterRole = commenterRoles?.[comment.userId];
-                  const commenterIsStaff = isStaffRole(commenterRole);
+                  const commenterIsStaff = shouldShowStaffBadgeOnComment(commenterRole, comment);
                   return (
                     <li key={comment.id} className={`rounded-xl p-3 border ${commenterIsStaff ? 'bg-accent/5 border-accent/20' : 'bg-inset border-app'}`}>
                       <div className="flex items-start gap-2">
@@ -212,7 +200,6 @@ export default function ListingEngagement({
               )}
             </>
           )}
-          {!browseOnly && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -235,7 +222,6 @@ export default function ListingEngagement({
               Post
             </button>
           </form>
-          )}
         </div>
       )}
 

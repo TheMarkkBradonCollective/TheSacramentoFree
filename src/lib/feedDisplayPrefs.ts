@@ -1,41 +1,80 @@
-import type { ItemPost } from '../types';
+import type { FeedPost, ItemPost } from '../types';
 
-const HIDE_GIVEN_KEY = 'sbn_feed_hide_given_v1';
-const HIDE_FULFILLED_KEY = 'sbn_feed_hide_fulfilled_v1';
+const VIEW_MODE_KEY = 'sbn_feed_view_mode_v1';
+const EVENTS_VIEW_MODE_KEY = 'sbn_events_view_mode_v1';
 
-function readBool(key: string, fallback = false): boolean {
+export type FeedViewMode = 'list' | 'grid';
+
+export type FeedContentFilter = 'all' | 'text' | 'pictures';
+
+const FEED_CONTENT_FILTER_KEY = 'sbn_feed_content_filter_v1';
+
+export function readFeedContentFilter(): FeedContentFilter {
   try {
-    const raw = localStorage.getItem(key);
-    if (raw === '1') return true;
-    if (raw === '0') return false;
+    const raw = localStorage.getItem(FEED_CONTENT_FILTER_KEY);
+    if (raw === 'all' || raw === 'text' || raw === 'pictures') return raw;
   } catch {
     /* ignore */
   }
-  return fallback;
+  return 'all';
 }
 
-function writeBool(key: string, value: boolean): void {
+export function writeFeedContentFilter(value: FeedContentFilter): void {
   try {
-    localStorage.setItem(key, value ? '1' : '0');
+    localStorage.setItem(FEED_CONTENT_FILTER_KEY, value);
   } catch {
     /* ignore */
   }
 }
 
-export function readHideGivenFromFeed(): boolean {
-  return readBool(HIDE_GIVEN_KEY);
+export function feedPostMatchesContentFilter(
+  post: Pick<FeedPost, 'imageUrls'>,
+  filter: FeedContentFilter,
+): boolean {
+  const hasPictures = post.imageUrls.length > 0;
+  if (filter === 'text') return !hasPictures;
+  if (filter === 'pictures') return hasPictures;
+  return true;
 }
 
-export function readHideFulfilledFromFeed(): boolean {
-  return readBool(HIDE_FULFILLED_KEY);
+export function readFeedViewMode(): FeedViewMode {
+  try {
+    const raw = localStorage.getItem(VIEW_MODE_KEY);
+    if (raw === 'grid' || raw === 'list') return raw;
+  } catch {
+    /* ignore */
+  }
+  return 'grid';
 }
 
-export function writeHideGivenFromFeed(value: boolean): void {
-  writeBool(HIDE_GIVEN_KEY, value);
+export function writeFeedViewMode(value: FeedViewMode): void {
+  try {
+    localStorage.setItem(VIEW_MODE_KEY, value);
+  } catch {
+    /* ignore */
+  }
 }
 
-export function writeHideFulfilledFromFeed(value: boolean): void {
-  writeBool(HIDE_FULFILLED_KEY, value);
+export function readEventsViewMode(): FeedViewMode {
+  try {
+    const raw = localStorage.getItem(EVENTS_VIEW_MODE_KEY);
+    if (raw === 'grid' || raw === 'list') return raw;
+  } catch {
+    /* ignore */
+  }
+  return 'grid';
+}
+
+export function writeEventsViewMode(value: FeedViewMode): void {
+  try {
+    localStorage.setItem(EVENTS_VIEW_MODE_KEY, value);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isClosedCommunityListing(item: Pick<ItemPost, 'status'>): boolean {
+  return item.status === 'completed';
 }
 
 export function isGivenListing(item: Pick<ItemPost, 'type' | 'status'>): boolean {
@@ -44,13 +83,4 @@ export function isGivenListing(item: Pick<ItemPost, 'type' | 'status'>): boolean
 
 export function isFulfilledListing(item: Pick<ItemPost, 'type' | 'status'>): boolean {
   return item.type === 'looking' && item.status === 'completed';
-}
-
-export function shouldHideCompletedListing(
-  item: Pick<ItemPost, 'type' | 'status'>,
-  prefs: { hideGiven: boolean; hideFulfilled: boolean },
-): boolean {
-  if (prefs.hideGiven && isGivenListing(item)) return true;
-  if (prefs.hideFulfilled && isFulfilledListing(item)) return true;
-  return false;
 }

@@ -1,11 +1,18 @@
-import { Bookmark, Calendar, Eye, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
+import { Bookmark, Calendar, Eye, LifeBuoy, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
-import { getPostTypeBadgeClass, getPostTypeLabel, getPostTypeCompletedLabel } from '../lib/postType';
+import {
+  getPostTypeBadgeClass,
+  getPostTypeCompletedLabel,
+  getPostTypeCardColumnLabel,
+  getPostTypeGridBadgeLabel,
+  getListingContactButtonLabel,
+} from '../lib/postType';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { getListingNavigateLabel } from '../lib/listingMapActions';
 import { formatRouteDistance } from '../lib/mapRoute';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
 import UserAvatar from './UserAvatar';
@@ -37,6 +44,12 @@ interface ItemCardProps {
   distanceMeters?: number | null;
   /** Open navigation directly from the card (map-view parity). */
   onNavigate?: () => void;
+  /** Staff opens reverse support thread about this listing. */
+  onStaffChat?: () => void;
+  /** When false, hide Go Get / navigate coordination actions. */
+  showPickupCoordination?: boolean;
+  /** List rows (default) or compact proximity grid tiles. */
+  layout?: 'list' | 'grid';
 }
 
 export default function ItemCard({
@@ -60,9 +73,13 @@ export default function ItemCard({
   onViewProfile,
   distanceMeters,
   onNavigate,
+  onStaffChat,
+  showPickupCoordination = true,
+  layout = 'list',
 }: ItemCardProps) {
   const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;
+  const isStaffViewer = isStaffActingOfficial(userProfile);
   const inactive = item.status === 'completed' || item.status === 'withdrawn';
 
   const dateLabel = item.createdAt
@@ -85,36 +102,27 @@ export default function ItemCard({
 
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
 
-  const statusBadges = (
-    <>
-      <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[10px] sm:text-xs py-0.5`}>
-        {getPostTypeLabel(item.type)}
+  const typeBadgeLabel =
+    item.status === 'completed'
+      ? getPostTypeCompletedLabel(item.type)
+      : getPostTypeCardColumnLabel(item.type);
+
+  const statusDetailBadge =
+    item.status === 'withdrawn' ? (
+      <span className="sbn-badge sbn-badge-withdrawn text-[10px] sm:text-xs py-0.5">
+        Withdrawn
       </span>
-      {item.status === 'completed' && (
-        <span className="sbn-badge sbn-badge-done text-[10px] sm:text-xs py-0.5">
-          {getPostTypeCompletedLabel(item.type)}
-        </span>
-      )}
-      {item.status === 'withdrawn' && (
-        <span className="sbn-badge sbn-badge-withdrawn text-[10px] sm:text-xs py-0.5">Withdrawn</span>
-      )}
-      {item.status === 'pending_pickup' && (
-        <span className="sbn-badge sbn-badge-done text-[10px] sm:text-xs py-0.5">Pending pickup</span>
-      )}
-      {item.status === 'on_hold' && (
-        <span className="sbn-badge text-[10px] sm:text-xs py-0.5">On hold</span>
-      )}
-      {item.status === 'active' && (
-        <span className="sbn-badge sbn-badge-give text-[10px] sm:text-xs py-0.5 sm:inline-flex hidden">
-          Active
-        </span>
-      )}
-    </>
-  );
+    ) : item.status === 'pending_pickup' ? (
+      <span className="sbn-badge sbn-badge-done text-[10px] sm:text-xs py-0.5">
+        Pending pickup
+      </span>
+    ) : item.status === 'on_hold' ? (
+      <span className="sbn-badge text-[10px] sm:text-xs py-0.5">On hold</span>
+    ) : null;
 
   const actionButtons = isOwner ? (
     <div className="flex flex-wrap gap-1 justify-end">
-      <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-sm sbn-btn-secondary shrink-0">
+      <button type="button" onClick={onViewDetail} aria-label="View listing" className="sbn-btn sbn-btn-sm sbn-btn-secondary shrink-0">
         <Eye className="w-3.5 h-3.5 sm:mr-0" />
         <span className="hidden sm:inline ml-1">View</span>
       </button>
@@ -124,6 +132,7 @@ export default function ItemCard({
         onClick={onEdit}
         className="sbn-btn sbn-btn-sm sbn-btn-primary shrink-0"
         title="Edit listing"
+        aria-label="Edit listing"
       >
         <Pencil className="w-3.5 h-3.5" />
         <span className="hidden sm:inline ml-1">Edit</span>
@@ -198,37 +207,112 @@ export default function ItemCard({
     </div>
   ) : item.status !== 'withdrawn' ? (
     <div className="flex flex-wrap gap-1 justify-end">
-      <button type="button" onClick={onViewDetail} className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
+      <button type="button" onClick={onViewDetail} aria-label="View listing" className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
         <Eye className="w-3.5 h-3.5" />
         <span className="hidden sm:inline ml-1">View</span>
       </button>
-      {onNavigate && item.status === 'active' ? (
+      {isStaffViewer && onStaffChat ? (
+        <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+          <LifeBuoy className="w-3.5 h-3.5" />
+          <span className="ml-1">Staff chat</span>
+        </button>
+      ) : null}
+      {showPickupCoordination && onNavigate && item.status === 'active' ? (
         <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
           <Navigation className="w-3.5 h-3.5" />
-          <span className="ml-1">{getListingNavigateLabel(item)}</span>
+          <span className="ml-1">
+            {isStaffViewer ? 'Navigate' : getListingNavigateLabel(item)}
+          </span>
         </button>
-      ) : (
-        <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+      ) : !isStaffViewer ? (
+        <button
+          type="button"
+          onClick={onMessage}
+          aria-label={`${getListingContactButtonLabel(item.type)} about this listing`}
+          className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
+        >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline ml-1">Message</span>
+          <span className="hidden sm:inline ml-1">{getListingContactButtonLabel(item.type)}</span>
         </button>
-      )}
+      ) : null}
     </div>
   ) : (
     <span className="text-[10px] font-medium text-muted">Archived</span>
   );
 
+  if (layout === 'grid') {
+    return (
+      <article
+        id={`item_card_${item.id}`}
+        className={`item-feed-tile ${inactive ? 'opacity-75' : ''}`}
+      >
+        <button
+          type="button"
+          onClick={onViewDetail}
+          className="item-feed-tile__hit w-full text-left cursor-pointer"
+          aria-label={`${item.title}${distanceMeters != null ? `, ${formatRouteDistance(distanceMeters)} away` : ''}`}
+        >
+          <div className="item-feed-tile__media relative aspect-square overflow-hidden bg-inset">
+            {showCoverPhoto ? (
+              <>
+                <ListingImage
+                  src={coverPhoto}
+                  alt=""
+                  width={320}
+                  className="h-full w-full object-cover"
+                  onLoadError={() => setCoverFailed(true)}
+                />
+                {photos.length > 1 && (
+                  <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
+                    +{photos.length - 1}
+                  </span>
+                )}
+              </>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Tag className="w-7 h-7 text-subtle" aria-hidden />
+              </div>
+            )}
+            <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
+              <span
+                className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[8px] px-1 py-0 leading-none whitespace-nowrap shadow-sm`}
+              >
+                {getPostTypeGridBadgeLabel(item.type)}
+              </span>
+              {item.status === 'completed' && (
+                <span className="sbn-badge sbn-badge-done text-[9px] py-0.5 shadow-sm">
+                  {getPostTypeCompletedLabel(item.type)}
+                </span>
+              )}
+            </div>
+            {distanceMeters != null && (
+              <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <Navigation className="w-3 h-3 shrink-0" aria-hidden />
+                {formatRouteDistance(distanceMeters)}
+              </span>
+            )}
+          </div>
+          <div className="item-feed-tile__body p-2">
+            <h3 className="font-display text-xs font-bold text-app leading-snug line-clamp-2">{item.title}</h3>
+            <p className="mt-0.5 text-[10px] text-muted truncate">{item.neighborhood}</p>
+          </div>
+        </button>
+      </article>
+    );
+  }
+
   return (
     <article
       id={`item_card_${item.id}`}
-      className={`item-feed-card item-feed-card--responsive flex flex-row sm:flex-col ${inactive ? 'opacity-75' : ''}`}
+      className={`item-feed-card item-feed-card--responsive item-feed-card--list flex flex-row sm:flex-row ${inactive ? 'opacity-75' : ''}`}
     >
       <button
         type="button"
         onClick={onViewDetail}
+        aria-label={`View ${item.title || 'listing'}`}
         className={`relative shrink-0 overflow-hidden bg-inset text-left cursor-pointer
-          w-[5.25rem] h-[5.25rem] sm:w-full sm:h-auto sm:aspect-[16/10]
-          ${!showCoverPhoto ? 'flex items-center justify-center border-r sm:border-r-0 border-app' : ''}`}
+          w-[5.25rem] h-[5.25rem] sm:w-28 sm:h-28
+          ${!showCoverPhoto ? 'flex items-center justify-center border-r border-app' : ''}`}
       >
         {showCoverPhoto ? (
           <>
@@ -251,9 +335,7 @@ export default function ItemCard({
       </button>
 
       <div className="flex-1 min-w-0 flex flex-col p-2.5 sm:p-4">
-        <div className="flex flex-wrap items-center gap-1 sm:gap-2">{statusBadges}</div>
-
-        <button type="button" onClick={onViewDetail} className="text-left w-full mt-1 sm:mt-3 cursor-pointer">
+        <button type="button" onClick={onViewDetail} className="text-left w-full cursor-pointer">
           <h3 className="font-display text-sm sm:text-lg font-bold text-app leading-snug hover:text-accent transition-colors line-clamp-2 sm:line-clamp-none">
             {item.title}
           </h3>
@@ -270,7 +352,7 @@ export default function ItemCard({
           </p>
         )}
 
-        <p className="hidden sm:block text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
+        <p className="hidden text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
           <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
@@ -296,13 +378,19 @@ export default function ItemCard({
           comments={comments}
           commentsExpanded={commentsExpanded}
           onVote={onVote}
-          onToggleComments={onViewDetail}
           onAddComment={onAddComment}
           onDeleteComment={onDeleteComment}
           userProfile={userProfile}
           onViewProfile={onViewProfile}
           variant="card"
         />
+
+        <div className="flex flex-wrap items-center gap-1.5 mt-2" id={`item_type_row_${item.id}`}>
+          <span className={`sbn-badge text-[10px] py-1 ${getPostTypeBadgeClass(item.type)}`}>
+            {typeBadgeLabel}
+          </span>
+          {statusDetailBadge}
+        </div>
 
         <div className="mt-2 sm:mt-4 pt-2 sm:pt-4 border-t border-app flex items-center justify-between gap-2">
           <button

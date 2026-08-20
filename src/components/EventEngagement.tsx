@@ -4,6 +4,9 @@ import { EventComment, EventRsvpStatus, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import { effectivePastRsvp } from '../lib/eventRsvp';
+import RoleBadge from './RoleBadge';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import { shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
 
 interface EventEngagementProps {
   hostUserId: string;
@@ -19,6 +22,7 @@ interface EventEngagementProps {
   rsvpDisabled?: boolean;
   commentsLocked?: boolean;
   isPast?: boolean;
+  commenterRoles?: Record<string, UserProfile['role']>;
 }
 
 const UPCOMING_RSVP_OPTIONS: { status: EventRsvpStatus; label: string; icon: typeof Check }[] = [
@@ -46,6 +50,7 @@ export default function EventEngagement({
   rsvpDisabled = false,
   commentsLocked = false,
   isPast = false,
+  commenterRoles,
 }: EventEngagementProps) {
   const DETAIL_PREVIEW_COUNT = 5;
   const { userRsvp, going, maybe, notGoing, gone, missed } = rsvpState;
@@ -140,9 +145,17 @@ export default function EventEngagement({
               <ul className="space-y-2 max-h-64 overflow-y-auto">
                 {visibleComments.map((comment) => {
                   const isOwnComment = comment.userId === currentUserId;
-                  const canReport = userProfile && !isOwnComment && comment.userId !== hostUserId;
+                  const canReport =
+                    userProfile && !isOwnComment && comment.userId !== hostUserId && !isStaffActingOfficial(userProfile);
+                  const commenterRole = commenterRoles?.[comment.userId];
+                  const commenterIsStaff = shouldShowStaffBadgeOnComment(commenterRole, comment);
                   return (
-                    <li key={comment.id} className="bg-inset rounded-xl p-3 border border-app">
+                    <li
+                      key={comment.id}
+                      className={`rounded-xl p-3 border ${
+                        commenterIsStaff ? 'bg-accent/5 border-accent/20' : 'bg-inset border-app'
+                      }`}
+                    >
                       <div className="flex items-start gap-2">
                         <button
                           type="button"
@@ -160,7 +173,13 @@ export default function EventEngagement({
                             referrerPolicy="no-referrer"
                           />
                           <span className="text-xs font-bold text-app">{comment.userName}</span>
-                          <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
+                          {commenterIsStaff && commenterRole ? (
+                            <span className="scale-[0.8] origin-left">
+                              <RoleBadge role={commenterRole} />
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-accent font-medium">{comment.userNeighborhood}</span>
+                          )}
                         </button>
                         <div className="flex items-center gap-1 shrink-0">
                           {isOwnComment && onDeleteComment && (

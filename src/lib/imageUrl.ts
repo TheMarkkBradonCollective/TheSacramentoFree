@@ -24,9 +24,42 @@ export function avatarImageUrl(url: string | undefined | null, displayName: stri
   return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(displayName || uid)}`;
 }
 
+const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif', 'bmp']);
+
+export const INVALID_IMAGE_FILE_MESSAGE = 'Please select a photo (JPG, PNG, or WEBP).';
+
+/** Android WebView often returns an empty type or application/octet-stream for gallery picks. */
+export function isLikelyImageFile(file: File): boolean {
+  if (file.type.startsWith('image/')) return true;
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return IMAGE_EXTENSIONS.has(ext);
+}
+
+/** Accept gallery picks from Android where MIME type is missing. */
+export function normalizeImageUploadFile(file: File | null | undefined): File | null {
+  if (!file) return null;
+  return isLikelyImageFile(file) ? file : null;
+}
+
+export function guessImageContentType(file: File): string {
+  if (file.type.startsWith('image/')) return file.type;
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const byExt: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    heic: 'image/heic',
+    heif: 'image/heif',
+    bmp: 'image/bmp',
+  };
+  return byExt[ext] ?? 'image/jpeg';
+}
+
 /** Shrink large uploads before storage — faster upload and smaller downloads. */
 export async function compressImageIfNeeded(file: File, maxDim = 1600, quality = 0.82): Promise<File> {
-  if (!file.type.startsWith('image/') || file.size <= 250_000) return file;
+  if (!isLikelyImageFile(file) || file.size <= 250_000) return file;
 
   try {
     const bitmap = await createImageBitmap(file);

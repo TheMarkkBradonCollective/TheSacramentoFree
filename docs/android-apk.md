@@ -63,7 +63,7 @@ Regenerate them from the community logo before building an APK:
 npm run android:assets
 ```
 
-This copies `public/Logo.jpeg` into `assets/logo.png` and runs `@capacitor/assets` with the dark brand background (`#0b0b0c`). `npm run android:apk` and `npm run android:apk:debug` run this step automatically.
+This paints the white JPEG canvas with the logo orange, writes full-bleed launcher mipmaps (no 16.7% adaptive inset), and runs `@capacitor/assets` for splash screens. Requires `ffmpeg`. `npm run android:apk` and `npm run android:apk:debug` run this step automatically.
 
 **Neighbors:** share the in-app download page at [www.sacramentobuynothing.com/download](https://www.sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
 
