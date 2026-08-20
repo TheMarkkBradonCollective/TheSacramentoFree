@@ -111,8 +111,7 @@ function news(
   };
 }
 
-/** Latest Update posts — merged with Supabase so neighbors always see current release notes.
- * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
+/** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
   update(
     '2026-08-20_apk-0034',
@@ -1117,7 +1116,7 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
   ),
 ];
 
-/** Latest News posts — community-facing announcements. */
+/** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
   news(
     '2026-08-20_apk-0034',
