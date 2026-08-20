@@ -12,7 +12,6 @@ import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import RoleBadge from './RoleBadge';
 import {
   MapPin,
-  User,
   CheckCircle,
   Save,
   AlertCircle,
@@ -46,7 +45,7 @@ import { isStaffActingOfficial, profileUiRole } from '../lib/staffInteractionMod
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 import TermsOfUseModal from './TermsOfUseModal';
-import { IN_APP, PRIVACY, TERMS } from '../siteContent';
+import { PRIVACY, TERMS } from '../siteContent';
 import { isPrivacyAccepted } from '../lib/privacyPolicyPrompt';
 import { isTermsAccepted } from '../lib/termsPolicyPrompt';
 import { getNeighborAwardClaims } from '../supabase';
@@ -85,6 +84,14 @@ function sanitizeRemotePhoto(url?: string): string | undefined {
   return undefined;
 }
 
+type ProfileTab = 'profile' | 'settings' | 'account';
+
+const PROFILE_TABS: Array<{ id: ProfileTab; label: string }> = [
+  { id: 'profile', label: 'Profile' },
+  { id: 'settings', label: 'Settings' },
+  { id: 'account', label: 'Account' },
+];
+
 export default function UserProfileView({
   userProfile,
   userPosts = [],
@@ -118,6 +125,7 @@ export default function UserProfileView({
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
   const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
+  const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
   const { apkDownloadHref, latestApk, apkStatus, loading: apkVersionLoading } = useInstallVersions(userProfile);
   const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
   const usingApk = installKind === 'android-apk';
@@ -297,22 +305,54 @@ export default function UserProfileView({
     ? 'border-b border-app px-4 py-6 bg-surface'
     : 'sbn-section';
 
+  const joinedLabel = (() => {
+    const raw = userProfile.createdAt;
+    const ms =
+      raw && typeof raw === 'object' && 'seconds' in raw
+        ? Number((raw as { seconds: number }).seconds) * 1000
+        : new Date(raw as string | number | Date).getTime();
+    const date = new Date(ms);
+    return Number.isNaN(date.getTime()) ? 'recently' : date.toLocaleDateString();
+  })();
+
   return (
     <div
       className={`${fullBleed ? 'font-sans' : 'space-y-6'} w-full max-w-full min-w-0 overflow-x-hidden`}
       id="profile_root_container"
     >
       <div
-        className={
-          fullBleed
-            ? 'flex flex-col font-sans min-w-0 w-full'
-            : 'grid grid-cols-1 md:grid-cols-3 gap-6 font-sans min-w-0 w-full'
-        }
-        id="profile_views_grid"
+        className={`${fullBleed ? 'sticky top-0 z-10 bg-surface/95 backdrop-blur-sm border-b border-app px-4 py-3' : 'mb-2'}`}
+        id="profile_tab_bar"
       >
-        {/* Profile overview */}
         <div
-          className={`${fullBleed ? sectionShell : 'md:col-span-1'} flex flex-col items-center text-center h-fit`}
+          className="flex gap-1 p-1 rounded-xl bg-inset border border-app w-full"
+          role="tablist"
+          aria-label="Profile sections"
+        >
+          {PROFILE_TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              id={`profile_tab_${id}`}
+              aria-selected={activeTab === id}
+              onClick={() => setActiveTab(id)}
+              className={`flex-1 min-w-0 px-2 sm:px-3 py-2 rounded-lg text-[11px] sm:text-sm font-bold transition-colors leading-tight text-center ${
+                activeTab === id
+                  ? 'bg-accent text-on-accent shadow-sm'
+                  : 'text-muted hover:text-app hover:bg-surface'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeTab === 'profile' ? (
+        <div className={fullBleed ? 'flex flex-col min-w-0 w-full' : 'space-y-6'} id="profile_tab_panel_profile">
+        <div
+          className={`${fullBleed ? sectionShell : 'sbn-section'} flex flex-col items-center text-center h-fit`}
         >
           <UserAvatar
             src={photoURL}
@@ -346,7 +386,6 @@ export default function UserProfileView({
           <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{userProfile.displayName}</h3>
           
           <RoleBadge role={profileUiRole(userProfile)} showForUser />
-          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
 
           <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-xs font-bold text-accent mt-3">
             <MapPin className="w-3.5 h-3.5 text-accent" />
@@ -392,38 +431,70 @@ export default function UserProfileView({
           />
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
-            Joined our sharing circle:{' '}
-            {(() => {
-              const raw = userProfile.createdAt;
-              const ms =
-                raw && typeof raw === 'object' && 'seconds' in raw
-                  ? Number((raw as { seconds: number }).seconds) * 1000
-                  : new Date(raw as string | number | Date).getTime();
-              const date = new Date(ms);
-              return Number.isNaN(date.getTime()) ? 'recently' : date.toLocaleDateString();
-            })()}
+            Joined our sharing circle: {joinedLabel}
           </p>
           
           {userProfile.bio ? (
             <p className="mt-4 text-xs font-medium text-muted italic leading-relaxed text-left w-full bg-inset p-3 rounded-xl border border-app">
-              "{userProfile.bio}"
+              &ldquo;{userProfile.bio}&rdquo;
             </p>
           ) : (
             <p className="mt-4 text-xs font-semibold text-subtle italic text-left w-full bg-inset p-3 rounded-xl border border-dashed border-app">
-              No biography specified yet. Update your profile to tell neighbors what kinds of items you like to share or receive!
+              No biography yet. Add one under Settings to tell neighbors what you like to share or receive.
             </p>
           )}
         </div>
 
-        {/* Settings Form */}
+      {usingApk && (
+        <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
+      )}
+
+      {onOpenAwards && (
+        <div className={fullBleed ? sectionShell : ''}>
+          <ProfileAwardsSection
+            summary={awardSummary}
+            loading={awardsLoading}
+            onOpenAwards={onOpenAwards}
+          />
+        </div>
+      )}
+
+      <div className={fullBleed ? sectionShell : 'sbn-section'}>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h3 className="text-sm font-bold text-app uppercase tracking-wider">Your posts</h3>
+          <span className="text-xs text-muted">{userPosts.length}</span>
+        </div>
+        <ProfilePostList
+          posts={userPosts
+            .slice()
+            .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime())}
+          emptyMessage="You have not posted anything yet."
+          onViewPost={onViewPost}
+          onRepostPost={onRepostPost}
+          onDeletePost={onDeletePost}
+        />
+      </div>
+
+      {onViewProfile && !isStaffRole(userProfile.role) ? (
+        <CommunityMenuView
+          userProfile={userProfile}
+          onViewProfile={onViewProfile}
+          scrollToDirectorOverview={scrollToDirectorOverview}
+          onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+          fullBleed={fullBleed}
+        />
+      ) : null}
+        </div>
+      ) : null}
+
+      {activeTab === 'settings' ? (
         <div
-          className={fullBleed ? sectionShell : `md:col-span-2 ${sectionShell}`}
-          id="profile_credentials_form_box"
+          className={fullBleed ? sectionShell : 'sbn-section'}
+          id="profile_tab_panel_settings"
         >
-          <h3 className="text-lg font-bold text-app tracking-tight mb-5 flex items-center space-x-2 border-b border-app pb-3 font-display">
-            <User className="w-5 h-5 text-accent" />
-            <span>{IN_APP.profileTitle}</span>
-          </h3>
+          <p className="text-xs text-muted mb-5 leading-relaxed">
+            Update how neighbors see you and tune app preferences.
+          </p>
 
           <form onSubmit={handleSave} className="space-y-5" id="profile_edit_form">
             {errorMsg && (
@@ -509,6 +580,7 @@ export default function UserProfileView({
             </button>
           </form>
 
+          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           <SystemPermissionsSettings />
           <ThemeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           <AccountNavigationSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
@@ -516,55 +588,10 @@ export default function UserProfileView({
             <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           )}
         </div>
-      </div>
-
-      {/* ── Activity ─────────────────────────────────────────── */}
-      {usingApk && (
-        <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
-      )}
-
-      {/* ── Awards ───────────────────────────────────────────── */}
-      {onOpenAwards && (
-        <div className={fullBleed ? sectionShell : ''}>
-          <ProfileAwardsSection
-            summary={awardSummary}
-            loading={awardsLoading}
-            onOpenAwards={onOpenAwards}
-          />
-        </div>
-      )}
-
-      {/* ── Your posts ───────────────────────────────────────── */}
-      <div className={fullBleed ? sectionShell : 'sbn-section'}>
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <h3 className="text-sm font-bold text-app uppercase tracking-wider">Your posts</h3>
-          <span className="text-xs text-muted">{userPosts.length}</span>
-        </div>
-        <ProfilePostList
-          posts={userPosts
-            .slice()
-            .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime())}
-          emptyMessage="You have not posted anything yet."
-          onViewPost={onViewPost}
-          onRepostPost={onRepostPost}
-          onDeletePost={onDeletePost}
-        />
-      </div>
-
-      {/* ── Staff tools — only shown on account page for non-staff users or
-           when the sidebar is unavailable. Staff with the sidebar see all
-           moderation tools there instead. ────────────────────────────── */}
-      {onViewProfile && !isStaffRole(userProfile.role) ? (
-        <CommunityMenuView
-          userProfile={userProfile}
-          onViewProfile={onViewProfile}
-          scrollToDirectorOverview={scrollToDirectorOverview}
-          onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
-          fullBleed={fullBleed}
-        />
       ) : null}
 
-      {/* ── Install app ──────────────────────────────────────── */}
+      {activeTab === 'account' ? (
+        <div id="profile_tab_panel_account" className={fullBleed ? 'flex flex-col min-w-0 w-full' : 'space-y-6'}>
       <div
         className={`${fullBleed ? `${sectionShell} shadow-none` : 'sbn-section'} animate-fade-in min-w-0 overflow-hidden`}
         id="pwa_installs_section"
@@ -702,24 +729,6 @@ export default function UserProfileView({
         )}
       </div>
 
-      {showPrivacyModal && (
-        <PrivacyPolicyModal
-          userId={userProfile.uid}
-          required={!isPrivacyAccepted(userProfile.uid)}
-          onAccepted={() => setShowPrivacyModal(false)}
-          onClose={() => setShowPrivacyModal(false)}
-        />
-      )}
-
-      {showTermsModal && (
-        <TermsOfUseModal
-          userId={userProfile.uid}
-          required={!isTermsAccepted(userProfile.uid)}
-          onAccepted={() => setShowTermsModal(false)}
-          onClose={() => setShowTermsModal(false)}
-        />
-      )}
-
       {!isStaffRole(userProfile.role) ? (
         <div className={fullBleed ? sectionShell : 'sbn-section'} id="account_staff_apply_section">
           <div className="flex items-center gap-2 mb-3">
@@ -728,7 +737,7 @@ export default function UserProfileView({
           </div>
           <p className="text-xs text-muted leading-relaxed mb-4">
             Read what each role actually does, then apply for one. Tell us how fast you can respond
-            and if you've been a mod elsewhere. Staff see one request at a time.
+            and if you&apos;ve been a mod elsewhere. Staff see one request at a time.
           </p>
           <button
             type="button"
@@ -827,6 +836,26 @@ export default function UserProfileView({
             <span>{isDeletingAccount ? 'Deleting…' : 'Delete my account'}</span>
           </button>
         </div>
+      )}
+        </div>
+      ) : null}
+
+      {showPrivacyModal && (
+        <PrivacyPolicyModal
+          userId={userProfile.uid}
+          required={!isPrivacyAccepted(userProfile.uid)}
+          onAccepted={() => setShowPrivacyModal(false)}
+          onClose={() => setShowPrivacyModal(false)}
+        />
+      )}
+
+      {showTermsModal && (
+        <TermsOfUseModal
+          userId={userProfile.uid}
+          required={!isTermsAccepted(userProfile.uid)}
+          onAccepted={() => setShowTermsModal(false)}
+          onClose={() => setShowTermsModal(false)}
+        />
       )}
     </div>
   );
