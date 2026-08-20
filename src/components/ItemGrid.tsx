@@ -2,21 +2,17 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
-  ArrowLeftRight,
   CircleDot,
-  Gift,
-  LayoutGrid,
-  LayoutList,
   Plus,
   Search as SearchIcon,
   MapPin,
-  SlidersHorizontal,
   Tag,
   AlertCircle,
   ThumbsUp,
   X,
 } from 'lucide-react';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
+import FilterToggleGroup from './FilterToggleGroup';
 import ItemCard from './ItemCard';
 import { ItemGridSkeleton } from './Skeleton';
 import PostItemModal from './PostItemModal';
@@ -78,30 +74,22 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
 
-function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string {
-  if (compact) return mode === 'nearest' ? 'Near' : 'New';
-  return mode === 'nearest' ? 'Nearest' : 'Newest';
-}
+const FEED_SORT_OPTIONS = [
+  { value: 'nearest' as const, label: 'Near', id: 'feed_sort_nearest' },
+  { value: 'new' as const, label: 'New', id: 'feed_sort_new' },
+];
 
-function feedTypeToolbarLabel(type: ListingTypeFilter): string {
-  switch (type) {
-    case 'all':
-      return 'All';
-    case 'giveaway':
-      return 'Give';
-    case 'looking':
-      return 'Look';
-    case 'trade':
-      return 'Trade';
-  }
-}
+const FEED_TYPE_OPTIONS: { value: ListingTypeFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'looking', label: 'Look' },
+  { value: 'giveaway', label: 'Give' },
+  { value: 'trade', label: 'Trade' },
+];
 
-function FeedTypeToolbarIcon({ type }: { type: ListingTypeFilter }) {
-  if (type === 'giveaway') return <Gift className="w-3.5 h-3.5 shrink-0" aria-hidden />;
-  if (type === 'looking') return <SearchIcon className="w-3.5 h-3.5 shrink-0" aria-hidden />;
-  if (type === 'trade') return <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" aria-hidden />;
-  return <CircleDot className="w-3.5 h-3.5 shrink-0" aria-hidden />;
-}
+const FEED_VIEW_OPTIONS = [
+  { value: 'grid' as const, label: 'Grid', id: 'feed_view_grid_btn' },
+  { value: 'list' as const, label: 'List', id: 'feed_view_list_btn' },
+];
 
 function needsPickupListing(item: ItemPost): boolean {
   if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
@@ -314,13 +302,9 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set());
   };
 
-  const cycleTypeFilter = () => {
-    setSelectedType((current) => {
-      const idx = LISTING_TYPE_FILTERS.indexOf(current);
-      const next = LISTING_TYPE_FILTERS[(idx + 1) % LISTING_TYPE_FILTERS.length];
-      if (next !== 'all') setSelectedCategory('All Categories');
-      return next;
-    });
+  const handleToolbarTypeChange = (type: ListingTypeFilter) => {
+    setSelectedType(type);
+    if (type !== 'all') setSelectedCategory('All Categories');
   };
 
   const filteredItems = useMemo(() => {
@@ -394,112 +378,73 @@ export default function ItemGrid({
     <>
     <div className="space-y-3" id="item_feed_wrapper">
       <div className="space-y-1 min-w-0" id="feed_view_mode_bar">
-        <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
-          <div className="shrink-0">
-            {onOpenNewPost ? (
-              <button
-                type="button"
-                id="feed_new_listing_btn"
-                onClick={onOpenNewPost}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
-                aria-label="New listing"
-                title="New listing"
-              >
-                <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                <span>New</span>
-              </button>
-            ) : null}
-          </div>
-
-          <div className="flex-1 min-w-0 flex justify-center px-0.5">
-            <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0 max-w-full">
-              <button
-                type="button"
-                id="feed_sort_toggle"
-                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0"
-                aria-pressed={gridSortMode === 'nearest'}
-                aria-label={feedSortToolbarLabel(gridSortMode, false)}
-              >
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-                <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
-                <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
-              </button>
-              <button
-                type="button"
-                id="feed_type_toggle"
-                onClick={cycleTypeFilter}
-                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 ${
-                  selectedType !== 'all'
-                    ? 'border-accent bg-accent-soft text-accent'
-                    : 'border-app bg-inset text-app hover:border-accent/40'
-                }`}
-                aria-pressed={selectedType !== 'all'}
-              >
-                <FeedTypeToolbarIcon type={selectedType} />
-                <span>{feedTypeToolbarLabel(selectedType)}</span>
-              </button>
+        <div className="sbn-feed-toolbar-scroll min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 w-max min-w-full">
+            <div className="shrink-0">
+              {onOpenNewPost ? (
+                <button
+                  type="button"
+                  id="feed_new_listing_btn"
+                  onClick={onOpenNewPost}
+                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2.5 py-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
+                  aria-label="New listing"
+                  title="New listing"
+                >
+                  <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                  <span>New</span>
+                </button>
+              ) : null}
             </div>
-          </div>
 
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <button
-              type="button"
-              id="feed_filters_panel_toggle"
-              onClick={() => setFiltersPanelOpen((open) => !open)}
-              aria-expanded={filtersPanelOpen}
-              aria-label="Filters"
-              className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
-                filtersPanelOpen
-                  ? 'border-accent bg-accent-soft text-accent'
-                  : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
-              <span className="hidden md:inline">Filters</span>
+            <FilterToggleGroup
+              id="feed_sort_group"
+              ariaLabel="Sort listings"
+              options={FEED_SORT_OPTIONS}
+              value={gridSortMode}
+              onChange={setGridSortMode}
+              compact
+            />
+
+            <FilterToggleGroup
+              id="feed_type_group"
+              ariaLabel="Listing type"
+              options={FEED_TYPE_OPTIONS}
+              value={selectedType}
+              onChange={handleToolbarTypeChange}
+              compact
+            />
+
+            <div className="relative shrink-0">
+              <FilterLabeledSwitch
+                id="feed_filters_panel_toggle"
+                label="Filter"
+                checked={filtersPanelOpen}
+                onChange={setFiltersPanelOpen}
+                compact
+                ariaLabel={
+                  activeFilterCount > 0
+                    ? `Filters, ${activeFilterCount} active`
+                    : 'Filters'
+                }
+              />
               {activeFilterCount > 0 && (
-                <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center leading-none">
+                <span
+                  className="pointer-events-none absolute -top-1 -right-1 text-[9px] font-bold bg-accent text-on-accent min-w-[1rem] h-4 px-1 rounded-full flex items-center justify-center leading-none"
+                  aria-hidden
+                >
                   {activeFilterCount}
                 </span>
               )}
-            </button>
-            <div
-              className="inline-flex rounded-xl border border-app bg-inset p-0.5 shrink-0"
-              role="group"
-              aria-label="Feed view"
-              id="feed_view_mode_toggle"
-            >
-              <button
-                type="button"
-                id="feed_view_grid_btn"
-                aria-pressed={viewMode === 'grid'}
-                aria-label="Grid view"
-                onClick={() => handleViewModeChange('grid')}
-                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-accent text-on-accent'
-                    : 'text-muted hover:text-app hover:bg-surface-hover'
-                }`}
-              >
-                <LayoutGrid className="w-4 h-4 shrink-0" aria-hidden />
-                <span className="sr-only">Grid</span>
-              </button>
-              <button
-                type="button"
-                id="feed_view_list_btn"
-                aria-pressed={viewMode === 'list'}
-                aria-label="List view"
-                onClick={() => handleViewModeChange('list')}
-                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                  viewMode === 'list'
-                    ? 'bg-accent text-on-accent'
-                    : 'text-muted hover:text-app hover:bg-surface-hover'
-                }`}
-              >
-                <LayoutList className="w-4 h-4 shrink-0" aria-hidden />
-                <span className="sr-only">List</span>
-              </button>
             </div>
+
+            <FilterToggleGroup
+              id="feed_view_mode_toggle"
+              ariaLabel="Feed view"
+              options={FEED_VIEW_OPTIONS}
+              value={viewMode}
+              onChange={handleViewModeChange}
+              compact
+            />
           </div>
         </div>
         {gridSortMode === 'nearest' && !userLocation && (
