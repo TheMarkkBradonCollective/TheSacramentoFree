@@ -52,10 +52,15 @@ export interface UserProfile {
   accountStatus?: AccountStatus;
   suspendedUntil?: string | null;
   /**
-   * When false, this neighbor opts out of Go Get / Drop off / Meet up / claim-at-pin
-   * coordination and uses listing + chat only. Default true when unset.
+   * When true, this neighbor opts in to Go Get / Drop off / Meet up / claim-at-pin
+   * coordination. Default false until explicitly enabled in Account.
    */
   goGetEnabled?: boolean;
+  /** Weekly pickup windows for app coordination. Null / unset = 24/7. */
+  pickupAvailability?: PickupAvailabilitySchedule | null;
+  /** How long incoming Go Get rings last (10–140 seconds). */
+  goGetRingDurationSeconds?: number;
+  goGetRingPattern?: GoGetRingPattern;
   /**
    * Staff only: `staff` = official capacity (badge, support threads, restricted neighbor flows).
    * `neighbor` = participate like a regular neighbor. Default staff when unset.
@@ -65,6 +70,28 @@ export interface UserProfile {
   joinRank?: number | null;
   createdAt: any;
   lastActiveAt?: string | null;
+}
+
+export type GoGetRingPattern =
+  | 'single_beep'
+  | 'double_beep'
+  | 'triple_beep'
+  | 'ring'
+  | 'vibrate'
+  | 'vibrate_only';
+
+export interface PickupDayAvailability {
+  /** 0 = Sunday … 6 = Saturday */
+  day: number;
+  enabled: boolean;
+  /** Minutes from local midnight (0–1439). */
+  startMinute: number;
+  /** Exclusive end minute; 1440 = end of day. */
+  endMinute: number;
+}
+
+export interface PickupAvailabilitySchedule {
+  days: PickupDayAvailability[];
 }
 
 export interface StaffUserRow extends UserProfile {
@@ -305,6 +332,7 @@ export type GoGetHandshakeMode = 'instant' | 'availability';
  */
 export type GoGetSessionStatus =
   | 'awaiting_availability'
+  | 'awaiting_schedule'
   | 'window_offered'
   | 'scheduled'
   | 'active'
@@ -342,6 +370,10 @@ export interface GoGetSession {
   cancelReason?: string | null;
   /** Poster opted in to share live device location so the picker can find them at the meetup. */
   fulfillerSharingLocation?: boolean;
+  /** When the live "available now?" ring ends if the poster does not answer. */
+  ringExpiresAt?: string | null;
+  /** Snapshot of poster ring duration when the session was created. */
+  ringDurationSeconds?: number | null;
   createdAt: string;
   updatedAt: string;
 }

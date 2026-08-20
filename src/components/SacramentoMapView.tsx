@@ -25,6 +25,8 @@ import {
   type LatLng,
 } from '../lib/mapRoute';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
+import { getUserPickupCoordinationByIds } from '../supabase';
 import { remainingRouteMeters } from '../lib/navigationRoute';
 import { usePreviewDrivingRoute } from '../hooks/usePreviewDrivingRoute';
 import { subscribeLiveGeolocation, getLastLiveLatLng, retainLiveGeolocation } from '../lib/liveGeolocation';
@@ -397,9 +399,19 @@ export default function SacramentoMapView({
   commentsLocked = false,
 }: SacramentoMapViewProps) {
   const isStaffViewer = isStaffActingOfficial(userProfile);
+  const [posterCoordByUid, setPosterCoordByUid] = useState<
+    Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
+  >({});
 
-  const neighborListingUsesNavigate = (post: ItemPost): boolean =>
-    post.userId !== userProfile.uid && post.status === 'active' && !isStaffViewer;
+  const neighborListingUsesNavigate = (post: ItemPost): boolean => {
+    if (post.userId === userProfile.uid || post.status !== 'active') return false;
+    const posterCoord = posterCoordByUid[post.userId];
+    return canShowAppPickupCoordination({
+      item: post,
+      posterProfile: posterCoord ?? { uid: post.userId, goGetEnabled: false },
+      pickerProfile: userProfile,
+    }).ok;
+  };
   const openItemDetail = onViewItem || onItemDetail;
   const { confirm, alert } = useConfirm();
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -764,6 +776,15 @@ export default function SacramentoMapView({
       return matchesSearch && matchesType && matchesCategory && matchesNeighborhood;
     });
   }, [items, sType, sCat, sNeigh, sTerm, showingEvents]);
+
+  useEffect(() => {
+    const posterIds = [...new Set(activeItems.map((i) => i.userId).filter((uid): uid is string => Boolean(uid) && uid !== userProfile.uid))];
+    if (posterIds.length === 0) {
+      setPosterCoordByUid({});
+      return;
+    }
+    void getUserPickupCoordinationByIds(posterIds).then(setPosterCoordByUid);
+  }, [activeItems, userProfile.uid]);
 
   const activeEvents = useMemo(() => {
     if (!showEventsOnMap) return [];

@@ -41,6 +41,7 @@ import { confirmStaffEventOutreach, confirmStaffListingOutreach } from './lib/st
 import { isStaffRole } from './lib/roles';
 import { isStaffActingOfficial } from './lib/staffInteractionMode';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
+import GoGetRingCoordinator from './components/goget/GoGetRingCoordinator';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
@@ -1722,6 +1723,7 @@ export default function App() {
           ) : (
             <BrowseOnlyProvider browseOnly={browseOnlyReview}>
             <NotificationsHubProvider userProfile={userProfile} onDeepLink={handlePushDeepLink}>
+            <GoGetRingCoordinator userProfile={userProfile} />
             <PresenceProvider userId={userProfile.uid}>
                {deviceType === 'mobile' ? (
                 <MobileView

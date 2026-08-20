@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Navigation2 } from 'lucide-react';
-import type { UserProfile } from '../types';
+import { Navigation2, Volume2 } from 'lucide-react';
+import type { GoGetRingPattern, PickupAvailabilitySchedule, UserProfile } from '../types';
 import { upsertSupabaseProfile } from '../supabase';
+import {
+  GO_GET_RING_PATTERN_LABELS,
+  MAX_GO_GET_RING_DURATION,
+  MIN_GO_GET_RING_DURATION,
+  normalizeGoGetRingDuration,
+  normalizeGoGetRingPattern,
+} from '../lib/goGetRing';
+import { getPickupAvailability } from '../lib/pickupAvailability';
+import PickupAvailabilityEditor from './goget/PickupAvailabilityEditor';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface GoGetSettingsProps {
   userProfile: UserProfile;
@@ -9,32 +19,78 @@ interface GoGetSettingsProps {
 }
 
 export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSettingsProps) {
-  const [enabled, setEnabled] = useState(userProfile.goGetEnabled !== false);
+  const { alert } = useConfirm();
+  const [enabled, setEnabled] = useState(userProfile.goGetEnabled === true);
+  const [availability, setAvailability] = useState<PickupAvailabilitySchedule>(() =>
+    getPickupAvailability(userProfile),
+  );
+  const [ringDuration, setRingDuration] = useState(
+    normalizeGoGetRingDuration(userProfile.goGetRingDurationSeconds),
+  );
+  const [ringPattern, setRingPattern] = useState<GoGetRingPattern>(
+    normalizeGoGetRingPattern(userProfile.goGetRingPattern),
+  );
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    setEnabled(userProfile.goGetEnabled !== false);
-  }, [userProfile.goGetEnabled, userProfile.uid]);
+    setEnabled(userProfile.goGetEnabled === true);
+    setAvailability(getPickupAvailability(userProfile));
+    setRingDuration(normalizeGoGetRingDuration(userProfile.goGetRingDurationSeconds));
+    setRingPattern(normalizeGoGetRingPattern(userProfile.goGetRingPattern));
+  }, [userProfile.uid, userProfile.goGetEnabled, userProfile.pickupAvailability, userProfile.goGetRingDurationSeconds, userProfile.goGetRingPattern]);
 
-  const handleToggle = async (next: boolean) => {
+  const persist = async (patch: Partial<UserProfile>, successMsg?: string) => {
     setSaving(true);
     setMsg('');
     setErr('');
-    const updated: UserProfile = { ...userProfile, goGetEnabled: next };
+    const updated: UserProfile = { ...userProfile, ...patch };
     const result = await upsertSupabaseProfile(updated);
     setSaving(false);
     if (!result.ok) {
       setErr(result.errorMessage || 'Could not save this setting.');
-      return;
+      return false;
     }
-    setEnabled(next);
     onUpdateProfile(updated);
-    setMsg(
+    if (successMsg) setMsg(successMsg);
+    return true;
+  };
+
+  const handleToggle = async (next: boolean) => {
+    if (next) {
+      await alert({
+        title: 'Turn on app pickup coordination?',
+        message:
+          'Neighbors can start Go Get with you when you both use the installed app and notifications. Incoming requests ring your phone (like a delivery alert) for the duration you choose below. You can set pickup hours and ring style anytime.',
+        okLabel: 'Turn on',
+      });
+    }
+    const ok = await persist(
+      {
+        goGetEnabled: next,
+        pickupAvailability: next ? availability : userProfile.pickupAvailability,
+        goGetRingDurationSeconds: ringDuration,
+        goGetRingPattern: ringPattern,
+      },
       next
-        ? 'Go Get & pickup coordination is on.'
+        ? 'Pickup coordination is on — set your hours and ring style below.'
         : 'Opted out — you can still list and message neighbors without app pickup support.',
+    );
+    if (ok) setEnabled(next);
+  };
+
+  const saveAvailability = async () => {
+    await persist({ pickupAvailability: availability }, 'Pickup hours saved.');
+  };
+
+  const saveRingPrefs = async () => {
+    await persist(
+      {
+        goGetRingDurationSeconds: ringDuration,
+        goGetRingPattern: ringPattern,
+      },
+      'Ring alert settings saved.',
     );
   };
 
@@ -45,9 +101,8 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
         <div className="min-w-0">
           <h4 className="text-xs font-bold text-muted uppercase tracking-wider">Go Get & pickup coordination</h4>
           <p className="text-xs text-muted mt-1 leading-relaxed">
-            App-supported pickups (Go Get, Drop off, Meet up, claim-at-pin) only work in the installed app
-            (APK or Add to Home Screen) with notifications on. Turn this off to list normally and arrange
-            pickups yourself in chat — without live tracking or handoff prompts.
+            Off by default. Turn on to let neighbors use Go Get, Drop off, Meet up, and claim-at-pin on your
+            listings during your pickup hours. Requires the installed app and notifications.
           </p>
         </div>
       </div>
@@ -65,11 +120,11 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
       >
         <div className="text-left min-w-0">
           <p className="text-xs font-bold text-app">
-            {enabled ? 'Using app pickup coordination' : 'Opted out — listing & chat only'}
+            {enabled ? 'Using app pickup coordination' : 'Off — listing & chat only'}
           </p>
           <p className="text-[10px] text-muted mt-0.5 leading-snug">
             {enabled
-              ? 'Neighbors can start Go Get with you when you both have the app and notifications on.'
+              ? 'Go Get can ring your phone for live requests. Scheduling uses normal notifications.'
               : 'Your posts stay up. Neighbors message you to arrange pickup independently.'}
           </p>
         </div>
@@ -85,6 +140,74 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
           />
         </span>
       </button>
+
+      {enabled && (
+        <div className="space-y-4 pt-2 border-t border-app">
+          <div className="space-y-2">
+            <h5 className="text-[10px] font-bold text-muted uppercase tracking-wider">Pickup availability</h5>
+            <PickupAvailabilityEditor
+              value={availability}
+              onChange={setAvailability}
+              disabled={saving}
+            />
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void saveAvailability()}
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+            >
+              Save pickup hours
+            </button>
+          </div>
+
+          <div className="space-y-2 border-t border-app pt-4">
+            <div className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-accent" />
+              <h5 className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                Incoming Go Get ring
+              </h5>
+            </div>
+            <p className="text-[10px] text-muted leading-snug">
+              When someone wants you right now, your phone rings for this long ({MIN_GO_GET_RING_DURATION}–
+              {MAX_GO_GET_RING_DURATION} seconds).
+            </p>
+            <label className="block text-xs text-muted">
+              Ring duration: {ringDuration}s
+              <input
+                type="range"
+                min={MIN_GO_GET_RING_DURATION}
+                max={MAX_GO_GET_RING_DURATION}
+                step={5}
+                value={ringDuration}
+                onChange={(e) => setRingDuration(normalizeGoGetRingDuration(Number(e.target.value)))}
+                className="w-full mt-1"
+                disabled={saving}
+              />
+            </label>
+            <label className="block text-xs text-muted">
+              Alert style
+              <select
+                value={ringPattern}
+                onChange={(e) => setRingPattern(normalizeGoGetRingPattern(e.target.value))}
+                className="sbn-input text-sm mt-1 w-full"
+                disabled={saving}
+              >
+                {(Object.keys(GO_GET_RING_PATTERN_LABELS) as GoGetRingPattern[]).map((key) => (
+                  <option key={key} value={key}>{GO_GET_RING_PATTERN_LABELS[key]}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void saveRingPrefs()}
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+            >
+              Save ring settings
+            </button>
+          </div>
+        </div>
+      )}
 
       {msg && <p className="text-xs font-semibold text-emerald-500">{msg}</p>}
       {err && <p className="text-xs font-semibold text-red-400">{err}</p>}

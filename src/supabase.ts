@@ -8,6 +8,9 @@ import { normalizeItemMedia, plainListingDescription } from './lib/listingConten
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
 import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
+import type { PickupAvailabilitySchedule } from './types';
+import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './lib/goGetRing';
+import { normalizePickupAvailability } from './lib/pickupAvailability';
 import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
 import { getEventsUnlockStatus } from './lib/eventsApi';
 import {
@@ -380,6 +383,18 @@ function normalizeAccountStatus(
   return { accountStatus, suspendedUntil };
 }
 
+function parsePickupAvailabilityColumn(raw: unknown): PickupAvailabilitySchedule | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === 'string') {
+    try {
+      return normalizePickupAvailability(JSON.parse(raw));
+    } catch {
+      return undefined;
+    }
+  }
+  return normalizePickupAvailability(raw);
+}
+
 function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfile | null {
   if (!row) return null;
   const uid = String(row.uid ?? '');
@@ -402,8 +417,13 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     role: normalizeUserRole(row.role),
     accountStatus,
     suspendedUntil,
-    // Default true when column missing / null — only explicit false opts out.
-    goGetEnabled: row.goGetEnabled === false || row.go_get_enabled === false ? false : true,
+    // Default off until neighbor opts in explicitly.
+    goGetEnabled: row.goGetEnabled === true || row.go_get_enabled === true,
+    pickupAvailability: parsePickupAvailabilityColumn(row.pickupAvailability ?? row.pickup_availability),
+    goGetRingDurationSeconds: normalizeGoGetRingDuration(
+      row.goGetRingDurationSeconds ?? row.go_get_ring_duration_seconds,
+    ),
+    goGetRingPattern: normalizeGoGetRingPattern(row.goGetRingPattern ?? row.go_get_ring_pattern),
     staffInteractionMode:
       row.staffInteractionMode === 'neighbor' || row.staff_interaction_mode === 'neighbor'
         ? 'neighbor'
@@ -561,7 +581,7 @@ function listingRowToProfile(uid: string, row: Record<string, unknown>): UserPro
     neighborhood: String(row.neighborhood || 'Sacramento'),
     bio: undefined,
     role: 'user',
-    goGetEnabled: true,
+    goGetEnabled: false,
     createdAt: row.createdAt,
   };
 }
@@ -698,7 +718,10 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
-      goGetEnabled: profile.goGetEnabled !== false,
+      goGetEnabled: profile.goGetEnabled === true,
+      pickupAvailability: profile.pickupAvailability ?? null,
+      goGetRingDurationSeconds: normalizeGoGetRingDuration(profile.goGetRingDurationSeconds),
+      goGetRingPattern: normalizeGoGetRingPattern(profile.goGetRingPattern),
       staffInteractionMode:
         profile.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
       createdAt: coerceToIsoDate(profile.createdAt),
@@ -707,12 +730,19 @@ export async function upsertSupabaseProfile(
     let { data, error } = await supabase
       .from('users')
       .upsert(payload, { onConflict: 'uid' })
-      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, createdAt')
+      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, createdAt')
       .single();
 
     // Older DBs may not have goGetEnabled / staffInteractionMode yet — retry without missing columns.
-    if (error && /goGetEnabled|staffInteractionMode|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
-      const { goGetEnabled: _goGet, staffInteractionMode: _mode, ...legacyPayload } = payload;
+    if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+      const {
+        goGetEnabled: _goGet,
+        staffInteractionMode: _mode,
+        pickupAvailability: _avail,
+        goGetRingDurationSeconds: _ringDur,
+        goGetRingPattern: _ringPat,
+        ...legacyPayload
+      } = payload;
       ({ data, error } = await supabase
         .from('users')
         .upsert(legacyPayload, { onConflict: 'uid' })
@@ -1527,6 +1557,44 @@ export async function getSupabaseChats(
     console.warn('Supabase chats fetch failed:', err);
     handleSupabaseError(err, 'chats');
     return [];
+  }
+}
+
+export async function getUserPickupCoordinationByIds(
+  userIds: string[],
+): Promise<
+  Record<
+    string,
+    Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability' | 'goGetRingDurationSeconds' | 'goGetRingPattern'>
+  >
+> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid, goGetEnabled, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern')
+      .in('uid', unique);
+    if (error || !data) return {};
+    const map: Record<
+      string,
+      Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability' | 'goGetRingDurationSeconds' | 'goGetRingPattern'>
+    > = {};
+    for (const row of data as Record<string, unknown>[]) {
+      const uid = String(row.uid ?? '');
+      if (!uid) continue;
+      map[uid] = {
+        goGetEnabled: row.goGetEnabled === true || row.go_get_enabled === true,
+        pickupAvailability: parsePickupAvailabilityColumn(row.pickupAvailability ?? row.pickup_availability),
+        goGetRingDurationSeconds: normalizeGoGetRingDuration(
+          row.goGetRingDurationSeconds ?? row.go_get_ring_duration_seconds,
+        ),
+        goGetRingPattern: normalizeGoGetRingPattern(row.goGetRingPattern ?? row.go_get_ring_pattern),
+      };
+    }
+    return map;
+  } catch {
+    return {};
   }
 }
 

@@ -68,7 +68,11 @@ import GoGetMeetingMap from './goget/GoGetMeetingMap';
 import GoGetShareLocationToggle from './goget/GoGetShareLocationToggle';
 import ReportGoGetViolationDialog from './goget/ReportGoGetViolationDialog';
 import { confirmGoGetAsRequester, confirmGoGetTripStart, confirmDropOffAsFulfiller, confirmMeetUp } from './goget/goGetSafetyConfirm';
+import GoGetRingWaitingPanel from './goget/GoGetRingWaitingPanel';
+import GoGetScheduleMeetPanel from './goget/GoGetScheduleMeetPanel';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { getSupabaseProfile } from '../supabase';
+import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
 
 interface ItemDetailNavigationProps {
   item: ItemPost;
@@ -159,10 +163,25 @@ export default function ItemDetailNavigation({
   const [reportOpen, setReportOpen] = useState(false);
   const [fulfillerLiveLocation, setFulfillerLiveLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
+  const [posterProfile, setPosterProfile] = useState<UserProfile | null>(null);
   const arrivalHandledRef = useRef(false);
   const autoStartAttemptedRef = useRef(false);
 
   const isOwner = item.userId === currentUserId;
+
+  const coordinationGate = useMemo(() => {
+    if (isOwner || !userProfile) return { ok: true as const };
+    return canShowAppPickupCoordination({
+      item,
+      posterProfile: posterProfile ?? { uid: item.userId, goGetEnabled: false },
+      pickerProfile: userProfile,
+    });
+  }, [isOwner, userProfile, item, posterProfile]);
+
+  useEffect(() => {
+    if (item.userId === currentUserId) return;
+    void getSupabaseProfile(item.userId).then((p) => setPosterProfile(p));
+  }, [item.userId, currentUserId]);
 
   useEffect(() => {
     autoStartAttemptedRef.current = false;
@@ -432,6 +451,14 @@ export default function ItemDetailNavigation({
 
   useEffect(() => {
     if (!autoStartNavigation || autoStartAttemptedRef.current || !sessionLoaded) return;
+    if (!coordinationGate.ok) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
+    if (session && session.status !== 'active' && !navigatesDirectlyToPin(item)) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
     if (!destination) {
       onAutoStartNavigationConsumed?.();
       return;
@@ -443,10 +470,13 @@ export default function ItemDetailNavigation({
   }, [
     autoStartNavigation,
     sessionLoaded,
+    session,
     destination,
     userLocation,
     handleListingNavigation,
     onAutoStartNavigationConsumed,
+    coordinationGate.ok,
+    item,
   ]);
 
   const handleProgressUpdate = useCallback(
@@ -671,12 +701,36 @@ export default function ItemDetailNavigation({
         );
       }
       return (
+        <GoGetRingWaitingPanel
+          session={session}
+          item={item}
+          posterName={session.fulfillerName}
+          onSessionChange={setSession}
+          onCancel={() => void handleCancel()}
+          onRingExpired={() => {}}
+        />
+      );
+    }
+
+    if (session.status === 'awaiting_schedule' && isRequester && userProfile && posterProfile) {
+      return (
+        <GoGetScheduleMeetPanel
+          session={session}
+          item={item}
+          posterName={session.fulfillerName}
+          posterProfile={posterProfile}
+          requesterProfile={userProfile}
+          onSessionChange={setSession}
+          onCancel={() => void handleCancel()}
+        />
+      );
+    }
+
+    if (session.status === 'awaiting_schedule') {
+      return (
         <div className="sbn-card p-4 space-y-2">
           {errorBanner}
-          <p className="text-sm text-app flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-accent" />
-            Waiting for {otherUserName} to respond…
-          </p>
+          <p className="text-sm text-app">Waiting for {otherUserName} to schedule a pickup time…</p>
           {cancelLink}
         </div>
       );
@@ -929,7 +983,7 @@ export default function ItemDetailNavigation({
       {!sessionLoaded ? null : session ? (
         renderSessionCard()
       ) : (
-        destination && (
+        destination && coordinationGate.ok && (
           <>
             <MapSelectionRouteRow
               locationHint={locationHint}
@@ -1013,6 +1067,12 @@ export default function ItemDetailNavigation({
             )}
           </>
         )
+      )}
+      {!session && destination && !coordinationGate.ok && !isOwner && (
+        <p className="text-sm text-muted sbn-card p-3">
+          App pickup coordination isn&apos;t available for this listing right now (neighbor opted out or outside
+          pickup hours). Message the poster to arrange pickup manually.
+        </p>
       )}
 
       {session && !isOwner && !['completed', 'cancelled', 'disputed'].includes(session.status) && (
