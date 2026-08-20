@@ -133,43 +133,45 @@ html.sbn-session-restore #root:empty {
 
 #map_navigation_view {
   --sbn-nav-accent: var(--color-accent);
-  --sbn-nav-accent-glow: color-mix(in srgb, var(--color-accent) 55%, transparent);
+  --sbn-nav-accent-glow: color-mix(in srgb, var(--color-accent) 40%, transparent);
   --sbn-nav-danger: #ff4444;
   --sbn-nav-warning: #ffb000;
   --sbn-nav-success: #22c55e;
-  --sbn-nav-sheet-height: 8.5rem;
+  --sbn-nav-sheet-height: 7.25rem;
   font-family: var(--font-sans);
   overflow: hidden;
 }
 
 #map_navigation_view.sbn-nav--dark {
-  --sbn-nav-bg: #080808;
+  --sbn-nav-bg: #0b0b0c;
   --sbn-nav-map-bg: #0c0c0e;
-  --sbn-nav-card: rgba(21, 21, 21, 0.78);
-  --sbn-nav-card-solid: #151515;
-  --sbn-nav-surface: rgba(32, 32, 32, 0.88);
-  --sbn-nav-glass-border: rgba(255, 255, 255, 0.1);
-  --sbn-nav-text: #ffffff;
-  --sbn-nav-text-secondary: #a8a8a8;
-  --sbn-nav-fab-bg: rgba(15, 15, 16, 0.82);
-  --sbn-nav-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-  --sbn-nav-lane-inactive: rgba(255, 255, 255, 0.18);
+  --sbn-nav-chrome: #141416;
+  --sbn-nav-card: #141416;
+  --sbn-nav-card-solid: #141416;
+  --sbn-nav-surface: #1c1c20;
+  --sbn-nav-glass-border: rgba(255, 255, 255, 0.08);
+  --sbn-nav-text: #f4f4f5;
+  --sbn-nav-text-secondary: #a1a1aa;
+  --sbn-nav-fab-bg: rgba(20, 20, 22, 0.92);
+  --sbn-nav-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
+  --sbn-nav-lane-inactive: rgba(255, 255, 255, 0.14);
   --sbn-nav-lane-active-bg: var(--color-accent);
   --sbn-nav-lane-active-fg: #fff;
 }
 
 #map_navigation_view.sbn-nav--light {
-  --sbn-nav-bg: #f6f7f9;
+  --sbn-nav-bg: #f4f5f7;
   --sbn-nav-map-bg: #e8edf4;
-  --sbn-nav-card: rgba(255, 255, 255, 0.82);
+  --sbn-nav-chrome: #ffffff;
+  --sbn-nav-card: #ffffff;
   --sbn-nav-card-solid: #ffffff;
-  --sbn-nav-surface: rgba(240, 242, 245, 0.92);
+  --sbn-nav-surface: #f1f2f4;
   --sbn-nav-glass-border: rgba(0, 0, 0, 0.08);
   --sbn-nav-text: #111111;
-  --sbn-nav-text-secondary: #666666;
-  --sbn-nav-fab-bg: rgba(255, 255, 255, 0.88);
-  --sbn-nav-shadow: 0 12px 36px rgba(15, 23, 42, 0.14);
-  --sbn-nav-lane-inactive: rgba(0, 0, 0, 0.12);
+  --sbn-nav-text-secondary: #5c5f66;
+  --sbn-nav-fab-bg: rgba(255, 255, 255, 0.94);
+  --sbn-nav-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
+  --sbn-nav-lane-inactive: rgba(0, 0, 0, 0.1);
   --sbn-nav-lane-active-bg: var(--color-accent);
   --sbn-nav-lane-active-fg: #fff;
 }
@@ -201,9 +203,9 @@ html.sbn-session-restore #root:empty {
 }
 
 #map_navigation_view .leaflet-control-attribution {
-  margin-right: 0.5rem;
-  margin-bottom: calc(var(--sbn-nav-sheet-height, 8.5rem) + 0.35rem);
-  max-width: calc(100% - 5.5rem);
+  margin-right: 3.6rem;
+  margin-bottom: calc(var(--sbn-nav-sheet-height, 7.25rem) + 0.9rem);
+  max-width: calc(100% - 9.5rem);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -220,8 +222,6 @@ html.sbn-session-restore #root:empty {
 
 #map_navigation_view .sbn-nav-glass {
   background: var(--sbn-nav-card);
-  backdrop-filter: blur(22px) saturate(1.45);
-  -webkit-backdrop-filter: blur(22px) saturate(1.45);
   border: 1px solid var(--sbn-nav-glass-border);
   box-shadow: var(--sbn-nav-shadow);
   color: var(--sbn-nav-text);
@@ -229,16 +229,19 @@ html.sbn-session-restore #root:empty {
 
 #map_navigation_view .sbn-nav-top-stack {
   margin: 0;
-  border-radius: 0 0 1.35rem 1.35rem;
+  border-radius: 0 0 1.25rem 1.25rem;
   overflow: hidden;
   position: relative;
   z-index: 25;
+  background: var(--sbn-nav-chrome);
+  color: var(--sbn-nav-text);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
 }
 
 #map_navigation_view .sbn-nav-banner {
   border-radius: 0;
   margin: 0;
-  padding: calc(0.55rem + var(--sbn-safe-area-top, var(--sbn-inset-top, env(safe-area-inset-top, 0px)))) 1rem 0.7rem;
+  padding: calc(0.45rem + var(--sbn-safe-area-top, var(--sbn-inset-top, env(safe-area-inset-top, 0px)))) 1rem 0.55rem;
   position: relative;
   z-index: 25;
   background: transparent;
@@ -246,20 +249,123 @@ html.sbn-session-restore #root:empty {
   border: 0;
 }
 
+#map_navigation_view .sbn-nav-banner-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+#map_navigation_view .sbn-nav-banner-icon {
+  flex-shrink: 0;
+  width: 3.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.15rem;
+}
+
+#map_navigation_view .sbn-nav-banner-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+#map_navigation_view .sbn-nav-banner-distance {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--sbn-nav-text);
+  font-variant-numeric: tabular-nums;
+}
+
+#map_navigation_view .sbn-nav-banner-instruction {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--sbn-nav-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+#map_navigation_view .sbn-nav-banner-then {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--sbn-nav-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
 /* Landscape phones / short windows: free up vertical room so the floating
    controls below never have to overlap the details sheet. */
 #map_navigation_view .sbn-nav-banner-compact {
-  padding: calc(0.35rem + var(--sbn-safe-area-top, var(--sbn-inset-top, env(safe-area-inset-top, 0px)))) 0.75rem 0.45rem;
+  padding: calc(0.28rem + var(--sbn-safe-area-top, var(--sbn-inset-top, env(safe-area-inset-top, 0px)))) 0.75rem 0.35rem;
+}
+
+#map_navigation_view .sbn-nav-banner-compact .sbn-nav-banner-distance {
+  font-size: 1.35rem;
+}
+
+#map_navigation_view .sbn-nav-banner-compact .sbn-nav-banner-instruction {
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
 }
 
 #map_navigation_view .sbn-nav-mode-bar {
-  padding: 0 0.75rem 0.7rem;
+  padding: 0 0.85rem 0.7rem;
+}
+
+#map_navigation_view .sbn-nav-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  padding: 3px;
+  border-radius: 9999px;
+  background: var(--sbn-nav-surface);
+  border: 1px solid var(--sbn-nav-glass-border);
+}
+
+#map_navigation_view .sbn-nav-mode-btn {
+  height: 2.05rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--sbn-nav-text-secondary);
+  background: transparent;
+  border: 0;
+}
+
+#map_navigation_view .sbn-nav-mode-btn.is-selected {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+#map_navigation_view.sbn-nav-compact .sbn-nav-mode-btn span {
+  display: none;
+}
+
+#map_navigation_view.sbn-nav-compact .sbn-nav-mode-bar {
+  padding: 0 0.65rem 0.45rem;
 }
 
 #map_navigation_view .sbn-nav-banner-shimmer {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 1rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
   background: linear-gradient(110deg, rgba(255,255,255,0.06) 8%, rgba(255,255,255,0.18) 18%, rgba(255,255,255,0.06) 33%);
   background-size: 200% 100%;
   animation: sbn-nav-shimmer 1.2s linear infinite;
@@ -379,28 +485,32 @@ html.sbn-session-restore #root:empty {
   color: var(--sbn-nav-text-secondary);
 }
 
-#map_navigation_view .sbn-nav-speed-puck {
-  min-width: 4rem;
-  border-radius: 1rem;
-  padding: 0.55rem 0.7rem 0.5rem;
-  text-align: center;
+#map_navigation_view .sbn-nav-map-hud {
+  position: relative;
+  flex: 1;
+  min-height: 0;
 }
 
-#map_navigation_view .sbn-nav-speed-puck-value {
-  font-size: 1.35rem;
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--sbn-nav-text);
+#map_navigation_view .sbn-nav-speed-dock {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  pointer-events: none;
 }
 
-#map_navigation_view .sbn-nav-speed-puck-unit {
-  margin-top: 0.15rem;
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--sbn-nav-text-secondary);
+#map_navigation_view .sbn-nav-fab-dock {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: auto;
+}
+
+#map_navigation_view.sbn-nav-compact .sbn-nav-fab-dock {
+  flex-direction: row;
+  gap: 0.4rem;
 }
 
 #map_navigation_view .sbn-nav-user-puck {
@@ -438,66 +548,49 @@ html.sbn-session-restore #root:empty {
   border-bottom: 16px solid var(--color-accent);
 }
 
-#map_navigation_view .sbn-nav-banner::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-#map_navigation_view .sbn-nav-banner-accent {
-  box-shadow:
-    var(--sbn-nav-shadow),
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent),
-    0 0 28px color-mix(in srgb, var(--color-accent) 22%, transparent);
-}
-
 #map_navigation_view .sbn-nav-lane {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding-top: 0.75rem;
-  margin-top: 0.65rem;
+  justify-content: flex-start;
+  gap: 0.3rem;
+  padding-top: 0.55rem;
+  margin-top: 0.5rem;
+  margin-left: 4.1rem;
   border-top: 1px solid var(--sbn-nav-glass-border);
 }
 
+#map_navigation_view.sbn-nav-compact .sbn-nav-lane {
+  margin-left: 3.25rem;
+}
+
 #map_navigation_view .sbn-nav-lane-slot {
-  min-width: 2.15rem;
-  height: 1.85rem;
-  padding: 0 0.15rem;
-  border-radius: 0.45rem;
+  min-width: 1.85rem;
+  height: 1.55rem;
+  padding: 0 0.12rem;
+  border-radius: 0.35rem;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--sbn-nav-lane-inactive);
   color: var(--sbn-nav-text-secondary);
-  transition: transform 0.25s ease, background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
 }
 
 #map_navigation_view .sbn-nav-lane-slot-active {
   background: var(--sbn-nav-lane-active-bg);
   color: var(--sbn-nav-lane-active-fg);
-  box-shadow: 0 0 16px var(--sbn-nav-accent-glow);
-  transform: translateY(-1px) scale(1.04);
 }
 
 #map_navigation_view .sbn-nav-fab {
-  width: 3rem;
-  height: 3rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 9999px;
   background: var(--sbn-nav-fab-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   color: var(--sbn-nav-text);
   box-shadow: var(--sbn-nav-shadow);
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--sbn-nav-glass-border);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 #map_navigation_view .sbn-nav-fab:active {
@@ -508,87 +601,98 @@ html.sbn-session-restore #root:empty {
   background: var(--color-accent);
   color: var(--color-on-accent);
   border-color: transparent;
-  box-shadow:
-    var(--sbn-nav-shadow),
-    0 0 20px var(--sbn-nav-accent-glow);
 }
 
-/* Landscape phones / short windows — see .sbn-nav-banner-compact */
+#map_navigation_view .sbn-nav-fab-speaking {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 70%, transparent);
+}
+
 #map_navigation_view .sbn-nav-fab-compact {
   width: 2.25rem;
   height: 2.25rem;
 }
 
-#map_navigation_view .sbn-nav-speed-card {
-  border-radius: 1rem;
+#map_navigation_view .sbn-nav-speed {
+  width: 4.15rem;
+  border-radius: 0.7rem;
   overflow: hidden;
-  min-width: 3.5rem;
+  box-shadow: var(--sbn-nav-shadow);
+}
+
+#map_navigation_view .sbn-nav-speed-sign {
+  background: #fff;
+  color: #111;
   text-align: center;
+  padding: 0.3rem 0.25rem 0.35rem;
+  border: 2px solid #111;
+  border-bottom: 0;
+  border-radius: 0.7rem 0.7rem 0 0;
 }
 
-/* Landscape phones / short windows — see .sbn-nav-banner-compact */
-#map_navigation_view .sbn-nav-speed-card-compact {
-  min-width: 2.75rem;
+#map_navigation_view .sbn-nav-speed-sign-label {
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
-#map_navigation_view .sbn-nav-speed-card-compact .sbn-nav-speed-limit {
-  padding: 0.2rem 0.4rem 0.15rem;
-}
-
-#map_navigation_view .sbn-nav-speed-card-compact .sbn-nav-speed-current {
-  padding: 0.2rem 0.4rem 0.25rem;
-}
-
-#map_navigation_view .sbn-nav-speed-limit {
-  padding: 0.45rem 0.55rem 0.35rem;
-  border-bottom: 1px solid var(--sbn-nav-glass-border);
-  background: color-mix(in srgb, var(--sbn-nav-card-solid) 88%, white);
-}
-
-#map_navigation_view .sbn-nav-speed-current {
-  padding: 0.4rem 0.55rem 0.5rem;
+#map_navigation_view .sbn-nav-speed-sign-value {
+  margin-top: 0.05rem;
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-#map_navigation_view .sbn-nav-speed-current--ok {
-  color: var(--sbn-nav-text);
+#map_navigation_view .sbn-nav-speed-now {
+  background: #111;
+  color: #fff;
+  text-align: center;
+  padding: 0.28rem 0.2rem 0.35rem;
 }
 
-#map_navigation_view .sbn-nav-speed-current--warn {
+#map_navigation_view .sbn-nav-speed-now-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+#map_navigation_view .sbn-nav-speed-now-unit {
+  margin-top: 0.08rem;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+#map_navigation_view .sbn-nav-speed-now--warn {
   color: var(--sbn-nav-warning);
 }
 
-#map_navigation_view .sbn-nav-speed-current--over {
+#map_navigation_view .sbn-nav-speed-now--over {
   color: var(--sbn-nav-danger);
 }
 
-#map_navigation_view .sbn-nav-road-pill {
-  background: var(--sbn-nav-card);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  color: var(--sbn-nav-text);
-  border-radius: 9999px;
-  padding: 0.55rem 1.1rem;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  box-shadow: var(--sbn-nav-shadow);
-  border: 1px solid var(--sbn-nav-glass-border);
-  max-width: min(100%, 18rem);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
+#map_navigation_view.sbn-nav-compact .sbn-nav-speed {
+  width: 3.35rem;
 }
 
-#map_navigation_view .sbn-nav-voice-bar {
-  margin: 0.5rem 0.75rem 0;
-  padding: 0.55rem 0.85rem;
-  border-radius: 9999px;
+#map_navigation_view.sbn-nav-compact .sbn-nav-speed-sign-value {
+  font-size: 1.15rem;
+}
+
+#map_navigation_view .sbn-nav-voice-strip {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  z-index: 24;
+  gap: 0.5rem;
+  margin: 0 0.85rem 0.65rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 9999px;
+  background: var(--sbn-nav-surface);
+  color: var(--sbn-nav-text);
 }
 
 #map_navigation_view .sbn-nav-voice-waves {
@@ -615,14 +719,34 @@ html.sbn-session-restore #root:empty {
 }
 
 #map_navigation_view .sbn-nav-sheet {
-  background: var(--sbn-nav-card);
-  backdrop-filter: blur(24px) saturate(1.35);
-  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  background: var(--sbn-nav-chrome);
   color: var(--sbn-nav-text);
-  border-top-left-radius: 1.75rem;
-  border-top-right-radius: 1.75rem;
-  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.35);
+  border-top-left-radius: 1.35rem;
+  border-top-right-radius: 1.35rem;
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.2);
   border-top: 1px solid var(--sbn-nav-glass-border);
+}
+
+#map_navigation_view .sbn-nav-sheet-eta {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--sbn-nav-text);
+  font-variant-numeric: tabular-nums;
+}
+
+#map_navigation_view .sbn-nav-gps-toast {
+  margin: 0.55rem 0.85rem 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.85rem;
+  background: var(--sbn-nav-chrome);
+  color: var(--sbn-nav-warning);
+  box-shadow: var(--sbn-nav-shadow);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 #map_navigation_view .sbn-nav-sheet-handle {
@@ -673,22 +797,6 @@ html.sbn-session-restore #root:empty {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 32%, transparent);
 }
 
-#map_navigation_view .sbn-nav-mode-chip {
-  background: var(--sbn-nav-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  color: var(--sbn-nav-text);
-  border: 1px solid var(--sbn-nav-glass-border);
-  border-radius: 9999px;
-  padding: 0.35rem 0.7rem;
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-align: center;
-  box-shadow: var(--sbn-nav-shadow);
-}
-
 #map_navigation_view .sbn-nav-settings-overlay {
   position: absolute;
   inset: 0;
@@ -707,6 +815,10 @@ html.sbn-session-restore #root:empty {
   overflow-y: auto;
   border-radius: 1.5rem;
   padding: 1.15rem 1.1rem 1.25rem;
+  background: var(--sbn-nav-chrome);
+  color: var(--sbn-nav-text);
+  border: 1px solid var(--sbn-nav-glass-border);
+  box-shadow: var(--sbn-nav-shadow);
 }
 
 #map_navigation_view .sbn-nav-dest-pin {

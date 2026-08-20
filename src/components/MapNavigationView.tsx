@@ -113,13 +113,8 @@ const NAV_ROUTE_GLOW = 'rgba(255, 69, 0, 0.42)';
 function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean }) {
   if (!visible || !phrase) return null;
   return (
-    <motion.div
-      className="sbn-nav-voice-bar sbn-nav-glass pointer-events-none"
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-    >
-      <Mic className="w-4 h-4 text-accent shrink-0" />
+    <div className="sbn-nav-voice-strip pointer-events-none" aria-live="polite">
+      <Mic className="w-3.5 h-3.5 text-accent shrink-0" />
       <div className="sbn-nav-voice-waves shrink-0" aria-hidden>
         <span />
         <span />
@@ -127,7 +122,7 @@ function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean 
         <span />
       </div>
       <p className="text-xs font-semibold truncate text-[var(--sbn-nav-text)]">{phrase}</p>
-    </motion.div>
+    </div>
   );
 }
 
@@ -149,7 +144,7 @@ function NavLaneGuidance({ lanes, maneuverKind }: { lanes: NavLane[]; maneuverKi
       {highlighted.map((lane, index) => (
         <div
           key={`${lane.indications.join('-')}-${index}`}
-          className={`sbn-nav-lane-slot text-sm font-black ${lane.valid ? 'sbn-nav-lane-slot-active' : ''}`}
+          className={`sbn-nav-lane-slot text-xs font-bold ${lane.valid ? 'sbn-nav-lane-slot-active' : ''}`}
           title={lane.indications.join(', ') || 'Lane'}
           aria-hidden={!lane.valid}
         >
@@ -163,38 +158,36 @@ function NavLaneGuidance({ lanes, maneuverKind }: { lanes: NavLane[]; maneuverKi
 function NavSpeedCard({
   currentMph,
   limitMph,
-  compact = false,
 }: {
   currentMph: string | null;
   limitMph: number;
-  compact?: boolean;
 }) {
   const current = currentMph != null ? Number.parseInt(currentMph, 10) : null;
   const speedClass =
     current == null || Number.isNaN(current)
-      ? 'sbn-nav-speed-current--ok'
+      ? ''
       : current > limitMph + 5
-        ? 'sbn-nav-speed-current--over'
+        ? 'sbn-nav-speed-now--over'
         : current > limitMph
-          ? 'sbn-nav-speed-current--warn'
-          : 'sbn-nav-speed-current--ok';
+          ? 'sbn-nav-speed-now--warn'
+          : '';
 
   return (
     <div
-      className={`sbn-nav-speed-card sbn-nav-glass pointer-events-auto ${compact ? 'sbn-nav-speed-card-compact' : ''}`}
+      className="sbn-nav-speed"
       aria-label={
         currentMph
           ? `Speed limit ${limitMph} miles per hour, current speed ${currentMph}`
           : `Speed limit ${limitMph} miles per hour`
       }
     >
-      <div className="sbn-nav-speed-limit">
-        {!compact && <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--sbn-nav-text-secondary)]">Limit</p>}
-        <p className={`font-black tabular-nums leading-none text-[var(--sbn-nav-text)] ${compact ? 'text-sm' : 'text-lg'}`}>{limitMph}</p>
+      <div className="sbn-nav-speed-sign">
+        <p className="sbn-nav-speed-sign-label">Speed limit</p>
+        <p className="sbn-nav-speed-sign-value">{limitMph}</p>
       </div>
-      <div className={`sbn-nav-speed-current ${speedClass}`}>
-        {!compact && <p className="text-[9px] font-bold uppercase tracking-wider opacity-70">Now</p>}
-        <p className={`font-black tabular-nums leading-none ${compact ? 'text-base' : 'text-xl'}`}>{currentMph ?? '—'}</p>
+      <div className={`sbn-nav-speed-now ${speedClass}`}>
+        <p className="sbn-nav-speed-now-value">{currentMph ?? '—'}</p>
+        <p className="sbn-nav-speed-now-unit">mph</p>
       </div>
     </div>
   );
@@ -243,6 +236,7 @@ interface NavigationDetailsSheetProps {
   onRecenter: () => void;
   onSettings: () => void;
   onExit: () => void;
+  currentRoad?: string | null;
 }
 
 function NavigationDetailsSheet({
@@ -263,6 +257,7 @@ function NavigationDetailsSheet({
   onRecenter,
   onSettings,
   onExit,
+  currentRoad,
 }: NavigationDetailsSheetProps) {
   const dragStartYRef = useRef(0);
   const expanded = snap === 'expanded';
@@ -326,16 +321,19 @@ function NavigationDetailsSheet({
             <ChevronUp className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
           </button>
 
-          <div className="flex-1 min-h-0 text-center">
-            <p className="text-[2rem] font-black text-accent leading-none tabular-nums font-display">
-              {arrived ? '0 min' : formatNavDuration(remainingSeconds)}
+          <div className="flex-1 min-w-0">
+            <p className="sbn-nav-sheet-eta">
+              {arrived ? 'Arrived' : formatNavDuration(remainingSeconds)}
             </p>
             <p className="text-sm font-medium mt-1 tabular-nums text-[var(--sbn-nav-text-secondary)]">
               {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
             </p>
-            <p className="text-[11px] truncate mt-0.5 text-[var(--sbn-nav-text-secondary)]">
-              {arrived ? `Arrived · ${destinationLabel}` : destinationLabel}
+            <p className="text-[12px] truncate mt-1 font-semibold text-[var(--sbn-nav-text)]">
+              {destinationLabel}
             </p>
+            {currentRoad && currentRoad !== destinationLabel ? (
+              <p className="text-[11px] truncate mt-0.5 text-[var(--sbn-nav-text-secondary)]">{currentRoad}</p>
+            ) : null}
             {gpsAccuracy != null && gpsAccuracy > 35 && !arrived && (
               <p className="text-[10px] text-[var(--sbn-nav-warning)] mt-1">GPS weak — ±{Math.round(gpsAccuracy)}m</p>
             )}
@@ -1739,7 +1737,7 @@ export default function MapNavigationView({
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}`}
+      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}`}
       id="map_navigation_view"
       style={{ background: 'var(--sbn-nav-bg)' }}
       onPointerDown={() => voiceRef.current.unlock()}
@@ -1776,72 +1774,45 @@ export default function MapNavigationView({
           </div>
         )}
 
-        {gpsError && !showFatalError && (
-          <div className="absolute inset-x-3 top-[calc(var(--sbn-safe-area-top,var(--sbn-inset-top,0px))+5.5rem)] z-30 pointer-events-none">
-            <div className="sbn-nav-glass rounded-2xl px-4 py-3 text-xs font-semibold text-[var(--sbn-nav-warning)] text-center">
-              {gpsError}
-            </div>
-          </div>
-        )}
-
         <div className="absolute inset-0 z-20 pointer-events-none flex flex-col">
-          <div id="nav_top_stack" className="pointer-events-auto shrink-0 sbn-nav-top-stack sbn-nav-glass sbn-nav-banner-accent">
-            <motion.div
+          <div id="nav_top_stack" className="pointer-events-auto shrink-0 sbn-nav-top-stack">
+            <div
               id="nav_instruction_banner"
               className={`sbn-nav-banner ${isCompact ? 'sbn-nav-banner-compact' : ''}`}
               aria-live="assertive"
               aria-atomic="true"
             >
-              <div className={`flex items-start gap-3 ${isCompact ? '' : 'min-h-[4rem]'}`}>
-                <div className={`shrink-0 flex flex-col items-center justify-center ${isCompact ? 'w-12' : 'w-[4.75rem]'}`}>
+              <div className="sbn-nav-banner-row">
+                <div className="sbn-nav-banner-icon">
                   {loading ? (
                     <div className="sbn-nav-banner-shimmer" aria-hidden />
                   ) : (
-                    <NavManeuverShield kind={maneuverKind} className={isCompact ? 'w-9 h-9' : 'w-14 h-14'} />
-                  )}
-                  {!loading && !arrived && (
-                    <p className="text-sm font-black mt-2 tabular-nums leading-none tracking-tight text-accent">
-                      {formatNavDistance(distanceToManeuver)}
-                    </p>
+                    <NavManeuverShield kind={maneuverKind} className={isCompact ? 'w-10 h-10' : 'w-12 h-12'} />
                   )}
                 </div>
-
-                <div className="min-w-0 flex-1">
+                <div className="sbn-nav-banner-copy">
                   {loading ? (
                     <>
-                      <p className={`font-display font-extrabold leading-tight ${isCompact ? 'text-lg' : 'text-[1.65rem]'}`}>Loading route</p>
-                      <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">To {destinationLabel}</p>
+                      <p className="sbn-nav-banner-distance">Routing</p>
+                      <p className="sbn-nav-banner-instruction">To {destinationLabel}</p>
                     </>
                   ) : arrived ? (
                     <>
-                      <p className={`font-display font-extrabold leading-tight ${isCompact ? 'text-lg' : 'text-[1.65rem]'}`}>You&apos;ve arrived</p>
-                      <p className="text-base font-bold mt-1 truncate">{destinationLabel}</p>
+                      <p className="sbn-nav-banner-distance">Arrived</p>
+                      <p className="sbn-nav-banner-instruction">{destinationLabel}</p>
                     </>
                   ) : (
                     <>
-                      <p
-                        className={`font-display font-extrabold leading-[1.05] tracking-tight truncate ${
-                          isCompact ? 'text-lg' : 'text-[1.65rem] sm:text-[1.85rem]'
-                        }`}
-                      >
-                        {bannerInstruction ?? bannerStreet}
-                      </p>
-                      <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">
-                        {bannerStreet}
-                        {currentRoadLabel && currentRoadLabel !== bannerStreet ? ` · now on ${currentRoadLabel}` : ''}
-                      </p>
-                      {thenLine ? (
-                        <p className={`font-semibold truncate text-[var(--sbn-nav-text-secondary)] opacity-80 ${isCompact ? 'text-[10px] mt-0.5' : 'text-[11px] mt-1'}`}>
-                          {thenLine}
-                        </p>
-                      ) : null}
+                      <p className="sbn-nav-banner-distance">{formatNavDistance(distanceToManeuver)}</p>
+                      <p className="sbn-nav-banner-instruction">{bannerInstruction ?? bannerStreet}</p>
+                      {thenLine ? <p className="sbn-nav-banner-then">{thenLine}</p> : null}
                     </>
                   )}
                 </div>
               </div>
 
               {!loading && route && (rerouting || offRouteMeters > NAV_OFF_ROUTE_THRESHOLD_M) && !arrived && (
-                <p className="mt-2 text-center text-xs font-semibold text-[var(--sbn-nav-warning)]">
+                <p className="mt-2 text-xs font-semibold text-[var(--sbn-nav-warning)]">
                   {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
                 </p>
               )}
@@ -1849,7 +1820,7 @@ export default function MapNavigationView({
               {!loading && !arrived && (
                 <NavLaneGuidance lanes={displayLanes} maneuverKind={maneuverKind} />
               )}
-            </motion.div>
+            </div>
             {!loading && route && !arrived && (
               <div id="nav_mode_switcher" className="sbn-nav-mode-bar">
                 <NavTravelModeSwitcher
@@ -1859,33 +1830,28 @@ export default function MapNavigationView({
                 />
               </div>
             )}
+            <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
           </div>
-          <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
+
+          {gpsError && !showFatalError && (
+            <div className="sbn-nav-gps-toast pointer-events-none">{gpsError}</div>
+          )}
 
           {!loading && route && (
-            <div className="relative flex-1 min-h-0">
-              {/* These floating controls only fit — and are only needed — while the
-                  details sheet is collapsed. The sheet's own expanded view has its
-                  own overview/voice/recenter/share row, so hiding these here avoids
-                  both duplicate controls and the FAB stack visually spilling onto
-                  the sheet when there's little vertical room left for it. */}
+            <div className="sbn-nav-map-hud">
               {sheetSnap === 'collapsed' && (
                 <>
-                  <div className="absolute left-3 bottom-3 pointer-events-auto flex flex-col gap-2 w-[4.5rem]">
-                    {showSpeedCard && (
-                      <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} compact={isCompact} />
-                    )}
-                  </div>
+                  {showSpeedCard && (
+                    <div className="sbn-nav-speed-dock">
+                      <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} />
+                    </div>
+                  )}
 
-                  <div
-                    className={`absolute right-3 flex pointer-events-auto ${
-                      isCompact ? 'top-1 flex-row gap-1.5' : 'top-2 flex-col gap-2.5'
-                    }`}
-                  >
+                  <div className="sbn-nav-fab-dock">
                     <button
                       type="button"
                       onClick={handleVoiceToggle}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${voiceOn ? 'sbn-nav-fab-active' : ''}`}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${voiceOn ? 'sbn-nav-fab-active' : ''} ${voiceSpeaking && voiceOn ? 'sbn-nav-fab-speaking' : ''}`}
                       title={voiceOn ? 'Voice guidance on' : 'Voice guidance off'}
                       aria-pressed={voiceOn}
                       aria-label={voiceOn ? 'Mute voice guidance' : 'Enable voice guidance'}
@@ -1899,7 +1865,7 @@ export default function MapNavigationView({
                     <button
                       type="button"
                       onClick={handleRecenter}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${followUser ? 'sbn-nav-fab-active' : ''}`}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${followUser ? '' : 'sbn-nav-fab-active'}`}
                       title="Center on you and speak the next turn"
                       aria-label="Center on you"
                     >
@@ -1914,25 +1880,7 @@ export default function MapNavigationView({
                     >
                       <Settings2 className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleOverview}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''}`}
-                      title="Route overview"
-                      aria-label="Route overview"
-                    >
-                      <MapIcon className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
-                    </button>
                   </div>
-
-                  {!arrived && currentRoadLabel && (
-                    <div className="absolute inset-x-0 bottom-3 flex justify-center px-20 pointer-events-none">
-                      <div className="sbn-nav-road-pill truncate">
-                        {currentRoadLabel}
-                        {gpsAccuracy != null ? ` · ±${Math.round(gpsAccuracy)}m` : ''}
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -1952,6 +1900,7 @@ export default function MapNavigationView({
                 stepIndex={stepIndex}
                 voiceOn={voiceOn}
                 travelMode={navSettings.travelMode}
+                currentRoad={currentRoadLabel}
                 onVoiceToggle={handleVoiceToggle}
                 onOverview={handleOverview}
                 onShare={() => void handleShareTrip()}
@@ -1966,7 +1915,7 @@ export default function MapNavigationView({
 
       {settingsOpen && (
         <div className="sbn-nav-settings-overlay" role="dialog" aria-modal="true" aria-labelledby="nav_settings_title">
-          <div className="sbn-nav-settings-card sbn-nav-glass pointer-events-auto">
+          <div className="sbn-nav-settings-card pointer-events-auto">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 id="nav_settings_title" className="text-base font-display font-bold text-[var(--sbn-nav-text)]">
                 Navigation settings
