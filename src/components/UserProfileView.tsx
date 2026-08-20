@@ -589,7 +589,6 @@ export default function UserProfileView({
             </button>
           </form>
 
-          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           <SystemPermissionsSettings />
           <ThemeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           <AccountNavigationSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
@@ -600,7 +599,8 @@ export default function UserProfileView({
       ) : null}
 
       {activeTab === 'account' ? (
-        <div id="profile_tab_panel_account" className={fullBleed ? 'flex flex-col min-w-0 w-full' : 'space-y-6'}>
+        <div id="profile_tab_panel_account" className={fullBleed ? 'flex flex-col min-w-0 w-full gap-6' : 'space-y-6'}>
+      <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
       <div
         className={`${fullBleed ? `${sectionShell} shadow-none` : 'sbn-section'} animate-fade-in min-w-0 overflow-hidden`}
         id="pwa_installs_section"
