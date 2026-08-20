@@ -1,13 +1,9 @@
 Android beta v0.1.0.0026 (versionCode 26)
 
 What's new:
-• Staff Navigate on Stuff and Events (official staff mode — direct in-app routing, no Go Get session)
-• Go Get ring flow: requester waiting screen, poster incoming ring (10–140s), schedule meet on timeout
-• Pickup availability windows + Go Get coordination is opt-in (default off) in Account settings
-• List/grid feed toggle with nearest-first grid view
-• Go Get pickup coordination limited to native Android app (APK/AAB); improved handoff flows
-• Play Store reviewer account has full app access (browse, post, message, claim)
-• Feed and Events loading shimmer skeletons
-• Play tester email export pagination fix (no longer stops at 100 users)
+• Staff Navigate on Stuff and Events
+• Go Get ring + pickup availability (coordination opt-in in Account)
+• List/grid feed toggle
+• Faster loading on feed and Events
 
 Download (sideload): https://www.sacramentobuynothing.com/download
