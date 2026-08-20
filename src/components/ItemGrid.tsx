@@ -78,7 +78,7 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
 ];
 
 const FEED_TYPE_OPTIONS: { value: ListingTypeFilter; label: string; id: string }[] = [
-  { value: 'all', label: 'All', id: 'feed_type_all' },
+  { value: 'all', label: 'Everything', id: 'feed_type_all' },
   { value: 'giveaway', label: 'Giving', id: 'feed_type_giving' },
   { value: 'looking', label: 'Looking', id: 'feed_type_looking' },
   { value: 'trade', label: 'Trading', id: 'feed_type_trading' },
