@@ -1,16 +1,9 @@
 Android beta v0.1.0.0040 (versionCode 40)
 
 What's new:
-• Feed cards — votes, reactions, and comment count; tap for full post page
-• Push alerts when neighbors comment, react, or vote on your feed posts
-• Notification bar icon — hands + money logo (not a heart)
-• Notification taps go to the right place — feed, chats, listings, message requests
-• Message-request alerts open your inbox (not a bogus chat)
-• Listing contact button says Request on giveaways and asks
-• Reminder after posting to check DMs, comments, and notifications
-• Map route preview fills the screen — you near the bottom, destination toward the top
-• Map compass and + buttons hide while a route is showing
-• Removed redundant Post badge on neighbor feed cards
-• Welcome feed post — casual founder intro to kick off neighbor chit-chat
+• Feed engagement + push when neighbors comment, react, or vote
+• Notification taps go to the right screen (feed, chats, listings, inbox)
+• Listing Request button; map route preview fills the screen
+• Feed and map polish
 
 Download (sideload): https://www.sacramentobuynothing.com/download
