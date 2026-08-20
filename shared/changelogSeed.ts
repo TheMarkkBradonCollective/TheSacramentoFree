@@ -70,6 +70,7 @@ const FEED_FULLSCREEN_NAV_PUBLISHED_AT = '2026-08-20T19:10:00.000Z';
 const NOTIFICATION_RELIABILITY_PUBLISHED_AT = '2026-08-20T19:12:00.000Z';
 const APK_0042_PUBLISHED_AT = '2026-08-20T19:45:00.000Z';
 const APK_0043_PUBLISHED_AT = '2026-08-20T20:30:00.000Z';
+const APK_0044_PUBLISHED_AT = '2026-08-20T21:00:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -124,6 +125,35 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0044',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0044',
+    'Spoken turn-by-turn navigation, full notification coverage, and Events toolbar cleanup.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0044 (versionCode 44).
+
+Since 0043:
+• Navigation voice — turn-by-turn directions speak on Android (Test voice in settings)
+• Alerts — comment replies, friend requests, awards, event RSVPs, News/Updates comments
+• Notification settings — separate toggles for feed, friends, events, awards, and more
+• Events tab — New / All / Filters sit above the Almost meetup time card
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0044.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 44
+- play-store-assets/release-notes-v0.1.0-0044.txt
+- android/app/src/main/java/org/sacramentobuynothing/app/NavigationTtsPlugin.java — native TTS
+- scripts/supabase-migration-aug-20-2026-notification-prefs-granular.sql — new pref columns
+
+HISTORY
+2026-08-20 — /runit release (PRs #310–#312); Android beta 0044 built.`,
+    APK_0044_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0043',
     '2026-08-20',
@@ -1455,6 +1485,28 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0044',
+    '2026-08-20',
+    'New Android beta 0044 — navigation voice + notification coverage',
+    'Turn-by-turn speaking, comment-reply alerts, granular toggles, Events toolbar.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0044: spoken navigation, fuller alerts (replies, friends, awards, events), and Events toolbar above the meetup card.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run the notification-preferences migration in Supabase before neighbors use the new toggles.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0044.
+
+HISTORY
+2026-08-20 — Android beta 0044 /runit release (PRs #310–#312).`,
+    APK_0044_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0043',
     '2026-08-20',

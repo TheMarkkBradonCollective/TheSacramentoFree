@@ -1,0 +1,8 @@
+Android beta v0.1.0.0044 (versionCode 44)
+
+What's new:
+• Navigation speaks turn-by-turn directions (native Android voice)
+• Alerts for comment replies, friends, awards, event RSVPs
+• Granular notification toggles; Events toolbar above meetup card
+
+Download (sideload): https://www.sacramentobuynothing.com/download

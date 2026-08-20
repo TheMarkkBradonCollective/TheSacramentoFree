@@ -67,6 +67,11 @@ const migrationMarkers = [
     markers: ['navigationSettings', 'appPreferences', 'native_app_sessions'],
     label: 'User prefs + native app session',
   },
+  {
+    file: 'scripts/supabase-migration-aug-20-2026-notification-prefs-granular.sql',
+    markers: ['feedReplies', 'friendRequests', 'eventRsvps', 'discussionComments'],
+    label: 'Granular notification preferences',
+  },
 ];
 
 for (const { file, markers, label: migrationLabel } of migrationMarkers) {
