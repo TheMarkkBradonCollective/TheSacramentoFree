@@ -6,24 +6,36 @@ import PostEventModal from './PostEventModal';
 
 type ListingKind = 'stuff' | 'event';
 
+export type NewListingModalMode = 'both' | 'stuff' | 'event';
+
 interface NewListingModalProps {
   userProfile: UserProfile;
   canAccessEvents: boolean;
   allEvents: CommunityEvent[];
+  mode: NewListingModalMode;
   onClose: () => void;
   onStuffSuccess: (item: ItemPost) => void;
   onEventSuccess: () => void;
+}
+
+function resolveKind(mode: NewListingModalMode): ListingKind {
+  return mode === 'event' ? 'event' : 'stuff';
 }
 
 export default function NewListingModal({
   userProfile,
   canAccessEvents,
   allEvents,
+  mode,
   onClose,
   onStuffSuccess,
   onEventSuccess,
 }: NewListingModalProps) {
-  const [kind, setKind] = useState<ListingKind>('stuff');
+  const [kind, setKind] = useState<ListingKind>(() => resolveKind(mode));
+  const showKindToggle = mode === 'both' && canAccessEvents;
+  const activeKind = showKindToggle ? kind : resolveKind(mode);
+  const title = activeKind === 'event' ? 'New event' : 'New stuff';
+  const TitleIcon = activeKind === 'event' ? CalendarDays : Package;
 
   return (
     <div id="new_listing_modal_overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
@@ -38,10 +50,10 @@ export default function NewListingModal({
           <div className="flex shrink-0 items-center justify-between border-b border-app bg-accent-soft/50 px-6 py-5">
             <div className="flex items-center gap-2.5">
               <div className="flex items-center justify-center rounded-xl bg-accent p-1.5 text-on-accent">
-                <Package className="h-4 w-4" />
+                <TitleIcon className="h-4 w-4" />
               </div>
               <h3 id="new_listing_modal_title" className="font-display text-base font-bold text-app">
-                New listing
+                {title}
               </h3>
             </div>
             <button
@@ -54,7 +66,7 @@ export default function NewListingModal({
             </button>
           </div>
 
-          {canAccessEvents ? (
+          {showKindToggle ? (
             <div className="shrink-0 border-b border-app px-6 pb-4 pt-4">
               <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted">
                 What are you posting?
@@ -89,7 +101,7 @@ export default function NewListingModal({
           ) : null}
 
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {kind === 'stuff' || !canAccessEvents ? (
+            {activeKind === 'stuff' ? (
               <PostItemModal
                 embedded
                 userProfile={userProfile}

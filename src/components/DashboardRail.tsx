@@ -39,7 +39,7 @@ export default function DashboardRail({
             </button>
           )}
           <p className="text-[11px] text-muted leading-snug px-1.5 pt-1">
-            Use the Map tab + button to post Stuff or Events in one New listing flow.
+            Map + opens Stuff or Events. Stuff and Events tabs use New for that page only.
           </p>
         </div>
       </div>
