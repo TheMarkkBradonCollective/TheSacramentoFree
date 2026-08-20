@@ -32,6 +32,7 @@ import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
 import ChatInboxHeader from './ChatInboxHeader';
@@ -67,6 +68,7 @@ import {
   markTradeCompletedFromChat,
 } from '../supabase';
 import ChatClaimActions from './ChatClaimActions';
+import ChatClaimerActions from './ChatClaimerActions';
 import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
 import { confirmGoGetAsFulfiller } from './goget/goGetSafetyConfirm';
 import { getChatCoordinationLabel } from '../lib/listingMapActions';
@@ -1145,11 +1147,19 @@ export default function ChatSystem({
               linkedItem.type === 'trade' &&
               linkedItem.status === 'active';
 
-            const showMarkClaimedBtn =
+            const showPosterHandoffActions =
               !!linkedItem &&
               !isChatDisabled &&
               isListingOwner &&
-              linkedItem.type === 'giveaway' &&
+              (linkedItem.type === 'giveaway' || linkedItem.type === 'looking') &&
+              linkedItem.status === 'active';
+
+            const showClaimerHandoffActions =
+              !supportsGoGetCoordination() &&
+              !!linkedItem &&
+              !isChatDisabled &&
+              !isListingOwner &&
+              (linkedItem.type === 'giveaway' || linkedItem.type === 'looking') &&
               linkedItem.status === 'active';
 
             const claimerUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
@@ -1164,6 +1174,7 @@ export default function ChatSystem({
             // Looking/Trade: only the non-poster starts coordination so they become the
             // navigator (requester). Poster waits as fulfiller — same as listing/map.
             const showStartGoGetBtn =
+              supportsGoGetCoordination() &&
               !!linkedItem &&
               !isChatDisabled &&
               linkedItem.status === 'active' &&
@@ -1514,13 +1525,27 @@ export default function ChatSystem({
                       ) : null}
                     </div>
                   ) : null}
-                  {!isCommunity && showMarkClaimedBtn && claimerUserId && !staffActingOfficial ? (
+                  {!isCommunity && showPosterHandoffActions && claimerUserId && linkedItem && !staffActingOfficial ? (
                     <ChatClaimActions
                       chatId={selectedChat.id}
                       linkedItem={linkedItem}
                       viewer={userProfile}
                       claimerUserId={claimerUserId}
                       disabled={isSending}
+                      onOpenSupport={() => setSupportView('list')}
+                      onChanged={() => {
+                        onItemsChanged?.();
+                        void getSupabaseMessages(selectedChat.id).then(setMessages);
+                      }}
+                    />
+                  ) : null}
+                  {!isCommunity && showClaimerHandoffActions && linkedItem ? (
+                    <ChatClaimerActions
+                      chatId={selectedChat.id}
+                      linkedItem={linkedItem}
+                      viewer={userProfile}
+                      disabled={isSending}
+                      onOpenSupport={() => setSupportView('list')}
                       onChanged={() => {
                         onItemsChanged?.();
                         void getSupabaseMessages(selectedChat.id).then(setMessages);

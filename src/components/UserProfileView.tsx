@@ -546,12 +546,16 @@ export default function UserProfileView({
           <SystemPermissionsSettings />
           <ThemeSettings />
           <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
-          <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          {usingApk && (
+            <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          )}
         </div>
       </div>
 
       {/* ── Activity ─────────────────────────────────────────── */}
-      <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
+      {usingApk && (
+        <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
+      )}
 
       {/* ── Awards ───────────────────────────────────────────── */}
       {onOpenAwards && (

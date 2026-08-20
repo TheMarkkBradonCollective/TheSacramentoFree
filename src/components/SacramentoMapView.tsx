@@ -17,6 +17,7 @@ import {
 import { createGoGetSession } from '../lib/goGetSessions';
 import { confirmDropOffAsFulfiller, confirmGoGetAsRequester, confirmMeetUp } from './goget/goGetSafetyConfirm';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 import { extractListingImageUrls } from '../lib/listingContent';
 import {
   haversineMeters,
@@ -1314,6 +1315,11 @@ export default function SacramentoMapView({
       return;
     }
 
+    if (!supportsGoGetCoordination()) {
+      openNavigation();
+      return;
+    }
+
     const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
     const allowed = await ensureGoGetAllowed({
       self: userProfile,
@@ -1732,7 +1738,7 @@ export default function SacramentoMapView({
                         canNavigate={hasGpsFix && !!routeDestination}
                         navigateLabel={
                           selectedPost
-                            ? isStaffViewer
+                            ? isStaffViewer || !supportsGoGetCoordination()
                               ? 'Navigate'
                               : getListingNavigateLabel(selectedPost)
                             : 'Navigate'
@@ -2316,7 +2322,7 @@ export default function SacramentoMapView({
                     canNavigate={hasGpsFix && !!routeDestination}
                     navigateLabel={
                       selectedPost
-                        ? isStaffViewer
+                        ? isStaffViewer || !supportsGoGetCoordination()
                           ? 'Navigate'
                           : getListingNavigateLabel(selectedPost)
                         : 'Navigate'

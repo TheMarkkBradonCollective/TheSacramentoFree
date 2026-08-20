@@ -61,6 +61,7 @@ interface ItemDetailViewProps {
   /** Open listing detail and auto-start in-app navigation (feed Navigate button). */
   startNavigationOnOpen?: boolean;
   onStartNavigationConsumed?: () => void;
+  onPickupCompleted?: () => void;
 }
 
 export default function ItemDetailView({
@@ -88,6 +89,7 @@ export default function ItemDetailView({
   onEditPickupAttribution,
   startNavigationOnOpen = false,
   onStartNavigationConsumed,
+  onPickupCompleted,
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [hasAppClaim, setHasAppClaim] = useState(false);
@@ -334,6 +336,7 @@ export default function ItemDetailView({
                 onOpenChat={onOpenChat}
                 autoStartNavigation={startNavigationOnOpen}
                 onAutoStartNavigationConsumed={onStartNavigationConsumed}
+                onPickupCompleted={onPickupCompleted}
               />
             )}
 

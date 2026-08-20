@@ -8,6 +8,7 @@ import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealt
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { useBrowseOnly } from '../contexts/BrowseOnlyContext';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 
 interface ClaimAtPickupButtonProps {
   item: ItemPost;
@@ -30,7 +31,7 @@ export default function ClaimAtPickupButton({
 }: ClaimAtPickupButtonProps) {
   const browseOnly = useBrowseOnly();
   const { alert } = useConfirm();
-  if (browseOnly) return null;
+  if (browseOnly || !supportsGoGetCoordination()) return null;
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [loadingSubitems, setLoadingSubitems] = useState(false);
   const [showPicker, setShowPicker] = useState(false);

@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { isFcmConfigured, isFcmSubscription, sendFcmToSubscription } from './fcmDelivery';
+import { filterSubscriptionsForPickupPush } from './pickupPushEvents';
 import { configureVapidAsync, getWebPushModuleAsync } from './webPushLoader';
 
 export type PushEventType =
@@ -33,7 +34,19 @@ export type PushEventType =
   | 'staff_report'
   | 'director_alert'
   | 'saved_item_update'
-  | 'listing_status';
+  | 'listing_status'
+  | 'go_get_availability_request'
+  | 'go_get_available_now'
+  | 'go_get_schedule_proposed'
+  | 'go_get_schedule_confirmed'
+  | 'go_get_ready_reminder'
+  | 'go_get_fulfiller_ready'
+  | 'go_get_started'
+  | 'go_get_arrived'
+  | 'go_get_completed'
+  | 'go_get_cancelled'
+  | 'contactless_pickup_arrived'
+  | 'contactless_pickup_left';
 
 export interface PushPayload {
   title: string;
@@ -132,6 +145,18 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   staff_report: 'staffReports',
   director_alert: 'directorAlerts',
   saved_item_update: 'savedItems',
+  go_get_availability_request: 'pickupReminders',
+  go_get_available_now: 'pickupReminders',
+  go_get_schedule_proposed: 'pickupReminders',
+  go_get_schedule_confirmed: 'pickupReminders',
+  go_get_ready_reminder: 'pickupReminders',
+  go_get_fulfiller_ready: 'pickupReminders',
+  go_get_started: 'pickupReminders',
+  go_get_arrived: 'pickupReminders',
+  go_get_completed: 'pickupReminders',
+  go_get_cancelled: 'pickupReminders',
+  contactless_pickup_arrived: 'pickupReminders',
+  contactless_pickup_left: 'pickupReminders',
 };
 
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {
@@ -378,7 +403,10 @@ export async function sendPushToUsers(
   const { logUserNotifications } = await import('./userNotificationLog');
   await logUserNotifications(allowed, payload);
 
-  const subscriptions = await getSubscriptionsForUsers(allowed);
+  const subscriptions = filterSubscriptionsForPickupPush(
+    await getSubscriptionsForUsers(allowed),
+    payload.eventType,
+  );
   let sent = 0;
   let failed = 0;
   let removed = 0;

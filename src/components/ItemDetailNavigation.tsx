@@ -48,10 +48,10 @@ import {
 } from '../lib/goGetSessions';
 import { fileGoGetViolation } from '../lib/violations';
 import {
-  recordItemClaimInChat,
   markItemFulfilledFromChat,
   markTradeCompletedFromChat,
   getListingSubitems,
+  recordGiveawayPickupFromGoGet,
 } from '../supabase';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import type { GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
@@ -74,6 +74,7 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { getSupabaseProfile } from '../supabase';
 import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
+import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 
 interface ItemDetailNavigationProps {
   item: ItemPost;
@@ -83,6 +84,8 @@ interface ItemDetailNavigationProps {
   /** When true, start in-app navigation once GPS and session state are ready. */
   autoStartNavigation?: boolean;
   onAutoStartNavigationConsumed?: () => void;
+  /** Feed + profile stats refresh after a confirmed Go Get handoff. */
+  onPickupCompleted?: () => void;
 }
 
 /** Applies the pickup completion for whichever post type this session is for, reusing the existing claim/fulfill/trade paths. */
@@ -91,7 +94,7 @@ async function applyCompletionForItemType(
   session: GoGetSession,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   if (item.type === 'giveaway') {
-    return recordItemClaimInChat({
+    return recordGiveawayPickupFromGoGet({
       itemId: item.id,
       itemTitle: item.title,
       giverUserId: session.fulfillerUserId,
@@ -127,8 +130,10 @@ export default function ItemDetailNavigation({
   onOpenChat,
   autoStartNavigation = false,
   onAutoStartNavigationConsumed,
+  onPickupCompleted,
 }: ItemDetailNavigationProps) {
   const { confirm, alert } = useConfirm();
+  const goGetAvailable = supportsGoGetCoordination();
 
   const [session, setSession] = useState<GoGetSession | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
@@ -436,7 +441,7 @@ export default function ItemDetailNavigation({
   }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
 
   const handleListingNavigation = useCallback(() => {
-    if (isOwner) {
+    if (isOwner || !goGetAvailable) {
       openNavigation();
       return;
     }
@@ -453,7 +458,7 @@ export default function ItemDetailNavigation({
       return;
     }
     void handleStartGoGet();
-  }, [isOwner, isStaffOfficial, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
+  }, [goGetAvailable, isOwner, isStaffOfficial, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
 
   useEffect(() => {
     if (!autoStartNavigation || autoStartAttemptedRef.current || !sessionLoaded) return;
@@ -608,7 +613,16 @@ export default function ItemDetailNavigation({
     setSession(sessionResult.session);
     if (!completionResult.ok) {
       setErr(completionResult.errorMessage || 'Pickup confirmed, but the listing could not be updated.');
+      return;
     }
+    void import('../lib/pushEvents').then((m) =>
+      m.notifyGoGetCompleted({
+        item,
+        requesterUserId: session.requesterUserId,
+        sessionId: session.id,
+      }),
+    );
+    onPickupCompleted?.();
   };
 
   const handleDisputeCompletion = async () => {
@@ -1000,7 +1014,7 @@ export default function ItemDetailNavigation({
               routeOnMap={isRoadGeometry(routeCoords)}
               hasLiveGps={!!userLocation}
               canNavigate={!!userLocation}
-              navigateLabel={isOwner || isStaffOfficial ? 'Navigate' : getListingNavigateLabel(item)}
+              navigateLabel={isOwner || isStaffOfficial || !goGetAvailable ? 'Navigate' : getListingNavigateLabel(item)}
               onStartNavigation={() => (isOwner ? openNavigation() : void handleListingNavigation())}
               onOpenExternalMaps={() => {
                 if (!routeEndpoints) {
@@ -1012,7 +1026,7 @@ export default function ItemDetailNavigation({
             />
 
             {/* Contactless pickup: optional arrived / left notifications — no GPS to poster */}
-            {isContactless && !isOwner && contactlessNavActive && (
+            {goGetAvailable && isContactless && !isOwner && contactlessNavActive && (
               <div className="mt-3 sbn-card p-4 space-y-3">
                 {contactlessArrived ? (
                   <>
