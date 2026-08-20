@@ -5,14 +5,13 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, Plus, CalendarDays, Sparkles } from 'lucide-react';
+import { Map, List, MessageSquare, User, Plus, CalendarDays } from 'lucide-react';
 import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { MAP_CONTENT_FILTERS, getMapContentFilterLabel, type MapContentFilter } from '../lib/postType';
 import BrandLogo from './BrandLogo';
 import TopbarActions from './TopbarActions';
-import CommunityStatsBar from './CommunityStatsBar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 import { isStaffRole, roleTheme } from '../lib/roles';
@@ -165,13 +164,6 @@ export default function MobileView({
   const isStaff = isStaffRole(userProfile.role);
   const isNative = isNativeApp();
   const theme = roleTheme(userProfile.role);
-  const firstName = userProfile.displayName.trim().split(/\s+/)[0] || userProfile.displayName;
-  const greeting = (() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  })();
   // For staff, the type is AnyTab; for regular users, it's AppTab.
   // We cast activeTab back to AppTab for views that only accept AppTab.
   const setActiveTab = setActiveTabRaw;
@@ -281,19 +273,17 @@ export default function MobileView({
                 <ScrollPage
                   className={communityTab === 'feed' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'feed'}
-                  contentClassName="max-w-2xl mx-auto w-full p-4"
+                  contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <div className="sbn-page-header"><h2>{IN_APP.feedTitle}</h2><p>{IN_APP.feedDescription} · {items.length} listings</p></div>
                   <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} />
                 </ScrollPage>
                 <ScrollPage
                   className={communityTab === 'events' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'events'}
-                  contentClassName="max-w-2xl mx-auto w-full p-4"
+                  contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <div className="sbn-page-header"><h2>{IN_APP.eventsTitle}</h2></div>
                   <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onStaffEventChat={onStaffEventChat} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
                 </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
@@ -401,30 +391,9 @@ export default function MobileView({
           className={communityTab === 'feed' ? '' : 'hidden'}
           id="mobile_directory_drawer"
           aria-hidden={communityTab !== 'feed'}
-          contentClassName="max-w-2xl mx-auto w-full px-4 pt-4"
+          contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
           footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
-            {isNative && (
-              <div className="sbn-native-hero mb-4">
-                <p className="relative text-[11px] font-bold uppercase tracking-widest text-white/75">
-                  {greeting}
-                </p>
-                <p className="relative font-display text-lg font-extrabold text-white mt-0.5">
-                  {firstName} 👋
-                </p>
-                <p className="relative text-xs text-white/85 mt-1.5 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                  {items.length} listings live in Sacramento right now
-                </p>
-              </div>
-            )}
-            <div className="sbn-page-header">
-              <h2>{IN_APP.feedTitle}</h2>
-              <p>
-                {IN_APP.feedDescription} · {items.length} listings
-              </p>
-            </div>
-            <CommunityStatsBar items={items} variant="compact" />
             <ItemGrid
               items={items}
               userProfile={userProfile}
@@ -452,16 +421,9 @@ export default function MobileView({
           className={communityTab === 'events' ? '' : 'hidden'}
           id="mobile_events_dock"
           aria-hidden={communityTab !== 'events'}
-          contentClassName="max-w-2xl mx-auto w-full px-4 pt-4"
+          contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
           footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
-            <div className="sbn-page-header">
-              <h2>{IN_APP.eventsTitle}</h2>
-              <p>
-                {IN_APP.eventsDescription} · {events.length} events
-              </p>
-            </div>
-            <CommunityStatsBar items={items} variant="compact" />
             <EventsPanel
               events={events}
               userProfile={userProfile}

@@ -48,7 +48,7 @@ export function readFeedViewMode(): FeedViewMode {
   } catch {
     /* ignore */
   }
-  return 'list';
+  return 'grid';
 }
 
 export function writeFeedViewMode(value: FeedViewMode): void {

@@ -53,6 +53,8 @@ const EVENT_RECURRENCE_PUBLISHED_AT = '2026-08-20T07:45:00.000Z';
 const APK_0024_PUBLISHED_AT = '2026-08-20T08:00:00.000Z';
 const APK_0026_PUBLISHED_AT = '2026-08-20T09:30:00.000Z';
 const APK_0027_PUBLISHED_AT = '2026-08-20T09:45:00.000Z';
+const APK_0028_PUBLISHED_AT = '2026-08-20T10:20:00.000Z';
+const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -106,6 +108,63 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0028',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0028',
+    'App-style feed and events: default photo grid, collapsible filters, and a cleaner Messages inbox.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0028 (versionCode 28).
+
+Since 0027:
+• Community Stuff opens in photo grid view by default
+• Filters hide behind one button; tap Nearest first to switch to Newest
+• Events tab matches Stuff — grid/list toggle, filters, compact tiles
+• Messages inbox drops the duplicate title block
+• Listing cards show Given / Looking / Trade under votes
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0028 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0028.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 28
+- src/components/ItemGrid.tsx + EventsView.tsx — grid/list toolbar and filters
+- play-store-assets/release-notes-v0.1.0-0028.txt
+
+HISTORY
+2026-08-20 — Feed grid UI polish merged (PR #239); Android beta 0028 built.`,
+    APK_0028_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_feed-grid-ui',
+    '2026-08-20',
+    'Cleaner app-style feed and events',
+    'Photo grid by default, filters behind one button, and Events matches Stuff.',
+    `WHAT NEIGHBORS SEE
+Community Stuff and Events now feel more like a native app:
+
+• Photo grid is the default view — list view is one tap away
+• Filters stay hidden until you tap Filters
+• In grid view, tap Nearest first to switch to Newest
+• Events has the same toolbar and compact photo tiles
+• Messages no longer repeats the page title inside the inbox
+• Listing cards show Given / Looking / Trade in a row under votes
+
+Reopen the app or refresh the website to pick this up — no install required for web-only neighbors.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/ItemGrid.tsx, EventsView.tsx, ChatInboxHeader.tsx, ItemCard.tsx
+
+HISTORY
+2026-08-20 — PR #239.`,
+    FEED_GRID_UI_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0027',
     '2026-08-20',
@@ -885,6 +944,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0028',
+    '2026-08-20',
+    'New Android beta 0028 — app-style feed and events',
+    'Photo grid by default, filters behind one button, and Events matches Stuff. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0028 makes Community Stuff and Events feel more like a native app — grid view by default, collapsible filters, and a cleaner Messages inbox.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0028.
+
+HISTORY
+2026-08-20 — Android beta 0028 with feed grid UI polish.`,
+    APK_0028_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0024',
     '2026-08-20',

@@ -1,0 +1,11 @@
+Android beta v0.1.0.0028 (versionCode 28)
+
+What's new:
+• Community Stuff opens in photo grid view by default
+• Filters hide behind one button — cleaner app-style feed
+• Tap Nearest first to switch to Newest in grid view
+• Events tab matches Stuff: grid/list toggle, filters, compact tiles
+• Messages inbox drops the duplicate title block
+• Listing cards show Given / Looking / Trade under votes
+
+Download (sideload): https://www.sacramentobuynothing.com/download
