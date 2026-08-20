@@ -86,13 +86,13 @@ function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string
 function feedTypeToolbarLabel(type: ListingTypeFilter): string {
   switch (type) {
     case 'all':
-      return 'All';
+      return 'Everything';
     case 'giveaway':
-      return 'Give';
+      return 'Giving';
     case 'looking':
-      return 'Look';
+      return 'Looking';
     case 'trade':
-      return 'Trade';
+      return 'Trading';
   }
 }
 
