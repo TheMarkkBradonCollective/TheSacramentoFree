@@ -3,22 +3,22 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.1.0 (38)
+  0.1.0 (41)
 
 Beta label (for your records / changelog):
-  beta v0.1.0.0038
+  beta v0.1.0.0041
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0038.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0038.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0041.apk
 
 Package name:
   org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.1.0.0038.aab
+  public/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -26,12 +26,13 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta v0.1.0.0038 (versionCode 38)
+Android beta v0.1.0.0041 (versionCode 41)
 
 What's new:
-• Feed & Chat match Stuff/Events style — same toolbar, cards, and spacing
-• Legal footer sits below the fold on empty pages (scroll to see it)
-• Stuff grid — compact "Looking" tags (no more huge "Looking for" pills)
+• Notification taps go to the right place — feed posts, message requests, chats, listings, and more
+• Fixed message-request alerts opening a bogus "requests" chat instead of your inbox
+• Feed notification inbox items link to the correct feed post (not a listing)
+• Welcome feed post copy — casual founder intro to kick off neighbor chit-chat
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ───────────────────────────────────────────────────────────────
@@ -39,8 +40,8 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 Steps:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Internal testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0038.aab
-  4. Release name: 0.1.0 (38)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
+  4. Release name: 0.1.0 (41)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Internal testing
 
