@@ -3,6 +3,7 @@ import type { ItemPost } from '../types';
 const HIDE_GIVEN_KEY = 'sbn_feed_hide_given_v1';
 const HIDE_FULFILLED_KEY = 'sbn_feed_hide_fulfilled_v1';
 const VIEW_MODE_KEY = 'sbn_feed_view_mode_v1';
+const EVENTS_VIEW_MODE_KEY = 'sbn_events_view_mode_v1';
 
 export type FeedViewMode = 'list' | 'grid';
 
@@ -54,6 +55,24 @@ export function readFeedViewMode(): FeedViewMode {
 export function writeFeedViewMode(value: FeedViewMode): void {
   try {
     localStorage.setItem(VIEW_MODE_KEY, value);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readEventsViewMode(): FeedViewMode {
+  try {
+    const raw = localStorage.getItem(EVENTS_VIEW_MODE_KEY);
+    if (raw === 'grid' || raw === 'list') return raw;
+  } catch {
+    /* ignore */
+  }
+  return 'grid';
+}
+
+export function writeEventsViewMode(value: FeedViewMode): void {
+  try {
+    localStorage.setItem(EVENTS_VIEW_MODE_KEY, value);
   } catch {
     /* ignore */
   }
