@@ -42,10 +42,8 @@ import { getItemMapDestination } from '../lib/itemLocation';
 import { isNativeApp } from '../lib/nativePlatform';
 import {
   readFeedViewMode,
-  shouldHideCompletedListing,
+  isClosedCommunityListing,
   writeFeedViewMode,
-  writeHideFulfilledFromFeed,
-  writeHideGivenFromFeed,
   type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
 
@@ -59,7 +57,6 @@ const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'active', label: 'Available' },
   { value: 'pending_pickup', label: 'Pending pickup' },
   { value: 'on_hold', label: 'On hold' },
-  { value: 'completed', label: 'Completed' },
 ];
 
 const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
@@ -164,8 +161,6 @@ export default function ItemGrid({
   const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
   const [sortBy, setSortBy] = useState<FeedSortMode | null>(null);
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
-  const [hideGiven, setHideGiven] = useState(false);
-  const [hideFulfilled, setHideFulfilled] = useState(false);
   const [viewMode, setViewMode] = useState<FeedViewMode>(() => readFeedViewMode());
   const [gridSortMode, setGridSortMode] = useState<'nearest' | 'new'>('nearest');
   const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
@@ -274,8 +269,6 @@ export default function ItemGrid({
     selectedStatus !== 'all',
     selectedVoteFilter !== 'all',
     activeQuickPicks.size > 0,
-    hideGiven,
-    hideFulfilled,
   ].filter(Boolean).length;
 
   const hasExtraFilters = activeFilterCount > 0;
@@ -289,15 +282,12 @@ export default function ItemGrid({
     setSelectedVoteFilter('all');
     setSortBy(null);
     setActiveQuickPicks(new Set());
-    setHideGiven(false);
-    setHideFulfilled(false);
-    writeHideGivenFromFeed(false);
-    writeHideFulfilledFromFeed(false);
   };
 
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) => {
       if (item.status === 'withdrawn') return false;
+      if (isClosedCommunityListing(item)) return false;
 
       const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
       if (!searchString.includes(searchTerm.toLowerCase())) return false;
@@ -320,8 +310,6 @@ export default function ItemGrid({
       }
       if (activeQuickPicks.has('with_photos') && extractListingImageUrls(item).length === 0) return false;
       if (activeQuickPicks.has('needs_pickup') && !needsPickupListing(item)) return false;
-
-      if (shouldHideCompletedListing(item, { hideGiven, hideFulfilled })) return false;
 
       return true;
     });
@@ -351,8 +339,6 @@ export default function ItemGrid({
     selectedVoteFilter,
     sortBy,
     activeQuickPicks,
-    hideGiven,
-    hideFulfilled,
     userProfile.neighborhood,
     userProfile.uid,
     userLocation,
@@ -498,30 +484,6 @@ export default function ItemGrid({
                   />
                 </span>
               ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Completed in feed</p>
-            <div className="flex flex-wrap gap-2">
-              <FilterLabeledSwitch
-                id="feed_hide_given_toggle"
-                label="Hide given"
-                checked={hideGiven}
-                onChange={(value) => {
-                  setHideGiven(value);
-                  writeHideGivenFromFeed(value);
-                }}
-              />
-              <FilterLabeledSwitch
-                id="feed_hide_fulfilled_toggle"
-                label="Hide fulfilled"
-                checked={hideFulfilled}
-                onChange={(value) => {
-                  setHideFulfilled(value);
-                  writeHideFulfilledFromFeed(value);
-                }}
-              />
             </div>
           </div>
         </div>
