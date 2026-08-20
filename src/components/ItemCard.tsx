@@ -40,6 +40,8 @@ interface ItemCardProps {
   onNavigate?: () => void;
   /** Staff opens reverse support thread about this listing. */
   onStaffChat?: () => void;
+  /** When false, hide Go Get / navigate coordination actions. */
+  showPickupCoordination?: boolean;
 }
 
 export default function ItemCard({
@@ -64,6 +66,7 @@ export default function ItemCard({
   distanceMeters,
   onNavigate,
   onStaffChat,
+  showPickupCoordination = true,
 }: ItemCardProps) {
   const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;
@@ -213,7 +216,7 @@ export default function ItemCard({
           <span className="ml-1">Staff chat</span>
         </button>
       ) : null}
-      {onNavigate && item.status === 'active' ? (
+      {showPickupCoordination && onNavigate && item.status === 'active' ? (
         <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
           <Navigation className="w-3.5 h-3.5" />
           <span className="ml-1">

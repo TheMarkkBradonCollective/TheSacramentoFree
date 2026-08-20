@@ -22,7 +22,8 @@ const STATUS_CONFIG: Record<
   GoGetSessionStatus,
   { label: string; color: string; icon: typeof Activity }
 > = {
-  awaiting_availability: { label: 'Awaiting', color: 'text-amber-400 bg-amber-500/10', icon: Clock },
+  awaiting_availability: { label: 'Ringing', color: 'text-amber-400 bg-amber-500/10', icon: Clock },
+  awaiting_schedule: { label: 'Schedule', color: 'text-sky-400 bg-sky-500/10', icon: Clock },
   window_offered:        { label: 'Window offered', color: 'text-sky-400 bg-sky-500/10', icon: Clock },
   scheduled:             { label: 'Scheduled', color: 'text-blue-400 bg-blue-500/10', icon: Clock },
   active:                { label: 'En route', color: 'text-emerald-400 bg-emerald-500/10', icon: Activity },
@@ -33,7 +34,7 @@ const STATUS_CONFIG: Record<
   disputed:              { label: 'Disputed', color: 'text-red-400 bg-red-500/10', icon: AlertTriangle },
 };
 
-const LIVE_STATUSES: GoGetSessionStatus[] = ['active', 'arrived', 'awaiting_availability', 'window_offered', 'scheduled'];
+const LIVE_STATUSES: GoGetSessionStatus[] = ['active', 'arrived', 'awaiting_availability', 'awaiting_schedule', 'window_offered', 'scheduled'];
 
 interface StaffMeetsViewProps {
   actor: UserProfile;

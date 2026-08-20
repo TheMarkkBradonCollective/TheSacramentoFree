@@ -17,7 +17,8 @@ import CollapsibleFilterSection from './CollapsibleFilterSection';
 import ItemCard from './ItemCard';
 import PostItemModal from './PostItemModal';
 import PickupAttributionModal from './PickupAttributionModal';
-import { updateSupabaseItemStatus } from '../supabase';
+import { updateSupabaseItemStatus, getUserPickupCoordinationByIds } from '../supabase';
+import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
 import { completedActionNeedsAttribution } from '../lib/pickupAttribution';
 import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
@@ -138,6 +139,19 @@ export default function ItemGrid({
   onRefresh,
   isLoading = false,
 }: ItemGridProps) {
+  const [coordByUid, setCoordByUid] = useState<
+    Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
+  >({});
+
+  useEffect(() => {
+    const posterIds = [...new Set(items.map((i) => i.userId).filter((uid) => uid && uid !== userProfile.uid))];
+    if (posterIds.length === 0) {
+      setCoordByUid({});
+      return;
+    }
+    void getUserPickupCoordinationByIds(posterIds).then(setCoordByUid);
+  }, [items, userProfile.uid]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<ListingTypeFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -652,6 +666,14 @@ export default function ItemGrid({
                 onStaffChat={onStaffListingChat ? () => onStaffListingChat(item) : undefined}
                 onViewProfile={onViewProfile}
                 distanceMeters={getItemDistance(item)}
+                showPickupCoordination={
+                  item.userId === userProfile.uid ||
+                  canShowAppPickupCoordination({
+                    item,
+                    posterProfile: { uid: item.userId, ...coordByUid[item.userId] },
+                    pickerProfile: userProfile,
+                  }).ok
+                }
                 onNavigate={
                   item.userId !== userProfile.uid
                     ? () => (onNavigateItem ?? onViewItem)(item)

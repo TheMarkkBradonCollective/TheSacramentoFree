@@ -461,6 +461,8 @@ export async function notifyGoGetAvailabilityRequest(params: {
   fulfillerUserId: string;
   requesterName: string;
   sessionId: string;
+  ringDurationSeconds?: number;
+  ringPattern?: string;
 }) {
   await sendPushNotification({
     eventType: 'go_get_availability_request',
@@ -470,7 +472,12 @@ export async function notifyGoGetAvailabilityRequest(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-availability-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: {
+      goGetSessionId: params.sessionId,
+      urgentGoGetRing: 'true',
+      ringDurationSeconds: String(params.ringDurationSeconds ?? 140),
+      ringPattern: params.ringPattern ?? 'ring',
+    },
   });
 }
 

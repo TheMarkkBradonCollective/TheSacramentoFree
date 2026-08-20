@@ -197,7 +197,7 @@ export async function staffEscalateGoGetSession(params: {
 
 export function suggestViolationCategoryForSession(session: GoGetSession): ViolationCategory {
   if (session.status === 'disputed' || session.status === 'arrived') return 'false_claim';
-  if (['awaiting_availability', 'window_offered', 'scheduled'].includes(session.status)) return 'no_show';
+  if (['awaiting_availability', 'awaiting_schedule', 'window_offered', 'scheduled'].includes(session.status)) return 'no_show';
   if (session.status === 'active') return 'no_show';
   return 'other';
 }
@@ -206,7 +206,7 @@ export function suggestAccusedUserForSession(session: GoGetSession): {
   userId: string;
   name: string;
 } {
-  if (['awaiting_availability', 'window_offered', 'scheduled'].includes(session.status)) {
+  if (['awaiting_availability', 'awaiting_schedule', 'window_offered', 'scheduled'].includes(session.status)) {
     return { userId: session.fulfillerUserId, name: session.fulfillerName };
   }
   if (session.status === 'active' || session.status === 'arrived' || session.status === 'disputed') {
