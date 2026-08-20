@@ -134,7 +134,7 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
       item.kind === 'pickup_reminder' ||
       item.kind === 'on_the_way')
   ) {
-    return { tab: 'feed', listingId: item.itemId };
+    return { tab: 'stuff', listingId: item.itemId };
   }
   if (item.kind === 'message' || item.kind === 'message_request') {
     return { tab: 'chats' };

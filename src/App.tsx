@@ -1223,7 +1223,7 @@ export default function App() {
         }
         if (detailItem?.id === post.id) await refreshDetailItem();
         await loadItems(true);
-        setActiveTab('feed');
+        setActiveTab('stuff');
       } catch (err) {
         console.warn('Failed to repost listing:', err);
         setErrorMsg('Could not repost listing.');
@@ -1535,8 +1535,8 @@ export default function App() {
         } else {
           void getSupabaseItemById(target.listingId).then((item) => openListing(item ?? undefined));
         }
-        tabForUrl = 'feed';
-        navigateToTab('feed');
+        tabForUrl = 'stuff';
+        navigateToTab('stuff');
       }
       if (target.eventId) {
         const openEvent = (event: CommunityEvent | undefined) => {
@@ -1777,7 +1777,12 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <NotificationsHubProvider userProfile={userProfile} onDeepLink={handlePushDeepLink}>
+            <NotificationsHubProvider
+              userProfile={userProfile}
+              onDeepLink={handlePushDeepLink}
+              onOpenAwards={handleOpenAwards}
+              awardsGlow={awardsButtonGlow}
+            >
             <GoGetRingCoordinator userProfile={userProfile} />
             <PresenceProvider userId={userProfile.uid}>
                {deviceType === 'mobile' ? (
@@ -1826,7 +1831,6 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1887,7 +1891,6 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1948,7 +1951,6 @@ export default function App() {
                   onOpenTerms={() => setLegalPanel('terms')}
                   onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}

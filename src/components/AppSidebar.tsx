@@ -9,16 +9,16 @@ import {
   MapPin,
   Megaphone,
   MessageSquare,
+  Newspaper,
   Shield,
   ShieldAlert,
   ShieldCheck,
-  User,
   Users,
   X,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import type { UserProfile } from '../types';
-import type { AnyTab } from '../lib/appTabs';
+import { type AnyTab } from '../lib/appTabs';
 import { isStaffRole, roleLabel, roleRank, roleTheme } from '../lib/roles';
 import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
 import { IN_APP } from '../siteContent';
@@ -35,12 +35,12 @@ interface SidebarItem {
 }
 
 const NAV_ITEMS: SidebarItem[] = [
-  // Community
-  { id: 'feed', label: IN_APP.feedTabLabel, icon: List, section: 'community' },
-  { id: 'events', label: 'Events', icon: CalendarDays, section: 'community' },
+  // Community — account opens from header avatar, not sidebar
+  { id: 'feed', label: IN_APP.feedTabLabel, icon: Newspaper, section: 'community' },
+  { id: 'stuff', label: IN_APP.stuffTabLabel, icon: List, section: 'community' },
   { id: 'map', label: 'Map', icon: Map, section: 'community' },
-  { id: 'chats', label: 'Chats', icon: MessageSquare, section: 'community' },
-  { id: 'profile', label: 'Account', icon: User, section: 'community' },
+  { id: 'events', label: 'Events', icon: CalendarDays, section: 'community' },
+  { id: 'chats', label: IN_APP.chatsTabLabel, icon: MessageSquare, section: 'community' },
   // Staff
   { id: 'staff_overview', label: 'Overview', icon: GaugeCircle, section: 'staff', minRank: 1 },
   { id: 'staff_users', label: 'Users', icon: Users, section: 'staff', minRank: 1 },
