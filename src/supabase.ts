@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, FriendRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, FriendRequest, ProfileFriend, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded, guessImageContentType } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatSelfClaimRequestMessage, formatSelfDropOffRequestMessage } from './lib/claims';
@@ -5729,6 +5729,49 @@ export async function getAcceptedFriendIds(userId: string): Promise<string[]> {
     return data
       .map((row) => (row.fromUserId === userId ? row.toUserId : row.fromUserId))
       .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  } catch {
+    return [];
+  }
+}
+
+export async function getProfileFriends(
+  profileUserId: string,
+  viewerUserId: string,
+): Promise<ProfileFriend[]> {
+  const friendIds = await getAcceptedFriendIds(profileUserId);
+  if (friendIds.length === 0) return [];
+
+  const visibleIds: string[] = [];
+  await Promise.all(
+    friendIds.map(async (friendId) => {
+      if (friendId === viewerUserId) {
+        visibleIds.push(friendId);
+        return;
+      }
+      const status = await getBlockStatus(viewerUserId, friendId);
+      if (!status.isHidden) visibleIds.push(friendId);
+    }),
+  );
+
+  if (visibleIds.length === 0) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid, displayName, photoURL, neighborhood')
+      .in('uid', visibleIds);
+
+    if (error || !data?.length) return [];
+
+    const order = new Map(visibleIds.map((id, index) => [id, index]));
+    return (data as Array<{ uid: string; displayName: string; photoURL?: string; neighborhood?: string }>)
+      .map((row) => ({
+        userId: row.uid,
+        displayName: row.displayName || 'Neighbor',
+        photoURL: row.photoURL || undefined,
+        neighborhood: row.neighborhood || 'Sacramento',
+      }))
+      .sort((a, b) => (order.get(a.userId) ?? 0) - (order.get(b.userId) ?? 0));
   } catch {
     return [];
   }

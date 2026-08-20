@@ -44,6 +44,7 @@ import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealt
 import type { FriendRequest, MessageRequest } from '../types';
 import ProfilePostList from './ProfilePostList';
 import ProfileAwardsRow from './ProfileAwardsRow';
+import ProfileFriendsRow from './ProfileFriendsRow';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
 import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
@@ -59,6 +60,7 @@ interface NeighborProfileViewProps {
   onRepostPost?: (post: ItemPost) => void;
   onDeletePost?: (post: ItemPost) => void;
   onBlockListChanged?: () => void;
+  onViewNeighborProfile?: (userId: string) => void;
   /** Stack above an open listing or event detail sheet. */
   nested?: boolean;
 }
@@ -74,6 +76,7 @@ export default function NeighborProfileView({
   onRepostPost,
   onDeletePost,
   onBlockListChanged,
+  onViewNeighborProfile,
   nested = false,
 }: NeighborProfileViewProps) {
   const hintListing = listingHints.find((item) => item.userId === userId);
@@ -429,6 +432,13 @@ export default function NeighborProfileView({
               <ProfileAwardsRow
                 userId={profile.uid}
                 viewerIsStaff={isStaffRole(currentUserProfile?.role)}
+              />
+
+              <ProfileFriendsRow
+                userId={profile.uid}
+                viewerUserId={currentUserId}
+                isOwnProfile={isSelf}
+                onViewProfile={onViewNeighborProfile}
               />
             </div>
 

@@ -499,6 +499,13 @@ export interface FriendRequest {
   createdAt: any;
 }
 
+export interface ProfileFriend {
+  userId: string;
+  displayName: string;
+  photoURL?: string;
+  neighborhood: string;
+}
+
 export interface UserBlock {
   blockerUserId: string;
   blockedUserId: string;
