@@ -6,7 +6,6 @@ import {
   ArrowRight,
   ArrowUp,
   ChevronUp,
-  Compass,
   CornerUpLeft,
   CornerUpRight,
   LocateFixed,
@@ -725,9 +724,6 @@ export default function MapNavigationView({
   const [stepIndex, setStepIndex] = useState(0);
   const [followUser, setFollowUser] = useState(true);
   followUserRef.current = followUser;
-  const [northUp, setNorthUp] = useState(() => !readNavigationSettings().headingUp);
-  const northUpRef = useRef(false);
-  northUpRef.current = northUp;
   const [voiceOn, setVoiceOn] = useState(() => readNavigationSettings().voiceEnabled);
   const [arrived, setArrived] = useState(false);
   const [rerouting, setRerouting] = useState(false);
@@ -735,6 +731,11 @@ export default function MapNavigationView({
   const [sheetSnap, setSheetSnap] = useState<NavSheetSnap>('collapsed');
   const [navSettings, setNavSettings] = useState<NavigationSettings>(() => readNavigationSettings());
   settingsRef.current = navSettings;
+  // Heading is only the settings on/off. On = map follows the phone. Off = north-up.
+  // Panning/overview also forces north-up until Recenter restores follow.
+  const northUp = !navSettings.headingUp || !followUser;
+  const northUpRef = useRef(northUp);
+  northUpRef.current = northUp;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [osmLanes, setOsmLanes] = useState<NavLane[] | null>(null);
   const osmLanesRef = useRef<NavLane[] | null>(null);
@@ -748,8 +749,6 @@ export default function MapNavigationView({
   destinationLabelRef.current = destinationLabel;
   routeRef.current = route;
   voiceOnRef.current = voiceOn;
-
-  const [showHeading, setShowHeading] = useState(false);
 
   // Landscape phones (and any short window) leave very little vertical room between
   // the instruction banner and the details sheet. Below this threshold we switch to a
@@ -982,10 +981,6 @@ export default function MapNavigationView({
       setNavSettings(next);
       setVoiceOn(next.voiceEnabled);
       voiceRef.current.setEnabled(next.voiceEnabled);
-      setNorthUp((current) => {
-        if (followUserRef.current) return !next.headingUp;
-        return current;
-      });
     });
   }, []);
 
@@ -1618,7 +1613,6 @@ export default function MapNavigationView({
     followUserRef.current = true;
     routeOverviewLockedRef.current = false;
     const headingUp = settingsRef.current.headingUp;
-    setNorthUp(!headingUp);
     lastNavPanRef.current = null;
     const pos = userPosRef.current;
     const map = mapRef.current;
@@ -1636,7 +1630,6 @@ export default function MapNavigationView({
   const handleOverview = () => {
     setFollowUser(false);
     followUserRef.current = false;
-    setNorthUp(true);
     const map = mapRef.current;
     if (!map) return;
     applyHeadingUpRotation(mapRotatorRef.current, map, userPosRef.current, headingRef.current, true);
@@ -1891,21 +1884,6 @@ export default function MapNavigationView({
                   >
                     <button
                       type="button"
-                      onClick={() => {
-                        const nextNorthUp = !northUp;
-                        setNorthUp(nextNorthUp);
-                        setShowHeading(true);
-                        writeNavigationSettings({ headingUp: !nextNorthUp });
-                      }}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${northUp ? '' : 'sbn-nav-fab-active'}`}
-                      title={northUp ? 'North up — tap for heading up' : 'Heading up — tap for north up'}
-                      aria-label={northUp ? 'Switch to heading up map' : 'Switch to north up map'}
-                      aria-pressed={!northUp}
-                    >
-                      <Compass className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
-                    </button>
-                    <button
-                      type="button"
                       onClick={handleVoiceToggle}
                       className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${voiceOn ? 'sbn-nav-fab-active' : ''}`}
                       title={voiceOn ? 'Voice guidance on' : 'Voice guidance off'}
@@ -1945,13 +1923,6 @@ export default function MapNavigationView({
                     >
                       <MapIcon className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
                     </button>
-
-                    {showHeading && !isCompact && (
-                      <div className="sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none text-center">
-                        <p>{northUp ? 'North up' : 'Heading up'}</p>
-                        <p className="mt-0.5 opacity-80">{Math.round(heading)}°</p>
-                      </div>
-                    )}
                   </div>
 
                   {!arrived && currentRoadLabel && (
