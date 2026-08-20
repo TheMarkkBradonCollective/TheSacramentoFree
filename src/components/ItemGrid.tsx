@@ -26,7 +26,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
@@ -478,12 +478,8 @@ export default function ItemGrid({
                 />
               ))}
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
-            <div className="flex flex-wrap gap-2" id="feed_type_filter">
-              {LISTING_TYPE_FILTERS.map((type) => (
+            <div className="grid grid-cols-3 gap-2 pt-1" id="feed_type_filter">
+              {LISTING_POST_TYPES.map((type) => (
                 <FilterLabeledSwitch
                   key={type}
                   id={`type_${type}_switch`}

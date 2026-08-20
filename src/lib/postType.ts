@@ -6,6 +6,8 @@ export type MapContentFilter = ListingTypeFilter | 'events';
 
 export const LISTING_TYPE_FILTERS: ListingTypeFilter[] = ['all', 'giveaway', 'looking', 'trade'];
 
+export const LISTING_POST_TYPES: PostType[] = ['giveaway', 'looking', 'trade'];
+
 export const MAP_CONTENT_FILTERS: MapContentFilter[] = [...LISTING_TYPE_FILTERS, 'events'];
 
 export function isEventsMapFilter(filter: MapContentFilter): filter is 'events' {
@@ -30,7 +32,18 @@ export function getPostTypeFilterLabel(filter: ListingTypeFilter): string {
     case 'all':
       return 'All';
     case 'giveaway':
-      return 'Giving';
+      return 'Given';
+    case 'looking':
+      return 'Looking';
+    case 'trade':
+      return 'Trade';
+  }
+}
+
+export function getPostTypeCardColumnLabel(type: PostType): string {
+  switch (type) {
+    case 'giveaway':
+      return 'Given';
     case 'looking':
       return 'Looking';
     case 'trade':
