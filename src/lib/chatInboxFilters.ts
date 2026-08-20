@@ -8,6 +8,34 @@ export type ChatCategoryFilter = 'everyone' | 'dm' | 'support' | 'groups';
 
 export type ChatStatusFilter = 'all' | 'live' | 'closed' | 'archived';
 
+export const CHAT_CATEGORY_FILTER_ORDER: ChatCategoryFilter[] = ['everyone', 'dm', 'support', 'groups'];
+
+export const CHAT_STATUS_FILTER_ORDER: ChatStatusFilter[] = ['all', 'live', 'closed', 'archived'];
+
+export function chatCategoryFilterLabel(filter: ChatCategoryFilter): string {
+  if (filter === 'dm') return 'DM';
+  if (filter === 'support') return 'Support';
+  if (filter === 'groups') return 'Groups';
+  return 'Everyone';
+}
+
+export function chatStatusFilterLabel(filter: ChatStatusFilter): string {
+  if (filter === 'live') return 'Live';
+  if (filter === 'closed') return 'Closed';
+  if (filter === 'archived') return 'Archived';
+  return 'All';
+}
+
+export function cycleChatCategoryFilter(current: ChatCategoryFilter): ChatCategoryFilter {
+  const idx = CHAT_CATEGORY_FILTER_ORDER.indexOf(current);
+  return CHAT_CATEGORY_FILTER_ORDER[(idx + 1) % CHAT_CATEGORY_FILTER_ORDER.length];
+}
+
+export function cycleChatStatusFilter(current: ChatStatusFilter): ChatStatusFilter {
+  const idx = CHAT_STATUS_FILTER_ORDER.indexOf(current);
+  return CHAT_STATUS_FILTER_ORDER[(idx + 1) % CHAT_STATUS_FILTER_ORDER.length];
+}
+
 /** Status sub-tabs (All / Live / Closed / Archived) apply only to DM and Support inboxes. */
 export function categoryHasStatusTabs(category: ChatCategoryFilter): boolean {
   return category === 'dm' || category === 'support';
