@@ -2567,7 +2567,7 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 }
 
 .sbn-map-has-selection .sbn-map-float-btn {
-  bottom: calc(var(--sbn-map-card-stack, 11rem) + 1.25rem);
+  bottom: calc(var(--sbn-map-card-stack, 11rem) + 1.75rem);
 }
 
 .sbn-map-edge-top {

@@ -51,7 +51,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 import { getPostTypeMapDetailLabel, getPostTypeMapLabel, getListingContactButtonLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
 import { pickSoonestPerEventSeries } from '../lib/eventSeries';
-import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
 function MapCreateFab({
   onOpenNewPost,
@@ -564,23 +564,38 @@ export default function SacramentoMapView({
       });
 
       const cardStack = hasMapSelection ? selectionCardHeight : 0;
-      const floatControls = isFullScreenMobile ? 52 : 0;
+      const floatControls = isFullScreenMobile ? 56 : 0;
       const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 72 : 48);
-      const bottom = Math.max(measured.bottomRight[1], cardStack + floatControls + 16);
+      const bottom = Math.max(measured.bottomRight[1], cardStack + floatControls + 20);
 
-      const bounds = L.latLngBounds(coords);
       const start = userLocationRef.current ?? userLocation;
       const dest = routeEndpointsRef.current?.end;
-      if (start) bounds.extend([start.lat, start.lng]);
-      if (dest) bounds.extend([dest.lat, dest.lng]);
+      const padding = {
+        topLeft: [measured.topLeft[0], top] as [number, number],
+        bottomRight: [measured.bottomRight[0], bottom] as [number, number],
+      };
 
       isProgrammaticMapMoveRef.current = true;
-      map.fitBounds(bounds, {
-        paddingTopLeft: [measured.topLeft[0], top],
-        paddingBottomRight: [measured.bottomRight[0], bottom],
-        maxZoom: 17,
-        animate: false,
-      });
+      if (start && dest) {
+        fitRoutePreviewToViewport({
+          map,
+          routeCoords: coords,
+          start,
+          end: dest,
+          padding,
+          maxZoom: 17,
+        });
+      } else {
+        const bounds = L.latLngBounds(coords);
+        if (start) bounds.extend([start.lat, start.lng]);
+        if (dest) bounds.extend([dest.lat, dest.lng]);
+        map.fitBounds(bounds, {
+          paddingTopLeft: padding.topLeft,
+          paddingBottomRight: padding.bottomRight,
+          maxZoom: 17,
+          animate: false,
+        });
+      }
       window.requestAnimationFrame(() => {
         isProgrammaticMapMoveRef.current = false;
       });
