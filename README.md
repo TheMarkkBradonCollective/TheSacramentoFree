@@ -77,7 +77,7 @@ Deployed on Vercel. Set all variables from `.env.example` in Vercel project sett
 
 Database schema lives in `complete-schema.sql` at the repo root. Paste the entire file into the Supabase SQL editor and run it when setting up a new project or after schema changes — it is safe to re-run and keeps the whole site intact.
 
-Existing production databases should run the incremental files under `scripts/` instead of re-pasting the full schema (latest: `scripts/supabase-migration-aug-18-2026-outage.sql`). Neighbor **Updates** and **News** copy lives in `shared/changelogSeed.ts` and is upserted by cron `/api/cron/publish-changelog`.
+Existing production databases should run the incremental files under `scripts/` instead of re-pasting the full schema (latest: `scripts/supabase-migration-aug-20-2026-changelog-sync.sql`). Neighbor **Updates** and **News** copy lives in `shared/changelogSeed.ts` and is upserted by cron `/api/cron/publish-changelog` (every 4 hours).
 
 ## Project layout
 

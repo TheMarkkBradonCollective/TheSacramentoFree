@@ -34,10 +34,20 @@ export function useAppUpdates(userProfile?: UserProfile | null) {
       void reload();
     }, 150);
 
-    return subscribePostgresChanges<AppUpdateRecord>(
+    const onChangelogRefresh = () => {
+      void reload();
+    };
+    window.addEventListener('sbn-refresh-changelog', onChangelogRefresh);
+
+    const unsubscribe = subscribePostgresChanges<AppUpdateRecord>(
       { channelName: 'live-app-updates', table: 'app_updates', event: '*' },
       refresh,
     );
+
+    return () => {
+      window.removeEventListener('sbn-refresh-changelog', onChangelogRefresh);
+      unsubscribe();
+    };
   }, [reload]);
 
   const createUpdate = async (input: AppUpdateInput) => {

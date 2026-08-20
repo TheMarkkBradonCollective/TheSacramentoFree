@@ -21,7 +21,7 @@
 --   scripts/supabase-migration-event-series.sql
 --   scripts/supabase-migration-aug-18-2026-outage.sql
 -- Neighbor Updates/News copy: shared/changelogSeed.ts
---   (cron /api/cron/publish-changelog upserts seeds daily at 40 23 * * *)
+--   (cron /api/cron/publish-changelog upserts seeds every 4 hours — 0 */4 * * *)
 -- =========================================================
 
 -- =========================================================

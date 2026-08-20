@@ -1,10 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { secureCompare } from '../push/_server/secureSecrets';
-import { filterNews, filterUpdates } from '../../shared/changelogFilters';
-import {
-  SEEDED_APP_UPDATES,
-  SEEDED_HELP_ANNOUNCEMENTS,
-} from '../../shared/changelogSeed';
 
 function isAuthorized(req: VercelRequest): boolean {
   const cronSecret = (process.env.CRON_SECRET || '').trim();
@@ -21,6 +16,7 @@ function isAuthorized(req: VercelRequest): boolean {
  * - INSERT webhooks can fire push for brand-new ids
  *
  * Idempotent: ON CONFLICT updates content without duplicating.
+ * Preserves updatedAt when row content is unchanged (avoids false unread badges).
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
@@ -33,37 +29,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { getSupabaseAdmin } = await import('../push/_server/supabaseAdmin');
-    const admin = await getSupabaseAdmin();
-    const now = new Date().toISOString();
+    const { publishChangelogToSupabase } = await import('../push/_server/publishChangelog');
+    const result = await publishChangelogToSupabase();
 
-    const updateRows = filterUpdates(
-      SEEDED_APP_UPDATES.map((row) => ({
-        ...row,
-        updatedAt: now,
-      })),
-    );
-    const newsRows = filterNews(
-      SEEDED_HELP_ANNOUNCEMENTS.map((row) => ({
-        ...row,
-        updatedAt: now,
-      })),
-    );
-
-    const { error: updatesError } = await admin.from('app_updates').upsert(updateRows, {
-      onConflict: 'id',
-    });
-    if (updatesError) {
-      console.error('[publish-changelog] app_updates', updatesError);
-      return res.status(500).json({ error: updatesError.message });
-    }
-
-    const { error: newsError } = await admin.from('help_announcements').upsert(newsRows, {
-      onConflict: 'id',
-    });
-    if (newsError) {
-      console.error('[publish-changelog] help_announcements', newsError);
-      return res.status(500).json({ error: newsError.message });
+    if (!result.ok) {
+      console.error('[publish-changelog]', result.error);
+      return res.status(500).json({ error: result.error || 'Publish changelog failed.' });
     }
 
     let staffApplyInvite: Record<string, unknown> = {};
@@ -79,13 +50,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       ok: true,
-      updates: updateRows.length,
-      announcements: newsRows.length,
+      updates: result.updates,
+      announcements: result.announcements,
       staffApplyInvite,
-      ids: {
-        updates: updateRows.map((r) => r.id),
-        announcements: newsRows.map((r) => r.id),
-      },
+      ids: result.ids,
     });
   } catch (err) {
     console.error('[api/cron/publish-changelog]', err);

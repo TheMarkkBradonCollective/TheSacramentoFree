@@ -92,7 +92,7 @@
     },
     {
       "path": "/api/cron/publish-changelog",
-      "schedule": "40 23 * * *"
+      "schedule": "0 */4 * * *"
     }
   ]
 }
