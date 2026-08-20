@@ -78,9 +78,8 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
 
-function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string {
-  if (compact) return mode === 'nearest' ? 'Near' : 'New';
-  return mode === 'nearest' ? 'Nearest' : 'Newest';
+function feedSortToolbarLabel(mode: 'nearest' | 'new'): string {
+  return mode === 'nearest' ? 'Near' : 'New';
 }
 
 function feedTypeToolbarLabel(type: ListingTypeFilter): string {
@@ -467,11 +466,10 @@ export default function ItemGrid({
                 onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
                 className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
                 aria-pressed={gridSortMode === 'nearest'}
-                aria-label={feedSortToolbarLabel(gridSortMode, false)}
+                aria-label={feedSortToolbarLabel(gridSortMode)}
               >
                 <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-                <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
-                <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
+                <span>{feedSortToolbarLabel(gridSortMode)}</span>
               </button>
             </div>
           </div>

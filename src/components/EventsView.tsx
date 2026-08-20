@@ -86,9 +86,8 @@ function compareEventsByDistance(
   return eventCreatedMs(b) - eventCreatedMs(a);
 }
 
-function eventsSortToolbarLabel(mode: 'nearest' | 'newest', compact: boolean): string {
-  if (compact) return mode === 'nearest' ? 'Near' : 'New';
-  return mode === 'nearest' ? 'Nearest' : 'Newest';
+function eventsSortToolbarLabel(mode: 'nearest' | 'newest'): string {
+  return mode === 'nearest' ? 'Near' : 'New';
 }
 
 function eventTimeToolbarLabel(filter: EventTimeFilter | null): string {
@@ -345,11 +344,10 @@ export default function EventsView({
                 onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'newest' : 'nearest'))}
                 className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
                 aria-pressed={gridSortMode === 'nearest'}
-                aria-label={eventsSortToolbarLabel(gridSortMode, false)}
+                aria-label={eventsSortToolbarLabel(gridSortMode)}
               >
                 <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-                <span className="sm:hidden">{eventsSortToolbarLabel(gridSortMode, true)}</span>
-                <span className="hidden sm:inline">{eventsSortToolbarLabel(gridSortMode, false)}</span>
+                <span>{eventsSortToolbarLabel(gridSortMode)}</span>
               </button>
               <button
                 type="button"
