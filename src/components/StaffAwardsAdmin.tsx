@@ -8,6 +8,7 @@ import {
   UserProfile,
 } from '../types';
 import { useAwards } from '../hooks/useAwards';
+import { AWARDS_UNLOCK_TARGET } from '../lib/awardsApi';
 import AwardCard from './AwardCard';
 
 const CATEGORIES: AwardCategory[] = [
@@ -367,7 +368,7 @@ function AwardEditModal({ draft, busy, isEdit, onClose, onSave }: AwardEditModal
               checked={requiresUnlock}
               onChange={(e) => setRequiresUnlock(e.target.checked)}
             />
-            Requires 500-neighbor unlock to display
+            Requires {AWARDS_UNLOCK_TARGET}-neighbor unlock to display
           </label>
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">

@@ -6,7 +6,7 @@
 -- Run this whenever the app schema changes — keeps the whole site intact.
 --
 -- Milestones enforced in DB:
---   Awards unlock at 500 neighbors  (awards_unlocked)
+--   Awards unlock at 250 neighbors  (awards_unlocked)
 --   Events unlock at 500 neighbors  (events_unlocked)
 --
 -- Go Get / pickup coordination:
@@ -2112,7 +2112,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT public.community_member_count() >= 500;
+  SELECT public.community_member_count() >= 250;
 $$;
 
 CREATE OR REPLACE FUNCTION public.assign_user_join_rank(target_uid TEXT)

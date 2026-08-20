@@ -133,13 +133,11 @@ export function NotificationsHubProvider({
   userProfile,
   onDeepLink,
   onOpenAwards,
-  awardsGlow = false,
   children,
 }: {
   userProfile: UserProfile | null;
   onDeepLink?: (target: PushDeepLinkTarget) => void;
   onOpenAwards?: () => void;
-  awardsGlow?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -202,8 +200,8 @@ export function NotificationsHubProvider({
   }, [markTabSeen, userProfile]);
 
   const value = useMemo(
-    () => ({ openHub, shouldGlow: shouldGlow || inviteUnread > 0 || awardsGlow }),
-    [openHub, shouldGlow, inviteUnread, awardsGlow],
+    () => ({ openHub, shouldGlow: shouldGlow || inviteUnread > 0 }),
+    [openHub, shouldGlow, inviteUnread],
   );
 
   const selectTab = (next: NotificationsHubTab) => {

@@ -9,6 +9,8 @@ interface AppTopbarProps {
   eyebrow?: string;
   title?: string;
   onOpenAccount: () => void;
+  onOpenAwards?: () => void;
+  awardsButtonGlow?: boolean;
   accountActive?: boolean;
   /** Contextual primary action, e.g. "+ Post" on Stuff, "+ Post event" on Events. */
   action?: ReactNode;
@@ -28,6 +30,8 @@ export default function AppTopbar({
   eyebrow,
   title,
   onOpenAccount,
+  onOpenAwards,
+  awardsButtonGlow = false,
   accountActive = false,
   action,
   onToggleSidebar,
@@ -65,6 +69,8 @@ export default function AppTopbar({
         <TopbarActions
           userProfile={userProfile}
           onOpenAccount={onOpenAccount}
+          onOpenAwards={onOpenAwards}
+          awardsButtonGlow={awardsButtonGlow}
           accountActive={accountActive}
           compact={compactActions}
           showNeighborhood
