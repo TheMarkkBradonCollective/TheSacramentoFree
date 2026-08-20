@@ -46,8 +46,8 @@ export default function ChatInboxHeader({
             type="button"
             onClick={onStartConversation}
             className="p-2.5 rounded-full text-muted hover:text-app hover:bg-inset"
-            aria-label="Start conversation"
-            title="Start conversation"
+            aria-label="Compose message"
+            title="Compose message"
           >
             <Edit className="w-5 h-5" />
           </button>

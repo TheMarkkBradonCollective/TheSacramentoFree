@@ -9,7 +9,23 @@ import {
   sendMessageRequest,
 } from '../supabase';
 import type { PickupNeighborCandidate } from '../lib/pickupAttribution';
+import { normalizeUserRole, roleListLabel, roleTheme } from '../lib/roles';
 import UserAvatar from './UserAvatar';
+
+function NeighborRoleLine({ role }: { role?: UserProfile['role'] }) {
+  const normalized = normalizeUserRole(role);
+  const label = roleListLabel(role);
+  const theme = roleTheme(role);
+
+  return (
+    <p
+      className={`text-[10px] font-semibold truncate ${normalized === 'user' ? 'text-muted' : ''}`}
+      style={normalized === 'user' ? undefined : { color: theme.accent }}
+    >
+      {label}
+    </p>
+  );
+}
 
 interface DirectMessageRequestModalProps {
   currentUser: UserProfile;
@@ -122,10 +138,10 @@ export default function DirectMessageRequestModal({
           <div>
             <h4 id="direct_message_request_title" className="font-display font-bold text-app flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-accent" />
-              Message a neighbor
+              Compose message
             </h4>
             <p className="text-xs text-muted mt-1 leading-relaxed">
-              Search by display name, then send a message request. They choose whether to start a private chat.
+              Search by display name, pick a neighbor, then send a message request. Role labels help you spot staff members.
             </p>
           </div>
           <button
@@ -178,7 +194,8 @@ export default function DirectMessageRequestModal({
                   <UserAvatar src={neighbor.photoURL} name={neighbor.displayName} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-app truncate">{neighbor.displayName}</p>
-                    <p className="text-[10px] text-muted truncate">
+                    <NeighborRoleLine role={neighbor.role} />
+                    <p className="text-[10px] text-subtle truncate">
                       {neighbor.neighborhood || 'Sacramento neighbor'}
                     </p>
                   </div>
@@ -195,6 +212,7 @@ export default function DirectMessageRequestModal({
               <UserAvatar src={selectedNeighbor.photoURL} name={selectedNeighbor.displayName} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-app truncate">{selectedNeighbor.displayName}</p>
+                <NeighborRoleLine role={selectedNeighbor.role} />
                 <button
                   type="button"
                   onClick={() => onViewProfile(selectedNeighbor.userId)}

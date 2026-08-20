@@ -100,6 +100,13 @@ export function roleLabel(role?: UserProfile['role']): string {
   return ROLE_LABELS[normalized] ?? ROLE_LABELS.user;
 }
 
+/** Compact role label for neighbor pickers and message compose lists. */
+export function roleListLabel(role?: UserProfile['role']): string {
+  const normalized = normalizeUserRole(role);
+  if (normalized === 'user') return 'User';
+  return ROLE_THEME[normalized].shortLabel;
+}
+
 export function isStaffRole(role?: UserProfile['role']): boolean {
   const normalized = normalizeUserRole(role);
   return (
