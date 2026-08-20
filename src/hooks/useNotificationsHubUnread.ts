@@ -4,12 +4,15 @@ import {
   getSupabaseHelpAnnouncements,
   getUnreadUserNotificationCount,
   markSupabaseNotificationsRead,
+  userHasStaffApplyInviteNotification,
 } from '../supabase';
 import { readHubTabSeenAt, writeHubTabSeenAt } from '../lib/notificationsHubSeen';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { STAFF_MODE_NOTIFICATION_KINDS } from '../../shared/staffInteractionMode';
 import type { UserProfile } from '../types';
 import { receivesStaffNotifications } from '../lib/staffInteractionMode';
+import { isStaffApplyInviteSeen } from '../lib/staffApplyInvite';
+import { isStaffRole } from '../lib/roles';
 
 function countUnseenSince(
   rows: { updatedAt: string }[],
@@ -25,11 +28,21 @@ function countUnseenSince(
   }).length;
 }
 
+function latestRowUpdatedAt(rows: { updatedAt: string }[]): string {
+  let maxMs = Date.now();
+  for (const row of rows) {
+    const ms = new Date(row.updatedAt).getTime();
+    if (!Number.isNaN(ms) && ms > maxMs) maxMs = ms;
+  }
+  return new Date(maxMs).toISOString();
+}
+
 export function useNotificationsHubUnread(
   userId?: string | null,
   profile?: Pick<UserProfile, 'role' | 'staffInteractionMode'> | null,
 ) {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [seededStaffApplyUnread, setSeededStaffApplyUnread] = useState(0);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [unreadUpdates, setUnreadUpdates] = useState(0);
   const [ready, setReady] = useState(false);
@@ -37,6 +50,7 @@ export function useNotificationsHubUnread(
   const reload = useCallback(async () => {
     if (!userId) {
       setUnreadNotifications(0);
+      setSeededStaffApplyUnread(0);
       setUnreadAnnouncements(0);
       setUnreadUpdates(0);
       setReady(false);
@@ -47,16 +61,23 @@ export function useNotificationsHubUnread(
       ? [...STAFF_MODE_NOTIFICATION_KINDS]
       : undefined;
 
-    const [notifCount, announcements, updates] = await Promise.all([
+    const [notifCount, announcements, updates, hasDbStaffApplyInvite] = await Promise.all([
       getUnreadUserNotificationCount(userId, { excludeKinds: excludeStaffKinds }),
       getSupabaseHelpAnnouncements(),
       getSupabaseAppUpdates(),
+      userHasStaffApplyInviteNotification(userId),
     ]);
 
     const seenAnnouncementsAt = readHubTabSeenAt(userId, 'announcements');
     const seenUpdatesAt = readHubTabSeenAt(userId, 'updates');
 
+    let seededUnread = 0;
+    if (profile && !isStaffRole(profile.role) && !isStaffApplyInviteSeen(userId) && !hasDbStaffApplyInvite) {
+      seededUnread = 1;
+    }
+
     setUnreadNotifications(notifCount);
+    setSeededStaffApplyUnread(seededUnread);
     setUnreadAnnouncements(countUnseenSince(announcements, seenAnnouncementsAt));
     setUnreadUpdates(countUnseenSince(updates, seenUpdatesAt));
     setReady(true);
@@ -98,38 +119,46 @@ export function useNotificationsHubUnread(
     };
   }, [reload, userId]);
 
-  const shouldGlow = ready && (unreadNotifications > 0 || unreadAnnouncements > 0 || unreadUpdates > 0);
+  const notifyUnread = unreadNotifications + seededStaffApplyUnread;
+
+  const shouldGlow =
+    ready && (notifyUnread > 0 || unreadAnnouncements > 0 || unreadUpdates > 0);
 
   const markNotificationsRead = useCallback(async () => {
     if (!userId) return;
-    await markSupabaseNotificationsRead(userId);
+    const ok = await markSupabaseNotificationsRead(userId);
+    if (!ok) return;
     setUnreadNotifications(0);
-  }, [userId]);
+    setSeededStaffApplyUnread(0);
+    await reload();
+  }, [reload, userId]);
 
-  const markAnnouncementsSeen = useCallback(() => {
+  const markAnnouncementsSeen = useCallback(async () => {
     if (!userId) return;
-    writeHubTabSeenAt(userId, 'announcements');
+    const announcements = await getSupabaseHelpAnnouncements();
+    writeHubTabSeenAt(userId, 'announcements', latestRowUpdatedAt(announcements));
     setUnreadAnnouncements(0);
   }, [userId]);
 
-  const markUpdatesSeen = useCallback(() => {
+  const markUpdatesSeen = useCallback(async () => {
     if (!userId) return;
-    writeHubTabSeenAt(userId, 'updates');
+    const updates = await getSupabaseAppUpdates();
+    writeHubTabSeenAt(userId, 'updates', latestRowUpdatedAt(updates));
     setUnreadUpdates(0);
   }, [userId]);
 
   const markTabSeen = useCallback(
     async (tab: 'notifications' | 'announcements' | 'updates' | 'alerts') => {
       if (tab === 'notifications') await markNotificationsRead();
-      else if (tab === 'announcements') markAnnouncementsSeen();
-      else if (tab === 'updates') markUpdatesSeen();
+      else if (tab === 'announcements') await markAnnouncementsSeen();
+      else if (tab === 'updates') await markUpdatesSeen();
     },
     [markAnnouncementsSeen, markNotificationsRead, markUpdatesSeen],
   );
 
   return {
     shouldGlow,
-    unreadNotifications,
+    unreadNotifications: notifyUnread,
     unreadAnnouncements,
     unreadUpdates,
     markTabSeen,

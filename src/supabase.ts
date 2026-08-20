@@ -4966,7 +4966,8 @@ export async function getUnreadUserNotificationCount(
 
     const excludeKinds = options?.excludeKinds?.filter(Boolean) || [];
     if (excludeKinds.length) {
-      query = query.not('kind', 'in', `(${excludeKinds.join(',')})`);
+      const quoted = excludeKinds.map((kind) => `"${kind.replace(/"/g, '\\"')}"`).join(',');
+      query = query.not('kind', 'in', `(${quoted})`);
     }
 
     const { count, error } = await query;
@@ -4981,7 +4982,25 @@ export async function getUnreadUserNotificationCount(
   }
 }
 
-export async function markSupabaseNotificationsRead(userId: string): Promise<void> {
+export async function userHasStaffApplyInviteNotification(userId: string): Promise<boolean> {
+  try {
+    const { count, error } = await supabase
+      .from('user_notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('userId', userId)
+      .eq('kind', 'staff_apply');
+
+    if (error) {
+      if (error.code === '42P01') return false;
+      return false;
+    }
+    return (count ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function markSupabaseNotificationsRead(userId: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('user_notifications')
@@ -4991,9 +5010,12 @@ export async function markSupabaseNotificationsRead(userId: string): Promise<voi
 
     if (error && error.code !== '42P01') {
       console.warn('[notifications] mark read:', error.message);
+      return false;
     }
+    return true;
   } catch {
     // table may not exist yet
+    return false;
   }
 }
 
