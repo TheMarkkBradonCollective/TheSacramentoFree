@@ -69,7 +69,7 @@ npm run android:aab
 Upload file (same build as the sideload APK):
 
 ```
-public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab
+public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab
 ```
 
 Legacy alias: `public/downloads/sac-buy-nothing.aab`
