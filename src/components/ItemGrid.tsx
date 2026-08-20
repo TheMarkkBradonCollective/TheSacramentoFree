@@ -89,44 +89,57 @@ function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string
   return mode === 'nearest' ? 'Nearest' : 'Newest';
 }
 
-function needsPickupListing(item: ItemPost): boolean {
-  if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
-  return /pickup|curb|porch/i.test(item.category);
+const ALL_FEED_SORT_OPTIONS: { value: FeedSortMode; label: string }[] = [
+  ...PRIMARY_FEED_SORTS.map(({ value, label }) => ({ value, label })),
+  ...MORE_FEED_SORTS,
+];
+
+function filterToggleOptionId(prefix: string, value: string): string {
+  const slug = value.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return `${prefix}_${slug || 'option'}`;
 }
 
-function FilterSelect({
+function FilterPanelToggleSection<T extends string>({
   id,
   label,
   icon: Icon,
+  ariaLabel,
+  options,
   value,
   onChange,
-  children,
 }: {
   id: string;
   label: string;
   icon: typeof Tag;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
+  ariaLabel: string;
+  options: { value: T; label: string; id?: string }[];
+  value: T;
+  onChange: (value: T) => void;
 }) {
   return (
-    <label className="block space-y-1.5" htmlFor={id}>
-      <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
+    <div className="space-y-1.5" id={id}>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
         <Icon className="w-3 h-3 shrink-0" aria-hidden />
         {label}
-      </span>
-      <div className="flex items-center rounded-xl border border-app bg-inset px-3 py-2.5">
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
-        >
-          {children}
-        </select>
-      </div>
-    </label>
+      </p>
+      <FilterToggleGroup
+        id={`${id}_group`}
+        ariaLabel={ariaLabel}
+        options={options.map((opt) => ({
+          ...opt,
+          id: opt.id ?? filterToggleOptionId(`${id}_group`, opt.value),
+        }))}
+        value={value}
+        onChange={onChange}
+        wrap
+      />
+    </div>
   );
+}
+
+function needsPickupListing(item: ItemPost): boolean {
+  if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
+  return /pickup|curb|porch/i.test(item.category);
 }
 
 interface ItemGridProps {
@@ -304,6 +317,41 @@ export default function ItemGrid({
     setSelectedType(type);
     if (type !== 'all') setSelectedCategory('All Categories');
   };
+
+  const categoryFilterOptions = useMemo(() => {
+    const allOption = { value: 'All Categories', label: 'All categories' };
+    if (selectedType === 'giveaway' || selectedType === 'trade') {
+      return [allOption, ...ITEM_CATEGORIES.map((c) => ({ value: c, label: c }))];
+    }
+    if (selectedType === 'looking') {
+      return [allOption, ...ISO_CATEGORIES.map((c) => ({ value: c, label: c }))];
+    }
+    const merged = [...ITEM_CATEGORIES, ...ISO_CATEGORIES.filter((c) => !ITEM_CATEGORIES.includes(c))];
+    return [allOption, ...merged.map((c) => ({ value: c, label: c }))];
+  }, [selectedType]);
+
+  const neighborhoodFilterOptions = useMemo(
+    () => [
+      { value: 'All Neighborhoods', label: 'All neighborhoods' },
+      ...SACRAMENTO_NEIGHBORHOODS.map((n) => ({ value: n, label: n })),
+    ],
+    [],
+  );
+
+  const statusFilterOptions = useMemo(
+    () => STATUS_FILTER_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+    [],
+  );
+
+  const voteFilterOptions = useMemo(
+    () => VOTE_FILTER_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+    [],
+  );
+
+  const sortFilterOptions = useMemo(
+    () => ALL_FEED_SORT_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+    [],
+  );
 
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) => {
@@ -543,121 +591,56 @@ export default function ItemGrid({
           </div>
         </div>
 
-        <div className="pt-3 border-t border-app space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FilterSelect
-              id="filter_category_select"
-              label="Category"
-              icon={Tag}
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-            >
-              <option value="All Categories">All categories</option>
-              {selectedType === 'all' ? (
-                <>
-                  <optgroup label="Giving">
-                    {ITEM_CATEGORIES.map((c) => (
-                      <option key={`all_giveaway_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Looking for">
-                    {ISO_CATEGORIES.map((c) => (
-                      <option key={`all_looking_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Trade & Barter">
-                    {ITEM_CATEGORIES.map((c) => (
-                      <option key={`all_trade_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                </>
-              ) : selectedType === 'giveaway' || selectedType === 'trade' ? (
-                ITEM_CATEGORIES.map((c) => (
-                  <option key={`${selectedType}_only_${c}`} value={c}>
-                    {c}
-                  </option>
-                ))
-              ) : (
-                ISO_CATEGORIES.map((c) => (
-                  <option key={`looking_only_${c}`} value={c}>
-                    {c}
-                  </option>
-                ))
-              )}
-            </FilterSelect>
+        <div className="pt-3 border-t border-app space-y-4">
+          <FilterPanelToggleSection
+            id="filter_category_section"
+            label="Category"
+            icon={Tag}
+            ariaLabel="Category"
+            options={categoryFilterOptions}
+            value={selectedCategory}
+            onChange={setSelectedCategory}
+          />
 
-            <FilterSelect
-              id="filter_neighborhood_select"
-              label="Neighborhood"
-              icon={MapPin}
-              value={selectedNeighborhood}
-              onChange={setSelectedNeighborhood}
-            >
-              <option value="All Neighborhoods">All neighborhoods</option>
-              {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </FilterSelect>
+          <FilterPanelToggleSection
+            id="filter_neighborhood_section"
+            label="Neighborhood"
+            icon={MapPin}
+            ariaLabel="Neighborhood"
+            options={neighborhoodFilterOptions}
+            value={selectedNeighborhood}
+            onChange={setSelectedNeighborhood}
+          />
 
-            <FilterSelect
-              id="filter_status_select"
-              label="Listing status"
-              icon={CircleDot}
-              value={selectedStatus}
-              onChange={(v) => setSelectedStatus(v as StatusFilter)}
-            >
-              {STATUS_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </FilterSelect>
+          <FilterPanelToggleSection
+            id="filter_status_section"
+            label="Listing status"
+            icon={CircleDot}
+            ariaLabel="Listing status"
+            options={statusFilterOptions}
+            value={selectedStatus}
+            onChange={(v) => setSelectedStatus(v as StatusFilter)}
+          />
 
-            <FilterSelect
-              id="filter_vote_select"
-              label="Interest & comments"
-              icon={ThumbsUp}
-              value={selectedVoteFilter}
-              onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
-            >
-              {VOTE_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </FilterSelect>
-          </div>
+          <FilterPanelToggleSection
+            id="filter_vote_section"
+            label="Interest & comments"
+            icon={ThumbsUp}
+            ariaLabel="Interest and comments"
+            options={voteFilterOptions}
+            value={selectedVoteFilter}
+            onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
+          />
 
-          <FilterSelect
-            id="filter_sort_select"
+          <FilterPanelToggleSection
+            id="filter_sort_section"
             label="More sort options"
             icon={ArrowDownUp}
+            ariaLabel="More sort options"
+            options={sortFilterOptions}
             value={sortBy ?? 'new'}
             onChange={(v) => setSortBy(v as FeedSortMode)}
-          >
-            <optgroup label="Popular">
-              {PRIMARY_FEED_SORTS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="More">
-              {MORE_FEED_SORTS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </optgroup>
-          </FilterSelect>
+          />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">

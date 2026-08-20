@@ -2006,6 +2006,10 @@ option {
   font-size: 0.4rem;
 }
 
+.sbn-filter-toggle-group-wrap {
+  flex-wrap: wrap;
+}
+
 .sbn-feed-toolbar-scroll {
   overflow-x: auto;
   overflow-y: hidden;
