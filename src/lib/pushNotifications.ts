@@ -14,6 +14,22 @@ import type { NotificationPreferences, NearbyRadiusMiles } from '../types';
 const SW_PATH = '/service-worker.js';
 const PUSH_CELEBRATION_DISMISSED_KEY = 'sbn_push_celebration_prompt_dismissed_v1';
 const VAPID_CACHE_KEY = 'sbn_vapid_public_key_v1';
+const PUSH_API_TIMEOUT_MS = 20_000;
+
+async function fetchPushApi(input: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), PUSH_API_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Push server took too long to respond. Try again in a moment.');
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 const OPTIONAL_PREF_COLUMNS = ['communityChat', 'staffChat'] as const;
 
@@ -60,13 +76,13 @@ async function getAccessToken(): Promise<string | null> {
 function mapPushSubscriptionError(error: { code?: string; message?: string }): string {
   const message = error.message || '';
   if (error.code === '42P01' || message.includes('push_subscriptions')) {
-    return 'Push tables are missing in Supabase. Run supabase-complete.sql in the SQL editor, then try again.';
+    return 'Push tables are missing in Supabase. Run complete-schema.sql in the SQL editor, then try again.';
   }
   if (error.code === '23503') {
     return 'Your profile is not synced yet. Open Profile, save your settings once, then enable notifications again.';
   }
   if (error.code === '42501' || message.toLowerCase().includes('permission denied')) {
-    return 'Database blocked saving your subscription. Run supabase-complete.sql and confirm you are signed in.';
+    return 'Database blocked saving your subscription. Run complete-schema.sql and confirm you are signed in.';
   }
   return message || 'Could not save push subscription.';
 }
@@ -135,7 +151,7 @@ async function persistNativePushSubscription(token: string, userId: string): Pro
   const endpoint = fcmEndpointForToken(token);
   const tokenAuth = await getAccessToken();
   if (tokenAuth) {
-    const res = await fetch(apiUrl('/api/push/subscribe'), {
+    const res = await fetchPushApi(apiUrl('/api/push/subscribe'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${tokenAuth}`,
@@ -179,7 +195,7 @@ async function persistPushSubscription(subscription: PushSubscription, userId: s
 
   const token = await getAccessToken();
   if (token) {
-    const res = await fetch(apiUrl('/api/push/subscribe'), {
+    const res = await fetchPushApi(apiUrl('/api/push/subscribe'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -476,6 +492,7 @@ export type PushEventType =
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
+  | 'listing_expired'
   | 'nearby_item'
   | 'nearby_request'
   | 'claim_request'
@@ -504,7 +521,11 @@ export type PushEventType =
   | 'account_locked'
   | 'appeal_decision'
   | 'contactless_pickup_arrived'
-  | 'contactless_pickup_left';
+  | 'contactless_pickup_left'
+  | 'feed_comment'
+  | 'feed_reaction'
+  | 'feed_upvote'
+  | 'feed_downvote';
 
 export interface SendPushOptions {
   eventType: PushEventType;
@@ -561,11 +582,22 @@ export async function sendTestPushNotification(): Promise<{
   }
 
   if (getPushPermissionState() !== 'granted') {
-    return { ok: false, errorMessage: 'Allow notifications in your browser, then try again.' };
+    return {
+      ok: false,
+      errorMessage: isNativeApp()
+        ? 'Allow notifications for SacramentoBuyNothing in Android settings, then tap Enable alerts again.'
+        : 'Allow notifications in your browser, then try again.',
+    };
   }
 
   try {
-    await ensurePushSubscription();
+    if (isNativeApp()) {
+      if (!getStoredFcmToken()) {
+        await ensurePushSubscription();
+      }
+    } else {
+      await ensurePushSubscription();
+    }
   } catch (err) {
     return {
       ok: false,
@@ -573,18 +605,37 @@ export async function sendTestPushNotification(): Promise<{
     };
   }
 
-  const registration = await navigator.serviceWorker.ready;
-  const browserSubscription = await registration.pushManager.getSubscription();
+  let inlineSubscription: { endpoint: string; keys: { p256dh: string; auth: string } } | null = null;
+
+  if (isNativeApp()) {
+    const token = getStoredFcmToken();
+    if (token) {
+      inlineSubscription = {
+        endpoint: fcmEndpointForToken(token),
+        keys: { p256dh: FCM_NATIVE_KEY, auth: FCM_NATIVE_KEY },
+      };
+    }
+  } else {
+    const registration = await navigator.serviceWorker.ready;
+    const browserSubscription = await registration.pushManager.getSubscription();
+    const json = browserSubscription?.toJSON();
+    if (json?.endpoint && json.keys?.p256dh && json.keys?.auth) {
+      inlineSubscription = {
+        endpoint: json.endpoint,
+        keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      };
+    }
+  }
 
   try {
-    const res = await fetch(apiUrl('/api/push/test'), {
+    const res = await fetchPushApi(apiUrl('/api/push/test'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        subscription: browserSubscription?.toJSON() || null,
+        subscription: inlineSubscription,
       }),
     });
     const json = await readJsonResponse(res);
@@ -631,7 +682,7 @@ export async function sendDirectorBroadcastTest(params: {
   }
 
   try {
-    const res = await fetch(apiUrl('/api/push/test-broadcast'), {
+    const res = await fetchPushApi(apiUrl('/api/push/test-broadcast'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

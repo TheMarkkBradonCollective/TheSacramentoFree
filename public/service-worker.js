@@ -1,126 +1,26 @@
 // BUILD_TIMESTAMP is replaced at build time by the Vite swVersionPlugin.
 // Every deploy produces a unique value so the browser always detects a new SW.
 const BUILD_TIMESTAMP = '__BUILD_TIMESTAMP__';
-const CACHE_NAME = 'sac-buy-nothing-' + BUILD_TIMESTAMP;
-
-const OFFLINE_URLS = ['/index.html', '/icon.svg', '/Logo.jpeg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll(OFFLINE_URLS).catch((err) => {
-        console.warn('Offline pre-cache partial:', err);
-      }),
-    ),
-  );
-  self.skipWaiting();
+  // Take over immediately so a previous worker cannot keep serving a stale
+  // index.html / CSS bundle (that is what "old versions flashing" looks like).
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((names) =>
-      Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))),
-    ),
+    caches
+      .keys()
+      .then((names) => Promise.all(names.map((name) => caches.delete(name))))
+      .then(() => self.clients.claim()),
   );
-  self.clients.claim();
 });
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-});
-
-function isNavigationRequest(request) {
-  return (
-    request.mode === 'navigate' ||
-    request.destination === 'document' ||
-    request.headers.get('accept')?.includes('text/html')
-  );
-}
-
-async function networkFirst(request, fallbackUrl = '/index.html') {
-  try {
-    const response = await fetch(request);
-    if (response.status === 200) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    const cached = (await caches.match(request)) || (await caches.match(fallbackUrl));
-    if (cached) return cached;
-    throw new Error('Offline and no cached fallback');
-  }
-}
-
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-
-  const networkPromise = fetch(request)
-    .then((response) => {
-      if (response.status === 200) {
-        cache.put(request, response.clone());
-      }
-      return response;
-    })
-    .catch(() => null);
-
-  return cached || networkPromise || caches.match('/index.html');
-}
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-
-  const url = new URL(event.request.url);
-
-  if (url.pathname.startsWith('/api') || url.protocol === 'ws:' || url.protocol === 'wss:') {
-    return;
-  }
-
-  if (url.pathname === '/sw.js' || url.pathname === '/service-worker.js') {
-    return;
-  }
-
-  // Never cache the version manifest — always fetch live so clients detect new deploys.
-  if (url.pathname === '/version.json') {
-    return;
-  }
-
-  if (url.origin !== self.location.origin) {
-    if (url.href.includes('dicebear.com') || url.href.includes('tile.openstreetmap.org')) {
-      event.respondWith(staleWhileRevalidate(event.request));
-    }
-    return;
-  }
-
-  if (isNavigationRequest(event.request) || url.pathname === '/' || url.pathname.endsWith('.html')) {
-    event.respondWith(networkFirst(event.request));
-    return;
-  }
-
-  if (url.pathname === '/manifest.json') {
-    event.respondWith(networkFirst(event.request, '/manifest.json'));
-    return;
-  }
-
-  if (/\.(js|css|mjs|woff2?|ttf|otf)$/i.test(url.pathname)) {
-    event.respondWith(staleWhileRevalidate(event.request));
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (response.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
-        }
-        return response;
-      });
-    }),
-  );
 });
 
 function urlBase64ToUint8Array(base64String) {
@@ -178,8 +78,8 @@ self.addEventListener('push', (event) => {
     'You have a new community update.';
   const options = {
     body,
-    icon: payload.icon || '/Logo.jpeg',
-    badge: payload.badge || '/Logo.jpeg',
+    icon: payload.icon || '/notification-icon.png',
+    badge: payload.badge || '/notification-icon.png',
     tag: payload.tag || payload.eventType || 'sbn-notification',
     data: {
       url: resolveNotificationUrl(payload.url || '/'),

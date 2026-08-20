@@ -1,34 +1,30 @@
-import React, { Suspense } from 'react';
+import type { CSSProperties } from 'react';
+import { useState } from 'react';
 import { useScrollInputOnFocus } from '../hooks/useKeyboardInset';
-import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, FeedPost, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { List, MessageSquare, User, Plus, Map, CalendarDays } from 'lucide-react';
 import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
-import BrandLogo from './BrandLogo';
 import { IN_APP } from '../siteContent';
-import AwardsButton from './AwardsButton';
-import { NotificationsHubButton } from '../contexts/NotificationsHubContext';
-import CommunityStatsBar from './CommunityStatsBar';
+import AppSidebar from './AppSidebar';
+import FeedView from './FeedView';
+import AppTopbar from './AppTopbar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
-import { isStaffRole } from '../lib/roles';
-import StaffSidebar from './staff/StaffSidebar';
-import { OverlaySuspenseFallback } from './SuspenseFallback';
-import {
-  StaffUsersView,
-  StaffPostsView,
-  StaffTeamView,
-  StaffOverviewView,
-  StaffViolationsView,
-  StaffAuditView,
-  StaffWelcomeView,
-  StaffMessagesView,
-  StaffMeetsView,
-} from './staff/lazyStaffViews';
-import PageScrollFooter from './PageScrollFooter';
+import { roleTheme } from '../lib/roles';
+import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
+import StaffUsersView from './staff/StaffUsersView';
+import StaffPostsView from './staff/StaffPostsView';
+import StaffTeamView from './staff/StaffTeamView';
+import StaffOverviewView from './staff/StaffOverviewView';
+import StaffViolationsView from './staff/StaffViolationsView';
+import StaffAuditView from './staff/StaffAuditView';
+import StaffWelcomeView from './staff/StaffWelcomeView';
+import StaffMessagesView from './staff/StaffMessagesView';
+import StaffMeetsView from './staff/StaffMeetsView';
+import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 
 interface TabletViewProps {
   items: ItemPost[];
@@ -37,11 +33,16 @@ interface TabletViewProps {
   activeTab: AnyTab;
   setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
-  onOpenNewEvent: () => void;
+  onOpenNewStuff: () => void;
+  onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
+  onStaffEventChat?: (event: CommunityEvent) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
+  onViewFeedPost?: (post: FeedPost) => void;
+  onNavigateItem?: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
   onDeletePost?: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
@@ -50,6 +51,8 @@ interface TabletViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialFocusMessageRequests?: boolean;
+  onClearInitialFocusMessageRequests?: () => void;
   pendingChatCompose?: PendingChatCompose | null;
   onClearPendingChatCompose?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
@@ -57,15 +60,17 @@ interface TabletViewProps {
   onRefreshEvents: () => void;
   isEventsLoading?: boolean;
   itemsHydrated?: boolean;
+  eventsHydrated?: boolean;
   onViewEvent: (event: CommunityEvent) => void;
+  onNavigateEvent?: (event: CommunityEvent) => void;
   engagement: ItemsEngagementApi;
   eventsEngagement: EventsEngagementApi;
   blockedUserIds?: Set<string>;
   onOpenGoFundMe?: () => void;
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
+  onOpenDownload?: () => void;
   onOpenAwards?: () => void;
-  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -77,16 +82,25 @@ interface TabletViewProps {
   onOpenChatById?: (chatId: string) => void;
   onOpenTicketById?: (ticketId: string) => void;
   onViewListingId?: (itemId: string) => void | Promise<void>;
+  onViewEventId?: (eventId: string) => void;
+  onStartDirectMessage?: () => void;
 }
 
-const TABS = [
-  { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: List },
-  { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
-  { id: 'map' as const, label: 'Map', icon: Map },
-  { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
-  { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
-];
+const TAB_TITLES: Record<AppTab, string> = {
+  feed: IN_APP.communityFeedTitle,
+  stuff: IN_APP.feedTitle,
+  events: IN_APP.eventsTitle,
+  map: IN_APP.mapTitle,
+  chats: IN_APP.chatsTabLabel,
+  profile: IN_APP.profileTitle,
+};
 
+/**
+ * Tablet's signature shape: a permanent icon-only nav rail (never expands, never
+ * collapses — that's the desktop/mobile job) plus a single comfortably-wide
+ * content column. No dashboard rail here — that's what keeps it visually
+ * distinct from the desktop workspace instead of just being a narrower copy.
+ */
 export default function TabletView({
   items,
   events,
@@ -94,11 +108,16 @@ export default function TabletView({
   activeTab,
   setActiveTab,
   onOpenNewPost,
+  onOpenNewStuff,
   onOpenNewEvent,
   canAccessEvents = true,
   onInitiateChat,
+  onStaffListingChat,
+  onStaffEventChat,
   onClaimSubmitted,
   onViewItem,
+  onViewFeedPost,
+  onNavigateItem,
   onRepostPost,
   onDeletePost,
   onViewProfile,
@@ -107,6 +126,8 @@ export default function TabletView({
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialFocusMessageRequests = false,
+  onClearInitialFocusMessageRequests,
   pendingChatCompose = null,
   onClearPendingChatCompose,
   onDeleteAccount,
@@ -114,15 +135,17 @@ export default function TabletView({
   onRefreshEvents,
   isEventsLoading = false,
   itemsHydrated = true,
+  eventsHydrated = true,
   onViewEvent,
+  onNavigateEvent,
   engagement,
   eventsEngagement,
   blockedUserIds = new Set(),
   onOpenGoFundMe,
   onOpenPrivacy,
   onOpenTerms,
+  onOpenDownload,
   onOpenAwards,
-  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -134,247 +157,232 @@ export default function TabletView({
   onOpenChatById,
   onOpenTicketById,
   onViewListingId,
+  onViewEventId,
+  onStartDirectMessage,
 }: TabletViewProps) {
   useScrollInputOnFocus();
-  const isStaff = isStaffRole(userProfile.role);
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(true);
-  const communityTab = isStaff
-    ? (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
-      ? (activeTab as AppTab)
-      : 'feed'
-    : (activeTab as AppTab);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => hasStaffConsoleAccess(userProfile));
+  const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
+  const onStaffTab = isStaffTab(activeTab);
+  const showStaffConsole = hasStaffConsoleAccess(userProfile);
+  const communityTab: AppTab = (['feed', 'stuff', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
+    ? (activeTab as AppTab)
+    : 'map';
 
-  if (isStaff) {
-    return (
-      <div id="tablet_device_workspace" className="flex h-screen bg-app text-app overflow-hidden">
-        <StaffSidebar userProfile={userProfile} activeTab={activeTab} onTabChange={setActiveTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} onCollapse={() => setSidebarCollapsed(true)} autoCollapseOnNavigate />
-        <div
-          className="flex-1 min-w-0 flex flex-col h-full overflow-hidden"
-          onClick={() => {
-            if (!sidebarCollapsed) setSidebarCollapsed(true);
-          }}
-        >
-          {isStaffTab(activeTab) && (
-            <Suspense fallback={<OverlaySuspenseFallback />}>
-              {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
-              {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
-              {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} />}
-              {activeTab === 'staff_messages' && (
-                <StaffMessagesView
-                  actor={userProfile}
-                  onViewProfile={onViewProfile}
-                  onOpenChat={onOpenChatById}
-                  onOpenTicket={onOpenTicketById}
-                  onViewListing={onViewListingId}
-                />
-              )}
-              {activeTab === 'staff_meets' && <StaffMeetsView actor={userProfile} onViewProfile={onViewProfile} />}
-              {activeTab === 'staff_violations' && <StaffViolationsView actor={userProfile} />}
-              {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
-              {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
-              {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
-            </Suspense>
-          )}
-          {!isStaffTab(activeTab) && (
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <header className="sbn-glass-nav px-4 py-2 border-b border-app flex items-center justify-between shrink-0">
-                <BrandLogo showTitle subtitle={userProfile.neighborhood} />
-                <div className="flex items-center gap-2">
-                  {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
-                  <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm">+ Post</button>
-                </div>
-              </header>
-              <main className="flex-1 min-h-0 overflow-hidden">
-                <div className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'map'}><SacramentoMapView items={items} events={events} userProfile={userProfile} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} mapVisible={communityTab === 'map'} itemsHydrated={itemsHydrated} eventsHydrated={!isEventsLoading} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} /></div>
-                <div className={`relative h-full min-h-0 overflow-y-auto p-6 ${communityTab === 'feed' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'feed'}><div className="max-w-3xl mx-auto"><CommunityStatsBar items={items} variant="compact" /><ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onViewItem={onViewItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} /></div></div>
-                <div className={`relative h-full min-h-0 overflow-y-auto p-6 ${communityTab === 'events' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'events'}><div className="max-w-3xl mx-auto"><EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} /></div></div>
-                <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}><ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} fullBleed className="h-full min-h-0" /></div>
-                <div className={`h-full min-h-0 overflow-y-auto ${communityTab === 'profile' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'profile'}><div className="max-w-3xl mx-auto px-4 py-4"><UserProfileView userProfile={userProfile} userPosts={items.filter((i) => i.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} /></div></div>
-              </main>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const openAccount = () => setActiveTab('profile');
+
+  const topbarAction = null;
+
+  const theme = roleTheme(profileUiRole(userProfile));
 
   return (
-    <div id="tablet_device_workspace" className="flex flex-col min-h-screen h-dvh mesh-bg text-app overflow-hidden">
-      <header id="tablet_navbar" className="sticky top-0 z-40 sbn-glass-nav">
-        <div className="max-w-5xl mx-auto px-5 py-3 flex items-center justify-between gap-4">
-        <BrandLogo subtitle={userProfile.neighborhood} showTitle />
+    <div
+      id="tablet_device_workspace"
+      className="flex h-screen bg-app text-app overflow-hidden"
+      style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as CSSProperties}
+    >
+      <AppSidebar
+        userProfile={userProfile}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        variant={showStaffConsole ? 'expanded' : 'rail'}
+        collapsed={showStaffConsole ? sidebarCollapsed : false}
+        fullyHiddenWhenCollapsed={showStaffConsole}
+        onCollapse={() => setSidebarCollapsed(true)}
+        autoCollapseOnNavigate={showStaffConsole}
+      />
 
-        <nav className="flex gap-1" id="tablet_nav">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              id={`tablet_tab_${id}_btn`}
-              onClick={() => setActiveTab(id)}
-              className={`sbn-nav-tab inline-flex items-center gap-1.5 ${activeTab === id ? 'sbn-nav-tab-active' : ''}`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </nav>
+      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+        <AppTopbar
+          userProfile={userProfile}
+          eyebrow={onStaffTab ? 'Staff console' : 'Community'}
+          title={onStaffTab ? undefined : TAB_TITLES[communityTab]}
+          onOpenAccount={openAccount}
+          accountActive={activeTab === 'profile'}
+          action={topbarAction}
+          onToggleSidebar={showStaffConsole ? () => setSidebarCollapsed((c) => !c) : undefined}
+        />
 
-        <div className="flex items-center gap-2" id="tablet_actions">
-          <NotificationsHubButton />
-          {onOpenAwards ? <AwardsButton onClick={onOpenAwards} glow={awardsButtonGlow} /> : null}
-          <button type="button" id="tablet_header_post" onClick={onOpenNewPost} aria-label={IN_APP.postButton} className="sbn-btn sbn-btn-primary sbn-btn-sm">
-            <Plus className="w-4 h-4" />
-            <span className="hidden md:inline">{IN_APP.postButton}</span>
-          </button>
-        </div>
-        </div>
-      </header>
-
-      <main id="tablet_content_container" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-5xl w-full mx-auto p-5">
-        {activeTab === 'feed' && (
-          <div className="space-y-5" id="tablet_feed_pane">
-            <div className="sbn-page-header">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2>{IN_APP.feedTitle}</h2>
-                  <p>
-                    {IN_APP.feedDescription} · {items.length} listings
-                  </p>
-                </div>
-                <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary shrink-0">
-                  <Plus className="w-4 h-4" /> {IN_APP.postButton}
-                </button>
-              </div>
-            </div>
-            <CommunityStatsBar items={items} variant="full" />
-            <ItemGrid
-              items={items}
-              userProfile={userProfile}
-              engagement={engagement}
-              onInitiateChat={onInitiateChat}
-              onViewItem={onViewItem}
-              onViewProfile={onViewProfile}
-              onRefresh={onRefresh}
-              isLoading={!itemsHydrated}
-            />
+        {onStaffTab ? (
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            {activeTab === 'staff_overview' && <StaffOverviewView actor={userProfile} />}
+            {activeTab === 'staff_users' && <StaffUsersView actor={userProfile} onViewProfile={onViewProfile} />}
+            {activeTab === 'staff_posts' && <StaffPostsView actor={userProfile} onViewItem={onViewItem} onViewEvent={onViewEvent} />}
+            {activeTab === 'staff_messages' && (
+              <StaffMessagesView
+                actor={userProfile}
+                onViewProfile={onViewProfile}
+                onOpenChat={onOpenChatById}
+                onOpenTicket={onOpenTicketById}
+                onViewListing={onViewListingId}
+              />
+            )}
+            {activeTab === 'staff_meets' && (
+              <StaffMeetsView
+                actor={userProfile}
+                onViewProfile={onViewProfile}
+                onOpenViolations={(sessionId) => {
+                  setViolationsFocusSessionId(sessionId);
+                  setActiveTab('staff_violations');
+                }}
+              />
+            )}
+            {activeTab === 'staff_violations' && (
+              <StaffViolationsView
+                actor={userProfile}
+                focusSessionId={violationsFocusSessionId}
+                onClearFocusSession={() => setViolationsFocusSessionId(null)}
+              />
+            )}
+            {activeTab === 'staff_audit' && <StaffAuditView actor={userProfile} />}
+            {activeTab === 'staff_welcome' && <StaffWelcomeView actor={userProfile} />}
+            {activeTab === 'staff_team' && <StaffTeamView actor={userProfile} onViewProfile={onViewProfile} />}
           </div>
-        )}
+        ) : (
+          <main id="tablet_main" className="sbn-workspace-main">
+            {communityTab === 'feed' && (
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="tablet_feed_pane"
+                contentClassName="sbn-tablet-content"
+                pinToBottom
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
+                <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onViewFeedPost={onViewFeedPost} />
+              </ScrollPage>
+            )}
 
-        {activeTab === 'events' && (
-          <div className="space-y-5" id="tablet_events_pane">
-            <div className="sbn-page-header">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2>{IN_APP.eventsTitle}</h2>
-                  <p>
-                    {IN_APP.eventsDescription} · {events.length} events
-                  </p>
-                </div>
-                {canAccessEvents && (
-                <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary shrink-0">
-                  <Plus className="w-4 h-4" /> {IN_APP.postEventButton}
-                </button>
-                )}
-              </div>
-            </div>
-            <CommunityStatsBar items={items} variant="full" />
-            <EventsPanel
-              events={events}
-              userProfile={userProfile}
-              engagement={eventsEngagement}
-              onViewEvent={onViewEvent}
-              onViewProfile={onViewProfile}
-              onRefresh={onRefreshEvents}
-              isLoading={isEventsLoading}
-            />
-          </div>
-        )}
+            {communityTab === 'stuff' && (
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="tablet_stuff_pane"
+                contentClassName="sbn-tablet-content"
+                pinToBottom
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
+                  <ItemGrid
+                    items={items}
+                    userProfile={userProfile}
+                    engagement={engagement}
+                    onInitiateChat={onInitiateChat}
+                    onStaffListingChat={onStaffListingChat}
+                    onViewItem={onViewItem}
+                    onNavigateItem={onNavigateItem}
+                    onViewProfile={onViewProfile}
+                    onRefresh={onRefresh}
+                    isLoading={!itemsHydrated}
+                    onOpenNewPost={onOpenNewStuff}
+                  />
+              </ScrollPage>
+            )}
 
-        {/* Keep the map mounted across tab switches so GPS, Leaflet state, and any
-            active turn-by-turn navigation session survive — matches MobileView. */}
-        <div className={`space-y-5 ${activeTab === 'map' ? '' : 'hidden'}`} id="tablet_map_pane">
-          <div className="sbn-page-header">
-            <h2>{IN_APP.mapTitle}</h2>
-            <p>{IN_APP.mapDescription}</p>
-          </div>
-          <div className="sbn-card-elevated p-2 h-[520px]">
-            <SacramentoMapView
-              items={items}
-              events={events}
-              userProfile={userProfile}
-              onInitiateChat={onInitiateChat}
-              onClaimSubmitted={onClaimSubmitted}
-              onViewItem={onViewItem}
-              onViewEvent={onViewEvent}
-              onEditItem={onEditItem}
-              mapVisible={activeTab === 'map'}
-              itemsHydrated={itemsHydrated}
-              eventsHydrated={!isEventsLoading}
-              eventsEngagement={eventsEngagement}
-              commentsLocked={!canAccessEvents}
-            />
-          </div>
-        </div>
+            {communityTab === 'events' && (
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="tablet_events_pane"
+                contentClassName="sbn-tablet-content"
+                pinToBottom
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
+                  <EventsPanel
+                    events={events}
+                    userProfile={userProfile}
+                    engagement={eventsEngagement}
+                    onViewEvent={onViewEvent}
+                    onNavigateEvent={onNavigateEvent}
+                    onStaffEventChat={onStaffEventChat}
+                    onViewProfile={onViewProfile}
+                    onRefresh={onRefreshEvents}
+                    isLoading={isEventsLoading}
+                    onOpenNewEvent={onOpenNewEvent}
+                    canAccessEvents={canAccessEvents}
+                  />
+              </ScrollPage>
+            )}
 
-        {activeTab === 'chats' && (
-          <div
-            id="tablet_chats_pane"
-            className="flex flex-col min-h-0 h-[min(36rem,calc(100dvh-7rem))] md:h-[min(40rem,calc(100dvh-6.5rem))]"
-          >
-            <ChatSystem
-                userProfile={userProfile}
-                initialSelectedChatId={initialSelectedChatId}
-                onClearInitialChat={onClearInitialChat}
-                initialSupportTicketId={initialSupportTicketId}
-                onClearInitialSupportTicket={onClearInitialSupportTicket}
-                initialChatSupportView={initialChatSupportView}
-                onClearInitialChatSupportView={onClearInitialChatSupportView}
-                initialChatFeedbackPanel={initialChatFeedbackPanel}
-                onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel}
-                pendingChatCompose={pendingChatCompose}
-                onClearPendingChatCompose={onClearPendingChatCompose}
+            {/* Keep the map mounted across tab switches — matches Desktop/Mobile. */}
+            <div className={`h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} id="tablet_map_pane">
+              <SacramentoMapView
                 items={items}
-                blockedUserIds={blockedUserIds}
-                onViewProfile={onViewProfile}
-                onItemsChanged={onRefresh}
-                onOpenGoFundMe={onOpenGoFundMe}
-                onOpenPrivacy={onOpenPrivacy}
-                onOpenTerms={onOpenTerms}
-                onStartDirectMessage={() => setActiveTab('feed')}
-                className="h-full min-h-0 flex-1 rounded-2xl border border-app overflow-hidden bg-surface"
-              />
-          </div>
-        )}
-
-        {activeTab === 'profile' && (
-          <div className="space-y-4" id="tablet_profile_pane">
-            <div className="sbn-page-header">
-              <h2>{IN_APP.profileTitle}</h2>
-            </div>
-            <div className="sbn-card p-6">
-              <UserProfileView
+                events={events}
                 userProfile={userProfile}
-                userPosts={items.filter((item) => item.userId === userProfile.uid)}
-                onViewPost={onViewItem}
-                onRepostPost={onRepostPost}
-                onDeletePost={onDeletePost}
-                onUpdateProfile={onUpdateProfile}
-                onProfilePhotoSaved={onRefresh}
-                onDeleteAccount={onDeleteAccount}
-                onLogout={onLogout}
-                onViewProfile={onViewProfile}
-                onOpenAwards={onOpenAwards}
-                scrollToDirectorOverview={scrollToDirectorOverview}
-                onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+                onInitiateChat={onInitiateChat}
+                onClaimSubmitted={onClaimSubmitted}
+                onViewItem={onViewItem}
+                onViewEvent={onViewEvent}
+                onEditItem={onEditItem}
+                mapVisible={communityTab === 'map'}
+                onOpenNewPost={onOpenNewPost}
+                itemsHydrated={itemsHydrated}
+                eventsHydrated={eventsHydrated}
+                eventsEngagement={eventsEngagement}
+                commentsLocked={!canAccessEvents}
               />
             </div>
-          </div>
-        )}
 
-        {activeTab !== 'map' && activeTab !== 'chats' && (
-          <PageScrollFooter onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
+            {communityTab === 'chats' && (
+              <div id="tablet_chats_pane" className="h-full min-h-0 p-4">
+                <ChatSystem
+                  userProfile={userProfile}
+                  initialSelectedChatId={initialSelectedChatId}
+                  onClearInitialChat={onClearInitialChat}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={onClearInitialFocusMessageRequests}
+                  initialSupportTicketId={initialSupportTicketId}
+                  onClearInitialSupportTicket={onClearInitialSupportTicket}
+                  initialChatSupportView={initialChatSupportView}
+                  onClearInitialChatSupportView={onClearInitialChatSupportView}
+                  initialChatFeedbackPanel={initialChatFeedbackPanel}
+                  onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel}
+                  pendingChatCompose={pendingChatCompose}
+                  onClearPendingChatCompose={onClearPendingChatCompose}
+                  items={items}
+                  events={events}
+                  blockedUserIds={blockedUserIds}
+                  onViewProfile={onViewProfile}
+                  onItemsChanged={onRefresh}
+                  onOpenGoFundMe={onOpenGoFundMe}
+                  onOpenPrivacy={onOpenPrivacy}
+                  onOpenTerms={onOpenTerms}
+                  onStartDirectMessage={onStartDirectMessage}
+                  onViewRelatedListing={onViewListingId}
+                  onViewRelatedEvent={onViewEventId}
+                  className="h-full min-h-0 rounded-2xl border border-app overflow-hidden bg-surface"
+                />
+              </div>
+            )}
+
+            {communityTab === 'profile' && (
+              <ScrollPage
+                className="sbn-workspace-scroll"
+                id="tablet_profile_pane"
+                contentClassName="sbn-tablet-content"
+                pinToBottom
+                footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+              >
+                  <div className="sbn-card p-5">
+                    <UserProfileView
+                      userProfile={userProfile}
+                      userPosts={items.filter((item) => item.userId === userProfile.uid)}
+                      onViewPost={onViewItem}
+                      onRepostPost={onRepostPost}
+                      onDeletePost={onDeletePost}
+                      onUpdateProfile={onUpdateProfile}
+                      onProfilePhotoSaved={onRefresh}
+                      onDeleteAccount={onDeleteAccount}
+                      onLogout={onLogout}
+                      onViewProfile={onViewProfile}
+                      onOpenAwards={onOpenAwards}
+                      onOpenDownload={onOpenDownload}
+                      scrollToDirectorOverview={scrollToDirectorOverview}
+                      onClearScrollToDirectorOverview={onClearScrollToDirectorOverview}
+                    />
+                  </div>
+              </ScrollPage>
+            )}
+          </main>
         )}
-      </main>
+      </div>
     </div>
   );
 }

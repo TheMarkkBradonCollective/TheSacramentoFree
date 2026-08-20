@@ -78,7 +78,7 @@ export async function sendFcmToSubscription(
     await getMessaging(app).send({
       token,
       notification: {
-        title: payload.title || 'Sacramento Buy Nothing',
+        title: payload.title || 'SacramentoBuyNothing',
         body,
       },
       data: buildFcmData(payload),

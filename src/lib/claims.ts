@@ -18,8 +18,15 @@ export function formatSelfClaimRequestMessage(claimerName: string, itemLabels: s
       : '• (this listing)';
 
   return (
-    `📦 ${claimerName} says they have claimed (contactless pickup):\n${list}\n` +
-    `Please confirm in chat when you verify the pickup.`
+    `📦 ${claimerName} says they picked up:\n${list}\n` +
+    `Please confirm or deny in chat when you verify the handoff.`
+  );
+}
+
+export function formatSelfDropOffRequestMessage(helperName: string, itemTitle: string): string {
+  return (
+    `📦 ${helperName} says they dropped off for your request:\n• ${itemTitle}\n` +
+    `Please confirm or deny in chat when you verify you received it.`
   );
 }
 

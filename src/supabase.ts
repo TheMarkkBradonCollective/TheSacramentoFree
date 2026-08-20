@@ -1,12 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
-import { compressImageIfNeeded } from './lib/imageUrl';
-import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
+import { compressImageIfNeeded, guessImageContentType } from './lib/imageUrl';
+import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatSelfClaimRequestMessage, formatSelfDropOffRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
-import { normalizeItemMedia } from './lib/listingContent';
+import { normalizeItemMedia, plainListingDescription } from './lib/listingContent';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
+import { listingExpiresAtIso } from '../shared/listingExpiry';
+import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
+import { filterNews, filterUpdates } from '../shared/changelogFilters';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
+import type { AppPreferences, PickupAvailabilitySchedule } from './types';
+import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './lib/goGetRing';
+import { normalizePickupAvailability } from './lib/pickupAvailability';
+import { normalizeNavigationSettings, type NavigationSettings } from './lib/navigationSettings';
+import { normalizeAppPreferences } from './lib/appPreferences';
 import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
 import { getEventsUnlockStatus } from './lib/eventsApi';
 import {
@@ -19,7 +27,20 @@ import {
   VOTE_COOLDOWN_MAX_NEW_VOTES,
   VOTE_COOLDOWN_WINDOW_MS,
 } from './lib/voteCooldown';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, ROLE_RANK, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
+import {
+  deriveApplicantStaffApplyState,
+  isStaffApplyRole,
+  isStaffApplySeatFilled,
+  parseStaffApplySeatCounts,
+  staffApplicationDecisionNotice,
+  type ApplicantStaffApplyState,
+  type StaffApplication,
+  type StaffApplicationDecision,
+  type StaffApplyRole,
+  type StaffApplySeatCounts,
+} from './lib/staffApplications';
+import { notifyAccountUpdate } from './lib/pushEvents';
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -173,7 +194,8 @@ CREATE TABLE IF NOT EXISTS public.item_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.item_comments ENABLE ROW LEVEL SECURITY;
@@ -200,10 +222,12 @@ CREATE TABLE IF NOT EXISTS public.community_events (
   "isFree" BOOLEAN NOT NULL DEFAULT true,
   status TEXT NOT NULL DEFAULT 'active',
   "imageUrl" TEXT,
+  "seriesId" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "seriesId" TEXT;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "hostedBy" TEXT;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLat" DOUBLE PRECISION;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION;
@@ -363,6 +387,18 @@ function normalizeAccountStatus(
   return { accountStatus, suspendedUntil };
 }
 
+function parsePickupAvailabilityColumn(raw: unknown): PickupAvailabilitySchedule | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === 'string') {
+    try {
+      return normalizePickupAvailability(JSON.parse(raw));
+    } catch {
+      return undefined;
+    }
+  }
+  return normalizePickupAvailability(raw);
+}
+
 function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfile | null {
   if (!row) return null;
   const uid = String(row.uid ?? '');
@@ -385,6 +421,27 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     role: normalizeUserRole(row.role),
     accountStatus,
     suspendedUntil,
+    // Default off until neighbor opts in explicitly.
+    goGetEnabled: row.goGetEnabled === true || row.go_get_enabled === true,
+    pickupAvailability: parsePickupAvailabilityColumn(row.pickupAvailability ?? row.pickup_availability),
+    goGetRingDurationSeconds: normalizeGoGetRingDuration(
+      row.goGetRingDurationSeconds ?? row.go_get_ring_duration_seconds,
+    ),
+    goGetRingPattern: normalizeGoGetRingPattern(row.goGetRingPattern ?? row.go_get_ring_pattern),
+    navigationSettings: normalizeNavigationSettings(
+      row.navigationSettings ?? row.navigation_settings,
+    ),
+    appPreferences: normalizeAppPreferences(row.appPreferences ?? row.app_preferences),
+    staffInteractionMode:
+      row.staffInteractionMode === 'neighbor' || row.staff_interaction_mode === 'neighbor'
+        ? 'neighbor'
+        : 'staff',
+    joinRank:
+      typeof row.joinRank === 'number'
+        ? row.joinRank
+        : typeof row.join_rank === 'number'
+          ? row.join_rank
+          : null,
     createdAt: row.createdAt ?? row.created_at,
     lastActiveAt:
       typeof row.lastActiveAt === 'string'
@@ -532,6 +589,7 @@ function listingRowToProfile(uid: string, row: Record<string, unknown>): UserPro
     neighborhood: String(row.neighborhood || 'Sacramento'),
     bio: undefined,
     role: 'user',
+    goGetEnabled: false,
     createdAt: row.createdAt,
   };
 }
@@ -668,14 +726,41 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
+      goGetEnabled: profile.goGetEnabled === true,
+      pickupAvailability: profile.pickupAvailability ?? null,
+      goGetRingDurationSeconds: normalizeGoGetRingDuration(profile.goGetRingDurationSeconds),
+      goGetRingPattern: normalizeGoGetRingPattern(profile.goGetRingPattern),
+      navigationSettings: profile.navigationSettings ?? null,
+      appPreferences: profile.appPreferences ?? null,
+      staffInteractionMode:
+        profile.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
       createdAt: coerceToIsoDate(profile.createdAt),
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('users')
       .upsert(payload, { onConflict: 'uid' })
-      .select('uid, photoURL, displayName, email, neighborhood, bio, role, createdAt')
+      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, navigationSettings, appPreferences, createdAt')
       .single();
+
+    // Older DBs may not have goGetEnabled / staffInteractionMode yet — retry without missing columns.
+    if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+      const {
+        goGetEnabled: _goGet,
+        staffInteractionMode: _mode,
+        pickupAvailability: _avail,
+        goGetRingDurationSeconds: _ringDur,
+        goGetRingPattern: _ringPat,
+        navigationSettings: _nav,
+        appPreferences: _prefs,
+        ...legacyPayload
+      } = payload;
+      ({ data, error } = await supabase
+        .from('users')
+        .upsert(legacyPayload, { onConflict: 'uid' })
+        .select('uid, photoURL, displayName, email, neighborhood, bio, role, createdAt')
+        .single());
+    }
 
     if (error) {
       handleSupabaseError(error, 'users');
@@ -729,48 +814,211 @@ export async function upsertSupabaseProfile(
 /**
  * --- ITEMS / LISTINGS ---
  */
+const ITEM_FEED_COLUMNS =
+  'id,title,type,category,userId,userDisplayName,userPhotoURL,neighborhood,status,imageUrl,createdAt,updatedAt,expiresAt,expiryWarnedAt,pickupAttributionType,pickupAttributionUserId,pickupAttributionLabel';
+
+function mapItemRows(rows: unknown[]): ItemPost[] {
+  const items: ItemPost[] = [];
+  for (const row of rows) {
+    try {
+      items.push(normalizeItemFromRow(row as ItemPost));
+    } catch (rowErr) {
+      console.warn('Skipping malformed listing row:', (row as { id?: string })?.id, rowErr);
+    }
+  }
+  return items;
+}
+
+let itemFeedDescriptionRpc: boolean | null = null;
+let itemFeedImageUrlMapRpc: boolean | null = null;
+let cachedPhotoUrlMap: Map<string, string[]> | null = null;
+let cachedPhotoUrlMapAt = 0;
+
+async function itemFeedImageUrlMap(force = false): Promise<Map<string, string[]>> {
+  const now = Date.now();
+  if (!force && cachedPhotoUrlMap && now - cachedPhotoUrlMapAt < 60_000) {
+    return cachedPhotoUrlMap;
+  }
+
+  const map = new Map<string, string[]>();
+  if (itemFeedImageUrlMapRpc === false && cachedPhotoUrlMap) return cachedPhotoUrlMap;
+
+  const { data, error } = await supabase.rpc('item_feed_image_url_map');
+  if (error) {
+    itemFeedImageUrlMapRpc = false;
+    console.warn('Listing photo URL map RPC unavailable:', error.message);
+    return cachedPhotoUrlMap ?? map;
+  }
+
+  itemFeedImageUrlMapRpc = true;
+  for (const row of data ?? []) {
+    const id = String((row as { id?: string }).id ?? '');
+    const rawUrls = (row as { image_urls?: unknown }).image_urls;
+    if (!id || !Array.isArray(rawUrls)) continue;
+    const urls = rawUrls
+      .map((url) => String(url).trim())
+      .filter((url) => url.startsWith('http://') || url.startsWith('https://'));
+    if (urls.length > 0) map.set(id, urls);
+  }
+
+  cachedPhotoUrlMap = map;
+  cachedPhotoUrlMapAt = now;
+  return map;
+}
+
+async function itemFeedDescription(itemId: string): Promise<string | null> {
+  if (!itemId || itemFeedDescriptionRpc === false) return null;
+  const { data, error } = await supabase.rpc('item_feed_description', { item_id: itemId });
+  if (error) {
+    itemFeedDescriptionRpc = false;
+    return null;
+  }
+  itemFeedDescriptionRpc = true;
+  return typeof data === 'string' ? data : null;
+}
+
+/**
+ * Load every listing without pulling multi-megabyte `data:image` camera dumps
+ * that some descriptions still store in `[PHOTOS:]`.
+ */
+async function fetchItemRowsForFeed(): Promise<Record<string, unknown>[]> {
+  const { data: heads, error } = await supabase
+    .from('items')
+    .select(ITEM_FEED_COLUMNS)
+    .order('createdAt', { ascending: false });
+
+  if (error) {
+    handleSupabaseError(error, 'items');
+    throw error;
+  }
+
+  const { data: bodies, error: bodyError } = await supabase
+    .from('items')
+    .select('id,description')
+    .not('description', 'ilike', '%data:image%');
+
+  if (bodyError) {
+    console.warn('Listing descriptions fetch skipped bloated rows filter:', bodyError);
+  }
+
+  const descById = new Map<string, string>();
+  for (const row of bodies ?? []) {
+    const id = String((row as { id?: string }).id ?? '');
+    if (!id) continue;
+    descById.set(id, plainListingDescription((row as { description?: string }).description));
+  }
+
+  const missing = (heads ?? []).filter((row) => !descById.get(String((row as { id?: string }).id ?? '')));
+  if (missing.length > 0) {
+    const probeId = String((missing[0] as { id?: string }).id ?? '');
+    const probe = await itemFeedDescription(probeId);
+    if (probe != null) {
+      descById.set(probeId, plainListingDescription(probe));
+      await Promise.all(
+        missing.slice(1).map(async (row) => {
+          const id = String((row as { id?: string }).id ?? '');
+          const text = await itemFeedDescription(id);
+          if (text != null) descById.set(id, plainListingDescription(text));
+        }),
+      );
+    }
+  }
+
+  const photoUrlsById = await itemFeedImageUrlMap();
+
+  return (heads ?? []).map((row) => {
+    const id = String((row as { id?: string }).id ?? '');
+    const imageUrls = photoUrlsById.get(id);
+    return {
+      ...(row as Record<string, unknown>),
+      description: descById.get(id) || '',
+      ...(imageUrls?.length ? { imageUrls } : {}),
+    };
+  });
+}
+
 export async function getSupabaseItems(): Promise<ItemPost[]> {
   try {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('createdAt', { ascending: false });
-
-    if (error) {
-      handleSupabaseError(error, 'items');
-      return [];
-    }
-
+    const rows = await fetchItemRowsForFeed();
     setSupabaseConfigurationState(true);
-    const rows = data || [];
-    const items: ItemPost[] = [];
-    for (const row of rows) {
-      try {
-        items.push(normalizeItemFromRow(row as ItemPost));
-      } catch (rowErr) {
-        console.warn('Skipping malformed listing row:', row?.id, rowErr);
-      }
-    }
-    return items;
+    return mapItemRows(rows);
   } catch (err: any) {
     console.warn('Supabase items fetch failed:', err);
     handleSupabaseError(err, 'items');
-    return [];
+    throw err;
   }
+}
+
+export async function getSupabaseItemById(itemId: string): Promise<ItemPost | null> {
+  if (!itemId) return null;
+  try {
+    const headQuery = supabase.from('items').select(ITEM_FEED_COLUMNS).eq('id', itemId).maybeSingle();
+    const { data: head, error } = await headQuery;
+    if (error) {
+      handleSupabaseError(error, 'items');
+      return null;
+    }
+    if (!head) return null;
+
+    const { data: body } = await supabase
+      .from('items')
+      .select('description')
+      .eq('id', itemId)
+      .not('description', 'ilike', '%data:image%')
+      .maybeSingle();
+
+    let description = (body as { description?: string } | null)?.description || '';
+    if (!description) {
+      description = (await itemFeedDescription(itemId)) || '';
+    }
+
+    const photoUrlsById = await itemFeedImageUrlMap();
+    const imageUrls = photoUrlsById.get(itemId);
+
+    setSupabaseConfigurationState(true);
+    return normalizeItemFromRow({
+      ...(head as ItemPost),
+      description,
+      ...(imageUrls?.length ? { imageUrls } : {}),
+    });
+  } catch (err: any) {
+    console.warn('Supabase item fetch failed:', err);
+    handleSupabaseError(err, 'items');
+    return null;
+  }
+}
+
+async function requireAuthUserId(): Promise<string | null> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  return sessionData.session?.user?.id ?? null;
+}
+
+function sanitizeStorageKey(value: string, maxLen = 120): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, maxLen) || 'upload';
 }
 
 export async function uploadItemImage(file: File, itemId: string): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) {
+      console.warn('Listing photo upload failed: not signed in');
+      return null;
+    }
+
     const compressed = await compressImageIfNeeded(file);
-    const fileExt = compressed.name.split('.').pop() || 'jpg';
-    const filePath = `${itemId}_${Date.now()}.${fileExt}`;
+    const extRaw = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
+    const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
+    const safeItemKey = sanitizeStorageKey(itemId);
+    const filePath = `${userId}/listings/${safeItemKey}_${Date.now()}.${fileExt}`;
+    const contentType = guessImageContentType(compressed);
 
     // Upload to 'items' bucket using supabase-js
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('items')
       .upload(filePath, compressed, {
         cacheControl: '3600',
-        upsert: true
+        upsert: true,
+        contentType,
       });
 
     if (error) {
@@ -783,33 +1031,32 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
       .from('items')
       .getPublicUrl(filePath);
 
-    return publicData?.publicUrl || null;
+    const publicUrl = publicData?.publicUrl || null;
+    return publicUrl && publicUrl.startsWith('http') ? publicUrl : null;
   } catch (err: any) {
-    console.warn('Real storage upload failed, using local/base64 cache fallback:', err);
-    // If the storage block is disabled/empty/permission denied, fallback to dataURL base64 format mapping
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        resolve(reader.result as string);
-      };
-      reader.onerror = () => {
-        resolve(null);
-      };
-      reader.readAsDataURL(file);
-    });
+    // Never fall back to a data URL — inlining photos in `items.description`
+    // has ballooned a handful of rows to 4–12MB and emptied the community feed.
+    console.warn('Listing photo upload failed:', err);
+    return null;
   }
 }
 
 export async function uploadReportProofImage(file: File, reportId: string): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) return null;
+
     const compressed = await compressImageIfNeeded(file, 1400, 0.8);
     const fileExt = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
     const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
-    const filePath = `reports/${reportId}_${Date.now()}.${safeExt}`;
+    const safeReportId = sanitizeStorageKey(reportId);
+    const filePath = `${userId}/reports/${safeReportId}_${Date.now()}.${safeExt}`;
+    const contentType = guessImageContentType(compressed);
 
     const { error } = await supabase.storage.from('items').upload(filePath, compressed, {
       cacheControl: '3600',
       upsert: true,
+      contentType,
     });
 
     if (error) throw error;
@@ -832,14 +1079,21 @@ export async function uploadTicketMessageImage(
   messageId: string,
 ): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) return null;
+
     const compressed = await compressImageIfNeeded(file, 1400, 0.8);
     const fileExt = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
     const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
-    const filePath = `tickets/${ticketId}/${messageId}.${safeExt}`;
+    const safeTicketId = sanitizeStorageKey(ticketId);
+    const safeMessageId = sanitizeStorageKey(messageId);
+    const filePath = `${userId}/tickets/${safeTicketId}/${safeMessageId}.${safeExt}`;
+    const contentType = guessImageContentType(compressed);
 
     const { error } = await supabase.storage.from('items').upload(filePath, compressed, {
       cacheControl: '3600',
       upsert: true,
+      contentType,
     });
 
     if (error) throw error;
@@ -857,15 +1111,21 @@ export async function uploadTicketMessageImage(
 }
 
 export async function uploadProfilePhoto(file: File, userId: string): Promise<string | null> {
+  const authUserId = await requireAuthUserId();
+  if (!authUserId || authUserId !== userId) {
+    console.warn('Profile photo upload failed: not signed in as profile owner');
+    return null;
+  }
+
   const compressed = await compressImageIfNeeded(file, 512, 0.85);
   const extRaw = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
   const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
-  const contentType = compressed.type.startsWith('image/') ? compressed.type : 'image/jpeg';
+  const contentType = guessImageContentType(compressed);
 
   const attempts: { bucket: string; path: string }[] = [
     { bucket: 'avatars', path: `${userId}/avatar.${fileExt}` },
-    { bucket: 'items', path: `profiles/${userId}/avatar.${fileExt}` },
-    { bucket: 'items', path: `profiles/${userId}_${Date.now()}.${fileExt}` },
+    { bucket: 'items', path: `${userId}/avatar.${fileExt}` },
+    { bucket: 'items', path: `${userId}/avatar_${Date.now()}.${fileExt}` },
   ];
 
   for (const { bucket, path } of attempts) {
@@ -912,7 +1172,25 @@ function isMissingImageUrlColumnError(error: { code?: string; message?: string }
   );
 }
 
+function isMissingExpiryColumnError(error: { code?: string; message?: string } | null): boolean {
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    error?.code === 'PGRST204' ||
+    error?.code === '42703' ||
+    msg.includes('expiresat') ||
+    msg.includes('expirywarnedat')
+  );
+}
+
+function stripExpiryFields(payload: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...payload };
+  delete next.expiresAt;
+  delete next.expiryWarnedAt;
+  return next;
+}
+
 function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
+  const nowIso = new Date().toISOString();
   const payload: Record<string, unknown> = {
     id: item.id,
     title: item.title,
@@ -924,8 +1202,10 @@ function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
     userPhotoURL: item.userPhotoURL || null,
     neighborhood: item.neighborhood,
     status: item.status || 'active',
-    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
-    updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : new Date().toISOString(),
+    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : nowIso,
+    updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : nowIso,
+    expiresAt: listingExpiresAtIso(Date.now()),
+    expiryWarnedAt: null,
   };
 
   if (includeImageUrl && item.imageUrl) {
@@ -949,6 +1229,11 @@ export async function createSupabaseItem(
 
     let payload = buildItemInsertPayload(item, true);
     let { error } = await supabase.from('items').insert(payload);
+
+    if (error && isMissingExpiryColumnError(error)) {
+      payload = stripExpiryFields(payload);
+      ({ error } = await supabase.from('items').insert(payload));
+    }
 
     if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
       const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
@@ -980,6 +1265,7 @@ function buildItemUpdatePayload(
   includeImageUrl: boolean,
   options?: { repost?: boolean },
 ) {
+  const nowIso = new Date().toISOString();
   const payload: Record<string, unknown> = {
     title: item.title,
     description: item.description,
@@ -988,12 +1274,14 @@ function buildItemUpdatePayload(
     neighborhood: item.neighborhood,
     userDisplayName: item.userDisplayName,
     userPhotoURL: item.userPhotoURL || null,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso,
+    expiresAt: listingExpiresAtIso(Date.now()),
+    expiryWarnedAt: null,
   };
 
   if (options?.repost) {
     payload.status = 'active';
-    payload.createdAt = new Date().toISOString();
+    payload.createdAt = nowIso;
   }
 
   if (includeImageUrl && item.imageUrl) {
@@ -1013,6 +1301,11 @@ export async function updateSupabaseItem(
     const repost = options?.repost === true;
     let payload = buildItemUpdatePayload(item, true, repost ? { repost: true } : undefined);
     let { error } = await supabase.from('items').update(payload).eq('id', item.id);
+
+    if (error && isMissingExpiryColumnError(error)) {
+      payload = stripExpiryFields(payload);
+      ({ error } = await supabase.from('items').update(payload).eq('id', item.id));
+    }
 
     if (error && isMissingImageUrlColumnError(error) && item.imageUrl?.startsWith('http')) {
       const descriptionWithImage = `${item.description}\n\n[Photo]: ${item.imageUrl}`;
@@ -1062,14 +1355,24 @@ export async function updateSupabaseItemStatus(
     const now = new Date().toISOString();
     const isRepost = previousStatus === 'withdrawn' && status === 'active';
 
-    const { error } = await supabase
-      .from('items')
-      .update({
-        status,
-        updatedAt: now,
-        ...(isRepost ? { createdAt: now } : {}),
-      })
-      .eq('id', itemId);
+    let updatePayload: Record<string, unknown> = {
+      status,
+      updatedAt: now,
+      ...(isRepost
+        ? {
+            createdAt: now,
+            expiresAt: listingExpiresAtIso(Date.now()),
+            expiryWarnedAt: null,
+          }
+        : {}),
+    };
+
+    let { error } = await supabase.from('items').update(updatePayload).eq('id', itemId);
+
+    if (error && isMissingExpiryColumnError(error) && isRepost) {
+      updatePayload = { status, updatedAt: now, createdAt: now };
+      ({ error } = await supabase.from('items').update(updatePayload).eq('id', itemId));
+    }
 
     if (error) {
       handleSupabaseError(error, 'items');
@@ -1272,9 +1575,12 @@ async function fetchCommunityChatRows(includeStaffChat: boolean): Promise<Chat[]
 
 export async function getSupabaseChats(
   userId: string,
-  options?: { userRole?: UserProfile['role'] },
+  options?: { userRole?: UserProfile['role']; staffInteractionMode?: UserProfile['staffInteractionMode'] },
 ): Promise<Chat[]> {
-  const includeStaffChat = isStaffRole(options?.userRole);
+  const includeStaffChat =
+    isStaffRole(options?.userRole) &&
+    (options?.staffInteractionMode === undefined ||
+      options.staffInteractionMode !== 'neighbor');
   try {
     // Filter server-side using JSONB containment so we only fetch this user's chats.
     const { data, error } = await supabase
@@ -1309,6 +1615,44 @@ export async function getSupabaseChats(
     console.warn('Supabase chats fetch failed:', err);
     handleSupabaseError(err, 'chats');
     return [];
+  }
+}
+
+export async function getUserPickupCoordinationByIds(
+  userIds: string[],
+): Promise<
+  Record<
+    string,
+    Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability' | 'goGetRingDurationSeconds' | 'goGetRingPattern'>
+  >
+> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid, goGetEnabled, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern')
+      .in('uid', unique);
+    if (error || !data) return {};
+    const map: Record<
+      string,
+      Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability' | 'goGetRingDurationSeconds' | 'goGetRingPattern'>
+    > = {};
+    for (const row of data as Record<string, unknown>[]) {
+      const uid = String(row.uid ?? '');
+      if (!uid) continue;
+      map[uid] = {
+        goGetEnabled: row.goGetEnabled === true || row.go_get_enabled === true,
+        pickupAvailability: parsePickupAvailabilityColumn(row.pickupAvailability ?? row.pickup_availability),
+        goGetRingDurationSeconds: normalizeGoGetRingDuration(
+          row.goGetRingDurationSeconds ?? row.go_get_ring_duration_seconds,
+        ),
+        goGetRingPattern: normalizeGoGetRingPattern(row.goGetRingPattern ?? row.go_get_ring_pattern),
+      };
+    }
+    return map;
+  } catch {
+    return {};
   }
 }
 
@@ -1358,7 +1702,9 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
         .update({
           lastMessageAt: new Date().toISOString(),
           itemId: initialPayload.itemId || '',
-          itemTitle: initialPayload.itemTitle || ''
+          itemTitle: initialPayload.itemTitle || '',
+          eventId: initialPayload.eventId || '',
+          eventTitle: initialPayload.eventTitle || '',
         })
         .eq('id', chatId);
 
@@ -1377,7 +1723,9 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
         lastMessageAt: initialPayload.lastMessageAt ? new Date(initialPayload.lastMessageAt).toISOString() : new Date().toISOString(),
         lastMessageSenderId: initialPayload.lastMessageSenderId || '',
         itemId: initialPayload.itemId || '',
-        itemTitle: initialPayload.itemTitle || ''
+        itemTitle: initialPayload.itemTitle || '',
+        eventId: initialPayload.eventId || '',
+        eventTitle: initialPayload.eventTitle || '',
       };
 
       const { error: insertError } = await supabase
@@ -1428,6 +1776,8 @@ export interface NeighborStats {
   itemsGiven: number;
   /** Giveaways picked up + ISO requests fulfilled (received from a neighbor) */
   itemsClaimed: number;
+  /** Completed barter trades (posted or as trade partner) */
+  tradesCompleted: number;
   /** Upvotes neighbors cast on this user's listings */
   upvotesReceived: number;
   /** Downvotes neighbors cast on this user's listings */
@@ -1537,6 +1887,215 @@ export async function setUserRole(
   }
 }
 
+function isMissingRelationOrRpc(error: { code?: string; message?: string } | null | undefined): boolean {
+  const blob = `${error?.code || ''} ${error?.message || ''}`;
+  return /42P01|42883|PGRST202|PGRST205|schema cache|does not exist|could not find the function/i.test(blob);
+}
+
+function parseStaffApplicationRow(raw: unknown): StaffApplication | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const row = raw as Record<string, unknown>;
+  const role = String(row.role || '');
+  const status = String(row.status || '');
+  if (!isStaffApplyRole(role)) return null;
+  if (status !== 'pending' && status !== 'yes' && status !== 'no' && status !== 'maybe') return null;
+  const id = String(row.id || '').trim();
+  const applicantUserId = String(row.applicantUserId || '').trim();
+  if (!id || !applicantUserId) return null;
+  return {
+    id,
+    applicantUserId,
+    applicantName: String(row.applicantName || 'Neighbor'),
+    applicantEmail: String(row.applicantEmail || ''),
+    neighborhood: String(row.neighborhood || ''),
+    role,
+    statement: String(row.statement || ''),
+    responseTime: String(row.responseTime || ''),
+    otherGroups: String(row.otherGroups || ''),
+    otherInfo: String(row.otherInfo || ''),
+    status,
+    reviewedByUserId: row.reviewedByUserId ? String(row.reviewedByUserId) : null,
+    reviewedByName: row.reviewedByName ? String(row.reviewedByName) : null,
+    reviewedAt: row.reviewedAt ? String(row.reviewedAt) : null,
+    createdAt: String(row.createdAt || new Date().toISOString()),
+    updatedAt: String(row.updatedAt || row.createdAt || new Date().toISOString()),
+  };
+}
+
+export async function getMyStaffApplyState(): Promise<ApplicantStaffApplyState> {
+  const empty: ApplicantStaffApplyState = {
+    blocked: false,
+    pending: null,
+    lastDecision: null,
+    seatCounts: {},
+  };
+  try {
+    const { data, error } = await supabase.rpc('my_staff_apply_state');
+    if (!error && data && typeof data === 'object') {
+      const payload = data as {
+        blocked?: unknown;
+        pending?: unknown;
+        lastDecision?: unknown;
+        seatCounts?: unknown;
+      };
+      return {
+        blocked: payload.blocked === true,
+        pending: parseStaffApplicationRow(payload.pending),
+        lastDecision: parseStaffApplicationRow(payload.lastDecision),
+        seatCounts: parseStaffApplySeatCounts(payload.seatCounts),
+      };
+    }
+    if (error && !isMissingRelationOrRpc(error)) {
+      console.warn('my_staff_apply_state:', error.message);
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const uid = sessionData.session?.user?.id;
+    if (!uid) return empty;
+    const { data: rows, error: selectError } = await supabase
+      .from('staff_applications')
+      .select('*')
+      .eq('applicantUserId', uid)
+      .order('createdAt', { ascending: false })
+      .limit(20);
+    if (selectError) {
+      if (!isMissingRelationOrRpc(selectError)) {
+        console.warn('staff_applications state:', selectError.message);
+      }
+      return empty;
+    }
+    const parsed = (rows ?? []).map(parseStaffApplicationRow).filter((row): row is StaffApplication => !!row);
+    return deriveApplicantStaffApplyState(parsed);
+  } catch (err) {
+    console.warn('getMyStaffApplyState failed:', err);
+    return empty;
+  }
+}
+
+export async function submitStaffApplication(params: {
+  role: StaffApplyRole;
+  statement: string;
+  responseTime: string;
+  otherGroups: string;
+  otherInfo: string;
+  seatCounts?: StaffApplySeatCounts;
+}): Promise<{ ok: boolean; application?: StaffApplication; errorMessage?: string }> {
+  try {
+    if (isStaffApplySeatFilled(params.role, params.seatCounts)) {
+      return { ok: false, errorMessage: 'That staff seat is filled.' };
+    }
+    const { data, error } = await supabase.rpc('submit_staff_application', {
+      apply_role: params.role,
+      statement: params.statement,
+      response_time: params.responseTime,
+      other_groups: params.otherGroups,
+      other_info: params.otherInfo,
+    });
+    if (!error) {
+      const application = parseStaffApplicationRow(data);
+      if (application) return { ok: true, application };
+    }
+    if (error && !isMissingRelationOrRpc(error)) {
+      return { ok: false, errorMessage: error.message || 'Could not submit application.' };
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user?.id) return { ok: false, errorMessage: 'Sign in to apply.' };
+    const profile = await getSupabaseProfile(user.id);
+    const row = {
+      id: `sapp_${crypto.randomUUID().replace(/-/g, '')}`,
+      applicantUserId: user.id,
+      applicantName: profile?.displayName?.trim() || 'Neighbor',
+      applicantEmail: profile?.email || user.email || '',
+      neighborhood: profile?.neighborhood || '',
+      role: params.role,
+      statement: params.statement.trim(),
+      responseTime: params.responseTime.trim(),
+      otherGroups: params.otherGroups.trim(),
+      otherInfo: params.otherInfo.trim(),
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const { data: inserted, error: insertError } = await supabase
+      .from('staff_applications')
+      .insert(row)
+      .select('*')
+      .maybeSingle();
+    if (insertError) {
+      return {
+        ok: false,
+        errorMessage: isMissingRelationOrRpc(insertError)
+          ? 'Staff applications are not set up yet. Run the staff applications SQL in Supabase.'
+          : insertError.message || 'Could not submit application.',
+      };
+    }
+    const application = parseStaffApplicationRow(inserted) ?? parseStaffApplicationRow(row);
+    if (!application) return { ok: false, errorMessage: 'Could not submit application.' };
+    return { ok: true, application };
+  } catch (err: any) {
+    return { ok: false, errorMessage: err?.message || 'Could not submit application.' };
+  }
+}
+
+export async function getPendingStaffApplications(): Promise<StaffApplication[]> {
+  try {
+    const { data, error } = await supabase
+      .from('staff_applications')
+      .select('*')
+      .eq('status', 'pending')
+      .order('createdAt', { ascending: true })
+      .limit(40);
+    if (error) {
+      if (!isMissingRelationOrRpc(error)) {
+        console.warn('getPendingStaffApplications:', error.message);
+      }
+      return [];
+    }
+    return (data ?? []).map(parseStaffApplicationRow).filter((row): row is StaffApplication => !!row);
+  } catch (err) {
+    console.warn('getPendingStaffApplications failed:', err);
+    return [];
+  }
+}
+
+export async function reviewStaffApplication(params: {
+  applicationId: string;
+  decision: StaffApplicationDecision;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data, error } = await supabase.rpc('review_staff_application', {
+      app_id: params.applicationId,
+      decision: params.decision,
+    });
+    if (!error) {
+      const application = parseStaffApplicationRow(data);
+      if (application) {
+        const notice = staffApplicationDecisionNotice(application);
+        void notifyAccountUpdate({
+          userId: application.applicantUserId,
+          title: notice.title,
+          body: notice.body,
+          tag: `staff-apply-${application.id}`,
+        }).catch((err) => {
+          console.warn('staff application notify failed:', err);
+        });
+      }
+      return { ok: true };
+    }
+    if (!isMissingRelationOrRpc(error)) {
+      return { ok: false, errorMessage: error.message || 'Could not save that decision.' };
+    }
+    return {
+      ok: false,
+      errorMessage: 'Staff application review is not set up yet. Run the staff applications SQL in Supabase.',
+    };
+  } catch (err: any) {
+    return { ok: false, errorMessage: err?.message || 'Could not save that decision.' };
+  }
+}
+
 export async function getCommunityStats(): Promise<CommunityStats> {
   try {
     const [membersRes, activeRes, givenRes, fulfilledRes] = await Promise.all([
@@ -1569,11 +2128,13 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
   const empty = {
     itemsGiven: 0,
     itemsClaimed: 0,
+    tradesCompleted: 0,
     upvotesReceived: 0,
     downvotesReceived: 0,
   };
   try {
-    const [givenRes, claimedRes, helpedGiveRes, itemsRes] = await Promise.all([
+    const [givenRes, claimedRes, helpedGiveRes, tradesPostedRes, tradesPartnerRes, itemsRes] =
+      await Promise.all([
       supabase
         .from('items')
         .select('id', { count: 'exact', head: true })
@@ -1590,6 +2151,17 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
         .select('id', { count: 'exact', head: true })
         .eq('giverUserId', uid)
         .eq('kind', 'request_fulfilled'),
+      supabase
+        .from('items')
+        .select('id', { count: 'exact', head: true })
+        .eq('userId', uid)
+        .eq('type', 'trade')
+        .eq('status', 'completed'),
+      supabase
+        .from('item_claims')
+        .select('id', { count: 'exact', head: true })
+        .eq('claimerUserId', uid)
+        .eq('kind', 'trade_completed'),
       supabase.from('items').select('id').eq('userId', uid),
     ]);
 
@@ -1622,6 +2194,7 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
     return {
       itemsGiven: (givenRes.count ?? 0) + helpedGive,
       itemsClaimed,
+      tradesCompleted: (tradesPostedRes.count ?? 0) + (tradesPartnerRes.count ?? 0),
       upvotesReceived,
       downvotesReceived,
     };
@@ -1727,7 +2300,7 @@ export async function replaceListingSubitems(
     const { error: insertError } = await supabase.from('listing_subitems').insert(rows);
     if (insertError) {
       if (insertError.code === '42P01') {
-        return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (listing_subitems).' };
+        return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (listing_subitems).' };
       }
       return { ok: false, errorMessage: insertError.message };
     }
@@ -1814,7 +2387,7 @@ async function recordPartialItemClaims(params: {
             return { ok: false, errorMessage: `"${sub.label}" was already claimed.` };
           }
           if (claimError.code === '42P01') {
-            return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (multi-item claims).' };
+            return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (multi-item claims).' };
           }
           return { ok: false, errorMessage: claimError.message };
         }
@@ -1888,17 +2461,41 @@ export async function submitSelfClaimRequest(params: {
   claimer: UserProfile;
   subItemIds: string[];
 }): Promise<{ ok: boolean; chatId?: string; errorMessage?: string }> {
-  if (params.item.type !== 'giveaway' || params.item.status !== 'active') {
-    return { ok: false, errorMessage: 'This listing is not available to claim.' };
-  }
-  if (params.item.userId === params.claimer.uid) {
-    return { ok: false, errorMessage: 'You cannot claim your own listing.' };
+  return submitSelfHandoffRequest({
+    item: params.item,
+    actor: params.claimer,
+    subItemIds: params.subItemIds,
+    kind: 'pickup',
+  });
+}
+
+/** PWA / web handoff — claimer says "I picked up" or helper says "I dropped off"; poster confirms in chat. */
+export async function submitSelfHandoffRequest(params: {
+  item: ItemPost;
+  actor: UserProfile;
+  subItemIds: string[];
+  kind: 'pickup' | 'dropoff';
+}): Promise<{ ok: boolean; chatId?: string; errorMessage?: string }> {
+  const { item, actor, kind } = params;
+
+  if (kind === 'pickup') {
+    if (item.type !== 'giveaway' || item.status !== 'active') {
+      return { ok: false, errorMessage: 'This listing is not available to claim.' };
+    }
+  } else {
+    if (item.type !== 'looking' || item.status !== 'active') {
+      return { ok: false, errorMessage: 'This request is not open for drop-off confirmation.' };
+    }
   }
 
-  const subitems = await getListingSubitems(params.item.id);
+  if (item.userId === actor.uid) {
+    return { ok: false, errorMessage: 'You cannot confirm your own listing.' };
+  }
+
+  const subitems = await getListingSubitems(item.id);
   let targetIds = params.subItemIds;
 
-  if (subitems.length > 0) {
+  if (kind === 'pickup' && subitems.length > 0) {
     const available = subitems.filter((s) => s.status === 'available');
     if (targetIds.length !== 1) {
       return { ok: false, errorMessage: 'Pick exactly one item you picked up.' };
@@ -1909,27 +2506,30 @@ export async function submitSelfClaimRequest(params: {
       return { ok: false, errorMessage: 'That item is no longer available to claim.' };
     }
     targetIds = [subId];
+  } else if (kind === 'pickup') {
+    targetIds = [];
   } else {
     targetIds = [];
   }
 
-  const chatId = buildDmChatId(params.claimer.uid, params.item.userId);
+  const posterUserId = item.userId;
+  const chatId = buildDmChatId(actor.uid, posterUserId);
   const chatPayload = {
     id: chatId,
-    participantIds: [params.claimer.uid, params.item.userId].sort(),
+    participantIds: [actor.uid, posterUserId].sort(),
     participantNames: {
-      [params.claimer.uid]: params.claimer.displayName,
-      [params.item.userId]: params.item.userDisplayName,
+      [actor.uid]: actor.displayName,
+      [posterUserId]: item.userDisplayName,
     },
     participantPhotos: {
-      [params.claimer.uid]: params.claimer.photoURL || '',
-      [params.item.userId]: params.item.userPhotoURL || '',
+      [actor.uid]: actor.photoURL || '',
+      [posterUserId]: item.userPhotoURL || '',
     },
     lastMessageAt: new Date().toISOString(),
     lastMessageText: '',
-    lastMessageSenderId: params.claimer.uid,
-    itemId: params.item.id,
-    itemTitle: params.item.title,
+    lastMessageSenderId: actor.uid,
+    itemId: item.id,
+    itemTitle: item.title,
   };
 
   const chatOk = await getOrCreateSupabaseChat(chatId, chatPayload);
@@ -1937,13 +2537,13 @@ export async function submitSelfClaimRequest(params: {
     return { ok: false, errorMessage: 'Could not open chat with the poster.' };
   }
 
-  const requestId = `clreq_${params.item.id}_${Date.now()}`;
+  const requestId = `clreq_${item.id}_${Date.now()}`;
   const { error: reqError } = await supabase.from('item_claim_requests').insert({
     id: requestId,
-    itemId: params.item.id,
-    giverUserId: params.item.userId,
-    claimerUserId: params.claimer.uid,
-    claimerName: params.claimer.displayName,
+    itemId: item.id,
+    giverUserId: posterUserId,
+    claimerUserId: actor.uid,
+    claimerName: actor.displayName,
     subItemIds: JSON.stringify(targetIds),
     status: 'pending',
     chatId,
@@ -1952,12 +2552,12 @@ export async function submitSelfClaimRequest(params: {
 
   if (reqError) {
     if (reqError.code === '42P01') {
-      return { ok: false, errorMessage: 'Run section 15 in supabase-complete.sql (item_claim_requests).' };
+      return { ok: false, errorMessage: 'Run section 15 in complete-schema.sql (item_claim_requests).' };
     }
     return { ok: false, errorMessage: reqError.message };
   }
 
-  if (targetIds.length === 1) {
+  if (kind === 'pickup' && targetIds.length === 1) {
     const { error: holdError } = await supabase
       .from('listing_subitems')
       .update({ status: 'pending_pickup' })
@@ -1970,27 +2570,27 @@ export async function submitSelfClaimRequest(params: {
   }
 
   const labels =
-    subitems.length > 0
+    kind === 'pickup' && subitems.length > 0
       ? subitems.filter((s) => targetIds.includes(s.id)).map((s) => s.label)
-      : [params.item.title];
+      : [item.title];
+
+  const handoffMessage =
+    kind === 'dropoff'
+      ? formatSelfDropOffRequestMessage(actor.displayName, item.title)
+      : formatSelfClaimRequestMessage(actor.displayName, labels);
 
   const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  const msgOk = await createSupabaseMessage(
-    chatId,
-    formatSelfClaimRequestMessage(params.claimer.displayName, labels),
-    params.claimer.uid,
-    messageId,
-  );
+  const msgOk = await createSupabaseMessage(chatId, handoffMessage, actor.uid, messageId);
 
   if (!msgOk) {
-    return { ok: false, errorMessage: 'Claim request saved but message failed to send.' };
+    return { ok: false, errorMessage: 'Handoff request saved but message failed to send.' };
   }
 
   await runPushTask(() =>
     import('./lib/pushIntegration').then((m) =>
       m.pushAfterClaimRequest({
-        item: params.item,
-        claimerName: params.claimer.displayName,
+        item,
+        claimerName: actor.displayName,
         requestId,
       }),
     ),
@@ -2049,7 +2649,25 @@ export async function confirmClaimRequest(params: {
       return { ok: false, errorMessage: 'This claim request was already handled.' };
     }
     if (request.giverUserId !== params.actor.uid) {
-      return { ok: false, errorMessage: 'Only the poster can confirm pickups.' };
+      return { ok: false, errorMessage: 'Only the poster can confirm handoffs.' };
+    }
+
+    const { data: itemRow } = await supabase.from('items').select('type, title').eq('id', request.itemId).maybeSingle();
+    const itemType = itemRow?.type as ItemPost['type'] | undefined;
+    const itemTitle = params.itemTitle || String(itemRow?.title ?? '');
+
+    if (itemType === 'looking') {
+      const fulfillResult = await markItemFulfilledFromChat({
+        itemId: request.itemId,
+        ownerUserId: request.giverUserId,
+        helperUserId: request.claimerUserId,
+        chatId: request.chatId,
+        message: formatItemFulfilledChatMessage(itemTitle, request.claimerName),
+      });
+      if (!fulfillResult.ok) return fulfillResult;
+
+      await supabase.from('item_claim_requests').update({ status: 'confirmed' }).eq('id', request.id);
+      return { ok: true };
     }
 
     const ids = params.subItemIds ?? request.subItemIds;
@@ -2177,6 +2795,39 @@ export async function recordItemClaimInChat(params: {
   return result;
 }
 
+/** Go Get handoff — marks giveaway claimed, listing completed, and profile stats for both neighbors. */
+export async function recordGiveawayPickupFromGoGet(params: {
+  itemId: string;
+  itemTitle: string;
+  giverUserId: string;
+  claimerUserId: string;
+  chatId: string;
+  claimMessage: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const subitems = await getListingSubitems(params.itemId);
+  const availableIds =
+    subitems.length > 0
+      ? subitems
+          .filter((s) => s.status === 'available' || s.status === 'pending_pickup')
+          .map((s) => s.id)
+      : null;
+
+  if (subitems.length > 0 && (availableIds?.length ?? 0) === 0) {
+    return { ok: false, errorMessage: 'This listing was already marked as picked up.' };
+  }
+
+  return recordPartialItemClaims({
+    itemId: params.itemId,
+    itemTitle: params.itemTitle,
+    giverUserId: params.giverUserId,
+    claimerUserId: params.claimerUserId,
+    chatId: params.chatId,
+    subItemIds: availableIds,
+    claimMessage: params.claimMessage,
+    actorUserId: params.giverUserId,
+  });
+}
+
 function buildPickupAttributionPayload(input: PickupAttributionInput | null): Record<string, unknown> {
   if (!input) {
     return {
@@ -2224,6 +2875,94 @@ export async function itemHasRecordedAppClaim(itemId: string): Promise<boolean> 
     return false;
   }
   return (count ?? 0) > 0;
+}
+
+export async function getAppClaimsForItem(
+  itemId: string,
+): Promise<{ claimerUserId: string; giverUserId: string; kind: string }[]> {
+  try {
+    const { data, error } = await supabase
+      .from('item_claims')
+      .select('claimerUserId, giverUserId, kind')
+      .eq('itemId', itemId);
+
+    if (error) return [];
+    return (data ?? []).map((row) => ({
+      claimerUserId: String((row as Record<string, unknown>).claimerUserId),
+      giverUserId: String((row as Record<string, unknown>).giverUserId),
+      kind: String((row as Record<string, unknown>).kind ?? 'giveaway'),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function submitClaimDisputeSupportTicket(params: {
+  opener: UserProfile;
+  item: ItemPost;
+  chatId: string;
+  note?: string;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  const claims = await getAppClaimsForItem(params.item.id);
+  const claimSummary =
+    claims.length > 0
+      ? claims.map((c) => `• recorded claimer uid: ${c.claimerUserId} (${c.kind})`).join('\n')
+      : '• no in-app claim record yet';
+
+  const message = [
+    `Listing: "${params.item.title}" (${params.item.id})`,
+    `Type: ${params.item.type} · Status: ${params.item.status}`,
+    `Chat: ${params.chatId}`,
+    '',
+    'I believe the wrong neighbor was marked or someone else picked up / dropped off.',
+    claimSummary,
+    '',
+    params.note?.trim() || '(Neighbor did not add extra details.)',
+    '',
+    'Please review the listing claim record and adjust if needed.',
+  ].join('\n');
+
+  return createSupportTicket({
+    opener: params.opener,
+    subject: `Wrong pickup claim — ${params.item.title}`.slice(0, 120),
+    message,
+  });
+}
+
+/** Staff: mark listing completed with off-app / unnamed attribution (no specific neighbor credited). */
+export async function staffCompleteListingWithoutClaimer(
+  item: Pick<ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>,
+  actor: Pick<UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!isStaffRole(actor.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  const { error } = await supabase
+    .from('items')
+    .update({
+      status: 'completed',
+      pickupAttributionType: 'other',
+      pickupAttributionUserId: null,
+      pickupAttributionLabel: 'Claimed (corrected by staff — no app user named)',
+      updatedAt: new Date().toISOString(),
+    })
+    .eq('id', item.id);
+
+  if (error) {
+    handleSupabaseError(error, 'items');
+    return { ok: false, errorMessage: error.message };
+  }
+
+  await markAllSubitemsClaimed(item.id);
+  await writeModerationAudit({
+    actor: actor as UserProfile,
+    target: { uid: item.userId, displayName: item.userDisplayName },
+    action: 'complete_listing_staff',
+    detail: `"${item.title}" marked completed without naming a claimer`,
+  });
+
+  return { ok: true };
 }
 
 export async function getFacebookPickupGroups(): Promise<string[]> {
@@ -2332,7 +3071,7 @@ export async function getPickupNeighborCandidates(
     if (voterIds.length > 0) {
       const { data: users } = await supabase
         .from('users_public')
-        .select('uid, displayName, photoURL, neighborhood')
+        .select('uid, displayName, photoURL, neighborhood, role')
         .in('uid', voterIds);
 
       for (const row of users || []) {
@@ -2341,6 +3080,7 @@ export async function getPickupNeighborCandidates(
           displayName: String((row as { displayName?: string }).displayName || 'Neighbor'),
           photoURL: (row as { photoURL?: string }).photoURL || undefined,
           neighborhood: (row as { neighborhood?: string }).neighborhood || undefined,
+          role: (row as { role?: UserProfile['role'] }).role,
           source: 'interest',
         });
       }
@@ -2363,7 +3103,7 @@ export async function searchPickupNeighbors(
   try {
     const { data, error } = await supabase
       .from('users_public')
-      .select('uid, displayName, photoURL, neighborhood')
+      .select('uid, displayName, photoURL, neighborhood, role')
       .neq('uid', ownerUserId)
       .ilike('displayName', `%${trimmed}%`)
       .limit(limit);
@@ -2378,6 +3118,7 @@ export async function searchPickupNeighbors(
       displayName: String((row as { displayName?: string }).displayName || 'Neighbor'),
       photoURL: (row as { photoURL?: string }).photoURL || undefined,
       neighborhood: (row as { neighborhood?: string }).neighborhood || undefined,
+      role: (row as { role?: UserProfile['role'] }).role,
       source: 'search' as const,
     }));
   } catch {
@@ -2550,14 +3291,14 @@ export async function markItemFulfilledFromChat(params: {
       if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
         return {
           ok: false,
-          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see supabase-complete.sql).',
+          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see complete-schema.sql).',
         };
       }
       if (msg.includes('kind') || msg.includes('column')) {
         return {
           ok: false,
           errorMessage:
-            'Claims table needs the kind column — re-run section 7 in supabase-complete.sql (request_fulfilled support).',
+            'Claims table needs the kind column — re-run section 7 in complete-schema.sql (request_fulfilled support).',
         };
       }
       return { ok: false, errorMessage: claimError.message || 'Could not record fulfillment.' };
@@ -2583,6 +3324,71 @@ export async function markItemFulfilledFromChat(params: {
     return { ok: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Could not mark as fulfilled.';
+    return { ok: false, errorMessage: message };
+  }
+}
+
+export async function markTradeCompletedFromChat(params: {
+  itemId: string;
+  posterUserId: string;
+  partnerUserId: string;
+  chatId: string;
+  message: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const claimId = `trade_${params.itemId}_${Date.now()}`;
+
+    const { error: claimError } = await supabase.from('item_claims').insert({
+      id: claimId,
+      itemId: params.itemId,
+      giverUserId: params.posterUserId,
+      claimerUserId: params.partnerUserId,
+      chatId: params.chatId,
+      kind: 'trade_completed',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (claimError) {
+      const msg = String(claimError.message || '').toLowerCase();
+      if (msg.includes('duplicate') || msg.includes('unique')) {
+        return { ok: false, errorMessage: 'This trade was already marked as completed.' };
+      }
+      if (claimError.code === 'PGRST204' || claimError.code === '42P01' || msg.includes('item_claims')) {
+        return {
+          ok: false,
+          errorMessage: 'Claims table missing — run the item_claims SQL in Supabase (see complete-schema.sql).',
+        };
+      }
+      if (msg.includes('kind') || msg.includes('column')) {
+        return {
+          ok: false,
+          errorMessage:
+            'Claims table needs trade_completed support — re-run section 7 in complete-schema.sql.',
+        };
+      }
+      return { ok: false, errorMessage: claimError.message || 'Could not record trade.' };
+    }
+
+    const statusOk = await updateSupabaseItemStatus(params.itemId, 'completed', params.posterUserId);
+    if (!statusOk) {
+      return { ok: false, errorMessage: 'Trade saved but listing status could not be updated.' };
+    }
+
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const msgOk = await createSupabaseMessage(
+      params.chatId,
+      params.message,
+      params.posterUserId,
+      messageId,
+      { skipPush: true },
+    );
+    if (!msgOk) {
+      return { ok: false, errorMessage: 'Trade marked complete but chat message failed.' };
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Could not mark trade as completed.';
     return { ok: false, errorMessage: message };
   }
 }
@@ -2953,10 +3759,28 @@ export async function deleteSupabaseItemComment(
 /**
  * --- COMMUNITY EVENTS ---
  */
+export async function getSupabaseEventById(eventId: string): Promise<CommunityEvent | null> {
+  if (!eventId) return null;
+  try {
+    const { data, error } = await supabase.from('community_events').select('*').eq('id', eventId).maybeSingle();
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return null;
+    }
+    if (!data) return null;
+    setSupabaseConfigurationState(true);
+    return normalizeSupabaseEvent(data as CommunityEvent);
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return null;
+  }
+}
+
 export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
   return {
     ...row,
     hostedBy: row.hostedBy?.trim() || null,
+    seriesId: row.seriesId?.trim() || null,
     locationLat:
       typeof row.locationLat === 'number' && Number.isFinite(row.locationLat) ? row.locationLat : null,
     locationLng:
@@ -3029,7 +3853,7 @@ export async function createSupabaseEvent(
         return {
           ok: false,
           errorMessage:
-            'Community events unlock at 1,000 neighbors. Share the invite link to help us get there!',
+            'Community events unlock at 500 neighbors. Share the invite link to help us get there!',
         };
       }
     }
@@ -3038,20 +3862,7 @@ export async function createSupabaseEvent(
       await upsertSupabaseProfile(author);
     }
 
-    const payload = {
-      ...event,
-      isFree: true,
-      status: 'upcoming' as const,
-      eventStartAt: new Date(event.eventStartAt).toISOString(),
-      eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
-      createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : new Date().toISOString(),
-      imageUrl:
-        event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
-          ? event.imageUrl
-          : null,
-    };
-
+    const payload = buildCommunityEventInsertPayload(event);
     const { error } = await supabase.from('community_events').insert(payload);
 
     if (error) {
@@ -3066,6 +3877,185 @@ export async function createSupabaseEvent(
     return {
       ok: false,
       errorMessage: err instanceof Error ? err.message : 'Could not save event.',
+    };
+  }
+}
+
+function buildCommunityEventInsertPayload(event: CommunityEvent) {
+  return {
+    ...event,
+    seriesId: event.seriesId?.trim() || null,
+    isFree: true,
+    status: 'upcoming' as const,
+    eventStartAt: new Date(event.eventStartAt).toISOString(),
+    eventEndAt: event.eventEndAt ? new Date(event.eventEndAt).toISOString() : null,
+    createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : new Date().toISOString(),
+    imageUrl:
+      event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
+        ? event.imageUrl
+        : null,
+  };
+}
+
+/** Post multiple occurrences at the same location (shared seriesId). */
+export async function createSupabaseEventSeries(
+  events: CommunityEvent[],
+  author?: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string; count?: number }> {
+  if (events.length === 0) {
+    return { ok: false, errorMessage: 'Add at least one date.' };
+  }
+
+  try {
+    for (const event of events) {
+      if (!event.isFree) {
+        return { ok: false, errorMessage: 'Only free community events are allowed.' };
+      }
+    }
+
+    if (author && !isStaffRole(author.role)) {
+      const unlockStatus = await getEventsUnlockStatus();
+      if (!unlockStatus.unlocked) {
+        return {
+          ok: false,
+          errorMessage:
+            'Community events unlock at 500 neighbors. Share the invite link to help us get there!',
+        };
+      }
+    }
+
+    if (author?.email) {
+      await upsertSupabaseProfile(author);
+    }
+
+    const payloads = events.map((event) => buildCommunityEventInsertPayload(event));
+    const { error } = await supabase.from('community_events').insert(payloads);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not save events.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true, count: events.length };
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not save events.',
+    };
+  }
+}
+
+/** Update map pin on all upcoming rows in a series (same venue). */
+export async function updateSupabaseEventSeriesLocation(
+  seriesId: string,
+  userId: string,
+  locationLat: number,
+  locationLng: number,
+  neighborhood: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({
+        locationLat,
+        locationLng,
+        neighborhood,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('seriesId', seriesId)
+      .eq('userId', userId)
+      .eq('status', 'upcoming');
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not update series locations.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not update series locations.',
+    };
+  }
+}
+
+/** Sync shared listing fields across every upcoming row in a repeat series. */
+export async function updateSupabaseEventSeriesMetadata(
+  seriesId: string,
+  userId: string,
+  patch: {
+    title: string;
+    description: string;
+    location: string;
+    neighborhood: string;
+    hostedBy: string | null;
+    locationLat: number | null;
+    locationLng: number | null;
+    imageUrl: string | null;
+  },
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({
+        title: patch.title,
+        description: patch.description,
+        location: patch.location,
+        neighborhood: patch.neighborhood,
+        hostedBy: patch.hostedBy,
+        locationLat: patch.locationLat,
+        locationLng: patch.locationLng,
+        imageUrl: patch.imageUrl,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('seriesId', seriesId)
+      .eq('userId', userId)
+      .eq('status', 'upcoming');
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not update series details.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not update series details.',
+    };
+  }
+}
+
+/** Link an existing event row into a repeat series (e.g. when adding dates later). */
+export async function assignSupabaseEventSeriesId(
+  eventId: string,
+  userId: string,
+  seriesId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({ seriesId, updatedAt: new Date().toISOString() })
+      .eq('id', eventId)
+      .eq('userId', userId);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not link event to series.' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not link event to series.',
     };
   }
 }
@@ -3095,6 +4085,7 @@ export async function updateSupabaseEvent(
         hostedBy: event.hostedBy?.trim() || null,
         locationLat: event.locationLat ?? null,
         locationLng: event.locationLng ?? null,
+        seriesId: event.seriesId?.trim() || null,
         imageUrl:
           event.imageUrl?.startsWith('http://') || event.imageUrl?.startsWith('https://')
             ? event.imageUrl
@@ -3588,16 +4579,20 @@ export async function getSupabaseAppUpdates(): Promise<AppUpdateRecord[]> {
       .order('updatedAt', { ascending: false });
 
     if (error) {
-      if (error.code === '42P01') return [];
+      if (error.code === '42P01') {
+        return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
+      }
       handleSupabaseError(error, 'app_updates');
-      return [];
+      return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
     }
 
-    if (!data?.length) return [];
     setSupabaseConfigurationState(true);
-    return enrichAppUpdatesWithAuthorProfiles(data as Record<string, unknown>[]);
+    const live = data?.length
+      ? await enrichAppUpdatesWithAuthorProfiles(data as Record<string, unknown>[])
+      : [];
+    return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, live) as AppUpdateRecord[]);
   } catch {
-    return [];
+    return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
   }
 }
 
@@ -3803,13 +4798,23 @@ function normalizeUserNotificationRow(row: Record<string, unknown>): UserNotific
   };
 }
 
-export async function getUnreadUserNotificationCount(userId: string): Promise<number> {
+export async function getUnreadUserNotificationCount(
+  userId: string,
+  options?: { excludeKinds?: string[] },
+): Promise<number> {
   try {
-    const { count, error } = await supabase
+    let query = supabase
       .from('user_notifications')
       .select('id', { count: 'exact', head: true })
       .eq('userId', userId)
       .is('readAt', null);
+
+    const excludeKinds = options?.excludeKinds?.filter(Boolean) || [];
+    if (excludeKinds.length) {
+      query = query.not('kind', 'in', `(${excludeKinds.join(',')})`);
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       if (error.code === '42P01') return 0;
@@ -3868,16 +4873,18 @@ export async function getSupabaseHelpAnnouncements(): Promise<HelpAnnouncementRe
       .order('updatedAt', { ascending: false });
 
     if (error) {
-      if (error.code === '42P01') return [];
+      if (error.code === '42P01') {
+        return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
+      }
       handleSupabaseError(error, 'help_announcements');
-      return [];
+      return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
     }
 
-    if (!data?.length) return [];
     setSupabaseConfigurationState(true);
-    return (data as Record<string, unknown>[]).map(normalizeHelpAnnouncementRow);
+    const live = (data || []).map((row) => normalizeHelpAnnouncementRow(row as Record<string, unknown>));
+    return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, live) as HelpAnnouncementRecord[]);
   } catch {
-    return [];
+    return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
   }
 }
 
@@ -4263,6 +5270,11 @@ export async function setSupabaseCommunityContentVote(
     }
 
     setSupabaseConfigurationState(true);
+    if (targetType === 'feed_post') {
+      void import('./lib/pushFeedIntegration').then((m) =>
+        m.pushAfterFeedVote({ postId: targetId, voterUserId: userId, voteType }),
+      );
+    }
     return { ok: true };
   } catch {
     return { ok: false, reason: 'error' };
@@ -4401,7 +5413,7 @@ export async function blockUser(params: {
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Blocks table missing — run section 8 in supabase-complete.sql.' };
+        return { ok: false, errorMessage: 'Blocks table missing — run section 8 in complete-schema.sql.' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -4438,7 +5450,7 @@ export async function blockUser(params: {
       if (reportError.code === '42P01') {
         return {
           ok: true,
-          errorMessage: 'Neighbor blocked, but reports table is missing — run sections 12 and 16 in supabase-complete.sql.',
+          errorMessage: 'Neighbor blocked, but reports table is missing — run sections 12 and 16 in complete-schema.sql.',
         };
       }
       const missingColumn =
@@ -4571,7 +5583,7 @@ export async function sendMessageRequest(params: {
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Message requests table missing — run section 9 in supabase-complete.sql.' };
+        return { ok: false, errorMessage: 'Message requests table missing — run section 9 in complete-schema.sql.' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -4848,29 +5860,8 @@ export async function getSupabaseChatById(chatId: string): Promise<Chat | null> 
 /** Staff: fetch all listings (any status except physically deleted) ordered by newest first. */
 export async function staffGetAllListings(): Promise<{ items: ItemPost[]; errorMessage?: string }> {
   try {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('createdAt', { ascending: false })
-      .limit(1000);
-
-    if (error) {
-      handleSupabaseError(error, 'items');
-      return { items: [], errorMessage: String(error.message || 'Could not load listings.') };
-    }
-
-    const items = (data ?? [])
-      .map((row) => {
-        try {
-          return normalizeItemFromRow(row as ItemPost);
-        } catch (rowErr) {
-          console.warn('Skipping malformed listing row:', row?.id, rowErr);
-          return null;
-        }
-      })
-      .filter((p): p is ItemPost => !!p);
-
-    return { items };
+    const rows = await fetchItemRowsForFeed();
+    return { items: mapItemRows(rows) };
   } catch (err) {
     console.warn('staffGetAllListings failed:', err);
     return { items: [], errorMessage: 'Could not load listings.' };
@@ -4921,6 +5912,93 @@ export async function staffDeleteListing(
   return { ok: true };
 }
 
+/** Staff: fetch all community events ordered by newest first. */
+export async function staffGetAllEvents(): Promise<{ events: CommunityEvent[]; errorMessage?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('community_events')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .limit(1000);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { events: [], errorMessage: String(error.message || 'Could not load events.') };
+    }
+
+    const rows = (data ?? []) as CommunityEvent[];
+    void syncPastEventStatuses(rows);
+    const events = rows.map((row) => normalizeSupabaseEvent(row));
+    return { events };
+  } catch (err) {
+    console.warn('staffGetAllEvents failed:', err);
+    return { events: [], errorMessage: 'Could not load events.' };
+  }
+}
+
+/** Staff: cancel any upcoming community event. */
+export async function staffCancelEvent(
+  event: Pick<CommunityEvent, 'id' | 'title' | 'userId' | 'userDisplayName' | 'status' | 'eventStartAt'>,
+  actor: Pick<import('./types').UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+
+  if (!isEventEditable(event)) {
+    return { ok: false, errorMessage: 'Only upcoming events can be cancelled.' };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('community_events')
+      .update({ status: 'cancelled', updatedAt: new Date().toISOString() })
+      .eq('id', event.id)
+      .in('status', ['active', 'upcoming']);
+
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not cancel event.' };
+    }
+
+    await writeModerationAudit({
+      actor: actor as import('./types').UserProfile,
+      target: { uid: event.userId, displayName: event.userDisplayName },
+      action: 'cancel_event',
+      detail: `"${event.title}"`,
+    });
+
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not cancel event.',
+    };
+  }
+}
+
+/** Staff: delete a community event permanently (manager+). */
+export async function staffDeleteEvent(
+  event: Pick<CommunityEvent, 'id' | 'title' | 'userId' | 'userDisplayName'>,
+  actor: Pick<import('./types').UserProfile, 'uid' | 'displayName' | 'role'>,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!canStaffDeleteAccount(actor.role)) return { ok: false, errorMessage: 'City Manager+ only.' };
+
+  try {
+    await deleteSupabaseEvent(event.id);
+    await writeModerationAudit({
+      actor: actor as import('./types').UserProfile,
+      target: { uid: event.userId, displayName: event.userDisplayName },
+      action: 'delete_event',
+      detail: `"${event.title}"`,
+    });
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not delete event.',
+    };
+  }
+}
+
 export async function touchLastActive(): Promise<void> {
   try {
     await supabase.rpc('touch_last_active');
@@ -4959,17 +6037,31 @@ export async function getUsersLastActive(uids: string[]): Promise<Record<string,
   }
 }
 
+function countFromHeadResult(result: { count?: number | null; error?: { code?: string } | null }): number {
+  if (result.error?.code === '42P01') return 0;
+  return result.count ?? 0;
+}
+
 export async function getDirectorSiteOverview(): Promise<import('./types').DirectorSiteOverview> {
   const empty: import('./types').DirectorSiteOverview = {
     totalNeighbors: 0,
     neighborsJoinedToday: 0,
     activeOnlineCount: 0,
+    activeTodayCount: 0,
     activeNeighbors: [],
     activeListings: 0,
+    upcomingEvents: 0,
     openReports: 0,
     openTickets: 0,
     suspendedCount: 0,
     bannedCount: 0,
+    downloadDevicesApk: 0,
+    downloadDevicesAab: 0,
+    downloadDevicesTotal: 0,
+    installDevicesCount: 0,
+    installDevicesApk: 0,
+    installDevicesPwa: 0,
+    installDevicesIosPwa: 0,
     recentActivity: [],
   };
 
@@ -4983,12 +6075,21 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       usersRes,
       joinedTodayRes,
       activeOnlineRes,
+      activeTodayRes,
       activeNeighborsRes,
       activeListingsRes,
+      upcomingEventsRes,
       openReportsRes,
       openTicketsRes,
       suspendedRes,
       bannedRes,
+      downloadApkRes,
+      downloadAabRes,
+      downloadAnyRes,
+      installTotalRes,
+      installApkRes,
+      installPwaRes,
+      installIosPwaRes,
       auditRes,
       reportsRes,
       ticketsRes,
@@ -4999,16 +6100,50 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       supabase.rpc('active_neighbor_count', { within_minutes: 5 }),
       supabase
         .from('users')
+        .select('uid', { count: 'exact', head: true })
+        .eq('accountStatus', 'active')
+        .gte('lastActiveAt', todayIso),
+      supabase
+        .from('users')
         .select('uid, displayName, photoURL, neighborhood, lastActiveAt')
         .eq('accountStatus', 'active')
         .gte('lastActiveAt', onlineSince)
         .order('lastActiveAt', { ascending: false })
         .limit(12),
       supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase
+        .from('community_events')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['active', 'upcoming']),
       supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'new'),
       supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
       supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'suspended'),
       supabase.from('users').select('uid', { count: 'exact', head: true }).eq('accountStatus', 'banned'),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .not('apkDownloadedAt', 'is', null),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .not('aabDownloadedAt', 'is', null),
+      supabase
+        .from('app_device_downloads')
+        .select('deviceId', { count: 'exact', head: true })
+        .or('apkDownloadedAt.not.is.null,aabDownloadedAt.not.is.null'),
+      supabase.from('app_device_installs').select('deviceId', { count: 'exact', head: true }),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'android-apk'),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'pwa'),
+      supabase
+        .from('app_device_installs')
+        .select('deviceId', { count: 'exact', head: true })
+        .eq('installKind', 'ios-pwa'),
       supabase
         .from('moderation_audit_log')
         .select('*')
@@ -5084,6 +6219,7 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
       totalNeighbors: usersRes.count ?? 0,
       neighborsJoinedToday: joinedTodayRes.count ?? 0,
       activeOnlineCount: Number(activeOnlineRes.data ?? 0),
+      activeTodayCount: activeTodayRes.count ?? 0,
       activeNeighbors: (activeNeighborsRes.data ?? []).map((row) => {
         const r = row as Record<string, unknown>;
         return {
@@ -5095,10 +6231,18 @@ export async function getDirectorSiteOverview(): Promise<import('./types').Direc
         };
       }),
       activeListings: activeListingsRes.count ?? 0,
+      upcomingEvents: upcomingEventsRes.count ?? 0,
       openReports: openReportsRes.count ?? 0,
       openTickets: openTicketsRes.count ?? 0,
       suspendedCount: suspendedRes.count ?? 0,
       bannedCount: bannedRes.count ?? 0,
+      downloadDevicesApk: countFromHeadResult(downloadApkRes),
+      downloadDevicesAab: countFromHeadResult(downloadAabRes),
+      downloadDevicesTotal: countFromHeadResult(downloadAnyRes),
+      installDevicesCount: countFromHeadResult(installTotalRes),
+      installDevicesApk: countFromHeadResult(installApkRes),
+      installDevicesPwa: countFromHeadResult(installPwaRes),
+      installDevicesIosPwa: countFromHeadResult(installIosPwaRes),
       recentActivity: activity.slice(0, 20),
     };
   } catch {
@@ -5164,7 +6308,7 @@ export async function staffSuspendUser(params: {
 
     if (error) {
       if (error.code === '42703') {
-        return { ok: false, errorMessage: 'Run section 10 in supabase-complete.sql (account moderation columns).' };
+        return { ok: false, errorMessage: 'Run section 10 in complete-schema.sql (account moderation columns).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5238,7 +6382,7 @@ export async function staffBanUser(params: {
 
     if (error) {
       if (error.code === '42703') {
-        return { ok: false, errorMessage: 'Run section 10 in supabase-complete.sql (account moderation columns).' };
+        return { ok: false, errorMessage: 'Run section 10 in complete-schema.sql (account moderation columns).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5354,6 +6498,12 @@ function normalizeReport(row: Record<string, unknown>): UserReport {
 }
 
 function normalizeTicket(row: Record<string, unknown>): SupportTicket {
+  const ticketSourceRaw = row.ticketSource ?? row.ticket_source;
+  const ticketSource =
+    ticketSourceRaw === 'staff_listing' || ticketSourceRaw === 'staff_event' || ticketSourceRaw === 'neighbor'
+      ? ticketSourceRaw
+      : 'neighbor';
+
   return {
     id: String(row.id),
     openerUserId: String(row.openerUserId),
@@ -5363,6 +6513,12 @@ function normalizeTicket(row: Record<string, unknown>): SupportTicket {
     subject: String(row.subject),
     status: row.status === 'closed' ? 'closed' : 'open',
     closedByUserId: row.closedByUserId ? String(row.closedByUserId) : null,
+    ticketSource,
+    relatedItemId: row.relatedItemId ? String(row.relatedItemId) : null,
+    relatedItemTitle: row.relatedItemTitle ? String(row.relatedItemTitle) : null,
+    relatedEventId: row.relatedEventId ? String(row.relatedEventId) : null,
+    relatedEventTitle: row.relatedEventTitle ? String(row.relatedEventTitle) : null,
+    initiatedByUserId: row.initiatedByUserId ? String(row.initiatedByUserId) : null,
     createdAt: String(row.createdAt ?? row.created_at ?? ''),
     updatedAt: String(row.updatedAt ?? row.updated_at ?? ''),
   };
@@ -5440,6 +6596,8 @@ export async function submitUserReport(params: {
   reportedUserName?: string;
   proofImageUrl?: string | null;
   proofFile?: File | null;
+  feedPostId?: string;
+  feedCommentId?: string;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const subject = params.subject.trim();
   const body = params.body.trim();
@@ -5467,11 +6625,13 @@ export async function submitUserReport(params: {
       source: 'manual',
       status: 'new',
       createdAt: new Date().toISOString(),
+      ...(params.feedPostId ? { feedPostId: params.feedPostId } : {}),
+      ...(params.feedCommentId ? { feedCommentId: params.feedCommentId } : {}),
     });
 
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, errorMessage: 'Run section 12 in supabase-complete.sql (user_reports).' };
+        return { ok: false, errorMessage: 'Run section 12 in complete-schema.sql (user_reports).' };
       }
       return { ok: false, errorMessage: error.message };
     }
@@ -5569,7 +6729,7 @@ export async function createSupportTicket(params: {
 
     if (ticketError) {
       if (ticketError.code === '42P01') {
-        return { ok: false, errorMessage: 'Run sections 13–14 in supabase-complete.sql (support tickets).' };
+        return { ok: false, errorMessage: 'Run sections 13–14 in complete-schema.sql (support tickets).' };
       }
       return { ok: false, errorMessage: ticketError.message };
     }
@@ -5599,6 +6759,150 @@ export async function createSupportTicket(params: {
     return { ok: true, ticketId };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open ticket.' };
+  }
+}
+
+export async function findOrCreateStaffListingOutreachTicket(params: {
+  staff: UserProfile;
+  item: Pick<import('./types').ItemPost, 'id' | 'title' | 'userId' | 'userDisplayName'>;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  if (!isStaffRole(params.staff.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('support_tickets')
+      .select('id')
+      .eq('openerUserId', params.item.userId)
+      .eq('relatedItemId', params.item.id)
+      .eq('ticketSource', 'staff_listing')
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (findError && findError.code !== '42P01') {
+      return { ok: false, errorMessage: findError.message };
+    }
+    if (existing?.id) return { ok: true, ticketId: String(existing.id) };
+
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const subject = `Listing: ${params.item.title}`;
+
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.item.userId,
+      openerName: params.item.userDisplayName,
+      openerRole: 'user',
+      minStaffRank: ROLE_RANK.city_moderator,
+      subject,
+      status: 'open',
+      ticketSource: 'staff_listing',
+      relatedItemId: params.item.id,
+      relatedItemTitle: params.item.title,
+      initiatedByUserId: params.staff.uid,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run staff outreach ticket migration in Supabase.' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const msgResult = await insertSupportTicketMessageRow({
+      ticketId,
+      senderUserId: params.staff.uid,
+      senderName: params.staff.displayName,
+      text: `${roleLabel(params.staff.role)} opened a staff thread about this listing. Neighbors and staff can coordinate here.`,
+      createdAt: now,
+    });
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened', messageId: msgResult.messageId });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
+
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open staff thread.' };
+  }
+}
+
+export async function findOrCreateStaffEventOutreachTicket(params: {
+  staff: UserProfile;
+  event: Pick<import('./types').CommunityEvent, 'id' | 'title' | 'userId' | 'userDisplayName'>;
+}): Promise<{ ok: boolean; ticketId?: string; errorMessage?: string }> {
+  if (!isStaffRole(params.staff.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('support_tickets')
+      .select('id')
+      .eq('openerUserId', params.event.userId)
+      .eq('relatedEventId', params.event.id)
+      .eq('ticketSource', 'staff_event')
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (findError && findError.code !== '42P01') {
+      return { ok: false, errorMessage: findError.message };
+    }
+    if (existing?.id) return { ok: true, ticketId: String(existing.id) };
+
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const subject = `Event: ${params.event.title}`;
+
+    const { error: ticketError } = await supabase.from('support_tickets').insert({
+      id: ticketId,
+      openerUserId: params.event.userId,
+      openerName: params.event.userDisplayName,
+      openerRole: 'user',
+      minStaffRank: ROLE_RANK.city_moderator,
+      subject,
+      status: 'open',
+      ticketSource: 'staff_event',
+      relatedEventId: params.event.id,
+      relatedEventTitle: params.event.title,
+      initiatedByUserId: params.staff.uid,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (ticketError) {
+      if (ticketError.code === '42P01') {
+        return { ok: false, errorMessage: 'Run staff outreach ticket migration in Supabase.' };
+      }
+      return { ok: false, errorMessage: ticketError.message };
+    }
+
+    const msgResult = await insertSupportTicketMessageRow({
+      ticketId,
+      senderUserId: params.staff.uid,
+      senderName: params.staff.displayName,
+      text: `${roleLabel(params.staff.role)} opened a staff thread about this event.`,
+      createdAt: now,
+    });
+    if (!msgResult.ok) return { ok: false, errorMessage: msgResult.errorMessage };
+
+    try {
+      const m = await import('./lib/pushNotifications');
+      await m.notifySupportTicketPush({ ticketId, event: 'opened', messageId: msgResult.messageId });
+    } catch (err) {
+      console.warn('[push]', err);
+    }
+
+    return { ok: true, ticketId };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not open staff thread.' };
   }
 }
 
@@ -6053,7 +7357,7 @@ async function notifyDirectorDepartureAlert(params: {
 
 /**
  * Permanently removes the signed-in user's account (profile + auth).
- * Requires `delete_own_account()` in Supabase — run supabase-complete.sql.
+ * Requires `delete_own_account()` in Supabase — run complete-schema.sql.
  */
 export async function staffDeleteUserAccount(params: {
   actor: UserProfile;
@@ -6125,7 +7429,7 @@ export async function staffDeleteUserAccount(params: {
       actor: params.actor,
       target: { uid: params.targetUserId, displayName: params.targetName },
       action: 'delete_account',
-      detail: 'Community data removed (run supabase-complete.sql for full auth removal)',
+      detail: 'Community data removed (run complete-schema.sql for full auth removal)',
     });
 
     await notifyDirectorDepartureAlert({
@@ -6138,7 +7442,7 @@ export async function staffDeleteUserAccount(params: {
     return {
       ok: true,
       errorMessage:
-        'Community data removed. Run supabase-complete.sql to fully remove sign-in access.',
+        'Community data removed. Run complete-schema.sql to fully remove sign-in access.',
     };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };
@@ -6209,7 +7513,7 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
     return {
       ok: true,
       errorMessage:
-        'Community data removed. Ask an admin to run supabase-complete.sql if you still receive sign-in emails.',
+        'Community data removed. Ask an admin to run complete-schema.sql if you still receive sign-in emails.',
     };
   } catch (err: unknown) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not delete account.' };

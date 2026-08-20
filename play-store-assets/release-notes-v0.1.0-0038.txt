@@ -1,0 +1,8 @@
+Android beta v0.1.0.0038 (versionCode 38)
+
+What's new:
+• Feed & Chat match Stuff/Events style — same toolbar, cards, and spacing
+• Legal footer sits below the fold on empty pages (scroll to see it)
+• Stuff grid — compact "Looking" tags (no more huge "Looking for" pills)
+
+Download (sideload): https://www.sacramentobuynothing.com/download

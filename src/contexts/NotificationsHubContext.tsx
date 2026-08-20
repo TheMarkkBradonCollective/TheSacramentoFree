@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { ArrowLeft, Bell } from 'lucide-react';
 import type { UserProfile } from '../types';
 import FullScreenPanel from '../components/FullScreenPanel';
 import NotificationSettings from '../components/NotificationSettings';
@@ -9,10 +9,12 @@ import UserNotificationsList from '../components/UserNotificationsList';
 import { useNotificationsHubUnread } from '../hooks/useNotificationsHubUnread';
 import HeaderActionButton from '../components/HeaderActionButton';
 import type { PushDeepLinkTarget } from '../lib/pushDeepLink';
+import { isStaffRole } from '../lib/roles';
+import { isStaffApplyInviteSeen, markStaffApplyInviteSeen } from '../lib/staffApplyInvite';
 
-export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts';
+export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts' | 'awards';
 
-const HUB_TAB_ORDER: NotificationsHubTab[] = ['notifications', 'announcements', 'updates', 'alerts'];
+const HUB_TAB_ORDER: NotificationsHubTab[] = ['notifications', 'announcements', 'updates', 'awards', 'alerts'];
 
 const HUB_TAB_META: Record<
   NotificationsHubTab,
@@ -39,6 +41,13 @@ const HUB_TAB_META: Record<
     subtitle: 'Director changelog — vote and comment',
     intro: 'Technical release notes for the app. Expand any entry for the full story and discussion.',
   },
+  awards: {
+    label: 'Badges',
+    mobileLabel: 'Badges',
+    title: 'Your badges',
+    subtitle: 'Community awards and milestones',
+    intro: 'Open your full badges panel to see earned awards and progress.',
+  },
   alerts: {
     label: 'Alerts',
     mobileLabel: 'Alerts',
@@ -61,6 +70,7 @@ type NotificationsHubContextValue = {
 const NotificationsHubContext = createContext<NotificationsHubContextValue | null>(null);
 
 let openNotificationsHubGlobal: ((tab?: NotificationsHubTab) => void) | null = null;
+let closeNotificationsHubGlobal: (() => void) | null = null;
 
 function resolveHubTab(tab: NotificationsHubTab | 'notifications' | 'listings'): NotificationsHubTab {
   if (tab === 'listings') return 'notifications';
@@ -72,6 +82,10 @@ export function openNotificationsHub(tab: NotificationsHubTab | 'listings' = 'no
   openNotificationsHubGlobal?.(resolveHubTab(tab));
 }
 
+export function closeNotificationsHub() {
+  closeNotificationsHubGlobal?.();
+}
+
 export function useNotificationsHub(): NotificationsHubContextValue {
   const ctx = useContext(NotificationsHubContext);
   if (!ctx) {
@@ -80,7 +94,13 @@ export function useNotificationsHub(): NotificationsHubContextValue {
   return ctx;
 }
 
-export function NotificationsHubButton({ className = '' }: { className?: string }) {
+export function NotificationsHubButton({
+  className = '',
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   const { openHub, shouldGlow } = useNotificationsHub();
 
   return (
@@ -89,6 +109,7 @@ export function NotificationsHubButton({ className = '' }: { className?: string 
       icon={Bell}
       label="Notify"
       glow={shouldGlow}
+      compact={compact}
       title={shouldGlow ? 'You have unread notifications' : 'Notify, news, updates, and alerts'}
       ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notify, news, updates, and alerts'}
       id="notifications_hub_btn"
@@ -110,14 +131,19 @@ function tabUnreadCount(
 export function NotificationsHubProvider({
   userProfile,
   onDeepLink,
+  onOpenAwards,
+  awardsGlow = false,
   children,
 }: {
   userProfile: UserProfile | null;
   onDeepLink?: (target: PushDeepLinkTarget) => void;
+  onOpenAwards?: () => void;
+  awardsGlow?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationsHubTab>('notifications');
+  const [inviteSeen, setInviteSeen] = useState(true);
 
   const {
     shouldGlow,
@@ -125,9 +151,20 @@ export function NotificationsHubProvider({
     unreadAnnouncements,
     unreadUpdates,
     markTabSeen,
-  } = useNotificationsHubUnread(userProfile?.uid);
+  } = useNotificationsHubUnread(userProfile?.uid, userProfile);
 
-  const unreadCounts = { unreadNotifications, unreadAnnouncements, unreadUpdates };
+  useEffect(() => {
+    if (!userProfile || isStaffRole(userProfile.role)) {
+      setInviteSeen(true);
+      return;
+    }
+    setInviteSeen(isStaffApplyInviteSeen(userProfile.uid));
+  }, [userProfile]);
+
+  const inviteUnread = userProfile && !isStaffRole(userProfile.role) && !inviteSeen ? 1 : 0;
+  const notifyUnread = unreadNotifications + inviteUnread;
+
+  const unreadCounts = { unreadNotifications: notifyUnread, unreadAnnouncements, unreadUpdates };
 
   const openHub = useCallback((initialTab: NotificationsHubTab = 'notifications') => {
     const resolved = resolveHubTab(initialTab);
@@ -137,8 +174,10 @@ export function NotificationsHubProvider({
 
   useEffect(() => {
     openNotificationsHubGlobal = openHub;
+    closeNotificationsHubGlobal = () => setOpen(false);
     return () => {
       openNotificationsHubGlobal = null;
+      closeNotificationsHubGlobal = null;
     };
   }, [openHub]);
 
@@ -151,12 +190,16 @@ export function NotificationsHubProvider({
   }, [open, tab, userProfile, markTabSeen]);
 
   const handleNotificationsViewed = useCallback(() => {
+    if (userProfile && !isStaffRole(userProfile.role)) {
+      markStaffApplyInviteSeen(userProfile.uid);
+      setInviteSeen(true);
+    }
     void markTabSeen('notifications');
-  }, [markTabSeen]);
+  }, [markTabSeen, userProfile]);
 
   const value = useMemo(
-    () => ({ openHub, shouldGlow }),
-    [openHub, shouldGlow],
+    () => ({ openHub, shouldGlow: shouldGlow || inviteUnread > 0 || awardsGlow }),
+    [openHub, shouldGlow, inviteUnread, awardsGlow],
   );
 
   const selectTab = (next: NotificationsHubTab) => {
@@ -167,14 +210,20 @@ export function NotificationsHubProvider({
     <NotificationsHubContext.Provider value={value}>
       {children}
       {open && userProfile ? (
-        <FullScreenPanel
-          wide
-          title={HUB_TAB_META[tab].title}
-          subtitle={HUB_TAB_META[tab].subtitle}
-          onClose={() => setOpen(false)}
-        >
+        <FullScreenPanel wide onClose={() => setOpen(false)}>
           <div className="space-y-5">
-            <div className="flex gap-1 p-1 rounded-xl bg-inset border border-app w-full">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="sbn-back-btn !mb-0 shrink-0"
+                aria-label="Close notifications"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+            </div>
+            <div className="flex gap-1 p-1 rounded-xl bg-inset border border-app w-full -mt-2">
               {HUB_TABS.map((hubTab) => {
                 const unread = tabUnreadCount(hubTab.id, unreadCounts);
                 return (
@@ -209,7 +258,7 @@ export function NotificationsHubProvider({
             {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes showComments /> : null}
             {tab === 'notifications' ? (
               <UserNotificationsList
-                userId={userProfile.uid}
+                user={userProfile}
                 onViewed={handleNotificationsViewed}
                 onNavigate={(target) => {
                   setOpen(false);
@@ -221,9 +270,22 @@ export function NotificationsHubProvider({
               <NotificationSettings
                 userId={userProfile.uid}
                 userRole={userProfile.role}
+                staffInteractionMode={userProfile.staffInteractionMode}
                 embedded
                 scope="alerts"
               />
+            ) : null}
+            {tab === 'awards' ? (
+              <div className="sbn-card p-6 text-center space-y-4">
+                <p className="text-sm text-muted leading-relaxed">
+                  Badges celebrate giving, events, and community participation. View your full awards panel for details.
+                </p>
+                {onOpenAwards ? (
+                  <button type="button" className="sbn-btn sbn-btn-primary" onClick={onOpenAwards}>
+                    Open badges panel
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
         </FullScreenPanel>

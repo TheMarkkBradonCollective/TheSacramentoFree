@@ -1,0 +1,9 @@
+Android beta v0.1.0.0041 (versionCode 41)
+
+What's new:
+• Notification taps go to the right place — feed posts, message requests, chats, listings, and more
+• Fixed message-request alerts opening a bogus "requests" chat instead of your inbox
+• Feed notification inbox items link to the correct feed post (not a listing)
+• Welcome feed post copy — casual founder intro to kick off neighbor chit-chat
+
+Download (sideload): https://www.sacramentobuynothing.com/download

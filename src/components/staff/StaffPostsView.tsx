@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -9,16 +9,43 @@ import {
   Search,
   Tag,
   Trash2,
+  CheckCircle,
   X,
 } from 'lucide-react';
-import type { ItemPost, UserProfile } from '../../types';
-import { staffGetAllListings, staffWithdrawListing, staffDeleteListing } from '../../supabase';
+import type { CommunityEvent, ItemPost, UserProfile } from '../../types';
+import {
+  getAppClaimsForItem,
+  staffCancelEvent,
+  staffCompleteListingWithoutClaimer,
+  staffDeleteEvent,
+  staffDeleteListing,
+  staffGetAllEvents,
+  staffGetAllListings,
+  staffWithdrawListing,
+} from '../../supabase';
 import { getPostTypeLabel } from '../../lib/postType';
+import { resolveEventStatus } from '../../lib/eventRsvp';
 import { useStaffPermission } from '../../hooks/useStaffPermission';
 import NoPermissionModal from './NoPermissionModal';
 
+type ContentKind = 'item' | 'event';
+type ContentType = 'giveaway' | 'looking' | 'trade' | 'event';
 type SortField = 'title' | 'type' | 'category' | 'status' | 'neighborhood' | 'poster' | 'createdAt';
 type SortDir = 'asc' | 'desc';
+
+interface StaffContentRow {
+  id: string;
+  kind: ContentKind;
+  type: ContentType;
+  title: string;
+  category: string;
+  status: string;
+  neighborhood: string;
+  userDisplayName: string;
+  createdAt: unknown;
+  item?: ItemPost;
+  event?: CommunityEvent;
+}
 
 const STATUS_BADGE: Record<string, string> = {
   active: 'bg-emerald-500/15 text-emerald-400',
@@ -26,21 +53,76 @@ const STATUS_BADGE: Record<string, string> = {
   on_hold: 'bg-amber-500/15 text-amber-400',
   completed: 'bg-zinc-500/15 text-zinc-400',
   withdrawn: 'bg-red-500/15 text-red-400',
+  upcoming: 'bg-sky-500/15 text-sky-400',
+  past: 'bg-zinc-500/15 text-zinc-400',
+  cancelled: 'bg-red-500/15 text-red-400',
 };
 
 const TYPE_BADGE: Record<string, string> = {
   giveaway: 'bg-accent/15 text-accent',
   looking: 'bg-purple-500/15 text-purple-400',
   trade: 'bg-zinc-500/15 text-zinc-400',
+  event: 'bg-sky-500/15 text-sky-400',
 };
+
+const ITEM_STATUSES = ['active', 'pending_pickup', 'on_hold', 'completed', 'withdrawn'] as const;
+const EVENT_STATUSES = ['upcoming', 'past', 'cancelled'] as const;
+
+function toTimestamp(createdAt: unknown): number {
+  if (!createdAt) return 0;
+  if (typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt) {
+    return (createdAt as { seconds: number }).seconds;
+  }
+  return new Date(createdAt as string).getTime() / 1000;
+}
+
+function itemToRow(item: ItemPost): StaffContentRow {
+  return {
+    id: item.id,
+    kind: 'item',
+    type: item.type,
+    title: item.title,
+    category: item.category,
+    status: item.status ?? 'active',
+    neighborhood: item.neighborhood ?? '',
+    userDisplayName: item.userDisplayName,
+    createdAt: item.createdAt,
+    item,
+  };
+}
+
+function eventToRow(event: CommunityEvent): StaffContentRow {
+  return {
+    id: event.id,
+    kind: 'event',
+    type: 'event',
+    title: event.title,
+    category: event.location || 'Community event',
+    status: resolveEventStatus(event),
+    neighborhood: event.neighborhood ?? '',
+    userDisplayName: event.userDisplayName,
+    createdAt: event.createdAt,
+    event,
+  };
+}
+
+function getTypeLabel(type: ContentType): string {
+  if (type === 'event') return 'Event';
+  return getPostTypeLabel(type);
+}
+
+function formatStatusLabel(status: string): string {
+  return status.replace(/_/g, ' ');
+}
 
 interface StaffPostsViewProps {
   actor: UserProfile;
   onViewItem: (item: ItemPost) => void;
+  onViewEvent: (event: CommunityEvent) => void;
 }
 
-export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProps) {
-  const [posts, setPosts] = useState<ItemPost[]>([]);
+export default function StaffPostsView({ actor, onViewItem, onViewEvent }: StaffPostsViewProps) {
+  const [rows, setRows] = useState<StaffContentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -50,56 +132,78 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [claimRecords, setClaimRecords] = useState<
+    Record<string, { claimerUserId: string; giverUserId: string; kind: string }[]>
+  >({});
 
   const perm = useStaffPermission(actor);
+
+  const loadClaimsForItem = async (itemId: string) => {
+    const claims = await getAppClaimsForItem(itemId);
+    setClaimRecords((prev) => ({ ...prev, [itemId]: claims }));
+  };
 
   const load = async () => {
     setLoading(true);
     setErr('');
-    const { items, errorMessage } = await staffGetAllListings();
-    setPosts(items);
-    if (errorMessage) setErr(errorMessage);
+    const [listingsResult, eventsResult] = await Promise.all([
+      staffGetAllListings(),
+      staffGetAllEvents(),
+    ]);
+
+    const merged = [
+      ...listingsResult.items.map(itemToRow),
+      ...eventsResult.events.map(eventToRow),
+    ].sort((a, b) => toTimestamp(b.createdAt) - toTimestamp(a.createdAt));
+
+    setRows(merged);
+
+    const errors = [listingsResult.errorMessage, eventsResult.errorMessage].filter(Boolean);
+    if (errors.length > 0) setErr(errors.join(' '));
     setLoading(false);
   };
 
   useEffect(() => { void load(); }, []);
 
+  const itemCount = useMemo(() => rows.filter((row) => row.kind === 'item').length, [rows]);
+  const eventCount = useMemo(() => rows.filter((row) => row.kind === 'event').length, [rows]);
+
   const filtered = useMemo(() => {
-    let rows = posts;
+    let next = rows;
+
     if (search.trim()) {
       const q = search.toLowerCase();
-      rows = rows.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          p.neighborhood?.toLowerCase().includes(q) ||
-          p.userDisplayName.toLowerCase().includes(q),
+      next = next.filter(
+        (row) =>
+          row.title.toLowerCase().includes(q) ||
+          row.category.toLowerCase().includes(q) ||
+          row.neighborhood.toLowerCase().includes(q) ||
+          row.userDisplayName.toLowerCase().includes(q),
       );
     }
-    if (statusFilter !== 'all') rows = rows.filter((p) => p.status === statusFilter);
-    if (typeFilter !== 'all') rows = rows.filter((p) => p.type === typeFilter);
 
-    rows = [...rows].sort((a, b) => {
+    if (statusFilter !== 'all') {
+      next = next.filter((row) => row.status === statusFilter);
+    }
+
+    if (typeFilter !== 'all') {
+      next = next.filter((row) => row.type === typeFilter);
+    }
+
+    next = [...next].sort((a, b) => {
       let cmp = 0;
       if (sortField === 'title') cmp = a.title.localeCompare(b.title);
       else if (sortField === 'type') cmp = a.type.localeCompare(b.type);
       else if (sortField === 'category') cmp = a.category.localeCompare(b.category);
-      else if (sortField === 'status') cmp = (a.status ?? '').localeCompare(b.status ?? '');
-      else if (sortField === 'neighborhood') cmp = (a.neighborhood ?? '').localeCompare(b.neighborhood ?? '');
+      else if (sortField === 'status') cmp = a.status.localeCompare(b.status);
+      else if (sortField === 'neighborhood') cmp = a.neighborhood.localeCompare(b.neighborhood);
       else if (sortField === 'poster') cmp = a.userDisplayName.localeCompare(b.userDisplayName);
-      else if (sortField === 'createdAt') {
-        const ta = typeof a.createdAt === 'object' && 'seconds' in (a.createdAt as object)
-          ? ((a.createdAt as { seconds: number }).seconds)
-          : new Date(a.createdAt as string ?? 0).getTime() / 1000;
-        const tb = typeof b.createdAt === 'object' && 'seconds' in (b.createdAt as object)
-          ? ((b.createdAt as { seconds: number }).seconds)
-          : new Date(b.createdAt as string ?? 0).getTime() / 1000;
-        cmp = ta - tb;
-      }
+      else if (sortField === 'createdAt') cmp = toTimestamp(a.createdAt) - toTimestamp(b.createdAt);
       return sortDir === 'asc' ? cmp : -cmp;
     });
-    return rows;
-  }, [posts, search, statusFilter, typeFilter, sortField, sortDir]);
+
+    return next;
+  }, [rows, search, statusFilter, typeFilter, sortField, sortDir]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -124,35 +228,64 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
     else { void load(); setExpandedRow(null); }
   };
 
-  const handleWithdraw = (post: ItemPost) => {
-    if (!perm.checkModeratePost()) return;
-    void run(post.id, () => staffWithdrawListing(post, actor));
+  const handleWithdraw = (row: StaffContentRow) => {
+    if (!row.item || !perm.checkModeratePost()) return;
+    void run(row.id, () => staffWithdrawListing(row.item!, actor));
   };
 
-  const handleDelete = (post: ItemPost) => {
-    if (!perm.checkModeratePost()) return;
-    void run(post.id, () => staffDeleteListing(post, actor));
+  const handleDeleteItem = (row: StaffContentRow) => {
+    if (!row.item || !perm.checkModeratePost()) return;
+    void run(row.id, () => staffDeleteListing(row.item!, actor));
+  };
+
+  const handleCancelEvent = (row: StaffContentRow) => {
+    if (!row.event || !perm.checkModeratePost()) return;
+    void run(row.id, () => staffCancelEvent(row.event!, actor));
+  };
+
+  const handleDeleteEvent = (row: StaffContentRow) => {
+    if (!row.event || !perm.checkModeratePost()) return;
+    void run(row.id, () => staffDeleteEvent(row.event!, actor));
+  };
+
+  const handleStaffCompleteListing = (row: StaffContentRow) => {
+    if (!row.item || !perm.checkModeratePost()) return;
+    if (
+      !window.confirm(
+        `Mark "${row.title}" completed without naming a neighbor? Use when pickup happened off-app or the wrong claimer was recorded.`,
+      )
+    ) {
+      return;
+    }
+    void run(row.id, () => staffCompleteListingWithoutClaimer(row.item!, actor));
+  };
+
+  const toggleExpandedRow = (row: StaffContentRow) => {
+    const next = expandedRow === row.id ? null : row.id;
+    setExpandedRow(next);
+    if (next && row.kind === 'item' && row.item) {
+      void loadClaimsForItem(row.item.id);
+    }
   };
 
   const formatDate = (createdAt: unknown) => {
-    if (!createdAt) return '—';
-    const ms = typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt
-      ? (createdAt as { seconds: number }).seconds * 1000
-      : new Date(createdAt as string).getTime();
-    return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+    const ts = toTimestamp(createdAt);
+    if (!ts) return '—';
+    return new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
   };
 
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden">
       <NoPermissionModal open={perm.noPermOpen} reason={perm.noPermReason} onClose={perm.closeNoPerm} />
 
-      {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-app space-y-3 shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-accent font-mono">Staff Panel</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-role-accent font-mono">Staff Panel</p>
             <h2 className="font-display font-bold text-app text-lg">Listings Management</h2>
-            <p className="text-xs text-muted mt-0.5">{posts.length} listings total</p>
+            <p className="text-xs text-muted mt-0.5">
+              {rows.length} total ({itemCount} listings, {eventCount} events)
+            </p>
           </div>
           <button type="button" onClick={() => void load()} className="sbn-btn sbn-btn-secondary sbn-btn-sm">
             Refresh
@@ -177,24 +310,29 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
           </div>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="sbn-input text-xs w-auto">
             <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="pending_pickup">Pending pickup</option>
-            <option value="on_hold">On hold</option>
-            <option value="completed">Completed</option>
-            <option value="withdrawn">Withdrawn</option>
+            <optgroup label="Listings">
+              {ITEM_STATUSES.map((status) => (
+                <option key={status} value={status}>{formatStatusLabel(status)}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Events">
+              {EVENT_STATUSES.map((status) => (
+                <option key={status} value={status}>{formatStatusLabel(status)}</option>
+              ))}
+            </optgroup>
           </select>
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="sbn-input text-xs w-auto">
             <option value="all">All types</option>
             <option value="giveaway">Giveaway</option>
             <option value="looking">Looking</option>
             <option value="trade">Trade</option>
+            <option value="event">Event</option>
           </select>
         </div>
 
         {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
       </div>
 
-      {/* Table */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-accent" />
@@ -238,45 +376,42 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
               </tr>
             </thead>
             <tbody>
-              {filtered.map((post) => {
-                const isBusy = busy === post.id;
-                const isExpanded = expandedRow === post.id;
+              {filtered.map((row) => {
+                const isBusy = busy === row.id;
+                const isExpanded = expandedRow === row.id;
 
                 return (
-                  <>
-                    <tr
-                      key={post.id}
-                      className={`border-b border-app/50 hover:bg-inset transition-colors ${isExpanded ? 'bg-inset' : ''}`}
-                    >
+                  <Fragment key={row.id}>
+                    <tr className={`border-b border-app/50 hover:bg-inset transition-colors ${isExpanded ? 'bg-inset' : ''}`}>
                       <td className="px-3 py-2.5">
                         <div className="min-w-0">
-                          <p className="font-semibold text-app truncate max-w-[180px]">{post.title}</p>
+                          <p className="font-semibold text-app truncate max-w-[180px]">{row.title}</p>
                           <p className="text-muted flex items-center gap-1 mt-0.5">
                             <Tag className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{post.category}</span>
+                            <span className="truncate">{row.category}</span>
                           </p>
                         </div>
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${TYPE_BADGE[post.type] ?? ''}`}>
-                          {getPostTypeLabel(post.type)}
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${TYPE_BADGE[row.type] ?? ''}`}>
+                          {getTypeLabel(row.type)}
                         </span>
                       </td>
                       <td className="px-3 py-2.5 hidden sm:table-cell">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${STATUS_BADGE[post.status ?? 'active'] ?? ''}`}>
-                          {(post.status ?? 'active').replace('_', ' ')}
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${STATUS_BADGE[row.status] ?? ''}`}>
+                          {formatStatusLabel(row.status)}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 hidden md:table-cell text-muted">{post.userDisplayName}</td>
-                      <td className="px-3 py-2.5 hidden lg:table-cell text-muted">{post.neighborhood}</td>
-                      <td className="px-3 py-2.5 hidden lg:table-cell text-muted">{formatDate(post.createdAt)}</td>
+                      <td className="px-3 py-2.5 hidden md:table-cell text-muted">{row.userDisplayName}</td>
+                      <td className="px-3 py-2.5 hidden lg:table-cell text-muted">{row.neighborhood || '—'}</td>
+                      <td className="px-3 py-2.5 hidden lg:table-cell text-muted">{formatDate(row.createdAt)}</td>
                       <td className="px-3 py-2.5 text-right">
                         {isBusy ? (
                           <Loader2 className="w-4 h-4 animate-spin text-accent inline" />
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setExpandedRow(isExpanded ? null : post.id)}
+                            onClick={() => toggleExpandedRow(row)}
                             className="sbn-btn sbn-btn-secondary sbn-btn-sm"
                           >
                             {isExpanded ? 'Close' : 'Actions'}
@@ -286,37 +421,87 @@ export default function StaffPostsView({ actor, onViewItem }: StaffPostsViewProp
                     </tr>
 
                     {isExpanded && (
-                      <tr key={`${post.id}-actions`} className="bg-inset border-b border-app">
+                      <tr className="bg-inset border-b border-app">
                         <td colSpan={7} className="px-4 py-3">
                           <div className="flex flex-wrap gap-2 items-center">
-                            <button
-                              type="button"
-                              onClick={() => onViewItem(post)}
-                              className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-                            >
-                              <Eye className="w-3.5 h-3.5" /> View listing
-                            </button>
-                            {post.status !== 'withdrawn' && (
-                              <button
-                                type="button"
-                                onClick={() => handleWithdraw(post)}
-                                className="sbn-btn sbn-btn-sm bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
-                              >
-                                <X className="w-3.5 h-3.5" /> Withdraw
-                              </button>
+                            {row.kind === 'item' && row.item && (
+                              <>
+                                {claimRecords[row.item.id]?.length ? (
+                                  <p className="text-xs text-muted w-full mb-1">
+                                    In-app claims:{' '}
+                                    {claimRecords[row.item.id]
+                                      .map((c) => `${c.claimerUserId.slice(0, 8)}… (${c.kind})`)
+                                      .join(', ')}
+                                  </p>
+                                ) : row.status === 'active' || row.status === 'pending_pickup' ? (
+                                  <p className="text-xs text-muted w-full mb-1">No in-app claim record yet.</p>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  onClick={() => onViewItem(row.item!)}
+                                  className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                                >
+                                  <Eye className="w-3.5 h-3.5" /> View listing
+                                </button>
+                                {(row.status === 'active' || row.status === 'pending_pickup') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStaffCompleteListing(row)}
+                                    className="sbn-btn sbn-btn-sm bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                                  >
+                                    <CheckCircle className="w-3.5 h-3.5" /> Mark completed (no neighbor)
+                                  </button>
+                                )}
+                                {row.status !== 'withdrawn' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleWithdraw(row)}
+                                    className="sbn-btn sbn-btn-sm bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                  >
+                                    <X className="w-3.5 h-3.5" /> Withdraw
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteItem(row)}
+                                  className="sbn-btn sbn-btn-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                                </button>
+                              </>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(post)}
-                              className="sbn-btn sbn-btn-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Delete
-                            </button>
+                            {row.kind === 'event' && row.event && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => onViewEvent(row.event!)}
+                                  className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                                >
+                                  <Eye className="w-3.5 h-3.5" /> View event
+                                </button>
+                                {row.status === 'upcoming' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCancelEvent(row)}
+                                    className="sbn-btn sbn-btn-sm bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                  >
+                                    <X className="w-3.5 h-3.5" /> Cancel
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteEvent(row)}
+                                  className="sbn-btn sbn-btn-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
               {filtered.length === 0 && (

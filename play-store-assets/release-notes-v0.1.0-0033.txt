@@ -1,0 +1,7 @@
+Android beta v0.1.0.0033 (versionCode 33)
+
+What's new:
+• Staff mode box title updates with Staff/User toggle
+• Location permission toggle now reflects when GPS is allowed
+
+Download (sideload): https://www.sacramentobuynothing.com/download

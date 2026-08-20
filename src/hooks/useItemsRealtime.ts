@@ -32,6 +32,15 @@ export function applyItemRealtimeChange(
   if (eventType === 'UPDATE') {
     const exists = prev.some((i) => i.id === item.id);
     if (!exists) return sortItemsNewestFirst([item, ...prev]);
+    const current = prev.find((i) => i.id === item.id);
+    if (
+      current &&
+      current.updatedAt === item.updatedAt &&
+      current.status === item.status &&
+      current.title === item.title
+    ) {
+      return prev;
+    }
     return sortItemsNewestFirst(prev.map((i) => (i.id === item.id ? item : i)));
   }
 

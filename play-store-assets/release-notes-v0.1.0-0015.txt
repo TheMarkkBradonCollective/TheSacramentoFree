@@ -1,0 +1,9 @@
+Android beta v0.1.0.0015 (versionCode 15)
+
+What's new:
+• Hide given and fulfilled toggles on Community Stuff — keep your feed focused on open posts
+• Staff apply shows green seat pills for open roles and red Seat filled when full
+• Header, bottom tabs, map buttons, and new-post FAB respect the status bar and navigation buttons
+• Staff applications, Broadcast rename, and listing feed fixes from earlier today
+
+Download (sideload): https://www.sacramentobuynothing.com/download

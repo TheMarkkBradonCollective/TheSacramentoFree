@@ -1,0 +1,8 @@
+Android beta v0.1.0.0031 (versionCode 31)
+
+What's new:
+• Nav banner pinned to top; chat shows listing or event preview
+• Profile stats layout and listing type badges
+• Listing detail header scroll fix
+
+Download (sideload): https://www.sacramentobuynothing.com/download

@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { AlertCircle, Eye, MapPin, Search } from 'lucide-react';
 import { ItemPost } from '../../types';
 import { stripListingMetadata } from '../../lib/itemLocation';
-import { getPostTypeBadgeClass, getPostTypeLabel } from '../../lib/postType';
+import { getPostTypeBadgeClass, getPostTypeGridBadgeLabel } from '../../lib/postType';
 import { extractListingImageUrls } from '../../lib/listingContent';
 import ListingImage from '../ListingImage';
 import HorizontalSnapRow, { SnapSlide } from '../HorizontalSnapRow';
@@ -13,7 +13,7 @@ interface GuestListingPreviewProps {
   isLoading?: boolean;
   onViewItem: (item: ItemPost) => void;
   onRequireSignIn: () => void;
-  /** When nested inside HomeScrollStage DepthSection */
+  /** When nested inside the home page section layout */
   embedded?: boolean;
 }
 
@@ -64,7 +64,7 @@ export default function GuestListingPreview({
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && items.length === 0 ? (
         <p className="text-sm text-muted text-center py-12">Loading listings…</p>
       ) : previewItems.length === 0 ? (
         <div className="sbn-card text-center py-12 px-6 border-dashed">
@@ -100,9 +100,9 @@ export default function GuestListingPreview({
                       </div>
                     )}
                     <span
-                      className={`absolute top-2 left-2 sbn-badge text-[10px] ${getPostTypeBadgeClass(item.type)}`}
+                      className={`absolute top-2 left-2 sbn-badge text-[8px] px-1 py-0 leading-none whitespace-nowrap ${getPostTypeBadgeClass(item.type)}`}
                     >
-                      {getPostTypeLabel(item.type)}
+                      {getPostTypeGridBadgeLabel(item.type)}
                     </span>
                   </button>
 

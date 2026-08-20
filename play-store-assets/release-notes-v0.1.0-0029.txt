@@ -1,0 +1,9 @@
+Android beta v0.1.0.0029 (versionCode 29)
+
+What's new (Android app):
+• Turn-by-turn navigation: heading-up map, real lane guidance, walk / bike / drive
+• Voice reads the same detailed instructions as the screen
+• Recenter announces the next turn
+• Navigation settings in Account and the in-nav gear
+
+Download (sideload): https://www.sacramentobuynothing.com/download

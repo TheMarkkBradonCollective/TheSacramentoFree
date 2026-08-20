@@ -11,14 +11,24 @@ import {
   Megaphone,
   MessageSquare,
   Package,
+  Shield,
   Sparkles,
   Tag,
   UserPlus,
   Users,
 } from 'lucide-react';
-import type { UserNotificationItem, UserNotificationKind } from '../types';
+import type { UserNotificationItem, UserNotificationKind, UserProfile } from '../types';
 import { useUserNotifications } from '../hooks/useUserNotifications';
 import { parsePushDeepLink, type PushDeepLinkTarget } from '../lib/pushDeepLink';
+import { isStaffModeNotificationKind, receivesStaffNotifications } from '../lib/staffInteractionMode';
+import { isStaffRole } from '../lib/roles';
+import {
+  STAFF_APPLY_INVITE,
+  STAFF_APPLY_INVITE_KIND,
+  isStaffApplyInviteItem,
+  isStaffApplyInviteSeen,
+  markStaffApplyInviteSeen,
+} from '../lib/staffApplyInvite';
 import PublicCard from './public/PublicCard';
 
 function formatWhen(iso: string): string {
@@ -35,6 +45,8 @@ function formatWhen(iso: string): string {
 function kindIcon(kind: UserNotificationKind) {
   switch (kind) {
     case 'comment':
+    case 'feed_comment':
+    case 'feed_reaction':
       return MessageSquare;
     case 'message':
     case 'message_request':
@@ -56,8 +68,10 @@ function kindIcon(kind: UserNotificationKind) {
     case 'saved_item':
       return Heart;
     case 'upvote':
+    case 'feed_upvote':
       return ArrowUp;
     case 'downvote':
+    case 'feed_downvote':
       return ArrowDown;
     case 'claim':
     case 'gift':
@@ -73,6 +87,8 @@ function kindIcon(kind: UserNotificationKind) {
     case 'account_update':
     case 'director_alert':
       return Sparkles;
+    case 'staff_apply':
+      return Shield;
     default:
       return Package;
   }
@@ -81,8 +97,10 @@ function kindIcon(kind: UserNotificationKind) {
 function kindColor(kind: UserNotificationKind): string {
   switch (kind) {
     case 'upvote':
+    case 'feed_upvote':
       return 'text-emerald-400 bg-emerald-500/10';
     case 'downvote':
+    case 'feed_downvote':
       return 'text-amber-400 bg-amber-500/10';
     case 'claim':
     case 'claim_request':
@@ -93,10 +111,15 @@ function kindColor(kind: UserNotificationKind): string {
     case 'message':
     case 'message_request':
     case 'community_chat':
+    case 'comment':
+    case 'feed_comment':
+    case 'feed_reaction':
       return 'text-sky-400 bg-sky-500/10';
     case 'announcement':
     case 'app_update':
       return 'text-violet-400 bg-violet-500/10';
+    case 'staff_apply':
+      return 'text-accent bg-accent/10';
     default:
       return 'text-muted bg-inset';
   }
@@ -104,8 +127,64 @@ function kindColor(kind: UserNotificationKind): string {
 
 function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget | null {
   if (item.url) {
-    return parsePushDeepLink(item.url);
+    const fromUrl = parsePushDeepLink(item.url);
+    if (fromUrl) return fromUrl;
   }
+
+  const feedKinds = ['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote'] as const;
+  if (item.itemId && feedKinds.includes(item.kind as (typeof feedKinds)[number])) {
+    return { tab: 'feed', feedPostId: item.itemId };
+  }
+
+  if (item.kind === 'claim_request') {
+    if (item.url) {
+      const requestMatch = item.url.match(/\/requests\/([^/?#]+)/);
+      if (requestMatch) return { tab: 'chats', requestId: requestMatch[1] };
+    }
+    if (item.itemId) return { tab: 'stuff', listingId: item.itemId };
+    return { tab: 'chats' };
+  }
+
+  if (item.kind === 'message_request') {
+    return { tab: 'chats', messageRequests: true };
+  }
+
+  if (item.kind === 'message') {
+    return { tab: 'chats' };
+  }
+
+  if (item.kind === 'community_chat') {
+    return { tab: 'chats', conversationId: 'community-global' };
+  }
+
+  if (item.kind === 'staff_chat') {
+    return { tab: 'chats', conversationId: 'community-staff' };
+  }
+
+  if (item.kind === 'director_alert') {
+    return { tab: 'profile', directorOverview: true };
+  }
+
+  if (item.kind === 'staff_report') {
+    return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
+  }
+
+  if (item.kind === 'app_update') {
+    return { notificationsTab: 'updates' };
+  }
+
+  if (item.kind === 'announcement') {
+    return { notificationsTab: 'announcements' };
+  }
+
+  if (item.kind === 'support' || item.kind === 'staff_support') {
+    return { tab: 'chats', chatSupportView: 'list' };
+  }
+
+  if (item.kind === 'staff_apply') {
+    return { tab: 'profile', staffApply: true };
+  }
+
   if (
     item.itemId &&
     (item.kind === 'comment' ||
@@ -113,6 +192,8 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
       item.kind === 'downvote' ||
       item.kind === 'new_listing' ||
       item.kind === 'nearby_listing' ||
+      item.kind === 'new_request' ||
+      item.kind === 'nearby_request' ||
       item.kind === 'saved_item' ||
       item.kind === 'claim' ||
       item.kind === 'gift' ||
@@ -120,49 +201,47 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
       item.kind === 'pickup_reminder' ||
       item.kind === 'on_the_way')
   ) {
-    return { tab: 'feed', listingId: item.itemId };
+    return { tab: 'stuff', listingId: item.itemId };
   }
-  if (item.kind === 'message' || item.kind === 'message_request') {
-    return { tab: 'chats' };
-  }
-  if (item.kind === 'community_chat') {
-    return { tab: 'chats', conversationId: 'community-global' };
-  }
-  if (item.kind === 'staff_chat') {
-    return { tab: 'chats', conversationId: 'community-staff' };
-  }
-  if (item.kind === 'app_update') {
-    return { notificationsTab: 'updates' };
-  }
-  if (item.kind === 'announcement') {
-    return { notificationsTab: 'announcements' };
-  }
-  if (item.kind === 'support' || item.kind === 'staff_support') {
-    return { tab: 'chats', chatSupportView: 'list' };
-  }
+
   return null;
 }
 
 interface UserNotificationsListProps {
-  userId: string;
+  user: UserProfile;
   onNavigate?: (target: PushDeepLinkTarget) => void;
   /** Called when the Notify list is shown so the hub can clear unread state. */
   onViewed?: () => void;
 }
 
-export default function UserNotificationsList({ userId, onNavigate, onViewed }: UserNotificationsListProps) {
-  const { items, loading } = useUserNotifications(userId);
+export default function UserNotificationsList({ user, onNavigate, onViewed }: UserNotificationsListProps) {
+  const { items, loading } = useUserNotifications(user.uid);
+  const receivesStaffNotis = receivesStaffNotifications(user);
+  const dbInvites = items.filter(isStaffApplyInviteItem);
+  const otherItems = items.filter((item) => {
+    if (isStaffApplyInviteItem(item)) return false;
+    if (!receivesStaffNotis && isStaffModeNotificationKind(item.kind)) return false;
+    return true;
+  });
+  const showInvite = !isStaffRole(user.role);
+  const inviteSeen = isStaffApplyInviteSeen(user.uid);
+  const seededInvite =
+    showInvite && dbInvites.length === 0
+      ? { ...STAFF_APPLY_INVITE, readAt: inviteSeen ? new Date().toISOString() : null }
+      : null;
+  const inviteCards = seededInvite ? [seededInvite] : showInvite ? dbInvites : [];
 
   // Mark read only once the Notify list is actually shown.
   useEffect(() => {
+    if (showInvite) markStaffApplyInviteSeen(user.uid);
     onViewed?.();
-  }, [userId, onViewed]);
+  }, [user.uid, showInvite, onViewed]);
 
   if (loading) {
     return <p className="text-sm text-muted">Loading your notifications…</p>;
   }
 
-  if (items.length === 0) {
+  if (!inviteCards.length && otherItems.length === 0) {
     return (
       <p className="text-sm text-muted italic">
         Nothing yet — every alert you receive (messages, listings, comments, claims, and more) is logged here.
@@ -172,7 +251,18 @@ export default function UserNotificationsList({ userId, onNavigate, onViewed }: 
 
   return (
     <ul className="space-y-3">
-      {items.map((item) => {
+      {inviteCards.map((inviteItem) => (
+        <li key={inviteItem.id}>
+          <StaffApplyInviteCard
+            item={inviteItem}
+            onApply={() => {
+              markStaffApplyInviteSeen(user.uid);
+              onNavigate?.({ tab: 'profile', staffApply: true });
+            }}
+          />
+        </li>
+      ))}
+      {otherItems.map((item) => {
         const Icon = kindIcon(item.kind);
         const target = targetForNotification(item);
         const isInteractive = Boolean(onNavigate && target);
@@ -202,6 +292,45 @@ export default function UserNotificationsList({ userId, onNavigate, onViewed }: 
         );
       })}
     </ul>
+  );
+}
+
+function StaffApplyInviteCard({
+  item,
+  onApply,
+}: {
+  item: UserNotificationItem;
+  onApply: () => void;
+}) {
+  const Icon = kindIcon(STAFF_APPLY_INVITE_KIND);
+
+  return (
+    <PublicCard className={`${item.readAt ? 'border-accent/25' : 'border-accent/40 bg-accent-soft/15'}`}>
+      <div className="flex gap-3">
+        <span className={`shrink-0 p-2 rounded-xl h-fit ${kindColor(STAFF_APPLY_INVITE_KIND)}`} aria-hidden>
+          <Icon className="w-4 h-4" />
+        </span>
+        <div className="min-w-0 flex-1 space-y-3">
+          <div>
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-sm font-bold text-app flex items-center gap-2">
+                {item.title}
+                {!item.readAt ? (
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-accent bg-accent-soft px-1.5 py-0.5 rounded-full">
+                    New
+                  </span>
+                ) : null}
+              </h3>
+            </div>
+            {item.actorName ? <p className="text-[11px] text-muted mt-0.5">{item.actorName}</p> : null}
+            <p className="text-sm text-muted mt-1 leading-relaxed">{item.body}</p>
+          </div>
+          <button type="button" onClick={onApply} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+            Apply
+          </button>
+        </div>
+      </div>
+    </PublicCard>
   );
 }
 

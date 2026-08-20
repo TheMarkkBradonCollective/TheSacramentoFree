@@ -8,6 +8,7 @@ import {
   uploadProfilePhoto,
   getSupabaseProfile,
 } from '../supabase';
+import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import RoleBadge from './RoleBadge';
 import {
   MapPin,
@@ -20,8 +21,10 @@ import {
   LogOut,
   Smartphone,
   Share2,
+  Store,
   Gift,
   Package,
+  Repeat2,
   ChevronUp,
   ChevronDown,
   Camera,
@@ -35,6 +38,11 @@ import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
 import { usePwaInstallPrompt } from '../hooks/usePwaInstallPrompt';
 import ThemeSettings from './ThemeSettings';
+import AccountNavigationSettings from './AccountNavigationSettings';
+import SystemPermissionsSettings from './SystemPermissionsSettings';
+import GoGetSettings from './GoGetSettings';
+import StaffModeSettings from './StaffModeSettings';
+import { isStaffActingOfficial, profileUiRole } from '../lib/staffInteractionMode';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 import TermsOfUseModal from './TermsOfUseModal';
@@ -44,6 +52,12 @@ import { isTermsAccepted } from '../lib/termsPolicyPrompt';
 import { getNeighborAwardClaims } from '../supabase';
 import { buildNeighborAwardSummary, type NeighborAwardSummary } from '../lib/neighborAwards';
 import GoGetRecordSection from './goget/GoGetRecordSection';
+import { openStaffApplyPanel } from '../lib/staffApplyOpen';
+import { useInstallVersions } from '../hooks/useInstallVersions';
+import { apkWebsiteAccessMessage, canDownloadApkFromWebsite } from '../lib/apkWebsiteAccess';
+import { SITE } from '../siteContent';
+import { detectInstallKind } from '../lib/installContext';
+import TrackedDownloadLink from './TrackedDownloadLink';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -58,6 +72,7 @@ interface UserProfileViewProps {
   onLogout?: () => void | Promise<void>;
   onViewProfile?: (userId: string) => void;
   onOpenAwards?: () => void;
+  onOpenDownload?: () => void;
   scrollToDirectorOverview?: boolean;
   onClearScrollToDirectorOverview?: () => void;
   /** Edge-to-edge sections (mobile tab) — no nested card frames */
@@ -82,6 +97,7 @@ export default function UserProfileView({
   onLogout,
   onViewProfile,
   onOpenAwards,
+  onOpenDownload,
   scrollToDirectorOverview,
   onClearScrollToDirectorOverview,
   fullBleed = false,
@@ -102,6 +118,20 @@ export default function UserProfileView({
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
   const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
+  const { apkDownloadHref, latestApk, apkStatus, loading: apkVersionLoading } = useInstallVersions(userProfile);
+  const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
+  const usingApk = installKind === 'android-apk';
+  const canDownloadApk = canDownloadApkFromWebsite(userProfile);
+  const apkAccessMessage = apkWebsiteAccessMessage(userProfile);
+
+  const openDownloadPage = (event?: React.MouseEvent) => {
+    event?.preventDefault();
+    if (onOpenDownload) {
+      onOpenDownload();
+      return;
+    }
+    window.location.assign('/download');
+  };
 
   useEffect(() => {
     getNeighborStats(userProfile.uid).then(setStats);
@@ -198,8 +228,8 @@ export default function UserProfileView({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setErrorMsg('Please select an image file.');
+    if (!isLikelyImageFile(file)) {
+      setErrorMsg(INVALID_IMAGE_FILE_MESSAGE);
       event.target.value = '';
       return;
     }
@@ -315,40 +345,50 @@ export default function UserProfileView({
           />
           <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{userProfile.displayName}</h3>
           
-          <RoleBadge role={userProfile.role} showForUser />
+          <RoleBadge role={profileUiRole(userProfile)} showForUser />
+          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
 
           <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-xs font-bold text-accent mt-3">
             <MapPin className="w-3.5 h-3.5 text-accent" />
             <span>{userProfile.neighborhood} Sector</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-4 w-full">
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <Gift className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.itemsGiven ?? '—'}</p>
-              <p className="text-[10px] text-muted">Items given</p>
+          <div className="space-y-2 mt-4 w-full">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Gift className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.itemsGiven ?? '—'}</p>
+                <p className="text-[10px] text-muted">Items given</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Package className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.itemsClaimed ?? '—'}</p>
+                <p className="text-[10px] text-muted">Items claimed</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <Repeat2 className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.tradesCompleted ?? '—'}</p>
+                <p className="text-[10px] text-muted">Trades</p>
+              </div>
             </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <Package className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.itemsClaimed ?? '—'}</p>
-              <p className="text-[10px] text-muted">Items claimed</p>
-            </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <ChevronUp className="w-5 h-5 text-accent mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.upvotesReceived ?? '—'}</p>
-              <p className="text-[10px] text-muted">Upvotes received</p>
-            </div>
-            <div className="bg-inset border border-app rounded-xl p-3 text-center">
-              <ChevronDown className="w-5 h-5 text-muted mx-auto mb-1" />
-              <p className="font-display text-lg font-bold text-app">{stats?.downvotesReceived ?? '—'}</p>
-              <p className="text-[10px] text-muted">Downvotes received</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <ChevronUp className="w-5 h-5 text-accent mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.upvotesReceived ?? '—'}</p>
+                <p className="text-[10px] text-muted">Upvotes received</p>
+              </div>
+              <div className="bg-inset border border-app rounded-xl p-3 text-center">
+                <ChevronDown className="w-5 h-5 text-muted mx-auto mb-1" />
+                <p className="font-display text-lg font-bold text-app">{stats?.downvotesReceived ?? '—'}</p>
+                <p className="text-[10px] text-muted">Downvotes received</p>
+              </div>
             </div>
           </div>
 
           <ProfileAwardsRow
             userId={userProfile.uid}
             onOpenAwards={onOpenAwards}
-            viewerIsStaff={Boolean(userProfile.role && userProfile.role !== 'user')}
+            viewerIsStaff={isStaffActingOfficial(userProfile)}
           />
 
           <p className="text-xs text-muted mt-4 border-b border-app pb-4 w-full">
@@ -469,12 +509,19 @@ export default function UserProfileView({
             </button>
           </form>
 
-          <ThemeSettings />
+          <SystemPermissionsSettings />
+          <ThemeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          <AccountNavigationSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          {usingApk && (
+            <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          )}
         </div>
       </div>
 
       {/* ── Activity ─────────────────────────────────────────── */}
-      <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
+      {usingApk && (
+        <GoGetRecordSection userProfile={userProfile} className={fullBleed ? sectionShell : 'sbn-section'} />
+      )}
 
       {/* ── Awards ───────────────────────────────────────────── */}
       {onOpenAwards && (
@@ -527,16 +574,56 @@ export default function UserProfileView({
           <h3 className="text-sm font-bold text-app uppercase tracking-wider">Install app</h3>
         </div>
         <p className="text-xs text-muted mb-4 leading-relaxed">
-          Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience — no App Store required.
+          Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience.
+          Home screen install is free for everyone; Google Play is for native Android; free APK sideload is only for our
+          first 500 neighbors.
         </p>
 
-        <a
-          href="/download"
-          className="inline-flex items-center gap-2 px-4 py-2.5 mb-4 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          <span>Download page — APK vs home screen</span>
-        </a>
+        <div className="flex flex-col gap-2 mb-4 min-w-0">
+          <a
+            href={SITE.playStoreBetaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+          >
+            <Store className="w-4 h-4 shrink-0" />
+            <span>Get it from Play Store</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={openDownloadPage}
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+          >
+            <Download className="w-4 h-4 shrink-0" />
+            <span>{canDownloadApk ? 'Compare Play, APK & home screen' : 'Compare Play & home screen'}</span>
+          </button>
+
+          {canDownloadApk && apkDownloadHref ? (
+            <TrackedDownloadLink
+              href={apkDownloadHref}
+              download={latestApk?.fileName || 'sac-buy-nothing.apk'}
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+            >
+              <Download className="w-4 h-4 shrink-0" />
+              <span>
+                {apkVersionLoading
+                  ? 'Loading APK…'
+                  : latestApk?.betaLabel
+                    ? usingApk && apkStatus === 'update-available'
+                      ? `Update to ${latestApk.betaLabel}`
+                      : `Download ${latestApk.betaLabel}`
+                    : 'Download latest APK'}
+              </span>
+            </TrackedDownloadLink>
+          ) : null}
+        </div>
+
+        {!canDownloadApk && apkAccessMessage ? (
+          <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4 leading-relaxed">
+            {apkAccessMessage}
+          </p>
+        ) : null}
 
         {isAppInstalled ? (
           <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl" id="pwa_installed_badge">
@@ -579,13 +666,24 @@ export default function UserProfileView({
               )}
               {activeManualPlatform === 'android' && (
                 <ol className="list-decimal list-inside space-y-2 pl-1">
-                  <li>
-                    <strong className="text-app">APK (recommended for alerts):</strong> open the{' '}
-                    <a href="/download" className="text-accent font-bold underline underline-offset-2">
-                      download page
-                    </a>{' '}
-                    and install the Android app file.
-                  </li>
+                  {canDownloadApk ? (
+                    <li>
+                      <strong className="text-app">APK (first 500 neighbors):</strong> open{' '}
+                      <button
+                        type="button"
+                        onClick={openDownloadPage}
+                        className="text-accent font-bold underline underline-offset-2 cursor-pointer"
+                      >
+                        download page
+                      </button>{' '}
+                      or use the APK button above.
+                    </li>
+                  ) : (
+                    <li>
+                      <strong className="text-app">Google Play:</strong> use{' '}
+                      <strong className="text-app">Download from Play Store</strong> above if you are on the invite list.
+                    </li>
+                  )}
                   <li>
                     <strong className="text-app">Or Chrome home screen:</strong> tap the three-dot menu{' '}
                     <strong className="text-app">(⋮)</strong> → <strong className="text-app">Install app</strong> or{' '}
@@ -621,6 +719,26 @@ export default function UserProfileView({
           onClose={() => setShowTermsModal(false)}
         />
       )}
+
+      {!isStaffRole(userProfile.role) ? (
+        <div className={fullBleed ? sectionShell : 'sbn-section'} id="account_staff_apply_section">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="w-4 h-4 text-accent" />
+            <h3 className="text-sm font-bold text-app uppercase tracking-wider">Join the staff team</h3>
+          </div>
+          <p className="text-xs text-muted leading-relaxed mb-4">
+            Read what each role actually does, then apply for one. Tell us how fast you can respond
+            and if you've been a mod elsewhere. Staff see one request at a time.
+          </p>
+          <button
+            type="button"
+            onClick={() => openStaffApplyPanel()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-accent/40 bg-accent/10 text-accent text-xs font-bold uppercase tracking-wider hover:bg-accent/15 transition-colors"
+          >
+            View roles & apply
+          </button>
+        </div>
+      ) : null}
 
       {/* ── Privacy & legal ──────────────────────────────────── */}
       <div className={fullBleed ? sectionShell : 'sbn-section'} id="account_privacy_section">

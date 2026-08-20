@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { UserProfile } from '../types';
 import { submitUserReport } from '../supabase';
+import { INVALID_IMAGE_FILE_MESSAGE, isLikelyImageFile } from '../lib/imageUrl';
 import { Camera, Flag, X } from 'lucide-react';
 
 interface ReportNeighborModalProps {
@@ -9,6 +10,8 @@ interface ReportNeighborModalProps {
   reportedUserName: string;
   onClose: () => void;
   onSubmitted?: () => void;
+  feedPostId?: string;
+  feedCommentId?: string;
 }
 
 export default function ReportNeighborModal({
@@ -17,6 +20,8 @@ export default function ReportNeighborModal({
   reportedUserName,
   onClose,
   onSubmitted,
+  feedPostId,
+  feedCommentId,
 }: ReportNeighborModalProps) {
   const [subject, setSubject] = useState(`Report: ${reportedUserName}`);
   const [body, setBody] = useState('');
@@ -27,9 +32,15 @@ export default function ReportNeighborModal({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleProofChange = (file: File | null) => {
+    if (file && !isLikelyImageFile(file)) {
+      setErr(INVALID_IMAGE_FILE_MESSAGE);
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
     if (proofPreview) URL.revokeObjectURL(proofPreview);
     setProofFile(file);
     setProofPreview(file ? URL.createObjectURL(file) : null);
+    if (file) setErr('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +60,8 @@ export default function ReportNeighborModal({
       reportedUserId,
       reportedUserName,
       proofFile,
+      feedPostId,
+      feedCommentId,
     });
 
     setSubmitting(false);

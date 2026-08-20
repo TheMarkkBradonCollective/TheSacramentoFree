@@ -1,12 +1,40 @@
 import { useState } from 'react';
 import { Gift } from 'lucide-react';
-import { APP_LOGO_SRC, IN_APP } from '../siteContent';
+import { APP_LOGO_SRC, SITE } from '../siteContent';
 
 interface BrandLogoProps {
   className?: string;
   imgClassName?: string;
   showTitle?: boolean;
+  /** Defaults to SITE.tagline */
   subtitle?: string;
+  /** Square logo + name/slogan stack — fits mobile headers */
+  compact?: boolean;
+}
+
+function BrandTitleBlock({
+  title,
+  subtitle,
+  compact = false,
+}: {
+  title: string;
+  subtitle: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="text-left min-w-0">
+      <p
+        className={`font-display font-bold text-app leading-tight truncate ${
+          compact ? 'text-[13px] tracking-tight' : 'text-sm'
+        }`}
+      >
+        {title}
+      </p>
+      <p className={`text-muted truncate ${compact ? 'text-[10px] leading-snug mt-0.5' : 'text-[11px]'}`}>
+        {subtitle}
+      </p>
+    </div>
+  );
 }
 
 export default function BrandLogo({
@@ -14,8 +42,14 @@ export default function BrandLogo({
   imgClassName = 'h-9 w-auto max-w-[140px] object-contain rounded-lg shrink-0',
   showTitle = false,
   subtitle,
+  compact = false,
 }: BrandLogoProps) {
   const [failed, setFailed] = useState(false);
+  const title = SITE.name;
+  const tagline = subtitle ?? SITE.tagline;
+  const logoClass = compact
+    ? 'h-8 w-8 object-cover rounded-lg shrink-0'
+    : imgClassName;
 
   if (failed) {
     return (
@@ -23,14 +57,7 @@ export default function BrandLogo({
         <div className="w-9 h-9 bg-accent text-on-accent rounded-lg flex items-center justify-center shrink-0">
           <Gift className="w-5 h-5" />
         </div>
-        {showTitle && (
-          <div className="text-left min-w-0">
-            <p className="font-display font-bold text-sm text-app leading-tight">
-              Sacramento <span className="text-accent">Buy Nothing</span>
-            </p>
-            <p className="text-[11px] text-muted truncate">{subtitle ?? IN_APP.brandSubtitle}</p>
-          </div>
-        )}
+        {showTitle && <BrandTitleBlock title={title} subtitle={tagline} compact={compact} />}
       </div>
     );
   }
@@ -40,17 +67,10 @@ export default function BrandLogo({
       <img
         src={APP_LOGO_SRC}
         alt="Sacramento Buy Nothing"
-        className={imgClassName}
+        className={logoClass}
         onError={() => setFailed(true)}
       />
-      {showTitle && (
-        <div className="text-left min-w-0 hidden sm:block">
-          <p className="font-display font-bold text-sm text-app leading-tight">
-            Sacramento <span className="text-accent">Buy Nothing</span>
-          </p>
-          <p className="text-[11px] text-muted truncate">{subtitle ?? IN_APP.brandSubtitle}</p>
-        </div>
-      )}
+      {showTitle && <BrandTitleBlock title={title} subtitle={tagline} compact={compact} />}
     </div>
   );
 }

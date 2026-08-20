@@ -1,12 +1,22 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const serverUrl = (process.env.CAPACITOR_SERVER_URL || process.env.VITE_APP_URL || '').trim().replace(/\/$/, '');
+
 const config: CapacitorConfig = {
-  appId: 'org.sacbuynothing.app',
-  appName: 'Sac Buy Nothing',
+  appId: 'org.sacramentobuynothing.app',
+  appName: 'SacramentoBuyNothing',
   webDir: 'dist',
-  server: {
-    androidScheme: 'https',
+  android: {
+    adjustMarginsForEdgeToEdge: 'force',
   },
+  server: serverUrl
+    ? {
+        url: serverUrl,
+        cleartext: false,
+      }
+    : {
+        androidScheme: 'https',
+      },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1500,
@@ -16,6 +26,10 @@ const config: CapacitorConfig = {
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
+    },
+    SystemBars: {
+      insetsHandling: 'css',
+      style: 'DARK',
     },
   },
 };

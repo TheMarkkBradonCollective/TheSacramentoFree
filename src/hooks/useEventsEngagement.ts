@@ -8,6 +8,7 @@ import {
   setSupabaseEventRsvp,
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { countPastRsvps, effectivePastRsvp } from '../lib/eventRsvp';
 
@@ -243,6 +244,7 @@ export function useEventsEngagement(
       text: text.trim(),
       createdAt: new Date().toISOString(),
       userNeighborhood: userProfile.neighborhood || 'Midtown',
+      postedAsNeighbor: commentPostedAsNeighbor(userProfile) || undefined,
     };
 
     setEventComments((prev) => ({

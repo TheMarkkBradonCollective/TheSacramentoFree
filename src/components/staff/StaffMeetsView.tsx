@@ -22,7 +22,8 @@ const STATUS_CONFIG: Record<
   GoGetSessionStatus,
   { label: string; color: string; icon: typeof Activity }
 > = {
-  awaiting_availability: { label: 'Awaiting', color: 'text-amber-400 bg-amber-500/10', icon: Clock },
+  awaiting_availability: { label: 'Ringing', color: 'text-amber-400 bg-amber-500/10', icon: Clock },
+  awaiting_schedule: { label: 'Schedule', color: 'text-sky-400 bg-sky-500/10', icon: Clock },
   window_offered:        { label: 'Window offered', color: 'text-sky-400 bg-sky-500/10', icon: Clock },
   scheduled:             { label: 'Scheduled', color: 'text-blue-400 bg-blue-500/10', icon: Clock },
   active:                { label: 'En route', color: 'text-emerald-400 bg-emerald-500/10', icon: Activity },
@@ -33,11 +34,12 @@ const STATUS_CONFIG: Record<
   disputed:              { label: 'Disputed', color: 'text-red-400 bg-red-500/10', icon: AlertTriangle },
 };
 
-const LIVE_STATUSES: GoGetSessionStatus[] = ['active', 'arrived', 'awaiting_availability', 'window_offered', 'scheduled'];
+const LIVE_STATUSES: GoGetSessionStatus[] = ['active', 'arrived', 'awaiting_availability', 'awaiting_schedule', 'window_offered', 'scheduled'];
 
 interface StaffMeetsViewProps {
   actor: UserProfile;
   onViewProfile: (userId: string) => void;
+  onOpenViolations?: (sessionId: string) => void;
 }
 
 function StatusBadge({ status }: { status: GoGetSessionStatus }) {
@@ -71,7 +73,7 @@ function elapsed(from: string | null | undefined, to?: string | null): string {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
-export default function StaffMeetsView({ actor, onViewProfile }: StaffMeetsViewProps) {
+export default function StaffMeetsView({ actor, onViewProfile, onOpenViolations }: StaffMeetsViewProps) {
   const [sessions, setSessions] = useState<GoGetSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -138,6 +140,11 @@ export default function StaffMeetsView({ actor, onViewProfile }: StaffMeetsViewP
         actor={actor}
         onViewProfile={onViewProfile}
         onBack={() => setSelectedSession(null)}
+        onSessionUpdated={(updated) => {
+          setSelectedSession(updated);
+          setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        }}
+        onOpenViolations={onOpenViolations}
       />
     );
   }
@@ -148,7 +155,7 @@ export default function StaffMeetsView({ actor, onViewProfile }: StaffMeetsViewP
       <div className="px-4 pt-4 pb-0 border-b border-app shrink-0 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-accent font-mono">Staff Panel</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-role-accent font-mono">Staff Panel</p>
             <h2 className="font-display font-bold text-app text-lg">Meet Records</h2>
             <p className="text-xs text-muted mt-0.5">
               {liveCount > 0 ? (

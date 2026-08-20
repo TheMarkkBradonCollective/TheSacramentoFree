@@ -112,3 +112,19 @@ export function compareFeedItems(
 export function isPrimaryFeedSort(mode: FeedSortMode): boolean {
   return PRIMARY_FEED_SORTS.some((option) => option.value === mode);
 }
+
+/** Nearest-first for proximity grid — items without distance sink to the bottom. */
+export function compareFeedItemsByDistance(
+  a: ItemPost,
+  b: ItemPost,
+  getDistanceMeters: (item: ItemPost) => number | null,
+): number {
+  const distA = getDistanceMeters(a);
+  const distB = getDistanceMeters(b);
+  if (distA != null && distB != null) {
+    const diff = distA - distB;
+    if (diff !== 0) return diff;
+  } else if (distA != null) return -1;
+  else if (distB != null) return 1;
+  return itemTime(b.createdAt) - itemTime(a.createdAt);
+}

@@ -2,7 +2,7 @@
 
 A community gifting PWA for Sacramento neighbors. Post free items, browse a local feed and map, coordinate pickup in chat, RSVP to events, and get push notifications — no money, no ads.
 
-**Live site:** [sacramentobuynothing.com](https://sacramentobuynothing.com) · **Android APK:** [sacramentobuynothing.com/download](https://sacramentobuynothing.com/download)
+**Live site:** [www.sacramentobuynothing.com](https://www.sacramentobuynothing.com) · **Android APK:** [www.sacramentobuynothing.com/download](https://www.sacramentobuynothing.com/download)
 
 **Stack:** React 19, Vite, Tailwind CSS v4, Supabase (auth + Postgres + realtime), Vercel serverless push API.
 
@@ -50,7 +50,8 @@ A community gifting PWA for Sacramento neighbors. Post free items, browse a loca
 | `npm run dev:full` | Vite + local Express push API |
 | `npm run build` | Production build → `dist/` |
 | `npm run build:android` | Production web build for Capacitor |
-| `npm run android:apk:debug` | Build a sideloadable debug APK → `dist/android/` |
+| `npm run android:apk` | Signed release APK → `dist/android/` and `public/downloads/` |
+| `npm run android:apk:debug` | Build a sideloadable debug APK → `dist/android/` (local testing only) |
 | `npm run cap:sync` | Copy web build into the Android project |
 | `npm run preview` | Preview production build |
 | `npm run lint` | TypeScript typecheck |
@@ -66,14 +67,17 @@ Quick start:
 bash scripts/setup-android-sdk.sh
 export ANDROID_HOME="$HOME/Android/Sdk"
 cp android/app/google-services.json.example android/app/google-services.json  # then replace with real Firebase file
-npm run android:apk:debug
+npm run android:apk:debug   # local testing
+npm run android:apk         # signed release for sacramentobuynothing.com/download
 ```
 
 ## Deploy
 
 Deployed on Vercel. Set all variables from `.env.example` in Vercel project settings (Production + Preview), then redeploy after changes.
 
-Database schema lives in `supabase-complete.sql` at the repo root. Paste the entire file into the Supabase SQL editor and run it when setting up a new project or after schema changes — it is safe to re-run and keeps the whole site intact.
+Database schema lives in `complete-schema.sql` at the repo root. Paste the entire file into the Supabase SQL editor and run it when setting up a new project or after schema changes — it is safe to re-run and keeps the whole site intact.
+
+Existing production databases should run the incremental files under `scripts/` instead of re-pasting the full schema (latest: `scripts/supabase-migration-aug-18-2026-outage.sql`). Neighbor **Updates** and **News** copy lives in `shared/changelogSeed.ts` and is upserted by cron `/api/cron/publish-changelog`.
 
 ## Project layout
 

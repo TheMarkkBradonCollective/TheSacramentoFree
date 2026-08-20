@@ -11,12 +11,14 @@ import {
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { isAndroidApp } from '../lib/nativePlatform';
 import { isDirectorRole, isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 
 export type NotificationSettingsScope = 'alerts' | 'listings' | 'all';
 
 interface NotificationSettingsProps {
   userId: string;
   userRole?: UserProfile['role'];
+  staffInteractionMode?: UserProfile['staffInteractionMode'];
   fullBleed?: boolean;
   /** Inside the navbar bell panel — no outer card chrome. */
   embedded?: boolean;
@@ -41,7 +43,7 @@ const PREF_SECTIONS: {
   items: { key: BooleanPrefKey; label: string; description: string }[];
 }[] = [
   {
-    title: 'Messages & support',
+    title: 'Chat & support',
     items: [
       { key: 'messages', label: 'Direct messages', description: 'Chat messages from neighbors' },
       {
@@ -83,22 +85,34 @@ const PREF_SECTIONS: {
   },
 ];
 
+const LISTING_PREF_ITEMS = [
+  { key: 'claims' as const, label: 'Claims', description: 'When someone claims your item' },
+  { key: 'gifts' as const, label: 'Gifts', description: 'When an item is marked gifted' },
+  { key: 'comments' as const, label: 'Comments', description: 'New comments on your listings and feed posts' },
+  { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When someone upvotes your listing or feed post (anonymous)' },
+  { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When someone downvotes your listing or feed post (anonymous)' },
+  {
+    key: 'listingStatus' as const,
+    label: 'Listing status',
+    description: 'Expiring soon, gifted, withdrawn, and other status changes',
+  },
+  {
+    key: 'pickupReminders' as const,
+    label: 'Pickup reminders',
+    description: 'Go Get, pending pickup, on-the-way alerts — Android app only',
+    nativeAppOnly: true,
+  },
+  { key: 'accountUpdates' as const, label: 'Account updates', description: 'Profile and account notices' },
+] as const;
+
 const LISTING_PREF_SECTION = {
   title: 'Your posts & profile',
-  items: [
-    { key: 'claims' as const, label: 'Claims', description: 'When someone claims your item' },
-    { key: 'gifts' as const, label: 'Gifts', description: 'When an item is marked gifted' },
-    { key: 'comments' as const, label: 'Comments', description: 'New comments on your listings' },
-    { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When someone upvotes your listing (anonymous)' },
-    { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When someone downvotes your listing (anonymous)' },
-    {
-      key: 'listingStatus' as const,
-      label: 'Listing status',
-      description: 'Expiring soon, gifted, withdrawn, and other status changes',
-    },
-    { key: 'pickupReminders' as const, label: 'Pickup reminders', description: 'Pending pickup, on-the-way alerts, and nudges' },
-    { key: 'accountUpdates' as const, label: 'Account updates', description: 'Profile and account notices' },
-  ],
+  get items() {
+    return LISTING_PREF_ITEMS.filter((item) => {
+      if ('nativeAppOnly' in item && item.nativeAppOnly) return isAndroidApp();
+      return true;
+    });
+  },
 };
 
 function SwitchRow({
@@ -202,6 +216,7 @@ const DIRECTOR_CATEGORY_PREFS = [
 export default function NotificationSettings({
   userId,
   userRole,
+  staffInteractionMode,
   fullBleed = false,
   embedded = false,
   scope = 'all',
@@ -229,6 +244,10 @@ export default function NotificationSettings({
   } = usePushNotifications(userId);
 
   const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
+
+  const actingOfficial = isStaffActingOfficial({ role: userRole, staffInteractionMode });
+  const showStaffNotificationPrefs = isStaffRole(userRole) && actingOfficial;
+  const showDirectorNotificationPrefs = isDirectorRole(userRole) && actingOfficial;
 
   const shell = embedded
     ? ''
@@ -418,7 +437,7 @@ export default function NotificationSettings({
                       disabled={isTesting || isBroadcastTesting || isLoading}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/40 bg-amber-500/10 text-sm font-bold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
                     >
-                      {isBroadcastTesting ? 'Broadcasting…' : 'Test all users'}
+                      {isBroadcastTesting ? 'Broadcasting…' : 'Broadcast'}
                     </button>
                   )}
                 </>
@@ -519,7 +538,7 @@ export default function NotificationSettings({
                 </div>
               </div>
 
-              {isStaffRole(userRole) && (
+              {showStaffNotificationPrefs && (
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
                     {STAFF_PREF_SECTION.title}
@@ -539,7 +558,7 @@ export default function NotificationSettings({
                 </div>
               )}
 
-              {isDirectorRole(userRole) && (
+              {showDirectorNotificationPrefs && (
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 px-1">
                     Director oversight

@@ -4,9 +4,10 @@ import { useTheme } from '../theme/ThemeContext';
 interface ThemeToggleProps {
   className?: string;
   showLabel?: boolean;
+  compact?: boolean;
 }
 
-export default function ThemeToggle({ className = '', showLabel = false }: ThemeToggleProps) {
+export default function ThemeToggle({ className = '', showLabel = false, compact = false }: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -14,7 +15,11 @@ export default function ThemeToggle({ className = '', showLabel = false }: Theme
     <button
       type="button"
       onClick={toggleTheme}
-      className={`inline-flex items-center gap-1.5 p-2 rounded-xl border border-app bg-surface text-app hover:bg-surface-hover transition-colors cursor-pointer ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-lg text-app transition-colors cursor-pointer ${
+        compact
+          ? 'p-2 text-muted hover:text-app hover:bg-inset'
+          : 'p-2 border border-app bg-surface hover:bg-surface-hover'
+      } ${className}`}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       id="theme_toggle_btn"

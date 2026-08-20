@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
 interface FullScreenPanelProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   onClose: () => void;
   children: ReactNode;
@@ -37,27 +37,31 @@ export default function FullScreenPanel({
 
   const panel = (
     <div
-      className={`fixed inset-0 ${nested ? 'z-[95]' : 'z-[90]'} bg-app flex flex-col font-sans`}
+      className={`sbn-app-sheet ${nested ? 'sbn-app-sheet-nested' : ''} flex flex-col font-sans`}
       role="dialog"
       aria-modal="true"
     >
-      <header className="shrink-0 sbn-glass-nav border-b border-app sbn-safe-top">
-        <div className="max-w-6xl mx-auto px-4 min-h-14 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="sbn-back-btn !mb-0 shrink-0"
-            aria-label="Back"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-display font-bold text-base sm:text-lg text-app truncate">{title}</h2>
-            {subtitle && <p className="text-xs text-muted truncate mt-0.5">{subtitle}</p>}
+      {(title || subtitle) ? (
+        <header className="shrink-0 sbn-glass-nav border-b border-app sbn-safe-top">
+          <div className="max-w-6xl mx-auto px-4 min-h-14 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="sbn-back-btn !mb-0 shrink-0"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+            <div className="min-w-0 flex-1">
+              {title ? (
+                <h2 className="font-display font-bold text-base sm:text-lg text-app truncate">{title}</h2>
+              ) : null}
+              {subtitle ? <p className="text-xs text-muted truncate mt-0.5">{subtitle}</p> : null}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      ) : null}
 
       {fillBody ? (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">

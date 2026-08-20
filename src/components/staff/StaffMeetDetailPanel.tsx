@@ -7,22 +7,32 @@ import {
   CheckCircle,
   Clock,
   ExternalLink,
+  Loader2,
   MapPin,
   Navigation2,
   Route,
+  ShieldAlert,
   User,
   XCircle,
 } from 'lucide-react';
-import type { GoGetLiveLocation, GoGetSession, GoGetSessionStatus, UserProfile } from '../../types';
+import type { GoGetLiveLocation, GoGetSession, GoGetSessionStatus, UserProfile, UserViolation } from '../../types';
 import {
   getSessionLocationTrail,
   getLiveLocationForStaff,
+  staffCancelGoGetSession,
+  staffCompleteGoGetSession,
+  staffDisputeGoGetSession,
+  staffExpireGoGetSession,
   subscribeToGoGetSession,
   subscribeToLiveLocationChanges,
   type LocationTrailPoint,
 } from '../../lib/goGetSessions';
-import { formatRouteDuration, formatRouteDistance } from '../../lib/mapRoute';
-import RoleBadge from '../RoleBadge';
+import { getViolationsForSession, staffEscalateGoGetSession } from '../../lib/violations';
+import { formatRouteDuration, formatRouteDistance, haversineMeters } from '../../lib/mapRoute';
+import { useStaffPermission } from '../../hooks/useStaffPermission';
+import NoPermissionModal from './NoPermissionModal';
+import StaffEscalateViolationDialog from './StaffEscalateViolationDialog';
+import StaffReasonDialog from './StaffReasonDialog';
 
 const MAP_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 const MAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
@@ -111,17 +121,32 @@ interface StaffMeetDetailPanelProps {
   actor: UserProfile;
   onViewProfile: (userId: string) => void;
   onBack: () => void;
+  onSessionUpdated?: (session: GoGetSession) => void;
+  onOpenViolations?: (sessionId: string) => void;
 }
+
+type ReasonAction = 'cancel' | 'expire' | 'dispute' | 'complete' | null;
 
 export default function StaffMeetDetailPanel({
   session: initialSession,
+  actor,
   onViewProfile,
   onBack,
+  onSessionUpdated,
+  onOpenViolations,
 }: StaffMeetDetailPanelProps) {
   const [session, setSession] = useState(initialSession);
   const [trail, setTrail] = useState<LocationTrailPoint[]>([]);
   const [liveLocation, setLiveLocation] = useState<GoGetLiveLocation | null>(null);
   const [trailLoading, setTrailLoading] = useState(true);
+  const [violations, setViolations] = useState<UserViolation[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [reasonAction, setReasonAction] = useState<ReasonAction>(null);
+  const [escalateOpen, setEscalateOpen] = useState(false);
+
+  const perm = useStaffPermission(actor);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -129,14 +154,90 @@ export default function StaffMeetDetailPanel({
   const destMarkerRef = useRef<L.Marker | null>(null);
   const liveMarkerRef = useRef<L.Marker | null>(null);
   const trailPolyRef = useRef<L.Polyline | null>(null);
+  const lastFitLiveRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const isLive = !TERMINAL.includes(session.status);
+
+  useEffect(() => {
+    lastFitLiveRef.current = null;
+  }, [session.id]);
+
+  const applySession = (next: GoGetSession) => {
+    setSession(next);
+    onSessionUpdated?.(next);
+  };
+
+  const loadViolations = async () => {
+    const rows = await getViolationsForSession(session.id);
+    setViolations(rows);
+  };
+
+  useEffect(() => {
+    void loadViolations();
+  }, [session.id, session.updatedAt]);
+
+  const runAction = async (fn: () => Promise<{ ok: boolean; errorMessage?: string; session?: GoGetSession }>) => {
+    if (!perm.checkModeratePost()) return;
+    setBusy(true);
+    setErr('');
+    setMsg('');
+    const result = await fn();
+    setBusy(false);
+    if (!result.ok) {
+      setErr(result.errorMessage || 'Something went wrong.');
+      return;
+    }
+    if (result.session) applySession(result.session);
+    await loadViolations();
+  };
+
+  const handleReasonSubmit = async (reason: string) => {
+    if (!reasonAction) return;
+    await runAction(async () => {
+      if (reasonAction === 'cancel') return staffCancelGoGetSession(session, actor, reason);
+      if (reasonAction === 'expire') return staffExpireGoGetSession(session, actor, reason);
+      if (reasonAction === 'dispute') return staffDisputeGoGetSession(session, actor, reason);
+      return staffCompleteGoGetSession(session, actor, reason);
+    });
+    setReasonAction(null);
+  };
+
+  const handleEscalate = async (params: {
+    accusedUserId: string;
+    accusedName: string;
+    category: import('../../types').ViolationCategory;
+    description: string;
+    closeAction: import('../../lib/violations').StaffSessionCloseAction;
+    closeReason?: string;
+  }) => {
+    if (!perm.checkModeratePost()) return;
+    setBusy(true);
+    setErr('');
+    setMsg('');
+    const result = await staffEscalateGoGetSession({
+      actor,
+      session,
+      ...params,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setErr(result.errorMessage || 'Could not escalate this session.');
+      return;
+    }
+    if (result.session) applySession(result.session);
+    setEscalateOpen(false);
+    setMsg('Session updated and violation sent to review queue.');
+    await loadViolations();
+  };
 
   // Subscribe to session updates
   useEffect(() => {
     if (!isLive) return;
-    return subscribeToGoGetSession(session.id, setSession);
-  }, [session.id, isLive]);
+    return subscribeToGoGetSession(session.id, (updated) => {
+      setSession(updated);
+      onSessionUpdated?.(updated);
+    });
+  }, [session.id, isLive, onSessionUpdated]);
 
   // Subscribe to live location
   useEffect(() => {
@@ -241,14 +342,22 @@ export default function StaffMeetDetailPanel({
       }
     }
 
-    // Fit bounds to all points
+    // Fit bounds to all points — only when the live pin has actually moved,
+    // so GPS ticks don't keep zooming the staff map.
     const allCoords: [number, number][] = [
       [session.destinationLat, session.destinationLng],
       ...trail.map((p) => [p.lat, p.lng] as [number, number]),
       ...(liveLocation ? [[liveLocation.lat, liveLocation.lng] as [number, number]] : []),
     ];
-    if (allCoords.length > 1) {
-      map.fitBounds(L.latLngBounds(allCoords).pad(0.2), { animate: true, maxZoom: 16 });
+    const fitFrom = liveLocation ?? trail[trail.length - 1] ?? null;
+    const movedFar =
+      !lastFitLiveRef.current ||
+      (fitFrom
+        ? haversineMeters(lastFitLiveRef.current, { lat: fitFrom.lat, lng: fitFrom.lng }) >= 50
+        : false);
+    if (allCoords.length > 1 && movedFar) {
+      if (fitFrom) lastFitLiveRef.current = { lat: fitFrom.lat, lng: fitFrom.lng };
+      map.fitBounds(L.latLngBounds(allCoords).pad(0.2), { animate: false, maxZoom: 16 });
     }
   }, [trail, liveLocation]);
 
@@ -259,6 +368,48 @@ export default function StaffMeetDetailPanel({
 
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden">
+      <NoPermissionModal open={perm.noPermOpen} reason={perm.noPermReason} onClose={perm.closeNoPerm} />
+      <StaffReasonDialog
+        open={reasonAction === 'cancel'}
+        title="Cancel Go Get session"
+        description="This ends the pickup for both neighbors and posts a staff note in their chat."
+        confirmLabel="Cancel session"
+        onClose={() => setReasonAction(null)}
+        onSubmit={handleReasonSubmit}
+      />
+      <StaffReasonDialog
+        open={reasonAction === 'expire'}
+        title="Expire Go Get session"
+        description="Use when a session is stale or abandoned without a normal handoff."
+        confirmLabel="Expire session"
+        onClose={() => setReasonAction(null)}
+        onSubmit={handleReasonSubmit}
+      />
+      <StaffReasonDialog
+        open={reasonAction === 'dispute'}
+        title="Mark session disputed"
+        description="Flag a handoff disagreement so it stays visible for review."
+        confirmLabel="Mark disputed"
+        onClose={() => setReasonAction(null)}
+        onSubmit={handleReasonSubmit}
+      />
+      <StaffReasonDialog
+        open={reasonAction === 'complete'}
+        title="Mark session complete"
+        description="Use when the picker arrived and staff can confirm the handoff is done."
+        confirmLabel="Mark complete"
+        placeholder="Optional note for the chat…"
+        requireReason={false}
+        onClose={() => setReasonAction(null)}
+        onSubmit={handleReasonSubmit}
+      />
+      <StaffEscalateViolationDialog
+        open={escalateOpen}
+        session={session}
+        onClose={() => setEscalateOpen(false)}
+        onSubmit={handleEscalate}
+      />
+
       {/* Header */}
       <div className="px-4 pt-3 pb-3 border-b border-app shrink-0">
         <div className="flex items-center gap-2 mb-2">
@@ -297,9 +448,87 @@ export default function StaffMeetDetailPanel({
           )}
           <span className="font-mono text-subtle">{session.id}</span>
         </div>
+
+        {(msg || err) && (
+          <div className="mt-2 space-y-1">
+            {msg && <p className="text-xs font-semibold text-emerald-400">{msg}</p>}
+            {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
+        {/* ── Staff management ───────────────────────────────── */}
+        <div className="border-b border-app px-4 py-3 space-y-3 bg-inset/40">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-role-accent font-mono">Staff actions</p>
+            {busy && <Loader2 className="w-4 h-4 animate-spin text-accent" />}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {isLive && (
+              <>
+                <button type="button" disabled={busy} onClick={() => setReasonAction('cancel')} className="sbn-btn sbn-btn-sm bg-red-500/10 text-red-400 border border-red-500/20">
+                  Cancel session
+                </button>
+                <button type="button" disabled={busy} onClick={() => setReasonAction('expire')} className="sbn-btn sbn-btn-sm sbn-btn-secondary">
+                  Expire session
+                </button>
+                {['active', 'arrived'].includes(session.status) && (
+                  <button type="button" disabled={busy} onClick={() => setReasonAction('dispute')} className="sbn-btn sbn-btn-sm bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Mark disputed
+                  </button>
+                )}
+              </>
+            )}
+            {session.status === 'arrived' && (
+              <button type="button" disabled={busy} onClick={() => setReasonAction('complete')} className="sbn-btn sbn-btn-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Mark complete
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (!perm.checkModeratePost()) return;
+                setEscalateOpen(true);
+              }}
+              className="sbn-btn sbn-btn-sm sbn-btn-primary"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              Escalate to violation
+            </button>
+          </div>
+
+          <p className="text-[10px] text-muted leading-snug">
+            Use <strong className="text-app font-semibold">Escalate to violation</strong> when a pickup did not complete properly.
+            Staff can close the session and file a report in one step. Confirmed violations count toward the 6-strike lockout.
+          </p>
+
+          {violations.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted font-mono">
+                Linked violations ({violations.length})
+              </p>
+              <ul className="space-y-1.5">
+                {violations.map((v) => (
+                  <li key={v.id} className="rounded-xl border border-app bg-surface px-3 py-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-app capitalize">{v.category.replace(/_/g, ' ')}</span>
+                      <span className="text-[10px] uppercase tracking-wide text-muted">{v.status.replace(/_/g, ' ')}</span>
+                    </div>
+                    <p className="text-muted mt-1 line-clamp-2">{v.description}</p>
+                  </li>
+                ))}
+              </ul>
+              {onOpenViolations && (
+                <button type="button" onClick={() => onOpenViolations?.(session.id)} className="sbn-btn sbn-btn-secondary sbn-btn-sm">
+                  Open Go Get Violations
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         {/* ── Trail Map ────────────────────────────────────────── */}
         <div className="border-b border-app">
           <div className="px-4 pt-3 pb-2 flex items-center gap-2">

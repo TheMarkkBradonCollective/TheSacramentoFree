@@ -1,0 +1,9 @@
+Android beta v0.1.0.0019 (versionCode 19)
+
+What's new:
+• Account download buttons open the in-app download page with direct APK download
+• Device permission toggles for Notifications and Location on Account
+• Mobile download page safe-area and layout fixes
+• Includes 0018 sidebar slide, unified header actions, and filter polish
+
+Download (sideload): https://www.sacramentobuynothing.com/download

@@ -2,29 +2,38 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { createPortal } from 'react-dom';
 import type { CommunityEvent } from '../types';
 import {
-  fetchDrivingRoute,
-  formatRouteDistance,
-  formatRouteDuration,
+  haversineMeters,
   isRoadGeometry,
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
-import { fetchNavigationRoute } from '../lib/navigationRoute';
+import { remainingRouteMeters } from '../lib/navigationRoute';
+import { usePreviewDrivingRoute } from '../hooks/usePreviewDrivingRoute';
 import { getLastLiveLatLng, retainLiveGeolocation, subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import {
   clearActiveNavSession,
   readActiveNavSession,
   saveActiveNavSession,
 } from '../lib/navigationSession';
+import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import MapNavigationView from './MapNavigationView';
+import { unlockNavigationSpeech } from '../lib/navigationVoice';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 
 interface EventDetailNavigationProps {
   event: CommunityEvent;
   currentUserId: string;
+  /** When true, start in-app navigation once GPS is ready. */
+  autoStartNavigation?: boolean;
+  onAutoStartNavigationConsumed?: () => void;
 }
 
-export default function EventDetailNavigation({ event, currentUserId }: EventDetailNavigationProps) {
+export default function EventDetailNavigation({
+  event,
+  currentUserId,
+  autoStartNavigation = false,
+  onAutoStartNavigationConsumed,
+}: EventDetailNavigationProps) {
   const destination = useMemo<LatLng | null>(() => {
     if (
       typeof event.locationLat !== 'number' ||
@@ -38,21 +47,19 @@ export default function EventDetailNavigation({ event, currentUserId }: EventDet
   }, [event.locationLat, event.locationLng]);
 
   const [userLocation, setUserLocation] = useState<LatLng | null>(() => getLastLiveLatLng());
-  const [routeLoading, setRouteLoading] = useState(false);
-  const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
-  const [distanceMeters, setDistanceMeters] = useState<number | null>(null);
-  const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [lockedOrigin, setLockedOrigin] = useState<LatLng | null>(null);
-  const fetchIdRef = useRef(0);
+  const autoStartAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    autoStartAttemptedRef.current = false;
+  }, [event.id]);
 
   useEffect(() => {
     if (!destination) return;
     const unsub = subscribeLiveGeolocation((position) => {
-      setUserLocation({
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-      });
+      const next = { lat: position.coords.latitude, lng: position.coords.longitude };
+      setUserLocation((prev) => (prev && haversineMeters(prev, next) < 12 ? prev : next));
     });
     return unsub;
   }, [destination]);
@@ -62,44 +69,22 @@ export default function EventDetailNavigation({ event, currentUserId }: EventDet
     return { start: userLocation, end: destination };
   }, [destination, userLocation]);
 
-  useEffect(() => {
-    if (!routeEndpoints) {
-      setRouteCoords(null);
-      setDistanceMeters(null);
-      setDurationSeconds(null);
-      setRouteLoading(false);
-      return;
-    }
+  const {
+    coords: routeCoords,
+    distanceMeters: fetchedDistanceMeters,
+    durationSeconds,
+    navRoute: previewNavRoute,
+    loading: routeLoading,
+  } = usePreviewDrivingRoute(userLocation, destination, true, event.id);
 
-    const fetchId = ++fetchIdRef.current;
-    setRouteLoading(true);
-    setRouteCoords(null);
-    setDistanceMeters(null);
-    setDurationSeconds(null);
-
-    fetchNavigationRoute(routeEndpoints.start, routeEndpoints.end).then(async (navResult) => {
-      if (fetchId !== fetchIdRef.current) return;
-
-      if (navResult) {
-        setRouteCoords(navResult.coords.length >= 2 ? navResult.coords : null);
-        setDistanceMeters(navResult.distanceMeters);
-        setDurationSeconds(navResult.durationSeconds);
-        setRouteLoading(false);
-        return;
-      }
-
-      const fallback = await fetchDrivingRoute(routeEndpoints.start, routeEndpoints.end);
-      if (fetchId !== fetchIdRef.current) return;
-
-      setRouteCoords(fallback.onRoads && isRoadGeometry(fallback.coords) ? fallback.coords : null);
-      setDistanceMeters(fallback.distanceMeters);
-      setDurationSeconds(fallback.durationSeconds);
-      setRouteLoading(false);
-    });
-  }, [routeEndpoints]);
+  const distanceMeters =
+    routeCoords && userLocation && routeCoords.length >= 2
+      ? remainingRouteMeters(routeCoords, userLocation)
+      : fetchedDistanceMeters;
 
   const openNavigation = useCallback(() => {
     if (!destination || !userLocation) return;
+    unlockNavigationSpeech();
     saveActiveNavSession({
       userId: currentUserId,
       targetType: 'event',
@@ -147,12 +132,34 @@ export default function EventDetailNavigation({ event, currentUserId }: EventDet
     });
   }, [navigationOpen, destination, currentUserId, event.id, event.title]);
 
+  useEffect(() => {
+    if (!autoStartNavigation || autoStartAttemptedRef.current) return;
+    if (!destination) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
+    if (!userLocation) return;
+    autoStartAttemptedRef.current = true;
+    onAutoStartNavigationConsumed?.();
+    openNavigation();
+  }, [
+    autoStartNavigation,
+    destination,
+    userLocation,
+    openNavigation,
+    onAutoStartNavigationConsumed,
+  ]);
+
   if (!destination) {
     return (
       <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2">
         No map pin yet — the host can set an exact location so neighbors can navigate here.
       </p>
     );
+  }
+
+  if (!supportsInAppNavigation()) {
+    return null;
   }
 
   const locationHint = event.location?.trim() || `Event pin · ${event.neighborhood}`;
@@ -187,6 +194,7 @@ export default function EventDetailNavigation({ event, currentUserId }: EventDet
               origin={lockedOrigin}
               destination={destination}
               destinationLabel={event.title}
+              initialRoute={previewNavRoute}
               onExit={() => {
                 clearActiveNavSession();
                 setNavigationOpen(false);

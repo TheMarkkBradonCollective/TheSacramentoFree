@@ -1,6 +1,8 @@
 import { supabaseAdmin } from './auth';
 import { configureVapidAsync, getVapidPublicKey, getWebPushModuleAsync, isVapidConfigured } from '../api/push/_server/webPushLoader';
 import { isFcmConfigured, isFcmSubscription, sendFcmToSubscription } from '../api/push/_server/fcmDelivery';
+import { filterSubscriptionsForPickupPush } from '../api/push/_server/pickupPushEvents';
+import { isStaffModePushEvent, receivesStaffModeNotifications } from '../shared/staffInteractionMode';
 
 export type PushEventType =
   | 'new_item'
@@ -20,6 +22,7 @@ export type PushEventType =
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
+  | 'listing_expired'
   | 'nearby_item'
   | 'nearby_request'
   | 'claim_request'
@@ -117,6 +120,7 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   listing_approved: 'listingStatus',
   listing_denied: 'listingStatus',
   listing_expiring: 'listingStatus',
+  listing_expired: 'listingStatus',
   listing_status: 'listingStatus',
   nearby_item: 'nearbyListings',
   nearby_request: 'requests',
@@ -196,6 +200,26 @@ export function userAllowsDirectorAlert(prefs: NotificationPreferencesRow, categ
   const key = DIRECTOR_CATEGORY_PREF_MAP[category];
   if (!key) return true;
   return prefs[key] !== false;
+}
+
+export async function getStaffInteractionModesForUsers(userIds: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!userIds.length) return map;
+
+  const { data } = await supabaseAdmin
+    .from('users')
+    .select('uid, staffInteractionMode, staff_interaction_mode')
+    .in('uid', userIds);
+
+  for (const row of data || []) {
+    const uid = String((row as { uid: string }).uid);
+    const mode =
+      (row as { staffInteractionMode?: string; staff_interaction_mode?: string }).staffInteractionMode ??
+      (row as { staff_interaction_mode?: string }).staff_interaction_mode;
+    map.set(uid, mode === 'neighbor' ? 'neighbor' : 'staff');
+  }
+
+  return map;
 }
 
 export async function getPreferencesForUsers(userIds: string[]): Promise<Map<string, NotificationPreferencesRow>> {
@@ -366,7 +390,15 @@ export async function sendPushToUsers(
     });
   }
 
-  const subscriptions = await getSubscriptionsForUsers(allowed);
+  if (isStaffModePushEvent(payload.eventType)) {
+    const modeMap = await getStaffInteractionModesForUsers(allowed);
+    allowed = allowed.filter((uid) => receivesStaffModeNotifications(modeMap.get(uid)));
+  }
+
+  const subscriptions = filterSubscriptionsForPickupPush(
+    await getSubscriptionsForUsers(allowed),
+    payload.eventType,
+  );
   let sent = 0;
   let failed = 0;
   let removed = 0;

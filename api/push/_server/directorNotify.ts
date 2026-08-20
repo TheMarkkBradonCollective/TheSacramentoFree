@@ -243,6 +243,14 @@ export async function runDirectorModerationNotify(
       directorTitle = 'Listing deleted';
       directorBody = `${byLine} permanently deleted a listing by ${targetName}${detail ? ` — ${detail}` : ''}`;
       break;
+    case 'cancel_event':
+      directorTitle = 'Event cancelled';
+      directorBody = `${byLine} cancelled an event by ${targetName}${detail ? ` — ${detail}` : ''}`;
+      break;
+    case 'delete_event':
+      directorTitle = 'Event deleted';
+      directorBody = `${byLine} permanently deleted an event by ${targetName}${detail ? ` — ${detail}` : ''}`;
+      break;
     default:
       directorBody = `${byLine}: ${action} on ${targetName}${detail ? ` — ${detail}` : ''}`;
   }
@@ -293,6 +301,14 @@ export async function runDirectorModerationNotify(
     delete_listing: {
       title: 'Your listing was removed by staff',
       body: `${byLine} permanently removed your listing${detail ? ` — ${detail}` : ''}`,
+    },
+    cancel_event: {
+      title: 'Your event was cancelled by staff',
+      body: `${byLine} cancelled your event${detail ? ` — ${detail}` : ''}`,
+    },
+    delete_event: {
+      title: 'Your event was removed by staff',
+      body: `${byLine} permanently removed your event${detail ? ` — ${detail}` : ''}`,
     },
   };
 

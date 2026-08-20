@@ -1,6 +1,6 @@
 import { supabase } from '../supabase';
-import type { UserProfile, UserViolation, ViolationCategory, ViolationStatus } from '../types';
-import { roleRank } from './roles';
+import type { GoGetSession, UserProfile, UserViolation, ViolationCategory, ViolationStatus } from '../types';
+import { isStaffRole, roleRank } from './roles';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
 
 async function runViolationPushTask(task: () => Promise<unknown>): Promise<void> {
@@ -48,13 +48,13 @@ function normalizeViolation(row: Record<string, unknown>): UserViolation {
 
 type Result = { ok: boolean; errorMessage?: string };
 
-const MISSING_TABLE_MESSAGE = 'Run the Go Get violations SQL (section 21 in supabase-complete.sql) in Supabase.';
+const MISSING_TABLE_MESSAGE = 'Run the Go Get violations SQL (section 21 in complete-schema.sql) in Supabase.';
 
 function isMissingTableError(error: { code?: string } | null | undefined): boolean {
   return error?.code === '42P01';
 }
 
-/** Max strikes before an account auto-locks — kept in sync with the DB trigger in supabase-complete.sql. */
+/** Max strikes before an account auto-locks — kept in sync with the DB trigger in complete-schema.sql. */
 export const VIOLATION_LOCK_THRESHOLD = 6;
 
 export interface FileViolationParams {
@@ -95,6 +95,124 @@ export async function fileGoGetViolation(params: FileViolationParams): Promise<R
   );
 
   return { ok: true, violationId: id };
+}
+
+export async function getViolationsForSession(sessionId: string): Promise<UserViolation[]> {
+  if (!sessionId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('user_violations')
+      .select('*')
+      .eq('sessionId', sessionId)
+      .order('createdAt', { ascending: false });
+    if (error || !data) return [];
+    return data.map((r) => normalizeViolation(r as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+/** Staff files a Go Get violation on behalf of the community. */
+export async function staffFileGoGetViolation(params: {
+  actor: UserProfile;
+  targetUserId: string;
+  targetName: string;
+  sessionId: string;
+  category: ViolationCategory;
+  description: string;
+}): Promise<Result & { violationId?: string }> {
+  if (!isStaffRole(params.actor.role)) {
+    return { ok: false, errorMessage: 'Staff only.' };
+  }
+  if (!params.description.trim()) {
+    return { ok: false, errorMessage: 'A description is required.' };
+  }
+  if (params.targetUserId === params.actor.uid) {
+    return { ok: false, errorMessage: 'Choose a participant to report.' };
+  }
+
+  const description = `[Staff escalation by ${params.actor.displayName}] ${params.description.trim()}`;
+  return fileGoGetViolation({
+    targetUserId: params.targetUserId,
+    targetName: params.targetName,
+    sessionId: params.sessionId,
+    reportedByUserId: params.actor.uid,
+    reportedByName: params.actor.displayName,
+    category: params.category,
+    description,
+  });
+}
+
+export type StaffSessionCloseAction = 'cancel' | 'expire' | 'dispute' | 'complete' | 'none';
+
+/** Close (or leave) a session and file a violation in one staff workflow step. */
+export async function staffEscalateGoGetSession(params: {
+  actor: UserProfile;
+  session: GoGetSession;
+  accusedUserId: string;
+  accusedName: string;
+  category: ViolationCategory;
+  description: string;
+  closeAction: StaffSessionCloseAction;
+  closeReason?: string;
+}): Promise<Result & { violationId?: string; session?: GoGetSession }> {
+  const { actor, session, closeAction, closeReason } = params;
+  let updatedSession = session;
+
+  if (closeAction !== 'none') {
+    const {
+      staffCancelGoGetSession,
+      staffCompleteGoGetSession,
+      staffDisputeGoGetSession,
+      staffExpireGoGetSession,
+    } = await import('./goGetSessions');
+
+    let closeResult: { ok: boolean; errorMessage?: string; session?: GoGetSession };
+    if (closeAction === 'cancel') {
+      closeResult = await staffCancelGoGetSession(session, actor, closeReason || params.description);
+    } else if (closeAction === 'expire') {
+      closeResult = await staffExpireGoGetSession(session, actor, closeReason || params.description);
+    } else if (closeAction === 'dispute') {
+      closeResult = await staffDisputeGoGetSession(session, actor, closeReason || params.description);
+    } else {
+      closeResult = await staffCompleteGoGetSession(session, actor, closeReason || params.description);
+    }
+
+    if (!closeResult.ok) return closeResult;
+    if (closeResult.session) updatedSession = closeResult.session;
+  }
+
+  const violationResult = await staffFileGoGetViolation({
+    actor,
+    targetUserId: params.accusedUserId,
+    targetName: params.accusedName,
+    sessionId: session.id,
+    category: params.category,
+    description: params.description,
+  });
+  if (!violationResult.ok) return violationResult;
+
+  return { ok: true, violationId: violationResult.violationId, session: updatedSession };
+}
+
+export function suggestViolationCategoryForSession(session: GoGetSession): ViolationCategory {
+  if (session.status === 'disputed' || session.status === 'arrived') return 'false_claim';
+  if (['awaiting_availability', 'awaiting_schedule', 'window_offered', 'scheduled'].includes(session.status)) return 'no_show';
+  if (session.status === 'active') return 'no_show';
+  return 'other';
+}
+
+export function suggestAccusedUserForSession(session: GoGetSession): {
+  userId: string;
+  name: string;
+} {
+  if (['awaiting_availability', 'awaiting_schedule', 'window_offered', 'scheduled'].includes(session.status)) {
+    return { userId: session.fulfillerUserId, name: session.fulfillerName };
+  }
+  if (session.status === 'active' || session.status === 'arrived' || session.status === 'disputed') {
+    return { userId: session.requesterUserId, name: session.requesterName };
+  }
+  return { userId: session.requesterUserId, name: session.requesterName };
 }
 
 export async function getViolationsForUser(userId: string): Promise<UserViolation[]> {

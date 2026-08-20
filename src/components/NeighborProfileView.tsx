@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   Ban,
@@ -9,6 +10,7 @@ import {
   MapPin,
   MessageSquare,
   Package,
+  Repeat2,
   ShieldCheck,
   UserX,
 } from 'lucide-react';
@@ -32,6 +34,7 @@ import ReportNeighborModal from './ReportNeighborModal';
 import { ItemPost } from '../types';
 import RoleBadge from './RoleBadge';
 import { ASSIGNABLE_ROLE_OPTIONS, isDirectorRole, isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { MessageRequest } from '../types';
 import ProfilePostList from './ProfilePostList';
@@ -50,6 +53,8 @@ interface NeighborProfileViewProps {
   onRepostPost?: (post: ItemPost) => void;
   onDeletePost?: (post: ItemPost) => void;
   onBlockListChanged?: () => void;
+  /** Stack above an open listing or event detail sheet. */
+  nested?: boolean;
 }
 
 export default function NeighborProfileView({
@@ -63,6 +68,7 @@ export default function NeighborProfileView({
   onRepostPost,
   onDeletePost,
   onBlockListChanged,
+  nested = false,
 }: NeighborProfileViewProps) {
   const hintListing = listingHints.find((item) => item.userId === userId);
 
@@ -85,7 +91,8 @@ export default function NeighborProfileView({
   const [requestBusy, setRequestBusy] = useState(false);
 
   const isSelf = userId === currentUserId;
-  const isDirector = isDirectorRole(currentUserProfile?.role);
+  const canManageTeamRoles =
+    !isSelf && isDirectorRole(currentUserProfile?.role) && isStaffActingOfficial(currentUserProfile);
 
   const [selectedRole, setSelectedRole] = useState<UserProfile['role']>('user');
   const [roleMsg, setRoleMsg] = useState('');
@@ -157,6 +164,14 @@ export default function NeighborProfileView({
       unsubBlocks();
     };
   }, [userId, currentUserId, currentUserProfile, hintListing?.id]);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   const handleRoleSave = async () => {
     if (!profile || !selectedRole) return;
@@ -275,14 +290,14 @@ export default function NeighborProfileView({
     .slice()
     .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime());
 
-  return (
+  const panel = (
     <div
-      className="fixed inset-0 z-[75] bg-app overflow-y-auto"
+      className={`sbn-app-sheet ${nested ? 'sbn-app-sheet-nested' : ''} flex flex-col min-h-0 font-sans`}
       role="dialog"
       aria-modal="true"
       id="neighbor_profile_overlay"
     >
-      <header className="sticky top-0 z-10 sbn-glass-nav sbn-safe-top px-4 min-h-14 flex items-center gap-3">
+      <header className="shrink-0 sbn-glass-nav sbn-safe-top border-b border-app px-4 min-h-14 flex items-center gap-3">
         <button
           type="button"
           onClick={onClose}
@@ -300,6 +315,7 @@ export default function NeighborProfileView({
         )}
       </header>
 
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
       <div className="sbn-page-content pb-12">
         {loading && !profile && !blockStatus.theyBlockedMe ? (
           <p className="text-center text-sm text-muted py-16">Loading profile…</p>
@@ -456,26 +472,35 @@ export default function NeighborProfileView({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="sbn-card p-4 text-center">
-                <Gift className="w-6 h-6 text-accent mx-auto mb-2" />
-                <p className="font-display text-2xl font-bold text-app">{stats?.itemsGiven ?? 0}</p>
-                <p className="text-xs text-muted mt-0.5">Items given</p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="sbn-card p-4 text-center">
+                  <Gift className="w-6 h-6 text-accent mx-auto mb-2" />
+                  <p className="font-display text-2xl font-bold text-app">{stats?.itemsGiven ?? 0}</p>
+                  <p className="text-xs text-muted mt-0.5">Items given</p>
+                </div>
+                <div className="sbn-card p-4 text-center">
+                  <Package className="w-6 h-6 text-accent mx-auto mb-2" />
+                  <p className="font-display text-2xl font-bold text-app">{stats?.itemsClaimed ?? 0}</p>
+                  <p className="text-xs text-muted mt-0.5">Items claimed</p>
+                </div>
+                <div className="sbn-card p-4 text-center">
+                  <Repeat2 className="w-6 h-6 text-accent mx-auto mb-2" />
+                  <p className="font-display text-2xl font-bold text-app">{stats?.tradesCompleted ?? 0}</p>
+                  <p className="text-xs text-muted mt-0.5">Trades</p>
+                </div>
               </div>
-              <div className="sbn-card p-4 text-center">
-                <Package className="w-6 h-6 text-accent mx-auto mb-2" />
-                <p className="font-display text-2xl font-bold text-app">{stats?.itemsClaimed ?? 0}</p>
-                <p className="text-xs text-muted mt-0.5">Items claimed</p>
-              </div>
-              <div className="sbn-card p-4 text-center">
-                <ChevronUp className="w-6 h-6 text-accent mx-auto mb-2" />
-                <p className="font-display text-2xl font-bold text-app">{stats?.upvotesReceived ?? 0}</p>
-                <p className="text-xs text-muted mt-0.5">Upvotes received</p>
-              </div>
-              <div className="sbn-card p-4 text-center">
-                <ChevronDown className="w-6 h-6 text-muted mx-auto mb-2" />
-                <p className="font-display text-2xl font-bold text-app">{stats?.downvotesReceived ?? 0}</p>
-                <p className="text-xs text-muted mt-0.5">Downvotes received</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="sbn-card p-4 text-center">
+                  <ChevronUp className="w-6 h-6 text-accent mx-auto mb-2" />
+                  <p className="font-display text-2xl font-bold text-app">{stats?.upvotesReceived ?? 0}</p>
+                  <p className="text-xs text-muted mt-0.5">Upvotes received</p>
+                </div>
+                <div className="sbn-card p-4 text-center">
+                  <ChevronDown className="w-6 h-6 text-muted mx-auto mb-2" />
+                  <p className="font-display text-2xl font-bold text-app">{stats?.downvotesReceived ?? 0}</p>
+                  <p className="text-xs text-muted mt-0.5">Downvotes received</p>
+                </div>
               </div>
             </div>
 
@@ -502,7 +527,7 @@ export default function NeighborProfileView({
               />
             </div>
 
-            {isDirector && !isSelf && (
+            {canManageTeamRoles && (
               <div className="sbn-card p-5 border border-amber-500/25 bg-amber-500/5">
                 <div className="flex items-center gap-2 mb-4">
                   <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
@@ -591,6 +616,9 @@ export default function NeighborProfileView({
           }}
         />
       )}
+      </div>
     </div>
   );
+
+  return createPortal(panel, document.body);
 }

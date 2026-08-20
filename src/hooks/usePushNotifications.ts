@@ -185,10 +185,11 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     setIsLoading(true);
     setError('');
     try {
-      const sub = await subscribeToPushNotifications();
-      setIsSubscribed(!!sub);
+      await subscribeToPushNotifications();
+      const active = await hasActivePushSubscription();
+      setIsSubscribed(active);
       refreshPermission();
-      if (!sub) {
+      if (!active) {
         setError('Notification permission was not granted.');
       } else {
         await loadPreferences({ force: true });
@@ -217,32 +218,44 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     setIsTesting(true);
     setError('');
     setTestMessage('');
-    const result = await sendTestPushNotification();
-    setIsTesting(false);
-    if (result.ok) {
-      setTestMessage('Test notification sent from the server — check your device.');
-    } else {
-      setError(result.errorMessage || 'Could not send test notification.');
+    try {
+      const result = await sendTestPushNotification();
+      if (result.ok) {
+        setTestMessage('Test notification sent from the server — check your device.');
+      } else {
+        setError(result.errorMessage || 'Could not send test notification.');
+      }
+      return result.ok;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send test notification.');
+      return false;
+    } finally {
+      setIsTesting(false);
     }
-    return result.ok;
   }, []);
 
   const runBroadcastTest = useCallback(async (params: { title: string; body: string }) => {
     setIsBroadcastTesting(true);
     setError('');
     setTestMessage('');
-    const result = await sendDirectorBroadcastTest(params);
-    setIsBroadcastTesting(false);
-    if (result.ok) {
-      const devices = result.sent ?? 0;
-      const neighbors = result.userCount ?? 0;
-      setTestMessage(
-        `Broadcast test sent to ${devices} device${devices === 1 ? '' : 's'} across ${neighbors} neighbor${neighbors === 1 ? '' : 's'}.`,
-      );
-    } else {
-      setError(result.errorMessage || 'Could not send broadcast test.');
+    try {
+      const result = await sendDirectorBroadcastTest(params);
+      if (result.ok) {
+        const devices = result.sent ?? 0;
+        const neighbors = result.userCount ?? 0;
+        setTestMessage(
+          `Broadcast test sent to ${devices} device${devices === 1 ? '' : 's'} across ${neighbors} neighbor${neighbors === 1 ? '' : 's'}.`,
+        );
+      } else {
+        setError(result.errorMessage || 'Could not send broadcast test.');
+      }
+      return result.ok;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send broadcast test.');
+      return false;
+    } finally {
+      setIsBroadcastTesting(false);
     }
-    return result.ok;
   }, []);
 
   const setDraftPreferences = useCallback((next: NotificationPreferences) => {

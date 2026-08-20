@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useItemsEngagement } from './hooks/useItemsEngagement';
 import { useItemsRealtime } from './hooks/useItemsRealtime';
 import { useSavedItemPushAlerts } from './hooks/useSavedItemPushAlerts';
@@ -6,32 +6,30 @@ import { useEventsEngagement } from './hooks/useEventsEngagement';
 import { useEventsRealtime } from './hooks/useEventsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
-import { usePwaInstallPrompt } from './hooks/usePwaInstallPrompt';
-import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent } from './types';
+import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent, FeedPost } from './types';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
-import { FullScreenSuspenseFallback, OverlaySuspenseFallback } from './components/SuspenseFallback';
-
-// Signed-in views and overlays are code-split so guests browsing the public
-// marketing site (and the login/onboarding flow) never download the map,
-// chat, staff, and listing-editor bundles until they're actually needed.
-const PostItemModal = lazy(() => import('./components/PostItemModal'));
-const ItemDetailView = lazy(() => import('./components/ItemDetailView'));
-const PickupAttributionModal = lazy(() => import('./components/PickupAttributionModal'));
-const EventDetailView = lazy(() => import('./components/EventDetailView'));
-const PostEventModal = lazy(() => import('./components/PostEventModal'));
-const NeighborProfileView = lazy(() => import('./components/NeighborProfileView'));
-const MobileView = lazy(() => import('./components/MobileView'));
-const TabletView = lazy(() => import('./components/TabletView'));
-const DesktopView = lazy(() => import('./components/DesktopView'));
-const AwardsPanel = lazy(() => import('./components/AwardsPanel'));
-const GoFundMeSupport = lazy(() => import('./components/GoFundMeSupport'));
+import PostItemModal from './components/PostItemModal';
+import NewListingModal, { type NewListingModalMode } from './components/NewListingModal';
+import FeedPostDetailView from './components/feed/FeedPostDetailView';
+import ItemDetailView from './components/ItemDetailView';
+import { deleteFeedPost, getFeedPostById } from './lib/feedApi';
+import { isStaffRole } from './lib/roles';
+import PickupAttributionModal from './components/PickupAttributionModal';
+import EventDetailView from './components/EventDetailView';
+import PostEventModal from './components/PostEventModal';
+import NeighborProfileView from './components/NeighborProfileView';
+import DirectMessageRequestModal from './components/DirectMessageRequestModal';
+import MobileView from './components/MobileView';
+import TabletView from './components/TabletView';
+import DesktopView from './components/DesktopView';
 import { 
   supabase, 
   getSupabaseProfile, 
   upsertSupabaseProfile,
   profileFromAuthUser,
   getSupabaseItems,
+  getSupabaseItemById,
   getSupabaseEvents,
   cancelSupabaseEvent,
   updateSupabaseItemStatus,
@@ -41,12 +39,23 @@ import {
   migrateLocalSavedItemsToDb,
   getClaimRequestById,
   staffGetListingById,
+  findOrCreateStaffListingOutreachTicket,
+  findOrCreateStaffEventOutreachTicket,
 } from './supabase';
+import { confirmStaffEventOutreach, confirmStaffListingOutreach } from './lib/staffChatSafety';
+import { isStaffActingOfficial } from './lib/staffInteractionMode';
 import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
+import GoGetRingCoordinator from './components/goget/GoGetRingCoordinator';
 import FullScreenPanel from './components/FullScreenPanel';
+import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
 import TermsOfUseContent from './components/TermsOfUseContent';
-import { type AnyTab, type AppTab } from './lib/appTabs';
+import AwardsPanel from './components/AwardsPanel';
+import StaffApplyView from './components/StaffApplyView';
+import { registerStaffApplyOpener } from './lib/staffApplyOpen';
+import { detectInstallKind } from './lib/installContext';
+import { reportAppInstall } from './lib/deviceTracking';
+import { type AnyTab, type AppTab, isStaffTab } from './lib/appTabs';
 import {
   appTabPath,
   parseStoredTab,
@@ -68,10 +77,11 @@ import {
   clearSessionCache,
   sessionStubFromProfile,
 } from './lib/sessionCache';
+import { readStaffInteractionModePref } from './lib/staffModePrefs';
 import AppBootSplash from './components/AppBootSplash';
 import GuestItemDetailView from './components/public/GuestItemDetailView';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
-import { parsePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
+import { parsePushDeepLink, shouldPreservePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hooks/usePushNotifications';
 import PushNotificationCelebration from './components/PushNotificationCelebration';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
@@ -79,20 +89,45 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
-import { NotificationsHubProvider, openNotificationsHub } from './contexts/NotificationsHubContext';
+import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
 import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { useReviewPrompt } from './hooks/useReviewPrompt';
 import ReviewPromptModal from './components/ReviewPromptModal';
+import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
+import { isNativeApp } from './lib/nativePlatform';
+import { applyUserPreferencesToDevice } from './lib/appPreferences';
+import {
+  clearLocalNativeSessionId,
+  registerNativeAppSession,
+  subscribeNativeAppSessionGuard,
+  verifyNativeAppSession,
+} from './lib/nativeAppSession';
+import { hasSeenGoGetFirstRunPrompt } from './lib/goGetFirstRunState';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
-import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath } from './public/routes';
+import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath, normalizePublicPath } from './public/routes';
 import DownloadPage from './components/public/pages/DownloadPage';
+import { canDownloadApkFromWebsite } from './lib/apkWebsiteAccess';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
+
+function sameFeedSnapshot<T extends { id: string; updatedAt?: unknown; status?: unknown }>(
+  current: T[],
+  next: T[],
+): boolean {
+  if (current === next) return true;
+  if (current.length !== next.length) return false;
+  for (let i = 0; i < current.length; i++) {
+    if (current[i].id !== next[i].id) return false;
+    if (String(current[i].updatedAt ?? '') !== String(next[i].updatedAt ?? '')) return false;
+    if (String(current[i].status ?? '') !== String(next[i].status ?? '')) return false;
+  }
+  return true;
+}
 
 function readPendingDeepLinkPath(): string | null {
   if (typeof window === 'undefined') return null;
@@ -148,37 +183,55 @@ export default function App() {
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
-  const loadItemsRef = useRef<(isBackground?: boolean, attempt?: number) => Promise<void>>(async () => {});
+  const loadItemsRef = useRef<
+    (isBackground?: boolean, attempt?: number, options?: { guest?: boolean }) => Promise<void>
+  >(async () => {});
+  const itemsCountRef = useRef(initialAuth.items.length);
+  const eventsCountRef = useRef(0);
+  const itemsLoadGenRef = useRef(0);
   const lastSignedInUserIdRef = useRef<string | null>(initialAuth.userProfile?.uid ?? null);
+  const handleLogOutRef = useRef<(() => Promise<void>) | null>(null);
   const logoutCleanupDoneRef = useRef(false);
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const pathnameSeededRef = useRef(false);
   const [activeTab, setActiveTab] = useState<AnyTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
-  const [showPostModal, setShowPostModal] = useState(false);
-  const [showPostEventModal, setShowPostEventModal] = useState(false);
+  const [newListingModalMode, setNewListingModalMode] = useState<NewListingModalMode | null>(null);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
   const [legalPanel, setLegalPanel] = useState<'privacy' | 'terms' | null>(null);
   const [showAwardsPanel, setShowAwardsPanel] = useState(false);
+  const [showStaffApplyPanel, setShowStaffApplyPanel] = useState(false);
   const [privacyGateOpen, setPrivacyGateOpen] = useState(false);
   const [termsGateOpen, setTermsGateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
+  const [addEventDatesMode, setAddEventDatesMode] = useState(false);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
+  const [detailFeedPost, setDetailFeedPost] = useState<FeedPost | null>(null);
+  const [detailNavigateOnOpen, setDetailNavigateOnOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<CommunityEvent | null>(null);
+  const [detailEventNavigateOnOpen, setDetailEventNavigateOnOpen] = useState(false);
   const [detailEventUpdating, setDetailEventUpdating] = useState(false);
   const [detailUpdating, setDetailUpdating] = useState(false);
   const [pickupAttributionItem, setPickupAttributionItem] = useState<ItemPost | null>(null);
   const [pickupAttributionMode, setPickupAttributionMode] = useState<'complete' | 'edit'>('complete');
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
+  const [showDirectMessageModal, setShowDirectMessageModal] = useState(false);
   const [showDownloadPage, setShowDownloadPage] = useState(() => isDownloadRoute());
   const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
     'reviews' | 'report' | 'staffReports' | null
   >(null);
   const [initialSupportTicketId, setInitialSupportTicketId] = useState<string | null>(null);
   const [initialChatSupportView, setInitialChatSupportView] = useState<'list' | 'new' | null>(null);
+  const [initialFocusMessageRequests, setInitialFocusMessageRequests] = useState(false);
   const [scrollToDirectorOverview, setScrollToDirectorOverview] = useState(false);
   const [items, setItems] = useState<ItemPost[]>(initialAuth.items);
+  useEffect(() => {
+    itemsCountRef.current = items.length;
+  }, [items.length]);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
+  useEffect(() => {
+    eventsCountRef.current = events.length;
+  }, [events.length]);
   const { confirm, alert } = useConfirm();
   const { blockedUserIds, reloadBlockedUsers } = useBlockedUsers(userProfile?.uid);
   const { shouldGlow: awardsButtonGlow, markAwardsSeen } = useAwardsGlow(userProfile?.uid);
@@ -189,6 +242,24 @@ export default function App() {
     setShowAwardsPanel(true);
   }, [markAwardsSeen]);
 
+  const handleOpenDownload = useCallback(() => {
+    setShowDownloadPage(true);
+    try {
+      window.history.pushState(window.history.state, '', downloadPagePath());
+    } catch (err) {
+      console.warn('History pushState unavailable for download route:', err);
+    }
+  }, []);
+
+  const handleOpenStaffApply = useCallback(() => {
+    setShowStaffApplyPanel(true);
+  }, []);
+
+  useEffect(() => {
+    registerStaffApplyOpener(userProfile ? handleOpenStaffApply : null);
+    return () => registerStaffApplyOpener(null);
+  }, [userProfile, handleOpenStaffApply]);
+
   const goHomeTab = useCallback(() => {
     setActiveTab('map');
     persistActiveTab('map', userProfile?.uid);
@@ -196,16 +267,23 @@ export default function App() {
 
   const clearAuthenticatedUiState = useCallback(() => {
     setEvents([]);
+    setEventsHydrated(false);
+    setIsEventsLoading(false);
+    setItemsHydrated(false);
+    setIsItemsLoading(false);
     setDetailItem(null);
+    setDetailNavigateOnOpen(false);
     setDetailEvent(null);
+    setDetailEventNavigateOnOpen(false);
     setViewProfileUid(null);
-    setShowPostModal(false);
-    setShowPostEventModal(false);
+    setNewListingModalMode(null);
     setShowGoFundMeDetail(false);
     setLegalPanel(null);
     setShowAwardsPanel(false);
+    setShowStaffApplyPanel(false);
     setEditingItem(null);
     setEditingEvent(null);
+    setAddEventDatesMode(false);
     setPickupAttributionItem(null);
     setInitialSelectedChatId(null);
     setPendingChatCompose(null);
@@ -231,10 +309,45 @@ export default function App() {
     }
   }, []);
 
-  const navigateToTab = useCallback((tab: AnyTab) => {
-    setActiveTab(tab);
-    persistActiveTab(tab as AppTab, userProfile?.uid);
-  }, [userProfile?.uid]);
+  const closeTransientOverlays = useCallback(() => {
+    setDetailItem(null);
+    setDetailNavigateOnOpen(false);
+    setDetailEvent(null);
+    setDetailEventNavigateOnOpen(false);
+    setViewProfileUid(null);
+    setLegalPanel(null);
+    setShowAwardsPanel(false);
+    setShowStaffApplyPanel(false);
+    setShowGoFundMeDetail(false);
+    closeNotificationsHub();
+  }, []);
+
+  const handleTabChange = useCallback(
+    (tab: AnyTab) => {
+      closeTransientOverlays();
+      setActiveTab(tab);
+      persistActiveTab(tab as AppTab, userProfile?.uid);
+    },
+    [closeTransientOverlays, userProfile?.uid],
+  );
+
+  const handleUpdateProfile = useCallback(
+    (updated: UserProfile) => {
+      setUserProfile(updated);
+      if (!isStaffActingOfficial(updated) && isStaffTab(activeTab)) {
+        handleTabChange('profile');
+      }
+    },
+    [activeTab, handleTabChange],
+  );
+
+  const navigateToTab = useCallback(
+    (tab: AnyTab) => {
+      setActiveTab(tab);
+      persistActiveTab(tab as AppTab, userProfile?.uid);
+    },
+    [userProfile?.uid],
+  );
 
   const pendingDeepLinkPathRef = useRef<string | null>(
     typeof window !== 'undefined' ? readPendingDeepLinkPath() : null,
@@ -275,6 +388,8 @@ export default function App() {
   const eventsEngagement = useEventsEngagement(eventIds, userProfile, blockedUserIds);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [isEventsLoading, setIsEventsLoading] = useState(false);
+  const [itemsHydrated, setItemsHydrated] = useState(() => initialAuth.items.length > 0);
+  const [eventsHydrated, setEventsHydrated] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [guestDetailItem, setGuestDetailItem] = useState<ItemPost | null>(null);
 
@@ -301,31 +416,73 @@ export default function App() {
     return 'mobile';
   });
 
-  // PWA install status — shared listener, see usePwaInstallPrompt. The
-  // floating banner's own show/dismiss timing stays local to App.tsx.
-  const { canPromptInstall, isIOS, isInstalled: isAlreadyInstalled, promptInstall } = usePwaInstallPrompt();
+  // PWA states and install trigger handlers
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
 
   useEffect(() => {
-    if (isAlreadyInstalled) {
-      setShowInstallBanner(false);
+    // Check if running in standalone mode (already installed & launched from screen icon)
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches 
+      || (window.navigator as any).standalone === true;
+    
+    if (isStandaloneMode) {
+      setIsAlreadyInstalled(true);
+      void reportAppInstall();
       return;
     }
-    const isDismissed = localStorage.getItem('pwa_banner_dismissed_v1');
-    if (isDismissed) return;
-    if (canPromptInstall) {
-      const timer = setTimeout(() => setShowInstallBanner(true), 3000);
-      return () => clearTimeout(timer);
+
+    // Check device type
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIosDevice = /ipad|iphone|ipod/.test(userAgent) && !(window as any).MSStream;
+    setIsIOS(isIosDevice);
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const isDismissed = localStorage.getItem('pwa_banner_dismissed_v1');
+      if (!isDismissed) {
+        setTimeout(() => {
+          setShowInstallBanner(true);
+        }, 3000);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const handleAppInstalled = () => {
+      setIsAlreadyInstalled(true);
+      setShowInstallBanner(false);
+      setDeferredPrompt(null);
+      void reportAppInstall();
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    if (isIosDevice && !isStandaloneMode) {
+      const isDismissed = localStorage.getItem('pwa_banner_dismissed_v1');
+      if (!isDismissed) {
+        setTimeout(() => {
+          setShowInstallBanner(true);
+        }, 5000);
+      }
     }
-    if (isIOS) {
-      const timer = setTimeout(() => setShowInstallBanner(true), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [canPromptInstall, isIOS, isAlreadyInstalled]);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
 
   const handleInstallApp = async () => {
-    const outcome = await promptInstall();
-    if (outcome === 'accepted' || outcome === 'dismissed') {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsAlreadyInstalled(true);
+        void reportAppInstall(userProfile?.uid);
+      }
+      setDeferredPrompt(null);
       setShowInstallBanner(false);
     }
   };
@@ -334,6 +491,11 @@ export default function App() {
     setShowInstallBanner(false);
     localStorage.setItem('pwa_banner_dismissed_v1', 'true');
   };
+
+  useEffect(() => {
+    if (detectInstallKind() === 'browser') return;
+    void reportAppInstall(userProfile?.uid);
+  }, [userProfile?.uid]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -423,6 +585,25 @@ export default function App() {
       } catch (err) {
         console.warn('History replaceState unavailable for download route:', err);
       }
+      return;
+    }
+
+    // Last-tab replaceState used to wipe /updates, /news, /listing/… before the
+    // deep-link effect ran, so signed-in neighbors never reached Updates/News.
+    const currentPath = window.location.pathname;
+    const hashPath = window.location.hash
+      ? normalizePublicPath(window.location.hash.replace(/^#\/?/, ''))
+      : '';
+    const pendingFromDeepLink = shouldPreservePushDeepLink(parsePushDeepLink(currentPath))
+      ? currentPath
+      : hashPath === 'news' || hashPath === 'announcements'
+        ? '/news'
+        : null;
+    const pendingFromPublic = !pendingFromDeepLink && publicDest === 'updates' ? '/updates' : null;
+    const pendingPath = pendingFromDeepLink || pendingFromPublic;
+    if (pendingPath) {
+      pendingDeepLinkPathRef.current = pendingPath;
+      rememberPendingDeepLinkPath(pendingPath);
       return;
     }
 
@@ -518,13 +699,35 @@ export default function App() {
       new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
     ]);
 
+  const withTimeoutReject = <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+    ]);
+
+  const waitForSupabaseAuth = async (maxMs = 8_000): Promise<boolean> => {
+    const deadline = Date.now() + maxMs;
+    while (Date.now() < deadline) {
+      try {
+        const {
+          data: { session },
+        } = await withTimeoutReject(supabase.auth.getSession(), 3_000, 'getSession timed out');
+        if (session?.access_token) return true;
+      } catch (err) {
+        console.warn('Waiting for Supabase auth session:', err);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    return false;
+  };
+
   /** Enter the app immediately from auth metadata — DB sync runs in background. */
   const applySession = useCallback((user: any) => {
     if (user?.id && lastSignedInUserIdRef.current && lastSignedInUserIdRef.current !== user.id) {
       clearAuthenticatedUiState();
     }
     if (user?.id) lastSignedInUserIdRef.current = user.id;
-    setSessionUser(user);
+    setSessionUser((prev) => (prev?.id === user.id ? prev : user));
     setUserProfile((prev) => {
       if (prev?.uid === user.id) return prev;
       return profileFromAuthUser(user);
@@ -541,8 +744,12 @@ export default function App() {
     try {
       const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
         if (fromDb) {
-          setUserProfile(fromDb);
-          writeCachedProfile(fromDb);
+          const localMode = readStaffInteractionModePref(fromDb.uid);
+          const merged =
+            localMode != null ? { ...fromDb, staffInteractionMode: localMode } : fromDb;
+          setUserProfile(merged);
+          writeCachedProfile(merged);
+          applyUserPreferencesToDevice(merged);
           return;
         }
 
@@ -582,7 +789,9 @@ export default function App() {
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
         void syncProfileFromDb(session.user);
-      } else {
+      } else if (!hadSessionOnMountRef.current) {
+        // No cached session — this is a real guest. Do not wipe a restored
+        // session if getSession() races ahead of INITIAL_SESSION.
         setSessionUser(null);
         setUserProfile(null);
         clearSessionCache();
@@ -602,8 +811,10 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
+      if (event === 'TOKEN_REFRESHED') return;
 
       if (session?.user) {
+        const alreadyInApp = !!lastSignedInUserIdRef.current;
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
         // Defer DB sync — never await inside this callback (Supabase auth deadlock).
@@ -612,7 +823,12 @@ export default function App() {
             void syncProfileFromDb(session.user);
           }
         }, 0);
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' && isNativeApp()) {
+          setTimeout(() => {
+            if (!cancelled) void registerNativeAppSession(session.user.id);
+          }, 0);
+        }
+        if (event === 'SIGNED_IN' && !alreadyInApp) {
           const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
           const hasDeepLink = Boolean(pendingPath && parsePushDeepLink(pendingPath));
           if (!hasDeepLink) {
@@ -625,22 +841,37 @@ export default function App() {
           }, 100);
         }
       } else {
-        const signedOutUserId = lastSignedInUserIdRef.current;
+        if (event === 'SIGNED_OUT') {
+          const signedOutUserId = lastSignedInUserIdRef.current;
+          lastSignedInUserIdRef.current = null;
+          profileSyncRef.current = null;
+          if (!logoutCleanupDoneRef.current) {
+            logoutCleanupDoneRef.current = true;
+            void clearNotificationDataOnLogout(signedOutUserId);
+          }
+          clearSessionCache();
+          clearAuthenticatedUiState();
+          setSessionUser(null);
+          setUserProfile(null);
+          setItems([]);
+          setIsAuthLoading(false);
+          resetTabStateForSignOut();
+          return;
+        }
+        // INITIAL_SESSION with no user: keep a restored cache. getSession() often
+        // races and would otherwise flash the public site through the signed-in app.
+        if (event === 'INITIAL_SESSION' && hadSessionOnMountRef.current) {
+          return;
+        }
+        if (event !== 'INITIAL_SESSION') return;
         lastSignedInUserIdRef.current = null;
         profileSyncRef.current = null;
-        if (!logoutCleanupDoneRef.current) {
-          logoutCleanupDoneRef.current = true;
-          void clearNotificationDataOnLogout(signedOutUserId);
-        }
         clearSessionCache();
         clearAuthenticatedUiState();
         setSessionUser(null);
         setUserProfile(null);
         setItems([]);
         setIsAuthLoading(false);
-        if (event === 'SIGNED_OUT') {
-          resetTabStateForSignOut();
-        }
       }
     });
 
@@ -654,41 +885,75 @@ export default function App() {
   const loadItems = useCallback(
     async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
       const isGuest = options?.guest === true;
-      if (!isGuest && (!userProfile || !sessionUser)) return;
-      if (!isBackground) {
+      if (!isGuest && (!userProfile?.uid || !sessionUser?.id)) return;
+
+      const gen = ++itemsLoadGenRef.current;
+      const isStale = () => gen !== itemsLoadGenRef.current;
+      const hasVisibleItems = itemsCountRef.current > 0;
+
+      // Foreground spinner only when we have nothing to show yet.
+      if (!isBackground && !hasVisibleItems) {
         setIsItemsLoading(true);
       }
+
+      const scheduleRetry = () => {
+        if (attempt >= 2) return;
+        window.setTimeout(() => {
+          // Only the latest load generation may retry.
+          if (gen !== itemsLoadGenRef.current) return;
+          // Retries are always background so the UI is never stuck on "Loading…".
+          void loadItemsRef.current(true, attempt + 1, options);
+        }, 1200 * (attempt + 1));
+      };
+
+      let loadedOk = false;
       try {
-        const loadedItems = await getSupabaseItems();
+        if (!isGuest) {
+          // Best-effort wait for the JWT. Do not block the feed forever —
+          // public RLS still allows reading active listings without a session.
+          await waitForSupabaseAuth(4_000);
+          if (isStale()) return;
+        }
+
+        const loadedItems = await withTimeoutReject(
+          getSupabaseItems(),
+          15_000,
+          'Items fetch timed out',
+        );
+        if (isStale()) return;
+        loadedOk = true;
+
         setItems((current) => {
           if (!isGuest && loadedItems.length === 0 && current.length > 0) {
             console.warn('Items fetch returned empty — keeping cached listings until auth syncs.');
             return current;
           }
-          return loadedItems;
+          return sameFeedSnapshot(current, loadedItems) ? current : loadedItems;
         });
         if (loadedItems.length > 0) {
           writeCachedItems(loadedItems);
-        } else if (!isGuest && attempt < 2) {
-          window.setTimeout(() => {
-            void loadItemsRef.current(true, attempt + 1);
-          }, 1200 * (attempt + 1));
+        } else {
+          scheduleRetry();
         }
       } catch (err) {
         console.warn('Supabase items fetch failed:', err);
+        if (isStale()) return;
         setItems((current) => (current.length === 0 ? DEFAULT_OFFLINE_ITEMS : current));
-        if (!isGuest && attempt < 2) {
-          window.setTimeout(() => {
-            void loadItemsRef.current(true, attempt + 1);
-          }, 1200 * (attempt + 1));
-        }
+        scheduleRetry();
       } finally {
-        if (!isBackground) {
+        // Only the latest generation clears the spinner. Older in-flight loads
+        // must not leave "Loading…" up after a newer attempt finishes.
+        if (gen === itemsLoadGenRef.current) {
           setIsItemsLoading(false);
+          // A failed/empty fetch must not look like “the community has 0 posts”
+          // unless we actually completed a load (or we already have cached cards).
+          if (loadedOk || itemsCountRef.current > 0 || attempt >= 2) {
+            setItemsHydrated(true);
+          }
         }
       }
     },
-    [userProfile?.uid, sessionUser],
+    [userProfile?.uid, sessionUser?.id],
   );
 
   useEffect(() => {
@@ -706,7 +971,7 @@ export default function App() {
   // Load listings once auth is ready, then keep in sync via Supabase Realtime
   useEffect(() => {
     if (!sessionReady) return;
-    loadItems(false);
+    loadItems(itemsCountRef.current > 0);
   }, [sessionReady, userProfile?.uid, loadItems, authBootstrapping]);
 
   useEffect(() => {
@@ -717,20 +982,22 @@ export default function App() {
 
   const loadEvents = useCallback(async (isBackground = false) => {
     if (!userProfile || !sessionUser) return;
-    if (!isBackground) setIsEventsLoading(true);
+    const hasVisibleEvents = eventsCountRef.current > 0;
+    if (!isBackground && !hasVisibleEvents) setIsEventsLoading(true);
     try {
       const loaded = await getSupabaseEvents();
-      setEvents(loaded);
+      setEvents((current) => (sameFeedSnapshot(current, loaded) ? current : loaded));
     } catch (err) {
       console.warn('Supabase events fetch failed:', err);
     } finally {
-      if (!isBackground) setIsEventsLoading(false);
+      setIsEventsLoading(false);
+      setEventsHydrated(true);
     }
-  }, [userProfile?.uid, sessionUser]);
+  }, [userProfile?.uid, sessionUser?.id]);
 
   useEffect(() => {
     if (!sessionReady) return;
-    void loadEvents(false);
+    void loadEvents(eventsCountRef.current > 0);
   }, [sessionReady, userProfile?.uid, loadEvents]);
 
   useItemsRealtime(sessionReady, setItems);
@@ -766,11 +1033,16 @@ export default function App() {
       updated.updatedAt !== detailItem.updatedAt ||
       updated.status !== detailItem.status ||
       updated.title !== detailItem.title ||
-      updated.description !== detailItem.description ||
+      (updated.description !== detailItem.description && updated.description) ||
       updated.pickupAttributionType !== detailItem.pickupAttributionType ||
       updated.pickupAttributionLabel !== detailItem.pickupAttributionLabel
     ) {
-      setDetailItem(updated);
+      setDetailItem({
+        ...updated,
+        description: updated.description || detailItem.description,
+        imageUrl: updated.imageUrl || detailItem.imageUrl,
+        imageUrls: updated.imageUrls?.length ? updated.imageUrls : detailItem.imageUrls,
+      });
     }
   }, [items, detailItem]);
 
@@ -884,6 +1156,7 @@ export default function App() {
   const handleLogOut = async () => {
     const signedOutUserId =
       userProfile?.uid || sessionUser?.id || lastSignedInUserIdRef.current;
+    if (signedOutUserId) clearLocalNativeSessionId(signedOutUserId);
     try {
       logoutCleanupDoneRef.current = true;
       await clearNotificationDataOnLogout(signedOutUserId);
@@ -898,6 +1171,31 @@ export default function App() {
     setItems([]);
     resetTabStateForSignOut();
   };
+  handleLogOutRef.current = handleLogOut;
+
+  // Native APK/AAB: one active install per account — signing in elsewhere signs this device out.
+  useEffect(() => {
+    const userId = sessionUser?.id;
+    if (!userId || !isNativeApp()) return;
+
+    let cancelled = false;
+
+    void verifyNativeAppSession(userId).then((status) => {
+      if (cancelled || status !== 'revoked') return;
+      setErrorMsg('You signed in on another device. This app was signed out.');
+      void handleLogOutRef.current?.();
+    });
+
+    const unsub = subscribeNativeAppSessionGuard(userId, () => {
+      setErrorMsg('You signed in on another device. This app was signed out.');
+      void handleLogOutRef.current?.();
+    });
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [sessionUser?.id]);
 
   // Onboarding Complete Handler
   const handleOnboardingComplete = (newProfile: UserProfile) => {
@@ -912,15 +1210,29 @@ export default function App() {
   }, [detailItem?.id]);
 
   const refreshDetailItem = useCallback(async () => {
-    const loadedItems = await getSupabaseItems();
-    setItems((current) => {
-      if (loadedItems.length === 0 && current.length > 0) return current;
-      return loadedItems;
-    });
-    setDetailItem((current) => {
-      if (!current) return null;
-      return loadedItems.find((i) => i.id === current.id) ?? null;
-    });
+    try {
+      const loadedItems = await getSupabaseItems();
+      setItems((current) => {
+        if (loadedItems.length === 0 && current.length > 0) return current;
+        return loadedItems;
+      });
+      setDetailItem((current) => {
+        if (!current) return null;
+        const next = loadedItems.find((i) => i.id === current.id);
+        if (!next) return current;
+        if (!next.description && current.description) {
+          return {
+            ...next,
+            description: current.description,
+            imageUrl: next.imageUrl || current.imageUrl,
+            imageUrls: next.imageUrls?.length ? next.imageUrls : current.imageUrls,
+          };
+        }
+        return next;
+      });
+    } catch (err) {
+      console.warn('Could not refresh listing detail:', err);
+    }
   }, []);
 
   const handleDetailUpdateStatus = async (
@@ -955,8 +1267,8 @@ export default function App() {
           return;
         }
         if (detailItem?.id === post.id) await refreshDetailItem();
-        await loadItems(false);
-        setActiveTab('feed');
+        await loadItems(true);
+        setActiveTab('stuff');
       } catch (err) {
         console.warn('Failed to repost listing:', err);
         setErrorMsg('Could not repost listing.');
@@ -987,7 +1299,7 @@ export default function App() {
           return;
         }
         if (detailItem?.id === post.id) setDetailItem(null);
-        await loadItems(false);
+        await loadItems(true);
       } catch (err) {
         console.warn('Failed to delete post:', err);
         setErrorMsg('Could not delete post.');
@@ -998,9 +1310,73 @@ export default function App() {
     [userProfile, detailItem?.id, loadItems, confirm],
   );
 
+  const handleOpenSupportTicket = useCallback((ticketId: string) => {
+    setInitialSupportTicketId(ticketId);
+    setActiveTab('chats');
+  }, []);
+
+  const handleStaffListingOutreach = useCallback(
+    async (item: ItemPost) => {
+      if (!userProfile || !isStaffActingOfficial(userProfile)) return;
+      if (blockedUserIds.has(item.userId)) return;
+
+      const confirmed = await confirmStaffListingOutreach(
+        confirm,
+        item.userDisplayName,
+        item.title,
+      );
+      if (!confirmed) return;
+
+      const result = await findOrCreateStaffListingOutreachTicket({ staff: userProfile, item });
+      if (!result.ok || !result.ticketId) {
+        await alert({
+          title: 'Could not open staff thread',
+          message: result.errorMessage || 'Could not open staff thread.',
+        });
+        return;
+      }
+
+      setDetailItem(null);
+      handleOpenSupportTicket(result.ticketId);
+    },
+    [userProfile, blockedUserIds, confirm, alert, handleOpenSupportTicket],
+  );
+
+  const handleStaffEventOutreach = useCallback(
+    async (event: CommunityEvent) => {
+      if (!userProfile || !isStaffActingOfficial(userProfile)) return;
+      if (blockedUserIds.has(event.userId)) return;
+
+      const confirmed = await confirmStaffEventOutreach(
+        confirm,
+        event.userDisplayName,
+        event.title,
+      );
+      if (!confirmed) return;
+
+      const result = await findOrCreateStaffEventOutreachTicket({ staff: userProfile, event });
+      if (!result.ok || !result.ticketId) {
+        await alert({
+          title: 'Could not open staff thread',
+          message: result.errorMessage || 'Could not open staff thread.',
+        });
+        return;
+      }
+
+      setDetailEvent(null);
+      handleOpenSupportTicket(result.ticketId);
+    },
+    [userProfile, blockedUserIds, confirm, alert, handleOpenSupportTicket],
+  );
+
   const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
+
+    if (isStaffActingOfficial(userProfile) && item) {
+      void handleStaffListingOutreach(item);
+      return;
+    }
 
     const participants = [userProfile.uid, posterUid].sort();
     const chatId = participants.join('_');
@@ -1013,6 +1389,35 @@ export default function App() {
       otherUserPhoto: posterPhoto,
       itemId: item?.id,
       itemTitle: item?.title,
+    });
+    setActiveTab('chats');
+  };
+
+  const handleInitiateEventChat = (
+    hostUid: string,
+    hostName: string,
+    hostPhoto?: string,
+    event?: CommunityEvent,
+  ) => {
+    if (!userProfile) return;
+    if (blockedUserIds.has(hostUid)) return;
+
+    if (isStaffActingOfficial(userProfile) && event) {
+      void handleStaffEventOutreach(event);
+      return;
+    }
+
+    const participants = [userProfile.uid, hostUid].sort();
+    const chatId = participants.join('_');
+
+    setInitialSelectedChatId(null);
+    setPendingChatCompose({
+      chatId,
+      otherUserId: hostUid,
+      otherUserName: hostName,
+      otherUserPhoto: hostPhoto,
+      eventId: event?.id,
+      eventTitle: event?.title,
     });
     setActiveTab('chats');
   };
@@ -1044,15 +1449,102 @@ export default function App() {
     [blockedUserIds],
   );
 
+  const openDetailItem = useCallback((item: ItemPost, startNavigation = false) => {
+    setDetailNavigateOnOpen(startNavigation);
+    setDetailItem(item);
+    if (item.description) return;
+    void getSupabaseItemById(item.id).then((full) => {
+      if (!full) return;
+      setDetailItem((current) => {
+        if (current?.id !== full.id) return current;
+        return {
+          ...full,
+          description: full.description || current.description,
+          imageUrl: full.imageUrl || current.imageUrl,
+          imageUrls: full.imageUrls?.length ? full.imageUrls : current.imageUrls,
+        };
+      });
+      setItems((current) =>
+        current.map((row) => {
+          if (row.id !== full.id) return row;
+          return {
+            ...row,
+            description: full.description || row.description,
+            imageUrl: full.imageUrl || row.imageUrl,
+            imageUrls: full.imageUrls?.length ? full.imageUrls : row.imageUrls,
+          };
+        }),
+      );
+    });
+  }, []);
+
+  const handleViewItem = useCallback((item: ItemPost) => {
+    openDetailItem(item, false);
+  }, [openDetailItem]);
+
+  const handleViewFeedPost = useCallback((post: FeedPost) => {
+    setDetailFeedPost(post);
+  }, []);
+
+  const handleDeleteFeedPost = useCallback(
+    async (post: FeedPost) => {
+      if (!userProfile) return;
+      const isStaff = isStaffRole(userProfile.role);
+      const ok = await confirm({
+        title: 'Delete post?',
+        message:
+          isStaff && post.userId !== userProfile.uid
+            ? 'Remove this neighbor post as staff?'
+            : 'Delete your post for everyone?',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      });
+      if (!ok) return;
+      const result = await deleteFeedPost(post.id, userProfile.uid, isStaff);
+      if (!result.ok) {
+        await alert({ title: 'Could not delete', message: result.errorMessage || 'Try again.' });
+        return;
+      }
+      setDetailFeedPost(null);
+    },
+    [userProfile, confirm, alert],
+  );
+
+  const handleNavigateItem = useCallback(
+    (item: ItemPost) => {
+      openDetailItem(item, true);
+    },
+    [openDetailItem],
+  );
+
+  const openDetailEvent = useCallback((event: CommunityEvent, startNavigation = false) => {
+    setDetailEventNavigateOnOpen(startNavigation);
+    setDetailEvent(event);
+  }, []);
+
+  const handleViewEvent = useCallback(
+    (event: CommunityEvent) => {
+      openDetailEvent(event, false);
+    },
+    [openDetailEvent],
+  );
+
+  const handleNavigateEvent = useCallback(
+    (event: CommunityEvent) => {
+      openDetailEvent(event, true);
+    },
+    [openDetailEvent],
+  );
+
   const handleOpenChatFromProfile = useCallback((chatId: string) => {
     setViewProfileUid(null);
     setInitialSelectedChatId(chatId);
     setActiveTab('chats');
   }, []);
 
-  const handleOpenSupportTicket = useCallback((ticketId: string) => {
-    setInitialSupportTicketId(ticketId);
+  const handleStartDirectMessage = useCallback(() => {
     setActiveTab('chats');
+    setShowDirectMessageModal(true);
   }, []);
 
   const handleViewListingId = useCallback(
@@ -1063,18 +1555,26 @@ export default function App() {
         setErrorMsg('That listing is no longer available.');
         return;
       }
-      setDetailItem(item);
+      handleViewItem(item);
       await engagement.ensureEngagementForPost(item.id);
       engagement.setCommentsExpanded(item.id, true);
     },
-    [items, engagement],
+    [items, engagement, handleViewItem],
+  );
+
+  const handleViewEventId = useCallback(
+    (eventId: string) => {
+      const event = events.find((e) => e.id === eventId);
+      if (event) handleViewEvent(event);
+    },
+    [events, handleViewEvent],
   );
 
   const handleClaimSubmitted = useCallback((chatId: string) => {
     setDetailItem(null);
     setInitialSelectedChatId(chatId);
     setActiveTab('chats');
-    void loadItems(false);
+    void loadItems(true);
   }, [loadItems]);
 
   const handleBlockListChanged = useCallback(() => {
@@ -1083,10 +1583,18 @@ export default function App() {
 
   const handlePushDeepLink = useCallback(
     (target: PushDeepLinkTarget) => {
+      // Close stacked overlays so notification navigation lands on the intended screen.
+      setDetailItem(null);
+      setDetailFeedPost(null);
+      setDetailEvent(null);
+      setViewProfileUid(null);
+      setShowDirectMessageModal(false);
+
       let tabForUrl: AppTab = target.tab ?? 'map';
       if (target.tab) navigateToTab(target.tab);
       if (target.conversationId) {
         setInitialSelectedChatId(target.conversationId);
+        setInitialFocusMessageRequests(false);
         navigateToTab('chats');
         tabForUrl = 'chats';
       }
@@ -1106,12 +1614,10 @@ export default function App() {
         if (existing) {
           openListing(existing);
         } else {
-          void getSupabaseItems().then((loaded) => {
-            openListing(loaded.find((item) => item.id === target.listingId));
-          });
+          void getSupabaseItemById(target.listingId).then((item) => openListing(item ?? undefined));
         }
-        tabForUrl = 'feed';
-        navigateToTab('feed');
+        tabForUrl = 'stuff';
+        navigateToTab('stuff');
       }
       if (target.eventId) {
         const openEvent = (event: CommunityEvent | undefined) => {
@@ -1136,14 +1642,53 @@ export default function App() {
         tabForUrl = 'events';
         navigateToTab('events');
       }
+      if (target.feedPostId) {
+        const openFeedPost = (post: FeedPost | null | undefined) => {
+          if (!post) {
+            void alert({ message: 'This feed post is no longer available.' });
+            return;
+          }
+          if (blockedUserIds.has(post.userId)) {
+            void alert({ message: 'This post is unavailable.' });
+            return;
+          }
+          setDetailFeedPost(post);
+        };
+        void getFeedPostById(target.feedPostId).then((post) => openFeedPost(post));
+        tabForUrl = 'feed';
+        navigateToTab('feed');
+      }
       if (target.requestId) {
         void getClaimRequestById(target.requestId).then((request) => {
           if (request?.chatId) {
             setInitialSelectedChatId(request.chatId);
-          } else {
-            void alert({ message: 'That claim request is no longer available.' });
+            setInitialFocusMessageRequests(false);
+            navigateToTab('chats');
+            return;
           }
+          if (request?.itemId) {
+            void getSupabaseItemById(request.itemId).then((item) => {
+              if (!item) {
+                void alert({ message: 'That claim request is no longer available.' });
+                return;
+              }
+              if (blockedUserIds.has(item.userId)) {
+                void alert({ message: 'This listing is unavailable.' });
+                return;
+              }
+              setDetailItem(item);
+              navigateToTab('stuff');
+            });
+            return;
+          }
+          void alert({ message: 'That claim request is no longer available.' });
         });
+        tabForUrl = 'chats';
+        navigateToTab('chats');
+      }
+      if (target.messageRequests) {
+        setInitialSelectedChatId(null);
+        setInitialFocusMessageRequests(true);
         navigateToTab('chats');
         tabForUrl = 'chats';
       }
@@ -1170,6 +1715,11 @@ export default function App() {
         navigateToTab('profile');
         tabForUrl = 'profile';
       }
+      if (target.staffApply) {
+        setShowStaffApplyPanel(true);
+        navigateToTab('profile');
+        tabForUrl = 'profile';
+      }
       if (target.supportTicketId) {
         setInitialSupportTicketId(target.supportTicketId);
         navigateToTab('chats');
@@ -1190,6 +1740,10 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (pendingDeepLinkPathRef.current) {
+      rememberPendingDeepLinkPath(pendingDeepLinkPathRef.current);
+      return;
+    }
     const path = readPendingDeepLinkPath();
     if (path) {
       pendingDeepLinkPathRef.current = path;
@@ -1234,6 +1788,22 @@ export default function App() {
 
   const accountRestriction = isAccountRestricted(userProfile);
 
+  const openNewListingFromMap = useCallback(() => {
+    setNewListingModalMode('both');
+  }, []);
+
+  const openNewStuff = useCallback(() => {
+    setNewListingModalMode('stuff');
+  }, []);
+
+  const openNewEvent = useCallback(() => {
+    setNewListingModalMode('event');
+  }, []);
+
+  const closeNewListingModal = useCallback(() => {
+    setNewListingModalMode(null);
+  }, []);
+
   const reviewPromptEnabled =
     Boolean(userProfile) &&
     !privacyGateOpen &&
@@ -1256,6 +1826,7 @@ export default function App() {
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {showDownloadPage && sessionUser ? (
         <DownloadPage
+          userProfile={userProfile}
           onBack={() => {
             setShowDownloadPage(false);
             const tab = readPersistedTab(userProfile?.uid);
@@ -1277,7 +1848,13 @@ export default function App() {
             isAuthLoading={isAuthLoading}
             items={items}
             isItemsLoading={isItemsLoading}
-            onViewListing={setGuestDetailItem}
+            onViewListing={(item) => {
+              setGuestDetailItem(item);
+              if (item.description) return;
+              void getSupabaseItemById(item.id).then((full) => {
+                if (full) setGuestDetailItem((current) => (current?.id === full.id ? full : current));
+              });
+            }}
             onRequireSignIn={() => {
               window.location.hash = '#/login';
             }}
@@ -1320,36 +1897,50 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <NotificationsHubProvider userProfile={userProfile} onDeepLink={handlePushDeepLink}>
+            <NotificationsHubProvider
+              userProfile={userProfile}
+              onDeepLink={handlePushDeepLink}
+              onOpenAwards={handleOpenAwards}
+              awardsGlow={awardsButtonGlow}
+            >
+            <GoGetRingCoordinator userProfile={userProfile} />
             <PresenceProvider userId={userProfile.uid}>
-            <Suspense fallback={<FullScreenSuspenseFallback />}>
                {deviceType === 'mobile' ? (
                 <MobileView
                   items={visibleItems}
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  onOpenNewPost={() => setShowPostModal(true)}
-                  onOpenNewEvent={() => setShowPostEventModal(true)}
+                  setActiveTab={handleTabChange}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
+                  onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
-                  onRefresh={loadItems}
-                  onRefreshEvents={() => void loadEvents(false)}
+                  onRefresh={() => void loadItems(true)}
+                  onRefreshEvents={() => void loadEvents(true)}
                   isEventsLoading={isEventsLoading}
-                  itemsHydrated={!isItemsLoading}
-                  onViewItem={setDetailItem}
+                  itemsHydrated={itemsHydrated}
+                  eventsHydrated={eventsHydrated}
+                  onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1361,8 +1952,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
+                  onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1374,6 +1965,8 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               ) : deviceType === 'tablet' ? (
                 <TabletView
@@ -1381,27 +1974,36 @@ export default function App() {
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  onOpenNewPost={() => setShowPostModal(true)}
-                  onOpenNewEvent={() => setShowPostEventModal(true)}
+                  setActiveTab={handleTabChange}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
+                  onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
-                  onRefresh={loadItems}
-                  onRefreshEvents={() => void loadEvents(false)}
+                  onRefresh={() => void loadItems(true)}
+                  onRefreshEvents={() => void loadEvents(true)}
                   isEventsLoading={isEventsLoading}
-                  itemsHydrated={!isItemsLoading}
-                  onViewItem={setDetailItem}
+                  itemsHydrated={itemsHydrated}
+                  eventsHydrated={eventsHydrated}
+                  onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1413,8 +2015,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
+                  onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1426,6 +2028,8 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               ) : (
                 <DesktopView
@@ -1433,27 +2037,36 @@ export default function App() {
                   events={visibleEvents}
                   userProfile={userProfile}
                   activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  onOpenNewPost={() => setShowPostModal(true)}
-                  onOpenNewEvent={() => setShowPostEventModal(true)}
+                  setActiveTab={handleTabChange}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
+                  onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
+                  onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
-                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onUpdateProfile={handleUpdateProfile}
                   initialSelectedChatId={initialSelectedChatId}
                   onClearInitialChat={() => setInitialSelectedChatId(null)}
+                  initialFocusMessageRequests={initialFocusMessageRequests}
+                  onClearInitialFocusMessageRequests={() => setInitialFocusMessageRequests(false)}
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={() => setPendingChatCompose(null)}
                   onDeleteAccount={handleDeleteAccount}
-                  onRefresh={loadItems}
-                  onRefreshEvents={() => void loadEvents(false)}
+                  onRefresh={() => void loadItems(true)}
+                  onRefreshEvents={() => void loadEvents(true)}
                   isEventsLoading={isEventsLoading}
-                  itemsHydrated={!isItemsLoading}
-                  onViewItem={setDetailItem}
+                  itemsHydrated={itemsHydrated}
+                  eventsHydrated={eventsHydrated}
+                  onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
+                  onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
-                  onViewEvent={setDetailEvent}
+                  onViewEvent={handleViewEvent}
+                  onNavigateEvent={handleNavigateEvent}
                   onViewProfile={handleViewProfile}
                   blockedUserIds={blockedUserIds}
                   onEditItem={(item) => {
@@ -1465,8 +2078,8 @@ export default function App() {
                   onOpenGoFundMe={() => setShowGoFundMeDetail(true)}
                   onOpenPrivacy={() => setLegalPanel('privacy')}
                   onOpenTerms={() => setLegalPanel('terms')}
+                  onOpenDownload={handleOpenDownload}
                   onOpenAwards={handleOpenAwards}
-                  awardsButtonGlow={awardsButtonGlow}
                   initialChatFeedbackPanel={initialChatFeedbackPanel}
                   onClearInitialChatFeedbackPanel={() => setInitialChatFeedbackPanel(null)}
                   initialSupportTicketId={initialSupportTicketId}
@@ -1478,9 +2091,10 @@ export default function App() {
                   onOpenChatById={handleOpenChatFromProfile}
                   onOpenTicketById={handleOpenSupportTicket}
                   onViewListingId={handleViewListingId}
+                  onViewEventId={handleViewEventId}
+                  onStartDirectMessage={handleStartDirectMessage}
                 />
               )}
-            </Suspense>
 
               {showGoFundMeDetail && (
                 <FullScreenPanel
@@ -1488,9 +2102,7 @@ export default function App() {
                   subtitle={SUPPORT.gofundmeBlurb}
                   onClose={() => setShowGoFundMeDetail(false)}
                 >
-                  <Suspense fallback={<OverlaySuspenseFallback />}>
-                    <GoFundMeSupport />
-                  </Suspense>
+                  <GoFundMeSupport />
                 </FullScreenPanel>
               )}
 
@@ -1520,40 +2132,76 @@ export default function App() {
                   subtitle={AWARDS.panelSubtitle}
                   onClose={() => setShowAwardsPanel(false)}
                 >
-                  <Suspense fallback={<OverlaySuspenseFallback />}>
-                    <AwardsPanel
-                      userProfile={userProfile}
-                      userPosts={visibleItems.filter((item) => item.userId === userProfile.uid)}
-                      onViewProfile={handleViewProfile}
-                    />
-                  </Suspense>
+                  <AwardsPanel
+                    userProfile={userProfile}
+                    userPosts={visibleItems.filter((item) => item.userId === userProfile.uid)}
+                    onViewProfile={handleViewProfile}
+                  />
+                </FullScreenPanel>
+              )}
+
+              {showStaffApplyPanel && userProfile && (
+                <FullScreenPanel
+                  title="Join the staff team"
+                  subtitle="Read each role, then apply for one"
+                  onClose={() => setShowStaffApplyPanel(false)}
+                >
+                  <StaffApplyView user={userProfile} />
                 </FullScreenPanel>
               )}
 
               {viewProfileUid && (
-                <Suspense fallback={<OverlaySuspenseFallback />}>
-                  <NeighborProfileView
-                    userId={viewProfileUid}
-                    currentUserId={userProfile.uid}
-                    currentUserProfile={userProfile}
-                    listingHints={visibleItems}
-                    onClose={() => setViewProfileUid(null)}
-                    onOpenChat={handleOpenChatFromProfile}
-                    onViewPost={setDetailItem}
-                    onRepostPost={handleRepostPost}
-                    onDeletePost={handleDeletePost}
-                    onBlockListChanged={handleBlockListChanged}
-                  />
-                </Suspense>
+                <NeighborProfileView
+                  userId={viewProfileUid}
+                  currentUserId={userProfile.uid}
+                  currentUserProfile={userProfile}
+                  listingHints={visibleItems}
+                  nested={Boolean(detailItem || detailEvent || detailFeedPost)}
+                  onClose={() => setViewProfileUid(null)}
+                  onOpenChat={handleOpenChatFromProfile}
+                  onViewPost={handleViewItem}
+                  onRepostPost={handleRepostPost}
+                  onDeletePost={handleDeletePost}
+                  onBlockListChanged={handleBlockListChanged}
+                />
+              )}
+
+              {showDirectMessageModal && (
+                <DirectMessageRequestModal
+                  currentUser={userProfile}
+                  blockedUserIds={blockedUserIds}
+                  onClose={() => setShowDirectMessageModal(false)}
+                  onViewProfile={(uid) => {
+                    setShowDirectMessageModal(false);
+                    handleViewProfile(uid);
+                  }}
+                  onOpenChat={(chatId) => {
+                    setShowDirectMessageModal(false);
+                    handleOpenChatFromProfile(chatId);
+                  }}
+                />
+              )}
+
+              {detailFeedPost && userProfile && (
+                <FeedPostDetailView
+                  post={detailFeedPost}
+                  userProfile={userProfile}
+                  blockedUserIds={blockedUserIds}
+                  onClose={() => setDetailFeedPost(null)}
+                  onViewProfile={handleViewProfile}
+                  onDeletePost={(post) => void handleDeleteFeedPost(post)}
+                />
               )}
 
               {detailItem && (
-                <Suspense fallback={<OverlaySuspenseFallback />}>
                 <ItemDetailView
                   item={detailItem}
                   currentUserId={userProfile.uid}
                   updating={detailUpdating}
-                  onClose={() => setDetailItem(null)}
+                  onClose={() => {
+                    setDetailItem(null);
+                    setDetailNavigateOnOpen(false);
+                  }}
                   onEdit={() => {
                     setEditingItem(detailItem);
                     setDetailItem(null);
@@ -1573,7 +2221,7 @@ export default function App() {
                     void engagement.handleDeleteComment(detailItem.id, commentId)
                   }
                   onMessage={
-                    blockedUserIds.has(detailItem.userId)
+                    blockedUserIds.has(detailItem.userId) || isStaffActingOfficial(userProfile)
                       ? undefined
                       : () => {
                           handleInitiateChat(
@@ -1585,6 +2233,17 @@ export default function App() {
                           setDetailItem(null);
                         }
                   }
+                  onStaffChat={
+                    isStaffActingOfficial(userProfile) && !blockedUserIds.has(detailItem.userId)
+                      ? () => {
+                          void handleStaffListingOutreach(detailItem);
+                        }
+                      : undefined
+                  }
+                  onListingStaffAction={async () => {
+                    await refreshDetailItem();
+                    await loadItems(true);
+                  }}
                   userProfile={userProfile}
                   onClaimSubmitted={handleClaimSubmitted}
                   onOpenChat={(chatId) => {
@@ -1596,30 +2255,32 @@ export default function App() {
                     setPickupAttributionMode('edit');
                     setPickupAttributionItem(detailItem);
                   }}
+                  startNavigationOnOpen={detailNavigateOnOpen}
+                  onStartNavigationConsumed={() => setDetailNavigateOnOpen(false)}
+                  onPickupCompleted={() => {
+                    void loadItems(true);
+                  }}
                 />
-                </Suspense>
               )}
 
               {pickupAttributionItem && userProfile && (
-                <Suspense fallback={<OverlaySuspenseFallback />}>
-                  <PickupAttributionModal
-                    item={pickupAttributionItem}
-                    owner={userProfile}
-                    mode={pickupAttributionMode}
-                    onClose={() => setPickupAttributionItem(null)}
-                    onSaved={async () => {
-                      setPickupAttributionItem(null);
-                      await refreshDetailItem();
-                      await loadItems(false);
-                    }}
-                  />
-                </Suspense>
+                <PickupAttributionModal
+                  item={pickupAttributionItem}
+                  owner={userProfile}
+                  mode={pickupAttributionMode}
+                  onClose={() => setPickupAttributionItem(null)}
+                  onSaved={async () => {
+                    setPickupAttributionItem(null);
+                    await refreshDetailItem();
+                    await loadItems(true);
+                  }}
+                />
               )}
 
               {detailEvent && (
-                <Suspense fallback={<OverlaySuspenseFallback />}>
                 <EventDetailView
                   event={detailEvent}
+                  allEvents={events}
                   currentUserId={userProfile.uid}
                   userProfile={userProfile}
                   rsvpState={eventsEngagement.getRsvpsForEvent(detailEvent.id)}
@@ -1636,9 +2297,18 @@ export default function App() {
                   onDeleteComment={(commentId) =>
                     void eventsEngagement.handleDeleteComment(detailEvent.id, commentId)
                   }
-                  onClose={() => setDetailEvent(null)}
+                  onClose={() => {
+                    setDetailEvent(null);
+                    setDetailEventNavigateOnOpen(false);
+                  }}
                   onEdit={() => {
                     if (!isEventEditable(detailEvent)) return;
+                    setAddEventDatesMode(false);
+                    setEditingEvent(detailEvent);
+                    setDetailEvent(null);
+                  }}
+                  onAddDates={() => {
+                    setAddEventDatesMode(true);
                     setEditingEvent(detailEvent);
                     setDetailEvent(null);
                   }}
@@ -1661,52 +2331,85 @@ export default function App() {
                     }
                   }}
                   onViewProfile={handleViewProfile}
+                  onMessage={
+                    blockedUserIds.has(detailEvent.userId) || isStaffActingOfficial(userProfile)
+                      ? undefined
+                      : () => {
+                          handleInitiateEventChat(
+                            detailEvent.userId,
+                            detailEvent.userDisplayName,
+                            detailEvent.userPhotoURL,
+                            detailEvent,
+                          );
+                          setDetailEvent(null);
+                        }
+                  }
+                  onStaffChat={
+                    isStaffActingOfficial(userProfile) && !blockedUserIds.has(detailEvent.userId)
+                      ? () => void handleStaffEventOutreach(detailEvent)
+                      : undefined
+                  }
+                  onEventStaffAction={() => void loadEvents(true)}
+                  onSelectOccurrence={(occurrence) => setDetailEvent(occurrence)}
                   onEventUpdated={(updatedEvent) => {
                     setDetailEvent(updatedEvent);
                     void loadEvents(true);
                   }}
                   updating={detailEventUpdating}
                   commentsLocked={!canAccessEvents}
+                  startNavigationOnOpen={detailEventNavigateOnOpen}
+                  onStartNavigationConsumed={() => setDetailEventNavigateOnOpen(false)}
                 />
-                </Suspense>
               )}
 
-              {(showPostModal || editingItem) && (
-                <Suspense fallback={<OverlaySuspenseFallback />}>
-                  <PostItemModal
-                    userProfile={userProfile}
-                    editItem={editingItem}
-                    onClose={() => {
-                      setShowPostModal(false);
-                      setEditingItem(null);
-                    }}
-                    onSuccess={() => {
-                      loadItems(false);
-                      setActiveTab('feed');
-                      setShowPostModal(false);
-                      setEditingItem(null);
-                    }}
-                  />
-                </Suspense>
+              {newListingModalMode && (
+                <NewListingModal
+                  userProfile={userProfile}
+                  canAccessEvents={canAccessEvents}
+                  allEvents={events}
+                  mode={newListingModalMode}
+                  onClose={closeNewListingModal}
+                  onStuffSuccess={() => {
+                    void loadItems(true);
+                    closeNewListingModal();
+                  }}
+                  onEventSuccess={() => {
+                    void loadEvents(true);
+                    closeNewListingModal();
+                  }}
+                />
               )}
 
-              {((showPostEventModal && canAccessEvents) || editingEvent) && (
-                <Suspense fallback={<OverlaySuspenseFallback />}>
-                  <PostEventModal
-                    userProfile={userProfile}
-                    editEvent={editingEvent}
-                    onClose={() => {
-                      setShowPostEventModal(false);
-                      setEditingEvent(null);
-                    }}
-                    onSuccess={() => {
-                      void loadEvents(false);
-                      setActiveTab('events');
-                      setShowPostEventModal(false);
-                      setEditingEvent(null);
-                    }}
-                  />
-                </Suspense>
+              {editingItem && (
+                <PostItemModal
+                  userProfile={userProfile}
+                  editItem={editingItem}
+                  onClose={() => {
+                    setEditingItem(null);
+                  }}
+                  onSuccess={() => {
+                    void loadItems(true);
+                    setEditingItem(null);
+                  }}
+                />
+              )}
+
+              {editingEvent && (
+                <PostEventModal
+                  userProfile={userProfile}
+                  editEvent={editingEvent}
+                  allEvents={events}
+                  addOccurrencesOnly={addEventDatesMode}
+                  onClose={() => {
+                    setEditingEvent(null);
+                    setAddEventDatesMode(false);
+                  }}
+                  onSuccess={() => {
+                    void loadEvents(true);
+                    setEditingEvent(null);
+                    setAddEventDatesMode(false);
+                  }}
+                />
               )}
             </PresenceProvider>
             </NotificationsHubProvider>
@@ -1751,8 +2454,7 @@ export default function App() {
             <button 
               onClick={handleDismissPrompt}
               className="text-subtle hover:text-app p-1 hover:bg-surface rounded-lg transition-colors cursor-pointer shrink-0"
-              title="Dismiss install banner"
-              aria-label="Dismiss install banner"
+              title="Dismiss Installation Banner"
               id="pwa_banner_dismiss_btn"
             >
               <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1763,12 +2465,24 @@ export default function App() {
           
           {!isIOS && (
             <div className="mt-3 flex items-center justify-end flex-wrap gap-2 pt-2.5 border-t border-app">
-              <a
-                href="/download"
-                className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all"
-              >
-                ANDROID APK
-              </a>
+              {canDownloadApkFromWebsite(userProfile) ? (
+                <button
+                  type="button"
+                  onClick={handleOpenDownload}
+                  className="px-3.5 py-1.5 text-[11px] font-extrabold text-accent hover:text-accent-hover rounded-lg transition-all cursor-pointer"
+                >
+                  ANDROID APK
+                </button>
+              ) : (
+                <a
+                  href={SITE.playStoreBetaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 text-[11px] font-extrabold text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
+                >
+                  GOOGLE PLAY
+                </a>
+              )}
               <button
                 onClick={handleDismissPrompt}
                 className="px-3.5 py-1.5 text-[11px] font-extrabold text-muted hover:text-app rounded-lg transition-all cursor-pointer"
@@ -1814,6 +2528,19 @@ export default function App() {
           onDismiss={dismissPrompt}
         />
       )}
+
+      {sessionReady &&
+        userProfile &&
+        isNativeApp() &&
+        !hasSeenGoGetFirstRunPrompt() &&
+        !privacyGateOpen &&
+        !termsGateOpen && (
+          <GoGetFirstRunPrompt
+            userProfile={userProfile}
+            onUpdateProfile={handleUpdateProfile}
+            onOpenNotificationSettings={() => openNotificationsHub('alerts')}
+          />
+        )}
     </div>
   );
 }

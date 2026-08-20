@@ -1,5 +1,6 @@
-import { ArrowLeft, Bookmark, Calendar, ExternalLink, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bookmark, Calendar, ExternalLink, LifeBuoy, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ItemPost, extractGPSCoordinates, ItemComment, ListingSubItem, UserProfile } from '../types';
 import {
   canViewerSeeExactLocation,
@@ -15,6 +16,7 @@ import {
   getPostTypeBadgeClass,
   getPostTypeCompletedLabel,
   getPostTypeLabel,
+  getListingContactButtonLabel,
 } from '../lib/postType';
 import {
   extractListingImageUrls,
@@ -27,6 +29,10 @@ import ItemDetailNavigation from './ItemDetailNavigation';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
+import StaffListingActions from './StaffListingActions';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
+import { isStaffRole } from '../lib/roles';
 import { getListingSubitems, itemHasRecordedAppClaim, getUserDisplayInfoByIds } from '../supabase';
 import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
@@ -40,6 +46,8 @@ interface ItemDetailViewProps {
   userLng?: number | null;
   onClose: () => void;
   onMessage?: () => void;
+  onStaffChat?: () => void;
+  onListingStaffAction?: () => void;
   onClaimSubmitted?: (chatId: string) => void;
   onOpenChat?: (chatId: string) => void;
   onEdit: () => void;
@@ -53,6 +61,10 @@ interface ItemDetailViewProps {
   onDelete?: () => void;
   updating?: boolean;
   onEditPickupAttribution?: () => void;
+  /** Open listing detail and auto-start in-app navigation (feed Navigate button). */
+  startNavigationOnOpen?: boolean;
+  onStartNavigationConsumed?: () => void;
+  onPickupCompleted?: () => void;
 }
 
 export default function ItemDetailView({
@@ -63,6 +75,8 @@ export default function ItemDetailView({
   userLng = null,
   onClose,
   onMessage,
+  onStaffChat,
+  onListingStaffAction,
   onClaimSubmitted,
   onOpenChat,
   onEdit,
@@ -76,13 +90,22 @@ export default function ItemDetailView({
   onDelete,
   updating = false,
   onEditPickupAttribution,
+  startNavigationOnOpen = false,
+  onStartNavigationConsumed,
+  onPickupCompleted,
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [hasAppClaim, setHasAppClaim] = useState(false);
   const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const isOwner = item.userId === currentUserId;
+  const isStaffViewer = isStaffActingOfficial(userProfile);
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
+  const showNeighborNavigate =
+    supportsInAppNavigation() &&
+    !isOwner &&
+    item.status === 'active' &&
+    isOpenForCoordination;
 
   const { isSaved, toggleSaved } = useSavedItems(currentUserId);
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
@@ -104,6 +127,14 @@ export default function ItemDetailView({
       setCommenterRoles(roles);
     });
   }, [comments]);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   useEffect(() => {
     const refresh = debounceRealtime(() => {
@@ -150,49 +181,61 @@ export default function ItemDetailView({
       ).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
     : 'Recently posted';
 
-  return (
+  const panel = (
     <div
       id="item_detail_fullscreen"
-      className="fixed inset-0 z-[80] bg-app overflow-y-auto"
+      className="sbn-app-sheet flex flex-col min-h-0 font-sans"
       role="dialog"
       aria-modal="true"
+      aria-label={item.title}
     >
-      <header className="sticky top-0 z-10 sbn-glass-nav sbn-safe-top px-4 min-h-14 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 rounded-full hover:bg-inset text-app"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="font-display font-bold text-base text-app truncate flex-1">Listing details</h1>
-        <button
-          type="button"
-          onClick={() => toggleSaved(item.id)}
-          title={isSaved(item.id) ? 'Remove from saved' : 'Save this listing'}
-          className={`p-2 rounded-full transition-colors shrink-0 ${
-            isSaved(item.id)
-              ? 'text-accent bg-accent-soft'
-              : 'text-muted hover:text-accent hover:bg-inset'
-          }`}
-          aria-label={isSaved(item.id) ? 'Remove from saved' : 'Save listing'}
-        >
-          <Bookmark className={`w-5 h-5 ${isSaved(item.id) ? 'fill-current' : ''}`} />
-        </button>
-        {isOwner && isOpenForCoordination ? (
-          <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
-        ) : !isOwner ? (
-          isOpenForCoordination && onMessage && (
-            <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-              <MessageSquare className="w-4 h-4" />
-              Message
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
+        <header className="sbn-glass-nav sbn-safe-top border-b border-app">
+          <div className="px-4 min-h-14 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-inset text-app"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-5 h-5" />
             </button>
-          )
-        ) : null}
-      </header>
+            <div className="flex-1 min-w-0" />
+            <button
+              type="button"
+              onClick={() => toggleSaved(item.id)}
+              title={isSaved(item.id) ? 'Remove from saved' : 'Save this listing'}
+              className={`p-2 rounded-full transition-colors shrink-0 ${
+                isSaved(item.id)
+                  ? 'text-accent bg-accent-soft'
+                  : 'text-muted hover:text-accent hover:bg-inset'
+              }`}
+              aria-label={isSaved(item.id) ? 'Remove from saved' : 'Save listing'}
+            >
+              <Bookmark className={`w-5 h-5 ${isSaved(item.id) ? 'fill-current' : ''}`} />
+            </button>
+            {isOwner && isOpenForCoordination ? (
+              <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
+            ) : !isOwner ? (
+              isStaffViewer && onStaffChat ? (
+                <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+                  <LifeBuoy className="w-4 h-4" />
+                  Staff chat
+                </button>
+              ) : (
+                isOpenForCoordination &&
+                onMessage && (
+                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+                    <MessageSquare className="w-4 h-4" />
+                    {getListingContactButtonLabel(item.type)}
+                  </button>
+                )
+              )
+            ) : null}
+          </div>
+        </header>
 
-      <div className="sbn-page-content pb-36">
+        <div className="sbn-page-content pb-6">
         <ListingPhotoGallery urls={photos} title={item.title} />
 
         <div className="p-5 sm:p-6 space-y-5">
@@ -303,13 +346,27 @@ export default function ItemDetailView({
             {/* Renders itself only when there's a pickup pin OR an already-active Go Get
                 session — the latter matters for Looking/Trade, where the destination is
                 wherever the fulfiller is, not the listing's own (often absent) pin. */}
-            {userProfile && (
+            {userProfile && supportsInAppNavigation() && (
               <ItemDetailNavigation
                 item={item}
                 currentUserId={currentUserId}
                 userProfile={userProfile}
                 onOpenChat={onOpenChat}
+                autoStartNavigation={startNavigationOnOpen}
+                onAutoStartNavigationConsumed={onStartNavigationConsumed}
+                onPickupCompleted={onPickupCompleted}
               />
+            )}
+
+            {isStaffViewer && !isOwner && userProfile && (
+              <section className="sbn-card p-4 space-y-3 border border-role-accent/20">
+                <StaffListingActions
+                  item={item}
+                  actor={userProfile}
+                  onChanged={() => onListingStaffAction?.()}
+                  onDeleted={onClose}
+                />
+              </section>
             )}
           </section>
 
@@ -372,9 +429,10 @@ export default function ItemDetailView({
             </div>
           </button>
         </div>
+        </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 sbn-glass-nav border-t border-app safe-area-pb">
+      <div className="shrink-0 p-4 sbn-glass-nav border-t border-app safe-area-pb">
         <div className="max-w-2xl mx-auto flex flex-col gap-2">
           {isOwner ? (
             <>
@@ -503,24 +561,29 @@ export default function ItemDetailView({
                   )}
                 </div>
               ) : null}
-              <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary w-full">
-                Back
-              </button>
             </>
           ) : (
             <div className="flex flex-col gap-2">
-              <div className="flex gap-3">
-                <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
-                  Back
+              {isStaffViewer && onStaffChat ? (
+                <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary w-full">
+                  <LifeBuoy className="w-4 h-4" />
+                  Staff chat
                 </button>
-                {isOpenForCoordination && onMessage && (
-                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
+              ) : (
+                isOpenForCoordination &&
+                onMessage &&
+                !showNeighborNavigate && (
+                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary w-full">
                     <MessageSquare className="w-4 h-4" />
-                    Message
+                    {getListingContactButtonLabel(item.type)}
                   </button>
-                )}
-              </div>
-              {item.status === 'active' && userProfile && onClaimSubmitted && (
+                )
+              )}
+              {item.status === 'active' &&
+                userProfile &&
+                onClaimSubmitted &&
+                !isStaffViewer &&
+                !showNeighborNavigate && (
                 <ClaimAtPickupButton
                   item={item}
                   user={userProfile}
@@ -536,4 +599,6 @@ export default function ItemDetailView({
       </div>
     </div>
   );
+
+  return createPortal(panel, document.body);
 }

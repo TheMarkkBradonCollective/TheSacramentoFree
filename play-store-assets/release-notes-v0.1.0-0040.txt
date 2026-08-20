@@ -1,0 +1,9 @@
+Android beta v0.1.0.0040 (versionCode 40)
+
+What's new:
+• Feed engagement + push when neighbors comment, react, or vote
+• Notification taps go to the right screen (feed, chats, listings, inbox)
+• Listing Request button; map route preview fills the screen
+• Feed and map polish
+
+Download (sideload): https://www.sacramentobuynothing.com/download

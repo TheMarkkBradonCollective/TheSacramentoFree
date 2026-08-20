@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import PageScrollFooter from '../PageScrollFooter';
-import { PublicScrollContainerContext } from '../../public/PublicScrollContext';
+import PageScrollFooter, { ScrollPage } from '../PageScrollFooter';
 import { usePublicRoute } from '../../public/usePublicRoute';
 import PublicNav from './PublicNav';
 import HomePage from './pages/HomePage';
@@ -14,6 +13,7 @@ import ReviewsPage from './pages/ReviewsPage';
 import DownloadPage from './pages/DownloadPage';
 import GoFundMePage from './pages/GoFundMePage';
 import PrivacyPage from './pages/PrivacyPage';
+import DeleteAccountPage from './pages/DeleteAccountPage';
 import TermsPage from './pages/TermsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AuthPage from './AuthPage';
@@ -48,7 +48,7 @@ export default function PublicSite({
   onRequireSignIn,
 }: PublicSiteProps) {
   const { route, navigate } = usePublicRoute();
-  const mainRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (window.location.hash) return;
@@ -90,6 +90,8 @@ export default function PublicSite({
         return <GoFundMePage />;
       case 'privacy':
         return <PrivacyPage />;
+      case 'delete-account':
+        return <DeleteAccountPage />;
       case 'terms':
         return <TermsPage />;
       case 'login':
@@ -120,11 +122,10 @@ export default function PublicSite({
   return (
     <div className="min-h-screen h-dvh bg-app text-app font-sans flex flex-col overflow-hidden">
       <PublicNav route={route} onNavigate={navigate} />
-      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto">
-        <PublicScrollContainerContext.Provider value={mainRef}>
+      <main className="flex-1 min-h-0 overflow-hidden">
+        <ScrollPage ref={mainRef} footer={<PageScrollFooter />}>
           {renderPage()}
-          <PageScrollFooter />
-        </PublicScrollContainerContext.Provider>
+        </ScrollPage>
       </main>
     </div>
   );

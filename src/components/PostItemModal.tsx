@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType, mapGPSToPercent, NEIGHBORHOOD_COORDS, findClosestNeighborhood, findClosestNeighborhoodByLatLng } from '../types';
 import { createSupabaseItem, updateSupabaseItem, uploadItemImage, getListingSubitems, replaceListingSubitems } from '../supabase';
 import {
@@ -9,21 +9,33 @@ import {
 import {
   appendPhotosToDescription,
   extractListingImageUrls,
+  isPersistableListingImageUrl,
   MAX_LISTING_PHOTOS,
 } from '../lib/listingContent';
+import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil, Plus, ArrowLeftRight } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
 import { getPostTypeModalTitle } from '../lib/postType';
+import ListingPostedReminderModal from './ListingPostedReminderModal';
+import { openNotificationsHub } from '../contexts/NotificationsHubContext';
 
 interface PostItemModalProps {
   userProfile: UserProfile;
   editItem?: ItemPost | null;
+  /** Render form body only — used inside NewListingModal. */
+  embedded?: boolean;
   onClose: () => void;
   onSuccess: (item: ItemPost) => void;
 }
 
-export default function PostItemModal({ userProfile, editItem = null, onClose, onSuccess }: PostItemModalProps) {
+export default function PostItemModal({
+  userProfile,
+  editItem = null,
+  embedded = false,
+  onClose,
+  onSuccess,
+}: PostItemModalProps) {
   const isEditing = !!editItem;
   const isReposting = isEditing && editItem?.status === 'withdrawn';
   const [title, setTitle] = useState('');
@@ -50,6 +62,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
   const [pickupAddress, setPickupAddress] = useState('');
   const [multipleItems, setMultipleItems] = useState(false);
   const [subItemLabels, setSubItemLabels] = useState<string[]>(['']);
+  const [postedListing, setPostedListing] = useState<ItemPost | null>(null);
 
   const activeCategory = type === 'looking' ? isoCategory : category;
 
@@ -101,6 +114,36 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     }
   }, [editItem]);
 
+  const applyGpsPosition = useCallback((latitude: number, longitude: number) => {
+    const coords = mapGPSToPercent(latitude, longitude);
+    setCustomCoords(coords);
+    const closest = findClosestNeighborhoodByLatLng(latitude, longitude);
+    setNeighborhood(closest);
+    setGpsStatus(
+      `Using your current location in ${closest.toUpperCase()} — change or remove the pin if needed.`,
+    );
+    setShowMiniMap(true);
+  }, []);
+
+  useEffect(() => {
+    if (editItem || !navigator.geolocation) return;
+
+    setGpsLoading(true);
+    setGpsStatus('Setting pickup spot to your current location…');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        applyGpsPosition(position.coords.latitude, position.coords.longitude);
+        setGpsLoading(false);
+      },
+      () => {
+        setGpsStatus('Could not detect location — set a pin manually with GPS or the map.');
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+    );
+  }, [editItem, applyGpsPosition]);
+
   const handleDetectGPS = () => {
     setGpsLoading(true);
     setGpsStatus('Accessing browser location sensors...');
@@ -112,14 +155,8 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
-        const coords = mapGPSToPercent(latitude, longitude);
-        setCustomCoords(coords);
-        const closest = findClosestNeighborhoodByLatLng(latitude, longitude);
-        setNeighborhood(closest);
-        setGpsStatus(`Detected precise GPS: ${coords.x.toFixed(1)}%, ${coords.y.toFixed(1)}% inside ${closest.toUpperCase()} Sector 🟢`);
+        applyGpsPosition(position.coords.latitude, position.coords.longitude);
         setGpsLoading(false);
-        setShowMiniMap(true);
       },
       (error) => {
         console.warn('GPS location fetch error:', error);
@@ -134,11 +171,20 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     );
   };
 
+  const handleClearPin = () => {
+    setCustomCoords(null);
+    setGpsStatus('Map pin removed — use GPS, the map, or your neighborhood to set a new spot.');
+    setShowMiniMap(false);
+  };
+
   const totalPhotoCount = savedImageUrls.length + pendingImages.length;
 
   const addImageFiles = (files: FileList | File[]) => {
-    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    if (list.length === 0) return;
+    const list = Array.from(files).filter((f) => isLikelyImageFile(f));
+    if (list.length === 0) {
+      setErrorMsg(INVALID_IMAGE_FILE_MESSAGE);
+      return;
+    }
 
     const slotsLeft = MAX_LISTING_PHOTOS - totalPhotoCount;
     const toAdd = list.slice(0, Math.max(0, slotsLeft));
@@ -217,14 +263,15 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       ? editItem.id
       : `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    const imageUrls: string[] = [...savedImageUrls];
+    const imageUrls: string[] = savedImageUrls.filter((url) => isPersistableListingImageUrl(url));
     for (let i = 0; i < pendingImages.length; i++) {
-      try {
-        const url = await uploadItemImage(pendingImages[i].file, `${itemId}_${i}`);
-        if (url) imageUrls.push(url);
-      } catch (err) {
-        console.warn('Image uploading failed:', err);
+      const url = await uploadItemImage(pendingImages[i].file, `${itemId}_${i}`);
+      if (!url || !isPersistableListingImageUrl(url)) {
+        setIsSubmitting(false);
+        setErrorMsg('Could not upload photos. Check your connection and try again.');
+        return;
       }
+      imageUrls.push(url);
     }
     const imageUrl = imageUrls[0];
 
@@ -298,6 +345,12 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
         }
       }
 
+      if (!isEditing && !isReposting) {
+        setPostedListing(listing);
+        setIsSubmitting(false);
+        return;
+      }
+
       onSuccess(listing);
       onClose();
     } catch (err) {
@@ -314,39 +367,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     }
   };
 
-  return (
-    <div id="post_modal_overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4 py-8">
-      <div className="relative w-full max-w-lg sbn-card-elevated overflow-hidden" id="post_modal_box">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-app bg-accent-soft/50">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 bg-accent text-on-accent rounded-xl flex items-center justify-center">
-              {isEditing ? (
-                <Pencil className="w-4 h-4" />
-              ) : type === 'looking' ? (
-                <Search className="w-4 h-4" />
-              ) : type === 'trade' ? (
-                <ArrowLeftRight className="w-4 h-4" />
-              ) : (
-                <Gift className="w-4 h-4" />
-              )}
-            </div>
-            <h3 className="text-base font-bold text-app font-display">
-              {getPostTypeModalTitle(type, isEditing, isReposting)}
-            </h3>
-          </div>
-          <button
-            id="close_modal_btn"
-            onClick={onClose}
-            aria-label="Close"
-            className="p-1.5 text-muted hover:text-app hover:bg-surface-hover rounded-xl transition-colors cursor-pointer"
-          >
-            <X className="w-4.5 h-4.5" />
-          </button>
-        </div>
-
-        {/* Form Body */}
+  const formBody = (
         <form onSubmit={handleSubmit} className="p-6 space-y-5" id="post_item_form">
           {errorMsg && (
             <div className="p-3 bg-red-950/55 text-red-400 text-xs font-bold rounded-xl border border-red-900" id="post_item_error">
@@ -656,10 +677,19 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             )}
 
             {customCoords && (
-              <p className="text-[10px] font-semibold text-accent flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 shrink-0" />
-                GPS pin set — neighbors {locationIsPublic || categoryRequiresGps(activeCategory) ? 'can' : 'cannot'} see it on the map until you share in chat.
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[10px] font-semibold text-accent flex items-center gap-1.5 flex-1 min-w-[12rem]">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  GPS pin set — neighbors {locationIsPublic || categoryRequiresGps(activeCategory) ? 'can' : 'cannot'} see it on the map until you share in chat.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleClearPin}
+                  className="sbn-btn sbn-btn-ghost sbn-btn-sm shrink-0"
+                >
+                  Remove pin
+                </button>
+              </div>
             )}
 
             {/* Micro Sacramento Map Picker */}
@@ -911,8 +941,66 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             </button>
           </div>
         </form>
-      </div>
+  );
+
+  const postedReminderModal = postedListing ? (
+    <ListingPostedReminderModal
+      listingTitle={postedListing.title}
+      listingType={postedListing.type}
+      onDismiss={() => {
+        onSuccess(postedListing);
+        onClose();
+        setPostedListing(null);
+      }}
+      onOpenNotifications={() => openNotificationsHub('alerts')}
+    />
+  ) : null;
+
+  if (embedded) {
+    return (
+      <>
+        {formBody}
+        {postedReminderModal}
+      </>
+    );
+  }
+
+  return (
+    <>
+    <div id="post_modal_overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4 py-8">
+        <div className="relative w-full max-w-lg sbn-card-elevated overflow-hidden" id="post_modal_box">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-app bg-accent-soft/50">
+            <div className="flex items-center space-x-2.5">
+              <div className="p-1.5 bg-accent text-on-accent rounded-xl flex items-center justify-center">
+                {isEditing ? (
+                  <Pencil className="w-4 h-4" />
+                ) : type === 'looking' ? (
+                  <Search className="w-4 h-4" />
+                ) : type === 'trade' ? (
+                  <ArrowLeftRight className="w-4 h-4" />
+                ) : (
+                  <Gift className="w-4 h-4" />
+                )}
+              </div>
+              <h3 className="text-base font-bold text-app font-display">
+                {getPostTypeModalTitle(type, isEditing, isReposting)}
+              </h3>
+            </div>
+            <button
+              id="close_modal_btn"
+              onClick={onClose}
+              aria-label="Close"
+              className="p-1.5 text-muted hover:text-app hover:bg-surface-hover rounded-xl transition-colors cursor-pointer"
+            >
+              <X className="w-4.5 h-4.5" />
+            </button>
+          </div>
+          {formBody}
+        </div>
       </div>
     </div>
+    {postedReminderModal}
+    </>
   );
 }

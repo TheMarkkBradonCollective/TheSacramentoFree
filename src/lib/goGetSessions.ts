@@ -1,7 +1,14 @@
-import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage } from '../supabase';
+import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage, staffGetListingById, getSupabaseProfile } from '../supabase';
 import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost, UserProfile } from '../types';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
 import { subscribePostgresChanges } from './supabaseRealtime';
+import { isStaffRole } from './roles';
+import {
+  checkSelfGoGetEligibility,
+  isGoGetCoordinationEnabled,
+} from './goGetEligibility';
+import { getGoGetRingDuration } from './goGetRing';
+import { getPickupAvailability, isProfileWithinPickupAvailability, isTimeInSharedAvailability } from './pickupAvailability';
 
 /** Curb Alert / Porch Pickup — first-come items meant to be grabbed with no handshake. */
 export const INSTANT_CLAIM_CATEGORIES = ['Curb Alert', 'Porch Pickup'];
@@ -73,6 +80,8 @@ function normalizeGoGetSession(row: Record<string, unknown>): GoGetSession {
     cancelledByUserId: nullableStr(row.cancelledByUserId),
     cancelReason: nullableStr(row.cancelReason),
     fulfillerSharingLocation: row.fulfillerSharingLocation === true,
+    ringExpiresAt: nullableStr(row.ringExpiresAt),
+    ringDurationSeconds: nullableNum(row.ringDurationSeconds),
     createdAt: str(row.createdAt, new Date().toISOString()),
     updatedAt: str(row.updatedAt, new Date().toISOString()),
   };
@@ -104,7 +113,7 @@ function normalizeGoGetLiveLocation(row: Record<string, unknown>): GoGetLiveLoca
 type Result<T = undefined> = { ok: boolean; errorMessage?: string } & (T extends undefined ? {} : Partial<T>);
 
 const MISSING_TABLE_MESSAGE =
-  'Run the Go Get pickup sessions SQL (section 20/21 in supabase-complete.sql) in Supabase.';
+  'Run the Go Get pickup sessions SQL (section 20/21 in complete-schema.sql) in Supabase.';
 
 function isMissingTableError(error: { code?: string } | null | undefined): boolean {
   return error?.code === '42P01';
@@ -162,6 +171,67 @@ export async function createGoGetSession(
     return { ok: false, errorMessage: 'You cannot Go Get your own listing.' };
   }
 
+  // Device + notification gate for whoever is creating the session (signed-in user).
+  const { data: authData } = await supabase.auth.getSession();
+  const actorUid = authData.session?.user?.id || '';
+  if (actorUid) {
+    const actorProfile = await getSupabaseProfile(actorUid);
+    if (actorProfile) {
+      const selfOk = await checkSelfGoGetEligibility(actorProfile);
+      if (selfOk.ok === false) {
+        if (selfOk.reason === 'need_install') {
+          return {
+            ok: false,
+            errorMessage:
+              'Go Get only works in the Sacramento Buy Nothing Android app (APK or Play Store). On the website, message the neighbor to arrange pickup.',
+          };
+        }
+        if (selfOk.reason === 'need_notifications') {
+          return {
+            ok: false,
+            errorMessage:
+              'Turn on notifications (bell → Notification settings) before using Go Get or pickup coordination.',
+          };
+        }
+        return {
+          ok: false,
+          errorMessage:
+            'You turned off Go Get & pickup coordination in Account settings. You can still message neighbors to arrange pickup.',
+        };
+      }
+    }
+  }
+
+  // Opt-out check for both parties (poster + navigator).
+  const [fulfillerProfile, requesterProfile] = await Promise.all([
+    getSupabaseProfile(fulfillerUserId),
+    getSupabaseProfile(requesterUserId),
+  ]);
+  if (fulfillerProfile && !isGoGetCoordinationEnabled(fulfillerProfile)) {
+    return {
+      ok: false,
+      errorMessage: `${fulfillerName} isn’t using app pickup coordination. Message them to arrange pickup independently.`,
+    };
+  }
+  if (requesterProfile && !isGoGetCoordinationEnabled(requesterProfile)) {
+    return {
+      ok: false,
+      errorMessage: `${requesterName} isn’t using app pickup coordination. Message them to arrange pickup independently.`,
+    };
+  }
+  if (fulfillerProfile && !isProfileWithinPickupAvailability(fulfillerProfile)) {
+    return {
+      ok: false,
+      errorMessage: `${fulfillerName} isn’t available for app pickup coordination right now.`,
+    };
+  }
+  if (requesterProfile && !isProfileWithinPickupAvailability(requesterProfile)) {
+    return {
+      ok: false,
+      errorMessage: 'You’re outside your pickup availability hours. Adjust Account settings or message the poster.',
+    };
+  }
+
   const existing = await getActiveGoGetSession(item.id, requesterUserId);
   if (existing) {
     return { ok: true, session: existing };
@@ -188,6 +258,11 @@ export async function createGoGetSession(
   const instant = handshakeMode === 'instant';
 
   const id = `ggs_${item.id}_${requesterUserId}_${Date.now()}`;
+  const ringDurationSeconds = fulfillerProfile ? getGoGetRingDuration(fulfillerProfile) : 140;
+  const ringExpiresAt = instant
+    ? null
+    : new Date(Date.now() + ringDurationSeconds * 1000).toISOString();
+
   const payload: Record<string, unknown> = {
     id,
     itemId: item.id,
@@ -203,6 +278,8 @@ export async function createGoGetSession(
     destinationLng: destination.lng,
     destinationLabel,
     startedAt: instant ? now : null,
+    ringExpiresAt,
+    ringDurationSeconds: instant ? null : ringDurationSeconds,
     createdAt: now,
     updatedAt: now,
   };
@@ -229,12 +306,93 @@ export async function createGoGetSession(
   if (!instant) {
     await runGoGetPushTask(() =>
       import('./pushEvents').then((m) =>
-        m.notifyGoGetAvailabilityRequest({ item, fulfillerUserId, requesterName, sessionId: id }),
+        m.notifyGoGetAvailabilityRequest({
+          item,
+          fulfillerUserId,
+          requesterName,
+          sessionId: id,
+          ringDurationSeconds,
+          ringPattern: fulfillerProfile?.goGetRingPattern,
+        }),
       ),
     );
   }
 
   return { ok: true, session };
+}
+
+export function isGoGetRingActive(session: GoGetSession): boolean {
+  if (session.status !== 'awaiting_availability') return false;
+  if (!session.ringExpiresAt) return true;
+  return Date.now() < new Date(session.ringExpiresAt).getTime();
+}
+
+/** Move a timed-out live ring into async scheduling for the requester. */
+export async function expireGoGetRing(
+  session: GoGetSession,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (session.status !== 'awaiting_availability') {
+    return { ok: false, errorMessage: 'This request is no longer ringing.' };
+  }
+  if (isGoGetRingActive(session)) {
+    return { ok: false, errorMessage: 'Still waiting for a response.' };
+  }
+  const result = await updateSession(session.id, { status: 'awaiting_schedule' });
+  if (!result.ok || !result.session) return result;
+  return { ok: true, session: result.session };
+}
+
+/** Requester picks a meet time after the live ring timed out (no urgent ring). */
+export async function requesterProposeScheduledMeet(
+  session: GoGetSession,
+  item: ItemPost,
+  scheduledAt: string,
+  schedules: {
+    poster: Pick<UserProfile, 'pickupAvailability'>;
+    requester: Pick<UserProfile, 'pickupAvailability'>;
+  },
+): Promise<Result<{ session: GoGetSession }>> {
+  if (session.status !== 'awaiting_schedule') {
+    return { ok: false, errorMessage: 'This pickup is not awaiting a scheduled time.' };
+  }
+  const chosen = new Date(scheduledAt);
+  if (Number.isNaN(chosen.getTime())) {
+    return { ok: false, errorMessage: 'Pick a valid time.' };
+  }
+  const posterSchedule = getPickupAvailability(schedules.poster);
+  const requesterSchedule = getPickupAvailability(schedules.requester);
+  if (!isTimeInSharedAvailability(posterSchedule, requesterSchedule, scheduledAt)) {
+    return { ok: false, errorMessage: 'Pick a time when both of you are within your pickup availability.' };
+  }
+
+  const result = await updateSession(session.id, { status: 'scheduled', scheduledAt });
+  if (!result.ok || !result.session) return result;
+
+  const whenLabel = chosen.toLocaleString(undefined, {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  await createSupabaseMessage(
+    session.chatId,
+    `📅 ${session.requesterName} scheduled pickup for ${whenLabel}.`,
+    session.requesterUserId,
+    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
+  await runGoGetPushTask(() =>
+    import('./pushEvents').then((m) =>
+      m.notifyGoGetScheduleConfirmed({
+        item,
+        fulfillerUserId: session.fulfillerUserId,
+        requesterName: session.requesterName,
+        whenLabel,
+        sessionId: session.id,
+      }),
+    ),
+  );
+  return { ok: true, session: result.session };
 }
 
 async function updateSession(
@@ -829,4 +987,169 @@ export function subscribeToSessionForStaff(
   onChange: (session: GoGetSession) => void,
 ): () => void {
   return subscribeToGoGetSession(sessionId, onChange);
+}
+
+type StaffSessionActor = Pick<UserProfile, 'uid' | 'displayName' | 'role'>;
+
+async function staffSessionItem(session: GoGetSession): Promise<ItemPost | null> {
+  return staffGetListingById(session.itemId);
+}
+
+async function postStaffSessionChatMessage(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  message: string,
+): Promise<void> {
+  await createSupabaseMessage(
+    session.chatId,
+    message,
+    actor.uid,
+    `msg_staff_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
+}
+
+/** Staff: cancel any non-terminal Go Get session. */
+export async function staffCancelGoGetSession(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  reason: string,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+  if (isTerminalGoGetStatus(session.status)) {
+    return { ok: false, errorMessage: 'This session is already closed.' };
+  }
+  if (!reason.trim()) return { ok: false, errorMessage: 'A reason is required.' };
+
+  const item = await staffSessionItem(session);
+  if (!item) return { ok: false, errorMessage: 'Could not load the linked listing.' };
+
+  const result = await updateSession(session.id, {
+    status: 'cancelled',
+    cancelledAt: new Date().toISOString(),
+    cancelledByUserId: actor.uid,
+    cancelReason: `[Staff] ${reason.trim()}`,
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  const staffLabel = actor.displayName || 'Staff';
+  await postStaffSessionChatMessage(
+    session,
+    actor,
+    `🛡️ ${staffLabel} cancelled this Go Get: ${reason.trim()}`,
+  );
+
+  await runGoGetPushTask(() =>
+    import('./pushEvents').then((m) =>
+      m.notifyGoGetCancelled({
+        item,
+        recipientUserId: session.requesterUserId,
+        cancelledByName: staffLabel,
+        sessionId: session.id,
+      }),
+    ),
+  );
+  await runGoGetPushTask(() =>
+    import('./pushEvents').then((m) =>
+      m.notifyGoGetCancelled({
+        item,
+        recipientUserId: session.fulfillerUserId,
+        cancelledByName: staffLabel,
+        sessionId: session.id,
+      }),
+    ),
+  );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Staff: mark an arrived session complete when parties need help closing it out. */
+export async function staffCompleteGoGetSession(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  note?: string,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+  if (session.status !== 'arrived') {
+    return { ok: false, errorMessage: 'Only arrived sessions can be marked complete.' };
+  }
+
+  const result = await updateSession(session.id, {
+    status: 'completed',
+    completedAt: new Date().toISOString(),
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  const staffLabel = actor.displayName || 'Staff';
+  await postStaffSessionChatMessage(
+    session,
+    actor,
+    `✅ ${staffLabel} marked this Go Get complete${note?.trim() ? `: ${note.trim()}` : '.'}`,
+  );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Staff: expire a stale session that never finished scheduling or pickup. */
+export async function staffExpireGoGetSession(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  reason: string,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+  if (isTerminalGoGetStatus(session.status)) {
+    return { ok: false, errorMessage: 'This session is already closed.' };
+  }
+  if (!reason.trim()) return { ok: false, errorMessage: 'A reason is required.' };
+
+  const result = await updateSession(session.id, {
+    status: 'expired',
+    cancelReason: `[Staff expired] ${reason.trim()}`,
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  const staffLabel = actor.displayName || 'Staff';
+  await postStaffSessionChatMessage(
+    session,
+    actor,
+    `⏱️ ${staffLabel} expired this Go Get: ${reason.trim()}`,
+  );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Staff: mark a session disputed for review (e.g. handoff disagreement). */
+export async function staffDisputeGoGetSession(
+  session: GoGetSession,
+  actor: StaffSessionActor,
+  reason: string,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!isStaffRole(actor.role)) return { ok: false, errorMessage: 'Staff only.' };
+  if (!['active', 'arrived'].includes(session.status)) {
+    return { ok: false, errorMessage: 'Only active or arrived sessions can be disputed.' };
+  }
+  if (!reason.trim()) return { ok: false, errorMessage: 'A reason is required.' };
+
+  const result = await updateSession(session.id, {
+    status: 'disputed',
+    cancelReason: `[Staff dispute] ${reason.trim()}`,
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  const staffLabel = actor.displayName || 'Staff';
+  await postStaffSessionChatMessage(
+    session,
+    actor,
+    `⚠️ ${staffLabel} flagged this Go Get for review: ${reason.trim()}`,
+  );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
 }

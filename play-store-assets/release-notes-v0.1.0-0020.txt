@@ -1,0 +1,10 @@
+Android beta v0.1.0.0020 (versionCode 20)
+
+What's new:
+• Staff Console overview: Events count plus unique Downloads and Installs metrics
+• Staff accounts: upvote, staff actions, and comments only — no neighbor navigate/go/pickup/DM flows
+• Staff Message opens shared support threads with listing/event preview (all staff can participate)
+• Safety confirmations before staff open outreach or neighbor coordination chats
+• Download/install tracking for APK and AAB (unique devices)
+
+Download (sideload): https://www.sacramentobuynothing.com/download

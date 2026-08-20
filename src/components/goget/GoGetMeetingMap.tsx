@@ -6,6 +6,7 @@ import {
   getFulfillerLiveLocation,
   subscribeToFulfillerLiveLocationChanges,
 } from '../../lib/goGetSessions';
+import { haversineMeters } from '../../lib/mapRoute';
 
 const MAP_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 const MAP_ATTRIBUTION =
@@ -65,6 +66,7 @@ export default function GoGetMeetingMap({
   const mapRef = useRef<L.Map | null>(null);
   const pickupMarkerRef = useRef<L.Marker | null>(null);
   const posterMarkerRef = useRef<L.Marker | null>(null);
+  const lastFitPosterRef = useRef<{ lat: number; lng: number } | null>(null);
   const [posterLocation, setPosterLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
 
   useEffect(() => {
@@ -100,6 +102,8 @@ export default function GoGetMeetingMap({
 
     mapRef.current = map;
 
+    lastFitPosterRef.current = null;
+
     const resize = () => map.invalidateSize();
     requestAnimationFrame(resize);
     const timer = window.setTimeout(resize, 150);
@@ -125,17 +129,24 @@ export default function GoGetMeetingMap({
           icon: createPosterIcon(),
         }).addTo(map);
       }
-      const bounds = L.latLngBounds([
-        [destinationLat, destinationLng],
-        [posterLocation.lat, posterLocation.lng],
-      ]);
-      map.fitBounds(bounds.pad(0.35), { animate: true, maxZoom: 17 });
+      const lastFit = lastFitPosterRef.current;
+      const movedFar =
+        !lastFit ||
+        haversineMeters(lastFit, { lat: posterLocation.lat, lng: posterLocation.lng }) >= 45;
+      if (movedFar) {
+        lastFitPosterRef.current = { lat: posterLocation.lat, lng: posterLocation.lng };
+        const bounds = L.latLngBounds([
+          [destinationLat, destinationLng],
+          [posterLocation.lat, posterLocation.lng],
+        ]);
+        map.fitBounds(bounds.pad(0.35), { animate: false, maxZoom: 17 });
+      }
     } else {
       if (posterMarkerRef.current) {
         posterMarkerRef.current.remove();
         posterMarkerRef.current = null;
       }
-      map.setView([destinationLat, destinationLng], Math.max(map.getZoom(), 16), { animate: true });
+      map.setView([destinationLat, destinationLng], Math.max(map.getZoom(), 16), { animate: false });
     }
   }, [destinationLat, destinationLng, posterLocation, sharingEnabled]);
 

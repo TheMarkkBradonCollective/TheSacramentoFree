@@ -6,8 +6,8 @@ import { ItemPost } from '../types';
 interface CommunityStatsBarProps {
   /** When provided, stats appear instantly before the DB fetch completes. */
   items?: ItemPost[];
-  /** compact = single scrollable row (mobile); full = 4-up grid (desktop) */
-  variant?: 'compact' | 'full';
+  /** compact = single scrollable row (mobile); full = 4-up grid (desktop); stacked = vertical list (sidebar rail) */
+  variant?: 'compact' | 'full' | 'stacked';
 }
 
 function StatPill({
@@ -91,6 +91,34 @@ export default function CommunityStatsBar({ items = [], variant = 'full' }: Comm
       ? derivedRequestsFulfilled
       : (dbStats?.requestsFulfilled ?? derivedRequestsFulfilled);
   const memberCount = dbStats?.memberCount ?? null;
+
+  if (variant === 'stacked') {
+    const rows: { icon: React.ElementType; label: string; value: number | string; color: string }[] = [
+      ...(memberCount !== null
+        ? [{ icon: Users, label: 'Neighbors', value: memberCount, color: 'bg-violet-500/15 text-violet-400' }]
+        : []),
+      { icon: Package, label: 'Active listings', value: activeListings, color: 'bg-accent/15 text-accent' },
+      { icon: Gift, label: 'Given away', value: itemsGiven, color: 'bg-emerald-500/15 text-emerald-400' },
+      { icon: CheckCircle2, label: 'Fulfilled', value: requestsFulfilled, color: 'bg-sky-500/15 text-sky-400' },
+    ];
+    return (
+      <div id="community_stats_bar_stacked" aria-label="Community statistics">
+        {rows.map((row) => (
+          <div className="sbn-rail-stat-row" key={row.label}>
+            <span className={`sbn-stat-icon ${row.color}`}>
+              <row.icon className="w-3.5 h-3.5" strokeWidth={2.5} />
+            </span>
+            <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+              <span className="text-xs text-muted font-semibold">{row.label}</span>
+              <span className="text-sm font-black text-app tabular-nums">
+                {typeof row.value === 'number' ? row.value.toLocaleString() : row.value}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   if (variant === 'compact') {
     return (

@@ -1,46 +1,66 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
-  ArrowDownUp,
+  LayoutGrid,
+  LayoutList,
   MapPin,
+  Plus,
   Search as SearchIcon,
   SlidersHorizontal,
   X,
 } from 'lucide-react';
 import { CommunityEvent, SACRAMENTO_NEIGHBORHOODS, UserProfile } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
-import { isEventUpcoming } from '../lib/eventRsvp';
+import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
+import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
+import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
-import EventCard from './EventCard';
+import CollapsibleFilterSection from './CollapsibleFilterSection';
+import FilterLabeledSwitch from './FilterLabeledSwitch';
 import { EventGridSkeleton } from './Skeleton';
+import EventCard from './EventCard';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
+import {
+  readEventsViewMode,
+  writeEventsViewMode,
+  type FeedViewMode,
+} from '../lib/feedDisplayPrefs';
+import { persistUserAppPreferences } from '../lib/appPreferences';
 
 interface EventsViewProps {
   events: CommunityEvent[];
   userProfile: UserProfile;
   engagement: EventsEngagementApi;
   onViewEvent: (event: CommunityEvent) => void;
+  onNavigateEvent?: (event: CommunityEvent) => void;
+  onStaffEventChat?: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
   commentsLocked?: boolean;
   sneakPeek?: boolean;
+  onOpenNewEvent?: () => void;
 }
 
-type EventTimeFilter = 'all' | 'upcoming' | 'past';
+type EventTimeFilter = 'upcoming' | 'past';
 type EventSortMode = 'soonest' | 'newest' | 'most_rsvps';
+type EventQuickPick = 'my_area' | 'with_photos' | 'has_pin' | 'im_going' | 'has_rsvps' | 'series';
 
-const TIME_FILTER_OPTIONS: { value: EventTimeFilter; label: string }[] = [
-  { value: 'all', label: 'All events' },
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'past', label: 'Past' },
+const SORT_OPTIONS: { value: EventSortMode; label: string }[] = [
+  { value: 'soonest', label: 'Soonest' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'most_rsvps', label: 'Popular' },
 ];
 
-const SORT_OPTIONS: { value: EventSortMode; label: string; hint: string }[] = [
-  { value: 'soonest', label: 'Soonest', hint: 'Next on the calendar first' },
-  { value: 'newest', label: 'Newest', hint: 'Recently posted first' },
-  { value: 'most_rsvps', label: 'Popular', hint: 'Most RSVPs first' },
+const EVENT_QUICK_PICKS: { id: EventQuickPick; label: string }[] = [
+  { id: 'my_area', label: 'My area' },
+  { id: 'with_photos', label: 'With photos' },
+  { id: 'has_pin', label: 'Has map' },
+  { id: 'im_going', label: "I'm going" },
+  { id: 'has_rsvps', label: 'Has RSVPs' },
+  { id: 'series', label: 'Series' },
 ];
 
 function eventCreatedMs(event: CommunityEvent): number {
@@ -52,12 +72,18 @@ function eventCreatedMs(event: CommunityEvent): number {
   return new Date(createdAt).getTime();
 }
 
+function eventTimeToolbarLabel(filter: EventTimeFilter | null): string {
+  if (!filter) return 'All';
+  return filter === 'upcoming' ? 'Upcoming' : 'Past';
+}
+
 function FilterSelect({
   id,
   label,
   icon: Icon,
   value,
   onChange,
+  hideLabel = false,
   children,
 }: {
   id: string;
@@ -65,14 +91,17 @@ function FilterSelect({
   icon: typeof MapPin;
   value: string;
   onChange: (value: string) => void;
+  hideLabel?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block space-y-1.5" htmlFor={id}>
-      <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
-        <Icon className="w-3 h-3 shrink-0" aria-hidden />
-        {label}
-      </span>
+      {!hideLabel ? (
+        <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
+          <Icon className="w-3 h-3 shrink-0" aria-hidden />
+          {label}
+        </span>
+      ) : null}
       <div className="flex items-center rounded-xl border border-app bg-inset px-3 py-2.5">
         <select
           id={id}
@@ -92,18 +121,22 @@ export default function EventsView({
   userProfile,
   engagement,
   onViewEvent,
+  onNavigateEvent,
+  onStaffEventChat,
   onViewProfile,
   onRefresh,
   isLoading = false,
   commentsLocked = false,
   sneakPeek = false,
+  onOpenNewEvent,
 }: EventsViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [timeFilter, setTimeFilter] = useState<EventTimeFilter>('all');
-  const [sortBy, setSortBy] = useState<EventSortMode>('soonest');
+  const [timeFilter, setTimeFilter] = useState<EventTimeFilter | null>(null);
+  const [sortBy, setSortBy] = useState<EventSortMode | null>(null);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
-  const [myAreaOnly, setMyAreaOnly] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeQuickPicks, setActiveQuickPicks] = useState<Set<EventQuickPick>>(() => new Set());
+  const [viewMode, setViewMode] = useState<FeedViewMode>(() => readEventsViewMode());
+  const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
 
   // Subscribe to live GPS so we can show distance badges on event cards.
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
@@ -124,20 +157,68 @@ export default function EventsView({
     return haversineMeters(userLocation, { lat: event.locationLat, lng: event.locationLng });
   };
 
-  const hasExtraFilters =
-    timeFilter !== 'all' ||
-    selectedNeighborhood !== 'All Neighborhoods' ||
-    myAreaOnly ||
-    searchTerm.trim() !== '' ||
-    sortBy !== 'soonest';
+  const eventHasMapPin = (event: CommunityEvent): boolean =>
+    typeof event.locationLat === 'number' &&
+    typeof event.locationLng === 'number' &&
+    Number.isFinite(event.locationLat) &&
+    Number.isFinite(event.locationLng);
+
+  const canNavigateToEvent = (event: CommunityEvent): boolean => {
+    if (!supportsInAppNavigation()) return false;
+    if (event.userId === userProfile.uid) return false;
+    if (resolveEventStatus(event) === 'cancelled' || isEventPast(event)) return false;
+    return eventHasMapPin(event);
+  };
+
+  const handleViewModeChange = (mode: FeedViewMode) => {
+    setViewMode(mode);
+    writeEventsViewMode(mode);
+    void persistUserAppPreferences(userProfile, { eventsViewMode: mode });
+  };
+
+  /** Filters panel only — toolbar when/sort toggles have their own active styling. */
+  const panelFilterCount = [
+    searchTerm.trim() !== '',
+    sortBy !== null,
+    selectedNeighborhood !== 'All Neighborhoods',
+    activeQuickPicks.size > 0,
+  ].filter(Boolean).length;
+
+  const hasExtraFilters = panelFilterCount > 0 || timeFilter !== null;
 
   const clearFilters = () => {
     setSearchTerm('');
-    setTimeFilter('all');
-    setSortBy('soonest');
+    setSortBy(null);
     setSelectedNeighborhood('All Neighborhoods');
-    setMyAreaOnly(false);
+    setActiveQuickPicks(new Set());
   };
+
+  const handleSortSwitch = (value: EventSortMode) => (checked: boolean) => {
+    if (checked) {
+      setSortBy(value);
+      return;
+    }
+    if (sortBy === value) setSortBy(null);
+  };
+
+  const handleQuickPickSwitch = (pick: EventQuickPick) => (checked: boolean) => {
+    setActiveQuickPicks((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(pick);
+      else next.delete(pick);
+      return next;
+    });
+  };
+
+  const cycleTimeFilter = () => {
+    setTimeFilter((current) => {
+      if (current === null) return 'upcoming';
+      if (current === 'upcoming') return 'past';
+      return null;
+    });
+  };
+
+  const seriesUpcomingCounts = useMemo(() => buildSeriesUpcomingCountMap(events), [events]);
 
   const filteredEvents = useMemo(() => {
     const filtered = events.filter((event) => {
@@ -152,7 +233,18 @@ export default function EventsView({
         return false;
       }
 
-      if (myAreaOnly && event.neighborhood !== userProfile.neighborhood) return false;
+      if (activeQuickPicks.has('my_area') && event.neighborhood !== userProfile.neighborhood) {
+        return false;
+      }
+      if (activeQuickPicks.has('with_photos') && !event.imageUrl) return false;
+      if (activeQuickPicks.has('has_pin') && (event.locationLat == null || event.locationLng == null)) {
+        return false;
+      }
+      if (activeQuickPicks.has('series') && !event.seriesId) return false;
+
+      const rsvp = engagement.getRsvpsForEvent(event.id);
+      if (activeQuickPicks.has('im_going') && rsvp.userRsvp !== 'going') return false;
+      if (activeQuickPicks.has('has_rsvps') && rsvp.going + rsvp.maybe === 0) return false;
 
       return true;
     });
@@ -162,7 +254,11 @@ export default function EventsView({
       return rsvp.going + rsvp.maybe + rsvp.gone + rsvp.missed;
     };
 
-    return [...filtered].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
+      if (viewMode === 'grid') {
+        return eventCreatedMs(b) - eventCreatedMs(a);
+      }
+
       if (sortBy === 'newest') {
         return eventCreatedMs(b) - eventCreatedMs(a);
       }
@@ -177,14 +273,18 @@ export default function EventsView({
       if (!aUpcoming && !bUpcoming) return bTime - aTime;
       return aUpcoming ? -1 : 1;
     });
+
+    return collapseEventSeriesForDisplay(sorted);
   }, [
     events,
     searchTerm,
     timeFilter,
     selectedNeighborhood,
-    myAreaOnly,
+    activeQuickPicks,
     userProfile.neighborhood,
     sortBy,
+    viewMode,
+    userLocation,
     engagement,
   ]);
 
@@ -193,7 +293,107 @@ export default function EventsView({
   }
 
   return (
-    <div className="space-y-6" id="events_feed_wrapper">
+    <div className="space-y-3" id="events_feed_wrapper">
+      <div className="space-y-1 min-w-0" id="events_view_mode_bar">
+        <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
+          <div className="shrink-0">
+            {onOpenNewEvent ? (
+              <button
+                type="button"
+                id="events_new_listing_btn"
+                onClick={onOpenNewEvent}
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
+                aria-label="New event"
+                title="New event"
+              >
+                <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <span>New</span>
+              </button>
+            ) : null}
+          </div>
+
+          <div className="flex-1 min-w-0 flex justify-center px-0.5 overflow-x-auto sbn-feed-toolbar-scroll">
+            <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
+              <button
+                type="button"
+                id="events_time_toggle"
+                onClick={cycleTimeFilter}
+                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
+                  timeFilter !== null
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-app bg-inset text-app hover:border-accent/40'
+                }`}
+                aria-pressed={timeFilter !== null}
+                aria-label={`When: ${eventTimeToolbarLabel(timeFilter)}`}
+              >
+                <span>{eventTimeToolbarLabel(timeFilter)}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              id="events_filters_panel_toggle"
+              onClick={() => setFiltersPanelOpen((open) => !open)}
+              aria-expanded={filtersPanelOpen}
+              aria-label="Filters"
+              className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                filtersPanelOpen
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
+              <span className="hidden md:inline">Filters</span>
+              {panelFilterCount > 0 && (
+                <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center leading-none">
+                  {panelFilterCount}
+                </span>
+              )}
+            </button>
+            <div
+              className="inline-flex rounded-xl border border-app bg-inset p-0.5 shrink-0"
+              role="group"
+              aria-label="Events view"
+              id="events_view_mode_toggle"
+            >
+              <button
+                type="button"
+                id="events_view_grid_btn"
+                aria-pressed={viewMode === 'grid'}
+                aria-label="Grid view"
+                onClick={() => handleViewModeChange('grid')}
+                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-accent text-on-accent'
+                    : 'text-muted hover:text-app hover:bg-surface-hover'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4 shrink-0" aria-hidden />
+                <span className="sr-only">Grid</span>
+              </button>
+              <button
+                type="button"
+                id="events_view_list_btn"
+                aria-pressed={viewMode === 'list'}
+                aria-label="List view"
+                onClick={() => handleViewModeChange('list')}
+                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-accent text-on-accent'
+                    : 'text-muted hover:text-app hover:bg-surface-hover'
+                }`}
+              >
+                <LayoutList className="w-4 h-4 shrink-0" aria-hidden />
+                <span className="sr-only">List</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {filtersPanelOpen && (
       <div className="sbn-card p-4 sm:p-5 space-y-4" id="events_filter_panel">
         {commentsLocked && events.length > 0 && (
           <p className="text-xs text-muted leading-relaxed border-l-2 border-l-accent pl-3">
@@ -213,110 +413,72 @@ export default function EventsView({
           />
         </div>
 
-        <div className="space-y-2" id="events_sort_bar">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort events</p>
-            <p className="text-[10px] text-subtle">
-              {SORT_OPTIONS.find((option) => option.value === sortBy)?.hint}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Sort events">
-            {SORT_OPTIONS.map(({ value, label }) => {
-              const active = sortBy === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  id={`events_sort_${value}`}
-                  onClick={() => setSortBy(value)}
-                  className={`sbn-chip flex items-center gap-1.5 ${active ? 'sbn-chip-active' : ''}`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">When</p>
-          <div className="flex flex-wrap gap-2" id="events_time_filter">
-            {TIME_FILTER_OPTIONS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setTimeFilter(value)}
-                className={`sbn-chip ${timeFilter === value ? 'sbn-chip-active' : ''}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setMyAreaOnly((prev) => !prev)}
-              className={`sbn-chip ${myAreaOnly ? 'sbn-chip-active' : ''}`}
-            >
-              My area
-            </button>
-          </div>
-        </div>
-
-        <div className="pt-1 border-t border-app">
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((open) => !open)}
-            className="sbn-chip w-full justify-between flex items-center gap-2"
-            aria-expanded={filtersOpen}
+        <div className="space-y-3" id="events_filter_switches">
+          <CollapsibleFilterSection
+            id="events_sort_bar"
+            title="Sort events"
+            activeCount={sortBy !== null ? 1 : 0}
+            defaultOpen={sortBy !== null}
           >
-            <span className="inline-flex items-center gap-1.5">
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Refine filters
-            </span>
-            <span className="text-subtle text-xs">
-              {selectedNeighborhood !== 'All Neighborhoods' ? '1 active' : 'Neighborhood'}
-            </span>
-          </button>
-
-          {filtersOpen && (
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <FilterSelect
-                id="events_filter_neighborhood_select"
-                label="Neighborhood"
-                icon={MapPin}
-                value={selectedNeighborhood}
-                onChange={setSelectedNeighborhood}
-              >
-                <option value="All Neighborhoods">All neighborhoods</option>
-                {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </FilterSelect>
-
-              <FilterSelect
-                id="events_filter_sort_select"
-                label="More sort options"
-                icon={ArrowDownUp}
-                value={sortBy}
-                onChange={(v) => setSortBy(v as EventSortMode)}
-              >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </FilterSelect>
+            <div className="flex flex-wrap gap-2">
+              {SORT_OPTIONS.map(({ value, label }) => (
+                <span key={value} className="contents">
+                  <FilterLabeledSwitch
+                    id={`events_sort_${value}`}
+                    label={label}
+                    checked={sortBy === value}
+                    onChange={handleSortSwitch(value)}
+                  />
+                </span>
+              ))}
             </div>
-          )}
+          </CollapsibleFilterSection>
+
+          <CollapsibleFilterSection
+            id="events_quick_picks"
+            title="Quick picks"
+            activeCount={activeQuickPicks.size}
+            defaultOpen={activeQuickPicks.size > 0}
+          >
+            <div className="flex flex-wrap gap-2">
+              {EVENT_QUICK_PICKS.map(({ id, label }) => (
+                <span key={id} className="contents">
+                  <FilterLabeledSwitch
+                    id={`events_quick_pick_${id}`}
+                    label={label}
+                    checked={activeQuickPicks.has(id)}
+                    onChange={handleQuickPickSwitch(id)}
+                  />
+                </span>
+              ))}
+            </div>
+          </CollapsibleFilterSection>
+        </div>
+
+        <div className="pt-3 border-t border-app">
+          <CollapsibleFilterSection
+            id="events_neighborhood_section"
+            title="Neighborhood"
+            icon={MapPin}
+            activeCount={selectedNeighborhood !== 'All Neighborhoods' ? 1 : 0}
+            defaultOpen={selectedNeighborhood !== 'All Neighborhoods'}
+          >
+            <FilterSelect
+              id="events_filter_neighborhood_select"
+              label="Neighborhood"
+              icon={MapPin}
+              hideLabel
+              value={selectedNeighborhood}
+              onChange={setSelectedNeighborhood}
+            >
+              <option value="All Neighborhoods">All neighborhoods</option>
+              {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </FilterSelect>
+          </CollapsibleFilterSection>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">
@@ -338,6 +500,7 @@ export default function EventsView({
           )}
         </div>
       </div>
+      )}
 
       {filteredEvents.length === 0 ? (
         <div className="sbn-card text-center py-16 px-8 border-dashed" id="empty_events_state">
@@ -348,7 +511,7 @@ export default function EventsView({
           <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
             {events.length === 0
               ? sneakPeek
-                ? 'Events unlock when we reach 1,000 neighbors. Here is a preview of what is coming:'
+                ? 'Events unlock when we reach 500 neighbors. Here is a preview of what is coming:'
                 : 'Be the first to post a free neighborhood gathering — potlucks, swaps, park meetups, and more.'
               : 'Try different filters, or post a new event for your neighborhood.'}
           </p>
@@ -369,18 +532,39 @@ export default function EventsView({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5" id="events_grid_cards">
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5'
+              : 'flex flex-col gap-2 sm:gap-2.5'
+          }
+          id="events_grid_cards"
+        >
           {filteredEvents.map((event) => (
             <div key={event.id}>
               <EventCard
                 event={event}
+                layout={viewMode}
                 currentUserId={userProfile.uid}
+                userProfile={userProfile}
                 engagement={engagement}
                 onViewEvent={onViewEvent}
                 onViewProfile={onViewProfile}
                 commentsLocked={commentsLocked}
+                seriesUpcomingCount={
+                  event.seriesId ? seriesUpcomingCounts.get(event.seriesId) : undefined
+                }
                 distanceMeters={getEventDistance(event)}
-                onNavigate={() => onViewEvent(event)}
+                onNavigate={
+                  canNavigateToEvent(event)
+                    ? () => (onNavigateEvent ?? onViewEvent)(event)
+                    : undefined
+                }
+                onStaffChat={
+                  onStaffEventChat && isStaffActingOfficial(userProfile)
+                    ? () => onStaffEventChat(event)
+                    : undefined
+                }
               />
             </div>
           ))}

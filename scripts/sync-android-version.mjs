@@ -1,32 +1,35 @@
 import fs from 'fs';
 import path from 'path';
+import { readAppVersion } from './read-app-version.mjs';
 
 const root = process.cwd();
-const gradlePath = path.join(root, 'android/app/build.gradle');
 const manifestPath = path.join(root, 'public/android-version.json');
-
-const gradle = fs.readFileSync(gradlePath, 'utf8');
-const versionName = gradle.match(/versionName\s+"([^"]+)"/)?.[1] ?? '1.0.0';
-const versionCode = Number.parseInt(gradle.match(/versionCode\s+(\d+)/)?.[1] ?? '1', 10);
-
-const existing = fs.existsSync(manifestPath)
-  ? JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
-  : {};
+const { versionName, versionCode, label, build } = readAppVersion();
 
 const releaseTag = `android-v${versionName}`;
-const downloadUrl =
-  existing.downloadUrl?.includes(releaseTag)
-    ? existing.downloadUrl
-    : `https://github.com/sigsecspec/SacramentoBuyNothing/releases/download/${releaseTag}/sac-buy-nothing-debug.apk`;
+const fileName = `sac-buy-nothing-beta-v${versionName}.${build}.apk`;
+const aabFileName = `sac-buy-nothing-beta-v${versionName}.${build}.aab`;
+const legacyFileName = 'sac-buy-nothing.apk';
+const legacyAabFileName = 'sac-buy-nothing.aab';
+/** Always host the downloadable APK on the public site — private GitHub Releases 404 for neighbors. */
+const appOrigin = (process.env.VITE_APP_URL || process.env.APP_URL || 'https://www.sacramentobuynothing.com').replace(/\/$/, '');
+const downloadUrl = `${appOrigin}/downloads/${fileName}`;
+const aabDownloadUrl = `${appOrigin}/downloads/${aabFileName}`;
 
 const manifest = {
   versionName,
   versionCode,
+  betaLabel: label,
   downloadUrl,
+  aabDownloadUrl,
   releaseTag,
-  publishedAt: existing.publishedAt ?? new Date().toISOString(),
-  fileName: existing.fileName ?? 'sac-buy-nothing-debug.apk',
+  publishedAt: new Date().toISOString(),
+  fileName,
+  aabFileName,
+  legacyAabFileName,
 };
 
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`Synced public/android-version.json → ${versionName} (${versionCode})`);
+console.log(`APK download URL: ${downloadUrl}`);
+console.log(`AAB download URL: ${aabDownloadUrl}`);

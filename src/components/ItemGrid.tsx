@@ -2,34 +2,34 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
-  Bookmark,
-  ChevronDown,
   CircleDot,
-  Flame,
+  Plus,
   Search as SearchIcon,
   MapPin,
-  SlidersHorizontal,
   Tag,
   AlertCircle,
   ThumbsUp,
-  TrendingUp,
   X,
 } from 'lucide-react';
+import FilterLabeledSwitch from './FilterLabeledSwitch';
+import FilterToggleGroup from './FilterToggleGroup';
 import ItemCard from './ItemCard';
 import { ItemGridSkeleton } from './Skeleton';
 import PostItemModal from './PostItemModal';
 import PickupAttributionModal from './PickupAttributionModal';
-import { updateSupabaseItemStatus } from '../supabase';
+import { updateSupabaseItemStatus, getUserPickupCoordinationByIds } from '../supabase';
+import { canShowListingInAppNavigation } from '../lib/goGetCoordinationGating';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { completedActionNeedsAttribution } from '../lib/pickupAttribution';
 import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_TYPE_FILTERS, LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
+  compareFeedItemsByDistance,
   feedEngagementSlice,
-  isPrimaryFeedSort,
   MORE_FEED_SORTS,
   PRIMARY_FEED_SORTS,
   type FeedSortMode,
@@ -38,6 +38,14 @@ import { useTrackPresence } from '../contexts/PresenceContext';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
 import { getItemMapDestination } from '../lib/itemLocation';
+import { isNativeApp } from '../lib/nativePlatform';
+import {
+  readFeedViewMode,
+  isClosedCommunityListing,
+  writeFeedViewMode,
+  type FeedViewMode,
+} from '../lib/feedDisplayPrefs';
+import { persistUserAppPreferences } from '../lib/appPreferences';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
@@ -49,7 +57,6 @@ const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'active', label: 'Available' },
   { value: 'pending_pickup', label: 'Pending pickup' },
   { value: 'on_hold', label: 'On hold' },
-  { value: 'completed', label: 'Completed' },
 ];
 
 const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
@@ -68,15 +75,27 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
 
+const FEED_SORT_OPTIONS = [
+  { value: 'nearest' as const, label: 'Near', id: 'feed_sort_nearest' },
+  { value: 'new' as const, label: 'New', id: 'feed_sort_new' },
+];
+
+const FEED_TYPE_OPTIONS: { value: ListingTypeFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'looking', label: 'Look' },
+  { value: 'giveaway', label: 'Give' },
+  { value: 'trade', label: 'Trade' },
+];
+
+const FEED_VIEW_OPTIONS = [
+  { value: 'grid' as const, label: 'Grid', id: 'feed_view_grid_btn' },
+  { value: 'list' as const, label: 'List', id: 'feed_view_list_btn' },
+];
+
 function needsPickupListing(item: ItemPost): boolean {
   if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
   return /pickup|curb|porch/i.test(item.category);
 }
-
-const PRIMARY_SORT_ICONS: Partial<Record<FeedSortMode, typeof Flame>> = {
-  hot: Flame,
-  top: TrendingUp,
-};
 
 function FilterSelect({
   id,
@@ -118,10 +137,13 @@ interface ItemGridProps {
   userProfile: UserProfile;
   engagement: ItemsEngagementApi;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
   onViewItem: (item: ItemPost) => void;
+  onNavigateItem?: (item: ItemPost) => void;
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
+  onOpenNewPost?: () => void;
 }
 
 export default function ItemGrid({
@@ -129,20 +151,38 @@ export default function ItemGrid({
   userProfile,
   engagement,
   onInitiateChat,
+  onStaffListingChat,
   onViewItem,
+  onNavigateItem,
   onViewProfile,
   onRefresh,
   isLoading = false,
+  onOpenNewPost,
 }: ItemGridProps) {
+  const [coordByUid, setCoordByUid] = useState<
+    Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
+  >({});
+
+  useEffect(() => {
+    const posterIds = [...new Set(items.map((i) => i.userId).filter((uid) => uid && uid !== userProfile.uid))];
+    if (posterIds.length === 0) {
+      setCoordByUid({});
+      return;
+    }
+    void getUserPickupCoordinationByIds(posterIds).then(setCoordByUid);
+  }, [items, userProfile.uid]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<ListingTypeFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
   const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
-  const [sortBy, setSortBy] = useState<FeedSortMode>('new');
+  const [sortBy, setSortBy] = useState<FeedSortMode | null>(null);
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<FeedViewMode>(() => readFeedViewMode());
+  const [gridSortMode, setGridSortMode] = useState<'nearest' | 'new'>('nearest');
+  const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
@@ -169,6 +209,12 @@ export default function ItemGrid({
     const dest = getItemMapDestination(item, userProfile.uid);
     if (!dest) return null;
     return haversineMeters(userLocation, dest);
+  };
+
+  const handleViewModeChange = (mode: FeedViewMode) => {
+    setViewMode(mode);
+    writeFeedViewMode(mode);
+    void persistUserAppPreferences(userProfile, { feedViewMode: mode });
   };
 
   const {
@@ -205,35 +251,47 @@ export default function ItemGrid({
     }
   };
 
-  const toggleQuickPick = (pick: QuickPick) => {
+  const handleSortSwitch = (value: FeedSortMode) => (checked: boolean) => {
+    if (checked) {
+      setSortBy(value);
+      return;
+    }
+    if (sortBy === value) setSortBy(null);
+  };
+
+  const handleTypeSwitch = (type: ListingTypeFilter) => (checked: boolean) => {
+    if (checked) {
+      setSelectedType(type);
+      if (type !== 'all') setSelectedCategory('All Categories');
+      return;
+    }
+    if (selectedType === type) {
+      setSelectedType('all');
+      setSelectedCategory('All Categories');
+    }
+  };
+
+  const handleQuickPickSwitch = (pick: QuickPick) => (checked: boolean) => {
     setActiveQuickPicks((prev) => {
       const next = new Set(prev);
-      if (next.has(pick)) next.delete(pick);
-      else next.add(pick);
+      if (checked) next.add(pick);
+      else next.delete(pick);
       return next;
     });
   };
 
-  const hasRefineFilters =
-    selectedStatus !== 'all' ||
-    selectedVoteFilter !== 'all' ||
-    !isPrimaryFeedSort(sortBy) ||
-    selectedCategory !== 'All Categories' ||
-    selectedNeighborhood !== 'All Neighborhoods';
-
-  const refineFilterCount = [
+  const activeFilterCount = [
+    searchTerm.trim() !== '',
+    sortBy !== null,
+    selectedType !== 'all',
     selectedCategory !== 'All Categories',
     selectedNeighborhood !== 'All Neighborhoods',
     selectedStatus !== 'all',
     selectedVoteFilter !== 'all',
-    !isPrimaryFeedSort(sortBy),
+    activeQuickPicks.size > 0,
   ].filter(Boolean).length;
 
-  const hasExtraFilters =
-    selectedType !== 'all' ||
-    hasRefineFilters ||
-    searchTerm.trim() !== '' ||
-    activeQuickPicks.size > 0;
+  const hasExtraFilters = activeFilterCount > 0;
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -242,13 +300,19 @@ export default function ItemGrid({
     setSelectedNeighborhood('All Neighborhoods');
     setSelectedStatus('all');
     setSelectedVoteFilter('all');
-    setSortBy('new');
+    setSortBy(null);
     setActiveQuickPicks(new Set());
+  };
+
+  const handleToolbarTypeChange = (type: ListingTypeFilter) => {
+    setSelectedType(type);
+    if (type !== 'all') setSelectedCategory('All Categories');
   };
 
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) => {
       if (item.status === 'withdrawn') return false;
+      if (isClosedCommunityListing(item)) return false;
 
       const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
       if (!searchString.includes(searchTerm.toLowerCase())) return false;
@@ -280,7 +344,15 @@ export default function ItemGrid({
       return feedEngagementSlice(votes.upvotes, votes.downvotes, getCommentsForPost(itemId).length);
     };
 
-    return [...filtered].sort((a, b) => compareFeedItems(a, b, sortBy, getEngagement));
+    if (gridSortMode === 'nearest') {
+      return [...filtered].sort((a, b) => compareFeedItemsByDistance(a, b, getItemDistance));
+    }
+
+    if (viewMode === 'grid') {
+      return [...filtered].sort((a, b) => compareFeedItems(a, b, 'new', getEngagement));
+    }
+
+    return [...filtered].sort((a, b) => compareFeedItems(a, b, sortBy ?? 'new', getEngagement));
   }, [
     items,
     searchTerm,
@@ -293,6 +365,10 @@ export default function ItemGrid({
     sortBy,
     activeQuickPicks,
     userProfile.neighborhood,
+    userProfile.uid,
+    userLocation,
+    viewMode,
+    gridSortMode,
     getVotesForPost,
     getCommentsForPost,
   ]);
@@ -302,7 +378,83 @@ export default function ItemGrid({
 
   return (
     <>
-    <div className="space-y-6" id="item_feed_wrapper">
+    <div className="space-y-3" id="item_feed_wrapper">
+      <div className="space-y-1 min-w-0" id="feed_view_mode_bar">
+        <div className="sbn-feed-toolbar-scroll min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 w-max min-w-full">
+            <div className="shrink-0">
+              {onOpenNewPost ? (
+                <button
+                  type="button"
+                  id="feed_new_listing_btn"
+                  onClick={onOpenNewPost}
+                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2.5 py-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
+                  aria-label="New listing"
+                  title="New listing"
+                >
+                  <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                  <span>New</span>
+                </button>
+              ) : null}
+            </div>
+
+            <FilterToggleGroup
+              id="feed_sort_group"
+              ariaLabel="Sort listings"
+              options={FEED_SORT_OPTIONS}
+              value={gridSortMode}
+              onChange={setGridSortMode}
+              compact
+            />
+
+            <FilterToggleGroup
+              id="feed_type_group"
+              ariaLabel="Listing type"
+              options={FEED_TYPE_OPTIONS}
+              value={selectedType}
+              onChange={handleToolbarTypeChange}
+              compact
+            />
+
+            <div className="relative shrink-0">
+              <FilterLabeledSwitch
+                id="feed_filters_panel_toggle"
+                label="Filter"
+                checked={filtersPanelOpen}
+                onChange={setFiltersPanelOpen}
+                compact
+                ariaLabel={
+                  activeFilterCount > 0
+                    ? `Filters, ${activeFilterCount} active`
+                    : 'Filters'
+                }
+              />
+              {activeFilterCount > 0 && (
+                <span
+                  className="pointer-events-none absolute -top-1 -right-1 text-[9px] font-bold bg-accent text-on-accent min-w-[1rem] h-4 px-1 rounded-full flex items-center justify-center leading-none"
+                  aria-hidden
+                >
+                  {activeFilterCount}
+                </span>
+              )}
+            </div>
+
+            <FilterToggleGroup
+              id="feed_view_mode_toggle"
+              ariaLabel="Feed view"
+              options={FEED_VIEW_OPTIONS}
+              value={viewMode}
+              onChange={handleViewModeChange}
+              compact
+            />
+          </div>
+        </div>
+        {gridSortMode === 'nearest' && !userLocation && (
+          <p className="text-[10px] text-muted text-center px-1">Turn on location for distance sorting</p>
+        )}
+      </div>
+
+      {filtersPanelOpen && (
       <div className="sbn-card p-4 sm:p-5 space-y-4" id="filter_panel">
         <div className="relative">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
@@ -316,220 +468,167 @@ export default function ItemGrid({
           />
         </div>
 
-        <div className="space-y-2" id="feed_sort_bar">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="space-y-3" id="feed_filter_switches">
+          <div className="space-y-1.5" id="feed_sort_bar">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
-            <p className="text-[10px] text-subtle">
-              {PRIMARY_FEED_SORTS.find((option) => option.value === sortBy)?.hint ??
-                MORE_FEED_SORTS.find((option) => option.value === sortBy)?.label}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Sort feed">
-            {PRIMARY_FEED_SORTS.map(({ value, label }) => {
-              const Icon = PRIMARY_SORT_ICONS[value];
-              const active = sortBy === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  id={`feed_sort_${value}`}
-                  onClick={() => setSortBy(value)}
-                  className={`sbn-chip flex items-center gap-1.5 ${active ? 'sbn-chip-active' : ''}`}
-                >
-                  {Icon ? <Icon className="w-3.5 h-3.5" /> : null}
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Listing type</p>
-          <div className="flex flex-wrap gap-2" id="feed_type_filter">
-            {LISTING_TYPE_FILTERS.map((type) => (
-              <button
-                key={type}
-                type="button"
-                id={`type_${type}_btn`}
-                onClick={() => {
-                  setSelectedType(type);
-                  setSelectedCategory('All Categories');
-                }}
-                className={`sbn-chip ${selectedType === type ? 'sbn-chip-active' : ''}`}
-              >
-                {getPostTypeFilterLabel(type)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
-            <p className="text-[10px] text-subtle">Tap to combine multiple</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {QUICK_PICKS.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                id={`quick_pick_${id}`}
-                onClick={() => toggleQuickPick(id)}
-                className={`sbn-chip flex items-center gap-1.5 ${activeQuickPicks.has(id) ? 'sbn-chip-active' : ''}`}
-              >
-                {id === 'saved' && (
-                  <Bookmark className={`w-3 h-3 ${activeQuickPicks.has('saved') ? 'fill-current' : ''}`} />
-                )}
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="pt-3 border-t border-app">
-          <button
-            type="button"
-            id="feed_filters_sort_toggle"
-            onClick={() => setFiltersOpen((open) => !open)}
-            aria-expanded={filtersOpen}
-            className="w-full flex items-center justify-between gap-3 rounded-xl border border-app bg-inset px-4 py-3 text-left hover:border-accent/40 transition-colors"
-          >
-            <span className="flex items-center gap-2 min-w-0">
-              <SlidersHorizontal className="w-4 h-4 text-accent shrink-0" aria-hidden />
-              <span className="text-sm font-semibold text-app">Filters &amp; sort</span>
-              {refineFilterCount > 0 && (
-                <span className="text-[10px] font-bold uppercase tracking-wide text-accent bg-accent-soft px-2 py-0.5 rounded-full shrink-0">
-                  {refineFilterCount} active
+            <div className="flex flex-wrap gap-2">
+              {PRIMARY_FEED_SORTS.map(({ value, label }) => (
+                <span key={value} className="contents">
+                  <FilterLabeledSwitch
+                    id={`feed_sort_${value}`}
+                    label={label}
+                    checked={sortBy === value}
+                    onChange={handleSortSwitch(value)}
+                  />
                 </span>
-              )}
-            </span>
-            <ChevronDown
-              className={`w-4 h-4 text-muted shrink-0 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
-              aria-hidden
-            />
-          </button>
-
-          {filtersOpen && (
-            <div className="mt-3 space-y-3 rounded-xl border border-app bg-surface/50 p-3 sm:p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FilterSelect
-                  id="filter_category_select"
-                  label="Category"
-                  icon={Tag}
-                  value={selectedCategory}
-                  onChange={setSelectedCategory}
-                >
-                  <option value="All Categories">All categories</option>
-                  {selectedType === 'all' ? (
-                    <>
-                      <optgroup label="Giving">
-                        {ITEM_CATEGORIES.map((c) => (
-                          <option key={`all_giveaway_${c}`} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Looking for">
-                        {ISO_CATEGORIES.map((c) => (
-                          <option key={`all_looking_${c}`} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Trade & Barter">
-                        {ITEM_CATEGORIES.map((c) => (
-                          <option key={`all_trade_${c}`} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </optgroup>
-                    </>
-                  ) : selectedType === 'giveaway' || selectedType === 'trade' ? (
-                    ITEM_CATEGORIES.map((c) => (
-                      <option key={`${selectedType}_only_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))
-                  ) : (
-                    ISO_CATEGORIES.map((c) => (
-                      <option key={`looking_only_${c}`} value={c}>
-                        {c}
-                      </option>
-                    ))
-                  )}
-                </FilterSelect>
-
-                <FilterSelect
-                  id="filter_neighborhood_select"
-                  label="Neighborhood"
-                  icon={MapPin}
-                  value={selectedNeighborhood}
-                  onChange={setSelectedNeighborhood}
-                >
-                  <option value="All Neighborhoods">All neighborhoods</option>
-                  {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </FilterSelect>
-
-                <FilterSelect
-                  id="filter_status_select"
-                  label="Listing status"
-                  icon={CircleDot}
-                  value={selectedStatus}
-                  onChange={(v) => setSelectedStatus(v as StatusFilter)}
-                >
-                  {STATUS_FILTER_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </FilterSelect>
-
-                <FilterSelect
-                  id="filter_vote_select"
-                  label="Interest & comments"
-                  icon={ThumbsUp}
-                  value={selectedVoteFilter}
-                  onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
-                >
-                  {VOTE_FILTER_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </FilterSelect>
-              </div>
-
-              <FilterSelect
-                id="filter_sort_select"
-                label="More sort options"
-                icon={ArrowDownUp}
-                value={sortBy}
-                onChange={(v) => setSortBy(v as FeedSortMode)}
-              >
-                <optgroup label="Popular">
-                  {PRIMARY_FEED_SORTS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="More">
-                  {MORE_FEED_SORTS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </optgroup>
-              </FilterSelect>
+              ))}
             </div>
-          )}
+            <div className="grid grid-cols-3 gap-2 pt-1" id="feed_type_filter">
+              {LISTING_POST_TYPES.map((type) => (
+                <span key={type} className="contents">
+                  <FilterLabeledSwitch
+                    id={`type_${type}_switch`}
+                    label={getPostTypeFilterLabel(type)}
+                    checked={selectedType === type}
+                    onChange={handleTypeSwitch(type)}
+                  />
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_PICKS.map(({ id, label }) => (
+                <span key={id} className="contents">
+                  <FilterLabeledSwitch
+                    id={`quick_pick_${id}`}
+                    label={label}
+                    checked={activeQuickPicks.has(id)}
+                    onChange={handleQuickPickSwitch(id)}
+                  />
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-app space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FilterSelect
+              id="filter_category_select"
+              label="Category"
+              icon={Tag}
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+            >
+              <option value="All Categories">All categories</option>
+              {selectedType === 'all' ? (
+                <>
+                  <optgroup label="Giving">
+                    {ITEM_CATEGORIES.map((c) => (
+                      <option key={`all_giveaway_${c}`} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Looking for">
+                    {ISO_CATEGORIES.map((c) => (
+                      <option key={`all_looking_${c}`} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Trade & Barter">
+                    {ITEM_CATEGORIES.map((c) => (
+                      <option key={`all_trade_${c}`} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                </>
+              ) : selectedType === 'giveaway' || selectedType === 'trade' ? (
+                ITEM_CATEGORIES.map((c) => (
+                  <option key={`${selectedType}_only_${c}`} value={c}>
+                    {c}
+                  </option>
+                ))
+              ) : (
+                ISO_CATEGORIES.map((c) => (
+                  <option key={`looking_only_${c}`} value={c}>
+                    {c}
+                  </option>
+                ))
+              )}
+            </FilterSelect>
+
+            <FilterSelect
+              id="filter_neighborhood_select"
+              label="Neighborhood"
+              icon={MapPin}
+              value={selectedNeighborhood}
+              onChange={setSelectedNeighborhood}
+            >
+              <option value="All Neighborhoods">All neighborhoods</option>
+              {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </FilterSelect>
+
+            <FilterSelect
+              id="filter_status_select"
+              label="Listing status"
+              icon={CircleDot}
+              value={selectedStatus}
+              onChange={(v) => setSelectedStatus(v as StatusFilter)}
+            >
+              {STATUS_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </FilterSelect>
+
+            <FilterSelect
+              id="filter_vote_select"
+              label="Interest & comments"
+              icon={ThumbsUp}
+              value={selectedVoteFilter}
+              onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
+            >
+              {VOTE_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </FilterSelect>
+          </div>
+
+          <FilterSelect
+            id="filter_sort_select"
+            label="More sort options"
+            icon={ArrowDownUp}
+            value={sortBy ?? 'new'}
+            onChange={(v) => setSortBy(v as FeedSortMode)}
+          >
+            <optgroup label="Popular">
+              {PRIMARY_FEED_SORTS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="More">
+              {MORE_FEED_SORTS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </optgroup>
+          </FilterSelect>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">
@@ -551,8 +650,9 @@ export default function ItemGrid({
           )}
         </div>
       </div>
+      )}
 
-      {isLoading ? (
+      {isLoading && items.length === 0 ? (
         <ItemGridSkeleton />
       ) : filteredItems.length === 0 ? (
         <div className="sbn-card text-center py-16 px-8 border-dashed" id="empty_feed_state">
@@ -576,11 +676,19 @@ export default function ItemGrid({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5" id="items_grid_cards">
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5'
+              : 'flex flex-col gap-2 sm:gap-2.5'
+          }
+          id="items_grid_cards"
+        >
           {filteredItems.map((item) => (
             <div key={item.id}>
               <ItemCard
                 item={item}
+                layout={viewMode}
                 currentUserId={userProfile.uid}
                 voteState={getVotesForPost(item.id)}
                 comments={getCommentsForPost(item.id)}
@@ -599,9 +707,20 @@ export default function ItemGrid({
                 onMessage={() =>
                   onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)
                 }
+                onStaffChat={onStaffListingChat ? () => onStaffListingChat(item) : undefined}
                 onViewProfile={onViewProfile}
                 distanceMeters={getItemDistance(item)}
-                onNavigate={item.userId !== userProfile.uid ? () => onViewItem(item) : undefined}
+                showPickupCoordination={canShowListingInAppNavigation({
+                  item,
+                  viewerProfile: userProfile,
+                  posterProfile: coordByUid[item.userId],
+                  isStaffOfficial: isStaffActingOfficial(userProfile),
+                })}
+                onNavigate={
+                  item.userId !== userProfile.uid
+                    ? () => (onNavigateItem ?? onViewItem)(item)
+                    : undefined
+                }
               />
             </div>
           ))}

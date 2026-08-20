@@ -42,6 +42,7 @@ interface EventLocationMapPickerProps {
   latitude: number | null;
   longitude: number | null;
   onCoordinatesChange: (lat: number, lng: number) => void;
+  onClear?: () => void;
 }
 
 export default function EventLocationMapPicker({
@@ -49,6 +50,7 @@ export default function EventLocationMapPicker({
   latitude,
   longitude,
   onCoordinatesChange,
+  onClear,
 }: EventLocationMapPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -194,9 +196,16 @@ export default function EventLocationMapPicker({
       />
 
       {hasPin ? (
-        <p className="text-xs font-mono text-app bg-inset border border-app rounded-lg px-3 py-2">
-          Pin: {latitude.toFixed(6)}, {longitude.toFixed(6)}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-mono text-app bg-inset border border-app rounded-lg px-3 py-2 flex-1 min-w-[12rem]">
+            Pin: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+          </p>
+          {onClear ? (
+            <button type="button" onClick={onClear} className="sbn-btn sbn-btn-ghost sbn-btn-sm shrink-0">
+              Remove pin
+            </button>
+          ) : null}
+        </div>
       ) : (
         <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2">
           No pin yet — tap the park on the map or use My location.
