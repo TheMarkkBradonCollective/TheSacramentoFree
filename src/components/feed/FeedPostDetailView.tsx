@@ -206,7 +206,7 @@ export default function FeedPostDetailView({
                           }
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm border transition-colors ${
                             active
-                              ? 'border-accent bg-accent-soft text-accent'
+                              ? 'border-accent bg-accent text-on-accent'
                               : 'border-app bg-inset text-muted hover:border-accent/40'
                           }`}
                           aria-label={`React ${emoji}`}

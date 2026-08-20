@@ -157,7 +157,7 @@ export default function FeedPostCard({
                       }
                       className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-sm border transition-colors ${
                         active
-                          ? 'border-accent bg-accent-soft text-accent'
+                          ? 'border-accent bg-accent text-on-accent'
                           : 'border-app bg-inset text-muted hover:border-accent/40'
                       }`}
                       aria-label={`React ${emoji}`}

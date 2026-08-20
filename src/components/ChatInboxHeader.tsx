@@ -108,7 +108,7 @@ export default function ChatInboxHeader({
               onClick={handleCycleCategoryFilter}
               className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
                 hasActiveCategoryFilter
-                  ? 'border-accent bg-accent-soft text-accent'
+                  ? 'border-accent bg-accent text-on-accent'
                   : 'border-app bg-inset text-app hover:border-accent/40'
               }`}
               aria-pressed={hasActiveCategoryFilter}
@@ -125,7 +125,7 @@ export default function ChatInboxHeader({
                 onClick={handleCycleStatusFilter}
                 className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
                   hasActiveStatusFilter
-                    ? 'border-accent bg-accent-soft text-accent'
+                    ? 'border-accent bg-accent text-on-accent'
                     : 'border-app bg-inset text-app hover:border-accent/40'
                 }`}
                 aria-pressed={hasActiveStatusFilter}
@@ -157,7 +157,7 @@ export default function ChatInboxHeader({
               onClick={() => setMenuOpen((open) => !open)}
               className={`inline-flex items-center justify-center rounded-xl border p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
                 menuOpen
-                  ? 'border-accent bg-accent-soft text-accent'
+                  ? 'border-accent bg-accent text-on-accent'
                   : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
               }`}
               aria-label="More options"

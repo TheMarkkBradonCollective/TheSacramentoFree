@@ -30,7 +30,7 @@
   --color-text-subtle: #7c7f86;
   --color-accent: #ff4500;
   --color-accent-hover: #e03d00;
-  --color-accent-soft: #fff1eb;
+  --color-accent-soft: #ffece6;
   --color-on-accent: #ffffff;
   --color-card: #ffffff;
   --color-card-muted: #f6f7f8;
@@ -928,6 +928,13 @@ select,
 textarea {
   color: var(--color-text);
   background-color: var(--color-inset);
+  accent-color: var(--color-accent);
+}
+
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--color-accent);
 }
 
 input::placeholder,
@@ -1964,7 +1971,7 @@ option {
   padding: 0 0.65rem 0 1.85rem;
   border-radius: 9999px;
   border: 2px solid var(--color-accent);
-  background: var(--color-surface);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
   color: var(--color-accent);
   cursor: pointer;
   overflow: hidden;
@@ -2114,25 +2121,25 @@ option {
 
 .sbn-badge-ask {
   background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-accent) 82%, #7c2d12);
+  color: color-mix(in srgb, var(--color-accent) 82%, var(--color-text));
   border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
 }
 
 .sbn-badge-trade {
-  background: color-mix(in srgb, var(--color-accent) 22%, #fff7ed);
-  color: color-mix(in srgb, var(--color-accent) 68%, #92400e);
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 78%, var(--color-text));
   border: 1px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
 }
 
 .dark .sbn-badge-ask {
   background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-accent) 75%, #fed7aa);
+  color: color-mix(in srgb, var(--color-accent) 82%, white);
   border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
 .dark .sbn-badge-trade {
   background: color-mix(in srgb, var(--color-accent) 24%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-accent) 70%, #fdba74);
+  color: color-mix(in srgb, var(--color-accent) 78%, white);
   border-color: color-mix(in srgb, var(--color-accent) 36%, transparent);
 }
 
@@ -2613,9 +2620,9 @@ html.sbn-keyboard-open .sbn-fixed-bottom {
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--color-accent) 70%, #ffd166),
+    color-mix(in srgb, var(--color-accent) 70%, white),
     var(--color-accent),
-    color-mix(in srgb, var(--color-accent) 70%, #ffd166),
+    color-mix(in srgb, var(--color-accent) 70%, white),
     transparent
   );
   opacity: 0.85;
@@ -2648,9 +2655,9 @@ html.sbn-keyboard-open .sbn-fixed-bottom {
   background: linear-gradient(
     180deg,
     transparent,
-    color-mix(in srgb, var(--color-accent) 70%, #ffd166),
+    color-mix(in srgb, var(--color-accent) 70%, white),
     var(--color-accent),
-    color-mix(in srgb, var(--color-accent) 70%, #ffd166),
+    color-mix(in srgb, var(--color-accent) 70%, white),
     transparent
   );
 }

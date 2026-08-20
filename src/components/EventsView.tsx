@@ -363,7 +363,7 @@ export default function EventsView({
                 onClick={cycleTimeFilter}
                 className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
                   timeFilter !== null
-                    ? 'border-accent bg-accent-soft text-accent'
+                    ? 'border-accent bg-accent text-on-accent'
                     : 'border-app bg-inset text-app hover:border-accent/40'
                 }`}
                 aria-pressed={timeFilter !== null}
@@ -383,7 +383,7 @@ export default function EventsView({
               aria-label="Filters"
               className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
                 filtersPanelOpen
-                  ? 'border-accent bg-accent-soft text-accent'
+                  ? 'border-accent bg-accent text-on-accent'
                   : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
               }`}
             >

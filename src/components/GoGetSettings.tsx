@@ -133,24 +133,24 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
         disabled={saving}
         onClick={() => void handleToggle(!enabled)}
         className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border transition-colors disabled:opacity-60 ${
-          enabled ? 'border-accent/40 bg-accent/10' : 'border-app bg-inset'
+          enabled ? 'border-accent bg-accent text-on-accent' : 'border-app bg-inset'
         }`}
         id="profile_goget_enabled_toggle"
       >
         <div className="text-left min-w-0">
-          <p className="text-xs font-bold text-app">
+          <p className={`text-xs font-bold ${enabled ? 'text-on-accent' : 'text-app'}`}>
             {enabled ? 'Using app pickup coordination' : 'Off — listing & chat only'}
           </p>
-          <p className="text-[10px] text-muted mt-0.5 leading-snug">
+          <p className={`text-[10px] mt-0.5 leading-snug ${enabled ? 'text-on-accent/85' : 'text-muted'}`}>
             {enabled
               ? 'Go Get rings your phone for live requests; scheduling uses normal notifications. Confirmed pickups update listings and profiles.'
               : 'Your posts stay up. Neighbors message you to arrange pickup independently.'}
           </p>
         </div>
         <span
-          className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
-            enabled ? 'bg-accent' : 'bg-zinc-600'
-          }`}
+        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
+          enabled ? 'bg-white/35' : 'bg-zinc-600'
+        }`}
         >
           <span
             className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${

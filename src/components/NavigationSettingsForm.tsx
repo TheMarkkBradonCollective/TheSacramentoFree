@@ -37,15 +37,21 @@ function ToggleRow({
   icon: typeof Volume2;
   variant: 'account' | 'nav';
 }) {
-  const labelClass = variant === 'nav' ? 'text-[var(--sbn-nav-text)]' : 'text-app';
-  const mutedClass = variant === 'nav' ? 'text-[var(--sbn-nav-text-secondary)]' : 'text-muted';
-  const borderClass = checked
-    ? variant === 'nav'
-      ? 'border-[color-mix(in_srgb,var(--color-accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]'
-      : 'border-accent/40 bg-accent/10'
+  const labelClass = checked
+    ? 'text-on-accent'
     : variant === 'nav'
-      ? 'border-[var(--sbn-nav-glass-border)] bg-[var(--sbn-nav-surface)]'
-      : 'border-app bg-inset';
+      ? 'text-[var(--sbn-nav-text)]'
+      : 'text-app';
+  const mutedClass = checked
+    ? 'text-on-accent/80'
+    : variant === 'nav'
+      ? 'text-[var(--sbn-nav-text-secondary)]'
+      : 'text-muted';
+  const borderClass = checked
+        ? 'border-accent bg-accent text-on-accent'
+        : variant === 'nav'
+          ? 'border-[var(--sbn-nav-glass-border)] bg-[var(--sbn-nav-surface)]'
+          : 'border-app bg-inset';
 
   return (
     <button
@@ -57,7 +63,7 @@ function ToggleRow({
       className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border transition-colors ${borderClass}`}
     >
       <div className="flex items-start gap-2.5 min-w-0 text-left">
-        <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${checked ? 'text-accent' : mutedClass}`} />
+        <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${checked ? 'text-on-accent' : mutedClass}`} />
         <div className="min-w-0">
           <p className={`text-xs font-bold ${labelClass}`}>{title}</p>
           <p className={`text-[10px] mt-0.5 leading-snug ${mutedClass}`}>{description}</p>
@@ -65,7 +71,7 @@ function ToggleRow({
       </div>
       <span
         className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
-          checked ? 'bg-accent' : variant === 'nav' ? 'bg-[var(--sbn-nav-lane-inactive)]' : 'bg-zinc-600'
+          checked ? 'bg-white/35' : variant === 'nav' ? 'bg-[var(--sbn-nav-lane-inactive)]' : 'bg-zinc-600'
         }`}
         aria-hidden
       >
