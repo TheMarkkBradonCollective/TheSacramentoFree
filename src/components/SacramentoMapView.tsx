@@ -564,7 +564,9 @@ export default function SacramentoMapView({
       });
 
       const cardStack = hasMapSelection ? selectionCardHeight : 0;
-      const floatControls = isFullScreenMobile ? 56 : 0;
+      const routePreviewOnMap =
+        (routeCoordsRef.current?.length ?? 0) >= 2 && Boolean(routeEndpointsRef.current?.end);
+      const floatControls = isFullScreenMobile && hasMapSelection && !routePreviewOnMap ? 56 : 0;
       const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 72 : 48);
       const bottom = Math.max(measured.bottomRight[1], cardStack + floatControls + 20);
 
@@ -1202,6 +1204,10 @@ export default function SacramentoMapView({
     routeCoordsRef.current = routeCoords;
   }, [routeCoords]);
 
+  const mapRoutePreviewVisible = Boolean(
+    hasMapSelection && routeDestination && routeCoords && routeCoords.length >= 2,
+  );
+
   const liveRouteDistanceMeters = useMemo(() => {
     const here = userLocationRef.current ?? userLocation;
     if (routeCoords && here && routeCoords.length >= 2) {
@@ -1546,6 +1552,14 @@ export default function SacramentoMapView({
   }, [selectionCardHeight, hasMapSelection, fitRouteToAvailableView]);
 
   useEffect(() => {
+    if (!mapRoutePreviewVisible) return;
+    if (!routeCoordsRef.current || routeCoordsRef.current.length < 2) return;
+    routeAutoFitEnabledRef.current = true;
+    const id = window.requestAnimationFrame(() => fitRouteToAvailableView({ force: true }));
+    return () => window.cancelAnimationFrame(id);
+  }, [mapRoutePreviewVisible, fitRouteToAvailableView]);
+
+  useEffect(() => {
     if (!routeDestination) {
       routeEndpointsRef.current = null;
       lastFitDestKeyRef.current = null;
@@ -1614,24 +1628,28 @@ export default function SacramentoMapView({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleLocateUser}
-          className={`absolute sbn-map-float-btn left-4 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
-            isLocating
-              ? 'bg-accent text-on-accent border-accent'
-              : followUser
+        {!mapRoutePreviewVisible && (
+          <button
+            type="button"
+            onClick={handleLocateUser}
+            className={`absolute sbn-map-float-btn left-4 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
+              isLocating
                 ? 'bg-accent text-on-accent border-accent'
-                : 'bg-surface text-app hover:bg-surface-hover border-app'
-          }`}
-          id="mobile_floating_locator_btn"
-          title={followUser ? 'Following your location (tap to recenter)' : 'Center on my location'}
-          aria-label={followUser ? 'Following your location, tap to recenter' : 'Center on my location'}
-        >
-          <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
-        </button>
+                : followUser
+                  ? 'bg-accent text-on-accent border-accent'
+                  : 'bg-surface text-app hover:bg-surface-hover border-app'
+            }`}
+            id="mobile_floating_locator_btn"
+            title={followUser ? 'Following your location (tap to recenter)' : 'Center on my location'}
+            aria-label={followUser ? 'Following your location, tap to recenter' : 'Center on my location'}
+          >
+            <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
+          </button>
+        )}
 
-        <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute sbn-map-float-btn right-4" />
+        {!mapRoutePreviewVisible && (
+          <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute sbn-map-float-btn right-4" />
+        )}
 
         {/* Location error toast */}
         {locationError && (
@@ -2160,25 +2178,29 @@ export default function SacramentoMapView({
           </div>
 
           {/* Center to User (Locate Me) control at the bottom under the +- */}
-          <button
-            type="button"
-            onClick={handleLocateUser}
-            className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
-              isLocating
-                ? 'bg-accent text-on-accent border-accent'
-                : followUser
-                  ? 'bg-accent/15 border-accent text-accent'
-                  : 'bg-surface/95 border-app text-app hover:bg-surface-hover hover:text-accent'
-            }`}
-            title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
-            aria-label={followUser ? 'Following your location, tap to recenter' : 'Follow my location'}
-            id="custom_locate_user_btn"
-          >
-            <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
-          </button>
+          {!mapRoutePreviewVisible && (
+            <button
+              type="button"
+              onClick={handleLocateUser}
+              className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl shadow-md border transition-all active:scale-95 cursor-pointer ${
+                isLocating
+                  ? 'bg-accent text-on-accent border-accent'
+                  : followUser
+                    ? 'bg-accent/15 border-accent text-accent'
+                    : 'bg-surface/95 border-app text-app hover:bg-surface-hover hover:text-accent'
+              }`}
+              title={followUser ? 'Following your location (tap to recenter)' : 'Follow my location'}
+              aria-label={followUser ? 'Following your location, tap to recenter' : 'Follow my location'}
+              id="custom_locate_user_btn"
+            >
+              <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
+            </button>
+          )}
         </div>
 
-        <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute bottom-3 left-3 z-10" />
+        {!mapRoutePreviewVisible && (
+          <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute bottom-3 left-3 z-10" />
+        )}
 
         {/* Category Color Guide Drawer Overlay */}
         <AnimatePresence>
