@@ -18,6 +18,7 @@ import {
   getSupportTicketsForUser,
   getSupportTicketsForStaff,
   getSupportTicketLastMessages,
+  getSupabaseItemById,
 } from '../supabase';
 import {
   isCommunityChat,
@@ -51,7 +52,6 @@ import {
   Send,
   AlertCircle,
   MapPin,
-  Gift,
   ChevronLeft,
   Navigation,
   CheckCircle,
@@ -78,6 +78,7 @@ import { Navigation2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
 import { isStaffRole as isSenderStaff } from '../lib/roles';
 import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
+import ChatListingPreview from './ChatListingPreview';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -192,6 +193,33 @@ export default function ChatSystem({
       setSelectedChat(null);
     }
   }, [blockedUserIds, pendingChatCompose, onClearPendingChatCompose]);
+
+  const linkedItemFromFeed = useMemo(() => {
+    if (!selectedChat?.itemId || isCommunityChat(selectedChat.id)) return undefined;
+    return items.find((i) => i.id === selectedChat.itemId);
+  }, [selectedChat, items]);
+
+  const [fetchedLinkedItem, setFetchedLinkedItem] = useState<ItemPost | null>(null);
+
+  useEffect(() => {
+    if (!selectedChat?.itemId || isCommunityChat(selectedChat.id)) {
+      setFetchedLinkedItem(null);
+      return;
+    }
+    if (linkedItemFromFeed) {
+      setFetchedLinkedItem(null);
+      return;
+    }
+    let cancelled = false;
+    void getSupabaseItemById(selectedChat.itemId).then((item) => {
+      if (!cancelled) setFetchedLinkedItem(item);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChat?.itemId, selectedChat?.id, linkedItemFromFeed]);
+
+  const resolvedLinkedItem = linkedItemFromFeed ?? fetchedLinkedItem ?? undefined;
 
   const handleStartGoGetFromChat = useCallback(
     async (linkedItem: ItemPost, otherUserId: string, otherUserName: string) => {
@@ -1118,7 +1146,7 @@ export default function ChatSystem({
         ) : selectedChat ? (
           (() => {
             const isCommunity = isCommunityChat(selectedChat.id);
-            const linkedItem = isCommunity ? undefined : items.find((i) => i.id === selectedChat.itemId);
+            const linkedItem = isCommunity ? undefined : resolvedLinkedItem;
             const isChatDisabled =
               !isCommunity &&
               linkedItem &&
@@ -1249,17 +1277,14 @@ export default function ChatSystem({
                         >
                           {otherName}
                         </button>
-                        {selectedChat.itemTitle ? (
-                          <p className="text-xs text-accent truncate flex items-center gap-1 mt-0.5">
-                            <Gift className="w-3.5 h-3.5 shrink-0" />
-                            <span>{selectedChat.itemTitle}</span>
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3 shrink-0" />
-                            <span>Sacramento neighbor</span>
-                          </p>
-                        )}
+                        <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          <span>
+                            {selectedChat.itemId
+                              ? 'Coordination chat'
+                              : 'Sacramento neighbor'}
+                          </span>
+                        </p>
                       </>
                     )}
                   </div>
@@ -1277,6 +1302,16 @@ export default function ChatSystem({
                     </button>
                   ) : null}
                 </header>
+
+                {!isCommunity && selectedChat.itemId && selectedChat.itemTitle ? (
+                  <div className="shrink-0 px-3 sm:px-4 py-3 border-b border-app">
+                    <ChatListingPreview
+                      itemId={selectedChat.itemId}
+                      itemTitle={resolvedLinkedItem?.title ?? selectedChat.itemTitle}
+                      onViewListing={onViewRelatedListing}
+                    />
+                  </div>
+                ) : null}
 
                 <div
                   className="chat-thread-bg flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4"
