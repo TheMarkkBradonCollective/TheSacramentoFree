@@ -57,6 +57,11 @@ const migrationMarkers = [
     markers: ['staffInteractionMode', 'postedAsNeighbor'],
     label: 'Staff interaction mode',
   },
+  {
+    file: 'scripts/supabase-migration-aug-20-2026-neighbor-feed.sql',
+    markers: ['feed_posts', 'feed_post_comments', 'feed_post_reactions', "'feed_post'"],
+    label: 'Neighbor feed',
+  },
 ];
 
 for (const { file, markers, label: migrationLabel } of migrationMarkers) {

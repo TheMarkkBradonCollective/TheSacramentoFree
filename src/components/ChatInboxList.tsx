@@ -50,8 +50,8 @@ export default function ChatInboxList({
       <div className="px-3 py-8 flex justify-center">
         <ChatSectionEmptyState
           icon={MessageSquare}
-          title="No messages yet"
-          description="Browse Stuff or Events and message a neighbor from any listing or event, or contact support if you need help."
+          title="No chats yet"
+          description="Browse Stuff or Events and message a neighbor from any listing, or start a new chat from the compose button."
         />
       </div>
     );

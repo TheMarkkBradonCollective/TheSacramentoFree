@@ -1143,7 +1143,7 @@ export default function ChatSystem({
       {/* Conversation list */}
       <div
         id="chats_sidebar"
-        className={`flex flex-col min-h-0 shrink-0 w-full md:w-80 lg:w-[22rem] md:border-r md:border-app/30 ${
+        className={`flex flex-col min-h-0 shrink-0 w-full md:w-80 lg:w-[22rem] md:border-r md:border-app/30 chat-inbox-panel ${
           fullBleed ? 'bg-app' : 'bg-surface/80'
         } ${selectedChat || supportView ? 'hidden md:flex' : 'flex'}`}
       >

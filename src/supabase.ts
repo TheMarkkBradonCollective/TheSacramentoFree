@@ -6581,6 +6581,8 @@ export async function submitUserReport(params: {
   reportedUserName?: string;
   proofImageUrl?: string | null;
   proofFile?: File | null;
+  feedPostId?: string;
+  feedCommentId?: string;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const subject = params.subject.trim();
   const body = params.body.trim();
@@ -6608,6 +6610,8 @@ export async function submitUserReport(params: {
       source: 'manual',
       status: 'new',
       createdAt: new Date().toISOString(),
+      ...(params.feedPostId ? { feedPostId: params.feedPostId } : {}),
+      ...(params.feedCommentId ? { feedCommentId: params.feedCommentId } : {}),
     });
 
     if (error) {

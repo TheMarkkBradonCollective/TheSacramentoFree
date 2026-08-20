@@ -1407,24 +1407,42 @@ option {
 }
 
 .chat-inbox-scroll {
-  padding: 0.5rem 0.75rem 1rem;
+  padding: 0.35rem 0.65rem 1rem;
+}
+
+.chat-inbox-panel {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-surface) 96%, var(--color-accent) 4%) 0%,
+      var(--color-bg) 28%,
+      var(--color-bg) 100%
+    );
+}
+
+.chat-inbox-header {
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(10px) saturate(1.15);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
 }
 
 .chat-inbox-row {
   width: 100%;
   text-align: left;
-  padding: 0.8rem 0.9rem;
+  padding: 0.85rem 0.95rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  border-radius: var(--radius-lg);
+  gap: 0.85rem;
+  border-radius: 1.1rem;
   border: 1px solid transparent;
+  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
-    transform 0.12s ease;
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
   cursor: pointer;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.35rem;
 }
 
 .chat-inbox-row:hover {
@@ -1437,7 +1455,8 @@ option {
 
 .chat-inbox-row--selected {
   background: var(--color-accent-soft);
-  border-color: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
 .chat-inbox-request {
@@ -1542,6 +1561,23 @@ option {
     var(--color-accent)
   );
   box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 28%, transparent);
+  color: var(--color-on-accent);
+}
+
+.sbn-feed-composer {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border));
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+}
+
+.sbn-feed-post {
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.sbn-feed-post:hover {
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-border));
 }
 
 .sbn-btn {

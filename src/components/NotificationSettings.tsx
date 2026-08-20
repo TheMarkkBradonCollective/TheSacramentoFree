@@ -43,7 +43,7 @@ const PREF_SECTIONS: {
   items: { key: BooleanPrefKey; label: string; description: string }[];
 }[] = [
   {
-    title: 'Messages & support',
+    title: 'Chat & support',
     items: [
       { key: 'messages', label: 'Direct messages', description: 'Chat messages from neighbors' },
       {

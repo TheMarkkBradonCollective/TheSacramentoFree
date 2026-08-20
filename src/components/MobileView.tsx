@@ -280,7 +280,7 @@ export default function MobileView({
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <FeedView />
+                  <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} />
                 </ScrollPage>
                 <ScrollPage
                   className={communityTab === 'stuff' ? '' : 'hidden'}
@@ -406,7 +406,7 @@ export default function MobileView({
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
           footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
-          <FeedView />
+          <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} />
         </ScrollPage>
 
         <ScrollPage
