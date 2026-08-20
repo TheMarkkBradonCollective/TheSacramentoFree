@@ -5,8 +5,8 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 ## What is already done
 
 - Release signing keystore: `android/app/sac-buynothing-release.keystore`
-- `versionCode` **26**, `versionName` **0.1.0**
-- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0026.aab` (and legacy `sac-buy-nothing.aab`)
+- `versionCode` **27**, `versionName` **0.1.0**
+- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0027.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`
 - Firebase push configured (client + server)
