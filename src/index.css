@@ -1973,6 +1973,51 @@ option {
   color: var(--color-accent);
 }
 
+.sbn-filter-toggle-group {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (min-width: 640px) {
+  .sbn-filter-toggle-group {
+    gap: 0.5rem;
+  }
+}
+
+.sbn-filter-switch-compact {
+  height: 1.75rem;
+  min-width: 3.1rem;
+  padding: 0 0.45rem 0 1.55rem;
+}
+
+.sbn-filter-switch-compact.sbn-filter-switch-on {
+  padding: 0 1.55rem 0 0.45rem;
+}
+
+.sbn-filter-switch-compact .sbn-filter-switch-name {
+  font-size: 0.625rem;
+}
+
+.sbn-filter-switch-compact .sbn-filter-switch-thumb {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.4rem;
+}
+
+.sbn-feed-toolbar-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sbn-feed-toolbar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .sbn-help-list-item {
   display: flex;
   align-items: center;

@@ -2,9 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
-  ArrowLeftRight,
   CircleDot,
-  Gift,
   LayoutGrid,
   LayoutList,
   Plus,
@@ -17,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
+import FilterToggleGroup from './FilterToggleGroup';
 import ItemCard from './ItemCard';
 import { ItemGridSkeleton } from './Skeleton';
 import PostItemModal from './PostItemModal';
@@ -29,7 +28,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_TYPE_FILTERS, LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
@@ -78,29 +77,16 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
 
+const FEED_TYPE_OPTIONS: { value: ListingTypeFilter; label: string; id: string }[] = [
+  { value: 'all', label: 'Everything', id: 'feed_type_all' },
+  { value: 'giveaway', label: 'Giving', id: 'feed_type_giving' },
+  { value: 'looking', label: 'Looking', id: 'feed_type_looking' },
+  { value: 'trade', label: 'Trading', id: 'feed_type_trading' },
+];
+
 function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string {
   if (compact) return mode === 'nearest' ? 'Near' : 'New';
   return mode === 'nearest' ? 'Nearest' : 'Newest';
-}
-
-function feedTypeToolbarLabel(type: ListingTypeFilter): string {
-  switch (type) {
-    case 'all':
-      return 'All';
-    case 'giveaway':
-      return 'Give';
-    case 'looking':
-      return 'Look';
-    case 'trade':
-      return 'Trade';
-  }
-}
-
-function FeedTypeToolbarIcon({ type }: { type: ListingTypeFilter }) {
-  if (type === 'giveaway') return <Gift className="w-3.5 h-3.5 shrink-0" aria-hidden />;
-  if (type === 'looking') return <SearchIcon className="w-3.5 h-3.5 shrink-0" aria-hidden />;
-  if (type === 'trade') return <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" aria-hidden />;
-  return <CircleDot className="w-3.5 h-3.5 shrink-0" aria-hidden />;
 }
 
 function needsPickupListing(item: ItemPost): boolean {
@@ -314,13 +300,9 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set());
   };
 
-  const cycleTypeFilter = () => {
-    setSelectedType((current) => {
-      const idx = LISTING_TYPE_FILTERS.indexOf(current);
-      const next = LISTING_TYPE_FILTERS[(idx + 1) % LISTING_TYPE_FILTERS.length];
-      if (next !== 'all') setSelectedCategory('All Categories');
-      return next;
-    });
+  const handleToolbarTypeChange = (type: ListingTypeFilter) => {
+    setSelectedType(type);
+    if (type !== 'all') setSelectedCategory('All Categories');
   };
 
   const filteredItems = useMemo(() => {
@@ -411,13 +393,13 @@ export default function ItemGrid({
             ) : null}
           </div>
 
-          <div className="flex-1 min-w-0 flex justify-center px-0.5">
-            <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0 max-w-full">
+          <div className="flex-1 min-w-0 flex justify-center px-0.5 overflow-x-auto sbn-feed-toolbar-scroll">
+            <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
               <button
                 type="button"
                 id="feed_sort_toggle"
                 onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0"
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
                 aria-pressed={gridSortMode === 'nearest'}
                 aria-label={feedSortToolbarLabel(gridSortMode, false)}
               >
@@ -425,20 +407,14 @@ export default function ItemGrid({
                 <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
                 <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
               </button>
-              <button
-                type="button"
-                id="feed_type_toggle"
-                onClick={cycleTypeFilter}
-                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 ${
-                  selectedType !== 'all'
-                    ? 'border-accent bg-accent-soft text-accent'
-                    : 'border-app bg-inset text-app hover:border-accent/40'
-                }`}
-                aria-pressed={selectedType !== 'all'}
-              >
-                <FeedTypeToolbarIcon type={selectedType} />
-                <span>{feedTypeToolbarLabel(selectedType)}</span>
-              </button>
+              <FilterToggleGroup
+                id="feed_type_group"
+                ariaLabel="Listing type"
+                options={FEED_TYPE_OPTIONS}
+                value={selectedType}
+                onChange={handleToolbarTypeChange}
+                compact
+              />
             </div>
           </div>
 
