@@ -288,7 +288,7 @@ function NavigationDetailsSheet({
     <motion.div
       id="nav_details_sheet"
       className={`sbn-nav-sheet relative z-30 flex flex-col w-full safe-area-pb ${
-        expanded ? 'max-h-[72vh]' : ''
+        expanded ? 'is-expanded' : ''
       }`}
       initial={false}
     >
@@ -310,8 +310,8 @@ function NavigationDetailsSheet({
         <div className="sbn-nav-sheet-handle" />
       </div>
 
-      <div className="shrink-0 px-4 pb-4 pt-1">
-        <div className="flex items-center gap-3">
+      <div className="sbn-nav-sheet-body">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={() => onSnapChange(expanded ? 'collapsed' : 'expanded')}
@@ -322,20 +322,26 @@ function NavigationDetailsSheet({
           </button>
 
           <div className="flex-1 min-w-0">
-            <p className="sbn-nav-sheet-eta">
-              {arrived ? 'Arrived' : formatNavDuration(remainingSeconds)}
+            <p className="flex items-baseline gap-2 min-w-0">
+              <span className="sbn-nav-sheet-eta shrink-0">
+                {arrived ? 'Arrived' : formatNavDuration(remainingSeconds)}
+              </span>
+              <span className="text-xs font-medium tabular-nums truncate text-[var(--sbn-nav-text-secondary)]">
+                {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
+              </span>
             </p>
-            <p className="text-sm font-medium mt-1 tabular-nums text-[var(--sbn-nav-text-secondary)]">
-              {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
-            </p>
-            <p className="text-[12px] truncate mt-1 font-semibold text-[var(--sbn-nav-text)]">
+            <p className="text-[12px] truncate mt-0.5 font-semibold text-[var(--sbn-nav-text)]">
               {destinationLabel}
             </p>
             {currentRoad && currentRoad !== destinationLabel ? (
-              <p className="text-[11px] truncate mt-0.5 text-[var(--sbn-nav-text-secondary)]">{currentRoad}</p>
+              <p className="sbn-nav-sheet-road text-[11px] truncate mt-0.5 text-[var(--sbn-nav-text-secondary)]">
+                {currentRoad}
+              </p>
             ) : null}
             {gpsAccuracy != null && gpsAccuracy > 35 && !arrived && (
-              <p className="text-[10px] text-[var(--sbn-nav-warning)] mt-1">GPS weak — ±{Math.round(gpsAccuracy)}m</p>
+              <p className="text-[10px] text-[var(--sbn-nav-warning)] mt-1 truncate">
+                GPS weak — ±{Math.round(gpsAccuracy)}m
+              </p>
             )}
           </div>
 
@@ -546,6 +552,17 @@ function withProgrammaticNavCamera(fn: () => void): void {
   }
 }
 
+function readNavChromeFlags(): { compact: boolean; narrow: boolean } {
+  if (typeof window === 'undefined') return { compact: false, narrow: false };
+  const viewport = window.visualViewport;
+  const height = viewport?.height ?? window.innerHeight;
+  const width = viewport?.width ?? window.innerWidth;
+  return {
+    compact: height <= 640 || width > height + 48,
+    narrow: width <= 400,
+  };
+}
+
 /** Pixel offset so the user sits in the visible map hole between banner and sheet. */
 function visibleMapCenterOffsetPx(map: L.Map): { x: number; y: number } {
   const size = map.getSize();
@@ -752,19 +769,24 @@ export default function MapNavigationView({
   // the instruction banner and the details sheet. Below this threshold we switch to a
   // more compact banner and lay the floating controls out as a row instead of a
   // column so nothing gets clipped by or overlaps the sheet.
-  const [isCompact, setIsCompact] = useState(
-    () => typeof window !== 'undefined' && window.innerHeight <= 500,
-  );
+  const [isCompact, setIsCompact] = useState(() => readNavChromeFlags().compact);
+  const [isNarrow, setIsNarrow] = useState(() => readNavChromeFlags().narrow);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const update = () => setIsCompact(window.innerHeight <= 500);
+    const update = () => {
+      const flags = readNavChromeFlags();
+      setIsCompact(flags.compact);
+      setIsNarrow(flags.narrow);
+    };
     update();
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
+    window.visualViewport?.addEventListener('resize', update);
     return () => {
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
+      window.visualViewport?.removeEventListener('resize', update);
     };
   }, []);
 
@@ -1737,7 +1759,7 @@ export default function MapNavigationView({
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}`}
+      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}${isNarrow ? ' sbn-nav-narrow' : ''}`}
       id="map_navigation_view"
       style={{ background: 'var(--sbn-nav-bg)' }}
       onPointerDown={() => voiceRef.current.unlock()}
@@ -1774,8 +1796,8 @@ export default function MapNavigationView({
           </div>
         )}
 
-        <div className="absolute inset-0 z-20 pointer-events-none flex flex-col">
-          <div id="nav_top_stack" className="pointer-events-auto shrink-0 sbn-nav-top-stack">
+        <div className="sbn-nav-chrome">
+          <div id="nav_top_stack" className="pointer-events-auto sbn-nav-top-stack">
             <div
               id="nav_instruction_banner"
               className={`sbn-nav-banner ${isCompact ? 'sbn-nav-banner-compact' : ''}`}
@@ -1833,13 +1855,11 @@ export default function MapNavigationView({
             <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
           </div>
 
-          {gpsError && !showFatalError && (
-            <div className="sbn-nav-gps-toast pointer-events-none">{gpsError}</div>
-          )}
-
-          {!loading && route && (
-            <div className="sbn-nav-map-hud">
-              {sheetSnap === 'collapsed' && (
+          <div className="sbn-nav-map-hud">
+            {gpsError && !showFatalError && (
+              <div className="sbn-nav-gps-toast pointer-events-none">{gpsError}</div>
+            )}
+            {!loading && route && sheetSnap === 'collapsed' && (
                 <>
                   {showSpeedCard && (
                     <div className="sbn-nav-speed-dock">
@@ -1882,12 +1902,11 @@ export default function MapNavigationView({
                     </button>
                   </div>
                 </>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           {!loading && route && (
-            <div className="shrink-0 pointer-events-auto">
+            <div className="min-w-0 min-h-0 pointer-events-auto">
               <NavigationDetailsSheet
                 snap={sheetSnap}
                 onSnapChange={setSheetSnap}

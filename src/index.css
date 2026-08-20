@@ -137,9 +137,15 @@ html.sbn-session-restore #root:empty {
   --sbn-nav-danger: #ff4444;
   --sbn-nav-warning: #ffb000;
   --sbn-nav-success: #22c55e;
-  --sbn-nav-sheet-height: 7.25rem;
+  --sbn-nav-sheet-height: 6.5rem;
   font-family: var(--font-sans);
   overflow: hidden;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  padding-left: var(--sbn-inset-left, 0px);
+  padding-right: var(--sbn-inset-right, 0px);
 }
 
 #map_navigation_view.sbn-nav--dark {
@@ -203,15 +209,7 @@ html.sbn-session-restore #root:empty {
 }
 
 #map_navigation_view .leaflet-control-attribution {
-  margin-right: 3.6rem;
-  margin-bottom: calc(var(--sbn-nav-sheet-height, 7.25rem) + 0.9rem);
-  max-width: calc(100% - 9.5rem);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 9px;
-  opacity: 0.72;
-  z-index: 5;
+  display: none;
 }
 
 #map_navigation_view .nav-user-marker,
@@ -227,15 +225,28 @@ html.sbn-session-restore #root:empty {
   color: var(--sbn-nav-text);
 }
 
+#map_navigation_view .sbn-nav-chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: minmax(0, auto) minmax(5.5rem, 1fr) minmax(0, auto);
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 #map_navigation_view .sbn-nav-top-stack {
   margin: 0;
   border-radius: 0 0 1.25rem 1.25rem;
   overflow: hidden;
   position: relative;
   z-index: 25;
+  max-height: 34dvh;
   background: var(--sbn-nav-chrome);
   color: var(--sbn-nav-text);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
 }
 
 #map_navigation_view .sbn-nav-banner {
@@ -286,6 +297,8 @@ html.sbn-session-restore #root:empty {
   font-weight: 600;
   line-height: 1.25;
   color: var(--sbn-nav-text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -337,11 +350,13 @@ html.sbn-session-restore #root:empty {
 
 #map_navigation_view .sbn-nav-mode-btn {
   height: 2.05rem;
+  min-width: 0;
   border-radius: 9999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
+  padding: 0 0.3rem;
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--sbn-nav-text-secondary);
@@ -349,12 +364,32 @@ html.sbn-session-restore #root:empty {
   border: 0;
 }
 
+#map_navigation_view .sbn-nav-mode-btn span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #map_navigation_view .sbn-nav-mode-btn.is-selected {
   background: var(--color-accent);
   color: var(--color-on-accent);
 }
 
-#map_navigation_view.sbn-nav-compact .sbn-nav-mode-btn span {
+#map_navigation_view.sbn-nav-compact .sbn-nav-mode-btn span,
+#map_navigation_view.sbn-nav-narrow .sbn-nav-mode-btn span {
+  display: none;
+}
+
+#map_navigation_view.sbn-nav-compact .sbn-nav-banner-instruction {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+#map_navigation_view.sbn-nav-compact .sbn-nav-banner-then,
+#map_navigation_view.sbn-nav-compact .sbn-nav-lane,
+#map_navigation_view.sbn-nav-compact .sbn-nav-voice-strip,
+#map_navigation_view.sbn-nav-compact .sbn-nav-sheet-road {
   display: none;
 }
 
@@ -487,8 +522,10 @@ html.sbn-session-restore #root:empty {
 
 #map_navigation_view .sbn-nav-map-hud {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  min-height: 5.5rem;
+  overflow: hidden;
+  container-type: size;
+  container-name: navhud;
 }
 
 #map_navigation_view .sbn-nav-speed-dock {
@@ -511,6 +548,22 @@ html.sbn-session-restore #root:empty {
 #map_navigation_view.sbn-nav-compact .sbn-nav-fab-dock {
   flex-direction: row;
   gap: 0.4rem;
+}
+
+@container navhud (max-height: 8.75rem) {
+  .sbn-nav-speed-dock {
+    display: none;
+  }
+
+  .sbn-nav-fab-dock {
+    flex-direction: row;
+  }
+}
+
+@container navhud (max-height: 3.75rem) {
+  .sbn-nav-fab-dock {
+    display: none;
+  }
 }
 
 #map_navigation_view .sbn-nav-user-puck {
@@ -725,11 +778,24 @@ html.sbn-session-restore #root:empty {
   border-top-right-radius: 1.35rem;
   box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.2);
   border-top: 1px solid var(--sbn-nav-glass-border);
+  max-height: 34dvh;
+  min-width: 0;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+#map_navigation_view .sbn-nav-sheet.is-expanded {
+  max-height: min(70dvh, calc(100% - 6rem));
+}
+
+#map_navigation_view .sbn-nav-sheet-body {
+  padding: 0.1rem 1rem 0.75rem;
+  min-width: 0;
 }
 
 #map_navigation_view .sbn-nav-sheet-eta {
   font-family: var(--font-display);
-  font-size: 1.65rem;
+  font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -737,9 +803,28 @@ html.sbn-session-restore #root:empty {
   font-variant-numeric: tabular-nums;
 }
 
+#map_navigation_view.sbn-nav-compact .sbn-nav-sheet-eta {
+  font-size: 1.15rem;
+}
+
+#map_navigation_view.sbn-nav-compact .sbn-nav-sheet-body {
+  padding: 0.05rem 0.75rem 0.55rem;
+}
+
+#map_navigation_view.sbn-nav-compact .sbn-nav-sheet-expand,
+#map_navigation_view.sbn-nav-compact .sbn-nav-sheet-action {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+#map_navigation_view.sbn-nav-compact .sbn-nav-exit-btn {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+}
+
 #map_navigation_view .sbn-nav-gps-toast {
-  margin: 0.55rem 0.85rem 0;
-  padding: 0.55rem 0.75rem;
+  margin: 0.5rem 0.75rem 0;
+  padding: 0.45rem 0.7rem;
   border-radius: 0.85rem;
   background: var(--sbn-nav-chrome);
   color: var(--sbn-nav-warning);
@@ -747,6 +832,10 @@ html.sbn-session-restore #root:empty {
   text-align: center;
   font-size: 0.75rem;
   font-weight: 600;
+  max-width: calc(100% - 1.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #map_navigation_view .sbn-nav-sheet-handle {
