@@ -1,0 +1,8 @@
+Android beta v0.1.0.0046 (versionCode 46)
+
+What's new:
+• Profile name and photo no longer reset to defaults when saving other settings
+• Native app only signs you out when you sign in on another device — not on resume or account switch
+• Feed posts show Web / Lite / Full badge with app version
+
+Download (sideload): https://www.sacramentobuynothing.com/download

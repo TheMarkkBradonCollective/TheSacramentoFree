@@ -72,6 +72,7 @@ const APK_0042_PUBLISHED_AT = '2026-08-20T19:45:00.000Z';
 const APK_0043_PUBLISHED_AT = '2026-08-20T20:30:00.000Z';
 const APK_0044_PUBLISHED_AT = '2026-08-20T21:00:00.000Z';
 const APK_0045_PUBLISHED_AT = '2026-08-20T21:30:00.000Z';
+const APK_0046_PUBLISHED_AT = '2026-08-20T22:35:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -126,6 +127,37 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0046',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0046',
+    'Profile settings stick, no false sign-out, feed post client badges.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0046 (versionCode 46).
+
+Since 0045:
+• Profile name and photo no longer reset when saving Go Get, nav, or other settings
+• Native app only signs out when you sign in on another device — not on resume or account switch
+• Feed posts show Web / Lite / Full badge with app version
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0046.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run profile-identity-guard and native-session-realtime migrations in Supabase before rollout.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 46
+- play-store-assets/release-notes-v0.1.0-0046.txt
+- src/lib/profilePersistence.ts — client identity guards
+- scripts/supabase-migration-aug-20-2026-profile-identity-guard.sql
+- scripts/supabase-migration-aug-20-2026-native-session-realtime.sql
+
+HISTORY
+2026-08-20 — /runit release (PR #325); Android beta 0046 built.`,
+    APK_0046_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0045',
     '2026-08-20',
@@ -1518,6 +1550,28 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0046',
+    '2026-08-20',
+    'New Android beta 0046 — profile hardening + session fix',
+    'Settings no longer wipe your name/photo; native app stops false sign-out.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0046: saved profile name and photo stay put, native app only signs out on a real other-device login, feed posts show Web/Lite/Full badges.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run profile-identity-guard and native-session-realtime migrations in Supabase before rollout.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0046.
+
+HISTORY
+2026-08-20 — Android beta 0046 /runit release (PR #325).`,
+    APK_0046_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0045',
     '2026-08-20',
