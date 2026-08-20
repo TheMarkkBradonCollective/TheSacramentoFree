@@ -28,14 +28,10 @@ Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
 Android beta v0.1.0.0031 (versionCode 31)
 
-What's new (Android app):
-• Launcher icon matches the PWA — full-bleed orange, no white ring
-• Turn-by-turn nav: banner pinned to top, camera stays on you
-• Chat threads show listing or event preview at the top
-• Profile stats: three cards on top, two below
-• Listing cards show only the type badge (Given / Looking / Trade)
-• Listing detail header scrolls correctly
-• Field test tooling for end-to-end QA
+What's new:
+• Nav banner pinned to top; chat shows listing or event preview
+• Profile stats layout and listing type badges
+• Listing detail header scroll fix
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ───────────────────────────────────────────────────────────────
