@@ -93,7 +93,7 @@ export async function persistUserStaffInteractionMode(
   const next = normalizeStaffInteractionMode(mode);
   writeStaffInteractionModePref(profile.uid, next);
   const updated: UserProfile = { ...profile, staffInteractionMode: next };
-  const result = await upsertSupabaseProfile(updated);
+  const result = await upsertSupabaseProfile(updated, { scope: 'preferences' });
   if (!result.ok) return result;
   return { ok: true, profile: updated };
 }

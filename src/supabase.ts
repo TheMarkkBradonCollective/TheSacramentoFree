@@ -45,6 +45,14 @@ import {
   type StaffApplySeatCounts,
 } from './lib/staffApplications';
 import { notifyAccountUpdate } from './lib/pushEvents';
+import {
+  isDicebearAvatarUrl,
+  photoUrlForProfileUpsert,
+  resolveIdentityDisplayName,
+  resolveIdentityPhotoUrl,
+} from './lib/profilePersistence';
+
+export { isDicebearAvatarUrl };
 
 // Read values from environment or fall back to the provided strings.
 const metaEnv = (import.meta as any).env || {};
@@ -569,7 +577,7 @@ export function profileFromAuthUser(user: {
         ? meta.picture
         : undefined;
   const photoURL =
-    providerPhoto && sanitizePhotoUrlForDb(providerPhoto)
+    providerPhoto && sanitizePhotoUrlForDb(providerPhoto) && !isDicebearAvatarUrl(providerPhoto)
       ? sanitizePhotoUrlForDb(providerPhoto)!
       : `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.id)}`;
 
@@ -724,8 +732,75 @@ export function profileFromListingAuthor(
   };
 }
 
+type ProfileUpsertScope = 'full' | 'preferences' | 'bootstrap' | 'identity';
+
+type ExistingUserIdentityRow = {
+  uid: string;
+  displayName?: string | null;
+  photoURL?: string | null;
+  email?: string | null;
+  createdAt?: string | null;
+};
+
+async function fetchExistingUserIdentityRow(uid: string): Promise<ExistingUserIdentityRow | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('uid, displayName, photoURL, email, createdAt')
+    .eq('uid', uid)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as ExistingUserIdentityRow;
+}
+
+function buildUserPrefsPayload(profileForSave: UserProfile) {
+  return {
+    goGetEnabled: profileForSave.goGetEnabled === true,
+    pickupAvailability: profileForSave.pickupAvailability ?? null,
+    goGetRingDurationSeconds: normalizeGoGetRingDuration(profileForSave.goGetRingDurationSeconds),
+    goGetRingPattern: normalizeGoGetRingPattern(profileForSave.goGetRingPattern),
+    navigationSettings: profileForSave.navigationSettings ?? null,
+    appPreferences: profileForSave.appPreferences ?? null,
+    staffInteractionMode:
+      profileForSave.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
+  };
+}
+
+function prefsColumnMigrationHint(
+  error: { code?: string; message?: string } | null,
+  prefsPayload: ReturnType<typeof buildUserPrefsPayload>,
+  profileForSave: UserProfile,
+): string | null {
+  if (!error) return null;
+  const errText = `${error.code || ''} ${error.message || ''}`;
+  if (!/goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(errText)) {
+    return null;
+  }
+
+  const wantsGoGetPrefs =
+    prefsPayload.goGetEnabled === true ||
+    prefsPayload.pickupAvailability != null ||
+    prefsPayload.goGetRingDurationSeconds !== 140 ||
+    prefsPayload.goGetRingPattern !== 'ring';
+  if (/pickupAvailability|goGetRing/i.test(errText) && wantsGoGetPrefs) {
+    return 'Go Get settings could not be saved. Run scripts/supabase-migration-aug-20-2026-go-get-ring-availability.sql in the Supabase SQL editor, then try again.';
+  }
+  if (/navigationSettings/i.test(errText) && prefsPayload.navigationSettings != null) {
+    return 'Navigation settings could not be saved. Run scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql in the Supabase SQL editor, then try again.';
+  }
+  if (/staffInteractionMode/i.test(errText) && isStaffRole(profileForSave.role)) {
+    return 'Staff/user mode could not be saved. Run scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql in the Supabase SQL editor, then try again.';
+  }
+  return null;
+}
+
 export async function upsertSupabaseProfile(
   profile: UserProfile,
+  options: {
+    scope?: ProfileUpsertScope;
+    forceIdentity?: boolean;
+    allowClearPhoto?: boolean;
+  } = {},
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
     const email = profile.email?.trim();
@@ -733,106 +808,201 @@ export async function upsertSupabaseProfile(
       return { ok: false, errorMessage: 'Profile email is missing. Sign out and sign in again.' };
     }
 
-    const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
+    const rawScope = options.scope ?? 'identity';
+    const scope: ProfileUpsertScope = rawScope === 'full' ? 'identity' : rawScope;
+
     const profileForSave = mergeStoredAppPreferencesIntoProfile(
       mergeStaffInteractionModeIntoProfile(
         mergeNavigationPrefsIntoProfile(mergeGoGetPrefsIntoProfile(profile)),
       ),
     );
 
-    const payload = {
-      uid: profileForSave.uid,
-      displayName: profileForSave.displayName.trim(),
-      photoURL,
+    if (scope === 'preferences') {
+      const prefsPayload = buildUserPrefsPayload(profileForSave);
+
+      let { error } = await supabase.from('users').update(prefsPayload).eq('uid', profileForSave.uid);
+
+      const migrationHint = prefsColumnMigrationHint(error, prefsPayload, profileForSave);
+      if (migrationHint) {
+        return { ok: false, errorMessage: migrationHint };
+      }
+
+      if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+        const {
+          goGetEnabled: _goGet,
+          staffInteractionMode: _mode,
+          pickupAvailability: _avail,
+          goGetRingDurationSeconds: _ringDur,
+          goGetRingPattern: _ringPat,
+          navigationSettings: _nav,
+          appPreferences: _prefs,
+          ...legacyPrefs
+        } = prefsPayload;
+        ({ error } = await supabase.from('users').update(legacyPrefs).eq('uid', profileForSave.uid));
+      }
+
+      if (error) {
+        handleSupabaseError(error, 'users');
+        return { ok: false, errorMessage: error.message };
+      }
+
+      setSupabaseConfigurationState(true);
+      return { ok: true };
+    }
+
+    const existing = await fetchExistingUserIdentityRow(profileForSave.uid);
+
+    if (scope === 'bootstrap') {
+      if (existing) {
+        setSupabaseConfigurationState(true);
+        return { ok: true };
+      }
+
+      const displayName = resolveIdentityDisplayName({
+        existingDisplayName: null,
+        incomingDisplayName: profileForSave.displayName,
+        email,
+      });
+
+      const photoURL = photoUrlForProfileUpsert(profileForSave.photoURL);
+      const insertPayload = {
+        uid: profileForSave.uid,
+        displayName,
+        ...(photoURL !== undefined ? { photoURL } : {}),
+        email,
+        neighborhood: profileForSave.neighborhood || 'Sacramento',
+        bio: profileForSave.bio?.trim() || null,
+        role: profileForSave.role || 'user',
+        createdAt: coerceToIsoDate(profileForSave.createdAt),
+      };
+
+      const { error } = await supabase.from('users').insert(insertPayload);
+      if (error) {
+        handleSupabaseError(error, 'users');
+        return { ok: false, errorMessage: error.message };
+      }
+
+      setSupabaseConfigurationState(true);
+      return { ok: true };
+    }
+
+    const displayName = resolveIdentityDisplayName({
+      existingDisplayName: existing?.displayName,
+      incomingDisplayName: profileForSave.displayName,
+      email,
+      force: options.forceIdentity,
+    });
+
+    if (!displayName.trim()) {
+      return { ok: false, errorMessage: 'Display name is required.' };
+    }
+
+    const photoURL = resolveIdentityPhotoUrl({
+      existingPhotoURL: existing?.photoURL,
+      incomingPhotoURL: profileForSave.photoURL,
+      allowClearPhoto: options.allowClearPhoto,
+    });
+
+    const prefsPayload = buildUserPrefsPayload(profileForSave);
+    const updatePayload = {
+      displayName,
+      ...(photoURL !== undefined ? { photoURL } : {}),
       email,
       neighborhood: profileForSave.neighborhood,
       bio: profileForSave.bio?.trim() || null,
-      goGetEnabled: profileForSave.goGetEnabled === true,
-      pickupAvailability: profileForSave.pickupAvailability ?? null,
-      goGetRingDurationSeconds: normalizeGoGetRingDuration(profileForSave.goGetRingDurationSeconds),
-      goGetRingPattern: normalizeGoGetRingPattern(profileForSave.goGetRingPattern),
-      navigationSettings: profileForSave.navigationSettings ?? null,
-      appPreferences: profileForSave.appPreferences ?? null,
-      staffInteractionMode:
-        profileForSave.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
-      createdAt: coerceToIsoDate(profileForSave.createdAt),
+      ...prefsPayload,
     };
 
-    let { data, error } = await supabase
-      .from('users')
-      .upsert(payload, { onConflict: 'uid' })
-      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, navigationSettings, appPreferences, createdAt')
-      .single();
+    if (!existing) {
+      const insertPayload = {
+        uid: profileForSave.uid,
+        ...updatePayload,
+        role: profileForSave.role || 'user',
+        createdAt: coerceToIsoDate(profileForSave.createdAt),
+      };
 
-    // Older DBs may not have optional profile columns yet — retry without missing columns.
-    if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
-      const wantsGoGetPrefs =
-        payload.goGetEnabled === true ||
-        payload.pickupAvailability != null ||
-        payload.goGetRingDurationSeconds !== 140 ||
-        payload.goGetRingPattern !== 'ring';
-      if (/pickupAvailability|goGetRing/i.test(`${error.code || ''} ${error.message || ''}`) && wantsGoGetPrefs) {
-        return {
-          ok: false,
-          errorMessage:
-            'Go Get settings could not be saved. Run scripts/supabase-migration-aug-20-2026-go-get-ring-availability.sql in the Supabase SQL editor, then try again.',
-        };
+      let { error } = await supabase.from('users').insert(insertPayload);
+
+      const migrationHint = prefsColumnMigrationHint(error, prefsPayload, profileForSave);
+      if (migrationHint) {
+        return { ok: false, errorMessage: migrationHint };
       }
-      if (/navigationSettings/i.test(`${error.code || ''} ${error.message || ''}`) && payload.navigationSettings != null) {
-        return {
-          ok: false,
-          errorMessage:
-            'Navigation settings could not be saved. Run scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql in the Supabase SQL editor, then try again.',
-        };
+
+      if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+        const {
+          goGetEnabled: _goGet,
+          staffInteractionMode: _mode,
+          pickupAvailability: _avail,
+          goGetRingDurationSeconds: _ringDur,
+          goGetRingPattern: _ringPat,
+          navigationSettings: _nav,
+          appPreferences: _prefs,
+          ...legacyPayload
+        } = insertPayload;
+        ({ error } = await supabase.from('users').insert(legacyPayload));
       }
-      if (/staffInteractionMode/i.test(`${error.code || ''} ${error.message || ''}`) && isStaffRole(profileForSave.role)) {
-        return {
-          ok: false,
-          errorMessage:
-            'Staff/user mode could not be saved. Run scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql in the Supabase SQL editor, then try again.',
-        };
+
+      if (error) {
+        handleSupabaseError(error, 'users');
+        return { ok: false, errorMessage: error.message };
       }
-      const {
-        goGetEnabled: _goGet,
-        staffInteractionMode: _mode,
-        pickupAvailability: _avail,
-        goGetRingDurationSeconds: _ringDur,
-        goGetRingPattern: _ringPat,
-        navigationSettings: _nav,
-        appPreferences: _prefs,
-        ...legacyPayload
-      } = payload;
-      ({ data, error } = await supabase
+    } else {
+      let { data, error } = await supabase
         .from('users')
-        .upsert(legacyPayload, { onConflict: 'uid' })
-        .select('uid, photoURL, displayName, email, neighborhood, bio, role, createdAt')
-        .single());
-    }
+        .update(updatePayload)
+        .eq('uid', profileForSave.uid)
+        .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, navigationSettings, appPreferences, createdAt')
+        .maybeSingle();
 
-    if (error) {
-      handleSupabaseError(error, 'users');
-      return { ok: false, errorMessage: error.message };
-    }
+      const migrationHint = prefsColumnMigrationHint(error, prefsPayload, profileForSave);
+      if (migrationHint) {
+        return { ok: false, errorMessage: migrationHint };
+      }
 
-    const saved = normalizeUserProfileRow(data as Record<string, unknown>);
+      if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+        const {
+          goGetEnabled: _goGet,
+          staffInteractionMode: _mode,
+          pickupAvailability: _avail,
+          goGetRingDurationSeconds: _ringDur,
+          goGetRingPattern: _ringPat,
+          navigationSettings: _nav,
+          appPreferences: _prefs,
+          ...legacyPayload
+        } = updatePayload;
+        ({ data, error } = await supabase
+          .from('users')
+          .update(legacyPayload)
+          .eq('uid', profileForSave.uid)
+          .select('uid, photoURL, displayName, email, neighborhood, bio, role, createdAt')
+          .maybeSingle());
+      }
 
-    if (photoURL && !saved?.photoURL) {
-      const { error: patchError } = await supabase
-        .from('users')
-        .update({ photoURL })
-        .eq('uid', profile.uid);
-      if (patchError) {
-        return {
-          ok: false,
-          errorMessage:
-            patchError.message ||
-            'Profile saved but photoURL column could not be updated — check users table schema in Supabase.',
-        };
+      if (error) {
+        handleSupabaseError(error, 'users');
+        return { ok: false, errorMessage: error.message };
+      }
+
+      const saved = normalizeUserProfileRow(data as Record<string, unknown>);
+
+      if (photoURL && !saved?.photoURL) {
+        const { error: patchError } = await supabase
+          .from('users')
+          .update({ photoURL })
+          .eq('uid', profile.uid);
+        if (patchError) {
+          return {
+            ok: false,
+            errorMessage:
+              patchError.message ||
+              'Profile saved but photoURL column could not be updated — check users table schema in Supabase.',
+          };
+        }
       }
     }
 
     if (photoURL) {
-      void syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
+      void syncProfilePhotoAcrossApp(profile.uid, photoURL, displayName);
     }
 
     setSupabaseConfigurationState(true);
@@ -1253,13 +1423,9 @@ function buildItemInsertPayload(item: ItemPost, includeImageUrl: boolean) {
 
 export async function createSupabaseItem(
   item: ItemPost,
-  author?: UserProfile,
+  _author?: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
-    if (author?.email) {
-      await upsertSupabaseProfile(author);
-    }
-
     let payload = buildItemInsertPayload(item, true);
     let { error } = await supabase.from('items').insert(payload);
 
@@ -3913,10 +4079,6 @@ export async function createSupabaseEvent(
       }
     }
 
-    if (author?.email) {
-      await upsertSupabaseProfile(author);
-    }
-
     const payload = buildCommunityEventInsertPayload(event);
     const { error } = await supabase.from('community_events').insert(payload);
 
@@ -3978,10 +4140,6 @@ export async function createSupabaseEventSeries(
             'Community events unlock at 500 neighbors. Share the invite link to help us get there!',
         };
       }
-    }
-
-    if (author?.email) {
-      await upsertSupabaseProfile(author);
     }
 
     const payloads = events.map((event) => buildCommunityEventInsertPayload(event));
@@ -5398,10 +5556,6 @@ export async function upsertSupabaseAppReview(
   }
 
   try {
-    if (author.email) {
-      await upsertSupabaseProfile(author);
-    }
-
     const payload = {
       id: review.id || `review_${author.uid}`,
       userId: author.uid,

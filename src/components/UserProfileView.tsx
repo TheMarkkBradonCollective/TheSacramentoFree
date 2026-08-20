@@ -7,6 +7,7 @@ import {
   upsertSupabaseProfile,
   uploadProfilePhoto,
   getSupabaseProfile,
+  isDicebearAvatarUrl,
 } from '../supabase';
 import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import RoleBadge from './RoleBadge';
@@ -147,6 +148,13 @@ export default function UserProfileView({
   }, [userProfile.uid]);
 
   useEffect(() => {
+    if (isSaving || isPhotoUploading) return;
+    setDisplayName(userProfile.displayName);
+    setNeighborhood(userProfile.neighborhood);
+    setBio(userProfile.bio || '');
+  }, [userProfile.uid, userProfile.displayName, userProfile.neighborhood, userProfile.bio, isSaving, isPhotoUploading]);
+
+  useEffect(() => {
     if (!onOpenAwards) return;
     let cancelled = false;
     setAwardsLoading(true);
@@ -188,21 +196,32 @@ export default function UserProfileView({
       setErrorMsg('Display name is required.');
       return;
     }
+    if (isPhotoUploading) {
+      setErrorMsg('Please wait for your photo upload to finish.');
+      return;
+    }
 
     setIsSaving(true);
     setErrorMsg('');
     setSuccessMsg('');
 
-    const photoForSave =
-      photoURL.startsWith('data:') || photoURL.startsWith('blob:')
-        ? (sanitizeRemotePhoto(userProfile.photoURL) ?? undefined)
-        : photoURL;
+    const resolvePhotoForSave = (): string | undefined => {
+      if (photoURL.startsWith('data:') || photoURL.startsWith('blob:')) {
+        return sanitizeRemotePhoto(userProfile.photoURL);
+      }
+      if (isDicebearAvatarUrl(photoURL)) {
+        return sanitizeRemotePhoto(userProfile.photoURL);
+      }
+      return sanitizeRemotePhoto(photoURL);
+    };
+
+    const photoForSave = resolvePhotoForSave();
 
     const updateData = {
       displayName: displayName.trim(),
       neighborhood,
       bio: bio.trim(),
-      photoURL: photoForSave,
+      ...(photoForSave !== undefined ? { photoURL: photoForSave } : {}),
     };
 
     try {
@@ -212,7 +231,7 @@ export default function UserProfileView({
       };
 
       // Sync to Supabase
-      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile);
+      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile, { scope: 'identity' });
       if (!ok) {
         throw new Error(errorMessage || 'Profile save failed');
       }
@@ -273,7 +292,7 @@ export default function UserProfileView({
         photoURL: uploadedUrl,
       };
 
-      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile);
+      const { ok, errorMessage } = await upsertSupabaseProfile(updatedProfile, { scope: 'identity' });
       if (!ok) {
         setPhotoURL(previousPhoto);
         throw new Error(errorMessage || 'Profile photo could not be saved.');

@@ -1442,6 +1442,46 @@ BEGIN
 END;
 $$;
 
+-- Hard-cap guard: never downgrade real profile photos, custom names, or createdAt on UPDATE.
+CREATE OR REPLACE FUNCTION public.guard_user_profile_identity()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    NEW."createdAt" := OLD."createdAt";
+
+    IF OLD."photoURL" IS NOT NULL
+       AND OLD."photoURL" NOT LIKE '%dicebear.com%'
+       AND (
+         NEW."photoURL" IS NULL
+         OR NEW."photoURL" LIKE '%dicebear.com%'
+       )
+    THEN
+      NEW."photoURL" := OLD."photoURL";
+    END IF;
+
+    IF OLD."displayName" IS NOT NULL
+       AND length(trim(OLD."displayName")) > 0
+       AND NEW."displayName" IS NOT NULL
+       AND lower(trim(NEW."displayName")) = lower(split_part(NEW.email, '@', 1))
+       AND lower(trim(OLD."displayName")) <> lower(split_part(OLD.email, '@', 1))
+       AND lower(trim(OLD."displayName")) NOT IN ('neighbor', 'sacramento neighbor')
+    THEN
+      NEW."displayName" := OLD."displayName";
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS guard_user_profile_identity ON public.users;
+CREATE TRIGGER guard_user_profile_identity
+  BEFORE UPDATE ON public.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.guard_user_profile_identity();
+
 -- Trigger on auth.users — fires after every INSERT
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -4154,7 +4194,8 @@ BEGIN
     'go_get_sessions',
     'go_get_live_locations',
     'go_get_fulfiller_live_locations',
-    'user_violations'
+    'user_violations',
+    'native_app_sessions'
   ]
   LOOP
     IF NOT EXISTS (

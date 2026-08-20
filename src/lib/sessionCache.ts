@@ -47,10 +47,12 @@ function safeParse<T>(raw: string | null): T | null {
 }
 
 function toCachedProfile(profile: UserProfile): CachedProfile {
+  const cachedPhoto =
+    profile.photoURL && !profile.photoURL.includes('api.dicebear.com/') ? profile.photoURL : undefined;
   const cached: CachedProfile = {
     uid: profile.uid,
     displayName: profile.displayName,
-    photoURL: profile.photoURL,
+    photoURL: cachedPhoto,
     neighborhood: profile.neighborhood,
     bio: profile.bio,
     createdAt: profile.createdAt,
