@@ -168,6 +168,18 @@ export function shouldRenderLaneGuidance(
   return true;
 }
 
+/** Matches the on-screen lane guidance aria-label. */
+export function spokenLaneGuidance(lanes: NavLane[] | undefined, kind: string): string | null {
+  if (!lanes || lanes.length === 0) return null;
+  const highlighted = highlightLanesForManeuver(lanes, kind);
+  if (!shouldRenderLaneGuidance(highlighted, kind, true)) return null;
+  const activeIndexes = highlighted.flatMap((lane, index) => (lane.valid ? [index + 1] : []));
+  if (activeIndexes.length > 0) {
+    return `${highlighted.length} lanes. Use lane ${activeIndexes.join(' or ')}`;
+  }
+  return `${highlighted.length} lanes`;
+}
+
 interface OverpassWay {
   tags?: Record<string, string>;
   center?: { lat: number; lon: number };

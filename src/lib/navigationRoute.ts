@@ -243,6 +243,22 @@ export function formatNavDistance(meters: number): string {
   return `${Math.round(miles)} mi`;
 }
 
+/** Spoken form of `formatNavDistance` — same rounding, no abbreviations. */
+export function spokenNavDistance(meters: number): string {
+  const formatted = formatNavDistance(meters);
+  const feet = formatted.match(/^(\d+) ft$/);
+  if (feet) {
+    const n = Number(feet[1]);
+    return n === 1 ? '1 foot' : `${n} feet`;
+  }
+  const miles = formatted.match(/^([\d.]+) mi$/);
+  if (miles) {
+    const n = Number(miles[1]);
+    return n === 1 ? '1 mile' : `${miles[1]} miles`;
+  }
+  return formatted;
+}
+
 export function formatNavDuration(seconds: number): string {
   if (seconds < 45) return '< 1 min';
   const mins = Math.max(1, Math.round(seconds / 60));
@@ -250,6 +266,19 @@ export function formatNavDuration(seconds: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
+}
+
+/** Spoken form of `formatNavDuration` — same rounding, no abbreviations. */
+export function spokenNavDuration(seconds: number): string {
+  if (seconds < 45) return 'less than 1 minute';
+  const mins = Math.max(1, Math.round(seconds / 60));
+  if (mins < 60) return mins === 1 ? '1 minute' : `${mins} minutes`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const hours = h === 1 ? '1 hour' : `${h} hours`;
+  if (m === 0) return hours;
+  const minutes = m === 1 ? '1 minute' : `${m} minutes`;
+  return `${hours} ${minutes}`;
 }
 
 export function formatArrivalTime(durationSeconds: number): string {
@@ -269,14 +298,148 @@ export function bearingDegrees(from: LatLng, to: LatLng): number {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
+function isConnectorManeuver(type: string | undefined): boolean {
+  return type === 'depart' || type === 'continue' || type === 'new name';
+}
+
+/** Index of the step shown on the instruction banner (depart/continue cue the next turn). */
+export function getActiveVoiceCueIndex(steps: NavigationStep[], index: number): number {
+  const current = steps[index];
+  if (!current) return Math.max(0, Math.min(index, Math.max(0, steps.length - 1)));
+  if (isConnectorManeuver(current.maneuverType) && steps[index + 1]) return index + 1;
+  return index;
+}
+
 /** Step used for distance-based voice cues (depart/continue cue the next turn). */
 export function getActiveVoiceCueStep(steps: NavigationStep[], index: number): NavigationStep | undefined {
-  const current = steps[index];
-  if (!current) return undefined;
-  if ((current.maneuverType === 'depart' || current.maneuverType === 'continue' || current.maneuverType === 'new name') && steps[index + 1]) {
-    return steps[index + 1];
-  }
-  return current;
+  return steps[getActiveVoiceCueIndex(steps, index)];
+}
+
+export type ManeuverIconKind =
+  | 'straight'
+  | 'left'
+  | 'right'
+  | 'slight-left'
+  | 'slight-right'
+  | 'uturn'
+  | 'arrive'
+  | 'roundabout';
+
+export function maneuverIconKind(step: NavigationStep | undefined): ManeuverIconKind {
+  if (!step) return 'straight';
+  if (step.maneuverType === 'arrive') return 'arrive';
+  const mod = step.maneuverModifier ?? '';
+  if (step.maneuverType === 'roundabout' || step.maneuverType === 'rotary') return 'roundabout';
+  if (mod.includes('uturn')) return 'uturn';
+  if (mod.includes('sharp left') || mod === 'left') return 'left';
+  if (mod.includes('sharp right') || mod === 'right') return 'right';
+  if (mod.includes('slight left')) return 'slight-left';
+  if (mod.includes('slight right')) return 'slight-right';
+  if (mod.includes('left')) return 'left';
+  if (mod.includes('right')) return 'right';
+  return 'straight';
+}
+
+export interface DisplayedNavGuidance {
+  arrived: boolean;
+  maneuverKind: ManeuverIconKind;
+  instruction: string | null;
+  street: string;
+  currentRoad: string;
+  nowOnRoad: string | null;
+  thenInstruction: string | null;
+  thenLine: string | null;
+  distanceMeters: number;
+  destinationLabel: string;
+  lanes: NavLane[];
+  cueStep: NavigationStep | undefined;
+  currentStep: NavigationStep | undefined;
+}
+
+function lowercaseFirst(text: string): string {
+  return text.replace(/^./, (ch) => ch.toLowerCase());
+}
+
+/** Banner + voice share this card so TTS matches what is on screen. */
+export function getDisplayedNavGuidance(options: {
+  route: NavigationRouteResult | null;
+  stepIndex: number;
+  arrived: boolean;
+  destinationLabel: string;
+  userPos: LatLng;
+  travelMode: NavTravelMode;
+  showLaneGuidance: boolean;
+  osmLanes?: NavLane[] | null;
+}): DisplayedNavGuidance {
+  const { route, stepIndex, arrived, destinationLabel, userPos, travelMode, showLaneGuidance, osmLanes } = options;
+  const currentStep = route?.steps[stepIndex];
+  const cueIndex = route ? getActiveVoiceCueIndex(route.steps, stepIndex) : 0;
+  const cueStep = arrived ? currentStep : route?.steps[cueIndex] ?? currentStep;
+  const onConnectorStep = isConnectorManeuver(currentStep?.maneuverType);
+  const maneuverKind: ManeuverIconKind = route
+    ? arrived
+      ? 'arrive'
+      : maneuverIconKind(cueStep)
+    : 'arrive';
+
+  const street = arrived
+    ? destinationLabel
+    : onConnectorStep
+      ? currentStep?.name?.trim() || cueStep?.name?.trim() || 'Continue on route'
+      : cueStep?.name?.trim() ||
+        currentStep?.name?.trim() ||
+        (maneuverKind === 'arrive' ? destinationLabel : 'Continue on route');
+
+  const instruction = arrived
+    ? null
+    : onConnectorStep
+      ? cueStep?.instruction ?? null
+      : cueStep?.instruction || currentStep?.instruction || null;
+
+  const currentRoad = arrived
+    ? destinationLabel
+    : onConnectorStep
+      ? currentStep?.name?.trim() || cueStep?.name?.trim() || street
+      : cueStep?.name?.trim() || currentStep?.name?.trim() || street;
+
+  const thenStep =
+    route && !arrived && cueStep
+      ? route.steps[Math.min(cueIndex + 1, route.steps.length - 1)]
+      : undefined;
+  const thenInstruction =
+    thenStep && thenStep !== cueStep && thenStep.maneuverType !== 'arrive'
+      ? thenStep.instruction
+      : thenStep?.maneuverType === 'arrive'
+        ? `Arrive at ${destinationLabel}`
+        : null;
+  const thenLine = thenInstruction ? `Then ${lowercaseFirst(thenInstruction)}` : null;
+
+  const laneStep = cueStep ?? currentStep;
+  const lanes =
+    travelMode === 'driving' && showLaneGuidance
+      ? laneStep?.lanes && laneStep.lanes.length > 0
+        ? laneStep.lanes
+        : osmLanes ?? []
+      : [];
+
+  const distanceMeters =
+    !route || arrived || !cueStep ? 0 : haversineMeters(userPos, cueStep.location);
+
+  return {
+    arrived,
+    maneuverKind,
+    instruction,
+    street,
+    currentRoad,
+    nowOnRoad: currentRoad && currentRoad !== street ? currentRoad : null,
+    thenInstruction,
+    thenLine,
+    distanceMeters,
+    destinationLabel,
+    lanes,
+    cueStep,
+    currentStep,
+  };
 }
 
 /** Find the next step index based on user position. Advances at most one step per call. */
@@ -547,29 +710,4 @@ export function shouldFireVoiceCue(
     default:
       return false;
   }
-}
-
-export type ManeuverIconKind =
-  | 'straight'
-  | 'left'
-  | 'right'
-  | 'slight-left'
-  | 'slight-right'
-  | 'uturn'
-  | 'arrive'
-  | 'roundabout';
-
-export function maneuverIconKind(step: NavigationStep | undefined): ManeuverIconKind {
-  if (!step) return 'straight';
-  if (step.maneuverType === 'arrive') return 'arrive';
-  const mod = step.maneuverModifier ?? '';
-  if (step.maneuverType === 'roundabout' || step.maneuverType === 'rotary') return 'roundabout';
-  if (mod.includes('uturn')) return 'uturn';
-  if (mod.includes('sharp left') || mod === 'left') return 'left';
-  if (mod.includes('sharp right') || mod === 'right') return 'right';
-  if (mod.includes('slight left')) return 'slight-left';
-  if (mod.includes('slight right')) return 'slight-right';
-  if (mod.includes('left')) return 'left';
-  if (mod.includes('right')) return 'right';
-  return 'straight';
 }

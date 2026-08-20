@@ -39,13 +39,12 @@ import {
   formatNavDistance,
   formatNavDuration,
   formatSpeedMph,
-  getActiveVoiceCueStep,
-  maneuverIconKind,
+  getDisplayedNavGuidance,
   remainingRouteMeters,
   shouldFireVoiceCue,
+  maneuverIconKind,
   type ManeuverIconKind,
   type NavigationRouteResult,
-  type NavigationStep,
 } from '../lib/navigationRoute';
 import {
   fetchOsmLanes,
@@ -69,9 +68,9 @@ import {
   type NavTravelMode,
 } from '../lib/navigationSettings';
 import {
-  buildRecenterVoiceCue,
-  buildRouteSummaryVoice,
-  buildStepVoiceCue,
+  buildDisplayedGuidanceVoice,
+  buildStartBriefingVoice,
+  distanceCueKeysForStep,
   NavigationVoice,
   voiceCueThresholdsForMode,
 } from '../lib/navigationVoice';
@@ -706,6 +705,8 @@ export default function MapNavigationView({
   settingsRef.current = navSettings;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [osmLanes, setOsmLanes] = useState<NavLane[] | null>(null);
+  const osmLanesRef = useRef<NavLane[] | null>(null);
+  osmLanesRef.current = osmLanes;
   const [mapStyle, setMapStyle] = useState<NavMapStyle>(() => {
     const settings = readNavigationSettings();
     if (!settings.followAppTheme) return theme === 'light' ? 'light' : 'dark';
@@ -756,7 +757,22 @@ export default function MapNavigationView({
     routeAnnouncedRef.current = false;
   }, [initialRoute, route]);
 
-  const currentStep: NavigationStep | undefined = route?.steps[stepIndex];
+  const displayedGuidance = useMemo(
+    () =>
+      getDisplayedNavGuidance({
+        route,
+        stepIndex,
+        arrived,
+        destinationLabel,
+        userPos: logicPosRef.current,
+        travelMode: navSettings.travelMode,
+        showLaneGuidance: navSettings.showLaneGuidance,
+        osmLanes,
+      }),
+    [route, stepIndex, arrived, destinationLabel, userPos, navSettings.travelMode, navSettings.showLaneGuidance, osmLanes],
+  );
+
+  const distanceToManeuver = displayedGuidance.distanceMeters;
 
   const remainingMeters = useMemo(() => {
     if (!route) return 0;
@@ -769,19 +785,51 @@ export default function MapNavigationView({
     return Math.max(0, Math.round(route.durationSeconds * ratio));
   }, [route, remainingMeters, arrived]);
 
-  const distanceToManeuver = useMemo(() => {
-    if (!route) return 0;
-    const cueStep = getActiveVoiceCueStep(route.steps, stepIndex);
-    if (!cueStep) return 0;
-    return haversineMeters(logicPosRef.current, cueStep.location);
-  }, [route, stepIndex, userPos]);
-
   const bannerScale = useMemo(() => {
     if (arrived) return 1;
     if (distanceToManeuver < 80) return 1.05;
     if (distanceToManeuver < 250) return 1.025;
     return 1;
   }, [distanceToManeuver, arrived]);
+
+  const speakGuidanceCard = useCallback(
+    (
+      key: string,
+      extra?: {
+        prefix?: string;
+        route?: NavigationRouteResult | null;
+        stepIndex?: number;
+        arrived?: boolean;
+        userPos?: LatLng;
+      },
+    ) => {
+      const settings = settingsRef.current;
+      const route = extra?.route ?? routeRef.current;
+      const stepIndex = extra?.stepIndex ?? stepIndexRef.current;
+      const guidance = getDisplayedNavGuidance({
+        route,
+        stepIndex,
+        arrived: extra?.arrived ?? arrivedRef.current,
+        destinationLabel: destinationLabelRef.current,
+        userPos: extra?.userPos ?? logicPosRef.current,
+        travelMode: settings.travelMode,
+        showLaneGuidance: settings.showLaneGuidance,
+        osmLanes: osmLanesRef.current,
+      });
+      voiceRef.current.speak(buildDisplayedGuidanceVoice({ guidance, prefix: extra?.prefix }), key);
+      if (!guidance.arrived && guidance.cueStep) {
+        voiceRef.current.markSpoken(
+          distanceCueKeysForStep(
+            stepIndex,
+            guidance.cueStep.distanceMeters,
+            guidance.distanceMeters,
+            voiceCueThresholdsForMode(settings.travelMode),
+          ),
+        );
+      }
+    },
+    [],
+  );
 
   const loadRoute = useCallback(async (from: LatLng, to: LatLng, isReroute = false) => {
     const requestId = ++routeRequestIdRef.current;
@@ -807,11 +855,17 @@ export default function MapNavigationView({
 
     if (isReroute) {
       voiceRef.current.clearSpokenKeys();
-      voiceRef.current.speak('Route updated', `reroute-done-${requestId}`);
+      speakGuidanceCard(`reroute-done-${requestId}`, {
+        prefix: 'Route updated',
+        route: result,
+        stepIndex: 0,
+        arrived: false,
+        userPos: from,
+      });
     }
 
     return result;
-  }, []);
+  }, [speakGuidanceCard]);
 
   const fitRouteOverview = useCallback((options?: { force?: boolean }) => {
     const map = mapRef.current;
@@ -1003,23 +1057,41 @@ export default function MapNavigationView({
   useEffect(() => {
     if (!route || routeAnnouncedRef.current || !voiceOn) return;
     routeAnnouncedRef.current = true;
-    const departStep = route.steps.find((step) => step.maneuverType === 'depart') ?? route.steps[0];
-    voiceRef.current.speak(navigationStartMessage ?? `Starting navigation to ${destinationLabel}`, 'nav-start');
+    const settings = settingsRef.current;
+    const guidance = getDisplayedNavGuidance({
+      route,
+      stepIndex: 0,
+      arrived: false,
+      destinationLabel,
+      userPos: logicPosRef.current,
+      travelMode: settings.travelMode,
+      showLaneGuidance: settings.showLaneGuidance,
+      osmLanes: osmLanesRef.current,
+    });
+    voiceRef.current.speak(
+      buildStartBriefingVoice({
+        startMessage: navigationStartMessage ?? `Starting navigation to ${destinationLabel}`,
+        destinationLabel,
+        distanceMeters: route.distanceMeters,
+        durationSeconds: route.durationSeconds,
+        travelVerb: travelModeVerb(settings.travelMode),
+        guidance,
+      }),
+      'nav-start',
+    );
+    if (guidance.cueStep) {
+      voiceRef.current.markSpoken(
+        distanceCueKeysForStep(
+          0,
+          guidance.cueStep.distanceMeters,
+          guidance.distanceMeters,
+          voiceCueThresholdsForMode(settings.travelMode),
+        ),
+      );
+    }
     for (const [index, message] of (navigationFollowUpMessages ?? []).entries()) {
       voiceRef.current.speak(message, `nav-followup-${index}`);
     }
-    if (departStep) {
-      voiceRef.current.speak(departStep.instruction, 'nav-depart');
-    }
-    voiceRef.current.speak(
-      buildRouteSummaryVoice(
-        destinationLabel,
-        route.distanceMeters,
-        route.durationSeconds,
-        travelModeVerb(settingsRef.current.travelMode),
-      ),
-      'nav-summary',
-    );
   }, [route, destinationLabel, navigationStartMessage, navigationFollowUpMessages, voiceOn]);
 
   useEffect(() => {
@@ -1322,7 +1394,6 @@ export default function MapNavigationView({
       displayedPosRef.current = displayPos;
 
       const dest = destinationRef.current;
-      const destLabel = destinationLabelRef.current;
       const gpsHeading = position.coords.heading;
       const speed = position.coords.speed;
 
@@ -1394,24 +1465,11 @@ export default function MapNavigationView({
         arrivedRef.current = true;
         setArrived(true);
         if (voiceOnRef.current) {
-          const arriveStep = activeRoute?.steps.at(-1);
-          voiceRef.current.speak(
-            buildStepVoiceCue(
-              arriveStep ?? {
-                id: 'arrive',
-                distanceMeters: 0,
-                durationSeconds: 0,
-                name: '',
-                instruction: 'Arrive at pickup',
-                maneuverType: 'arrive',
-                location: dest,
-              },
-              0,
-              'arrival',
-              destLabel,
-            ),
-            'arrival',
-          );
+          speakGuidanceCard('arrival', {
+            arrived: true,
+            route: activeRoute,
+            userPos: snapped,
+          });
         }
         return;
       }
@@ -1421,27 +1479,42 @@ export default function MapNavigationView({
           coords: activeRoute.coords,
           distanceMeters: activeRoute.distanceMeters,
         });
+        let spokeStepChange = false;
         if (nextIdx !== stepIndexRef.current) {
           stepIndexRef.current = nextIdx;
           setStepIndex(nextIdx);
-          const step = activeRoute.steps[nextIdx];
-          if (voiceOnRef.current && step) {
-            voiceRef.current.speak(step.instruction, `step-change-${nextIdx}`);
+          if (voiceOnRef.current && activeRoute.steps[nextIdx]) {
+            speakGuidanceCard(`step-change-${nextIdx}`, {
+              route: activeRoute,
+              stepIndex: nextIdx,
+              userPos: snapped,
+            });
+            spokeStepChange = true;
           }
         }
 
-        const step = activeRoute.steps[stepIndexRef.current];
-        const cueStep = getActiveVoiceCueStep(activeRoute.steps, stepIndexRef.current);
-        const cueThresholds = voiceCueThresholdsForMode(settingsRef.current.travelMode);
-        if (voiceOnRef.current && cueStep && cueStep.maneuverType !== 'arrive') {
-          const dist = haversineMeters(snapped, cueStep.location);
-          for (const kind of ['far', 'medium', 'near', 'now'] as const) {
-            if (shouldFireVoiceCue(cueStep.distanceMeters, dist, kind, cueThresholds)) {
-              voiceRef.current.speak(
-                buildStepVoiceCue(cueStep, cueThresholds[kind], kind, destLabel),
-                `cue-${stepIndexRef.current}-${kind}`,
-              );
-              break;
+        const settings = settingsRef.current;
+        const cueThresholds = voiceCueThresholdsForMode(settings.travelMode);
+        if (voiceOnRef.current && !spokeStepChange) {
+          const guidance = getDisplayedNavGuidance({
+            route: activeRoute,
+            stepIndex: stepIndexRef.current,
+            arrived: false,
+            destinationLabel: destinationLabelRef.current,
+            userPos: snapped,
+            travelMode: settings.travelMode,
+            showLaneGuidance: settings.showLaneGuidance,
+            osmLanes: osmLanesRef.current,
+          });
+          if (guidance.cueStep && guidance.cueStep.maneuverType !== 'arrive') {
+            for (const kind of ['far', 'medium', 'near', 'now'] as const) {
+              if (shouldFireVoiceCue(guidance.cueStep.distanceMeters, guidance.distanceMeters, kind, cueThresholds)) {
+                voiceRef.current.speak(
+                  buildDisplayedGuidanceVoice({ guidance }),
+                  `cue-${stepIndexRef.current}-${kind}`,
+                );
+                break;
+              }
             }
           }
         }
@@ -1460,7 +1533,7 @@ export default function MapNavigationView({
               setRerouting(true);
               const rerouteKey = `reroute-${Date.now()}`;
               if (voiceOnRef.current) {
-                voiceRef.current.speak(buildStepVoiceCue(step!, 0, 'reroute'), rerouteKey);
+                voiceRef.current.speak('Recalculating route.', rerouteKey);
               }
               void loadRoute(raw, dest, true).then((result) => {
                 if (!result) {
@@ -1479,7 +1552,7 @@ export default function MapNavigationView({
         }
       }
     },
-    [loadRoute, syncNavigationMap],
+    [loadRoute, speakGuidanceCard, syncNavigationMap],
   );
 
   handleGpsUpdateRef.current = handleGpsUpdate;
@@ -1520,17 +1593,9 @@ export default function MapNavigationView({
   const speakRecenterCue = () => {
     const settings = settingsRef.current;
     if (!settings.voiceEnabled || !settings.speakOnRecenter) return;
-    const activeRoute = routeRef.current;
-    const cueStep = activeRoute
-      ? getActiveVoiceCueStep(activeRoute.steps, stepIndexRef.current) ?? activeRoute.steps[stepIndexRef.current]
-      : undefined;
-    const distance = cueStep ? haversineMeters(logicPosRef.current, cueStep.location) : 0;
     voiceRef.current.prime();
     voiceRef.current.setEnabled(true);
-    voiceRef.current.speak(
-      buildRecenterVoiceCue(cueStep, distance, destinationLabelRef.current),
-      `recenter-${Date.now()}`,
-    );
+    speakGuidanceCard(`recenter-${Date.now()}`, { prefix: 'Centered on you' });
   };
 
   const handleRecenter = () => {
@@ -1625,55 +1690,13 @@ export default function MapNavigationView({
   };
 
   const showFatalError = Boolean(error && !route);
-  const navigationCueStep =
-    route && !arrived ? getActiveVoiceCueStep(route.steps, stepIndex) ?? currentStep : currentStep;
-  const onConnectorStep =
-    currentStep?.maneuverType === 'depart' ||
-    currentStep?.maneuverType === 'continue' ||
-    currentStep?.maneuverType === 'new name';
-
-  const maneuverKind = route
-    ? arrived
-      ? 'arrive'
-      : maneuverIconKind(navigationCueStep)
-    : 'arrive';
-  const bannerStreet = arrived
-    ? destinationLabel
-    : onConnectorStep
-      ? currentStep?.name?.trim() || navigationCueStep?.name?.trim() || 'Continue on route'
-      : navigationCueStep?.name?.trim() ||
-        currentStep?.name?.trim() ||
-        (maneuverKind === 'arrive' ? destinationLabel : 'Continue on route');
-  const bannerInstruction = arrived
-    ? undefined
-    : onConnectorStep
-      ? navigationCueStep?.instruction
-      : navigationCueStep?.instruction || currentStep?.instruction;
-  const currentRoadLabel = arrived
-    ? destinationLabel
-    : onConnectorStep
-      ? currentStep?.name?.trim() || navigationCueStep?.name?.trim() || bannerStreet
-      : navigationCueStep?.name?.trim() || currentStep?.name?.trim() || bannerStreet;
-
-  const thenStep =
-    route && !arrived && navigationCueStep
-      ? route.steps[Math.min(route.steps.indexOf(navigationCueStep) + 1, route.steps.length - 1)]
-      : undefined;
-  const thenLabel =
-    thenStep && thenStep !== navigationCueStep && thenStep.maneuverType !== 'arrive'
-      ? thenStep.instruction
-      : thenStep?.maneuverType === 'arrive'
-        ? `Arrive at ${destinationLabel}`
-        : null;
-
-  const laneGuidanceStep = navigationCueStep ?? currentStep;
-  const displayLanes =
-    navSettings.travelMode === 'driving' && navSettings.showLaneGuidance
-      ? laneGuidanceStep?.lanes && laneGuidanceStep.lanes.length > 0
-        ? laneGuidanceStep.lanes
-        : osmLanes ?? []
-      : [];
-  const speedLimitMph = estimateSpeedLimitMph(currentStep ?? navigationCueStep);
+  const maneuverKind = displayedGuidance.maneuverKind;
+  const bannerStreet = displayedGuidance.street;
+  const bannerInstruction = displayedGuidance.instruction;
+  const currentRoadLabel = displayedGuidance.currentRoad;
+  const thenLine = displayedGuidance.thenLine;
+  const displayLanes = displayedGuidance.lanes;
+  const speedLimitMph = estimateSpeedLimitMph(displayedGuidance.currentStep ?? displayedGuidance.cueStep);
   const showSpeedCard = navSettings.travelMode === 'driving';
 
   useEffect(() => {
@@ -1693,7 +1716,7 @@ export default function MapNavigationView({
       setOsmLanes(null);
       return;
     }
-    const step = navigationCueStep ?? currentStep;
+    const step = displayedGuidance.cueStep ?? displayedGuidance.currentStep;
     if (!step || (step.lanes && step.lanes.length > 0) || maneuverKind === 'arrive') {
       setOsmLanes(null);
       return;
@@ -1707,7 +1730,7 @@ export default function MapNavigationView({
       cancelled = true;
       controller.abort();
     };
-  }, [navSettings.travelMode, navSettings.showLaneGuidance, navigationCueStep, currentStep, maneuverKind]);
+  }, [navSettings.travelMode, navSettings.showLaneGuidance, displayedGuidance.cueStep, displayedGuidance.currentStep, maneuverKind]);
 
   return (
     <div
@@ -1803,9 +1826,9 @@ export default function MapNavigationView({
                         {bannerStreet}
                         {currentRoadLabel && currentRoadLabel !== bannerStreet ? ` · now on ${currentRoadLabel}` : ''}
                       </p>
-                      {thenLabel ? (
+                      {thenLine ? (
                         <p className={`font-semibold truncate text-[var(--sbn-nav-text-secondary)] opacity-80 ${isCompact ? 'text-[10px] mt-0.5' : 'text-[11px] mt-1'}`}>
-                          Then {thenLabel.replace(/^./, (ch) => ch.toLowerCase())}
+                          {thenLine}
                         </p>
                       ) : null}
                     </>
