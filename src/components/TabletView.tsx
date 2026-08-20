@@ -315,6 +315,7 @@ export default function TabletView({
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={onClearPendingChatCompose}
                   items={items}
+                  events={events}
                   blockedUserIds={blockedUserIds}
                   onViewProfile={onViewProfile}
                   onItemsChanged={onRefresh}

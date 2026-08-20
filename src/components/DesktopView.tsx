@@ -336,6 +336,7 @@ export default function DesktopView({
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={onClearPendingChatCompose}
                   items={items}
+                  events={events}
                   blockedUserIds={blockedUserIds}
                   onViewProfile={onViewProfile}
                   onItemsChanged={onRefresh}

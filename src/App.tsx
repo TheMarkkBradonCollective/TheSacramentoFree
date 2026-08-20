@@ -1334,6 +1334,35 @@ export default function App() {
     setActiveTab('chats');
   };
 
+  const handleInitiateEventChat = (
+    hostUid: string,
+    hostName: string,
+    hostPhoto?: string,
+    event?: CommunityEvent,
+  ) => {
+    if (!userProfile) return;
+    if (blockedUserIds.has(hostUid)) return;
+
+    if (isStaffActingOfficial(userProfile) && event) {
+      void handleStaffEventOutreach(event);
+      return;
+    }
+
+    const participants = [userProfile.uid, hostUid].sort();
+    const chatId = participants.join('_');
+
+    setInitialSelectedChatId(null);
+    setPendingChatCompose({
+      chatId,
+      otherUserId: hostUid,
+      otherUserName: hostName,
+      otherUserPhoto: hostPhoto,
+      eventId: event?.id,
+      eventTitle: event?.title,
+    });
+    setActiveTab('chats');
+  };
+
   const handleDeleteAccount = async () => {
     if (!userProfile) return;
     const confirmed = await confirm({
@@ -2109,6 +2138,19 @@ export default function App() {
                     }
                   }}
                   onViewProfile={handleViewProfile}
+                  onMessage={
+                    blockedUserIds.has(detailEvent.userId) || isStaffActingOfficial(userProfile)
+                      ? undefined
+                      : () => {
+                          handleInitiateEventChat(
+                            detailEvent.userId,
+                            detailEvent.userDisplayName,
+                            detailEvent.userPhotoURL,
+                            detailEvent,
+                          );
+                          setDetailEvent(null);
+                        }
+                  }
                   onStaffChat={
                     isStaffActingOfficial(userProfile) && !blockedUserIds.has(detailEvent.userId)
                       ? () => void handleStaffEventOutreach(detailEvent)

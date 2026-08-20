@@ -34,17 +34,17 @@ export async function confirmStaffEventOutreach(
   });
 }
 
-/** Staff views a neighbor listing coordination chat (oversight). */
+/** Staff views a neighbor coordination chat (oversight). */
 export async function confirmStaffCoordinationChatView(
   confirm: ConfirmFn,
-  listingTitle?: string,
+  contextTitle?: string,
 ): Promise<boolean> {
-  const subject = listingTitle?.trim() ? `"${listingTitle}"` : 'this listing';
+  const subject = contextTitle?.trim() ? `"${contextTitle}"` : 'this conversation';
   return confirm({
     title: 'View neighbor coordination chat?',
     message:
       `You are opening a private neighbor coordination chat about ${subject}. ` +
-      'Only participate when needed for safety or moderation. For official staff outreach, use Staff chat on the listing.',
+      'Only participate when needed for safety or moderation. For official staff outreach, use Staff chat on the listing or event.',
     confirmLabel: 'View chat',
     cancelLabel: 'Cancel',
   });
