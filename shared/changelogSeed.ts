@@ -47,8 +47,9 @@ const APK_0019_PUBLISHED_AT = '2026-08-18T14:15:00.000Z';
 const APK_0020_PUBLISHED_AT = '2026-08-18T21:35:00.000Z';
 const PHOTO_UPLOAD_FIX_PUBLISHED_AT = '2026-08-20T03:30:00.000Z';
 const APK_0022_PUBLISHED_AT = '2026-08-20T03:35:00.000Z';
+const APK_0023_PUBLISHED_AT = '2026-08-20T07:30:00.000Z';
 const EVENT_RECURRENCE_PUBLISHED_AT = '2026-08-20T07:45:00.000Z';
-const APK_0023_PUBLISHED_AT = '2026-08-20T07:50:00.000Z';
+const APK_0024_PUBLISHED_AT = '2026-08-20T08:00:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -103,34 +104,34 @@ function news(
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
   update(
-    '2026-08-20_apk-0023',
+    '2026-08-20_apk-0024',
     '2026-08-20',
-    'New Android download — beta v0.1.0.0023',
-    'Event posters can schedule repeats by month day, weekday position, or weekly — plus Laundry Love and City of Refuge community events are seeded.',
+    'New Android download — beta v0.1.0.0024',
+    'Event posters can schedule repeats by month day, weekday position, or weekly — plus Laundry Love and City of Refuge community events.',
     `WHAT NEIGHBORS SEE
-Play Store testers and sideload installs: beta v0.1.0.0023 (versionCode 23).
+Play Store testers and sideload installs: beta v0.1.0.0024 (versionCode 24).
 
-Since 0022:
+Since 0023:
 • Post Event → Repeat on a schedule: month days (4th, 20th), weekday of month (4th Saturday), or every week (Thursday)
 • Live preview shows how many dates will be created before you post
 • Laundry Love (4th Saturdays) and City of Refuge (Thursdays) community resource events added
 
-Already on an older install? Reopening the app still loads the live site for web fixes, but install 0023 for the latest native shell.
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0024 for the latest native shell.
 
-Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0023.aab
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0024.aab
 Sideload: https://www.sacramentobuynothing.com/download
 
 — Mark
 
 WHERE TO LOOK IN CODE
-- android/app/build.gradle — versionCode 23
+- android/app/build.gradle — versionCode 24
 - src/lib/eventRecurrence.ts + src/components/EventRecurrenceEditor.tsx — schedule builder
 - scripts/seed-laundry-love-city-of-refuge-events-2026.sql — flyer event seeds
-- play-store-assets/release-notes-v0.1.0-0023.txt — Play Console release notes
+- play-store-assets/release-notes-v0.1.0-0024.txt — Play Console release notes
 
 HISTORY
-2026-08-20 — Event recurrence scheduling + Laundry Love / City of Refuge seeds (PR #234), then Android beta 0023 built.`,
-    APK_0023_PUBLISHED_AT,
+2026-08-20 — Event recurrence + community resource seeds merged with staff mode (PR #234), Android beta 0024 built.`,
+    APK_0024_PUBLISHED_AT,
   ),
   update(
     '2026-08-20_event-recurrence-scheduling',
@@ -145,9 +146,9 @@ Posting a community event? Under Repeat on a schedule you can now:
 • Pick weekly days (e.g. every Thursday)
 • Combine multiple rules and preview the dates before posting
 
-Same place, same time — neighbors still RSVP per day. No change to how events appear in the feed.
+Same place, same time — neighbors still RSVP per day.
 
-New community resource listings from flyers:
+New community resource events from flyers:
 • Laundry Love — 4th Saturdays at Stockridge Launderland (City Church of Sacramento)
 • City of Refuge — Thursdays, free showers, laundry, and meals
 
@@ -161,6 +162,38 @@ WHERE TO LOOK IN CODE
 HISTORY
 2026-08-20 — PR #234.`,
     EVENT_RECURRENCE_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0023',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0023',
+    'Staff can now switch between Staff mode and Neighbor mode in Account settings — participate officially or like a regular neighbor.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0023 (versionCode 23).
+
+Since 0022:
+• Account → Staff participation mode: Staff mode vs Neighbor mode
+• Staff mode: comments show your title, Staff chat on listings/events, no private neighbor DMs or Go Get
+• Neighbor mode: message, navigate, claim, and Go Get like any neighbor; comments post without staff badge
+• Moderation sidebar and staff tools stay available in both modes
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0023 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0023.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/components/StaffModeSettings.tsx — Account settings toggle
+- src/lib/staffInteractionMode.ts — staff vs neighbor acting helpers
+- scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql — DB columns
+- android/app/build.gradle — versionCode 23
+- play-store-assets/release-notes-v0.1.0-0023.txt — Play Console release notes
+
+HISTORY
+2026-08-20 — Staff participation mode toggle shipped in web + Android beta 0023.`,
+    APK_0023_PUBLISHED_AT,
   ),
   update(
     '2026-08-20_apk-0022',
@@ -762,12 +795,12 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
   news(
-    '2026-08-20_apk-0023',
+    '2026-08-20_apk-0024',
     '2026-08-20',
-    'New Android beta 0023 — event scheduling + community resources',
-    'Post repeat events by month day or weekday, and new Laundry Love / City of Refuge listings are live. Play Store testers: upload the new AAB; sideload neighbors grab 0023 from Download.',
+    'New Android beta 0024 — event scheduling + community resources',
+    'Post repeat events by month day or weekday, and Laundry Love / City of Refuge are on the calendar. Play Store: upload the new AAB; sideload: Download page.',
     `WHAT NEIGHBORS SEE
-Beta v0.1.0.0023 adds smarter event scheduling and two new community resource series.
+Beta v0.1.0.0024 adds smarter event scheduling and two new community resource series.
 
 Play Store: upload the new AAB to Internal testing and roll out to testers.
 Sideload: https://www.sacramentobuynothing.com/download
@@ -775,11 +808,11 @@ Sideload: https://www.sacramentobuynothing.com/download
 — Mark
 
 WHERE TO LOOK IN CODE
-See Update 2026-08-20_apk-0023.
+See Update 2026-08-20_apk-0024.
 
 HISTORY
-2026-08-20 — Android beta 0023 with event recurrence scheduling.`,
-    APK_0023_PUBLISHED_AT,
+2026-08-20 — Android beta 0024 with event recurrence scheduling.`,
+    APK_0024_PUBLISHED_AT,
   ),
   news(
     '2026-08-20_event-recurrence',
@@ -802,6 +835,28 @@ See Update 2026-08-20_event-recurrence-scheduling.
 HISTORY
 2026-08-20 — PR #234.`,
     EVENT_RECURRENCE_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_staff-participation-mode',
+    '2026-08-20',
+    'Staff can switch between official and neighbor mode',
+    'Community staff now choose how they participate — official Staff mode with your title on comments, or Neighbor mode to message and coordinate pickups like anyone else.',
+    `WHAT NEIGHBORS SEE
+Staff accounts now have Account → Staff participation mode:
+
+• Staff mode (default): comments show the staff title, listings use Staff chat, and neighbor pickup/DM flows stay off.
+• Neighbor mode: participate like any neighbor — message, navigate, claim, Go Get — and comments post without a staff badge.
+
+Moderation tools stay available either way. Your profile may still show you are on the team.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0023.
+
+HISTORY
+2026-08-20 — Staff participation mode toggle.`,
+    APK_0023_PUBLISHED_AT,
   ),
   news(
     '2026-08-20_apk-0022',

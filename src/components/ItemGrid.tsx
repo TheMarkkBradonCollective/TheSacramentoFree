@@ -23,7 +23,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { LISTING_TYPE_FILTERS, getPostTypeFilterLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
@@ -652,7 +652,7 @@ export default function ItemGrid({
                 onViewProfile={onViewProfile}
                 distanceMeters={getItemDistance(item)}
                 onNavigate={
-                  item.userId !== userProfile.uid && !isStaffRole(userProfile.role)
+                  item.userId !== userProfile.uid && !isStaffActingOfficial(userProfile)
                     ? () => onViewItem(item)
                     : undefined
                 }

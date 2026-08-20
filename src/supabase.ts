@@ -187,7 +187,8 @@ CREATE TABLE IF NOT EXISTS public.item_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.item_comments ENABLE ROW LEVEL SECURITY;
@@ -403,6 +404,10 @@ function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfi
     suspendedUntil,
     // Default true when column missing / null — only explicit false opts out.
     goGetEnabled: row.goGetEnabled === false || row.go_get_enabled === false ? false : true,
+    staffInteractionMode:
+      row.staffInteractionMode === 'neighbor' || row.staff_interaction_mode === 'neighbor'
+        ? 'neighbor'
+        : 'staff',
     joinRank:
       typeof row.joinRank === 'number'
         ? row.joinRank
@@ -694,18 +699,20 @@ export async function upsertSupabaseProfile(
       neighborhood: profile.neighborhood,
       bio: profile.bio?.trim() || null,
       goGetEnabled: profile.goGetEnabled !== false,
+      staffInteractionMode:
+        profile.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
       createdAt: coerceToIsoDate(profile.createdAt),
     };
 
     let { data, error } = await supabase
       .from('users')
       .upsert(payload, { onConflict: 'uid' })
-      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, createdAt')
+      .select('uid, photoURL, displayName, email, neighborhood, bio, role, goGetEnabled, staffInteractionMode, createdAt')
       .single();
 
-    // Older DBs may not have goGetEnabled yet — retry without it.
-    if (error && /goGetEnabled|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
-      const { goGetEnabled: _ignored, ...legacyPayload } = payload;
+    // Older DBs may not have goGetEnabled / staffInteractionMode yet — retry without missing columns.
+    if (error && /goGetEnabled|staffInteractionMode|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+      const { goGetEnabled: _goGet, staffInteractionMode: _mode, ...legacyPayload } = payload;
       ({ data, error } = await supabase
         .from('users')
         .upsert(legacyPayload, { onConflict: 'uid' })

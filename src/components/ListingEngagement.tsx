@@ -6,6 +6,7 @@ import ReportNeighborModal from './ReportNeighborModal';
 import { PostVoteState } from '../hooks/useItemsEngagement';
 import RoleBadge from './RoleBadge';
 import { isStaffRole } from '../lib/roles';
+import { commentPostedAsNeighbor, shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
 
 interface ListingEngagementProps {
   posterUserId: string;
@@ -141,7 +142,7 @@ export default function ListingEngagement({
                   const isOwnComment = comment.userId === currentUserId;
                   const canReport = userProfile && !isOwnComment && comment.userId !== posterUserId;
                   const commenterRole = commenterRoles?.[comment.userId];
-                  const commenterIsStaff = isStaffRole(commenterRole);
+                  const commenterIsStaff = shouldShowStaffBadgeOnComment(commenterRole, comment);
                   return (
                     <li key={comment.id} className={`rounded-xl p-3 border ${commenterIsStaff ? 'bg-accent/5 border-accent/20' : 'bg-inset border-app'}`}>
                       <div className="flex items-start gap-2">

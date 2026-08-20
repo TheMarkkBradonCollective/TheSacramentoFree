@@ -5,7 +5,7 @@ import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
 import StaffEventActions from './StaffEventActions';
-import { isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { getUserDisplayInfoByIds } from '../supabase';
 import { isEventEditable, isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
@@ -87,7 +87,7 @@ export default function EventDetailView({
   const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const eventStatus = resolveEventStatus(event);
   const isOwner = event.userId === currentUserId;
-  const isStaffViewer = isStaffRole(userProfile?.role);
+  const isStaffViewer = isStaffActingOfficial(userProfile);
   const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
   const canEdit = isOwner && isEventEditable(event);

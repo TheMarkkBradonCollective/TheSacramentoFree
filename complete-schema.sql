@@ -48,6 +48,8 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "photoURL" TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "lastActiveAt" TIMESTAMPTZ;
 -- Opt-out of Go Get / Drop off / Meet up / claim-at-pin (listing + chat still work).
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetEnabled" BOOLEAN NOT NULL DEFAULT true;
+-- Staff: official staff mode vs neighbor mode for community participation.
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "staffInteractionMode" TEXT NOT NULL DEFAULT 'staff';
 
 CREATE INDEX IF NOT EXISTS users_last_active_at_idx ON public.users ("lastActiveAt" DESC);
 
@@ -125,7 +127,8 @@ CREATE TABLE IF NOT EXISTS public.item_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.item_comments ENABLE ROW LEVEL SECURITY;
@@ -505,7 +508,8 @@ CREATE TABLE IF NOT EXISTS public.event_comments (
   "userPhoto" TEXT,
   "userNeighborhood" TEXT NOT NULL,
   text TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.event_comments ENABLE ROW LEVEL SECURITY;

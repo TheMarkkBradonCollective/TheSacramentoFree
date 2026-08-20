@@ -39,6 +39,7 @@ import { formatLastActive } from '../lib/presence';
 import ThemeSettings from './ThemeSettings';
 import SystemPermissionsSettings from './SystemPermissionsSettings';
 import GoGetSettings from './GoGetSettings';
+import StaffModeSettings from './StaffModeSettings';
 import CommunityMenuView from './CommunityMenuView';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 import TermsOfUseModal from './TermsOfUseModal';
@@ -544,6 +545,7 @@ export default function UserProfileView({
 
           <SystemPermissionsSettings />
           <ThemeSettings />
+          <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
         </div>
       </div>

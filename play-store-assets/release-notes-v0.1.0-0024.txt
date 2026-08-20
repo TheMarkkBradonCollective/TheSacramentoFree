@@ -1,0 +1,9 @@
+Android beta v0.1.0.0024 (versionCode 24)
+
+What's new:
+• Post Event → Repeat on a schedule: month days (4th, 20th), weekday of month (4th Saturday), or weekly (Thursday)
+• Live preview shows how many dates will be created before posting
+• Laundry Love and City of Refuge community resource events added to the calendar
+• Staff participation mode (Staff vs Neighbor) from beta 0023
+
+Download (sideload): https://www.sacramentobuynothing.com/download

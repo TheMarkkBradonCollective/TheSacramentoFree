@@ -29,6 +29,7 @@ import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import StaffListingActions from './StaffListingActions';
 import { isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { getListingSubitems, itemHasRecordedAppClaim, getUserDisplayInfoByIds } from '../supabase';
 import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
@@ -87,7 +88,7 @@ export default function ItemDetailView({
   const [hasAppClaim, setHasAppClaim] = useState(false);
   const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const isOwner = item.userId === currentUserId;
-  const isStaffViewer = isStaffRole(userProfile?.role);
+  const isStaffViewer = isStaffActingOfficial(userProfile);
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
 
