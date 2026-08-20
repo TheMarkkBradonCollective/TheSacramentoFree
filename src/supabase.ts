@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
-import { compressImageIfNeeded } from './lib/imageUrl';
+import { compressImageIfNeeded, guessImageContentType } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatSelfClaimRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia, plainListingDescription } from './lib/listingContent';
@@ -939,18 +939,37 @@ export async function getSupabaseItemById(itemId: string): Promise<ItemPost | nu
   }
 }
 
+async function requireAuthUserId(): Promise<string | null> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  return sessionData.session?.user?.id ?? null;
+}
+
+function sanitizeStorageKey(value: string, maxLen = 120): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, maxLen) || 'upload';
+}
+
 export async function uploadItemImage(file: File, itemId: string): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) {
+      console.warn('Listing photo upload failed: not signed in');
+      return null;
+    }
+
     const compressed = await compressImageIfNeeded(file);
-    const fileExt = compressed.name.split('.').pop() || 'jpg';
-    const filePath = `${itemId}_${Date.now()}.${fileExt}`;
+    const extRaw = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
+    const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
+    const safeItemKey = sanitizeStorageKey(itemId);
+    const filePath = `${userId}/listings/${safeItemKey}_${Date.now()}.${fileExt}`;
+    const contentType = guessImageContentType(compressed);
 
     // Upload to 'items' bucket using supabase-js
     const { error } = await supabase.storage
       .from('items')
       .upload(filePath, compressed, {
         cacheControl: '3600',
-        upsert: true
+        upsert: true,
+        contentType,
       });
 
     if (error) {
@@ -975,14 +994,20 @@ export async function uploadItemImage(file: File, itemId: string): Promise<strin
 
 export async function uploadReportProofImage(file: File, reportId: string): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) return null;
+
     const compressed = await compressImageIfNeeded(file, 1400, 0.8);
     const fileExt = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
     const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
-    const filePath = `reports/${reportId}_${Date.now()}.${safeExt}`;
+    const safeReportId = sanitizeStorageKey(reportId);
+    const filePath = `${userId}/reports/${safeReportId}_${Date.now()}.${safeExt}`;
+    const contentType = guessImageContentType(compressed);
 
     const { error } = await supabase.storage.from('items').upload(filePath, compressed, {
       cacheControl: '3600',
       upsert: true,
+      contentType,
     });
 
     if (error) throw error;
@@ -1005,14 +1030,21 @@ export async function uploadTicketMessageImage(
   messageId: string,
 ): Promise<string | null> {
   try {
+    const userId = await requireAuthUserId();
+    if (!userId) return null;
+
     const compressed = await compressImageIfNeeded(file, 1400, 0.8);
     const fileExt = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
     const safeExt = /^[a-z0-9]+$/.test(fileExt) ? fileExt : 'jpg';
-    const filePath = `tickets/${ticketId}/${messageId}.${safeExt}`;
+    const safeTicketId = sanitizeStorageKey(ticketId);
+    const safeMessageId = sanitizeStorageKey(messageId);
+    const filePath = `${userId}/tickets/${safeTicketId}/${safeMessageId}.${safeExt}`;
+    const contentType = guessImageContentType(compressed);
 
     const { error } = await supabase.storage.from('items').upload(filePath, compressed, {
       cacheControl: '3600',
       upsert: true,
+      contentType,
     });
 
     if (error) throw error;
@@ -1030,15 +1062,21 @@ export async function uploadTicketMessageImage(
 }
 
 export async function uploadProfilePhoto(file: File, userId: string): Promise<string | null> {
+  const authUserId = await requireAuthUserId();
+  if (!authUserId || authUserId !== userId) {
+    console.warn('Profile photo upload failed: not signed in as profile owner');
+    return null;
+  }
+
   const compressed = await compressImageIfNeeded(file, 512, 0.85);
   const extRaw = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
   const fileExt = /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
-  const contentType = compressed.type.startsWith('image/') ? compressed.type : 'image/jpeg';
+  const contentType = guessImageContentType(compressed);
 
   const attempts: { bucket: string; path: string }[] = [
     { bucket: 'avatars', path: `${userId}/avatar.${fileExt}` },
-    { bucket: 'items', path: `profiles/${userId}/avatar.${fileExt}` },
-    { bucket: 'items', path: `profiles/${userId}_${Date.now()}.${fileExt}` },
+    { bucket: 'items', path: `${userId}/avatar.${fileExt}` },
+    { bucket: 'items', path: `${userId}/avatar_${Date.now()}.${fileExt}` },
   ];
 
   for (const { bucket, path } of attempts) {

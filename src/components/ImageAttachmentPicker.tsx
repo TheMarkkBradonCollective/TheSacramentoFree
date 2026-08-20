@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { Camera, X } from 'lucide-react';
+import { INVALID_IMAGE_FILE_MESSAGE, normalizeImageUploadFile } from '../lib/imageUrl';
 
 interface ImageAttachmentPickerProps {
   label?: string;
@@ -7,6 +8,7 @@ interface ImageAttachmentPickerProps {
   file: File | null;
   previewUrl: string | null;
   onChange: (file: File | null) => void;
+  onInvalidFile?: (message: string) => void;
   disabled?: boolean;
 }
 
@@ -16,6 +18,7 @@ export default function ImageAttachmentPicker({
   file,
   previewUrl,
   onChange,
+  onInvalidFile,
   disabled = false,
 }: ImageAttachmentPickerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -35,7 +38,16 @@ export default function ImageAttachmentPicker({
         accept="image/*"
         className="hidden"
         disabled={disabled}
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+        onChange={(e) => {
+          const picked = e.target.files?.[0] ?? null;
+          const normalized = normalizeImageUploadFile(picked);
+          if (picked && !normalized) {
+            onInvalidFile?.(INVALID_IMAGE_FILE_MESSAGE);
+            e.target.value = '';
+            return;
+          }
+          onChange(normalized);
+        }}
       />
       {previewUrl ? (
         <div className="relative rounded-xl border border-app overflow-hidden bg-inset">

@@ -8,6 +8,7 @@ import {
   uploadProfilePhoto,
   getSupabaseProfile,
 } from '../supabase';
+import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import RoleBadge from './RoleBadge';
 import {
   MapPin,
@@ -265,8 +266,8 @@ export default function UserProfileView({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setErrorMsg('Please select an image file.');
+    if (!isLikelyImageFile(file)) {
+      setErrorMsg(INVALID_IMAGE_FILE_MESSAGE);
       event.target.value = '';
       return;
     }

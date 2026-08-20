@@ -12,6 +12,7 @@ import {
   isPersistableListingImageUrl,
   MAX_LISTING_PHOTOS,
 } from '../lib/listingContent';
+import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
 import { X, Gift, Search, Info, Camera, Trash2, Navigation, Map, MapPin, Pencil, Plus, ArrowLeftRight } from 'lucide-react';
 import { UserProfile, ItemPost } from '../types';
 import { RULES } from '../siteContent';
@@ -138,8 +139,11 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
   const totalPhotoCount = savedImageUrls.length + pendingImages.length;
 
   const addImageFiles = (files: FileList | File[]) => {
-    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    if (list.length === 0) return;
+    const list = Array.from(files).filter((f) => isLikelyImageFile(f));
+    if (list.length === 0) {
+      setErrorMsg(INVALID_IMAGE_FILE_MESSAGE);
+      return;
+    }
 
     const slotsLeft = MAX_LISTING_PHOTOS - totalPhotoCount;
     const toAdd = list.slice(0, Math.max(0, slotsLeft));
