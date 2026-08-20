@@ -241,7 +241,7 @@ export default function TabletView({
                 contentClassName="sbn-tablet-content"
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
-                <FeedView />
+                <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} />
               </ScrollPage>
             )}
 

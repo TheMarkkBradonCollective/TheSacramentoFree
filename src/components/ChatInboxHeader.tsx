@@ -4,6 +4,7 @@ import type { UserProfile } from '../types';
 import { canViewStaffReports } from '../lib/roles';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import type { ChatFeedbackPanel } from './ChatFeedbackSection';
+import { IN_APP } from '../siteContent';
 
 interface ChatInboxHeaderProps {
   onStartConversation?: () => void;
@@ -38,16 +39,22 @@ export default function ChatInboxHeader({
   return (
     <header
       id="chat_inbox_header"
-      className="shrink-0 flex items-center justify-end gap-1 px-3 py-2 chat-thread-header"
+      className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 chat-inbox-header"
     >
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="min-w-0">
+        <h2 className="text-lg font-display font-bold text-app tracking-tight leading-tight">
+          {IN_APP.chatsTitle}
+        </h2>
+        <p className="text-[11px] text-muted truncate mt-0.5">Neighbors, groups & support</p>
+      </div>
+      <div className="flex items-center gap-0.5 shrink-0">
         {onStartConversation ? (
           <button
             type="button"
             onClick={onStartConversation}
             className="p-2.5 rounded-full text-muted hover:text-app hover:bg-inset"
-            aria-label="Compose message"
-            title="Compose message"
+            aria-label="New chat"
+            title="New chat"
           >
             <Edit className="w-5 h-5" />
           </button>

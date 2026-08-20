@@ -1,26 +1,58 @@
-import { Sparkles } from 'lucide-react';
-import { FEED_REACTION_EMOJI } from '../lib/feedReactions';
-import { IN_APP } from '../siteContent';
+import { useMemo, Fragment } from 'react';
+import type { UserProfile } from '../types';
+import { useFeedEngagement } from '../hooks/useFeedEngagement';
+import { useFeedPosts } from '../hooks/useFeedPosts';
+import FeedPostComposer from './feed/FeedPostComposer';
+import FeedPostCard from './feed/FeedPostCard';
+import { ItemGridSkeleton } from './Skeleton';
 
-/** Neighbor wall placeholder — posts, photos, comments, and reactions coming soon. */
-export default function FeedView() {
+interface FeedViewProps {
+  userProfile: UserProfile;
+  blockedUserIds?: Set<string>;
+  onViewProfile?: (userId: string) => void;
+}
+
+export default function FeedView({
+  userProfile,
+  blockedUserIds = new Set(),
+  onViewProfile,
+}: FeedViewProps) {
+  const { posts, loading, creating, publishPost, removePost } = useFeedPosts(userProfile);
+  const postIds = useMemo(
+    () => posts.filter((p) => !blockedUserIds.has(p.userId)).map((p) => p.id),
+    [posts, blockedUserIds],
+  );
+  const visiblePosts = useMemo(
+    () => posts.filter((p) => !blockedUserIds.has(p.userId)),
+    [posts, blockedUserIds],
+  );
+  const engagement = useFeedEngagement(postIds, userProfile, blockedUserIds);
+
   return (
-    <div className="sbn-card text-center py-16 px-8 border-dashed" id="community_feed_placeholder">
-      <Sparkles className="w-10 h-10 text-accent mx-auto mb-3" aria-hidden />
-      <h2 className="font-display text-lg font-bold text-app">{IN_APP.communityFeedTitle}</h2>
-      <p className="text-sm text-muted mt-2 max-w-sm mx-auto leading-relaxed">{IN_APP.communityFeedDescription}</p>
-      <p className="text-xs text-muted mt-4">Planned reactions</p>
-      <div className="flex flex-wrap justify-center gap-2 mt-2" aria-hidden>
-        {FEED_REACTION_EMOJI.map((emoji) => (
-          <span
-            key={emoji}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-app bg-inset text-lg"
-          >
-            {emoji}
-          </span>
-        ))}
-      </div>
-      <p className="text-[11px] text-muted mt-3">Plus upvote / downvote on each post</p>
+    <div className="space-y-4 pb-6" id="community_feed_view">
+      <FeedPostComposer userProfile={userProfile} creating={creating} onPublish={publishPost} />
+
+      {loading && visiblePosts.length === 0 ? (
+        <ItemGridSkeleton count={3} />
+      ) : visiblePosts.length === 0 ? (
+        <div className="sbn-card text-center py-12 px-6 border-dashed">
+          <p className="text-sm text-muted">No posts yet — say hi to the neighborhood.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {visiblePosts.map((post) => (
+            <Fragment key={post.id}>
+              <FeedPostCard
+                post={post}
+                userProfile={userProfile}
+                engagement={engagement}
+                onViewProfile={onViewProfile}
+                onDeletePost={removePost}
+              />
+            </Fragment>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

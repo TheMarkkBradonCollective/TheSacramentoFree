@@ -234,7 +234,7 @@ export default function DesktopView({
                 footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
               >
                 <div className="sbn-tablet-content max-w-2xl mx-auto w-full">
-                  <FeedView />
+                  <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} />
                 </div>
               </ScrollPage>
             )}
