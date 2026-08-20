@@ -14,6 +14,7 @@ import {
   ThumbsUp,
   X,
 } from 'lucide-react';
+import CollapsibleFilterSection from './CollapsibleFilterSection';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
 import FilterToggleGroup from './FilterToggleGroup';
 import ItemCard from './ItemCard';
@@ -85,13 +86,13 @@ function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string
 function feedTypeToolbarLabel(type: ListingTypeFilter): string {
   switch (type) {
     case 'all':
-      return 'All';
+      return 'Everything';
     case 'giveaway':
-      return 'Give';
+      return 'Giving';
     case 'looking':
-      return 'Look';
+      return 'Looking';
     case 'trade':
-      return 'Trade';
+      return 'Trading';
   }
 }
 
@@ -113,7 +114,7 @@ function filterToggleOptionId(prefix: string, value: string): string {
 function FilterPanelToggleSection<T extends string>({
   id,
   label,
-  icon: Icon,
+  icon,
   ariaLabel,
   options,
   value,
@@ -127,12 +128,17 @@ function FilterPanelToggleSection<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
+  const defaultValue = options[0]?.value;
+  const activeCount = defaultValue !== undefined && value !== defaultValue ? 1 : 0;
+
   return (
-    <div className="space-y-1.5" id={id}>
-      <p className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
-        <Icon className="w-3 h-3 shrink-0" aria-hidden />
-        {label}
-      </p>
+    <CollapsibleFilterSection
+      id={id}
+      title={label}
+      icon={icon}
+      activeCount={activeCount}
+      defaultOpen={activeCount > 0}
+    >
       <FilterToggleGroup
         id={`${id}_group`}
         ariaLabel={ariaLabel}
@@ -144,7 +150,7 @@ function FilterPanelToggleSection<T extends string>({
         onChange={onChange}
         wrap
       />
-    </div>
+    </CollapsibleFilterSection>
   );
 }
 
@@ -443,18 +449,6 @@ export default function ItemGrid({
             <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
               <button
                 type="button"
-                id="feed_sort_toggle"
-                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
-                aria-pressed={gridSortMode === 'nearest'}
-                aria-label={feedSortToolbarLabel(gridSortMode, false)}
-              >
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-                <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
-                <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
-              </button>
-              <button
-                type="button"
                 id="feed_type_toggle"
                 onClick={cycleTypeFilter}
                 className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
@@ -466,6 +460,18 @@ export default function ItemGrid({
                 aria-label={`Listing type: ${feedTypeToolbarLabel(selectedType)}`}
               >
                 <span>{feedTypeToolbarLabel(selectedType)}</span>
+              </button>
+              <button
+                type="button"
+                id="feed_sort_toggle"
+                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
+                aria-pressed={gridSortMode === 'nearest'}
+                aria-label={feedSortToolbarLabel(gridSortMode, false)}
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
+                <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
+                <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
               </button>
             </div>
           </div>
@@ -550,8 +556,12 @@ export default function ItemGrid({
         </div>
 
         <div className="space-y-3" id="feed_filter_switches">
-          <div className="space-y-1.5" id="feed_sort_bar">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
+          <CollapsibleFilterSection
+            id="feed_sort_bar"
+            title="Sort feed"
+            activeCount={sortBy !== null ? 1 : 0}
+            defaultOpen={sortBy !== null}
+          >
             <div className="flex flex-wrap gap-2">
               {PRIMARY_FEED_SORTS.map(({ value, label }) => (
                 <span key={value} className="contents">
@@ -564,10 +574,14 @@ export default function ItemGrid({
                 </span>
               ))}
             </div>
-          </div>
+          </CollapsibleFilterSection>
 
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+          <CollapsibleFilterSection
+            id="feed_quick_picks"
+            title="Quick picks"
+            activeCount={activeQuickPicks.size}
+            defaultOpen={activeQuickPicks.size > 0}
+          >
             <div className="flex flex-wrap gap-2">
               {QUICK_PICKS.map(({ id, label }) => (
                 <span key={id} className="contents">
@@ -580,7 +594,7 @@ export default function ItemGrid({
                 </span>
               ))}
             </div>
-          </div>
+          </CollapsibleFilterSection>
         </div>
 
         <div className="pt-3 border-t border-app space-y-4">
