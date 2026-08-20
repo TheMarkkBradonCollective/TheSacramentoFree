@@ -50,6 +50,16 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "lastActiveAt" TIMESTAMPTZ;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetEnabled" BOOLEAN NOT NULL DEFAULT true;
 -- Staff: official staff mode vs neighbor mode for community participation.
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "staffInteractionMode" TEXT NOT NULL DEFAULT 'staff';
+-- Go Get ring timeout, scheduling, and pickup coordination preferences (Aug 20, 2026)
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "pickupAvailability" JSONB;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetRingDurationSeconds" INTEGER NOT NULL DEFAULT 140;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "goGetRingPattern" TEXT NOT NULL DEFAULT 'ring';
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_go_get_ring_duration_check;
+ALTER TABLE public.users ADD CONSTRAINT users_go_get_ring_duration_check
+  CHECK ("goGetRingDurationSeconds" >= 10 AND "goGetRingDurationSeconds" <= 140);
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_go_get_ring_pattern_check;
+ALTER TABLE public.users ADD CONSTRAINT users_go_get_ring_pattern_check
+  CHECK ("goGetRingPattern" IN ('single_beep', 'double_beep', 'triple_beep', 'ring', 'vibrate', 'vibrate_only'));
 
 CREATE INDEX IF NOT EXISTS users_last_active_at_idx ON public.users ("lastActiveAt" DESC);
 
@@ -1168,6 +1178,8 @@ CREATE TABLE IF NOT EXISTS public.go_get_sessions (
 -- Poster may opt in to share their live device location during active/arrived pickup
 -- so the picker can see both the listed pickup pin and where they actually are.
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "fulfillerSharingLocation" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringExpiresAt" TIMESTAMPTZ;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringDurationSeconds" INTEGER;
 
 ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_item_type_check;
 ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_item_type_check
@@ -1180,7 +1192,7 @@ ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_handshake_chec
 ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_status_check;
 ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_status_check
   CHECK (status IN (
-    'awaiting_availability', 'window_offered', 'scheduled', 'active', 'arrived',
+    'awaiting_availability', 'awaiting_schedule', 'window_offered', 'scheduled', 'active', 'arrived',
     'completed', 'cancelled', 'expired', 'disputed'
   ));
 
