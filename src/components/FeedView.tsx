@@ -1,6 +1,6 @@
 import { useMemo, useState, Fragment } from 'react';
 import { Newspaper, Plus, Sparkles } from 'lucide-react';
-import type { UserProfile } from '../types';
+import type { FeedPost, UserProfile } from '../types';
 import { useFeedEngagement } from '../hooks/useFeedEngagement';
 import { useFeedPosts } from '../hooks/useFeedPosts';
 import FeedPostComposer from './feed/FeedPostComposer';
@@ -11,12 +11,14 @@ interface FeedViewProps {
   userProfile: UserProfile;
   blockedUserIds?: Set<string>;
   onViewProfile?: (userId: string) => void;
+  onViewFeedPost?: (post: FeedPost) => void;
 }
 
 export default function FeedView({
   userProfile,
   blockedUserIds = new Set(),
   onViewProfile,
+  onViewFeedPost,
 }: FeedViewProps) {
   const { posts, loading, creating, publishPost, removePost } = useFeedPosts(userProfile);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -107,6 +109,7 @@ export default function FeedView({
                 post={post}
                 userProfile={userProfile}
                 engagement={engagement}
+                onViewPost={onViewFeedPost}
                 onViewProfile={onViewProfile}
                 onDeletePost={removePost}
               />
