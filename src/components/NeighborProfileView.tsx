@@ -41,6 +41,7 @@ import ProfilePostList from './ProfilePostList';
 import ProfileAwardsRow from './ProfileAwardsRow';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
+import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface NeighborProfileViewProps {
   userId: string;
@@ -164,6 +165,8 @@ export default function NeighborProfileView({
       unsubBlocks();
     };
   }, [userId, currentUserId, currentUserProfile, hintListing?.id]);
+
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;

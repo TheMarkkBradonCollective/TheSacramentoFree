@@ -315,13 +315,113 @@ export default function App() {
     setDetailNavigateOnOpen(false);
     setDetailEvent(null);
     setDetailEventNavigateOnOpen(false);
+    setDetailFeedPost(null);
     setViewProfileUid(null);
+    setShowDirectMessageModal(false);
+    setPickupAttributionItem(null);
     setLegalPanel(null);
     setShowAwardsPanel(false);
     setShowStaffApplyPanel(false);
     setShowGoFundMeDetail(false);
     closeNotificationsHub();
   }, []);
+
+  /** Dismiss the topmost overlay — used by Android hardware back. Returns true when handled. */
+  const popTopOverlay = useCallback((): boolean => {
+    if (editingEvent) {
+      setEditingEvent(null);
+      setAddEventDatesMode(false);
+      return true;
+    }
+    if (editingItem) {
+      setEditingItem(null);
+      return true;
+    }
+    if (newListingModalMode) {
+      setNewListingModalMode(null);
+      return true;
+    }
+    if (pickupAttributionItem) {
+      setPickupAttributionItem(null);
+      return true;
+    }
+    if (showDirectMessageModal) {
+      setShowDirectMessageModal(false);
+      return true;
+    }
+    if (viewProfileUid) {
+      setViewProfileUid(null);
+      return true;
+    }
+    if (detailEvent) {
+      setDetailEvent(null);
+      setDetailEventNavigateOnOpen(false);
+      return true;
+    }
+    if (detailItem) {
+      setDetailItem(null);
+      setDetailNavigateOnOpen(false);
+      return true;
+    }
+    if (detailFeedPost) {
+      setDetailFeedPost(null);
+      return true;
+    }
+    if (showStaffApplyPanel) {
+      setShowStaffApplyPanel(false);
+      return true;
+    }
+    if (showAwardsPanel) {
+      setShowAwardsPanel(false);
+      return true;
+    }
+    if (legalPanel) {
+      setLegalPanel(null);
+      return true;
+    }
+    if (showGoFundMeDetail) {
+      setShowGoFundMeDetail(false);
+      return true;
+    }
+    return false;
+  }, [
+    detailEvent,
+    detailFeedPost,
+    detailItem,
+    editingEvent,
+    editingItem,
+    legalPanel,
+    newListingModalMode,
+    pickupAttributionItem,
+    showAwardsPanel,
+    showDirectMessageModal,
+    showGoFundMeDetail,
+    showStaffApplyPanel,
+    viewProfileUid,
+  ]);
+
+  useEffect(() => {
+    if (!isNativeApp()) return;
+
+    let removeListener: (() => void) | undefined;
+
+    void import('@capacitor/app').then(({ App }) => {
+      void App.addListener('backButton', ({ canGoBack }) => {
+        if (popTopOverlay()) return;
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          void App.exitApp();
+        }
+      }).then((handle) => {
+        removeListener = () => void handle.remove();
+      });
+    });
+
+    return () => {
+      removeListener?.();
+    };
+  }, [popTopOverlay]);
 
   const handleTabChange = useCallback(
     (tab: AnyTab) => {

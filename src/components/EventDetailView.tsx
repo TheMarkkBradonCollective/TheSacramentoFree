@@ -12,6 +12,7 @@ import { isEventEditable, isEventPast, isEventUpcoming, resolveEventStatus } fro
 import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
 import EventStatusBadge from './EventStatusBadge';
 import EventDetailNavigation from './EventDetailNavigation';
+import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface EventDetailViewProps {
   event: CommunityEvent;
@@ -117,6 +118,8 @@ export default function EventDetailView({
       setCommenterRoles(roles);
     });
   }, [comments]);
+
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
