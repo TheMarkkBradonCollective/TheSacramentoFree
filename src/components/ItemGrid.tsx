@@ -42,8 +42,6 @@ import { getItemMapDestination } from '../lib/itemLocation';
 import { isNativeApp } from '../lib/nativePlatform';
 import {
   readFeedViewMode,
-  readHideFulfilledFromFeed,
-  readHideGivenFromFeed,
   shouldHideCompletedListing,
   writeFeedViewMode,
   writeHideFulfilledFromFeed,
