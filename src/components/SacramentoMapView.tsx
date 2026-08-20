@@ -53,6 +53,29 @@ import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type
 import { pickSoonestPerEventSeries } from '../lib/eventSeries';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
+function MapCreateFab({
+  onOpenNewPost,
+  className = '',
+}: {
+  onOpenNewPost?: () => void;
+  className?: string;
+}) {
+  if (!onOpenNewPost) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpenNewPost}
+      className={`sbn-fab pointer-events-auto ${className}`}
+      aria-label="New listing"
+      title="New listing"
+      id="map_new_listing_btn"
+    >
+      <Plus className="w-6 h-6" />
+    </button>
+  );
+}
+
 interface SacramentoMapViewProps {
   items: ItemPost[];
   events?: CommunityEvent[];
@@ -1528,17 +1551,7 @@ export default function SacramentoMapView({
           <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
         </button>
 
-        {onOpenNewPost && (
-          <button
-            type="button"
-            onClick={onOpenNewPost}
-            className="sbn-fab absolute sbn-map-edge-bottom right-4 z-20 pointer-events-auto"
-            aria-label="New post"
-            id="mobile_map_new_post_btn"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        )}
+        <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute sbn-map-edge-bottom right-4 z-20" />
 
         {/* Location error toast */}
         {locationError && (
@@ -2084,6 +2097,8 @@ export default function SacramentoMapView({
             <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
           </button>
         </div>
+
+        <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute bottom-3 left-3 z-10" />
 
         {/* Category Color Guide Drawer Overlay */}
         <AnimatePresence>

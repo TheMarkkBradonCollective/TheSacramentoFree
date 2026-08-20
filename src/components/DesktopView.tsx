@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
 import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
@@ -154,17 +153,7 @@ export default function DesktopView({
     ? (activeTab as AppTab)
     : 'feed';
 
-  const topbarAction = !onStaffTab ? (
-    communityTab === 'feed' ? (
-      <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm" id="topbar_new_post_btn">
-        <Plus className="w-4 h-4" /> {IN_APP.postButton}
-      </button>
-    ) : communityTab === 'events' && canAccessEvents ? (
-      <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary sbn-btn-sm" id="topbar_new_event_btn">
-        <Plus className="w-4 h-4" /> {IN_APP.postEventButton}
-      </button>
-    ) : null
-  ) : null;
+  const topbarAction = null;
 
   const theme = roleTheme(profileUiRole(userProfile));
 
@@ -258,8 +247,6 @@ export default function DesktopView({
                   <DashboardRail
                     items={items}
                     userProfile={userProfile}
-                    onOpenNewPost={onOpenNewPost}
-                    onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
                     canAccessEvents={canAccessEvents}
                     onOpenAwards={onOpenAwards}
                     onViewProfile={onViewProfile}
@@ -291,8 +278,6 @@ export default function DesktopView({
                   <DashboardRail
                     items={items}
                     userProfile={userProfile}
-                    onOpenNewPost={onOpenNewPost}
-                    onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
                     canAccessEvents={canAccessEvents}
                     onOpenAwards={onOpenAwards}
                     onViewProfile={onViewProfile}
@@ -317,6 +302,7 @@ export default function DesktopView({
                 onViewEvent={onViewEvent}
                 onEditItem={onEditItem}
                 mapVisible={communityTab === 'map'}
+                onOpenNewPost={onOpenNewPost}
                 itemsHydrated={itemsHydrated}
                 eventsHydrated={eventsHydrated}
                 eventsEngagement={eventsEngagement}

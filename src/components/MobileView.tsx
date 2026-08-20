@@ -5,7 +5,7 @@ import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, Plus, CalendarDays } from 'lucide-react';
+import { Map, List, MessageSquare, User, CalendarDays } from 'lucide-react';
 import EventsPanel from './EventsPanel';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
@@ -409,16 +409,6 @@ export default function MobileView({
               isLoading={!itemsHydrated}
             />
         </ScrollPage>
-        {communityTab === 'feed' && (
-          <button
-            type="button"
-            onClick={onOpenNewPost}
-            className="sbn-fab absolute right-4 bottom-4 z-20"
-            aria-label="New post"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        )}
 
         <ScrollPage
           className={communityTab === 'events' ? '' : 'hidden'}
@@ -439,16 +429,6 @@ export default function MobileView({
               isLoading={isEventsLoading}
             />
         </ScrollPage>
-        {communityTab === 'events' && canAccessEvents && (
-          <button
-            type="button"
-            onClick={onOpenNewEvent}
-            className="sbn-fab absolute right-4 bottom-4 z-20"
-            aria-label="Post event"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        )}
 
         <div
           className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`}
