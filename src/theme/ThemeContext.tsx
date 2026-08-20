@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { subscribeThemeSyncFromProfile } from '../lib/appPreferences';
 
 export type Theme = 'light' | 'dark';
 
@@ -37,6 +38,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyThemeToDocument(theme);
     localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
+
+  useEffect(() => subscribeThemeSyncFromProfile(setThemeState), []);
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);

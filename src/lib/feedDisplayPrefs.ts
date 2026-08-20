@@ -1,9 +1,9 @@
-import type { FeedPost, ItemPost } from '../types';
+import type { FeedPost, ItemPost, FeedViewMode } from '../types';
 
 const VIEW_MODE_KEY = 'sbn_feed_view_mode_v1';
 const EVENTS_VIEW_MODE_KEY = 'sbn_events_view_mode_v1';
 
-export type FeedViewMode = 'list' | 'grid';
+export type { FeedViewMode };
 
 export type FeedContentFilter = 'all' | 'text' | 'pictures';
 

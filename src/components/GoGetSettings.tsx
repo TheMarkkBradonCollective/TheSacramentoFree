@@ -102,7 +102,8 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
           <h4 className="text-xs font-bold text-muted uppercase tracking-wider">Go Get & pickup coordination</h4>
           <p className="text-xs text-muted mt-1 leading-relaxed">
             Off by default. Turn on in the Android app to let neighbors use Go Get, Drop off, Meet up, and
-            claim-at-pin on your listings during your pickup hours. Requires notifications.
+            claim-at-pin on your listings during your pickup hours. Requires notifications. Settings save to
+            your account and follow you on any device.
           </p>
         </div>
       </div>

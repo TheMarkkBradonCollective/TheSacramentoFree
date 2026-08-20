@@ -1,20 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
   CircleDot,
-  LayoutGrid,
-  LayoutList,
   Plus,
   Search as SearchIcon,
   MapPin,
-  SlidersHorizontal,
   Tag,
   AlertCircle,
   ThumbsUp,
   X,
 } from 'lucide-react';
-import CollapsibleFilterSection from './CollapsibleFilterSection';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
 import FilterToggleGroup from './FilterToggleGroup';
 import ItemCard from './ItemCard';
@@ -29,7 +25,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_TYPE_FILTERS, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_TYPE_FILTERS, LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
@@ -49,6 +45,7 @@ import {
   writeFeedViewMode,
   type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
+import { persistUserAppPreferences } from '../lib/appPreferences';
 
 export type ItemsEngagementApi = ReturnType<typeof useItemsEngagement>;
 
@@ -78,78 +75,60 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
 
-function feedSortToolbarLabel(mode: 'nearest' | 'new'): string {
-  return mode === 'nearest' ? 'Near' : 'New';
-}
+const FEED_SORT_OPTIONS = [
+  { value: 'nearest' as const, label: 'Near', id: 'feed_sort_nearest' },
+  { value: 'new' as const, label: 'New', id: 'feed_sort_new' },
+];
 
-function feedTypeToolbarLabel(type: ListingTypeFilter): string {
-  switch (type) {
-    case 'all':
-      return 'Everything';
-    case 'giveaway':
-      return 'Giving';
-    case 'looking':
-      return 'Looking';
-    case 'trade':
-      return 'Trading';
-  }
-}
+const FEED_TYPE_OPTIONS: { value: ListingTypeFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'looking', label: 'Look' },
+  { value: 'giveaway', label: 'Give' },
+  { value: 'trade', label: 'Trade' },
+];
+
+const FEED_VIEW_OPTIONS = [
+  { value: 'grid' as const, label: 'Grid', id: 'feed_view_grid_btn' },
+  { value: 'list' as const, label: 'List', id: 'feed_view_list_btn' },
+];
 
 function needsPickupListing(item: ItemPost): boolean {
   if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
   return /pickup|curb|porch/i.test(item.category);
 }
 
-const ALL_FEED_SORT_OPTIONS: { value: FeedSortMode; label: string }[] = [
-  ...PRIMARY_FEED_SORTS.map(({ value, label }) => ({ value, label })),
-  ...MORE_FEED_SORTS,
-];
-
-function filterToggleOptionId(prefix: string, value: string): string {
-  const slug = value.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
-  return `${prefix}_${slug || 'option'}`;
-}
-
-function FilterPanelToggleSection<T extends string>({
+function FilterSelect({
   id,
   label,
-  icon,
-  ariaLabel,
-  options,
+  icon: Icon,
   value,
   onChange,
+  children,
 }: {
   id: string;
   label: string;
   icon: typeof Tag;
-  ariaLabel: string;
-  options: { value: T; label: string; id?: string }[];
-  value: T;
-  onChange: (value: T) => void;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
 }) {
-  const defaultValue = options[0]?.value;
-  const activeCount = defaultValue !== undefined && value !== defaultValue ? 1 : 0;
-
   return (
-    <CollapsibleFilterSection
-      id={id}
-      title={label}
-      icon={icon}
-      activeCount={activeCount}
-      defaultOpen={activeCount > 0}
-    >
-      <FilterToggleGroup
-        id={`${id}_group`}
-        ariaLabel={ariaLabel}
-        options={options.map((opt) => ({
-          ...opt,
-          id: opt.id ?? filterToggleOptionId(`${id}_group`, opt.value),
-        }))}
-        value={value}
-        onChange={onChange}
-        wrap
-      />
-    </CollapsibleFilterSection>
+    <label className="block space-y-1.5" htmlFor={id}>
+      <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
+        <Icon className="w-3 h-3 shrink-0" aria-hidden />
+        {label}
+      </span>
+      <div className="flex items-center rounded-xl border border-app bg-inset px-3 py-2.5">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-transparent text-sm font-medium text-app focus:outline-none cursor-pointer"
+        >
+          {children}
+        </select>
+      </div>
+    </label>
   );
 }
 
@@ -235,6 +214,7 @@ export default function ItemGrid({
   const handleViewModeChange = (mode: FeedViewMode) => {
     setViewMode(mode);
     writeFeedViewMode(mode);
+    void persistUserAppPreferences(userProfile, { feedViewMode: mode });
   };
 
   const {
@@ -279,6 +259,18 @@ export default function ItemGrid({
     if (sortBy === value) setSortBy(null);
   };
 
+  const handleTypeSwitch = (type: ListingTypeFilter) => (checked: boolean) => {
+    if (checked) {
+      setSelectedType(type);
+      if (type !== 'all') setSelectedCategory('All Categories');
+      return;
+    }
+    if (selectedType === type) {
+      setSelectedType('all');
+      setSelectedCategory('All Categories');
+    }
+  };
+
   const handleQuickPickSwitch = (pick: QuickPick) => (checked: boolean) => {
     setActiveQuickPicks((prev) => {
       const next = new Set(prev);
@@ -288,10 +280,10 @@ export default function ItemGrid({
     });
   };
 
-  /** Filters panel only — toolbar type/sort toggles have their own active styling. */
-  const panelFilterCount = [
+  const activeFilterCount = [
     searchTerm.trim() !== '',
     sortBy !== null,
+    selectedType !== 'all',
     selectedCategory !== 'All Categories',
     selectedNeighborhood !== 'All Neighborhoods',
     selectedStatus !== 'all',
@@ -299,13 +291,11 @@ export default function ItemGrid({
     activeQuickPicks.size > 0,
   ].filter(Boolean).length;
 
-  const hasExtraFilters =
-    panelFilterCount > 0 ||
-    selectedType !== 'all' ||
-    gridSortMode === 'nearest';
+  const hasExtraFilters = activeFilterCount > 0;
 
   const clearFilters = () => {
     setSearchTerm('');
+    setSelectedType('all');
     setSelectedCategory('All Categories');
     setSelectedNeighborhood('All Neighborhoods');
     setSelectedStatus('all');
@@ -314,49 +304,10 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set());
   };
 
-  const cycleTypeFilter = () => {
-    setSelectedType((current) => {
-      const idx = LISTING_TYPE_FILTERS.indexOf(current);
-      const next = LISTING_TYPE_FILTERS[(idx + 1) % LISTING_TYPE_FILTERS.length];
-      if (next !== 'all') setSelectedCategory('All Categories');
-      return next;
-    });
+  const handleToolbarTypeChange = (type: ListingTypeFilter) => {
+    setSelectedType(type);
+    if (type !== 'all') setSelectedCategory('All Categories');
   };
-
-  const categoryFilterOptions = useMemo(() => {
-    const allOption = { value: 'All Categories', label: 'All categories' };
-    if (selectedType === 'giveaway' || selectedType === 'trade') {
-      return [allOption, ...ITEM_CATEGORIES.map((c) => ({ value: c, label: c }))];
-    }
-    if (selectedType === 'looking') {
-      return [allOption, ...ISO_CATEGORIES.map((c) => ({ value: c, label: c }))];
-    }
-    const merged = [...ITEM_CATEGORIES, ...ISO_CATEGORIES.filter((c) => !ITEM_CATEGORIES.includes(c))];
-    return [allOption, ...merged.map((c) => ({ value: c, label: c }))];
-  }, [selectedType]);
-
-  const neighborhoodFilterOptions = useMemo(
-    () => [
-      { value: 'All Neighborhoods', label: 'All neighborhoods' },
-      ...SACRAMENTO_NEIGHBORHOODS.map((n) => ({ value: n, label: n })),
-    ],
-    [],
-  );
-
-  const statusFilterOptions = useMemo(
-    () => STATUS_FILTER_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
-    [],
-  );
-
-  const voteFilterOptions = useMemo(
-    () => VOTE_FILTER_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
-    [],
-  );
-
-  const sortFilterOptions = useMemo(
-    () => ALL_FEED_SORT_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
-    [],
-  );
 
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) => {
@@ -429,111 +380,73 @@ export default function ItemGrid({
     <>
     <div className="space-y-3" id="item_feed_wrapper">
       <div className="space-y-1 min-w-0" id="feed_view_mode_bar">
-        <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
-          <div className="shrink-0">
-            {onOpenNewPost ? (
-              <button
-                type="button"
-                id="feed_new_listing_btn"
-                onClick={onOpenNewPost}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
-                aria-label="New stuff listing"
-                title="New stuff listing"
-              >
-                <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                <span>New</span>
-              </button>
-            ) : null}
-          </div>
-
-          <div className="flex-1 min-w-0 flex justify-center px-0.5 overflow-x-auto sbn-feed-toolbar-scroll">
-            <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
-              <button
-                type="button"
-                id="feed_type_toggle"
-                onClick={cycleTypeFilter}
-                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
-                  selectedType !== 'all'
-                    ? 'border-accent bg-accent-soft text-accent'
-                    : 'border-app bg-inset text-app hover:border-accent/40'
-                }`}
-                aria-pressed={selectedType !== 'all'}
-                aria-label={`Listing type: ${feedTypeToolbarLabel(selectedType)}`}
-              >
-                <span>{feedTypeToolbarLabel(selectedType)}</span>
-              </button>
-              <button
-                type="button"
-                id="feed_sort_toggle"
-                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
-                aria-pressed={gridSortMode === 'nearest'}
-                aria-label={feedSortToolbarLabel(gridSortMode)}
-              >
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-                <span>{feedSortToolbarLabel(gridSortMode)}</span>
-              </button>
+        <div className="sbn-feed-toolbar-scroll min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 w-max min-w-full">
+            <div className="shrink-0">
+              {onOpenNewPost ? (
+                <button
+                  type="button"
+                  id="feed_new_listing_btn"
+                  onClick={onOpenNewPost}
+                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2.5 py-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
+                  aria-label="New listing"
+                  title="New listing"
+                >
+                  <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                  <span>New</span>
+                </button>
+              ) : null}
             </div>
-          </div>
 
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <button
-              type="button"
-              id="feed_filters_panel_toggle"
-              onClick={() => setFiltersPanelOpen((open) => !open)}
-              aria-expanded={filtersPanelOpen}
-              aria-label="Filters"
-              className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
-                filtersPanelOpen
-                  ? 'border-accent bg-accent-soft text-accent'
-                  : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
-              <span className="hidden md:inline">Filters</span>
-              {panelFilterCount > 0 && (
-                <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center leading-none">
-                  {panelFilterCount}
+            <FilterToggleGroup
+              id="feed_sort_group"
+              ariaLabel="Sort listings"
+              options={FEED_SORT_OPTIONS}
+              value={gridSortMode}
+              onChange={setGridSortMode}
+              compact
+            />
+
+            <FilterToggleGroup
+              id="feed_type_group"
+              ariaLabel="Listing type"
+              options={FEED_TYPE_OPTIONS}
+              value={selectedType}
+              onChange={handleToolbarTypeChange}
+              compact
+            />
+
+            <div className="relative shrink-0">
+              <FilterLabeledSwitch
+                id="feed_filters_panel_toggle"
+                label="Filter"
+                checked={filtersPanelOpen}
+                onChange={setFiltersPanelOpen}
+                compact
+                ariaLabel={
+                  activeFilterCount > 0
+                    ? `Filters, ${activeFilterCount} active`
+                    : 'Filters'
+                }
+              />
+              {activeFilterCount > 0 && (
+                <span
+                  className="pointer-events-none absolute -top-1 -right-1 text-[9px] font-bold bg-accent text-on-accent min-w-[1rem] h-4 px-1 rounded-full flex items-center justify-center leading-none"
+                  aria-hidden
+                >
+                  {activeFilterCount}
                 </span>
               )}
-            </button>
-            <div
-              className="inline-flex rounded-xl border border-app bg-inset p-0.5 shrink-0"
-              role="group"
-              aria-label="Feed view"
-              id="feed_view_mode_toggle"
-            >
-              <button
-                type="button"
-                id="feed_view_grid_btn"
-                aria-pressed={viewMode === 'grid'}
-                aria-label="Grid view"
-                onClick={() => handleViewModeChange('grid')}
-                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-accent text-on-accent'
-                    : 'text-muted hover:text-app hover:bg-surface-hover'
-                }`}
-              >
-                <LayoutGrid className="w-4 h-4 shrink-0" aria-hidden />
-                <span className="sr-only">Grid</span>
-              </button>
-              <button
-                type="button"
-                id="feed_view_list_btn"
-                aria-pressed={viewMode === 'list'}
-                aria-label="List view"
-                onClick={() => handleViewModeChange('list')}
-                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                  viewMode === 'list'
-                    ? 'bg-accent text-on-accent'
-                    : 'text-muted hover:text-app hover:bg-surface-hover'
-                }`}
-              >
-                <LayoutList className="w-4 h-4 shrink-0" aria-hidden />
-                <span className="sr-only">List</span>
-              </button>
             </div>
+
+            <FilterToggleGroup
+              id="feed_view_mode_toggle"
+              ariaLabel="Feed view"
+              options={FEED_VIEW_OPTIONS}
+              value={viewMode}
+              onChange={handleViewModeChange}
+              compact
+            />
           </div>
         </div>
         {gridSortMode === 'nearest' && !userLocation && (
@@ -556,12 +469,8 @@ export default function ItemGrid({
         </div>
 
         <div className="space-y-3" id="feed_filter_switches">
-          <CollapsibleFilterSection
-            id="feed_sort_bar"
-            title="Sort feed"
-            activeCount={sortBy !== null ? 1 : 0}
-            defaultOpen={sortBy !== null}
-          >
+          <div className="space-y-1.5" id="feed_sort_bar">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
             <div className="flex flex-wrap gap-2">
               {PRIMARY_FEED_SORTS.map(({ value, label }) => (
                 <span key={value} className="contents">
@@ -574,14 +483,22 @@ export default function ItemGrid({
                 </span>
               ))}
             </div>
-          </CollapsibleFilterSection>
+            <div className="grid grid-cols-3 gap-2 pt-1" id="feed_type_filter">
+              {LISTING_POST_TYPES.map((type) => (
+                <span key={type} className="contents">
+                  <FilterLabeledSwitch
+                    id={`type_${type}_switch`}
+                    label={getPostTypeFilterLabel(type)}
+                    checked={selectedType === type}
+                    onChange={handleTypeSwitch(type)}
+                  />
+                </span>
+              ))}
+            </div>
+          </div>
 
-          <CollapsibleFilterSection
-            id="feed_quick_picks"
-            title="Quick picks"
-            activeCount={activeQuickPicks.size}
-            defaultOpen={activeQuickPicks.size > 0}
-          >
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
             <div className="flex flex-wrap gap-2">
               {QUICK_PICKS.map(({ id, label }) => (
                 <span key={id} className="contents">
@@ -594,59 +511,124 @@ export default function ItemGrid({
                 </span>
               ))}
             </div>
-          </CollapsibleFilterSection>
+          </div>
         </div>
 
-        <div className="pt-3 border-t border-app space-y-4">
-          <FilterPanelToggleSection
-            id="filter_category_section"
-            label="Category"
-            icon={Tag}
-            ariaLabel="Category"
-            options={categoryFilterOptions}
-            value={selectedCategory}
-            onChange={setSelectedCategory}
-          />
+        <div className="pt-3 border-t border-app space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FilterSelect
+              id="filter_category_select"
+              label="Category"
+              icon={Tag}
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+            >
+              <option value="All Categories">All categories</option>
+              {selectedType === 'all' ? (
+                <>
+                  <optgroup label="Giving">
+                    {ITEM_CATEGORIES.map((c) => (
+                      <option key={`all_giveaway_${c}`} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Looking for">
+                    {ISO_CATEGORIES.map((c) => (
+                      <option key={`all_looking_${c}`} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Trade & Barter">
+                    {ITEM_CATEGORIES.map((c) => (
+                      <option key={`all_trade_${c}`} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                </>
+              ) : selectedType === 'giveaway' || selectedType === 'trade' ? (
+                ITEM_CATEGORIES.map((c) => (
+                  <option key={`${selectedType}_only_${c}`} value={c}>
+                    {c}
+                  </option>
+                ))
+              ) : (
+                ISO_CATEGORIES.map((c) => (
+                  <option key={`looking_only_${c}`} value={c}>
+                    {c}
+                  </option>
+                ))
+              )}
+            </FilterSelect>
 
-          <FilterPanelToggleSection
-            id="filter_neighborhood_section"
-            label="Neighborhood"
-            icon={MapPin}
-            ariaLabel="Neighborhood"
-            options={neighborhoodFilterOptions}
-            value={selectedNeighborhood}
-            onChange={setSelectedNeighborhood}
-          />
+            <FilterSelect
+              id="filter_neighborhood_select"
+              label="Neighborhood"
+              icon={MapPin}
+              value={selectedNeighborhood}
+              onChange={setSelectedNeighborhood}
+            >
+              <option value="All Neighborhoods">All neighborhoods</option>
+              {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </FilterSelect>
 
-          <FilterPanelToggleSection
-            id="filter_status_section"
-            label="Listing status"
-            icon={CircleDot}
-            ariaLabel="Listing status"
-            options={statusFilterOptions}
-            value={selectedStatus}
-            onChange={(v) => setSelectedStatus(v as StatusFilter)}
-          />
+            <FilterSelect
+              id="filter_status_select"
+              label="Listing status"
+              icon={CircleDot}
+              value={selectedStatus}
+              onChange={(v) => setSelectedStatus(v as StatusFilter)}
+            >
+              {STATUS_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </FilterSelect>
 
-          <FilterPanelToggleSection
-            id="filter_vote_section"
-            label="Interest & comments"
-            icon={ThumbsUp}
-            ariaLabel="Interest and comments"
-            options={voteFilterOptions}
-            value={selectedVoteFilter}
-            onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
-          />
+            <FilterSelect
+              id="filter_vote_select"
+              label="Interest & comments"
+              icon={ThumbsUp}
+              value={selectedVoteFilter}
+              onChange={(v) => setSelectedVoteFilter(v as VoteFilter)}
+            >
+              {VOTE_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </FilterSelect>
+          </div>
 
-          <FilterPanelToggleSection
-            id="filter_sort_section"
+          <FilterSelect
+            id="filter_sort_select"
             label="More sort options"
             icon={ArrowDownUp}
-            ariaLabel="More sort options"
-            options={sortFilterOptions}
             value={sortBy ?? 'new'}
             onChange={(v) => setSortBy(v as FeedSortMode)}
-          />
+          >
+            <optgroup label="Popular">
+              {PRIMARY_FEED_SORTS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="More">
+              {MORE_FEED_SORTS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </optgroup>
+          </FilterSelect>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">
