@@ -1,3 +1,4 @@
+import { apiUrl } from './appOrigin';
 import type { LatLng } from './mapRoute';
 import { haversineMeters } from './mapRoute';
 
@@ -163,7 +164,7 @@ export function shouldRenderLaneGuidance(
 ): boolean {
   if (!enabled) return false;
   if (!lanes || lanes.length < 2) return false;
-  if (kind === 'arrive') return false;
+  if (kind === 'arrive' || kind === 'straight') return false;
   return true;
 }
 
@@ -172,12 +173,40 @@ interface OverpassWay {
   center?: { lat: number; lon: number };
 }
 
-export async function fetchOsmLanes(location: LatLng, signal?: AbortSignal): Promise<NavLane[] | null> {
-  const key = cacheKey(location);
+export async function fetchOsmLanes(
+  location: LatLng,
+  signal?: AbortSignal,
+  streetName?: string,
+): Promise<NavLane[] | null> {
+  const key = `${cacheKey(location)}:${(streetName ?? '').trim().toLowerCase()}`;
   if (laneCache.has(key)) return laneCache.get(key) ?? null;
 
+  try {
+    const params = new URLSearchParams({
+      lat: String(location.lat),
+      lng: String(location.lng),
+    });
+    if (streetName?.trim()) params.set('name', streetName.trim());
+    const response = await fetch(apiUrl(`/api/map/lanes?${params.toString()}`), {
+      signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (response.ok) {
+      const data = (await response.json()) as { lanes?: NavLane[] };
+      const lanes = Array.isArray(data.lanes) ? data.lanes : [];
+      const result = lanes.length > 0 ? lanes : null;
+      laneCache.set(key, result);
+      return result;
+    }
+  } catch {
+    if (signal?.aborted) return null;
+  }
+
+  const nameFilter = streetName?.trim()
+    ? `["name"="${streetName.replace(/"/g, '').trim()}"]`
+    : '';
   const query = `[out:json][timeout:8];
-way(around:22,${location.lat},${location.lng})["highway"]["highway"!~"^(footway|path|cycleway|steps|pedestrian|track|bridleway)$"];
+way(around:22,${location.lat},${location.lng})["highway"]["highway"!~"^(footway|path|cycleway|steps|pedestrian|track|bridleway)$"]${nameFilter};
 out tags center;`;
 
   for (const endpoint of OVERPASS_ENDPOINTS) {

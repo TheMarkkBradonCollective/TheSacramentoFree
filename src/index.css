@@ -264,7 +264,7 @@ html.sbn-session-restore #root:empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at center, rgba(0,0,0,0.35), rgba(0,0,0,0.72));
+  background: color-mix(in srgb, var(--sbn-nav-bg) 72%, transparent);
 }
 
 #map_navigation_view .sbn-nav-loading-card {
@@ -300,7 +300,7 @@ html.sbn-session-restore #root:empty {
   width: 1.6rem;
   height: 0.22rem;
   border-radius: 9999px;
-  background: rgba(255,255,255,0.16);
+  background: var(--sbn-nav-lane-inactive);
 }
 
 #map_navigation_view .sbn-nav-loading-steps span.active {
@@ -319,7 +319,7 @@ html.sbn-session-restore #root:empty {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: rgba(0,0,0,0.82);
+  background: color-mix(in srgb, var(--sbn-nav-bg) 82%, transparent);
 }
 
 #map_navigation_view .sbn-nav-error-card {

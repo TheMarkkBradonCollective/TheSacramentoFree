@@ -1,7 +1,14 @@
 import { Compass, Navigation } from 'lucide-react';
 import { formatRouteDistance, formatRouteDuration, type LatLng } from '../lib/mapRoute';
-import { readNavigationSettings, subscribeNavigationSettings, travelModeGerund, type NavTravelMode } from '../lib/navigationSettings';
+import {
+  readNavigationSettings,
+  subscribeNavigationSettings,
+  travelModeGerund,
+  writeNavigationSettings,
+  type NavTravelMode,
+} from '../lib/navigationSettings';
 import { useEffect, useState } from 'react';
+import NavTravelModeSwitcher from './NavTravelModeSwitcher';
 
 export interface MapSelectionRouteRowProps {
   locationHint: string;
@@ -36,14 +43,23 @@ export default function MapSelectionRouteRow({
 
   if (!routeEndpoints) {
     return (
-      <div className="mt-2 pt-2 border-t border-app">
+      <div className="mt-2 pt-2 border-t border-app space-y-2">
+        <NavTravelModeSwitcher
+          value={travelMode}
+          onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
+        />
         <p className="text-[9px] text-muted">Enable GPS to see distance and turn-by-turn navigation.</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-2 pt-2 border-t border-app flex items-center gap-2">
+    <div className="mt-2 pt-2 border-t border-app space-y-2">
+      <NavTravelModeSwitcher
+        value={travelMode}
+        onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
+      />
+      <div className="flex items-center gap-2">
       <div className="flex-1 min-w-0">
         {distanceMeters != null ? (
           <>
@@ -90,6 +106,7 @@ export default function MapSelectionRouteRow({
             <Compass className="w-3.5 h-3.5" />
           </button>
         )}
+      </div>
       </div>
     </div>
   );

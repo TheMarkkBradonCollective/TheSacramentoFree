@@ -22,10 +22,11 @@ import {
   X,
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
-import { haversineMeters, geolocationAgeMs, openDrivingDirections } from '../lib/mapRoute';
+import { haversineMeters, geolocationAgeMs, openDrivingDirections, googleMapsDirectionsUrl } from '../lib/mapRoute';
 import { projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
 import NavManeuverShield from './navigation/NavManeuverShield';
 import NavigationSettingsForm from './NavigationSettingsForm';
+import NavTravelModeSwitcher from './NavTravelModeSwitcher';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { touchActiveNavSession } from '../lib/navigationSession';
 import { useTheme } from '../theme/ThemeContext';
@@ -72,7 +73,7 @@ import {
   buildRouteSummaryVoice,
   buildStepVoiceCue,
   NavigationVoice,
-  VOICE_CUE_THRESHOLDS,
+  voiceCueThresholdsForMode,
 } from '../lib/navigationVoice';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
@@ -664,7 +665,8 @@ export default function MapNavigationView({
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS = 10;
+  const NAV_GPS_FOLLOW_METERS_DRIVING = 10;
+  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 4;
   const NAV_UI_TICK_MS = 900;
   const NAV_MAP_SYNC_MS = 450;
   const NAV_ROUTE_DRAW_MIN_METERS = 14;
@@ -876,9 +878,11 @@ export default function MapNavigationView({
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
-        // Always re-request — OS may have released the lock without clearing our ref.
         void requestWakeLock();
         touchActiveNavSession();
+        if (typeof window !== 'undefined' && window.speechSynthesis?.paused) {
+          window.speechSynthesis.resume();
+        }
       }
     };
     const onPageHide = () => {
@@ -1245,7 +1249,9 @@ export default function MapNavigationView({
     if (!followUserRef.current) return;
 
     const last = lastNavPanRef.current;
-    const movedEnough = !last || haversineMeters(last, next) >= NAV_GPS_FOLLOW_METERS;
+    const followMeters =
+      settingsRef.current.travelMode === 'driving' ? NAV_GPS_FOLLOW_METERS_DRIVING : NAV_GPS_FOLLOW_METERS_WALK_BIKE;
+    const movedEnough = !last || haversineMeters(last, next) >= followMeters;
     const now = Date.now();
     const bearingDue = now - lastBearingApplyRef.current >= NAV_MAP_SYNC_MS;
 
@@ -1426,12 +1432,13 @@ export default function MapNavigationView({
 
         const step = activeRoute.steps[stepIndexRef.current];
         const cueStep = getActiveVoiceCueStep(activeRoute.steps, stepIndexRef.current);
+        const cueThresholds = voiceCueThresholdsForMode(settingsRef.current.travelMode);
         if (voiceOnRef.current && cueStep && cueStep.maneuverType !== 'arrive') {
           const dist = haversineMeters(snapped, cueStep.location);
           for (const kind of ['far', 'medium', 'near', 'now'] as const) {
-            if (shouldFireVoiceCue(cueStep.distanceMeters, dist, kind, VOICE_CUE_THRESHOLDS)) {
+            if (shouldFireVoiceCue(cueStep.distanceMeters, dist, kind, cueThresholds)) {
               voiceRef.current.speak(
-                buildStepVoiceCue(cueStep, VOICE_CUE_THRESHOLDS[kind], kind, destLabel),
+                buildStepVoiceCue(cueStep, cueThresholds[kind], kind, destLabel),
                 `cue-${stepIndexRef.current}-${kind}`,
               );
               break;
@@ -1504,6 +1511,7 @@ export default function MapNavigationView({
     setVoiceOn((on) => {
       const next = !on;
       voiceRef.current.setEnabled(next);
+      if (next) voiceRef.current.prime();
       writeNavigationSettings({ voiceEnabled: next });
       return next;
     });
@@ -1517,6 +1525,7 @@ export default function MapNavigationView({
       ? getActiveVoiceCueStep(activeRoute.steps, stepIndexRef.current) ?? activeRoute.steps[stepIndexRef.current]
       : undefined;
     const distance = cueStep ? haversineMeters(logicPosRef.current, cueStep.location) : 0;
+    voiceRef.current.prime();
     voiceRef.current.setEnabled(true);
     voiceRef.current.speak(
       buildRecenterVoiceCue(cueStep, distance, destinationLabelRef.current),
@@ -1578,7 +1587,7 @@ export default function MapNavigationView({
 
   const handleShareTrip = async () => {
     const summary = `${formatNavDuration(remainingSeconds)} · ${formatNavDistance(remainingMeters)} to ${destinationLabel}`;
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`;
+    const mapsUrl = googleMapsDirectionsUrl(destination, userPosRef.current, navSettings.travelMode);
     try {
       if (navigator.share) {
         await navigator.share({ title: 'Sacramento Buy Nothing navigation', text: summary, url: mapsUrl });
@@ -1691,7 +1700,7 @@ export default function MapNavigationView({
     }
     let cancelled = false;
     const controller = new AbortController();
-    void fetchOsmLanes(step.location, controller.signal).then((lanes) => {
+    void fetchOsmLanes(step.location, controller.signal, step.name).then((lanes) => {
       if (!cancelled) setOsmLanes(lanes);
     });
     return () => {
@@ -1794,8 +1803,8 @@ export default function MapNavigationView({
                         {bannerStreet}
                         {currentRoadLabel && currentRoadLabel !== bannerStreet ? ` · now on ${currentRoadLabel}` : ''}
                       </p>
-                      {thenLabel && !isCompact ? (
-                        <p className="text-[11px] font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)] opacity-80">
+                      {thenLabel ? (
+                        <p className={`font-semibold truncate text-[var(--sbn-nav-text-secondary)] opacity-80 ${isCompact ? 'text-[10px] mt-0.5' : 'text-[11px] mt-1'}`}>
                           Then {thenLabel.replace(/^./, (ch) => ch.toLowerCase())}
                         </p>
                       ) : null}
@@ -1827,13 +1836,15 @@ export default function MapNavigationView({
                   the sheet when there's little vertical room left for it. */}
               {sheetSnap === 'collapsed' && (
                 <>
-                  <div className="absolute left-3 bottom-3 pointer-events-auto flex flex-col gap-2">
+                  <div className="absolute left-3 bottom-3 pointer-events-auto flex flex-col gap-2 w-[10.75rem]">
                     {showSpeedCard && (
                       <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} compact={isCompact} />
                     )}
-                    <div className="sbn-nav-mode-chip">
-                      {travelModeVerb(navSettings.travelMode)}
-                    </div>
+                    <NavTravelModeSwitcher
+                      variant="nav"
+                      value={navSettings.travelMode}
+                      onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
+                    />
                   </div>
 
                   <div

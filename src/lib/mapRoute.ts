@@ -88,10 +88,23 @@ function appleDirFlag(mode: NavTravelMode): string {
   return 'd';
 }
 
-function googleTravelMode(mode: NavTravelMode): string {
+export function googleTravelModeParam(mode: NavTravelMode): string {
   if (mode === 'walking') return 'walking';
   if (mode === 'cycling') return 'bicycling';
   return 'driving';
+}
+
+export function googleMapsDirectionsUrl(
+  dest: LatLng,
+  origin?: LatLng,
+  travelMode: NavTravelMode = typeof window !== 'undefined' ? readNavigationSettings().travelMode : 'driving',
+): string {
+  const destParam = `${dest.lat},${dest.lng}`;
+  const originParam = origin ? `${origin.lat},${origin.lng}` : undefined;
+  const googleMode = googleTravelModeParam(travelMode);
+  return originParam
+    ? `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destParam}&travelmode=${googleMode}`
+    : `https://www.google.com/maps/dir/?api=1&destination=${destParam}&travelmode=${googleMode}`;
 }
 
 /** Open Google Maps or Apple Maps for turn-by-turn directions. */
@@ -104,18 +117,12 @@ export function openDrivingDirections(
   const originParam = origin ? `${origin.lat},${origin.lng}` : undefined;
   const isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent);
   const dirflg = appleDirFlag(travelMode);
-  const googleMode = googleTravelMode(travelMode);
 
-  let url: string;
-  if (isIOS) {
-    url = originParam
+  const url = isIOS
+    ? originParam
       ? `https://maps.apple.com/?saddr=${originParam}&daddr=${destParam}&dirflg=${dirflg}`
-      : `https://maps.apple.com/?daddr=${destParam}&dirflg=${dirflg}`;
-  } else {
-    url = originParam
-      ? `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destParam}&travelmode=${googleMode}`
-      : `https://www.google.com/maps/dir/?api=1&destination=${destParam}&travelmode=${googleMode}`;
-  }
+      : `https://maps.apple.com/?daddr=${destParam}&dirflg=${dirflg}`
+    : googleMapsDirectionsUrl(dest, origin, travelMode);
 
   window.open(url, '_blank', 'noopener,noreferrer');
 }

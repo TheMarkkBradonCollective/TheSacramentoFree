@@ -75,7 +75,7 @@ function formatManeuverInstruction(
   isArrival = false,
 ): string {
   const street = name?.trim() || 'your route';
-  if (isArrival || type === 'arrive') return 'Arrive at pickup';
+  if (isArrival || type === 'arrive') return 'Arrive at your destination';
   switch (type) {
     case 'depart':
       return formatDepartInstruction(modifier, name);

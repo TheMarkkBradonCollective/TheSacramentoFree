@@ -98,17 +98,30 @@ export async function requestCompassPermission(): Promise<boolean> {
 export function subscribeDeviceCompass(onHeading: (degrees: number) => void): () => void {
   if (typeof window === 'undefined') return () => undefined;
 
-  const handle = (event: Event) => {
+  let hasAbsolute = false;
+
+  const handleAbsolute = (event: Event) => {
     const heading = compassHeadingFromEvent(event as DeviceOrientationEvent);
+    if (heading == null) return;
+    hasAbsolute = true;
+    onHeading(heading);
+  };
+
+  const handleRelative = (event: Event) => {
+    if (hasAbsolute) return;
+    const device = event as DeviceOrientationEvent;
+    const webkit = (device as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading;
+    if (typeof webkit !== 'number' && device.absolute !== true) return;
+    const heading = compassHeadingFromEvent(device);
     if (heading == null) return;
     onHeading(heading);
   };
 
-  window.addEventListener('deviceorientationabsolute', handle, true);
-  window.addEventListener('deviceorientation', handle, true);
+  window.addEventListener('deviceorientationabsolute', handleAbsolute, true);
+  window.addEventListener('deviceorientation', handleRelative, true);
 
   return () => {
-    window.removeEventListener('deviceorientationabsolute', handle, true);
-    window.removeEventListener('deviceorientation', handle, true);
+    window.removeEventListener('deviceorientationabsolute', handleAbsolute, true);
+    window.removeEventListener('deviceorientation', handleRelative, true);
   };
 }

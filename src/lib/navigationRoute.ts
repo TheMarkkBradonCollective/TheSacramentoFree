@@ -69,7 +69,7 @@ function formatManeuverInstruction(
   isArrival = false,
 ): string {
   const street = name?.trim() || 'your route';
-  if (isArrival || type === 'arrive') return 'Arrive at pickup';
+  if (isArrival || type === 'arrive') return 'Arrive at your destination';
   switch (type) {
     case 'depart':
       return formatDepartInstruction(modifier, name);
@@ -273,7 +273,7 @@ export function bearingDegrees(from: LatLng, to: LatLng): number {
 export function getActiveVoiceCueStep(steps: NavigationStep[], index: number): NavigationStep | undefined {
   const current = steps[index];
   if (!current) return undefined;
-  if ((current.maneuverType === 'depart' || current.maneuverType === 'continue') && steps[index + 1]) {
+  if ((current.maneuverType === 'depart' || current.maneuverType === 'continue' || current.maneuverType === 'new name') && steps[index + 1]) {
     return steps[index + 1];
   }
   return current;

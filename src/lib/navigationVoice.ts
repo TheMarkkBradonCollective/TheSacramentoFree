@@ -1,5 +1,6 @@
 import type { NavigationStep } from './navigationRoute';
 import { formatNavDistance, formatNavDuration } from './navigationRoute';
+import type { NavTravelMode } from './navigationSettings';
 
 export type VoiceCueKind = 'start' | 'far' | 'medium' | 'near' | 'now' | 'step' | 'arrival' | 'reroute';
 
@@ -10,6 +11,14 @@ export const VOICE_CUE_THRESHOLDS: Record<Exclude<VoiceCueKind, 'start' | 'step'
   near: 152,
   now: 46,
 };
+
+export function voiceCueThresholdsForMode(
+  mode: NavTravelMode,
+): Record<Exclude<VoiceCueKind, 'start' | 'step' | 'arrival' | 'reroute'>, number> {
+  if (mode === 'walking') return { far: 250, medium: 120, near: 55, now: 22 };
+  if (mode === 'cycling') return { far: 402, medium: 180, near: 80, now: 28 };
+  return VOICE_CUE_THRESHOLDS;
+}
 
 function voiceDistancePhrase(meters: number): string {
   const feet = meters * 3.28084;
@@ -39,7 +48,7 @@ export function buildStepVoiceCue(
   if (kind === 'step' || kind === 'now') return step.instruction;
 
   const prefix = `In ${voiceDistancePhrase(distanceMeters)}, `;
-  const instruction = step.instruction.replace(/^Arrive at pickup$/i, 'arrive at your destination');
+  const instruction = step.instruction.replace(/^Arrive at (pickup|your destination)$/i, 'arrive at your destination');
   return `${prefix}${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}`;
 }
 
@@ -59,7 +68,7 @@ export function buildRecenterVoiceCue(
 ): string {
   if (!step) return `Centered on you. Continue toward ${destinationLabel}.`;
   if (step.maneuverType === 'arrive') return `Centered on you. Approaching ${destinationLabel}.`;
-  const instruction = step.instruction.replace(/^Arrive at pickup$/i, `arrive at ${destinationLabel}`);
+  const instruction = step.instruction.replace(/^Arrive at (pickup|your destination)$/i, `arrive at ${destinationLabel}`);
   if (distanceMeters > 80) {
     return `Centered on you. In ${voiceDistancePhrase(distanceMeters)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}`;
   }
