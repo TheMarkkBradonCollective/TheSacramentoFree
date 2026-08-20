@@ -51,6 +51,7 @@ const APK_0022_PUBLISHED_AT = '2026-08-20T03:35:00.000Z';
 const APK_0023_PUBLISHED_AT = '2026-08-20T07:30:00.000Z';
 const EVENT_RECURRENCE_PUBLISHED_AT = '2026-08-20T07:45:00.000Z';
 const APK_0024_PUBLISHED_AT = '2026-08-20T08:00:00.000Z';
+const APK_0026_PUBLISHED_AT = '2026-08-20T09:30:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -104,6 +105,39 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0026',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0026',
+    'Staff Navigate, Go Get ring + availability, opt-in coordination, list/grid feed, APK-only Go Get, full Play reviewer access, and loading skeletons.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0026 (versionCode 26).
+
+Since 0025:
+• Staff official mode: Navigate on Stuff and Events (direct in-app routing)
+• Go Get ring: waiting screen, incoming ring (10–140s), schedule meet on timeout
+• Pickup availability windows; Go Get coordination opt-in (default off) in Account
+• List/grid feed toggle with nearest-first grid
+• Go Get coordination on native Android app only; improved handoff flows
+• Play reviewer account: full browse, post, message, and claim access
+• Shimmer skeletons while feed and Events load
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0026 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0026.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 26
+- play-store-assets/release-notes-v0.1.0-0026.txt — Play Console release notes
+- Merged PRs #237–#238, #223–#222, #229, #188, #221 (changelog), partial #157
+
+HISTORY
+2026-08-20 — Merged open PR stack; Android beta 0026 built.`,
+    APK_0026_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0024',
     '2026-08-20',
