@@ -17,6 +17,7 @@ import ImageAttachmentPicker from './ImageAttachmentPicker';
 import { useImageAttachment } from '../hooks/useImageAttachment';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmUnsendMessage } from '../lib/destructiveConfirm';
 import {
   getMessageGroupMeta,
   messageBubbleClass,
@@ -141,6 +142,9 @@ export default function SupportTicketThread({
   const handleUnsendMessage = async (message: SupportTicketMessage) => {
     if (!isOpen || unsendingMessageId) return;
     if (!canUnsendSupportTicketMessage(viewer, message)) return;
+
+    const confirmed = await confirmUnsendMessage(confirm);
+    if (!confirmed) return;
 
     setUnsendingMessageId(message.id);
     setErr('');

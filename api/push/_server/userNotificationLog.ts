@@ -69,6 +69,8 @@ function inboxKind(eventType: PushEventType): string {
       return 'feed_upvote';
     case 'feed_downvote':
       return 'feed_downvote';
+    case 'feed_post':
+      return 'feed_post';
     default:
       return eventType;
   }
@@ -79,7 +81,7 @@ function notificationId(userId: string, tag: string): string {
   return `un_${userId.slice(0, 8)}_${safeTag}`.slice(0, 200);
 }
 
-const FEED_INBOX_KINDS = new Set(['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote']);
+const FEED_INBOX_KINDS = new Set(['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote', 'feed_post']);
 
 function isFeedInboxEvent(eventType: PushEventType): boolean {
   return FEED_INBOX_KINDS.has(eventType);

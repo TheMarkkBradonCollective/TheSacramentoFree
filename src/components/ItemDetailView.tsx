@@ -39,6 +39,7 @@ import { getListingSubitems, itemHasRecordedAppClaim } from '../supabase';
 import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useSavedItems } from '../hooks/useSavedItems';
+import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface ItemDetailViewProps {
   item: ItemPost;
@@ -114,6 +115,8 @@ export default function ItemDetailView({
     void getListingSubitems(item.id).then(setSubitems);
     void itemHasRecordedAppClaim(item.id).then(setHasAppClaim);
   }, [item.id]);
+
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;

@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
+import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface FullScreenPanelProps {
   title?: string;
@@ -26,6 +27,8 @@ export default function FullScreenPanel({
   wide = false,
 }: FullScreenPanelProps) {
   const contentMax = wide ? 'max-w-4xl' : 'max-w-2xl';
+
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;

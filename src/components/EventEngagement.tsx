@@ -9,6 +9,8 @@ import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { shouldShowStaffBadgeOnComment } from '../lib/staffInteractionMode';
 import { useUserDisplayInfo } from '../hooks/useUserDisplayInfo';
 import { PresenceUserAvatar } from './UserAvatar';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmRemoveComment } from '../lib/destructiveConfirm';
 
 interface EventEngagementProps {
   hostUserId: string;
@@ -59,6 +61,14 @@ export default function EventEngagement({
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
   const commenterInfo = useUserDisplayInfo(comments.map((comment) => comment.userId));
+  const { confirm } = useConfirm();
+
+  const requestDeleteComment = async (commentId: string) => {
+    if (!onDeleteComment) return;
+    const ok = await confirmRemoveComment(confirm);
+    if (!ok) return;
+    onDeleteComment(commentId);
+  };
 
   const rsvpOptions = isPast ? PAST_RSVP_OPTIONS : UPCOMING_RSVP_OPTIONS;
   const activeRsvp = isPast ? effectivePastRsvp(userRsvp) : userRsvp;
@@ -186,7 +196,7 @@ export default function EventEngagement({
                           {isOwnComment && onDeleteComment && (
                             <button
                               type="button"
-                              onClick={() => onDeleteComment(comment.id)}
+                              onClick={() => void requestDeleteComment(comment.id)}
                               className="p-1.5 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
                               title="Remove your comment"
                               aria-label="Remove your comment"

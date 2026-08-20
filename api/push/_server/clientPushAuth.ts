@@ -17,6 +17,7 @@ export const WEBHOOK_ONLY_PUSH_EVENTS = new Set<PushEventType>([
 export const CLIENT_FAN_OUT_PUSH_EVENTS = new Set<PushEventType>([
   'new_item',
   'new_request',
+  'feed_post',
   'community_chat',
   'staff_chat',
   'director_alert',
@@ -94,6 +95,10 @@ async function validateDirectorAlertClient(
   }
 
   if (category === 'join') {
+    const joinUid = tag.startsWith('director-join-') ? tag.slice('director-join-'.length) : '';
+    if (!joinUid || joinUid !== callerId) {
+      return { ok: false, error: 'Join alerts can only be sent for your own new account' };
+    }
     return { ok: true };
   }
 
@@ -531,10 +536,44 @@ export async function validateClientPush(
       const { data } = await supabaseAdmin.from('feed_posts').select('userId').eq('id', postId).maybeSingle();
       const ownerId = String((data as { userId?: string } | null)?.userId || '');
       if (!ownerId || ownerId === callerId) return { ok: false, error: 'No feed post owner to notify' };
-      if (eventType === 'feed_upvote' || eventType === 'feed_downvote') {
+      if (eventType === 'feed_upvote' || eventType === 'feed_downvote' || eventType === 'feed_reaction') {
         return { ok: true, recipientUserIds: [ownerId] };
       }
+
+      const requested = body.recipientUserIds?.filter(Boolean) || [];
+      if (requested.length) {
+        const allowed = new Set<string>();
+        if (ownerId !== callerId) allowed.add(ownerId);
+
+        const parentCommentId = String(body.data?.parentCommentId || '').trim();
+        if (parentCommentId) {
+          const { data: parent } = await supabaseAdmin
+            .from('feed_post_comments')
+            .select('userId')
+            .eq('id', parentCommentId)
+            .maybeSingle();
+          const parentAuthorId = String((parent as { userId?: string } | null)?.userId || '');
+          if (parentAuthorId && parentAuthorId !== callerId) allowed.add(parentAuthorId);
+        }
+
+        const valid = requested.filter((uid) => allowed.has(uid));
+        if (!valid.length) return { ok: false, error: 'Invalid feed comment recipients' };
+        return { ok: true, recipientUserIds: valid };
+      }
+
       return { ok: true, recipientUserIds: [ownerId] };
+    }
+
+    case 'feed_post': {
+      const postId = String(body.data?.feedPostId || '').trim();
+      if (!postId) return { ok: false, error: 'feedPostId is required' };
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin.from('feed_posts').select('userId').eq('id', postId).maybeSingle();
+      const ownerId = String((data as { userId?: string } | null)?.userId || '');
+      if (!ownerId || ownerId !== callerId) {
+        return { ok: false, error: 'Only the feed post author can broadcast this alert' };
+      }
+      return { ok: true };
     }
 
     default:

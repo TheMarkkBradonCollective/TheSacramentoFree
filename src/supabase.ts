@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, FriendRequest, ProfileFriend, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded, guessImageContentType } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatSelfClaimRequestMessage, formatSelfDropOffRequestMessage } from './lib/claims';
@@ -731,21 +731,6 @@ export async function upsertSupabaseProfile(
 
     const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
 
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('uid, createdAt')
-      .eq('uid', profile.uid)
-      .maybeSingle();
-    const isNewNeighbor = !existingUser;
-    const createdAtMs = existingUser
-      ? Date.parse(String((existingUser as { createdAt?: string }).createdAt || ''))
-      : NaN;
-    // Auth trigger may insert users before first profile save — still alert directors then.
-    const isRecentSignupProfile =
-      Boolean(existingUser) &&
-      Number.isFinite(createdAtMs) &&
-      Date.now() - createdAtMs < 24 * 60 * 60 * 1000;
-
     const payload = {
       uid: profile.uid,
       displayName: profile.displayName.trim(),
@@ -813,20 +798,6 @@ export async function upsertSupabaseProfile(
 
     if (photoURL) {
       void syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
-    }
-
-    if ((isNewNeighbor || isRecentSignupProfile) && normalizeUserRole(profile.role) !== 'director') {
-      await runPushTask(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushDirectorAlert({
-            category: 'join',
-            title: `New neighbor — ${payload.displayName}`,
-            body: `${payload.neighborhood} · joined Sacramento Buy Nothing`,
-            tag: `director-join-${profile.uid}`,
-            excludeUserIds: [profile.uid],
-          }),
-        ),
-      );
     }
 
     setSupabaseConfigurationState(true);
@@ -5741,6 +5712,210 @@ export async function declineMessageRequest(
 
     const { error } = await supabase
       .from('message_requests')
+      .update({ status: 'declined' })
+      .eq('id', requestId);
+
+    if (error) return { ok: false, errorMessage: error.message };
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not decline request.' };
+  }
+}
+
+export async function getLatestFriendRequestBetween(
+  userA: string,
+  userB: string,
+): Promise<FriendRequest | null> {
+  try {
+    const { data, error } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .or(
+        `and(fromUserId.eq.${userA},toUserId.eq.${userB}),and(fromUserId.eq.${userB},toUserId.eq.${userA})`,
+      )
+      .order('createdAt', { ascending: false })
+      .limit(1);
+
+    if (error || !data?.length) return null;
+    return data[0] as FriendRequest;
+  } catch {
+    return null;
+  }
+}
+
+export async function getAcceptedFriendIds(userId: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('friend_requests')
+      .select('"fromUserId", "toUserId", status')
+      .eq('status', 'accepted')
+      .or(`fromUserId.eq.${userId},toUserId.eq.${userId}`);
+
+    if (error || !data?.length) return [];
+
+    return data
+      .map((row) => (row.fromUserId === userId ? row.toUserId : row.fromUserId))
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  } catch {
+    return [];
+  }
+}
+
+export async function getProfileFriends(
+  profileUserId: string,
+  viewerUserId: string,
+): Promise<ProfileFriend[]> {
+  const friendIds = await getAcceptedFriendIds(profileUserId);
+  if (friendIds.length === 0) return [];
+
+  const visibleIds: string[] = [];
+  await Promise.all(
+    friendIds.map(async (friendId) => {
+      if (friendId === viewerUserId) {
+        visibleIds.push(friendId);
+        return;
+      }
+      const status = await getBlockStatus(viewerUserId, friendId);
+      if (!status.isHidden) visibleIds.push(friendId);
+    }),
+  );
+
+  if (visibleIds.length === 0) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('uid, displayName, photoURL, neighborhood')
+      .in('uid', visibleIds);
+
+    if (error || !data?.length) return [];
+
+    const order = new Map(visibleIds.map((id, index) => [id, index]));
+    return (data as Array<{ uid: string; displayName: string; photoURL?: string; neighborhood?: string }>)
+      .map((row) => ({
+        userId: row.uid,
+        displayName: row.displayName || 'Neighbor',
+        photoURL: row.photoURL || undefined,
+        neighborhood: row.neighborhood || 'Sacramento',
+      }))
+      .sort((a, b) => (order.get(a.userId) ?? 0) - (order.get(b.userId) ?? 0));
+  } catch {
+    return [];
+  }
+}
+
+export async function areFriends(userA: string, userB: string): Promise<boolean> {
+  if (userA === userB) return true;
+  const latest = await getLatestFriendRequestBetween(userA, userB);
+  return latest?.status === 'accepted';
+}
+
+export async function sendFriendRequest(params: {
+  fromUser: UserProfile;
+  toUserId: string;
+  message?: string;
+}): Promise<{ ok: boolean; errorMessage?: string }> {
+  const { fromUser, toUserId, message } = params;
+  if (fromUser.uid === toUserId) {
+    return { ok: false, errorMessage: 'You cannot friend yourself.' };
+  }
+
+  if (await areUsersBlocked(fromUser.uid, toUserId)) {
+    return { ok: false, errorMessage: 'This neighbor is not available.' };
+  }
+
+  const existing = await getLatestFriendRequestBetween(fromUser.uid, toUserId);
+  if (existing?.status === 'pending') {
+    return { ok: false, errorMessage: 'A friend request is already pending.' };
+  }
+  if (existing?.status === 'accepted') {
+    return { ok: false, errorMessage: 'You are already friends.' };
+  }
+
+  try {
+    const requestId = `frireq_${fromUser.uid}_${toUserId}_${Date.now()}`;
+    const { error } = await supabase.from('friend_requests').insert({
+      id: requestId,
+      fromUserId: fromUser.uid,
+      toUserId,
+      fromUserName: fromUser.displayName,
+      fromUserPhoto: fromUser.photoURL ?? null,
+      message: message?.trim() || null,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (error) {
+      if (error.code === '42P01') {
+        return {
+          ok: false,
+          errorMessage: 'Friend requests table missing — run scripts/supabase-migration-aug-20-2026-friend-requests.sql.',
+        };
+      }
+      return { ok: false, errorMessage: error.message };
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not send friend request.' };
+  }
+}
+
+export async function acceptFriendRequest(
+  requestId: string,
+  accepter: UserProfile,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data: request, error: fetchError } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .eq('id', requestId)
+      .maybeSingle();
+
+    if (fetchError || !request) {
+      return { ok: false, errorMessage: 'Request not found.' };
+    }
+
+    const req = request as FriendRequest;
+    if (req.toUserId !== accepter.uid) {
+      return { ok: false, errorMessage: 'You cannot accept this request.' };
+    }
+    if (req.status !== 'pending') {
+      return { ok: false, errorMessage: 'This request was already handled.' };
+    }
+
+    const { error: updateError } = await supabase
+      .from('friend_requests')
+      .update({ status: 'accepted' })
+      .eq('id', requestId);
+
+    if (updateError) {
+      return { ok: false, errorMessage: updateError.message };
+    }
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not accept request.' };
+  }
+}
+
+export async function declineFriendRequest(
+  requestId: string,
+  userId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data: request } = await supabase
+      .from('friend_requests')
+      .select('toUserId, status')
+      .eq('id', requestId)
+      .maybeSingle();
+
+    if (!request || request.toUserId !== userId) {
+      return { ok: false, errorMessage: 'Request not found.' };
+    }
+
+    const { error } = await supabase
+      .from('friend_requests')
       .update({ status: 'declined' })
       .eq('id', requestId);
 

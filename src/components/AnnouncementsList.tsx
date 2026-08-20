@@ -9,6 +9,7 @@ import AnnouncementComments from './AnnouncementComments';
 import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmDeleteAnnouncement } from '../lib/destructiveConfirm';
 
 interface AnnouncementsListProps {
   userProfile?: UserProfile | null;
@@ -167,11 +168,7 @@ export default function AnnouncementsList({
                         <button
                           type="button"
                           onClick={async () => {
-                            const confirmed = await confirm({
-                              message: 'Delete this announcement?',
-                              confirmLabel: 'Delete',
-                              variant: 'danger',
-                            });
+                            const confirmed = await confirmDeleteAnnouncement(confirm);
                             if (!confirmed) return;
                             await removeAnnouncement(announcement.id);
                           }}

@@ -12,19 +12,24 @@ import {
   Package,
   Repeat2,
   ShieldCheck,
+  UserPlus,
   UserX,
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import {
   acceptMessageRequest,
+  acceptFriendRequest,
   chatIdForUsers,
   declineMessageRequest,
+  declineFriendRequest,
   getBlockStatus,
+  getLatestFriendRequestBetween,
   getLatestMessageRequestBetween,
   getNeighborStats,
   getPublicNeighborProfile,
   NeighborStats,
   profileFromListingAuthor,
+  sendFriendRequest,
   sendMessageRequest,
   setUserRole,
   unblockUser,
@@ -36,11 +41,13 @@ import RoleBadge from './RoleBadge';
 import { ASSIGNABLE_ROLE_OPTIONS, isDirectorRole, isStaffRole } from '../lib/roles';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
-import type { MessageRequest } from '../types';
+import type { FriendRequest, MessageRequest } from '../types';
 import ProfilePostList from './ProfilePostList';
 import ProfileAwardsRow from './ProfileAwardsRow';
+import ProfileFriendsRow from './ProfileFriendsRow';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
+import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface NeighborProfileViewProps {
   userId: string;
@@ -53,6 +60,7 @@ interface NeighborProfileViewProps {
   onRepostPost?: (post: ItemPost) => void;
   onDeletePost?: (post: ItemPost) => void;
   onBlockListChanged?: () => void;
+  onViewNeighborProfile?: (userId: string) => void;
   /** Stack above an open listing or event detail sheet. */
   nested?: boolean;
 }
@@ -68,6 +76,7 @@ export default function NeighborProfileView({
   onRepostPost,
   onDeletePost,
   onBlockListChanged,
+  onViewNeighborProfile,
   nested = false,
 }: NeighborProfileViewProps) {
   const hintListing = listingHints.find((item) => item.userId === userId);
@@ -81,14 +90,18 @@ export default function NeighborProfileView({
     theyBlockedMe: false,
   });
   const [dmRequest, setDmRequest] = useState<MessageRequest | null>(null);
+  const [friendRequest, setFriendRequest] = useState<FriendRequest | null>(null);
   const [requestNote, setRequestNote] = useState('');
+  const [friendNote, setFriendNote] = useState('');
   const [actionMsg, setActionMsg] = useState('');
   const [actionError, setActionError] = useState('');
   const [requestSending, setRequestSending] = useState(false);
+  const [friendSending, setFriendSending] = useState(false);
   const [blockBusy, setBlockBusy] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [requestBusy, setRequestBusy] = useState(false);
+  const [friendBusy, setFriendBusy] = useState(false);
 
   const isSelf = userId === currentUserId;
   const canManageTeamRoles =
@@ -99,11 +112,12 @@ export default function NeighborProfileView({
   const [roleSaving, setRoleSaving] = useState(false);
 
   const loadProfileData = async () => {
-    const [status, loadedProfile, loadedStats, latestRequest] = await Promise.all([
+    const [status, loadedProfile, loadedStats, latestRequest, latestFriendRequest] = await Promise.all([
       getBlockStatus(currentUserId, userId),
       getPublicNeighborProfile(userId, currentUserId),
       getNeighborStats(userId),
       getLatestMessageRequestBetween(currentUserId, userId),
+      getLatestFriendRequestBetween(currentUserId, userId),
     ]);
 
     setBlockStatus(status);
@@ -111,6 +125,7 @@ export default function NeighborProfileView({
       setProfile(null);
       setStats(null);
       setDmRequest(null);
+      setFriendRequest(null);
       setLoading(false);
       return;
     }
@@ -127,6 +142,7 @@ export default function NeighborProfileView({
     setSelectedRole(resolved?.role ?? 'user');
     setStats(loadedStats);
     setDmRequest(latestRequest);
+    setFriendRequest(latestFriendRequest);
     setLoading(false);
   };
 
@@ -152,6 +168,10 @@ export default function NeighborProfileView({
       { channelName: `live-dm-req-${currentUserId}-${userId}`, table: 'message_requests', event: '*' },
       () => reload(),
     );
+    const unsubFriendRequests = subscribePostgresChanges(
+      { channelName: `live-friend-req-${currentUserId}-${userId}`, table: 'friend_requests', event: '*' },
+      () => reload(),
+    );
     const unsubBlocks = subscribePostgresChanges(
       { channelName: `live-block-${currentUserId}-${userId}`, table: 'user_blocks', event: '*' },
       () => reload(),
@@ -161,9 +181,12 @@ export default function NeighborProfileView({
       active = false;
       unsubItems();
       unsubRequests();
+      unsubFriendRequests();
       unsubBlocks();
     };
   }, [userId, currentUserId, currentUserProfile, hintListing?.id]);
+
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -209,6 +232,53 @@ export default function NeighborProfileView({
       void loadProfileData();
     } else {
       setActionError(result.errorMessage || 'Could not send request.');
+    }
+  };
+
+  const handleSendFriendRequest = async () => {
+    if (!currentUserProfile) return;
+    setFriendSending(true);
+    setActionError('');
+    setActionMsg('');
+    const result = await sendFriendRequest({
+      fromUser: currentUserProfile,
+      toUserId: userId,
+      message: friendNote,
+    });
+    setFriendSending(false);
+    if (result.ok) {
+      setActionMsg('Friend request sent. They can accept to become friends.');
+      setFriendNote('');
+      void loadProfileData();
+    } else {
+      setActionError(result.errorMessage || 'Could not send friend request.');
+    }
+  };
+
+  const handleAcceptFriendRequest = async () => {
+    if (!currentUserProfile || !friendRequest) return;
+    setFriendBusy(true);
+    setActionError('');
+    const result = await acceptFriendRequest(friendRequest.id, currentUserProfile);
+    setFriendBusy(false);
+    if (result.ok) {
+      setActionMsg(`You and ${profile?.displayName ?? 'this neighbor'} are now friends.`);
+      void loadProfileData();
+    } else {
+      setActionError(result.errorMessage || 'Could not accept friend request.');
+    }
+  };
+
+  const handleDeclineFriendRequest = async () => {
+    if (!friendRequest) return;
+    setFriendBusy(true);
+    const result = await declineFriendRequest(friendRequest.id, currentUserId);
+    setFriendBusy(false);
+    if (result.ok) {
+      setActionMsg('Friend request declined.');
+      void loadProfileData();
+    } else {
+      setActionError(result.errorMessage || 'Could not decline friend request.');
     }
   };
 
@@ -285,6 +355,12 @@ export default function NeighborProfileView({
     dmRequest?.status === 'pending' && dmRequest.fromUserId === currentUserId;
   const pendingIncoming =
     dmRequest?.status === 'pending' && dmRequest.toUserId === currentUserId;
+  const areFriends = friendRequest?.status === 'accepted';
+  const friendPendingOutgoing =
+    friendRequest?.status === 'pending' && friendRequest.fromUserId === currentUserId;
+  const friendPendingIncoming =
+    friendRequest?.status === 'pending' && friendRequest.toUserId === currentUserId;
+  const canSendFriendRequest = !areFriends && !friendPendingOutgoing && !friendPendingIncoming;
   const neighborPosts = listingHints
     .filter((item) => item.userId === userId)
     .slice()
@@ -358,11 +434,83 @@ export default function NeighborProfileView({
                 userId={profile.uid}
                 viewerIsStaff={isStaffRole(currentUserProfile?.role)}
               />
+
+              <ProfileFriendsRow
+                userId={profile.uid}
+                viewerUserId={currentUserId}
+                isOwnProfile={isSelf}
+                onViewProfile={onViewNeighborProfile}
+              />
             </div>
 
             {!isSelf && !blockStatus.iBlockedThem && (
               <div className="sbn-card p-4 space-y-3">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">Connect</h3>
+
+                {friendPendingIncoming && friendRequest && (
+                  <div className="rounded-xl border border-accent/30 bg-accent-soft/40 p-3 space-y-2">
+                    <p className="text-sm font-semibold text-app">
+                      {friendRequest.fromUserName} wants to be friends
+                    </p>
+                    {friendRequest.message && (
+                      <p className="text-xs text-muted italic">&ldquo;{friendRequest.message}&rdquo;</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAcceptFriendRequest}
+                        disabled={friendBusy}
+                        className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeclineFriendRequest}
+                        disabled={friendBusy}
+                        className="sbn-btn sbn-btn-secondary sbn-btn-sm flex-1"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {areFriends && (
+                  <p className="text-xs font-semibold text-emerald-400 text-center py-1">
+                    You are friends with {profile.displayName}.
+                  </p>
+                )}
+
+                {canSendFriendRequest && (
+                  <>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Send a friend request to see their posts in your Friends feed and stay connected.
+                    </p>
+                    <textarea
+                      value={friendNote}
+                      onChange={(e) => setFriendNote(e.target.value)}
+                      placeholder="Optional: say why you'd like to connect…"
+                      className="sbn-input w-full text-sm min-h-[3.5rem] resize-y"
+                      maxLength={280}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendFriendRequest}
+                      disabled={friendSending}
+                      className="sbn-btn sbn-btn-secondary w-full"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      {friendSending ? 'Sending…' : 'Send friend request'}
+                    </button>
+                  </>
+                )}
+
+                {friendPendingOutgoing && (
+                  <p className="text-xs text-muted text-center py-1">
+                    Friend request sent — waiting for {profile.displayName} to accept.
+                  </p>
+                )}
 
                 {pendingIncoming && dmRequest && (
                   <div className="rounded-xl border border-accent/30 bg-accent-soft/40 p-3 space-y-2">

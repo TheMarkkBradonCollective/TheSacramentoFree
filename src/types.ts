@@ -487,6 +487,26 @@ export interface MessageRequest {
   createdAt: any;
 }
 
+export type FriendRequestStatus = 'pending' | 'accepted' | 'declined';
+
+export interface FriendRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  fromUserName: string;
+  fromUserPhoto?: string;
+  message?: string;
+  status: FriendRequestStatus;
+  createdAt: any;
+}
+
+export interface ProfileFriend {
+  userId: string;
+  displayName: string;
+  photoURL?: string;
+  neighborhood: string;
+}
+
 export interface UserBlock {
   blockerUserId: string;
   blockedUserId: string;

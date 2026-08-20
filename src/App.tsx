@@ -90,6 +90,8 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
+import { confirmDeleteFeedPost, confirmDeleteListing, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
+import { getOwnerCompletedActionLabel } from './lib/postType';
 import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
@@ -315,13 +317,113 @@ export default function App() {
     setDetailNavigateOnOpen(false);
     setDetailEvent(null);
     setDetailEventNavigateOnOpen(false);
+    setDetailFeedPost(null);
     setViewProfileUid(null);
+    setShowDirectMessageModal(false);
+    setPickupAttributionItem(null);
     setLegalPanel(null);
     setShowAwardsPanel(false);
     setShowStaffApplyPanel(false);
     setShowGoFundMeDetail(false);
     closeNotificationsHub();
   }, []);
+
+  /** Dismiss the topmost overlay — used by Android hardware back. Returns true when handled. */
+  const popTopOverlay = useCallback((): boolean => {
+    if (editingEvent) {
+      setEditingEvent(null);
+      setAddEventDatesMode(false);
+      return true;
+    }
+    if (editingItem) {
+      setEditingItem(null);
+      return true;
+    }
+    if (newListingModalMode) {
+      setNewListingModalMode(null);
+      return true;
+    }
+    if (pickupAttributionItem) {
+      setPickupAttributionItem(null);
+      return true;
+    }
+    if (showDirectMessageModal) {
+      setShowDirectMessageModal(false);
+      return true;
+    }
+    if (viewProfileUid) {
+      setViewProfileUid(null);
+      return true;
+    }
+    if (detailEvent) {
+      setDetailEvent(null);
+      setDetailEventNavigateOnOpen(false);
+      return true;
+    }
+    if (detailItem) {
+      setDetailItem(null);
+      setDetailNavigateOnOpen(false);
+      return true;
+    }
+    if (detailFeedPost) {
+      setDetailFeedPost(null);
+      return true;
+    }
+    if (showStaffApplyPanel) {
+      setShowStaffApplyPanel(false);
+      return true;
+    }
+    if (showAwardsPanel) {
+      setShowAwardsPanel(false);
+      return true;
+    }
+    if (legalPanel) {
+      setLegalPanel(null);
+      return true;
+    }
+    if (showGoFundMeDetail) {
+      setShowGoFundMeDetail(false);
+      return true;
+    }
+    return false;
+  }, [
+    detailEvent,
+    detailFeedPost,
+    detailItem,
+    editingEvent,
+    editingItem,
+    legalPanel,
+    newListingModalMode,
+    pickupAttributionItem,
+    showAwardsPanel,
+    showDirectMessageModal,
+    showGoFundMeDetail,
+    showStaffApplyPanel,
+    viewProfileUid,
+  ]);
+
+  useEffect(() => {
+    if (!isNativeApp()) return;
+
+    let removeListener: (() => void) | undefined;
+
+    void import('@capacitor/app').then(({ App }) => {
+      void App.addListener('backButton', ({ canGoBack }) => {
+        if (popTopOverlay()) return;
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          void App.exitApp();
+        }
+      }).then((handle) => {
+        removeListener = () => void handle.remove();
+      });
+    });
+
+    return () => {
+      removeListener?.();
+    };
+  }, [popTopOverlay]);
 
   const handleTabChange = useCallback(
     (tab: AnyTab) => {
@@ -756,7 +858,15 @@ export default function App() {
     profileSyncRef.current = user.id;
 
     try {
-      const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
+      const { data, error } = await supabase.from('users').select('*').eq('uid', user.id).maybeSingle();
+
+      if (error) {
+        console.warn('Background profile sync skipped (transient fetch error):', error.message);
+        return;
+      }
+
+      if (data) {
+        const fromDb = await getSupabaseProfile(user.id);
         if (fromDb) {
           const localMode = readStaffInteractionModePref(fromDb.uid);
           const merged =
@@ -764,8 +874,9 @@ export default function App() {
           setUserProfile(merged);
           writeCachedProfile(merged);
           applyUserPreferencesToDevice(merged);
-          return;
         }
+        return;
+      }
 
       const seed = profileFromAuthUser(user);
       await upsertSupabaseProfile(seed);
@@ -1253,6 +1364,16 @@ export default function App() {
     status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold',
   ) => {
     if (!detailItem || !userProfile) return;
+
+    if (status === 'withdrawn') {
+      const ok = await confirmWithdrawListing(confirm, detailItem.title);
+      if (!ok) return;
+    } else if (status === 'completed') {
+      const actionLabel = getOwnerCompletedActionLabel(detailItem.type);
+      const ok = await confirmMarkListingCompleted(confirm, detailItem.title, actionLabel);
+      if (!ok) return;
+    }
+
     if (status === 'completed' && completedActionNeedsAttribution(detailItem, userProfile)) {
       setPickupAttributionMode('complete');
       setPickupAttributionItem(detailItem);
@@ -1297,12 +1418,7 @@ export default function App() {
     async (post: ItemPost) => {
       if (!userProfile || post.userId !== userProfile.uid || post.status !== 'withdrawn') return;
 
-      const confirmed = await confirm({
-        title: 'Delete listing',
-        message: `Permanently delete "${post.title}"? This cannot be undone.`,
-        confirmLabel: 'Delete',
-        variant: 'danger',
-      });
+      const confirmed = await confirmDeleteListing(confirm, post.title);
       if (!confirmed) return;
 
       setDetailUpdating(true);
@@ -1506,15 +1622,7 @@ export default function App() {
     async (post: FeedPost) => {
       if (!userProfile) return;
       const isStaff = isStaffRole(userProfile.role);
-      const ok = await confirm({
-        title: 'Delete post?',
-        message:
-          isStaff && post.userId !== userProfile.uid
-            ? 'Remove this neighbor post as staff?'
-            : 'Delete your post for everyone?',
-        confirmLabel: 'Delete',
-        variant: 'danger',
-      });
+      const ok = await confirmDeleteFeedPost(confirm, isStaff && post.userId !== userProfile.uid);
       if (!ok) return;
       const result = await deleteFeedPost(post.id, userProfile.uid, isStaff);
       if (!result.ok) {
@@ -2179,6 +2287,7 @@ export default function App() {
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
                   onBlockListChanged={handleBlockListChanged}
+                  onViewNeighborProfile={handleViewProfile}
                 />
               )}
 

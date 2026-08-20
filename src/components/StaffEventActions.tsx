@@ -4,6 +4,7 @@ import type { CommunityEvent, UserProfile } from '../types';
 import { staffCancelEvent, staffDeleteEvent } from '../supabase';
 import { canStaffDeleteAccount, isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmStaffCancelEvent, confirmStaffDeleteEvent } from '../lib/destructiveConfirm';
 
 interface StaffEventActionsProps {
   event: CommunityEvent;
@@ -29,12 +30,7 @@ export default function StaffEventActions({
   const isUpcoming = event.status === 'upcoming';
 
   const handleCancel = async () => {
-    const ok = await confirm({
-      title: 'Cancel event?',
-      message: `Cancel "${event.title}" as staff? Neighbors will see it as cancelled.`,
-      confirmLabel: 'Cancel event',
-      variant: 'danger',
-    });
+    const ok = await confirmStaffCancelEvent(confirm, event.title);
     if (!ok) return;
     setBusy('cancel');
     const result = await staffCancelEvent(event, actor);
@@ -47,12 +43,7 @@ export default function StaffEventActions({
   };
 
   const handleDelete = async () => {
-    const ok = await confirm({
-      title: 'Delete event?',
-      message: `Permanently delete "${event.title}"? This cannot be undone.`,
-      confirmLabel: 'Delete',
-      variant: 'danger',
-    });
+    const ok = await confirmStaffDeleteEvent(confirm, event.title);
     if (!ok) return;
     setBusy('delete');
     const result = await staffDeleteEvent(event, actor);

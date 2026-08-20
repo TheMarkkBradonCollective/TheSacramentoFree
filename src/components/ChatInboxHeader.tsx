@@ -1,11 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
-import { ClipboardList, Flag, LifeBuoy, MoreHorizontal, Plus, Star } from 'lucide-react';
+import {
+  ClipboardList,
+  Flag,
+  LifeBuoy,
+  MessageSquare,
+  MoreHorizontal,
+  Plus,
+  Star,
+  Users,
+  UsersRound,
+} from 'lucide-react';
 import type { UserProfile } from '../types';
 import { canViewStaffReports } from '../lib/roles';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import type { ChatFeedbackPanel } from './ChatFeedbackSection';
 import {
   categoryHasStatusTabs,
+  chatCategoryFilterLabel,
+  chatStatusFilterLabel,
+  cycleChatCategoryFilter,
+  cycleChatStatusFilter,
   type ChatCategoryFilter,
   type ChatStatusFilter,
 } from '../lib/chatInboxFilters';
@@ -22,63 +36,12 @@ interface ChatInboxHeaderProps {
   onStatusFilterChange: (filter: ChatStatusFilter) => void;
 }
 
-const CATEGORY_TABS: Array<{ value: ChatCategoryFilter; label: string }> = [
-  { value: 'everyone', label: 'Everyone' },
-  { value: 'dm', label: 'DM' },
-  { value: 'support', label: 'Support' },
-  { value: 'groups', label: 'Groups' },
-];
-
-const STATUS_TABS: Array<{ value: ChatStatusFilter; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'live', label: 'Live' },
-  { value: 'closed', label: 'Closed' },
-  { value: 'archived', label: 'Archived' },
-];
-
-function FilterTabRow<T extends string>({
-  id,
-  ariaLabel,
-  tabs,
-  value,
-  onChange,
-}: {
-  id: string;
-  ariaLabel: string;
-  tabs: Array<{ value: T; label: string }>;
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div
-      className="inline-flex w-full rounded-xl border border-app bg-inset p-0.5"
-      role="tablist"
-      aria-label={ariaLabel}
-      id={id}
-    >
-      {tabs.map(({ value: tabValue, label }) => {
-        const selected = value === tabValue;
-        return (
-          <button
-            key={tabValue}
-            type="button"
-            role="tab"
-            id={`${id}_${tabValue}`}
-            aria-selected={selected}
-            onClick={() => onChange(tabValue)}
-            className={`flex-1 inline-flex items-center justify-center rounded-[0.65rem] px-1.5 py-1.5 text-[10px] sm:text-[11px] font-bold transition-colors cursor-pointer whitespace-nowrap ${
-              selected
-                ? 'bg-accent text-on-accent'
-                : 'text-muted hover:text-app hover:bg-surface-hover'
-            }`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+const CATEGORY_ICONS: Record<ChatCategoryFilter, typeof Users> = {
+  everyone: Users,
+  dm: MessageSquare,
+  support: LifeBuoy,
+  groups: UsersRound,
+};
 
 export default function ChatInboxHeader({
   onStartConversation,
@@ -94,6 +57,10 @@ export default function ChatInboxHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const canStaffReports = canViewStaffReports(userProfile.role) && isStaffActingOfficial(userProfile);
+  const showStatusToggle = categoryHasStatusTabs(categoryFilter);
+  const CategoryIcon = CATEGORY_ICONS[categoryFilter];
+  const hasActiveCategoryFilter = categoryFilter !== 'everyone';
+  const hasActiveStatusFilter = statusFilter !== 'all';
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -106,25 +73,16 @@ export default function ChatInboxHeader({
     return () => document.removeEventListener('mousedown', onDoc);
   }, [menuOpen]);
 
+  const handleCycleCategoryFilter = () => {
+    onCategoryFilterChange(cycleChatCategoryFilter(categoryFilter));
+  };
+
+  const handleCycleStatusFilter = () => {
+    onStatusFilterChange(cycleChatStatusFilter(statusFilter));
+  };
+
   return (
     <header id="chat_inbox_header" className="shrink-0 px-3 pt-2 pb-1 space-y-2">
-      <FilterTabRow
-        id="chat_category_tabs"
-        ariaLabel="Chat type"
-        tabs={CATEGORY_TABS}
-        value={categoryFilter}
-        onChange={onCategoryFilterChange}
-      />
-      {categoryHasStatusTabs(categoryFilter) ? (
-        <FilterTabRow
-          id="chat_status_tabs"
-          ariaLabel="Chat status"
-          tabs={STATUS_TABS}
-          value={statusFilter}
-          onChange={onStatusFilterChange}
-        />
-      ) : null}
-
       <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0" id="chat_view_mode_bar">
         <div className="shrink-0">
           {onStartConversation ? (
@@ -142,7 +100,43 @@ export default function ChatInboxHeader({
           ) : null}
         </div>
 
-        <div className="flex-1 min-w-0" aria-hidden />
+        <div className="flex-1 min-w-0 flex justify-center px-0.5 overflow-x-auto sbn-feed-toolbar-scroll">
+          <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
+            <button
+              type="button"
+              id="chat_category_toggle"
+              onClick={handleCycleCategoryFilter}
+              className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
+                hasActiveCategoryFilter
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-app bg-inset text-app hover:border-accent/40'
+              }`}
+              aria-pressed={hasActiveCategoryFilter}
+              aria-label={`Chat type: ${chatCategoryFilterLabel(categoryFilter)}`}
+              title={`Showing ${chatCategoryFilterLabel(categoryFilter).toLowerCase()} — tap to change`}
+            >
+              <CategoryIcon className="w-3.5 h-3.5 shrink-0" aria-hidden />
+              <span>{chatCategoryFilterLabel(categoryFilter)}</span>
+            </button>
+            {showStatusToggle ? (
+              <button
+                type="button"
+                id="chat_status_toggle"
+                onClick={handleCycleStatusFilter}
+                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
+                  hasActiveStatusFilter
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-app bg-inset text-app hover:border-accent/40'
+                }`}
+                aria-pressed={hasActiveStatusFilter}
+                aria-label={`Chat status: ${chatStatusFilterLabel(statusFilter)}`}
+                title={`Showing ${chatStatusFilterLabel(statusFilter).toLowerCase()} — tap to change`}
+              >
+                <span>{chatStatusFilterLabel(statusFilter)}</span>
+              </button>
+            ) : null}
+          </div>
+        </div>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {onNewSupport ? (

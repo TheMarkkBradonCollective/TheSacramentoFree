@@ -12,6 +12,7 @@ import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '
 import EventStatusBadge from './EventStatusBadge';
 import EventDetailNavigation from './EventDetailNavigation';
 import { PresenceUserAvatar } from './UserAvatar';
+import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface EventDetailViewProps {
   event: CommunityEvent;
@@ -104,6 +105,8 @@ export default function EventDetailView({
   const upcomingInSeries =
     event.seriesId ? getUpcomingSeriesOccurrences(allEvents, event.seriesId) : [];
   const pastSiblings = seriesSiblings.filter((sibling) => !isEventUpcoming(sibling));
+
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
