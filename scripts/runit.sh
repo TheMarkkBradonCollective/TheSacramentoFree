@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# /runit — full release pipeline: SQL sync, website, APK, AAB, commit, deploy, merge.
-# Usage: npm run runit [-- --dry-run] [-- --skip-merge] [-- --skip-build]
+# /runit — full release pipeline: merge open PRs, SQL sync, website, APK, AAB, commit, deploy.
+# Usage: npm run runit [-- --dry-run] [-- --skip-merge] [-- --skip-build] [-- --skip-pr-merge]
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -9,11 +9,13 @@ cd "$ROOT_DIR"
 DRY_RUN=false
 SKIP_MERGE=false
 SKIP_BUILD=false
+SKIP_PR_MERGE=false
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=true ;;
     --skip-merge) SKIP_MERGE=true ;;
     --skip-build) SKIP_BUILD=true ;;
+    --skip-pr-merge) SKIP_PR_MERGE=true ;;
   esac
 done
 
@@ -30,6 +32,19 @@ echo "════════════════════════�
 echo "  /runit — Sacramento Buy Nothing full release"
 echo "═══════════════════════════════════════════════════════════════"
 [[ "$DRY_RUN" == true ]] && echo "(dry-run — no builds, commits, or merges)"
+
+# ── 0. Merge all open PRs into main ─────────────────────────────
+echo ""
+echo "── Step 0: Merge all open PRs into main ──"
+if [[ "$SKIP_PR_MERGE" == true ]]; then
+  echo "  (skipped — --skip-pr-merge)"
+elif [[ "$DRY_RUN" == true ]]; then
+  bash scripts/runit-merge-open-prs.sh --dry-run
+else
+  bash scripts/runit-merge-open-prs.sh
+  git checkout main
+  git pull origin main
+fi
 
 # ── 1. Pre-flight ───────────────────────────────────────────────
 echo ""

@@ -19,6 +19,7 @@
     "runit": "bash scripts/runit.sh",
     "runit:dry": "bash scripts/runit.sh --dry-run",
     "runit:check": "node scripts/runit-check.mjs",
+    "runit:merge-prs": "bash scripts/runit-merge-open-prs.sh",
     "android:play-assets": "bash scripts/generate-play-store-assets.sh",
     "play:reviewer-account": "node scripts/create-play-reviewer-account.mjs",
     "export:user-emails": "node scripts/export-user-emails.mjs",

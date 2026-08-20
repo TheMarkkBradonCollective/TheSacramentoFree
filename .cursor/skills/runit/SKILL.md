@@ -1,18 +1,18 @@
 ---
 name: runit
-description: Full release pipeline for Sacramento Buy Nothing — sync complete-schema.sql, build website, APK, AAB, commit, deploy, and merge to main. Use when the user says /runit or asks for a full release.
+description: Full release pipeline for Sacramento Buy Nothing — merge all open PRs first, then sync complete-schema.sql, build website, APK, AAB, commit, deploy, and merge to main. Use when the user says /runit or asks for a full release.
 ---
 
 # /runit — Full Release Pipeline
 
-Runs the complete Sacramento Buy Nothing release: SQL verification, website build, APK + AAB, commit artifacts, push, merge to main, and print Google Play Console instructions.
+Runs the complete Sacramento Buy Nothing release: **merge all open PRs into main first**, then SQL verification, website build, APK + AAB, commit artifacts, push, and print Google Play Console instructions.
 
 **Do not run unless the user explicitly asks.** When creating or documenting the command, use `--dry-run` to validate without building.
 
 ## Quick start
 
 ```bash
-npm run runit              # full release
+npm run runit              # full release (merges open PRs first)
 npm run runit:dry          # print steps only, no builds/commits
 npm run runit:check        # pre-flight only
 ```
@@ -29,6 +29,7 @@ npm run runit:check        # pre-flight only
 
 | Step | Action |
 |------|--------|
+| **0** | **Merge all open PRs into `main`** (`scripts/runit-merge-open-prs.sh` via `gh pr merge`) |
 | 1 | `npm run lint` + `node scripts/runit-check.mjs` |
 | 2 | Verify `complete-schema.sql` includes all migration markers |
 | 3 | `npm run build` (website → `dist/`) |
@@ -45,8 +46,9 @@ npm run runit:check        # pre-flight only
 | Flag | Effect |
 |------|--------|
 | `--dry-run` | Log steps without building, committing, or merging |
+| `--skip-pr-merge` | Skip merging open PRs (start at pre-flight) |
 | `--skip-build` | Skip website/APK/AAB builds (commit/deploy only) |
-| `--skip-merge` | Commit and push branch but do not merge to main |
+| `--skip-merge` | Commit and push branch but do not merge release branch to main |
 
 ## Output the user needs
 
@@ -81,6 +83,7 @@ When user says `/runit`:
 
 1. Run `npm run runit:check` first and fix any blocking errors.
 2. Confirm version bump and release notes exist.
-3. Ask user to confirm before running full `npm run runit` (large binaries, merge to main).
-4. After run, paste the Play Console summary from script output.
-5. Remind user to run Supabase incremental migrations if any are new.
+3. **Merge all open PRs first** — this is Step 0 of the pipeline (or run `bash scripts/runit-merge-open-prs.sh` alone).
+4. Ask user to confirm before running full `npm run runit` (merges PRs, large binaries, push to main).
+5. After run, paste the Play Console summary from script output.
+6. Remind user to run Supabase incremental migrations if any are new.
