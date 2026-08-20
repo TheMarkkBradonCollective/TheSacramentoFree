@@ -10,6 +10,7 @@ import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent } from './typ
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
+import NewListingModal from './components/NewListingModal';
 import ItemDetailView from './components/ItemDetailView';
 import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
@@ -182,8 +183,7 @@ export default function App() {
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const pathnameSeededRef = useRef(false);
   const [activeTab, setActiveTab] = useState<AnyTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
-  const [showPostModal, setShowPostModal] = useState(false);
-  const [showPostEventModal, setShowPostEventModal] = useState(false);
+  const [showNewListingModal, setShowNewListingModal] = useState(false);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
   const [legalPanel, setLegalPanel] = useState<'privacy' | 'terms' | null>(null);
   const [showAwardsPanel, setShowAwardsPanel] = useState(false);
@@ -261,8 +261,7 @@ export default function App() {
     setDetailEvent(null);
     setDetailEventNavigateOnOpen(false);
     setViewProfileUid(null);
-    setShowPostModal(false);
-    setShowPostEventModal(false);
+    setShowNewListingModal(false);
     setShowGoFundMeDetail(false);
     setLegalPanel(null);
     setShowAwardsPanel(false);
@@ -1662,13 +1661,9 @@ export default function App() {
 
   const accountRestriction = isAccountRestricted(userProfile);
 
-  const openNewPost = () => {
+  const openNewListing = () => {
     setActiveTab('map');
-    setShowPostModal(true);
-  };
-  const openNewEvent = () => {
-    setActiveTab('map');
-    setShowPostEventModal(true);
+    setShowNewListingModal(true);
   };
 
   const reviewPromptEnabled =
@@ -1774,8 +1769,7 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewPost}
-                  onOpenNewEvent={openNewEvent}
+                  onOpenNewPost={openNewListing}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
@@ -1833,8 +1827,7 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewPost}
-                  onOpenNewEvent={openNewEvent}
+                  onOpenNewPost={openNewListing}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
@@ -1892,8 +1885,7 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewPost}
-                  onOpenNewEvent={openNewEvent}
+                  onOpenNewPost={openNewListing}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
@@ -2184,38 +2176,51 @@ export default function App() {
                 />
               )}
 
-              {(showPostModal || editingItem) && (
+              {showNewListingModal && (
+                <NewListingModal
+                  userProfile={userProfile}
+                  canAccessEvents={canAccessEvents}
+                  allEvents={events}
+                  onClose={() => setShowNewListingModal(false)}
+                  onStuffSuccess={() => {
+                    void loadItems(true);
+                    setActiveTab('map');
+                    setShowNewListingModal(false);
+                  }}
+                  onEventSuccess={() => {
+                    void loadEvents(true);
+                    setActiveTab('map');
+                    setShowNewListingModal(false);
+                  }}
+                />
+              )}
+
+              {editingItem && (
                 <PostItemModal
                   userProfile={userProfile}
                   editItem={editingItem}
                   onClose={() => {
-                    setShowPostModal(false);
                     setEditingItem(null);
                   }}
                   onSuccess={() => {
                     void loadItems(true);
-                    if (!editingItem) setActiveTab('map');
-                    setShowPostModal(false);
                     setEditingItem(null);
                   }}
                 />
               )}
 
-              {((showPostEventModal && canAccessEvents) || editingEvent) && (
+              {editingEvent && (
                 <PostEventModal
                   userProfile={userProfile}
                   editEvent={editingEvent}
                   allEvents={events}
                   addOccurrencesOnly={addEventDatesMode}
                   onClose={() => {
-                    setShowPostEventModal(false);
                     setEditingEvent(null);
                     setAddEventDatesMode(false);
                   }}
                   onSuccess={() => {
                     void loadEvents(true);
-                    if (!editingEvent) setActiveTab('map');
-                    setShowPostEventModal(false);
                     setEditingEvent(null);
                     setAddEventDatesMode(false);
                   }}

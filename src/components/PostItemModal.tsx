@@ -21,11 +21,19 @@ import { getPostTypeModalTitle } from '../lib/postType';
 interface PostItemModalProps {
   userProfile: UserProfile;
   editItem?: ItemPost | null;
+  /** Render form body only — used inside NewListingModal. */
+  embedded?: boolean;
   onClose: () => void;
   onSuccess: (item: ItemPost) => void;
 }
 
-export default function PostItemModal({ userProfile, editItem = null, onClose, onSuccess }: PostItemModalProps) {
+export default function PostItemModal({
+  userProfile,
+  editItem = null,
+  embedded = false,
+  onClose,
+  onSuccess,
+}: PostItemModalProps) {
   const isEditing = !!editItem;
   const isReposting = isEditing && editItem?.status === 'withdrawn';
   const [title, setTitle] = useState('');
@@ -350,39 +358,7 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     }
   };
 
-  return (
-    <div id="post_modal_overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4 py-8">
-      <div className="relative w-full max-w-lg sbn-card-elevated overflow-hidden" id="post_modal_box">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-app bg-accent-soft/50">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 bg-accent text-on-accent rounded-xl flex items-center justify-center">
-              {isEditing ? (
-                <Pencil className="w-4 h-4" />
-              ) : type === 'looking' ? (
-                <Search className="w-4 h-4" />
-              ) : type === 'trade' ? (
-                <ArrowLeftRight className="w-4 h-4" />
-              ) : (
-                <Gift className="w-4 h-4" />
-              )}
-            </div>
-            <h3 className="text-base font-bold text-app font-display">
-              {getPostTypeModalTitle(type, isEditing, isReposting)}
-            </h3>
-          </div>
-          <button
-            id="close_modal_btn"
-            onClick={onClose}
-            aria-label="Close"
-            className="p-1.5 text-muted hover:text-app hover:bg-surface-hover rounded-xl transition-colors cursor-pointer"
-          >
-            <X className="w-4.5 h-4.5" />
-          </button>
-        </div>
-
-        {/* Form Body */}
+  const formBody = (
         <form onSubmit={handleSubmit} className="p-6 space-y-5" id="post_item_form">
           {errorMsg && (
             <div className="p-3 bg-red-950/55 text-red-400 text-xs font-bold rounded-xl border border-red-900" id="post_item_error">
@@ -956,7 +932,44 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             </button>
           </div>
         </form>
-      </div>
+  );
+
+  if (embedded) {
+    return formBody;
+  }
+
+  return (
+    <div id="post_modal_overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4 py-8">
+        <div className="relative w-full max-w-lg sbn-card-elevated overflow-hidden" id="post_modal_box">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-app bg-accent-soft/50">
+            <div className="flex items-center space-x-2.5">
+              <div className="p-1.5 bg-accent text-on-accent rounded-xl flex items-center justify-center">
+                {isEditing ? (
+                  <Pencil className="w-4 h-4" />
+                ) : type === 'looking' ? (
+                  <Search className="w-4 h-4" />
+                ) : type === 'trade' ? (
+                  <ArrowLeftRight className="w-4 h-4" />
+                ) : (
+                  <Gift className="w-4 h-4" />
+                )}
+              </div>
+              <h3 className="text-base font-bold text-app font-display">
+                {getPostTypeModalTitle(type, isEditing, isReposting)}
+              </h3>
+            </div>
+            <button
+              id="close_modal_btn"
+              onClick={onClose}
+              aria-label="Close"
+              className="p-1.5 text-muted hover:text-app hover:bg-surface-hover rounded-xl transition-colors cursor-pointer"
+            >
+              <X className="w-4.5 h-4.5" />
+            </button>
+          </div>
+          {formBody}
+        </div>
       </div>
     </div>
   );

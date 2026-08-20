@@ -269,7 +269,7 @@ export default function MobileView({
             <main className="flex-1 min-h-0 overflow-hidden">
                 {/* Reuse all existing community tab views */}
                 <div className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'map'}>
-                  <SacramentoMapView items={items} events={events} userProfile={userProfile} selectedType={selectedMobileType} selectedCategory={selectedMobileCategory} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} isFullScreenMobile mapVisible={communityTab === 'map'} colorGuideOpen={colorGuideOpen} onColorGuideOpenChange={setColorGuideOpen} onOpenNewPost={onOpenNewPost} onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined} canAccessEvents={canAccessEvents} onImmersiveModeChange={setMapImmersiveNav} itemsHydrated={itemsHydrated} eventsHydrated={eventsHydrated} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} />
+                  <SacramentoMapView items={items} events={events} userProfile={userProfile} selectedType={selectedMobileType} selectedCategory={selectedMobileCategory} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} isFullScreenMobile mapVisible={communityTab === 'map'} colorGuideOpen={colorGuideOpen} onColorGuideOpenChange={setColorGuideOpen} onOpenNewPost={onOpenNewPost} onImmersiveModeChange={setMapImmersiveNav} itemsHydrated={itemsHydrated} eventsHydrated={eventsHydrated} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} />
                 </div>
                 <ScrollPage
                   className={communityTab === 'feed' ? '' : 'hidden'}
@@ -356,8 +356,6 @@ export default function MobileView({
             colorGuideOpen={colorGuideOpen}
             onColorGuideOpenChange={setColorGuideOpen}
             onOpenNewPost={onOpenNewPost}
-            onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
-            canAccessEvents={canAccessEvents}
             onImmersiveModeChange={setMapImmersiveNav}
             itemsHydrated={itemsHydrated}
             eventsHydrated={eventsHydrated}

@@ -1,7 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useState } from 'react';
 import { useScrollInputOnFocus } from '../hooks/useKeyboardInset';
-import { Plus } from 'lucide-react';
 import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
@@ -285,8 +284,6 @@ export default function TabletView({
                 onEditItem={onEditItem}
                 mapVisible={communityTab === 'map'}
                 onOpenNewPost={onOpenNewPost}
-                onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
-                canAccessEvents={canAccessEvents}
                 itemsHydrated={itemsHydrated}
                 eventsHydrated={eventsHydrated}
                 eventsEngagement={eventsEngagement}

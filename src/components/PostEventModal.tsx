@@ -28,6 +28,8 @@ interface PostEventModalProps {
   allEvents?: CommunityEvent[];
   /** Add new upcoming dates only (e.g. from a past occurrence). */
   addOccurrencesOnly?: boolean;
+  /** Render form body only — used inside NewListingModal. */
+  embedded?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -107,6 +109,7 @@ export default function PostEventModal({
   editEvent = null,
   allEvents = [],
   addOccurrencesOnly = false,
+  embedded = false,
   onClose,
   onSuccess,
 }: PostEventModalProps) {
@@ -504,31 +507,7 @@ export default function PostEventModal({
       recurrenceConfig.enabled);
   const metadataLocked = editBlocked && !addOccurrencesOnly;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
-      <div
-        className="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto bg-surface border border-app rounded-t-2xl sm:rounded-2xl shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="post_event_modal_title"
-      >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3 border-b border-app bg-surface/95 backdrop-blur">
-          <div>
-            <h2 id="post_event_modal_title" className="font-display font-bold text-app">
-              {modalTitle}
-            </h2>
-            <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-              <Sparkles className="w-3 h-3 text-accent" />
-              {addOccurrencesOnly
-                ? 'New dates use the same location and details — neighbors RSVP per day.'
-                : 'All events must be 100% free — no tickets or fees'}
-            </p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="p-2 rounded-full hover:bg-inset text-muted">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
+  const formBody = (
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {editBlocked && !addOccurrencesOnly && (
             <p className="text-sm text-muted bg-inset border border-app rounded-lg px-3 py-2">
@@ -539,6 +518,13 @@ export default function PostEventModal({
           {errorMsg && (
             <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
               {errorMsg}
+            </p>
+          )}
+
+          {embedded && !isEditing && (
+            <p className="text-xs text-muted flex items-center gap-1 bg-inset border border-app rounded-lg px-3 py-2">
+              <Sparkles className="w-3 h-3 text-accent shrink-0" />
+              All events must be 100% free — no tickets or fees
             </p>
           )}
 
@@ -816,6 +802,37 @@ export default function PostEventModal({
             </button>
           </div>
         </form>
+  );
+
+  if (embedded) {
+    return formBody;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
+      <div
+        className="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto bg-surface border border-app rounded-t-2xl sm:rounded-2xl shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="post_event_modal_title"
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3 border-b border-app bg-surface/95 backdrop-blur">
+          <div>
+            <h2 id="post_event_modal_title" className="font-display font-bold text-app">
+              {modalTitle}
+            </h2>
+            <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+              <Sparkles className="w-3 h-3 text-accent" />
+              {addOccurrencesOnly
+                ? 'New dates use the same location and details — neighbors RSVP per day.'
+                : 'All events must be 100% free — no tickets or fees'}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="p-2 rounded-full hover:bg-inset text-muted">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        {formBody}
       </div>
     </div>
   );

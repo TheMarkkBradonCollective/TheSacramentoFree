@@ -39,7 +39,7 @@ export default function DashboardRail({
             </button>
           )}
           <p className="text-[11px] text-muted leading-snug px-1.5 pt-1">
-            Post listings and events from the Map tab — your current location is used as the starting pin.
+            Use the Map tab + button to post Stuff or Events in one New listing flow.
           </p>
         </div>
       </div>

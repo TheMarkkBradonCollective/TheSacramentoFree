@@ -301,8 +301,6 @@ export default function DesktopView({
                 onEditItem={onEditItem}
                 mapVisible={communityTab === 'map'}
                 onOpenNewPost={onOpenNewPost}
-                onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
-                canAccessEvents={canAccessEvents}
                 itemsHydrated={itemsHydrated}
                 eventsHydrated={eventsHydrated}
                 eventsEngagement={eventsEngagement}
