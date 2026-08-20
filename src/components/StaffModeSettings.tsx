@@ -61,7 +61,7 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold text-app">Staff mode</p>
+          <p className="text-xs font-bold text-app">{isStaffMode ? 'Staff mode' : 'User mode'}</p>
           <p className="text-[10px] text-muted mt-0.5 leading-snug">
             {isStaffMode
               ? 'Staff tools, sidebar, and official outreach are on.'
