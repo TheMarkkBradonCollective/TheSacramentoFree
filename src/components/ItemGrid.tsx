@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
+  ArrowLeft,
+  ArrowLeftRight,
   CircleDot,
+  Gift,
   LayoutGrid,
   LayoutList,
   Search as SearchIcon,
@@ -26,7 +29,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_TYPE_FILTERS, LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
@@ -74,6 +77,26 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'with_photos', label: 'With photos' },
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
+
+function feedTypeToolbarLabel(type: ListingTypeFilter): string {
+  switch (type) {
+    case 'all':
+      return 'All types';
+    case 'giveaway':
+      return 'Giving';
+    case 'looking':
+      return 'Looking';
+    case 'trade':
+      return 'Trades';
+  }
+}
+
+function FeedTypeToolbarIcon({ type }: { type: ListingTypeFilter }) {
+  if (type === 'giveaway') return <Gift className="w-3.5 h-3.5 shrink-0" aria-hidden />;
+  if (type === 'looking') return <SearchIcon className="w-3.5 h-3.5 shrink-0" aria-hidden />;
+  if (type === 'trade') return <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" aria-hidden />;
+  return <CircleDot className="w-3.5 h-3.5 shrink-0" aria-hidden />;
+}
 
 function needsPickupListing(item: ItemPost): boolean {
   if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
@@ -284,6 +307,23 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set());
   };
 
+  const showBackToStuff =
+    selectedType !== 'all' || selectedCategory !== 'All Categories';
+
+  const handleBackToStuff = () => {
+    setSelectedType('all');
+    setSelectedCategory('All Categories');
+  };
+
+  const cycleTypeFilter = () => {
+    setSelectedType((current) => {
+      const idx = LISTING_TYPE_FILTERS.indexOf(current);
+      const next = LISTING_TYPE_FILTERS[(idx + 1) % LISTING_TYPE_FILTERS.length];
+      if (next !== 'all') setSelectedCategory('All Categories');
+      return next;
+    });
+  };
+
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) => {
       if (item.status === 'withdrawn') return false;
@@ -354,23 +394,54 @@ export default function ItemGrid({
   return (
     <>
     <div className="space-y-3" id="item_feed_wrapper">
-      <div className="flex items-center justify-between gap-3" id="feed_view_mode_bar">
-        <div className="min-w-0">
-          <button
-            type="button"
-            id="feed_sort_toggle"
-            onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer"
-            aria-pressed={gridSortMode === 'nearest'}
-          >
-            <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-            <span>{gridSortMode === 'nearest' ? 'Nearest' : 'Newest'}</span>
-          </button>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3" id="feed_view_mode_bar">
+        <div className="flex justify-start min-w-0">
+          {showBackToStuff ? (
+            <button
+              type="button"
+              id="feed_back_to_stuff_btn"
+              onClick={handleBackToStuff}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
+              <span>Back to Stuff</span>
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col items-center gap-1 min-w-0">
+          <div className="flex items-center justify-center gap-2">
+            <button
+              type="button"
+              id="feed_sort_toggle"
+              onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'new' : 'nearest'))}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer shrink-0"
+              aria-pressed={gridSortMode === 'nearest'}
+            >
+              <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
+              <span>{gridSortMode === 'nearest' ? 'Nearest' : 'Newest'}</span>
+            </button>
+            <button
+              type="button"
+              id="feed_type_toggle"
+              onClick={cycleTypeFilter}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer shrink-0 ${
+                selectedType !== 'all'
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-app bg-inset text-app hover:border-accent/40'
+              }`}
+              aria-pressed={selectedType !== 'all'}
+            >
+              <FeedTypeToolbarIcon type={selectedType} />
+              <span>{feedTypeToolbarLabel(selectedType)}</span>
+            </button>
+          </div>
           {gridSortMode === 'nearest' && !userLocation && (
-            <p className="text-[10px] text-muted mt-1">Turn on location for distance sorting</p>
+            <p className="text-[10px] text-muted text-center">Turn on location for distance sorting</p>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+
+        <div className="flex items-center justify-end gap-2 shrink-0">
           <button
             type="button"
             id="feed_filters_panel_toggle"
