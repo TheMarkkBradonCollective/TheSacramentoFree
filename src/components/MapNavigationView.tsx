@@ -6,7 +6,6 @@ import {
   ArrowRight,
   ArrowUp,
   ChevronUp,
-  Compass,
   CornerUpLeft,
   CornerUpRight,
   LocateFixed,
@@ -72,9 +71,11 @@ import {
   buildStartBriefingVoice,
   distanceCueKeysForStep,
   NavigationVoice,
+  unlockNavigationSpeech,
   voiceCueThresholdsForMode,
 } from '../lib/navigationVoice';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
 
 export interface NavProgressUpdate {
   lat: number;
@@ -109,24 +110,11 @@ const NAV_BRAND = '#FF4500';
 const NAV_BRAND_LIGHT = '#FF6B2E';
 const NAV_ROUTE_GLOW = 'rgba(255, 69, 0, 0.42)';
 
-type NavMapStyle = 'dark' | 'light' | 'standard';
-
-const NAV_TILE_URLS: Record<NavMapStyle, string> = {
-  dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png',
-  standard: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-};
-
 function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean }) {
   if (!visible || !phrase) return null;
   return (
-    <motion.div
-      className="sbn-nav-voice-bar sbn-nav-glass pointer-events-none"
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-    >
-      <Mic className="w-4 h-4 text-accent shrink-0" />
+    <div className="sbn-nav-voice-strip pointer-events-none" aria-live="polite">
+      <Mic className="w-3.5 h-3.5 text-accent shrink-0" />
       <div className="sbn-nav-voice-waves shrink-0" aria-hidden>
         <span />
         <span />
@@ -134,7 +122,7 @@ function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean 
         <span />
       </div>
       <p className="text-xs font-semibold truncate text-[var(--sbn-nav-text)]">{phrase}</p>
-    </motion.div>
+    </div>
   );
 }
 
@@ -156,7 +144,7 @@ function NavLaneGuidance({ lanes, maneuverKind }: { lanes: NavLane[]; maneuverKi
       {highlighted.map((lane, index) => (
         <div
           key={`${lane.indications.join('-')}-${index}`}
-          className={`sbn-nav-lane-slot text-sm font-black ${lane.valid ? 'sbn-nav-lane-slot-active' : ''}`}
+          className={`sbn-nav-lane-slot text-xs font-bold ${lane.valid ? 'sbn-nav-lane-slot-active' : ''}`}
           title={lane.indications.join(', ') || 'Lane'}
           aria-hidden={!lane.valid}
         >
@@ -170,59 +158,50 @@ function NavLaneGuidance({ lanes, maneuverKind }: { lanes: NavLane[]; maneuverKi
 function NavSpeedCard({
   currentMph,
   limitMph,
-  compact = false,
 }: {
   currentMph: string | null;
   limitMph: number;
-  compact?: boolean;
 }) {
   const current = currentMph != null ? Number.parseInt(currentMph, 10) : null;
   const speedClass =
     current == null || Number.isNaN(current)
-      ? 'sbn-nav-speed-current--ok'
+      ? ''
       : current > limitMph + 5
-        ? 'sbn-nav-speed-current--over'
+        ? 'sbn-nav-speed-now--over'
         : current > limitMph
-          ? 'sbn-nav-speed-current--warn'
-          : 'sbn-nav-speed-current--ok';
+          ? 'sbn-nav-speed-now--warn'
+          : '';
 
   return (
     <div
-      className={`sbn-nav-speed-card sbn-nav-glass pointer-events-auto ${compact ? 'sbn-nav-speed-card-compact' : ''}`}
+      className="sbn-nav-speed"
       aria-label={
         currentMph
           ? `Speed limit ${limitMph} miles per hour, current speed ${currentMph}`
           : `Speed limit ${limitMph} miles per hour`
       }
     >
-      <div className="sbn-nav-speed-limit">
-        {!compact && <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--sbn-nav-text-secondary)]">Limit</p>}
-        <p className={`font-black tabular-nums leading-none text-[var(--sbn-nav-text)] ${compact ? 'text-sm' : 'text-lg'}`}>{limitMph}</p>
+      <div className="sbn-nav-speed-sign">
+        <p className="sbn-nav-speed-sign-label">Speed limit</p>
+        <p className="sbn-nav-speed-sign-value">{limitMph}</p>
       </div>
-      <div className={`sbn-nav-speed-current ${speedClass}`}>
-        {!compact && <p className="text-[9px] font-bold uppercase tracking-wider opacity-70">Now</p>}
-        <p className={`font-black tabular-nums leading-none ${compact ? 'text-base' : 'text-xl'}`}>{currentMph ?? '—'}</p>
+      <div className={`sbn-nav-speed-now ${speedClass}`}>
+        <p className="sbn-nav-speed-now-value">{currentMph ?? '—'}</p>
+        <p className="sbn-nav-speed-now-unit">mph</p>
       </div>
     </div>
   );
 }
 
-function NavLoadingOverlay({ stage, destinationLabel }: { stage: NavLoadingStage; destinationLabel: string }) {
+function NavLoadingOverlay({ stage }: { stage: NavLoadingStage }) {
   const label =
-    stage === 'locating' ? 'Acquiring GPS signal…' : stage === 'routing' ? 'Calculating best route…' : 'Starting guidance…';
+    stage === 'locating' ? 'Getting your location…' : stage === 'routing' ? 'Finding route…' : 'Starting…';
 
   return (
-    <div className="sbn-nav-loading-overlay pointer-events-none">
-      <div className="sbn-nav-loading-card sbn-nav-glass">
-        <div className="sbn-nav-loading-ring" aria-hidden />
-        <Navigation className="w-8 h-8 text-accent" />
-        <p className="text-sm font-bold text-[var(--sbn-nav-text)] mt-4">{label}</p>
-        <p className="text-xs text-[var(--sbn-nav-text-secondary)] mt-1 truncate max-w-[16rem]">To {destinationLabel}</p>
-        <div className="sbn-nav-loading-steps" aria-hidden>
-          <span className={stage === 'locating' ? 'active' : 'done'} />
-          <span className={stage === 'routing' ? 'active' : stage === 'ready' ? 'done' : ''} />
-          <span className={stage === 'ready' ? 'active' : ''} />
-        </div>
+    <div className="sbn-nav-loading-overlay pointer-events-none" role="status" aria-live="polite" aria-label={label}>
+      <div className="sbn-nav-loading">
+        <div className="sbn-nav-loading-spinner" aria-hidden />
+        <p className="sbn-nav-loading-label">{label}</p>
       </div>
     </div>
   );
@@ -250,6 +229,7 @@ interface NavigationDetailsSheetProps {
   onRecenter: () => void;
   onSettings: () => void;
   onExit: () => void;
+  currentRoad?: string | null;
 }
 
 function NavigationDetailsSheet({
@@ -270,6 +250,7 @@ function NavigationDetailsSheet({
   onRecenter,
   onSettings,
   onExit,
+  currentRoad,
 }: NavigationDetailsSheetProps) {
   const dragStartYRef = useRef(0);
   const expanded = snap === 'expanded';
@@ -300,7 +281,7 @@ function NavigationDetailsSheet({
     <motion.div
       id="nav_details_sheet"
       className={`sbn-nav-sheet relative z-30 flex flex-col w-full safe-area-pb ${
-        expanded ? 'max-h-[72vh]' : ''
+        expanded ? 'is-expanded' : ''
       }`}
       initial={false}
     >
@@ -322,8 +303,8 @@ function NavigationDetailsSheet({
         <div className="sbn-nav-sheet-handle" />
       </div>
 
-      <div className="shrink-0 px-4 pb-4 pt-1">
-        <div className="flex items-center gap-3">
+      <div className="sbn-nav-sheet-body">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={() => onSnapChange(expanded ? 'collapsed' : 'expanded')}
@@ -333,18 +314,27 @@ function NavigationDetailsSheet({
             <ChevronUp className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
           </button>
 
-          <div className="flex-1 min-h-0 text-center">
-            <p className="text-[2rem] font-black text-accent leading-none tabular-nums font-display">
-              {arrived ? '0 min' : formatNavDuration(remainingSeconds)}
+          <div className="flex-1 min-w-0">
+            <p className="flex items-baseline gap-2 min-w-0">
+              <span className="sbn-nav-sheet-eta shrink-0">
+                {arrived ? 'Arrived' : formatNavDuration(remainingSeconds)}
+              </span>
+              <span className="text-xs font-medium tabular-nums truncate text-[var(--sbn-nav-text-secondary)]">
+                {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
+              </span>
             </p>
-            <p className="text-sm font-medium mt-1 tabular-nums text-[var(--sbn-nav-text-secondary)]">
-              {formatNavDistance(remainingMeters)} · {formatArrivalTime(remainingSeconds)}
+            <p className="text-[12px] truncate mt-0.5 font-semibold text-[var(--sbn-nav-text)]">
+              {destinationLabel}
             </p>
-            <p className="text-[11px] truncate mt-0.5 text-[var(--sbn-nav-text-secondary)]">
-              {arrived ? `Arrived · ${destinationLabel}` : destinationLabel}
-            </p>
+            {currentRoad && currentRoad !== destinationLabel ? (
+              <p className="sbn-nav-sheet-road text-[11px] truncate mt-0.5 text-[var(--sbn-nav-text-secondary)]">
+                {currentRoad}
+              </p>
+            ) : null}
             {gpsAccuracy != null && gpsAccuracy > 35 && !arrived && (
-              <p className="text-[10px] text-[var(--sbn-nav-warning)] mt-1">GPS weak — ±{Math.round(gpsAccuracy)}m</p>
+              <p className="text-[10px] text-[var(--sbn-nav-warning)] mt-1 truncate">
+                GPS weak — ±{Math.round(gpsAccuracy)}m
+              </p>
             )}
           </div>
 
@@ -446,8 +436,6 @@ function ManeuverIcon({ kind, className = 'w-10 h-10' }: { kind: ManeuverIconKin
   }
 }
 
-const NAV_LOOKAHEAD_SCREEN_RATIO = 0.22;
-
 function createNavUserIcon(heading: number): L.DivIcon {
   return L.divIcon({
     html: `<div class="sbn-nav-user-puck" style="transform: rotate(${heading}deg)"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-core"></span><span class="sbn-nav-user-puck-arrow"></span></div>`,
@@ -543,33 +531,84 @@ function debounceMapInvalidate(map: L.Map, delayMs = 160): () => void {
   };
 }
 
-function centerMapWithLookahead(map: L.Map, center: LatLng, zoom: number): void {
+/** True while we pan/zoom in code so Leaflet zoomstart does not drop follow-user. */
+let programmaticNavCamera = false;
+
+function withProgrammaticNavCamera(fn: () => void): void {
+  programmaticNavCamera = true;
+  try {
+    fn();
+  } finally {
+    window.requestAnimationFrame(() => {
+      programmaticNavCamera = false;
+    });
+  }
+}
+
+function readNavChromeFlags(): { compact: boolean; narrow: boolean } {
+  if (typeof window === 'undefined') return { compact: false, narrow: false };
+  const viewport = window.visualViewport;
+  const height = viewport?.height ?? window.innerHeight;
+  const width = viewport?.width ?? window.innerWidth;
+  return {
+    compact: height <= 640 || width > height + 48,
+    narrow: width <= 400,
+  };
+}
+
+/** Pixel offset so the user sits in the visible map hole between banner and sheet. */
+function visibleMapCenterOffsetPx(map: L.Map): { x: number; y: number } {
+  const size = map.getSize();
+  if (size.x <= 0 || size.y <= 0) return { x: 0, y: 0 };
+  const mapRect = map.getContainer().getBoundingClientRect();
+  let top = 0;
+  let bottom = 0;
+  for (const id of ['nav_top_stack', 'nav_instruction_banner', 'nav_details_sheet']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom <= mapRect.top || rect.top >= mapRect.bottom) continue;
+    const fromTop = rect.bottom - mapRect.top;
+    const fromBottom = mapRect.bottom - rect.top;
+    if (rect.top <= mapRect.top + 8) {
+      top = Math.max(top, fromTop);
+    } else if (rect.bottom >= mapRect.bottom - 8) {
+      bottom = Math.max(bottom, fromBottom);
+    }
+  }
+  const usable = Math.max(80, size.y - top - bottom);
+  const visibleMidY = top + usable / 2;
+  return { x: 0, y: size.y / 2 - visibleMidY };
+}
+
+/** Keep the puck in the center of the uncovered map, not the full canvas. */
+function centerMapOnUser(map: L.Map, center: LatLng, zoom: number): void {
   if (!map.getContainer()?.isConnected) return;
 
   const mapSize = map.getSize();
   if (mapSize.x <= 0 || mapSize.y <= 0) {
-    map.setView([center.lat, center.lng], zoom, { animate: false });
+    withProgrammaticNavCamera(() => {
+      map.setView([center.lat, center.lng], zoom, { animate: false });
+    });
     return;
   }
 
   try {
-    const lookaheadPx = Math.round(mapSize.y * NAV_LOOKAHEAD_SCREEN_RATIO);
+    const offset = visibleMapCenterOffsetPx(map);
     const targetPoint = map.project([center.lat, center.lng], zoom);
-    // Shifting the *center* up (negative y) moves the user's own position DOWN on
-    // screen, which is what reveals more map area ahead of them — this was
-    // previously shifted the other way, pushing the user toward the top of the
-    // screen and leaving the actual route/destination rendered mostly off-screen.
-    const shiftedCenter = map.unproject(L.point(targetPoint.x, targetPoint.y - lookaheadPx), zoom);
-
-    if (map.getZoom() !== zoom) {
-      map.setView(shiftedCenter, zoom, { animate: false });
-      return;
-    }
-
-    map.panTo(shiftedCenter, { animate: false, noMoveStart: true });
+    const shiftedCenter = map.unproject(L.point(targetPoint.x + offset.x, targetPoint.y + offset.y), zoom);
+    withProgrammaticNavCamera(() => {
+      if (map.getZoom() !== zoom) {
+        map.setView(shiftedCenter, zoom, { animate: false });
+        return;
+      }
+      map.panTo(shiftedCenter, { animate: false, noMoveStart: true });
+    });
   } catch (error) {
-    console.warn('Could not apply navigation lookahead:', error);
-    map.setView([center.lat, center.lng], zoom, { animate: false });
+    console.warn('Could not center navigation map on user:', error);
+    withProgrammaticNavCamera(() => {
+      map.setView([center.lat, center.lng], zoom, { animate: false });
+    });
   }
 }
 
@@ -664,14 +703,14 @@ export default function MapNavigationView({
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS_DRIVING = 10;
-  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 4;
-  const NAV_UI_TICK_MS = 900;
-  const NAV_MAP_SYNC_MS = 450;
+  const NAV_GPS_FOLLOW_METERS_DRIVING = 8;
+  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 3;
+  const NAV_UI_TICK_MS = 700;
+  const NAV_MAP_SYNC_MS = 220;
   const NAV_ROUTE_DRAW_MIN_METERS = 14;
   const NAV_ROUTE_DRAW_MIN_MS = 1400;
   const NAV_HEADING_ICON_DEG = 12;
-  const NAV_DISPLAY_SMOOTH_ALPHA = 0.38;
+  const NAV_DISPLAY_SMOOTH_ALPHA = 0.72;
   const NAV_OFF_ROUTE_THRESHOLD_M = 55;
   const NAV_OFF_ROUTE_EVAL_MS = 900;
   const NAV_OFF_ROUTE_TICKS = 4;
@@ -693,9 +732,6 @@ export default function MapNavigationView({
   const [stepIndex, setStepIndex] = useState(0);
   const [followUser, setFollowUser] = useState(true);
   followUserRef.current = followUser;
-  const [northUp, setNorthUp] = useState(() => !readNavigationSettings().headingUp);
-  const northUpRef = useRef(false);
-  northUpRef.current = northUp;
   const [voiceOn, setVoiceOn] = useState(() => readNavigationSettings().voiceEnabled);
   const [arrived, setArrived] = useState(false);
   const [rerouting, setRerouting] = useState(false);
@@ -703,15 +739,15 @@ export default function MapNavigationView({
   const [sheetSnap, setSheetSnap] = useState<NavSheetSnap>('collapsed');
   const [navSettings, setNavSettings] = useState<NavigationSettings>(() => readNavigationSettings());
   settingsRef.current = navSettings;
+  // Heading is only the settings on/off. On = map follows the phone. Off = north-up.
+  // Panning/overview also forces north-up until Recenter restores follow.
+  const northUp = !navSettings.headingUp || !followUser;
+  const northUpRef = useRef(northUp);
+  northUpRef.current = northUp;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [osmLanes, setOsmLanes] = useState<NavLane[] | null>(null);
   const osmLanesRef = useRef<NavLane[] | null>(null);
   osmLanesRef.current = osmLanes;
-  const [mapStyle, setMapStyle] = useState<NavMapStyle>(() => {
-    const settings = readNavigationSettings();
-    if (!settings.followAppTheme) return theme === 'light' ? 'light' : 'dark';
-    return theme === 'light' ? 'light' : 'dark';
-  });
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [voicePhrase, setVoicePhrase] = useState('');
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -722,25 +758,28 @@ export default function MapNavigationView({
   routeRef.current = route;
   voiceOnRef.current = voiceOn;
 
-  const [showHeading, setShowHeading] = useState(false);
-
   // Landscape phones (and any short window) leave very little vertical room between
   // the instruction banner and the details sheet. Below this threshold we switch to a
   // more compact banner and lay the floating controls out as a row instead of a
   // column so nothing gets clipped by or overlaps the sheet.
-  const [isCompact, setIsCompact] = useState(
-    () => typeof window !== 'undefined' && window.innerHeight <= 500,
-  );
+  const [isCompact, setIsCompact] = useState(() => readNavChromeFlags().compact);
+  const [isNarrow, setIsNarrow] = useState(() => readNavChromeFlags().narrow);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const update = () => setIsCompact(window.innerHeight <= 500);
+    const update = () => {
+      const flags = readNavChromeFlags();
+      setIsCompact(flags.compact);
+      setIsNarrow(flags.narrow);
+    };
     update();
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
+    window.visualViewport?.addEventListener('resize', update);
     return () => {
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
+      window.visualViewport?.removeEventListener('resize', update);
     };
   }, []);
 
@@ -784,13 +823,6 @@ export default function MapNavigationView({
     const ratio = Math.min(1, remainingMeters / route.distanceMeters);
     return Math.max(0, Math.round(route.durationSeconds * ratio));
   }, [route, remainingMeters, arrived]);
-
-  const bannerScale = useMemo(() => {
-    if (arrived) return 1;
-    if (distanceToManeuver < 80) return 1.05;
-    if (distanceToManeuver < 250) return 1.025;
-    return 1;
-  }, [distanceToManeuver, arrived]);
 
   const speakGuidanceCard = useCallback(
     (
@@ -876,7 +908,7 @@ export default function MapNavigationView({
     if (!options?.force && followUserRef.current) return;
 
     const sheet = document.getElementById('nav_details_sheet');
-    const banner = document.getElementById('nav_instruction_banner');
+    const banner = document.getElementById('nav_top_stack') ?? document.getElementById('nav_instruction_banner');
     const padding = measureMapFitPadding({
       mapElement: mapEl,
       obstructingElements: [sheet, banner],
@@ -962,18 +994,8 @@ export default function MapNavigationView({
       setNavSettings(next);
       setVoiceOn(next.voiceEnabled);
       voiceRef.current.setEnabled(next.voiceEnabled);
-      setNorthUp((current) => {
-        if (followUserRef.current) return !next.headingUp;
-        return current;
-      });
     });
   }, []);
-
-  useEffect(() => {
-    if (navSettings.followAppTheme) {
-      setMapStyle(theme === 'light' ? 'light' : 'dark');
-    }
-  }, [theme, navSettings.followAppTheme]);
 
   useEffect(() => {
     const destPart = `${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`;
@@ -1107,13 +1129,7 @@ export default function MapNavigationView({
       markerZoomAnimation: false,
     }).setView([start.lat, start.lng], 16);
 
-    const tileLayer = L.tileLayer(NAV_TILE_URLS[mapStyle], {
-      maxZoom: 19,
-      updateWhenIdle: true,
-      updateWhenZooming: false,
-      keepBuffer: 3,
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-    }).addTo(map);
+    const tileLayer = L.tileLayer(SBN_MAP_TILE_URL, SBN_MAP_TILE_OPTIONS).addTo(map);
     tileLayerRef.current = tileLayer;
 
     const routeLayer = L.layerGroup().addTo(map);
@@ -1124,11 +1140,11 @@ export default function MapNavigationView({
     const debouncedInvalidate = debounceMapInvalidate(map);
 
     const onUserMapInteraction = () => {
-      if (isProgrammaticMapMoveRef.current) return;
+      if (programmaticNavCamera || isProgrammaticMapMoveRef.current) return;
       routeOverviewLockedRef.current = true;
-      // Stop camera follow so the user can pan/zoom without GPS yanking them back.
       followUserRef.current = false;
       setFollowUser(false);
+      applyHeadingUpRotation(mapRotatorRef.current, map, userPosRef.current, headingRef.current, true);
     };
     map.on('dragstart', onUserMapInteraction);
     map.on('zoomstart', onUserMapInteraction);
@@ -1172,10 +1188,6 @@ export default function MapNavigationView({
       displayedPosRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    tileLayerRef.current?.setUrl(NAV_TILE_URLS[mapStyle]);
-  }, [mapStyle]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1249,8 +1261,16 @@ export default function MapNavigationView({
         setHeading(initialHeading);
       }
 
-      centerMapWithLookahead(map, start, 17);
+      followUserRef.current = true;
+      setFollowUser(true);
+      centerMapOnUser(map, start, 17);
       applyHeadingUpRotation(mapRotatorRef.current, map, start, headingRef.current, northUpRef.current);
+      window.requestAnimationFrame(() => {
+        const live = mapRef.current;
+        if (!live || !followUserRef.current) return;
+        centerMapOnUser(live, userPosRef.current, Math.max(live.getZoom(), 17));
+        applyHeadingUpRotation(mapRotatorRef.current, live, userPosRef.current, headingRef.current, northUpRef.current);
+      });
       if (userMarkerRef.current) {
         const markerHeading = northUpRef.current ? headingRef.current : 0;
         userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
@@ -1345,7 +1365,7 @@ export default function MapNavigationView({
       const target = pendingNavPanRef.current;
       const liveMap = mapRef.current;
       if (!target || !liveMap || !followUserRef.current) return;
-      centerMapWithLookahead(liveMap, target, Math.max(liveMap.getZoom(), 17));
+      centerMapOnUser(liveMap, target, Math.max(liveMap.getZoom(), 17));
       applyHeadingUpRotation(mapRotatorRef.current, liveMap, target, headingRef.current, northUpRef.current);
     });
   }, []);
@@ -1584,7 +1604,10 @@ export default function MapNavigationView({
     setVoiceOn((on) => {
       const next = !on;
       voiceRef.current.setEnabled(next);
-      if (next) voiceRef.current.prime();
+      if (next) {
+        voiceRef.current.unlock();
+        voiceRef.current.speak('Voice guidance on.', `voice-on-${Date.now()}`);
+      }
       writeNavigationSettings({ voiceEnabled: next });
       return next;
     });
@@ -1593,7 +1616,7 @@ export default function MapNavigationView({
   const speakRecenterCue = () => {
     const settings = settingsRef.current;
     if (!settings.voiceEnabled || !settings.speakOnRecenter) return;
-    voiceRef.current.prime();
+    voiceRef.current.unlock();
     voiceRef.current.setEnabled(true);
     speakGuidanceCard(`recenter-${Date.now()}`, { prefix: 'Centered on you' });
   };
@@ -1601,26 +1624,18 @@ export default function MapNavigationView({
   const handleRecenter = () => {
     setFollowUser(true);
     followUserRef.current = true;
+    routeOverviewLockedRef.current = false;
     const headingUp = settingsRef.current.headingUp;
-    setNorthUp(!headingUp);
     lastNavPanRef.current = null;
     const pos = userPosRef.current;
     const map = mapRef.current;
     if (!map) return;
-    if (headingUp) {
-      map.setView([pos.lat, pos.lng], 17, { animate: false });
-      applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, false);
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setIcon(createNavUserIcon(0));
-        lastMarkerHeadingRef.current = 0;
-      }
-    } else {
-      applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, true);
-      centerMapWithLookahead(map, pos, 17);
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
-        lastMarkerHeadingRef.current = headingRef.current;
-      }
+    centerMapOnUser(map, pos, Math.max(map.getZoom(), 17));
+    applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, !headingUp);
+    if (userMarkerRef.current) {
+      const markerHeading = headingUp ? 0 : headingRef.current;
+      userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
+      lastMarkerHeadingRef.current = markerHeading;
     }
     speakRecenterCue();
   };
@@ -1628,7 +1643,6 @@ export default function MapNavigationView({
   const handleOverview = () => {
     setFollowUser(false);
     followUserRef.current = false;
-    setNorthUp(true);
     const map = mapRef.current;
     if (!map) return;
     applyHeadingUpRotation(mapRotatorRef.current, map, userPosRef.current, headingRef.current, true);
@@ -1639,15 +1653,6 @@ export default function MapNavigationView({
     }
     routeOverviewLockedRef.current = false;
     fitRouteOverview({ force: true });
-  };
-
-  const handleMapStyleCycle = () => {
-    writeNavigationSettings({ followAppTheme: false });
-    setMapStyle((current) => {
-      if (current === 'dark') return 'light';
-      if (current === 'light') return 'standard';
-      return 'dark';
-    });
   };
 
   const handleShareTrip = async () => {
@@ -1712,6 +1717,19 @@ export default function MapNavigationView({
   }, [northUp]);
 
   useEffect(() => {
+    if (!followUser || !route) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const frame = window.requestAnimationFrame(() => {
+      const live = mapRef.current;
+      if (!live || !followUserRef.current) return;
+      centerMapOnUser(live, userPosRef.current, Math.max(live.getZoom(), 17));
+      applyHeadingUpRotation(mapRotatorRef.current, live, userPosRef.current, headingRef.current, northUpRef.current);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [followUser, route, sheetSnap, isCompact]);
+
+  useEffect(() => {
     if (navSettings.travelMode !== 'driving' || !navSettings.showLaneGuidance) {
       setOsmLanes(null);
       return;
@@ -1734,9 +1752,10 @@ export default function MapNavigationView({
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}`}
+      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}${isNarrow ? ' sbn-nav-narrow' : ''}`}
       id="map_navigation_view"
       style={{ background: 'var(--sbn-nav-bg)' }}
+      onPointerDown={() => voiceRef.current.unlock()}
     >
       <div className="relative flex-1 min-h-0 overflow-hidden">
         <div className="sbn-nav-map-stage">
@@ -1745,7 +1764,7 @@ export default function MapNavigationView({
           </div>
         </div>
 
-        {loading && !route && <NavLoadingOverlay stage={loadingStage} destinationLabel={destinationLabel} />}
+        {loading && !route && <NavLoadingOverlay stage={loadingStage} />}
 
         {showFatalError && (
           <div className="sbn-nav-error-overlay safe-area-pb">
@@ -1770,74 +1789,45 @@ export default function MapNavigationView({
           </div>
         )}
 
-        {gpsError && !showFatalError && (
-          <div className="absolute inset-x-3 top-[calc(var(--sbn-safe-area-top,var(--sbn-inset-top,0px))+5.5rem)] z-30 pointer-events-none">
-            <div className="sbn-nav-glass rounded-2xl px-4 py-3 text-xs font-semibold text-[var(--sbn-nav-warning)] text-center">
-              {gpsError}
-            </div>
-          </div>
-        )}
-
-        <div className="absolute inset-0 z-20 pointer-events-none flex flex-col">
-          <div className="pointer-events-auto safe-area-pt shrink-0">
-            <motion.div
+        <div className="sbn-nav-chrome">
+          <div id="nav_top_stack" className="pointer-events-auto sbn-nav-top-stack">
+            <div
               id="nav_instruction_banner"
-              className={`sbn-nav-banner sbn-nav-glass sbn-nav-banner-accent ${isCompact ? 'sbn-nav-banner-compact' : ''}`}
-              animate={{ scale: bannerScale }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className={`sbn-nav-banner ${isCompact ? 'sbn-nav-banner-compact' : ''}`}
               aria-live="assertive"
               aria-atomic="true"
             >
-              <div className={`flex items-start gap-3 ${isCompact ? '' : 'min-h-[4rem]'}`}>
-                <div className={`shrink-0 flex flex-col items-center justify-center ${isCompact ? 'w-12' : 'w-[4.75rem]'}`}>
+              <div className="sbn-nav-banner-row">
+                <div className="sbn-nav-banner-icon">
                   {loading ? (
                     <div className="sbn-nav-banner-shimmer" aria-hidden />
                   ) : (
-                    <NavManeuverShield kind={maneuverKind} className={isCompact ? 'w-9 h-9' : 'w-14 h-14'} />
-                  )}
-                  {!loading && !arrived && (
-                    <p className="text-sm font-black mt-2 tabular-nums leading-none tracking-tight text-accent">
-                      {formatNavDistance(distanceToManeuver)}
-                    </p>
+                    <NavManeuverShield kind={maneuverKind} className={isCompact ? 'w-10 h-10' : 'w-12 h-12'} />
                   )}
                 </div>
-
-                <div className="min-w-0 flex-1">
+                <div className="sbn-nav-banner-copy">
                   {loading ? (
                     <>
-                      <p className={`font-display font-extrabold leading-tight ${isCompact ? 'text-lg' : 'text-[1.65rem]'}`}>Loading route</p>
-                      <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">To {destinationLabel}</p>
+                      <p className="sbn-nav-banner-distance">Routing</p>
+                      <p className="sbn-nav-banner-instruction">To {destinationLabel}</p>
                     </>
                   ) : arrived ? (
                     <>
-                      <p className={`font-display font-extrabold leading-tight ${isCompact ? 'text-lg' : 'text-[1.65rem]'}`}>You&apos;ve arrived</p>
-                      <p className="text-base font-bold mt-1 truncate">{destinationLabel}</p>
+                      <p className="sbn-nav-banner-distance">Arrived</p>
+                      <p className="sbn-nav-banner-instruction">{destinationLabel}</p>
                     </>
                   ) : (
                     <>
-                      <p
-                        className={`font-display font-extrabold leading-[1.05] tracking-tight truncate ${
-                          isCompact ? 'text-lg' : 'text-[1.65rem] sm:text-[1.85rem]'
-                        }`}
-                      >
-                        {bannerInstruction ?? bannerStreet}
-                      </p>
-                      <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">
-                        {bannerStreet}
-                        {currentRoadLabel && currentRoadLabel !== bannerStreet ? ` · now on ${currentRoadLabel}` : ''}
-                      </p>
-                      {thenLine ? (
-                        <p className={`font-semibold truncate text-[var(--sbn-nav-text-secondary)] opacity-80 ${isCompact ? 'text-[10px] mt-0.5' : 'text-[11px] mt-1'}`}>
-                          {thenLine}
-                        </p>
-                      ) : null}
+                      <p className="sbn-nav-banner-distance">{formatNavDistance(distanceToManeuver)}</p>
+                      <p className="sbn-nav-banner-instruction">{bannerInstruction ?? bannerStreet}</p>
+                      {thenLine ? <p className="sbn-nav-banner-then">{thenLine}</p> : null}
                     </>
                   )}
                 </div>
               </div>
 
               {!loading && route && (rerouting || offRouteMeters > NAV_OFF_ROUTE_THRESHOLD_M) && !arrived && (
-                <p className="mt-2 text-center text-xs font-semibold text-[var(--sbn-nav-warning)]">
+                <p className="mt-2 text-xs font-semibold text-[var(--sbn-nav-warning)]">
                   {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
                 </p>
               )}
@@ -1845,55 +1835,36 @@ export default function MapNavigationView({
               {!loading && !arrived && (
                 <NavLaneGuidance lanes={displayLanes} maneuverKind={maneuverKind} />
               )}
-            </motion.div>
-
+            </div>
+            {!loading && route && !arrived && (
+              <div id="nav_mode_switcher" className="sbn-nav-mode-bar">
+                <NavTravelModeSwitcher
+                  variant="nav"
+                  value={navSettings.travelMode}
+                  onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
+                />
+              </div>
+            )}
             <VoiceStatusBar phrase={voicePhrase} visible={voiceSpeaking && voiceOn} />
           </div>
 
-          {!loading && route && (
-            <div className="relative flex-1 min-h-0">
-              {/* These floating controls only fit — and are only needed — while the
-                  details sheet is collapsed. The sheet's own expanded view has its
-                  own overview/voice/recenter/share row, so hiding these here avoids
-                  both duplicate controls and the FAB stack visually spilling onto
-                  the sheet when there's little vertical room left for it. */}
-              {sheetSnap === 'collapsed' && (
+          <div className="sbn-nav-map-hud">
+            {gpsError && !showFatalError && (
+              <div className="sbn-nav-gps-toast pointer-events-none">{gpsError}</div>
+            )}
+            {!loading && route && sheetSnap === 'collapsed' && (
                 <>
-                  <div className="absolute left-3 bottom-3 pointer-events-auto flex flex-col gap-2 w-[10.75rem]">
-                    {showSpeedCard && (
-                      <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} compact={isCompact} />
-                    )}
-                    <NavTravelModeSwitcher
-                      variant="nav"
-                      value={navSettings.travelMode}
-                      onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
-                    />
-                  </div>
+                  {showSpeedCard && (
+                    <div className="sbn-nav-speed-dock">
+                      <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} />
+                    </div>
+                  )}
 
-                  <div
-                    className={`absolute right-3 flex pointer-events-auto ${
-                      isCompact ? 'top-1 flex-row gap-1.5' : 'top-2 flex-col gap-2.5'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextNorthUp = !northUp;
-                        setNorthUp(nextNorthUp);
-                        setShowHeading(true);
-                        writeNavigationSettings({ headingUp: !nextNorthUp });
-                      }}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${northUp ? '' : 'sbn-nav-fab-active'}`}
-                      title={northUp ? 'North up — tap for heading up' : 'Heading up — tap for north up'}
-                      aria-label={northUp ? 'Switch to heading up map' : 'Switch to north up map'}
-                      aria-pressed={!northUp}
-                    >
-                      <Compass className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
-                    </button>
+                  <div className="sbn-nav-fab-dock">
                     <button
                       type="button"
                       onClick={handleVoiceToggle}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${voiceOn ? 'sbn-nav-fab-active' : ''}`}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${voiceOn ? 'sbn-nav-fab-active' : ''} ${voiceSpeaking && voiceOn ? 'sbn-nav-fab-speaking' : ''}`}
                       title={voiceOn ? 'Voice guidance on' : 'Voice guidance off'}
                       aria-pressed={voiceOn}
                       aria-label={voiceOn ? 'Mute voice guidance' : 'Enable voice guidance'}
@@ -1907,7 +1878,7 @@ export default function MapNavigationView({
                     <button
                       type="button"
                       onClick={handleRecenter}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${followUser ? 'sbn-nav-fab-active' : ''}`}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${followUser ? '' : 'sbn-nav-fab-active'}`}
                       title="Center on you and speak the next turn"
                       aria-label="Center on you"
                     >
@@ -1922,39 +1893,13 @@ export default function MapNavigationView({
                     >
                       <Settings2 className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleOverview}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''}`}
-                      title="Route overview"
-                      aria-label="Route overview"
-                    >
-                      <MapIcon className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
-                    </button>
-
-                    {showHeading && !isCompact && (
-                      <div className="sbn-nav-glass rounded-xl px-3 py-2 text-xs font-bold tabular-nums pointer-events-none text-center">
-                        <p>{northUp ? 'North up' : 'Heading up'}</p>
-                        <p className="mt-0.5 opacity-80">{Math.round(heading)}°</p>
-                      </div>
-                    )}
                   </div>
-
-                  {!arrived && currentRoadLabel && (
-                    <div className="absolute inset-x-0 bottom-3 flex justify-center px-20 pointer-events-none">
-                      <div className="sbn-nav-road-pill truncate">
-                        {currentRoadLabel}
-                        {gpsAccuracy != null ? ` · ±${Math.round(gpsAccuracy)}m` : ''}
-                      </div>
-                    </div>
-                  )}
                 </>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           {!loading && route && (
-            <div className="shrink-0 pointer-events-auto">
+            <div className="min-w-0 min-h-0 pointer-events-auto">
               <NavigationDetailsSheet
                 snap={sheetSnap}
                 onSnapChange={setSheetSnap}
@@ -1967,6 +1912,7 @@ export default function MapNavigationView({
                 stepIndex={stepIndex}
                 voiceOn={voiceOn}
                 travelMode={navSettings.travelMode}
+                currentRoad={currentRoadLabel}
                 onVoiceToggle={handleVoiceToggle}
                 onOverview={handleOverview}
                 onShare={() => void handleShareTrip()}
@@ -1981,7 +1927,7 @@ export default function MapNavigationView({
 
       {settingsOpen && (
         <div className="sbn-nav-settings-overlay" role="dialog" aria-modal="true" aria-labelledby="nav_settings_title">
-          <div className="sbn-nav-settings-card sbn-nav-glass pointer-events-auto">
+          <div className="sbn-nav-settings-card pointer-events-auto">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 id="nav_settings_title" className="text-base font-display font-bold text-[var(--sbn-nav-text)]">
                 Navigation settings
@@ -2000,9 +1946,6 @@ export default function MapNavigationView({
               settings={navSettings}
               onChange={(patch) => writeNavigationSettings(patch)}
             />
-            <button type="button" onClick={handleMapStyleCycle} className="sbn-nav-secondary-btn mt-4">
-              Map tiles: {mapStyle}
-            </button>
           </div>
         </div>
       )}

@@ -143,8 +143,8 @@ export default function NavigationSettingsForm({
         />
         <ToggleRow
           id={variant === 'nav' ? 'nav_setting_heading' : 'profile_nav_heading'}
-          title="Heading-up map"
-          description="Rotate the map to match your compass and GPS heading. Turn off for north-up."
+          title="Follow phone heading"
+          description="On: the map turns with your phone. Off: north stays up."
           checked={settings.headingUp}
           onChange={(headingUp) => onChange({ headingUp })}
           icon={Compass}
@@ -162,7 +162,7 @@ export default function NavigationSettingsForm({
         <ToggleRow
           id={variant === 'nav' ? 'nav_setting_theme' : 'profile_nav_theme'}
           title="Follow app theme"
-          description="Navigation chrome and map tiles match light or dark mode from Account."
+          description="Navigation chrome matches light or dark mode from Account. The map uses the same tiles as the community map."
           checked={settings.followAppTheme}
           onChange={(followAppTheme) => onChange({ followAppTheme })}
           icon={Moon}

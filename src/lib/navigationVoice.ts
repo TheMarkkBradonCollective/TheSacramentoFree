@@ -147,6 +147,22 @@ export function buildStartBriefingVoice(options: {
   ]);
 }
 
+/** Android WebView drops TTS unless it is unlocked from a tap. Never cancel() after this. */
+let navigationSpeechUnlocked = false;
+
+export function unlockNavigationSpeech(): void {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.resume();
+  if (navigationSpeechUnlocked) return;
+  const warmup = new SpeechSynthesisUtterance('.');
+  warmup.volume = 0.01;
+  warmup.rate = 2;
+  warmup.lang = 'en-US';
+  window.speechSynthesis.speak(warmup);
+  navigationSpeechUnlocked = true;
+}
+
 export class NavigationVoice {
   private enabled = true;
   private spokenKeys = new Set<string>();
@@ -156,6 +172,8 @@ export class NavigationVoice {
   private currentPhrase = '';
   private utterance: SpeechSynthesisUtterance | null = null;
   private speakingListeners = new Set<(speaking: boolean, phrase: string) => void>();
+  private keepAliveTimer: number | null = null;
+  private voicesListener: (() => void) | null = null;
 
   subscribeSpeaking(listener: (speaking: boolean, phrase: string) => void): () => void {
     this.speakingListeners.add(listener);
@@ -188,15 +206,31 @@ export class NavigationVoice {
   setEnabled(on: boolean): void {
     this.enabled = on;
     if (!on) this.cancel();
+    else this.unlock();
   }
 
   isEnabled(): boolean {
     return this.enabled;
   }
 
+  private startKeepAlive(): void {
+    if (this.keepAliveTimer != null || typeof window === 'undefined') return;
+    this.keepAliveTimer = window.setInterval(() => {
+      if (!this.enabled || !window.speechSynthesis) return;
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+    }, 8000);
+  }
+
+  private stopKeepAlive(): void {
+    if (this.keepAliveTimer == null) return;
+    window.clearInterval(this.keepAliveTimer);
+    this.keepAliveTimer = null;
+  }
+
   cancel(): void {
     this.queue = [];
     this.processing = false;
+    this.stopKeepAlive();
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -230,6 +264,16 @@ export class NavigationVoice {
     this.processQueue();
   }
 
+  private pickVoice(): SpeechSynthesisVoice | null {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    return (
+      voices.find((v) => v.lang.startsWith('en') && /samantha|google us english|karen|daniel/i.test(v.name)) ??
+      voices.find((v) => v.lang.toLowerCase().startsWith('en')) ??
+      null
+    );
+  }
+
   private processQueue(): void {
     if (this.processing || !this.enabled || this.queue.length === 0) return;
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -238,19 +282,21 @@ export class NavigationVoice {
     if (!text) return;
 
     this.processing = true;
+    window.speechSynthesis.resume();
     const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
     utterance.rate = 0.98;
     utterance.pitch = 1;
     utterance.volume = 1;
     this.setSpeaking(true, text);
 
-    const voices = window.speechSynthesis.getVoices();
-    const preferred =
-      voices.find((v) => v.lang.startsWith('en') && /samantha|google us english|karen|daniel/i.test(v.name)) ??
-      voices.find((v) => v.lang.startsWith('en'));
+    const preferred = this.pickVoice();
     if (preferred) utterance.voice = preferred;
 
+    let settled = false;
     const onDone = () => {
+      if (settled) return;
+      settled = true;
       this.processing = false;
       this.utterance = null;
       if (this.queue.length === 0) {
@@ -264,15 +310,33 @@ export class NavigationVoice {
 
     this.utterance = utterance;
     window.speechSynthesis.speak(utterance);
+
+    // Android WebView often swallows the first speak() unless we retry after resume.
+    window.setTimeout(() => {
+      if (settled || this.utterance !== utterance) return;
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
+      window.speechSynthesis.resume();
+      window.speechSynthesis.speak(utterance);
+    }, 280);
+  }
+
+  /**
+   * Must run from a user gesture on Android WebView or speech is silently dropped.
+   * Do not cancel() afterward — that kills the engine on Chrome/WebView.
+   */
+  unlock(): void {
+    unlockNavigationSpeech();
+    this.startKeepAlive();
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (!this.voicesListener) {
+      this.voicesListener = () => this.pickVoice();
+      window.speechSynthesis.addEventListener('voiceschanged', this.voicesListener);
+    }
+    this.processQueue();
   }
 
   /** Prime voices on iOS/Safari (must run after a user gesture). */
   prime(): void {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.getVoices();
-    const silent = new SpeechSynthesisUtterance('');
-    silent.volume = 0;
-    window.speechSynthesis.speak(silent);
-    window.speechSynthesis.cancel();
+    this.unlock();
   }
 }
