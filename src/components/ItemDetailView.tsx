@@ -28,8 +28,9 @@ import { PostVoteState } from '../hooks/useItemsEngagement';
 import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import StaffListingActions from './StaffListingActions';
-import { isStaffRole } from '../lib/roles';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
+import { isStaffRole } from '../lib/roles';
 import { getListingSubitems, itemHasRecordedAppClaim, getUserDisplayInfoByIds } from '../supabase';
 import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
@@ -99,7 +100,10 @@ export default function ItemDetailView({
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
   const showNeighborNavigate =
-    !isOwner && item.status === 'active' && isOpenForCoordination;
+    supportsInAppNavigation() &&
+    !isOwner &&
+    item.status === 'active' &&
+    isOpenForCoordination;
 
   const { isSaved, toggleSaved } = useSavedItems(currentUserId);
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
@@ -328,7 +332,7 @@ export default function ItemDetailView({
             {/* Renders itself only when there's a pickup pin OR an already-active Go Get
                 session — the latter matters for Looking/Trade, where the destination is
                 wherever the fulfiller is, not the listing's own (often absent) pin. */}
-            {userProfile && (
+            {userProfile && supportsInAppNavigation() && (
               <ItemDetailNavigation
                 item={item}
                 currentUserId={currentUserId}

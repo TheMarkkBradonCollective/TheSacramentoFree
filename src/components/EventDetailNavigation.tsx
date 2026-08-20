@@ -15,6 +15,7 @@ import {
   readActiveNavSession,
   saveActiveNavSession,
 } from '../lib/navigationSession';
+import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import MapNavigationView from './MapNavigationView';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 
@@ -153,6 +154,10 @@ export default function EventDetailNavigation({
         No map pin yet — the host can set an exact location so neighbors can navigate here.
       </p>
     );
+  }
+
+  if (!supportsInAppNavigation()) {
+    return null;
   }
 
   const locationHint = event.location?.trim() || `Event pin · ${event.neighborhood}`;

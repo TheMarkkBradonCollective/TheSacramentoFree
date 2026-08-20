@@ -178,6 +178,7 @@ export default function ItemDetailNavigation({
 
   const coordinationGate = useMemo(() => {
     if (isOwner || !userProfile) return { ok: true as const };
+    if (isStaffOfficial) return { ok: true as const };
     return canShowAppPickupCoordination({
       item,
       posterProfile: posterProfile ?? { uid: item.userId, goGetEnabled: false },

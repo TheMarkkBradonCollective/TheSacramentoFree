@@ -21,7 +21,8 @@ import { ItemGridSkeleton } from './Skeleton';
 import PostItemModal from './PostItemModal';
 import PickupAttributionModal from './PickupAttributionModal';
 import { updateSupabaseItemStatus, getUserPickupCoordinationByIds } from '../supabase';
-import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
+import { canShowListingInAppNavigation } from '../lib/goGetCoordinationGating';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { completedActionNeedsAttribution } from '../lib/pickupAttribution';
 import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
@@ -744,14 +745,12 @@ export default function ItemGrid({
                 onStaffChat={onStaffListingChat ? () => onStaffListingChat(item) : undefined}
                 onViewProfile={onViewProfile}
                 distanceMeters={getItemDistance(item)}
-                showPickupCoordination={
-                  item.userId === userProfile.uid ||
-                  canShowAppPickupCoordination({
-                    item,
-                    posterProfile: { uid: item.userId, ...coordByUid[item.userId] },
-                    pickerProfile: userProfile,
-                  }).ok
-                }
+                showPickupCoordination={canShowListingInAppNavigation({
+                  item,
+                  viewerProfile: userProfile,
+                  posterProfile: coordByUid[item.userId],
+                  isStaffOfficial: isStaffActingOfficial(userProfile),
+                })}
                 onNavigate={
                   item.userId !== userProfile.uid
                     ? () => (onNavigateItem ?? onViewItem)(item)

@@ -26,7 +26,7 @@ import {
   type LatLng,
 } from '../lib/mapRoute';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
-import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
+import { canShowAppPickupCoordination, supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import { getUserPickupCoordinationByIds } from '../supabase';
 import { remainingRouteMeters } from '../lib/navigationRoute';
 import { usePreviewDrivingRoute } from '../hooks/usePreviewDrivingRoute';
@@ -1278,6 +1278,12 @@ export default function SacramentoMapView({
   // Events navigate straight from the map pin. Curb alerts use "Pick Up" (direct nav, no poster notification).
   // Other types start their coordination flow (Go Get / Drop off / Meet up).
   const handleNavigateRequest = useCallback(async () => {
+    if (!supportsInAppNavigation()) {
+      if (selectedPost) openItemDetail?.(selectedPost);
+      else if (selectedEvent) onViewEvent?.(selectedEvent);
+      return;
+    }
+
     if (selectedEvent) {
       openNavigation();
       return;
@@ -1311,11 +1317,6 @@ export default function SacramentoMapView({
     }
 
     if (navigatesDirectlyToPin(selectedPost)) {
-      openNavigation();
-      return;
-    }
-
-    if (!supportsGoGetCoordination()) {
       openNavigation();
       return;
     }
@@ -1632,7 +1633,7 @@ export default function SacramentoMapView({
                 durationSeconds={routeDurationSeconds}
                 routeOnMap={isRoadGeometry(routeCoords)}
                 hasLiveGps={!!userLocation}
-                canNavigate={hasGpsFix && !!routeDestination}
+                canNavigate={supportsInAppNavigation() && hasGpsFix && !!routeDestination}
                 onStartNavigation={handleNavigateRequest}
                 onOpenExternalMaps={handleOpenExternalMaps}
               />
@@ -1735,7 +1736,7 @@ export default function SacramentoMapView({
                         durationSeconds={routeDurationSeconds}
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
-                        canNavigate={hasGpsFix && !!routeDestination}
+                        canNavigate={supportsInAppNavigation() && hasGpsFix && !!routeDestination}
                         navigateLabel={
                           selectedPost
                             ? isStaffViewer || !supportsGoGetCoordination()
@@ -2209,7 +2210,7 @@ export default function SacramentoMapView({
             durationSeconds={routeDurationSeconds}
             routeOnMap={isRoadGeometry(routeCoords)}
             hasLiveGps={!!userLocation}
-                    canNavigate={hasGpsFix && !!routeDestination}
+                    canNavigate={supportsInAppNavigation() && hasGpsFix && !!routeDestination}
             onStartNavigation={handleNavigateRequest}
             onOpenExternalMaps={handleOpenExternalMaps}
           />
@@ -2319,7 +2320,7 @@ export default function SacramentoMapView({
                     durationSeconds={routeDurationSeconds}
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
-                    canNavigate={hasGpsFix && !!routeDestination}
+                    canNavigate={supportsInAppNavigation() && hasGpsFix && !!routeDestination}
                     navigateLabel={
                       selectedPost
                         ? isStaffViewer || !supportsGoGetCoordination()

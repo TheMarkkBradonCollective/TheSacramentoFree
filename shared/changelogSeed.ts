@@ -109,15 +109,16 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
     '2026-08-20_apk-0026',
     '2026-08-20',
     'New Android download — beta v0.1.0.0026',
-    'Staff Navigate, Go Get ring and availability, list/grid feed, and faster loading.',
+    'Android app: Staff Navigate, Go Get ring, list/grid feed. Website stays message + mark only.',
     `WHAT NEIGHBORS SEE
 Play Store testers and sideload installs: beta v0.1.0.0026 (versionCode 26).
 
-Since 0025:
+Android app only:
 • Staff Navigate on Stuff and Events
 • Go Get ring + pickup availability (coordination opt-in in Account)
 • List/grid feed toggle
-• Faster loading on feed and Events
+
+Website (browser): message neighbors and mark listings — no in-app navigation or Go Get.
 
 Already on an older install? Reopening the app still loads the live site for web fixes, but install 0026 for the latest native shell.
 

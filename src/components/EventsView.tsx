@@ -10,6 +10,7 @@ import {
 import { CommunityEvent, SACRAMENTO_NEIGHBORHOODS, UserProfile } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
+import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
@@ -149,6 +150,7 @@ export default function EventsView({
     Number.isFinite(event.locationLng);
 
   const canNavigateToEvent = (event: CommunityEvent): boolean => {
+    if (!supportsInAppNavigation()) return false;
     if (event.userId === userProfile.uid) return false;
     if (resolveEventStatus(event) === 'cancelled' || isEventPast(event)) return false;
     return eventHasMapPin(event);
