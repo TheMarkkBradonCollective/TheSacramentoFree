@@ -40,6 +40,22 @@ import ChatInboxHeader from './ChatInboxHeader';
 import ChatInboxList from './ChatInboxList';
 import { buildInboxEntries } from '../lib/chatInbox';
 import {
+  emptyInboxFilterMessage,
+  filterInboxEntries,
+  readChatCategoryFilter,
+  readChatStatusFilter,
+  writeChatCategoryFilter,
+  writeChatStatusFilter,
+  type ChatCategoryFilter,
+  type ChatStatusFilter,
+} from '../lib/chatInboxFilters';
+import {
+  archiveInboxConversation,
+  isInboxArchived,
+  readArchivedInboxKeys,
+  unarchiveInboxConversation,
+} from '../lib/chatInboxArchive';
+import {
   getMessageGroupMeta,
   messageBubbleClass,
   messageGroupSpacing,
@@ -60,6 +76,8 @@ import {
   Shield,
   Trash2,
   Undo2,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
 import { formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
@@ -163,6 +181,14 @@ export default function ChatSystem({
   const [errorMsg, setErrorMsg] = useState('');
   const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<ChatCategoryFilter>(() => readChatCategoryFilter());
+  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>(() => readChatStatusFilter());
+  const [archivedKeys, setArchivedKeys] = useState(() => readArchivedInboxKeys(userProfile.uid));
+
+  useEffect(() => {
+    setArchivedKeys(readArchivedInboxKeys(userProfile.uid));
+  }, [userProfile.uid]);
+
   const userIsStaff = isStaffRole(userProfile.role) && isStaffActingOfficial(userProfile);
   const staffActingOfficial = isStaffActingOfficial(userProfile);
   const canStaffReports = canViewStaffReports(userProfile.role) && isStaffActingOfficial(userProfile);
@@ -1074,6 +1100,77 @@ export default function ChatSystem({
     [chats, supportTickets, supportPreviews, incomingRequests],
   );
 
+  const filteredInboxEntries = useMemo(
+    () =>
+      filterInboxEntries(inboxEntries, categoryFilter, statusFilter, {
+        archivedKeys,
+        items,
+        events,
+      }),
+    [inboxEntries, categoryFilter, statusFilter, archivedKeys, items, events],
+  );
+
+  const emptyInboxCopy = useMemo(
+    () => emptyInboxFilterMessage(categoryFilter, statusFilter),
+    [categoryFilter, statusFilter],
+  );
+
+  const handleCategoryFilterChange = (filter: ChatCategoryFilter) => {
+    setCategoryFilter(filter);
+    writeChatCategoryFilter(filter);
+  };
+
+  const handleStatusFilterChange = (filter: ChatStatusFilter) => {
+    setStatusFilter(filter);
+    writeChatStatusFilter(filter);
+  };
+
+  const handleArchiveChat = useCallback(
+    (chatId: string) => {
+      setArchivedKeys(archiveInboxConversation(userProfile.uid, 'chat', chatId));
+      setSelectedChat(null);
+      onClearInitialChat();
+      onClearPendingChatCompose?.();
+    },
+    [userProfile.uid, onClearInitialChat, onClearPendingChatCompose],
+  );
+
+  const handleUnarchiveChat = useCallback(
+    (chatId: string) => {
+      setArchivedKeys(unarchiveInboxConversation(userProfile.uid, 'chat', chatId));
+    },
+    [userProfile.uid],
+  );
+
+  const handleArchiveSupportTicket = useCallback(
+    (ticketId: string) => {
+      setArchivedKeys(archiveInboxConversation(userProfile.uid, 'support', ticketId));
+      setSupportView(null);
+      setSupportOpenTicketId(null);
+      onClearInitialSupportTicket?.();
+    },
+    [userProfile.uid, onClearInitialSupportTicket],
+  );
+
+  const handleUnarchiveSupportTicket = useCallback(
+    (ticketId: string) => {
+      setArchivedKeys(unarchiveInboxConversation(userProfile.uid, 'support', ticketId));
+    },
+    [userProfile.uid],
+  );
+
+  const selectedChatArchived =
+    selectedChat && !isCommunityChat(selectedChat.id)
+      ? isInboxArchived(userProfile.uid, 'chat', selectedChat.id)
+      : false;
+
+  const selectedSupportTicket = supportOpenTicketId
+    ? supportTickets.find((ticket) => ticket.id === supportOpenTicketId) ?? null
+    : null;
+  const selectedSupportArchived = selectedSupportTicket
+    ? isInboxArchived(userProfile.uid, 'support', selectedSupportTicket.id)
+    : false;
+
   const getFormattedChatTitle = (chat: Chat) => {
     if (isCommunityChat(chat.id)) return communityChatTitle(chat.id);
     const contextTitle = chat.eventTitle || chat.itemTitle;
@@ -1164,6 +1261,10 @@ export default function ChatSystem({
       >
         <ChatInboxHeader
           userProfile={userProfile}
+          categoryFilter={categoryFilter}
+          statusFilter={statusFilter}
+          onCategoryFilterChange={handleCategoryFilterChange}
+          onStatusFilterChange={handleStatusFilterChange}
           onStartConversation={onStartDirectMessage}
           onNewSupport={!isStaffSupportInbox ? () => openSupport('new') : undefined}
           onOpenFeedbackPanel={setFeedbackPanel}
@@ -1179,13 +1280,15 @@ export default function ChatSystem({
             }
           >
             <ChatInboxList
-              entries={inboxEntries}
+              entries={filteredInboxEntries}
               loading={isChatsLoading || supportTicketsLoading}
               isStaffSupportInbox={isStaffSupportInbox}
               selectedChatId={selectedChat?.id ?? null}
               supportOpenTicketId={supportOpenTicketId}
               supportActive={!!supportView}
               requestBusyId={requestBusyId}
+              emptyTitle={emptyInboxCopy.title}
+              emptyDescription={emptyInboxCopy.description}
               getFormattedChatTitle={getFormattedChatTitle}
               getRecipientInfo={getRecipientInfo}
               formatTime={formatTime}
@@ -1220,6 +1323,9 @@ export default function ChatSystem({
               setSupportOpenTicketId(null);
               onClearInitialSupportTicket?.();
             }}
+            onArchiveTicket={handleArchiveSupportTicket}
+            onUnarchiveTicket={handleUnarchiveSupportTicket}
+            supportTicketArchived={selectedSupportArchived}
             onViewRelatedListing={onViewRelatedListing}
             onViewRelatedEvent={onViewRelatedEvent}
             className="h-full"
@@ -1379,23 +1485,47 @@ export default function ChatSystem({
                     )}
                   </div>
 
-                  {!isCommunity &&
-                  canDeleteDirectChat(
-                    userProfile,
-                    selectedChat,
-                    linkedItem ?? null,
-                    linkedEvent ?? null,
-                  ) ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteChat(linkedItem, linkedEvent)}
-                      disabled={deletingChat}
-                      className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset shrink-0 disabled:opacity-50"
-                      title="Delete conversation"
-                      aria-label="Delete conversation"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  {!isCommunity ? (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {selectedChatArchived ? (
+                        <button
+                          type="button"
+                          onClick={() => handleUnarchiveChat(selectedChat.id)}
+                          className="p-2 rounded-full text-muted hover:text-accent hover:bg-inset"
+                          title="Unarchive conversation"
+                          aria-label="Unarchive conversation"
+                        >
+                          <ArchiveRestore className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void handleArchiveChat(selectedChat.id)}
+                          className="p-2 rounded-full text-muted hover:text-accent hover:bg-inset"
+                          title="Archive conversation"
+                          aria-label="Archive conversation"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canDeleteDirectChat(
+                        userProfile,
+                        selectedChat,
+                        linkedItem ?? null,
+                        linkedEvent ?? null,
+                      ) ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteChat(linkedItem, linkedEvent)}
+                          disabled={deletingChat}
+                          className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset disabled:opacity-50"
+                          title="Delete conversation"
+                          aria-label="Delete conversation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </header>
 
