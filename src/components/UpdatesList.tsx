@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { AppUpdateInput, AppUpdateRecord, UserProfile } from '../types';
 import { neighborUpdateDetail } from '../../shared/changelogFilters';
@@ -18,6 +18,7 @@ interface UpdatesListProps {
   onViewProfile?: (userId: string) => void;
   showVotes?: boolean;
   showComments?: boolean;
+  focusId?: string | null;
 }
 
 function formatUpdateDate(iso: string): string {
@@ -39,6 +40,7 @@ export default function UpdatesList({
   onViewProfile,
   showVotes = true,
   showComments = true,
+  focusId = null,
 }: UpdatesListProps) {
   const { updates, loading, createUpdate, saveUpdate, removeUpdate, canManage } = useAppUpdates(userProfile);
   const updateIds = useMemo(() => updates.map((update) => update.id), [updates]);
@@ -82,6 +84,16 @@ export default function UpdatesList({
       return haystack.includes(q);
     });
   }, [updates, searchQuery]);
+
+  useEffect(() => {
+    if (!focusId) return;
+    setSearchQuery('');
+    setExpandedId(focusId);
+    const timer = window.setTimeout(() => {
+      document.getElementById(`update-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [focusId, updates.length]);
 
   const emptyDraft = (): AppUpdateInput => ({
     date: todayIsoDate(),
@@ -139,7 +151,11 @@ export default function UpdatesList({
             const isOwnUpdate = signedIn && update.postedByUserId === userProfile?.uid;
 
             return (
-              <li key={update.id}>
+              <li
+                key={update.id}
+                id={`update-${update.id}`}
+                className={focusId === update.id ? 'scroll-mt-4 ring-2 ring-accent/60 rounded-2xl' : 'scroll-mt-4'}
+              >
                 <PublicCard>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 text-left min-w-0">

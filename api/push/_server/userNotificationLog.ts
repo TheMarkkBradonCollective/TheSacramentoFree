@@ -71,6 +71,21 @@ function inboxKind(eventType: PushEventType): string {
       return 'feed_downvote';
     case 'feed_post':
       return 'feed_post';
+    case 'feed_reply':
+      return 'feed_reply';
+    case 'friend_request':
+    case 'friend_request_accepted':
+      return eventType;
+    case 'award_unlocked':
+      return 'award_unlocked';
+    case 'event_rsvp':
+      return 'event_rsvp';
+    case 'event_comment':
+      return 'event_comment';
+    case 'announcement_comment':
+      return 'announcement_comment';
+    case 'update_comment':
+      return 'update_comment';
     default:
       return eventType;
   }
@@ -81,7 +96,14 @@ function notificationId(userId: string, tag: string): string {
   return `un_${userId.slice(0, 8)}_${safeTag}`.slice(0, 200);
 }
 
-const FEED_INBOX_KINDS = new Set(['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote', 'feed_post']);
+const FEED_INBOX_KINDS = new Set([
+  'feed_comment',
+  'feed_reaction',
+  'feed_upvote',
+  'feed_downvote',
+  'feed_post',
+  'feed_reply',
+]);
 
 function isFeedInboxEvent(eventType: PushEventType): boolean {
   return FEED_INBOX_KINDS.has(eventType);
@@ -124,6 +146,14 @@ function inboxItemId(payload: PushPayload): string | null {
   const feedPostId = payload.data?.feedPostId || '';
   if (feedPostId) return feedPostId;
   if (isFeedInboxEvent(payload.eventType)) return null;
+  const eventId = payload.data?.eventId || '';
+  if (eventId) return eventId;
+  const announcementId = payload.data?.announcementId || '';
+  if (announcementId) return announcementId;
+  const updateId = payload.data?.updateId || '';
+  if (updateId) return updateId;
+  const profileUserId = payload.data?.profileUserId || '';
+  if (profileUserId) return profileUserId;
   const listingId = payload.data?.listingId || '';
   return listingId || null;
 }

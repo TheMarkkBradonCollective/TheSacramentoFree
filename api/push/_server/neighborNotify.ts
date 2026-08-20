@@ -427,6 +427,28 @@ export async function runNeighborNewCommentNotify(
     );
   }
 
+  const { data: commentRows } = await supabaseAdmin.from('item_comments').select('userId').eq('itemId', itemId);
+  const threadIds = [
+    ...new Set(
+      (commentRows || [])
+        .map((row) => String((row as { userId?: string }).userId || ''))
+        .filter((id) => id && id !== commenterId && id !== ownerId),
+    ),
+  ];
+  if (threadIds.length) {
+    results.push(
+      await sendNeighborPush(commenterId, {
+        eventType: 'new_comment',
+        title: 'New reply on a listing you commented on',
+        body: `${commenterName} on "${itemTitle}": ${preview}`,
+        url: listingUrl(itemId),
+        listingId: itemId,
+        recipientUserIds: threadIds,
+        tag: `listing-thread-${commentId}`,
+      }),
+    );
+  }
+
   results.push(
     await runSavedItemsActivityNotify(commenterId, {
       itemId,

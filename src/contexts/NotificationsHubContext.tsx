@@ -14,6 +14,11 @@ import { isStaffApplyInviteSeen, markStaffApplyInviteSeen } from '../lib/staffAp
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts' | 'awards';
 
+export type NotificationsHubFocus = {
+  announcementId?: string;
+  updateId?: string;
+};
+
 const HUB_TAB_ORDER: NotificationsHubTab[] = ['notifications', 'announcements', 'updates', 'awards', 'alerts'];
 
 const HUB_TAB_META: Record<
@@ -63,13 +68,13 @@ const HUB_TABS = HUB_TAB_ORDER.map((id) => ({
 }));
 
 type NotificationsHubContextValue = {
-  openHub: (tab?: NotificationsHubTab) => void;
+  openHub: (tab?: NotificationsHubTab, focus?: NotificationsHubFocus) => void;
   shouldGlow: boolean;
 };
 
 const NotificationsHubContext = createContext<NotificationsHubContextValue | null>(null);
 
-let openNotificationsHubGlobal: ((tab?: NotificationsHubTab) => void) | null = null;
+let openNotificationsHubGlobal: ((tab?: NotificationsHubTab, focus?: NotificationsHubFocus) => void) | null = null;
 let closeNotificationsHubGlobal: (() => void) | null = null;
 
 function resolveHubTab(tab: NotificationsHubTab | 'notifications' | 'listings'): NotificationsHubTab {
@@ -78,8 +83,11 @@ function resolveHubTab(tab: NotificationsHubTab | 'notifications' | 'listings'):
 }
 
 /** Open the navbar bell panel from outside React (e.g. push deep links in App.tsx). */
-export function openNotificationsHub(tab: NotificationsHubTab | 'listings' = 'notifications') {
-  openNotificationsHubGlobal?.(resolveHubTab(tab));
+export function openNotificationsHub(
+  tab: NotificationsHubTab | 'listings' = 'notifications',
+  focus?: NotificationsHubFocus,
+) {
+  openNotificationsHubGlobal?.(resolveHubTab(tab), focus);
 }
 
 export function closeNotificationsHub() {
@@ -143,6 +151,8 @@ export function NotificationsHubProvider({
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationsHubTab>('notifications');
   const [inviteSeen, setInviteSeen] = useState(true);
+  const [focusAnnouncementId, setFocusAnnouncementId] = useState<string | null>(null);
+  const [focusUpdateId, setFocusUpdateId] = useState<string | null>(null);
 
   const {
     shouldGlow,
@@ -165,10 +175,12 @@ export function NotificationsHubProvider({
 
   const unreadCounts = { unreadNotifications: notifyUnread, unreadAnnouncements, unreadUpdates };
 
-  const openHub = useCallback((initialTab: NotificationsHubTab = 'notifications') => {
+  const openHub = useCallback((initialTab: NotificationsHubTab = 'notifications', focus?: NotificationsHubFocus) => {
     const resolved = resolveHubTab(initialTab);
     setTab(resolved);
     setOpen(true);
+    setFocusAnnouncementId(focus?.announcementId || null);
+    setFocusUpdateId(focus?.updateId || null);
     if (resolved === 'announcements' || resolved === 'updates') {
       window.dispatchEvent(new CustomEvent('sbn-refresh-changelog'));
     }
@@ -216,7 +228,7 @@ export function NotificationsHubProvider({
       {children}
       {open && userProfile ? (
         <FullScreenPanel wide onClose={() => setOpen(false)}>
-          <div className="space-y-5">
+          <div className="space-y-5 min-h-0">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -258,9 +270,11 @@ export function NotificationsHubProvider({
             <p className="text-xs text-muted -mt-2">{HUB_TAB_META[tab].intro}</p>
 
             {tab === 'announcements' ? (
-              <AnnouncementsList userProfile={userProfile} showVotes showComments />
+              <AnnouncementsList userProfile={userProfile} showVotes showComments focusId={focusAnnouncementId} />
             ) : null}
-            {tab === 'updates' ? <UpdatesList userProfile={userProfile} showVotes showComments /> : null}
+            {tab === 'updates' ? (
+              <UpdatesList userProfile={userProfile} showVotes showComments focusId={focusUpdateId} />
+            ) : null}
             {tab === 'notifications' ? (
               <UserNotificationsList
                 user={userProfile}

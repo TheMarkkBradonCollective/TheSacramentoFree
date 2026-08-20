@@ -54,6 +54,14 @@ export type PushEventType =
   | 'feed_upvote'
   | 'feed_downvote'
   | 'feed_post'
+  | 'feed_reply'
+  | 'friend_request'
+  | 'friend_request_accepted'
+  | 'award_unlocked'
+  | 'event_rsvp'
+  | 'event_comment'
+  | 'announcement_comment'
+  | 'update_comment'
   | 'violation_filed'
   | 'violation_decision'
   | 'account_locked'
@@ -90,6 +98,27 @@ export interface NotificationPreferencesRow {
   newListings: boolean;
   savedItems: boolean;
   accountUpdates: boolean;
+  feedPosts: boolean;
+  feedComments: boolean;
+  feedReactions: boolean;
+  feedUpvotes: boolean;
+  feedDownvotes: boolean;
+  listingComments: boolean;
+  goGetAlerts: boolean;
+  pickupCoordination: boolean;
+  listingModeration: boolean;
+  listingExpiry: boolean;
+  violations: boolean;
+  claimRequests: boolean;
+  nearbyRequests: boolean;
+  requestFulfilled: boolean;
+  neighborRequests: boolean;
+  feedReplies: boolean;
+  friendRequests: boolean;
+  awards: boolean;
+  eventRsvps: boolean;
+  eventComments: boolean;
+  discussionComments: boolean;
   staffSupport: boolean;
   staffReports: boolean;
   directorAlerts: boolean;
@@ -126,29 +155,29 @@ interface PushSubscriptionRow {
 
 const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | 'enabled'> = {
   new_item: 'newListings',
-  new_request: 'requests',
+  new_request: 'neighborRequests',
   item_claimed: 'claims',
   item_gifted: 'gifts',
-  pickup_scheduled: 'pickupReminders',
-  pickup_reminder: 'pickupReminders',
-  on_the_way: 'pickupReminders',
+  pickup_scheduled: 'pickupCoordination',
+  pickup_reminder: 'pickupCoordination',
+  on_the_way: 'pickupCoordination',
   new_message: 'messages',
   community_chat: 'communityChat',
   staff_chat: 'staffChat',
   message_request: 'messageRequests',
   message_request_accepted: 'messageRequests',
-  new_comment: 'comments',
+  new_comment: 'listingComments',
   listing_upvote: 'listingUpvotes',
   listing_downvote: 'listingDownvotes',
-  listing_approved: 'listingStatus',
-  listing_denied: 'listingStatus',
-  listing_expiring: 'listingStatus',
-  listing_expired: 'listingStatus',
-  listing_status: 'listingStatus',
+  listing_approved: 'listingModeration',
+  listing_denied: 'listingModeration',
+  listing_expiring: 'listingExpiry',
+  listing_expired: 'listingExpiry',
+  listing_status: 'listingExpiry',
   nearby_item: 'nearbyListings',
-  nearby_request: 'requests',
-  claim_request: 'requests',
-  request_fulfilled: 'requests',
+  nearby_request: 'nearbyRequests',
+  claim_request: 'claimRequests',
+  request_fulfilled: 'requestFulfilled',
   announcement: 'announcements',
   app_update: 'appUpdates',
   account_update: 'accountUpdates',
@@ -157,28 +186,76 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   staff_report: 'staffReports',
   director_alert: 'directorAlerts',
   saved_item_update: 'savedItems',
-  go_get_availability_request: 'pickupReminders',
-  go_get_available_now: 'pickupReminders',
-  go_get_schedule_proposed: 'pickupReminders',
-  go_get_schedule_confirmed: 'pickupReminders',
-  go_get_ready_reminder: 'pickupReminders',
-  go_get_fulfiller_ready: 'pickupReminders',
-  go_get_started: 'pickupReminders',
-  go_get_arrived: 'pickupReminders',
-  go_get_completed: 'pickupReminders',
-  go_get_cancelled: 'pickupReminders',
-  contactless_pickup_arrived: 'pickupReminders',
-  contactless_pickup_left: 'pickupReminders',
-  feed_comment: 'comments',
-  feed_reaction: 'comments',
-  feed_upvote: 'listingUpvotes',
-  feed_downvote: 'listingDownvotes',
-  feed_post: 'newListings',
-  violation_filed: 'accountUpdates',
-  violation_decision: 'accountUpdates',
-  account_locked: 'accountUpdates',
-  appeal_decision: 'accountUpdates',
+  go_get_availability_request: 'goGetAlerts',
+  go_get_available_now: 'goGetAlerts',
+  go_get_schedule_proposed: 'goGetAlerts',
+  go_get_schedule_confirmed: 'goGetAlerts',
+  go_get_ready_reminder: 'goGetAlerts',
+  go_get_fulfiller_ready: 'goGetAlerts',
+  go_get_started: 'goGetAlerts',
+  go_get_arrived: 'goGetAlerts',
+  go_get_completed: 'goGetAlerts',
+  go_get_cancelled: 'goGetAlerts',
+  contactless_pickup_arrived: 'pickupCoordination',
+  contactless_pickup_left: 'pickupCoordination',
+  feed_comment: 'feedComments',
+  feed_reaction: 'feedReactions',
+  feed_upvote: 'feedUpvotes',
+  feed_downvote: 'feedDownvotes',
+  feed_post: 'feedPosts',
+  feed_reply: 'feedReplies',
+  friend_request: 'friendRequests',
+  friend_request_accepted: 'friendRequests',
+  award_unlocked: 'awards',
+  event_rsvp: 'eventRsvps',
+  event_comment: 'eventComments',
+  announcement_comment: 'discussionComments',
+  update_comment: 'discussionComments',
+  violation_filed: 'violations',
+  violation_decision: 'violations',
+  account_locked: 'violations',
+  appeal_decision: 'violations',
 };
+
+const LEGACY_PREF_FALLBACK: Partial<Record<keyof NotificationPreferencesRow, keyof NotificationPreferencesRow>> = {
+  feedPosts: 'newListings',
+  feedComments: 'comments',
+  feedReactions: 'comments',
+  feedUpvotes: 'listingUpvotes',
+  feedDownvotes: 'listingDownvotes',
+  listingComments: 'comments',
+  goGetAlerts: 'pickupReminders',
+  pickupCoordination: 'pickupReminders',
+  listingModeration: 'listingStatus',
+  listingExpiry: 'listingStatus',
+  violations: 'accountUpdates',
+  claimRequests: 'requests',
+  nearbyRequests: 'requests',
+  requestFulfilled: 'requests',
+  neighborRequests: 'requests',
+  feedReplies: 'feedComments',
+  friendRequests: 'messages',
+  awards: 'enabled',
+  eventRsvps: 'comments',
+  eventComments: 'comments',
+  discussionComments: 'announcements',
+};
+
+function prefAllows(prefs: NotificationPreferencesRow, key: keyof NotificationPreferencesRow): boolean {
+  const row = prefs as unknown as Record<string, unknown>;
+  if (row[key] !== undefined && row[key] !== null) {
+    return row[key] !== false;
+  }
+  const fallback = LEGACY_PREF_FALLBACK[key];
+  if (fallback) return prefs[fallback] !== false;
+  return prefs[key] !== false;
+}
+
+function boolPref(row: Record<string, unknown>, key: string, fallbackKey?: string): boolean {
+  if (row[key] !== undefined && row[key] !== null) return row[key] !== false;
+  if (fallbackKey && row[fallbackKey] !== undefined) return row[fallbackKey] !== false;
+  return true;
+}
 
 function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRow {
   return {
@@ -203,6 +280,27 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     newListings: row.newListings !== false,
     savedItems: row.savedItems !== false,
     accountUpdates: row.accountUpdates !== false,
+    feedPosts: boolPref(row, 'feedPosts', 'newListings'),
+    feedComments: boolPref(row, 'feedComments', 'comments'),
+    feedReactions: boolPref(row, 'feedReactions', 'comments'),
+    feedUpvotes: boolPref(row, 'feedUpvotes', 'listingUpvotes'),
+    feedDownvotes: boolPref(row, 'feedDownvotes', 'listingDownvotes'),
+    listingComments: boolPref(row, 'listingComments', 'comments'),
+    goGetAlerts: boolPref(row, 'goGetAlerts', 'pickupReminders'),
+    pickupCoordination: boolPref(row, 'pickupCoordination', 'pickupReminders'),
+    listingModeration: boolPref(row, 'listingModeration', 'listingStatus'),
+    listingExpiry: boolPref(row, 'listingExpiry', 'listingStatus'),
+    violations: boolPref(row, 'violations', 'accountUpdates'),
+    claimRequests: boolPref(row, 'claimRequests', 'requests'),
+    nearbyRequests: boolPref(row, 'nearbyRequests', 'requests'),
+    requestFulfilled: boolPref(row, 'requestFulfilled', 'requests'),
+    neighborRequests: boolPref(row, 'neighborRequests', 'requests'),
+    feedReplies: boolPref(row, 'feedReplies', 'comments'),
+    friendRequests: boolPref(row, 'friendRequests', 'messages'),
+    awards: boolPref(row, 'awards'),
+    eventRsvps: boolPref(row, 'eventRsvps', 'comments'),
+    eventComments: boolPref(row, 'eventComments', 'comments'),
+    discussionComments: boolPref(row, 'discussionComments', 'announcements'),
     staffSupport: row.staffSupport !== false,
     staffReports: row.staffReports !== false,
     directorAlerts: row.directorAlerts !== false,
@@ -224,7 +322,7 @@ export function userAllowsEvent(prefs: NotificationPreferencesRow, eventType: Pu
   const key = EVENT_PREF_MAP[eventType];
   if (key === 'enabled') return prefs.enabled;
   if (!key) return true;
-  return prefs[key] !== false;
+  return prefAllows(prefs, key);
 }
 
 export function userAllowsDirectorAlert(prefs: NotificationPreferencesRow, category?: string): boolean {
@@ -291,6 +389,27 @@ export async function getPreferencesForUsers(userIds: string[]): Promise<Map<str
         newListings: true,
         savedItems: true,
         accountUpdates: true,
+        feedPosts: true,
+        feedComments: true,
+        feedReactions: true,
+        feedUpvotes: true,
+        feedDownvotes: true,
+        listingComments: true,
+        goGetAlerts: true,
+        pickupCoordination: true,
+        listingModeration: true,
+        listingExpiry: true,
+        violations: true,
+        claimRequests: true,
+        nearbyRequests: true,
+        requestFulfilled: true,
+        neighborRequests: true,
+        feedReplies: true,
+        friendRequests: true,
+        awards: true,
+        eventRsvps: true,
+        eventComments: true,
+        discussionComments: true,
         staffSupport: true,
         staffReports: true,
         directorAlerts: true,

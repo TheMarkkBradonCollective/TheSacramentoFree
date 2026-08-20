@@ -120,21 +120,24 @@ export async function runFeedCommentNotify(
     recipientId: string;
     title: string;
     tag: string;
+    eventType: 'feed_comment' | 'feed_reply';
   }> = [];
 
-  if (ownerId && ownerId !== commenterId) {
-    alerts.push({
-      recipientId: ownerId,
-      title: 'New comment on your feed post',
-      tag: `feed-comment-${commentId}-owner`,
-    });
-  }
-
-  if (parentAuthorId && parentAuthorId !== commenterId && parentAuthorId !== ownerId) {
+  if (parentAuthorId && parentAuthorId !== commenterId) {
     alerts.push({
       recipientId: parentAuthorId,
       title: 'New reply to your comment',
       tag: `feed-comment-${commentId}-reply`,
+      eventType: 'feed_reply',
+    });
+  }
+
+  if (ownerId && ownerId !== commenterId && ownerId !== parentAuthorId) {
+    alerts.push({
+      recipientId: ownerId,
+      title: 'New comment on your feed post',
+      tag: `feed-comment-${commentId}-owner`,
+      eventType: 'feed_comment',
     });
   }
 
@@ -145,7 +148,7 @@ export async function runFeedCommentNotify(
   const results = await Promise.all(
     alerts.map((alert) =>
       sendFeedPush(commenterId, {
-        eventType: 'feed_comment',
+        eventType: alert.eventType,
         title: alert.title,
         body: `${commenterName}: ${preview}`,
         url: feedPostUrl(postId),
@@ -155,6 +158,7 @@ export async function runFeedCommentNotify(
           feedPostId: postId,
           actorName: commenterName,
           actorUserId: commenterId,
+          ...(parentCommentId ? { parentCommentId } : {}),
         },
       }),
     ),

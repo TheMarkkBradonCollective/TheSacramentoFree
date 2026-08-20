@@ -46,14 +46,19 @@ function kindIcon(kind: UserNotificationKind) {
   switch (kind) {
     case 'comment':
     case 'feed_comment':
+    case 'feed_reply':
     case 'feed_reaction':
     case 'feed_post':
+    case 'event_comment':
+    case 'announcement_comment':
+    case 'update_comment':
       return MessageSquare;
     case 'message':
     case 'message_request':
       return MessageSquare;
     case 'community_chat':
     case 'staff_chat':
+    case 'event_rsvp':
       return Users;
     case 'support':
     case 'staff_support':
@@ -84,9 +89,12 @@ function kindIcon(kind: UserNotificationKind) {
     case 'listing_status':
       return Tag;
     case 'claim_request':
+    case 'friend_request':
+    case 'friend_request_accepted':
       return UserPlus;
     case 'account_update':
     case 'director_alert':
+    case 'award_unlocked':
       return Sparkles;
     case 'staff_apply':
       return Shield;
@@ -114,10 +122,18 @@ function kindColor(kind: UserNotificationKind): string {
     case 'community_chat':
     case 'comment':
     case 'feed_comment':
+    case 'feed_reply':
     case 'feed_reaction':
+    case 'event_comment':
+    case 'announcement_comment':
+    case 'update_comment':
+    case 'friend_request':
+    case 'friend_request_accepted':
       return 'text-sky-400 bg-sky-500/10';
     case 'announcement':
     case 'app_update':
+    case 'award_unlocked':
+    case 'event_rsvp':
       return 'text-violet-400 bg-violet-500/10';
     case 'staff_apply':
       return 'text-accent bg-accent/10';
@@ -132,9 +148,34 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
     if (fromUrl) return fromUrl;
   }
 
-  const feedKinds = ['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote', 'feed_post'] as const;
+  const feedKinds = ['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote', 'feed_post', 'feed_reply'] as const;
   if (item.itemId && feedKinds.includes(item.kind as (typeof feedKinds)[number])) {
     return { tab: 'feed', feedPostId: item.itemId };
+  }
+
+  if (item.kind === 'friend_request' || item.kind === 'friend_request_accepted') {
+    if (item.itemId) return { tab: 'profile', viewProfileUid: item.itemId };
+    return { tab: 'profile' };
+  }
+
+  if (item.kind === 'award_unlocked') {
+    return { awardsPanel: true };
+  }
+
+  if ((item.kind === 'event_rsvp' || item.kind === 'event_comment') && item.itemId) {
+    return { tab: 'events', eventId: item.itemId };
+  }
+
+  if (item.kind === 'announcement_comment') {
+    return item.itemId
+      ? { notificationsTab: 'announcements', announcementId: item.itemId }
+      : { notificationsTab: 'announcements' };
+  }
+
+  if (item.kind === 'update_comment') {
+    return item.itemId
+      ? { notificationsTab: 'updates', updateId: item.itemId }
+      : { notificationsTab: 'updates' };
   }
 
   if (item.kind === 'claim_request') {
