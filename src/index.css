@@ -2067,21 +2067,27 @@ option {
 }
 
 .sbn-badge-ask {
-  background: var(--color-inset);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 82%, #7c2d12);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
 }
 
 .sbn-badge-trade {
-  background: rgba(168, 85, 247, 0.12);
-  color: #a855f7;
-  border: 1px solid rgba(168, 85, 247, 0.35);
+  background: color-mix(in srgb, var(--color-accent) 22%, #fff7ed);
+  color: color-mix(in srgb, var(--color-accent) 68%, #92400e);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
+}
+
+.dark .sbn-badge-ask {
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 75%, #fed7aa);
+  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
 .dark .sbn-badge-trade {
-  background: rgba(168, 85, 247, 0.18);
-  color: #c084fc;
-  border: 1px solid rgba(192, 132, 252, 0.35);
+  background: color-mix(in srgb, var(--color-accent) 24%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 70%, #fdba74);
+  border-color: color-mix(in srgb, var(--color-accent) 36%, transparent);
 }
 
 .sbn-badge-done {
