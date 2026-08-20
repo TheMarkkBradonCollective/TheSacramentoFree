@@ -151,7 +151,7 @@ export async function runNeighborMessageRequestNotify(
     eventType: 'message_request',
     title: 'New message request',
     body,
-    url: '/messages',
+    url: '/messages/requests',
     recipientUserIds: [toUserId],
     tag: `dm-req-${requestId}`,
     data: { requestId },
