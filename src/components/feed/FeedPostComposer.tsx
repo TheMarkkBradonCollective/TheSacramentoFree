@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Camera, ImagePlus, Loader2, Send, X } from 'lucide-react';
 import type { UserProfile } from '../../types';
 import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../../lib/imageUrl';
+import { PresenceUserAvatar } from '../UserAvatar';
 
 interface FeedPostComposerProps {
   userProfile: UserProfile;
@@ -64,16 +65,16 @@ export default function FeedPostComposer({
   };
 
   return (
-    <section className="sbn-feed-composer sbn-card p-3 sm:p-4 space-y-3 min-w-0 overflow-hidden" id="feed_post_composer">
+    <section className="item-feed-card sbn-feed-composer p-3 sm:p-4 space-y-3 min-w-0 overflow-hidden" id="feed_post_composer">
+      <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+        Post
+      </span>
       <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
-        <img
-          src={
-            userProfile.photoURL ||
-            `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.displayName)}`
-          }
-          alt=""
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-app shrink-0 object-cover"
-          referrerPolicy="no-referrer"
+        <PresenceUserAvatar
+          uid={userProfile.uid}
+          src={userProfile.photoURL}
+          name={userProfile.displayName}
+          size="md"
         />
         <div className="flex-1 min-w-0 space-y-2">
           <textarea
