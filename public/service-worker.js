@@ -78,8 +78,8 @@ self.addEventListener('push', (event) => {
     'You have a new community update.';
   const options = {
     body,
-    icon: payload.icon || '/Logo.jpeg',
-    badge: payload.badge || '/Logo.jpeg',
+    icon: payload.icon || '/notification-icon.png',
+    badge: payload.badge || '/notification-icon.png',
     tag: payload.tag || payload.eventType || 'sbn-notification',
     data: {
       url: resolveNotificationUrl(payload.url || '/'),
