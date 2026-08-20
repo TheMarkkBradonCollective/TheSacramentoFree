@@ -78,11 +78,6 @@ export default function FeedPostCard({
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
-            <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap shadow-sm">
-              Post
-            </span>
-          </div>
           {extraPhotos > 0 && (
             <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
               +{extraPhotos}
@@ -92,14 +87,6 @@ export default function FeedPostCard({
       ) : null}
 
       <div className="p-3 sm:p-4">
-        {!cover ? (
-          <div className="mb-2 pointer-events-none">
-            <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
-              Post
-            </span>
-          </div>
-        ) : null}
-
         <header className="flex items-start gap-2.5 pointer-events-none">
           <PresenceUserAvatar
             uid={post.userId}
