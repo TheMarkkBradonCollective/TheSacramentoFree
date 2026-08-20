@@ -3,22 +3,22 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.1.0 (35)
+  0.1.0 (37)
 
 Beta label (for your records / changelog):
-  beta v0.1.0.0035
+  beta v0.1.0.0037
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0035.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0037.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0035.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0037.apk
 
 Package name:
   org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.1.0.0035.aab
+  public/downloads/sac-buy-nothing-beta-v0.1.0.0037.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -26,14 +26,15 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta v0.1.0.0035 (versionCode 35)
+Android beta v0.1.0.0037 (versionCode 37)
 
 What's new:
-• Events page toolbar matches Stuff feed — New, sort, All/Upcoming/Past, filters, grid/list
-• New button on Map (Stuff or Event), Stuff feed (stuff only), Events feed (event only)
-• Filter drawer master toggles — expand/collapse each filter group
-• Feed type cycle: Everything / Giving / Looking / Trading
-• News vs Updates split — releases in News, product changes in Updates
+• Neighbor Feed is live — post text/photos, comment threads, reactions, up/down votes
+• Chat makeover — tab renamed Chat, messenger-style inbox
+• Map — GPS and + buttons sit lower; route zooms to fit when you tap a listing
+• Square Map button in footer center
+
+Run scripts/supabase-migration-aug-20-2026-neighbor-feed.sql in Supabase if Feed is empty.
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ───────────────────────────────────────────────────────────────
@@ -41,8 +42,8 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 Steps:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Internal testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0035.aab
-  4. Release name: 0.1.0 (35)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0037.aab
+  4. Release name: 0.1.0 (37)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Internal testing
 
