@@ -447,6 +447,9 @@ ALTER TABLE public.user_reports DROP CONSTRAINT IF EXISTS user_reports_source_ch
 ALTER TABLE public.user_reports ADD CONSTRAINT user_reports_source_check
   CHECK (source IN ('manual', 'block'));
 
+ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS "feedPostId" TEXT;
+ALTER TABLE public.user_reports ADD COLUMN IF NOT EXISTS "feedCommentId" TEXT;
+
 -- =========================================================
 -- 17. Community events (free gatherings only)
 -- 500-member events unlock RLS (included in complete-schema.sql).
@@ -1847,7 +1850,7 @@ ALTER TABLE public.help_announcements ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.community_content_votes (
   id TEXT PRIMARY KEY,
-  "targetType" TEXT NOT NULL CHECK ("targetType" IN ('update', 'review', 'leader_message', 'announcement')),
+  "targetType" TEXT NOT NULL CHECK ("targetType" IN ('update', 'review', 'leader_message', 'announcement', 'feed_post')),
   "targetId" TEXT NOT NULL,
   "userId" TEXT NOT NULL,
   "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),
@@ -1891,6 +1894,59 @@ CREATE INDEX IF NOT EXISTS help_announcement_comments_announcement_id_idx
   ON public.help_announcement_comments ("announcementId");
 
 ALTER TABLE public.help_announcement_comments ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================
+-- NEIGHBOR FEED (posts, nested comments, emoji reactions)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS public.feed_posts (
+  id TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "userDisplayName" TEXT NOT NULL,
+  "userPhotoURL" TEXT,
+  neighborhood TEXT NOT NULL,
+  text TEXT NOT NULL DEFAULT '',
+  "imageUrls" JSONB NOT NULL DEFAULT '[]'::jsonb,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'hidden', 'removed')),
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS feed_posts_created_idx ON public.feed_posts ("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS feed_posts_user_idx ON public.feed_posts ("userId");
+
+ALTER TABLE public.feed_posts ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.feed_post_comments (
+  id TEXT PRIMARY KEY,
+  "postId" TEXT NOT NULL REFERENCES public.feed_posts(id) ON DELETE CASCADE,
+  "parentCommentId" TEXT REFERENCES public.feed_post_comments(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "userName" TEXT NOT NULL,
+  "userPhoto" TEXT,
+  "userNeighborhood" TEXT NOT NULL,
+  text TEXT NOT NULL,
+  "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS feed_post_comments_post_idx ON public.feed_post_comments ("postId", "createdAt");
+CREATE INDEX IF NOT EXISTS feed_post_comments_parent_idx ON public.feed_post_comments ("parentCommentId");
+
+ALTER TABLE public.feed_post_comments ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.feed_post_reactions (
+  "postId" TEXT NOT NULL REFERENCES public.feed_posts(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY ("postId", "userId", emoji)
+);
+
+CREATE INDEX IF NOT EXISTS feed_post_reactions_post_idx ON public.feed_post_reactions ("postId");
+
+ALTER TABLE public.feed_post_reactions ENABLE ROW LEVEL SECURITY;
 
 
 -- =========================================================
@@ -3305,6 +3361,38 @@ CREATE POLICY "help_announcement_comments_write" ON public.help_announcement_com
   FOR ALL USING (auth.uid()::text = "userId")
   WITH CHECK (auth.uid()::text = "userId");
 
+DROP POLICY IF EXISTS "feed_posts_select" ON public.feed_posts;
+DROP POLICY IF EXISTS "feed_posts_insert" ON public.feed_posts;
+DROP POLICY IF EXISTS "feed_posts_update_own" ON public.feed_posts;
+DROP POLICY IF EXISTS "feed_posts_delete" ON public.feed_posts;
+CREATE POLICY "feed_posts_select" ON public.feed_posts
+  FOR SELECT USING (auth.uid() IS NOT NULL AND status = 'active');
+CREATE POLICY "feed_posts_insert" ON public.feed_posts
+  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
+CREATE POLICY "feed_posts_update_own" ON public.feed_posts
+  FOR UPDATE USING (auth.uid()::text = "userId" OR public.is_staff())
+  WITH CHECK (auth.uid()::text = "userId" OR public.is_staff());
+CREATE POLICY "feed_posts_delete" ON public.feed_posts
+  FOR DELETE USING (auth.uid()::text = "userId" OR public.is_staff());
+
+DROP POLICY IF EXISTS "feed_post_comments_select" ON public.feed_post_comments;
+DROP POLICY IF EXISTS "feed_post_comments_insert" ON public.feed_post_comments;
+DROP POLICY IF EXISTS "feed_post_comments_delete" ON public.feed_post_comments;
+CREATE POLICY "feed_post_comments_select" ON public.feed_post_comments
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "feed_post_comments_insert" ON public.feed_post_comments
+  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
+CREATE POLICY "feed_post_comments_delete" ON public.feed_post_comments
+  FOR DELETE USING (auth.uid()::text = "userId" OR public.is_staff());
+
+DROP POLICY IF EXISTS "feed_post_reactions_select" ON public.feed_post_reactions;
+DROP POLICY IF EXISTS "feed_post_reactions_write" ON public.feed_post_reactions;
+CREATE POLICY "feed_post_reactions_select" ON public.feed_post_reactions
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "feed_post_reactions_write" ON public.feed_post_reactions
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
 DROP POLICY IF EXISTS "Allow read community content votes" ON public.community_content_votes;
 DROP POLICY IF EXISTS "Allow write community content votes" ON public.community_content_votes;
 DROP POLICY IF EXISTS "content_votes_select" ON public.community_content_votes;
@@ -3956,6 +4044,9 @@ BEGIN
     'help_announcement_comments',
     'app_update_comments',
     'community_content_votes',
+    'feed_posts',
+    'feed_post_comments',
+    'feed_post_reactions',
     'go_get_sessions',
     'go_get_live_locations',
     'go_get_fulfiller_live_locations',
@@ -4013,6 +4104,58 @@ INSERT INTO public.chats (
   ''
 )
 ON CONFLICT (id) DO NOTHING;
+
+
+-- =========================================================
+-- NEIGHBOR FEED SEED — founder welcome post
+-- =========================================================
+
+INSERT INTO public.feed_posts (
+  id,
+  "userId",
+  "userDisplayName",
+  "userPhotoURL",
+  neighborhood,
+  text,
+  "imageUrls",
+  status,
+  "postedAsNeighbor",
+  "createdAt",
+  "updatedAt"
+)
+VALUES (
+  'feed_welcome_director_2026',
+  '204b071f-100c-401d-b76d-40c594e1f132',
+  COALESCE(
+    (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    'Markeith White'
+  ),
+  (SELECT "photoURL" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  COALESCE(
+    (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    'Midtown'
+  ),
+  'Hey guys — glad to have y''all here!
+
+I was thinking… what''s an app like this without somewhere to chit-chat? So Feed is live.
+
+Not just listing stuff. Drop a photo, say hey, talk about a pickup that went smooth, ask the neighborhood something — whatever.
+
+Comment, react, vote — same as everywhere else. I wanted a spot where we''re not ONLY talking about free couches 😂
+
+Say hi when you get a minute. Let me know what you think.',
+  '[]'::jsonb,
+  'active',
+  false,
+  '2026-08-20 16:00:00-07'::timestamptz,
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  text = EXCLUDED.text,
+  "userDisplayName" = EXCLUDED."userDisplayName",
+  "userPhotoURL" = EXCLUDED."userPhotoURL",
+  neighborhood = EXCLUDED.neighborhood,
+  "updatedAt" = NOW();
 
 
 -- =========================================================

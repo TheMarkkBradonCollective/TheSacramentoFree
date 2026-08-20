@@ -12,6 +12,7 @@ interface FilterToggleGroupProps<T extends string> {
   onChange: (value: T) => void;
   className?: string;
   compact?: boolean;
+  wrap?: boolean;
 }
 
 /** Mutually exclusive filter pills — same ON/OFF thumb design as FilterLabeledSwitch. */
@@ -23,13 +24,14 @@ export default function FilterToggleGroup<T extends string>({
   onChange,
   className = '',
   compact = false,
+  wrap = false,
 }: FilterToggleGroupProps<T>) {
   return (
     <div
       id={id}
       role="radiogroup"
       aria-label={ariaLabel}
-      className={`sbn-filter-toggle-group ${className}`.trim()}
+      className={`sbn-filter-toggle-group ${wrap ? 'sbn-filter-toggle-group-wrap' : ''} ${className}`.trim()}
     >
       {options.map(({ value: optionValue, label, id: optionId }) => {
         const selected = value === optionValue;

@@ -12,12 +12,13 @@ interface PageScrollFooterProps {
 /** Legal links strip — last child of a `.sbn-scroll-page-body` (or any min-h-full flex column). */
 export default function PageScrollFooter({
   className = '',
+  pinToBottom = false,
   onOpenPrivacy,
   onOpenTerms,
 }: PageScrollFooterProps) {
   return (
     <LegalFooter
-      className={`sbn-page-end-footer pt-8 ${className}`.trim()}
+      className={`sbn-page-end-footer ${pinToBottom ? 'sbn-page-end-footer--below-fold' : ''} pt-8 ${className}`.trim()}
       onOpenPrivacy={onOpenPrivacy}
       onOpenTerms={onOpenTerms}
     />
@@ -28,6 +29,8 @@ type ScrollPageProps = {
   children: ReactNode;
   footer?: ReactNode;
   contentClassName?: string;
+  /** Extra scroll height on short pages so the legal footer sits below the fold. */
+  pinToBottom?: boolean;
 } & HTMLAttributes<HTMLDivElement>;
 
 /**
@@ -36,12 +39,14 @@ type ScrollPageProps = {
  * the visual bottom on short pages and after the last section on long pages.
  */
 export const ScrollPage = forwardRef<HTMLDivElement, ScrollPageProps>(function ScrollPage(
-  { children, footer, className = '', contentClassName = '', ...rest },
+  { children, footer, pinToBottom = false, className = '', contentClassName = '', ...rest },
   ref,
 ) {
   return (
     <div ref={ref} className={`sbn-scroll-page ${className}`.trim()} {...rest}>
-      <div className="sbn-scroll-page-body">
+      <div
+        className={`sbn-scroll-page-body ${pinToBottom ? 'sbn-scroll-page-body--below-fold' : ''}`.trim()}
+      >
         <div className={`sbn-scroll-page-content ${contentClassName}`.trim()}>{children}</div>
         {footer}
       </div>

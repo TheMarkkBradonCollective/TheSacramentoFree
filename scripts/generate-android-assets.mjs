@@ -11,7 +11,7 @@
  * the 108dp canvas with no inset.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -76,6 +76,99 @@ writeFileSync(
 assertCornersAreFill(join(resDir, 'mipmap-xxxhdpi', 'ic_launcher_foreground.png'), iconBg);
 assertCornersAreFill(join(resDir, 'mipmap-xxxhdpi', 'ic_launcher.png'), iconBg);
 console.log('Android launcher icons written (full-bleed, no adaptive inset).');
+
+const NOTIFICATION_DENSITIES = {
+  mdpi: 24,
+  hdpi: 36,
+  xhdpi: 48,
+  xxhdpi: 72,
+  xxxhdpi: 96,
+};
+
+function isNotificationSubject(r, g, b, fill) {
+  if (isCanvasPixel(r, g, b)) return false;
+  const dr = Math.abs(r - fill[0]);
+  const dg = Math.abs(g - fill[1]);
+  const db = Math.abs(b - fill[2]);
+  if (dr < 42 && dg < 42 && db < 42) return false;
+  return true;
+}
+
+function writeNotificationSilhouettePng(srcJpeg, destPng) {
+  const probe = execFileSync(
+    'ffprobe',
+    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', srcJpeg],
+    { encoding: 'utf8' },
+  ).trim();
+  const [width, height] = probe.split(',').map(Number);
+  if (!width || !height) {
+    throw new Error(`Could not read dimensions for ${srcJpeg}`);
+  }
+
+  const pixels = Uint8Array.from(
+    execFileSync('ffmpeg', ['-v', 'error', '-i', srcJpeg, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'], {
+      maxBuffer: width * height * 3 + 1024 * 1024,
+    }),
+  );
+  const fill = sampleOrange(pixels, width, height);
+  const rgba = new Uint8Array(width * height * 4);
+
+  for (let i = 0; i < width * height; i++) {
+    const r = pixels[i * 3];
+    const g = pixels[i * 3 + 1];
+    const b = pixels[i * 3 + 2];
+    const o = i * 4;
+    if (isNotificationSubject(r, g, b, fill)) {
+      rgba[o] = 255;
+      rgba[o + 1] = 255;
+      rgba[o + 2] = 255;
+      rgba[o + 3] = 255;
+    }
+  }
+
+  execFileSync(
+    'ffmpeg',
+    [
+      '-y',
+      '-loglevel',
+      'error',
+      '-f',
+      'rawvideo',
+      '-pix_fmt',
+      'rgba',
+      '-s',
+      `${width}x${height}`,
+      '-i',
+      'pipe:0',
+      '-frames:v',
+      '1',
+      '-update',
+      '1',
+      destPng,
+    ],
+    { input: Buffer.from(rgba) },
+  );
+}
+
+function writeNotificationIcons(srcJpeg) {
+  const silhouetteSrc = join(assetsDir, 'notification-silhouette.png');
+  const publicIcon = join(root, 'public', 'notification-icon.png');
+  writeNotificationSilhouettePng(srcJpeg, silhouetteSrc);
+
+  const vectorIcon = join(resDir, 'drawable', 'ic_stat_notification.xml');
+  if (existsSync(vectorIcon)) {
+    unlinkSync(vectorIcon);
+  }
+
+  for (const [density, size] of Object.entries(NOTIFICATION_DENSITIES)) {
+    const dir = join(resDir, `drawable-${density}`);
+    mkdirSync(dir, { recursive: true });
+    scalePng(silhouetteSrc, join(dir, 'ic_stat_notification.png'), size);
+  }
+
+  scalePng(silhouetteSrc, publicIcon, 192);
+  console.log(`Notification silhouette → drawable-*/ic_stat_notification.png + ${publicIcon}`);
+}
 
 function generateSplashScreens(iconBackgroundColor) {
   const cli = join(root, 'node_modules', '@capacitor', 'assets', 'bin', 'capacitor-assets');
@@ -344,3 +437,5 @@ function hexToRgb(hex) {
   const n = hex.replace('#', '');
   return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
 }
+
+writeNotificationIcons(logoSrc);

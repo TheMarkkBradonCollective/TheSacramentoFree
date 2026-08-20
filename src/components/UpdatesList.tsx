@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { AppUpdateInput, AppUpdateRecord, UserProfile } from '../types';
+import { neighborUpdateDetail } from '../../shared/changelogFilters';
 import { useAppUpdates } from '../hooks/useAppUpdates';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
 import { useAppUpdateComments } from '../hooks/useAppUpdateComments';
@@ -131,8 +132,8 @@ export default function UpdatesList({
           {filteredUpdates.map((update) => {
             const expanded = expandedId === update.id;
             const summary = update.body;
-            const fullStory = update.detail?.trim() || '';
-            const hasFullStory = Boolean(fullStory);
+            const fullStory = neighborUpdateDetail(update.detail);
+            const hasFullStory = Boolean(fullStory) && fullStory !== summary.trim();
             const comments = getCommentsForUpdate(update.id);
             const isOwnUpdate = signedIn && update.postedByUserId === userProfile?.uid;
 

@@ -14,6 +14,8 @@ interface EventsPanelProps {
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
+  onOpenNewEvent?: () => void;
+  canAccessEvents?: boolean;
 }
 
 export default function EventsPanel({
@@ -26,8 +28,11 @@ export default function EventsPanel({
   onViewProfile,
   onRefresh,
   isLoading = false,
+  onOpenNewEvent,
+  canAccessEvents: canAccessEventsProp,
 }: EventsPanelProps) {
-  const { unlockStatus, loading, isCommunityUnlocked, canAccessEvents } = useEventsUnlock(userProfile);
+  const { unlockStatus, loading, isCommunityUnlocked, canAccessEvents: canAccessEventsUnlock } = useEventsUnlock(userProfile);
+  const canAccessEvents = canAccessEventsProp ?? canAccessEventsUnlock;
 
   if (loading && !unlockStatus) {
     return (
@@ -57,6 +62,7 @@ export default function EventsPanel({
         isLoading={isLoading}
         commentsLocked={!canAccessEvents}
         sneakPeek={sneakPeek}
+        onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
       />
     </div>
   );

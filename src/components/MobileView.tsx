@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useKeyboardInset, useScrollInputOnFocus } from '../hooks/useKeyboardInset';
-import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, FeedPost, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
 import UserProfileView from './UserProfileView';
-import { Map, List, MessageSquare, User, CalendarDays } from 'lucide-react';
+import { Map, List, MessageSquare, CalendarDays, Newspaper } from 'lucide-react';
 import EventsPanel from './EventsPanel';
+import FeedView from './FeedView';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { IN_APP } from '../siteContent';
 import { MAP_CONTENT_FILTERS, getMapContentFilterLabel, type MapContentFilter } from '../lib/postType';
@@ -36,6 +37,7 @@ interface MobileViewProps {
   activeTab: AnyTab;
   setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
+  onOpenNewStuff: () => void;
   onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
@@ -43,6 +45,7 @@ interface MobileViewProps {
   onStaffEventChat?: (event: CommunityEvent) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
+  onViewFeedPost?: (post: FeedPost) => void;
   onNavigateItem?: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
   onDeletePost?: (item: ItemPost) => void;
@@ -52,6 +55,8 @@ interface MobileViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialFocusMessageRequests?: boolean;
+  onClearInitialFocusMessageRequests?: () => void;
   pendingChatCompose?: PendingChatCompose | null;
   onClearPendingChatCompose?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
@@ -70,7 +75,6 @@ interface MobileViewProps {
   onOpenTerms?: () => void;
   onOpenDownload?: () => void;
   onOpenAwards?: () => void;
-  awardsButtonGlow?: boolean;
   initialChatFeedbackPanel?: 'reviews' | 'report' | 'staffReports' | null;
   onClearInitialChatFeedbackPanel?: () => void;
   initialSupportTicketId?: string | null;
@@ -87,15 +91,15 @@ interface MobileViewProps {
 }
 
 const MOBILE_NAV_LEFT = [
-  { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: List },
-  { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
+  { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: Newspaper },
+  { id: 'stuff' as const, label: IN_APP.stuffTabLabel, icon: List },
 ] as const;
 
 const MOBILE_NAV_MAP = { id: 'map' as const, label: 'Map', icon: Map };
 
 const MOBILE_NAV_RIGHT = [
+  { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
-  { id: 'profile' as const, label: IN_APP.accountTabLabel, icon: User },
 ] as const;
 
 export default function MobileView({
@@ -105,6 +109,7 @@ export default function MobileView({
   activeTab,
   setActiveTab: setActiveTabRaw,
   onOpenNewPost,
+  onOpenNewStuff,
   onOpenNewEvent,
   canAccessEvents = true,
   onInitiateChat,
@@ -112,6 +117,7 @@ export default function MobileView({
   onStaffEventChat,
   onClaimSubmitted,
   onViewItem,
+  onViewFeedPost,
   onNavigateItem,
   onRepostPost,
   onDeletePost,
@@ -121,6 +127,8 @@ export default function MobileView({
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialFocusMessageRequests = false,
+  onClearInitialFocusMessageRequests,
   pendingChatCompose = null,
   onClearPendingChatCompose,
   onDeleteAccount,
@@ -139,7 +147,6 @@ export default function MobileView({
   onOpenTerms,
   onOpenDownload,
   onOpenAwards,
-  awardsButtonGlow = false,
   initialChatFeedbackPanel = null,
   onClearInitialChatFeedbackPanel,
   initialSupportTicketId = null,
@@ -171,10 +178,12 @@ export default function MobileView({
   // We cast activeTab back to AppTab for views that only accept AppTab.
   const setActiveTab = setActiveTabRaw;
   const communityTab = showStaffConsole
-    ? (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
+    ? (['feed', 'stuff', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
       ? (activeTab as AppTab)
-      : 'feed'
+      : 'map'
     : (activeTab as AppTab);
+
+  const openAccount = () => setActiveTab('profile');
 
   if (showStaffConsole) {
     const onStaffTab = isStaffTab(activeTab);
@@ -182,14 +191,16 @@ export default function MobileView({
     const staffTitle = onStaffTab
       ? undefined
       : communityTab === 'feed'
-        ? IN_APP.feedTitle
-        : communityTab === 'events'
-          ? IN_APP.eventsTitle
-          : communityTab === 'map'
-            ? IN_APP.mapTitle
-            : communityTab === 'chats'
-              ? IN_APP.chatsTabLabel
-              : IN_APP.profileTitle;
+        ? IN_APP.communityFeedTitle
+        : communityTab === 'stuff'
+          ? IN_APP.feedTitle
+          : communityTab === 'events'
+            ? IN_APP.eventsTitle
+            : communityTab === 'map'
+              ? IN_APP.mapTitle
+              : communityTab === 'chats'
+                ? IN_APP.chatsTabLabel
+                : IN_APP.profileTitle;
 
     return (
       <div
@@ -223,8 +234,8 @@ export default function MobileView({
             title={staffTitle}
             drawerOpen={!sidebarCollapsed}
             compactActions
-            onOpenAwards={onOpenAwards ?? (() => {})}
-            awardsButtonGlow={awardsButtonGlow}
+            onOpenAccount={openAccount}
+            accountActive={activeTab === 'profile'}
             onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
           />
 
@@ -277,25 +288,37 @@ export default function MobileView({
                   className={communityTab === 'feed' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'feed'}
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} onOpenNewPost={onOpenNewPost} />
+                  <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onViewFeedPost={onViewFeedPost} />
+                </ScrollPage>
+                <ScrollPage
+                  className={communityTab === 'stuff' ? '' : 'hidden'}
+                  aria-hidden={communityTab !== 'stuff'}
+                  contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+                >
+                  <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} onOpenNewPost={onOpenNewStuff} />
                 </ScrollPage>
                 <ScrollPage
                   className={communityTab === 'events' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'events'}
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onStaffEventChat={onStaffEventChat} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
+                  <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onStaffEventChat={onStaffEventChat} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} onOpenNewEvent={onOpenNewEvent} canAccessEvents={canAccessEvents} />
                 </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
-                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} events={events} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={onStartDirectMessage} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
+                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialFocusMessageRequests={initialFocusMessageRequests} onClearInitialFocusMessageRequests={onClearInitialFocusMessageRequests} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} events={events} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={onStartDirectMessage} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
                 </div>
                 <ScrollPage
                   className={`bg-app ${communityTab === 'profile' ? '' : 'hidden'}`}
                   aria-hidden={communityTab !== 'profile'}
                   contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <UserProfileView userProfile={userProfile} userPosts={items.filter((item) => item.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} onOpenDownload={onOpenDownload} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} fullBleed />
@@ -325,8 +348,8 @@ export default function MobileView({
         <div className="flex items-center gap-1 shrink-0">
           <TopbarActions
             userProfile={userProfile}
-            onOpenAwards={onOpenAwards ?? (() => {})}
-            awardsButtonGlow={awardsButtonGlow}
+            onOpenAccount={openAccount}
+            accountActive={activeTab === 'profile'}
             compact
           />
         </div>
@@ -392,10 +415,22 @@ export default function MobileView({
 
         <ScrollPage
           className={communityTab === 'feed' ? '' : 'hidden'}
-          id="mobile_directory_drawer"
+          id="mobile_feed_dock"
           aria-hidden={communityTab !== 'feed'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+        >
+          <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onViewFeedPost={onViewFeedPost} />
+        </ScrollPage>
+
+        <ScrollPage
+          className={communityTab === 'stuff' ? '' : 'hidden'}
+          id="mobile_directory_drawer"
+          aria-hidden={communityTab !== 'stuff'}
+          contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <ItemGrid
               items={items}
@@ -407,7 +442,7 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               onRefresh={onRefresh}
               isLoading={!itemsHydrated}
-              onOpenNewPost={onOpenNewPost}
+              onOpenNewPost={onOpenNewStuff}
             />
         </ScrollPage>
 
@@ -416,7 +451,8 @@ export default function MobileView({
           id="mobile_events_dock"
           aria-hidden={communityTab !== 'events'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <EventsPanel
               events={events}
@@ -428,6 +464,8 @@ export default function MobileView({
               onViewProfile={onViewProfile}
               onRefresh={onRefreshEvents}
               isLoading={isEventsLoading}
+              onOpenNewEvent={onOpenNewEvent}
+              canAccessEvents={canAccessEvents}
             />
         </ScrollPage>
 
@@ -440,6 +478,8 @@ export default function MobileView({
             userProfile={userProfile}
             initialSelectedChatId={initialSelectedChatId}
             onClearInitialChat={onClearInitialChat}
+            initialFocusMessageRequests={initialFocusMessageRequests}
+            onClearInitialFocusMessageRequests={onClearInitialFocusMessageRequests}
             initialSupportTicketId={initialSupportTicketId}
             onClearInitialSupportTicket={onClearInitialSupportTicket}
             initialChatSupportView={initialChatSupportView}
@@ -469,7 +509,8 @@ export default function MobileView({
           id="mobile_profile_dock"
           aria-hidden={communityTab !== 'profile'}
           contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <div className="sbn-page-header px-4 pt-4 pb-2">
               <h2>{IN_APP.profileTitle}</h2>

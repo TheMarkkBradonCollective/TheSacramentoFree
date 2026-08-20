@@ -8,6 +8,7 @@ import { normalizeItemMedia, plainListingDescription } from './lib/listingConten
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
 import { listingExpiresAtIso } from '../shared/listingExpiry';
 import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
+import { filterNews, filterUpdates } from '../shared/changelogFilters';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import type { PickupAvailabilitySchedule } from './types';
 import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './lib/goGetRing';
@@ -4569,19 +4570,19 @@ export async function getSupabaseAppUpdates(): Promise<AppUpdateRecord[]> {
 
     if (error) {
       if (error.code === '42P01') {
-        return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
+        return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
       }
       handleSupabaseError(error, 'app_updates');
-      return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
+      return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
     }
 
     setSupabaseConfigurationState(true);
     const live = data?.length
       ? await enrichAppUpdatesWithAuthorProfiles(data as Record<string, unknown>[])
       : [];
-    return mergeByIdNewestFirst(SEEDED_APP_UPDATES, live) as AppUpdateRecord[];
+    return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, live) as AppUpdateRecord[]);
   } catch {
-    return mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[];
+    return filterUpdates(mergeByIdNewestFirst(SEEDED_APP_UPDATES, []) as AppUpdateRecord[]);
   }
 }
 
@@ -4863,17 +4864,17 @@ export async function getSupabaseHelpAnnouncements(): Promise<HelpAnnouncementRe
 
     if (error) {
       if (error.code === '42P01') {
-        return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
+        return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
       }
       handleSupabaseError(error, 'help_announcements');
-      return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
+      return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
     }
 
     setSupabaseConfigurationState(true);
     const live = (data || []).map((row) => normalizeHelpAnnouncementRow(row as Record<string, unknown>));
-    return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, live) as HelpAnnouncementRecord[];
+    return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, live) as HelpAnnouncementRecord[]);
   } catch {
-    return mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[];
+    return filterNews(mergeByIdNewestFirst(SEEDED_HELP_ANNOUNCEMENTS, []) as HelpAnnouncementRecord[]);
   }
 }
 
@@ -5259,6 +5260,11 @@ export async function setSupabaseCommunityContentVote(
     }
 
     setSupabaseConfigurationState(true);
+    if (targetType === 'feed_post') {
+      void import('./lib/pushFeedIntegration').then((m) =>
+        m.pushAfterFeedVote({ postId: targetId, voterUserId: userId, voteType }),
+      );
+    }
     return { ok: true };
   } catch {
     return { ok: false, reason: 'error' };
@@ -6580,6 +6586,8 @@ export async function submitUserReport(params: {
   reportedUserName?: string;
   proofImageUrl?: string | null;
   proofFile?: File | null;
+  feedPostId?: string;
+  feedCommentId?: string;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const subject = params.subject.trim();
   const body = params.body.trim();
@@ -6607,6 +6615,8 @@ export async function submitUserReport(params: {
       source: 'manual',
       status: 'new',
       createdAt: new Date().toISOString(),
+      ...(params.feedPostId ? { feedPostId: params.feedPostId } : {}),
+      ...(params.feedCommentId ? { feedCommentId: params.feedCommentId } : {}),
     });
 
     if (error) {

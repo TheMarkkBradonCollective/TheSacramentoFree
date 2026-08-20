@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
-  Calendar,
   LayoutGrid,
   LayoutList,
   MapPin,
+  Plus,
   Search as SearchIcon,
   SlidersHorizontal,
   X,
@@ -15,6 +15,7 @@ import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRs
 import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
+import CollapsibleFilterSection from './CollapsibleFilterSection';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
 import { EventGridSkeleton } from './Skeleton';
 import EventCard from './EventCard';
@@ -39,16 +40,12 @@ interface EventsViewProps {
   isLoading?: boolean;
   commentsLocked?: boolean;
   sneakPeek?: boolean;
+  onOpenNewEvent?: () => void;
 }
 
 type EventTimeFilter = 'upcoming' | 'past';
 type EventSortMode = 'soonest' | 'newest' | 'most_rsvps';
 type EventQuickPick = 'my_area' | 'with_photos' | 'has_pin' | 'im_going' | 'has_rsvps' | 'series';
-
-const TIME_FILTER_OPTIONS: { value: EventTimeFilter; label: string }[] = [
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'past', label: 'Past' },
-];
 
 const SORT_OPTIONS: { value: EventSortMode; label: string }[] = [
   { value: 'soonest', label: 'Soonest' },
@@ -74,19 +71,9 @@ function eventCreatedMs(event: CommunityEvent): number {
   return new Date(createdAt).getTime();
 }
 
-function compareEventsByDistance(
-  a: CommunityEvent,
-  b: CommunityEvent,
-  getDistanceMeters: (event: CommunityEvent) => number | null,
-): number {
-  const distA = getDistanceMeters(a);
-  const distB = getDistanceMeters(b);
-  if (distA != null && distB != null) {
-    const diff = distA - distB;
-    if (diff !== 0) return diff;
-  } else if (distA != null) return -1;
-  else if (distB != null) return 1;
-  return eventCreatedMs(b) - eventCreatedMs(a);
+function eventTimeToolbarLabel(filter: EventTimeFilter | null): string {
+  if (!filter) return 'All';
+  return filter === 'upcoming' ? 'Upcoming' : 'Past';
 }
 
 function FilterSelect({
@@ -95,6 +82,7 @@ function FilterSelect({
   icon: Icon,
   value,
   onChange,
+  hideLabel = false,
   children,
 }: {
   id: string;
@@ -102,14 +90,17 @@ function FilterSelect({
   icon: typeof MapPin;
   value: string;
   onChange: (value: string) => void;
+  hideLabel?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block space-y-1.5" htmlFor={id}>
-      <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
-        <Icon className="w-3 h-3 shrink-0" aria-hidden />
-        {label}
-      </span>
+      {!hideLabel ? (
+        <span className="text-[10px] font-bold uppercase tracking-wide text-muted flex items-center gap-1">
+          <Icon className="w-3 h-3 shrink-0" aria-hidden />
+          {label}
+        </span>
+      ) : null}
       <div className="flex items-center rounded-xl border border-app bg-inset px-3 py-2.5">
         <select
           id={id}
@@ -136,6 +127,7 @@ export default function EventsView({
   isLoading = false,
   commentsLocked = false,
   sneakPeek = false,
+  onOpenNewEvent,
 }: EventsViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [timeFilter, setTimeFilter] = useState<EventTimeFilter | null>(null);
@@ -143,7 +135,6 @@ export default function EventsView({
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<EventQuickPick>>(() => new Set());
   const [viewMode, setViewMode] = useState<FeedViewMode>(() => readEventsViewMode());
-  const [gridSortMode, setGridSortMode] = useState<'nearest' | 'newest'>('nearest');
   const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
 
   // Subscribe to live GPS so we can show distance badges on event cards.
@@ -183,19 +174,18 @@ export default function EventsView({
     writeEventsViewMode(mode);
   };
 
-  const activeFilterCount = [
+  /** Filters panel only — toolbar when/sort toggles have their own active styling. */
+  const panelFilterCount = [
     searchTerm.trim() !== '',
     sortBy !== null,
-    timeFilter !== null,
     selectedNeighborhood !== 'All Neighborhoods',
     activeQuickPicks.size > 0,
   ].filter(Boolean).length;
 
-  const hasExtraFilters = activeFilterCount > 0;
+  const hasExtraFilters = panelFilterCount > 0 || timeFilter !== null;
 
   const clearFilters = () => {
     setSearchTerm('');
-    setTimeFilter(null);
     setSortBy(null);
     setSelectedNeighborhood('All Neighborhoods');
     setActiveQuickPicks(new Set());
@@ -209,20 +199,20 @@ export default function EventsView({
     if (sortBy === value) setSortBy(null);
   };
 
-  const handleTimeSwitch = (value: EventTimeFilter) => (checked: boolean) => {
-    if (checked) {
-      setTimeFilter(value);
-      return;
-    }
-    if (timeFilter === value) setTimeFilter(null);
-  };
-
   const handleQuickPickSwitch = (pick: EventQuickPick) => (checked: boolean) => {
     setActiveQuickPicks((prev) => {
       const next = new Set(prev);
       if (checked) next.add(pick);
       else next.delete(pick);
       return next;
+    });
+  };
+
+  const cycleTimeFilter = () => {
+    setTimeFilter((current) => {
+      if (current === null) return 'upcoming';
+      if (current === 'upcoming') return 'past';
+      return null;
     });
   };
 
@@ -263,10 +253,6 @@ export default function EventsView({
     };
 
     const sorted = [...filtered].sort((a, b) => {
-      if (gridSortMode === 'nearest') {
-        return compareEventsByDistance(a, b, getEventDistance);
-      }
-
       if (viewMode === 'grid') {
         return eventCreatedMs(b) - eventCreatedMs(a);
       }
@@ -296,7 +282,6 @@ export default function EventsView({
     userProfile.neighborhood,
     sortBy,
     viewMode,
-    gridSortMode,
     userLocation,
     engagement,
   ]);
@@ -307,76 +292,101 @@ export default function EventsView({
 
   return (
     <div className="space-y-3" id="events_feed_wrapper">
-      <div className="flex items-center justify-between gap-3" id="events_view_mode_bar">
-        <div className="min-w-0">
-          <button
-            type="button"
-            id="events_sort_toggle"
-            onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'newest' : 'nearest'))}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-app bg-inset px-2.5 py-1.5 text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer"
-            aria-pressed={gridSortMode === 'nearest'}
-          >
-            <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-            <span>{gridSortMode === 'nearest' ? 'Nearest' : 'Newest'}</span>
-          </button>
-          {gridSortMode === 'nearest' && !userLocation && (
-            <p className="text-[10px] text-muted mt-1">Turn on location for distance sorting</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            id="events_filters_panel_toggle"
-            onClick={() => setFiltersPanelOpen((open) => !open)}
-            aria-expanded={filtersPanelOpen}
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-              filtersPanelOpen
-                ? 'border-accent bg-accent-soft text-accent'
-                : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
-            }`}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-          <div
-            className="inline-flex rounded-xl border border-app bg-inset p-0.5 shrink-0"
-            role="group"
-            aria-label="Events view"
-            id="events_view_mode_toggle"
-          >
+      <div className="space-y-1 min-w-0" id="events_view_mode_bar">
+        <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
+          <div className="shrink-0">
+            {onOpenNewEvent ? (
+              <button
+                type="button"
+                id="events_new_listing_btn"
+                onClick={onOpenNewEvent}
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
+                aria-label="New event"
+                title="New event"
+              >
+                <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <span>New</span>
+              </button>
+            ) : null}
+          </div>
+
+          <div className="flex-1 min-w-0 flex justify-center px-0.5 overflow-x-auto sbn-feed-toolbar-scroll">
+            <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
+              <button
+                type="button"
+                id="events_time_toggle"
+                onClick={cycleTimeFilter}
+                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
+                  timeFilter !== null
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-app bg-inset text-app hover:border-accent/40'
+                }`}
+                aria-pressed={timeFilter !== null}
+                aria-label={`When: ${eventTimeToolbarLabel(timeFilter)}`}
+              >
+                <span>{eventTimeToolbarLabel(timeFilter)}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button
               type="button"
-              id="events_view_grid_btn"
-              aria-pressed={viewMode === 'grid'}
-              onClick={() => handleViewModeChange('grid')}
-              className={`inline-flex items-center justify-center gap-1.5 rounded-[0.65rem] px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                viewMode === 'grid'
-                  ? 'bg-accent text-on-accent'
-                  : 'text-muted hover:text-app hover:bg-surface-hover'
+              id="events_filters_panel_toggle"
+              onClick={() => setFiltersPanelOpen((open) => !open)}
+              aria-expanded={filtersPanelOpen}
+              aria-label="Filters"
+              className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                filtersPanelOpen
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-app bg-inset text-muted hover:text-app hover:border-accent/40'
               }`}
             >
-              <LayoutGrid className="w-4 h-4 shrink-0" aria-hidden />
-              <span className="sr-only sm:not-sr-only">Grid</span>
+              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
+              <span className="hidden md:inline">Filters</span>
+              {panelFilterCount > 0 && (
+                <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center leading-none">
+                  {panelFilterCount}
+                </span>
+              )}
             </button>
-            <button
-              type="button"
-              id="events_view_list_btn"
-              aria-pressed={viewMode === 'list'}
-              onClick={() => handleViewModeChange('list')}
-              className={`inline-flex items-center justify-center gap-1.5 rounded-[0.65rem] px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-accent text-on-accent'
-                  : 'text-muted hover:text-app hover:bg-surface-hover'
-              }`}
+            <div
+              className="inline-flex rounded-xl border border-app bg-inset p-0.5 shrink-0"
+              role="group"
+              aria-label="Events view"
+              id="events_view_mode_toggle"
             >
-              <LayoutList className="w-4 h-4 shrink-0" aria-hidden />
-              <span className="hidden sm:inline">List</span>
-            </button>
+              <button
+                type="button"
+                id="events_view_grid_btn"
+                aria-pressed={viewMode === 'grid'}
+                aria-label="Grid view"
+                onClick={() => handleViewModeChange('grid')}
+                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-accent text-on-accent'
+                    : 'text-muted hover:text-app hover:bg-surface-hover'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4 shrink-0" aria-hidden />
+                <span className="sr-only">Grid</span>
+              </button>
+              <button
+                type="button"
+                id="events_view_list_btn"
+                aria-pressed={viewMode === 'list'}
+                aria-label="List view"
+                onClick={() => handleViewModeChange('list')}
+                className={`inline-flex items-center justify-center rounded-[0.65rem] p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-accent text-on-accent'
+                    : 'text-muted hover:text-app hover:bg-surface-hover'
+                }`}
+              >
+                <LayoutList className="w-4 h-4 shrink-0" aria-hidden />
+                <span className="sr-only">List</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -402,8 +412,12 @@ export default function EventsView({
         </div>
 
         <div className="space-y-3" id="events_filter_switches">
-          <div className="space-y-1.5" id="events_sort_bar">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort events</p>
+          <CollapsibleFilterSection
+            id="events_sort_bar"
+            title="Sort events"
+            activeCount={sortBy !== null ? 1 : 0}
+            defaultOpen={sortBy !== null}
+          >
             <div className="flex flex-wrap gap-2">
               {SORT_OPTIONS.map(({ value, label }) => (
                 <span key={value} className="contents">
@@ -416,26 +430,14 @@ export default function EventsView({
                 </span>
               ))}
             </div>
-          </div>
+          </CollapsibleFilterSection>
 
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">When</p>
-            <div className="flex flex-wrap gap-2" id="events_time_filter">
-              {TIME_FILTER_OPTIONS.map(({ value, label }) => (
-                <span key={value} className="contents">
-                  <FilterLabeledSwitch
-                    id={`events_time_${value}`}
-                    label={label}
-                    checked={timeFilter === value}
-                    onChange={handleTimeSwitch(value)}
-                  />
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
+          <CollapsibleFilterSection
+            id="events_quick_picks"
+            title="Quick picks"
+            activeCount={activeQuickPicks.size}
+            defaultOpen={activeQuickPicks.size > 0}
+          >
             <div className="flex flex-wrap gap-2">
               {EVENT_QUICK_PICKS.map(({ id, label }) => (
                 <span key={id} className="contents">
@@ -448,24 +450,33 @@ export default function EventsView({
                 </span>
               ))}
             </div>
-          </div>
+          </CollapsibleFilterSection>
         </div>
 
         <div className="pt-3 border-t border-app">
-          <FilterSelect
-            id="events_filter_neighborhood_select"
-            label="Neighborhood"
+          <CollapsibleFilterSection
+            id="events_neighborhood_section"
+            title="Neighborhood"
             icon={MapPin}
-            value={selectedNeighborhood}
-            onChange={setSelectedNeighborhood}
+            activeCount={selectedNeighborhood !== 'All Neighborhoods' ? 1 : 0}
+            defaultOpen={selectedNeighborhood !== 'All Neighborhoods'}
           >
-            <option value="All Neighborhoods">All neighborhoods</option>
-            {SACRAMENTO_NEIGHBORHOODS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </FilterSelect>
+            <FilterSelect
+              id="events_filter_neighborhood_select"
+              label="Neighborhood"
+              icon={MapPin}
+              hideLabel
+              value={selectedNeighborhood}
+              onChange={setSelectedNeighborhood}
+            >
+              <option value="All Neighborhoods">All neighborhoods</option>
+              {SACRAMENTO_NEIGHBORHOODS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </FilterSelect>
+          </CollapsibleFilterSection>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-app">

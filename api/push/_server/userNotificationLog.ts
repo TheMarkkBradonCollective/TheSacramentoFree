@@ -61,6 +61,14 @@ function inboxKind(eventType: PushEventType): string {
       return 'staff_report';
     case 'director_alert':
       return 'director_alert';
+    case 'feed_comment':
+      return 'feed_comment';
+    case 'feed_reaction':
+      return 'feed_reaction';
+    case 'feed_upvote':
+      return 'feed_upvote';
+    case 'feed_downvote':
+      return 'feed_downvote';
     default:
       return eventType;
   }
@@ -71,10 +79,35 @@ function notificationId(userId: string, tag: string): string {
   return `un_${userId.slice(0, 8)}_${safeTag}`.slice(0, 200);
 }
 
-async function enrichItemTitle(payload: PushPayload): Promise<string> {
-  const listingId = payload.data?.listingId || '';
+const FEED_INBOX_KINDS = new Set(['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote']);
+
+function isFeedInboxEvent(eventType: PushEventType): boolean {
+  return FEED_INBOX_KINDS.has(eventType);
+}
+
+async function enrichContextTitle(payload: PushPayload): Promise<string> {
   const existing = payload.data?.itemTitle || '';
-  if (!listingId || existing) return existing;
+  if (existing) return existing;
+
+  const feedPostId = payload.data?.feedPostId || '';
+  if (feedPostId) {
+    try {
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin
+        .from('feed_posts')
+        .select('text')
+        .eq('id', feedPostId)
+        .maybeSingle();
+      const text = String((data as { text?: string } | null)?.text || '').trim();
+      if (!text) return 'Feed post';
+      return text.length > 80 ? `${text.slice(0, 80)}…` : text;
+    } catch {
+      return '';
+    }
+  }
+
+  const listingId = payload.data?.listingId || '';
+  if (!listingId) return '';
 
   try {
     const supabaseAdmin = await getSupabaseAdmin();
@@ -85,17 +118,27 @@ async function enrichItemTitle(payload: PushPayload): Promise<string> {
   }
 }
 
+function inboxItemId(payload: PushPayload): string | null {
+  const feedPostId = payload.data?.feedPostId || '';
+  if (feedPostId) return feedPostId;
+  if (isFeedInboxEvent(payload.eventType)) return null;
+  const listingId = payload.data?.listingId || '';
+  return listingId || null;
+}
+
 /** Log every alert a user is eligible to receive into bell → Notifications. */
 export async function logUserNotifications(userIds: string[], payload: PushPayload): Promise<void> {
   if (!userIds.length) return;
 
   try {
     const supabaseAdmin = await getSupabaseAdmin();
-    const listingId = payload.data?.listingId || '';
-    const itemTitle = (await enrichItemTitle(payload)) || '';
+    const itemId = inboxItemId(payload);
+    const itemTitle = (await enrichContextTitle(payload)) || '';
     const actorName = payload.data?.actorName || '';
     const actorUserId = payload.data?.actorUserId || '';
-    const tag = payload.tag || `${payload.eventType}-${listingId || payload.data?.conversationId || 'general'}`;
+    const tag =
+      payload.tag ||
+      `${payload.eventType}-${itemId || payload.data?.conversationId || payload.data?.requestId || 'general'}`;
 
     const rows = userIds.map((userId) => ({
       id: notificationId(userId, tag),
@@ -103,7 +146,7 @@ export async function logUserNotifications(userIds: string[], payload: PushPaylo
       kind: inboxKind(payload.eventType),
       title: payload.title,
       body: payload.body,
-      itemId: listingId || null,
+      itemId,
       itemTitle: itemTitle || null,
       actorUserId: actorUserId || null,
       actorName: actorName || null,

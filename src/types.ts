@@ -709,7 +709,12 @@ export type DiscussionComment = Pick<
   'id' | 'userId' | 'userName' | 'userPhoto' | 'userNeighborhood' | 'text'
 >;
 
-export type CommunityContentVoteTarget = 'update' | 'review' | 'leader_message' | 'announcement';
+export type CommunityContentVoteTarget =
+  | 'update'
+  | 'review'
+  | 'leader_message'
+  | 'announcement'
+  | 'feed_post';
 
 export interface CommunityContentVote {
   id: string;
@@ -724,6 +729,51 @@ export interface ContentVoteState {
   userVote: 'up' | 'down' | null;
   upvotes: number;
   downvotes: number;
+}
+
+export interface ContentVoteState {
+  userVote: 'up' | 'down' | null;
+  upvotes: number;
+  downvotes: number;
+}
+
+export interface FeedPost {
+  id: string;
+  userId: string;
+  userDisplayName: string;
+  userPhotoURL?: string;
+  neighborhood: string;
+  text: string;
+  imageUrls: string[];
+  status: 'active' | 'hidden' | 'removed';
+  postedAsNeighbor?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedPostComment {
+  id: string;
+  postId: string;
+  parentCommentId?: string | null;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  userNeighborhood: string;
+  text: string;
+  postedAsNeighbor?: boolean;
+  createdAt: string;
+}
+
+export interface FeedPostReaction {
+  postId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+}
+
+export interface FeedPostCommentNode extends FeedPostComment {
+  replies: FeedPostCommentNode[];
+  depth: number;
 }
 
 export const SACRAMENTO_NEIGHBORHOODS = [

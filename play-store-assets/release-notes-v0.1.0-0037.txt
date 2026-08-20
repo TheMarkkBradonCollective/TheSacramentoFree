@@ -1,0 +1,11 @@
+Android beta v0.1.0.0037 (versionCode 37)
+
+What's new:
+• Neighbor Feed is live — post text/photos, comment threads, reactions, up/down votes
+• Chat makeover — tab renamed Chat, messenger-style inbox
+• Map — GPS and + buttons sit lower; route zooms to fit when you tap a listing
+• Square Map button in footer center
+
+Run scripts/supabase-migration-aug-20-2026-neighbor-feed.sql in Supabase if Feed is empty.
+
+Download (sideload): https://www.sacramentobuynothing.com/download

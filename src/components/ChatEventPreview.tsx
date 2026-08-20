@@ -11,19 +11,21 @@ export default function ChatEventPreview({ eventId, eventTitle, onViewEvent }: C
     <button
       type="button"
       onClick={() => onViewEvent?.(eventId)}
-      className="w-full text-left rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/5 hover:bg-fuchsia-500/10 transition-colors p-3 flex items-start gap-3"
+      className="item-feed-card w-full text-left hover:border-accent/40 transition-colors flex items-stretch overflow-hidden"
     >
-      <span className="p-2 rounded-lg bg-fuchsia-500/15 text-fuchsia-400 shrink-0">
-        <CalendarDays className="w-4 h-4" />
+      <span className="w-[4.25rem] min-h-[4.25rem] shrink-0 bg-inset border-r border-app flex items-center justify-center text-accent">
+        <CalendarDays className="w-5 h-5" />
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-black uppercase tracking-widest text-fuchsia-400">Related event</p>
-        <p className="text-sm font-bold text-app truncate mt-0.5">{eventTitle}</p>
-        <p className="text-[11px] text-muted mt-1 flex items-center gap-1">
+      <span className="min-w-0 flex-1 p-2.5 text-left">
+        <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+          Event
+        </span>
+        <p className="text-sm font-display font-bold text-app truncate mt-1">{eventTitle}</p>
+        <p className="text-[11px] text-muted mt-0.5 flex items-center gap-1">
           <ExternalLink className="w-3 h-3 shrink-0" />
-          Open event preview
+          Open event
         </p>
-      </div>
+      </span>
     </button>
   );
 }

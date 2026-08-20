@@ -1,13 +1,18 @@
-import { AppTab, parseAppTab } from './appTabs';
+import { AppTab, migrateLegacyStoredTab, parseAppTab } from './appTabs';
 import { hasActiveNavSession } from './navigationSession';
 
-export const TAB_STORAGE_KEY = 'sbn_active_tab_v1';
+export const TAB_STORAGE_KEY = 'sbn_active_tab_v2';
+const LEGACY_TAB_STORAGE_KEY = 'sbn_active_tab_v1';
 export const TAB_HISTORY_KEY = 'sbnTab';
 
-const APP_TAB_PATHS = new Set(['feed', 'events', 'map', 'chats', 'profile']);
+const APP_TAB_PATHS = new Set(['feed', 'stuff', 'events', 'map', 'chats', 'profile']);
 
 function tabStorageKey(userId?: string): string {
   return userId ? `${TAB_STORAGE_KEY}_${userId}` : TAB_STORAGE_KEY;
+}
+
+function legacyTabStorageKey(userId?: string): string {
+  return userId ? `${LEGACY_TAB_STORAGE_KEY}_${userId}` : LEGACY_TAB_STORAGE_KEY;
 }
 
 export function appTabPath(tab: AppTab): string {
@@ -41,7 +46,10 @@ export function readPersistedTab(userId?: string): AppTab {
   const pathTab = parseTabFromPathname(window.location.pathname);
   const historyTab = parseTabFromHistoryState(window.history.state);
   const storedTab = parseStoredTab(window.localStorage.getItem(tabStorageKey(userId)));
-  return pathTab || historyTab || storedTab || 'map';
+  if (storedTab) return storedTab;
+
+  const legacyTab = migrateLegacyStoredTab(window.localStorage.getItem(legacyTabStorageKey(userId)));
+  return pathTab || historyTab || legacyTab || 'map';
 }
 
 function tabUrl(tab: AppTab): string {
@@ -80,4 +88,5 @@ export function replaceAppTabUrl(tab: AppTab) {
 export function clearPersistedTab(userId?: string) {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(tabStorageKey(userId));
+  window.localStorage.removeItem(legacyTabStorageKey(userId));
 }

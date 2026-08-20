@@ -29,6 +29,9 @@ interface SupportTicketThreadProps {
   onClosed?: () => void;
   onDeleted?: () => void;
   onUpdated?: () => void;
+  onArchive?: () => void;
+  onUnarchive?: () => void;
+  isArchived?: boolean;
   /** Hide ticket meta bar when the parent header already shows context */
   showTicketMeta?: boolean;
   onViewRelatedListing?: (itemId: string) => void;
@@ -41,6 +44,9 @@ export default function SupportTicketThread({
   onClosed,
   onDeleted,
   onUpdated,
+  onArchive,
+  onUnarchive,
+  isArchived = false,
   showTicketMeta = true,
   onViewRelatedListing,
   onViewRelatedEvent,
@@ -393,18 +399,39 @@ export default function SupportTicketThread({
             </button>
           </div>
         </div>
-      ) : canDeleteSupportTicket(viewer, ticket) ? (
-        <div className="shrink-0 p-4 border-t border-app bg-surface">
-          <button
-            type="button"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
-            className="sbn-btn sbn-btn-secondary w-full text-sm text-red-400 border-red-500/30 hover:bg-red-500/10"
-          >
-            {deleting ? 'Deleting…' : 'Delete closed ticket'}
-          </button>
+      ) : (
+        <div className="shrink-0 p-4 border-t border-app bg-surface space-y-2">
+          {isArchived ? (
+            onUnarchive ? (
+              <button
+                type="button"
+                onClick={onUnarchive}
+                className="sbn-btn sbn-btn-secondary w-full text-sm"
+              >
+                Unarchive ticket
+              </button>
+            ) : null
+          ) : onArchive ? (
+            <button
+              type="button"
+              onClick={onArchive}
+              className="sbn-btn sbn-btn-secondary w-full text-sm"
+            >
+              Archive ticket
+            </button>
+          ) : null}
+          {canDeleteSupportTicket(viewer, ticket) ? (
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={deleting}
+              className="sbn-btn sbn-btn-secondary w-full text-sm text-red-400 border-red-500/30 hover:bg-red-500/10"
+            >
+              {deleting ? 'Deleting…' : 'Delete closed ticket'}
+            </button>
+          ) : null}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

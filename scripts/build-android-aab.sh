@@ -19,8 +19,10 @@ fi
 export CAPACITOR_SERVER_URL="${CAPACITOR_SERVER_URL:-$VITE_APP_URL}"
 echo "Using CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL}"
 
-# APKs and AABs in public/ get copied into dist/ and then nested inside the next build.
+# Stage all download binaries before web build (they get nested in dist otherwise).
 APK_STAGING_DIR="$(mktemp -d)"
+CURRENT_APK="$(node -e "const {readAppVersion}=require('./scripts/read-app-version.mjs'); const v=readAppVersion(); process.stdout.write(\`sac-buy-nothing-beta-v\${v.versionName}.\${v.build}.apk\`)")"
+CURRENT_AAB="$(node -e "const {readAppVersion}=require('./scripts/read-app-version.mjs'); const v=readAppVersion(); process.stdout.write(\`sac-buy-nothing-beta-v\${v.versionName}.\${v.build}.aab\`)")"
 if compgen -G "public/downloads/*.apk" > /dev/null; then
   mv public/downloads/*.apk "$APK_STAGING_DIR/"
 fi
@@ -72,13 +74,25 @@ cp "$AAB_PATH" "public/downloads/${AAB_FILE}"
 cp "$AAB_PATH" "public/downloads/sac-buy-nothing.aab"
 node scripts/sync-android-version.mjs
 if compgen -G "$APK_STAGING_DIR/*.apk" > /dev/null; then
-  mv "$APK_STAGING_DIR"/*.apk public/downloads/ 2>/dev/null || true
+  for staged in "$APK_STAGING_DIR"/*.apk; do
+    base="$(basename "$staged")"
+    if [[ "$base" == "$CURRENT_APK" || "$base" == "sac-buy-nothing.apk" ]]; then
+      continue
+    fi
+    mv "$staged" public/downloads/
+  done
   for f in public/downloads/buynothing*.apk; do
     [[ -f "$f" ]] && mv "$f" public/ 2>/dev/null || true
   done
 fi
 if compgen -G "$APK_STAGING_DIR/*.aab" > /dev/null; then
-  mv "$APK_STAGING_DIR"/*.aab public/downloads/ 2>/dev/null || true
+  for staged in "$APK_STAGING_DIR"/*.aab; do
+    base="$(basename "$staged")"
+    if [[ "$base" == "$AAB_FILE" || "$base" == "sac-buy-nothing.aab" ]]; then
+      continue
+    fi
+    mv "$staged" public/downloads/
+  done
 fi
 rm -rf "$APK_STAGING_DIR"
 

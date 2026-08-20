@@ -1,48 +1,43 @@
 import { useState, type ReactNode } from 'react';
-import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import FilterLabeledSwitch from './FilterLabeledSwitch';
 
 interface CollapsibleFilterSectionProps {
   id: string;
   title: string;
+  icon?: LucideIcon;
+  /** Non-default selections in this group (shown in master label when > 0). */
   activeCount?: number;
+  /** When true, child toggles start visible. Defaults to true when activeCount > 0. */
   defaultOpen?: boolean;
   children: ReactNode;
 }
 
+/** Master ON/OFF pill per filter group — expands or collapses the toggles underneath. */
 export default function CollapsibleFilterSection({
   id,
   title,
+  icon: Icon,
   activeCount = 0,
-  defaultOpen = false,
+  defaultOpen,
   children,
 }: CollapsibleFilterSectionProps) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(defaultOpen ?? activeCount > 0);
+  const masterLabel = activeCount > 0 ? `${title} · ${activeCount}` : title;
 
   return (
-    <div className="border-t border-app pt-3">
-      <button
-        type="button"
-        id={id}
-        onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
-        className="w-full flex items-center justify-between gap-3 rounded-xl border border-app bg-inset px-4 py-3 text-left hover:border-accent/40 transition-colors"
-      >
-        <span className="flex items-center gap-2 min-w-0">
-          <SlidersHorizontal className="w-4 h-4 text-accent shrink-0" aria-hidden />
-          <span className="text-sm font-semibold text-app">{title}</span>
-          {activeCount > 0 && (
-            <span className="text-[10px] font-bold uppercase tracking-wide text-accent bg-accent-soft px-2 py-0.5 rounded-full shrink-0">
-              {activeCount} active
-            </span>
-          )}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-muted shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-          aria-hidden
+    <div className="space-y-1.5" id={id}>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {Icon ? <Icon className="w-3 h-3 shrink-0 text-muted" aria-hidden /> : null}
+        <FilterLabeledSwitch
+          id={`${id}_master`}
+          label={masterLabel}
+          checked={open}
+          onChange={setOpen}
+          ariaLabel={`${open ? 'Hide' : 'Show'} ${title}`}
         />
-      </button>
-
-      {open && <div className="mt-3 space-y-3">{children}</div>}
+      </div>
+      {open ? children : null}
     </div>
   );
 }

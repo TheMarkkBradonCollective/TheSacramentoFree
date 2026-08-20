@@ -1,0 +1,10 @@
+Android beta v0.1.0.0039 (versionCode 39)
+
+What's new:
+• Feed posts — tap a card to open the full post page with comments below
+• One reaction per post; upvotes and downvotes shown separately
+• Your own posts hide vote/reaction controls (neighbors engage; you comment)
+• Feed cards show Comment button + count only — votes/reactions on detail page
+• Feed & Chat visual polish matching Stuff and Events
+
+Download (sideload): https://www.sacramentobuynothing.com/download

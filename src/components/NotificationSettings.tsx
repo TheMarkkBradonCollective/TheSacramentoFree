@@ -43,7 +43,7 @@ const PREF_SECTIONS: {
   items: { key: BooleanPrefKey; label: string; description: string }[];
 }[] = [
   {
-    title: 'Messages & support',
+    title: 'Chat & support',
     items: [
       { key: 'messages', label: 'Direct messages', description: 'Chat messages from neighbors' },
       {
@@ -88,9 +88,9 @@ const PREF_SECTIONS: {
 const LISTING_PREF_ITEMS = [
   { key: 'claims' as const, label: 'Claims', description: 'When someone claims your item' },
   { key: 'gifts' as const, label: 'Gifts', description: 'When an item is marked gifted' },
-  { key: 'comments' as const, label: 'Comments', description: 'New comments on your listings' },
-  { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When someone upvotes your listing (anonymous)' },
-  { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When someone downvotes your listing (anonymous)' },
+  { key: 'comments' as const, label: 'Comments', description: 'New comments on your listings and feed posts' },
+  { key: 'listingUpvotes' as const, label: 'Upvotes', description: 'When someone upvotes your listing or feed post (anonymous)' },
+  { key: 'listingDownvotes' as const, label: 'Downvotes', description: 'When someone downvotes your listing or feed post (anonymous)' },
   {
     key: 'listingStatus' as const,
     label: 'Listing status',

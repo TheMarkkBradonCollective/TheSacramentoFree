@@ -210,8 +210,12 @@ export const STAFF_MESSAGE_DEFAULT = {
 
 export const IN_APP = {
   brandSubtitle: 'Neighbors helping neighbors',
-  feedTabLabel: 'Stuff',
+  feedTabLabel: 'Feed',
+  stuffTabLabel: 'Stuff',
   feedTitle: 'Community Stuff',
+  communityFeedTitle: 'Neighbor feed',
+  communityFeedDescription:
+    'Share thoughts and photos with neighbors — comment, react, and vote on posts.',
   feedDescription: 'Give away items, request what you need, trade with neighbors, and connect across Sacramento — 100% free.',
   mapTitle: 'Sacramento Neighborhood Map',
   mapDescription: 'Explore free gifts and requests across Sacramento. Message neighbors to arrange porch pickup.',
@@ -220,10 +224,10 @@ export const IN_APP = {
     'Neighborhood potlucks, swaps, and meetups — always 100% free. Unlocks for everyone when we reach 500 neighbors.',
   eventsTabLabel: 'Events',
   postEventButton: 'Post Event',
-  chatsTabLabel: 'Messages',
-  chatsTitle: 'Messages',
+  chatsTabLabel: 'Chat',
+  chatsTitle: 'Chat',
   chatsDescription:
-    'Group chats, reviews, support, and direct messages — coordinate pickups and get help from staff.',
+    'Direct messages, group chats, and support — coordinate pickups and talk with neighbors.',
   profileTitle: 'Your Community Profile',
   accountTabLabel: 'Account',
   onboardingTitle: 'Join Sacramento Buy Nothing',

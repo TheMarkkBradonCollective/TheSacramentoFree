@@ -138,6 +138,48 @@ async function validateDirectorAlertClient(
   return { ok: true };
 }
 
+async function resolveGoGetSessionRecipient(
+  callerId: string,
+  body: PushSendBody,
+): Promise<{ ok: true; recipientUserIds: string[] } | { ok: false; error: string }> {
+  const sessionId = String(body.data?.goGetSessionId || '').trim();
+  const listingId = String(body.listingId || '').trim();
+  if (!sessionId) return { ok: false, error: 'goGetSessionId is required' };
+  if (!listingId) return { ok: false, error: 'listingId is required' };
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data } = await supabaseAdmin
+    .from('go_get_sessions')
+    .select('requesterUserId, fulfillerUserId, itemId')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (!data) return { ok: false, error: 'Go Get session not found' };
+  const row = data as { requesterUserId?: string; fulfillerUserId?: string; itemId?: string };
+  if (String(row.itemId || '') !== listingId) {
+    return { ok: false, error: 'Listing mismatch for Go Get session' };
+  }
+  const requesterId = String(row.requesterUserId || '');
+  const fulfillerId = String(row.fulfillerUserId || '');
+  if (callerId !== requesterId && callerId !== fulfillerId) {
+    return { ok: false, error: 'Not a participant in this Go Get session' };
+  }
+  const recipient = callerId === requesterId ? fulfillerId : requesterId;
+  if (!recipient) return { ok: false, error: 'No Go Get recipient' };
+  return { ok: true, recipientUserIds: [recipient] };
+}
+
+async function validateStaffAccountNotify(
+  callerId: string,
+  recipientUserId: string,
+): Promise<{ ok: true; recipientUserIds: string[] } | { ok: false; error: string }> {
+  const role = await getUserRole(callerId);
+  if (roleRank(role) < roleRank('city_administrator')) {
+    return { ok: false, error: 'City administrator access required' };
+  }
+  if (!recipientUserId) return { ok: false, error: 'recipient is required' };
+  return { ok: true, recipientUserIds: [recipientUserId] };
+}
+
 /**
  * When push is triggered from the public /api/push/send endpoint, never trust
  * recipientUserIds — derive and validate recipients from database state.
@@ -384,7 +426,9 @@ export async function validateClientPush(
       return { ok: true, recipientUserIds: [...recipientIds] };
     }
 
-    case 'on_the_way': {
+    case 'on_the_way':
+    case 'contactless_pickup_arrived':
+    case 'contactless_pickup_left': {
       const listingId = String(body.listingId || '').trim();
       if (!listingId) return { ok: false, error: 'listingId is required' };
       const supabaseAdmin = await getSupabaseAdmin();
@@ -393,6 +437,61 @@ export async function validateClientPush(
       if (!ownerId) return { ok: false, error: 'Listing not found' };
       if (ownerId === callerId) return { ok: false, error: 'Cannot notify yourself' };
       return { ok: true, recipientUserIds: [ownerId] };
+    }
+
+    case 'go_get_availability_request':
+    case 'go_get_available_now':
+    case 'go_get_schedule_proposed':
+    case 'go_get_schedule_confirmed':
+    case 'go_get_ready_reminder':
+    case 'go_get_fulfiller_ready':
+    case 'go_get_started':
+    case 'go_get_arrived':
+    case 'go_get_completed':
+    case 'go_get_cancelled':
+      return resolveGoGetSessionRecipient(callerId, body);
+
+    case 'violation_filed': {
+      const violationId =
+        String(body.tag || '')
+          .replace(/^violation-filed-/, '')
+          .trim() || String(body.data?.violationId || '').trim();
+      if (!violationId) return { ok: false, error: 'violationId is required' };
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin
+        .from('user_violations')
+        .select('userId, reportedByUserId')
+        .eq('id', violationId)
+        .maybeSingle();
+      if (!data) return { ok: false, error: 'Violation not found' };
+      const row = data as { userId?: string; reportedByUserId?: string };
+      if (String(row.reportedByUserId || '') !== callerId) {
+        return { ok: false, error: 'Not the reporter for this violation' };
+      }
+      return { ok: true, recipientUserIds: [String(row.userId || '')] };
+    }
+
+    case 'violation_decision':
+    case 'appeal_decision': {
+      const violationId =
+        String(body.tag || '')
+          .replace(/^violation-decision-/, '')
+          .replace(/^appeal-decision-/, '')
+          .trim() || String(body.data?.violationId || '').trim();
+      if (!violationId) return { ok: false, error: 'violationId is required' };
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin.from('user_violations').select('userId').eq('id', violationId).maybeSingle();
+      const userId = String((data as { userId?: string } | null)?.userId || '');
+      if (!userId) return { ok: false, error: 'Violation not found' };
+      return validateStaffAccountNotify(callerId, userId);
+    }
+
+    case 'account_locked': {
+      const userId =
+        String(body.tag || '')
+          .replace(/^account-locked-/, '')
+          .trim() || String(body.recipientUserIds?.[0] || '').trim();
+      return validateStaffAccountNotify(callerId, userId);
     }
 
     case 'new_comment': {
@@ -420,6 +519,22 @@ export async function validateClientPush(
         .filter((uid) => uid && uid !== callerId);
       if (!userIds.length) return { ok: false, error: 'No saved-item subscribers' };
       return { ok: true, recipientUserIds: userIds };
+    }
+
+    case 'feed_comment':
+    case 'feed_reaction':
+    case 'feed_upvote':
+    case 'feed_downvote': {
+      const postId = String(body.data?.feedPostId || '').trim();
+      if (!postId) return { ok: false, error: 'feedPostId is required' };
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { data } = await supabaseAdmin.from('feed_posts').select('userId').eq('id', postId).maybeSingle();
+      const ownerId = String((data as { userId?: string } | null)?.userId || '');
+      if (!ownerId || ownerId === callerId) return { ok: false, error: 'No feed post owner to notify' };
+      if (eventType === 'feed_upvote' || eventType === 'feed_downvote') {
+        return { ok: true, recipientUserIds: [ownerId] };
+      }
+      return { ok: true, recipientUserIds: [ownerId] };
     }
 
     default:
