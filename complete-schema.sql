@@ -1993,6 +1993,8 @@ CREATE TABLE IF NOT EXISTS public.feed_posts (
   "imageUrls" JSONB NOT NULL DEFAULT '[]'::jsonb,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'hidden', 'removed')),
   "postedAsNeighbor" BOOLEAN NOT NULL DEFAULT false,
+  "clientInstallKind" TEXT CHECK ("clientInstallKind" IN ('browser', 'pwa', 'ios-pwa', 'android-apk')),
+  "clientVersion" TEXT,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

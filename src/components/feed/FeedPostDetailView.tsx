@@ -8,6 +8,7 @@ import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from '../../lib/feedReact
 import { isStaffRole } from '../../lib/roles';
 import { PresenceUserAvatar } from '../UserAvatar';
 import FeedPostComments from './FeedPostComments';
+import FeedPostClientBadge from './FeedPostClientBadge';
 import ReportNeighborModal from '../ReportNeighborModal';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
@@ -151,11 +152,20 @@ export default function FeedPostDetailView({
                     {post.userDisplayName}
                   </p>
                 </button>
-                <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                <p className="text-xs text-muted flex items-center gap-1 mt-0.5 flex-wrap">
                   <MapPin className="w-3 h-3 text-accent shrink-0" />
                   {post.neighborhood}
                   <span className="text-subtle">·</span>
                   {timeLabel(post.createdAt)}
+                  {post.clientInstallKind ? (
+                    <>
+                      <span className="text-subtle">·</span>
+                      <FeedPostClientBadge
+                        installKind={post.clientInstallKind}
+                        version={post.clientVersion}
+                      />
+                    </>
+                  ) : null}
                 </p>
               </div>
             </div>

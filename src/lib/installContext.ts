@@ -39,6 +39,65 @@ export function installKindLabel(kind: InstallKind): string {
   }
 }
 
+export type PostClientTier = 'web' | 'lite' | 'full';
+
+/** Product tier for feed posts: Web (browser), Lite (PWA), Full (APK/AAB). */
+export function postClientTier(kind: InstallKind): PostClientTier {
+  if (kind === 'android-apk') return 'full';
+  if (kind === 'pwa' || kind === 'ios-pwa') return 'lite';
+  return 'web';
+}
+
+export function postClientTierLabel(kind: InstallKind): string {
+  switch (postClientTier(kind)) {
+    case 'full':
+      return 'Full';
+    case 'lite':
+      return 'Lite';
+    default:
+      return 'Web';
+  }
+}
+
+export function postClientTierHint(kind: InstallKind): string {
+  switch (postClientTier(kind)) {
+    case 'full':
+      return 'APK/AAB';
+    case 'lite':
+      return 'PWA';
+    default:
+      return 'url';
+  }
+}
+
+export function formatPostClientBadge(
+  kind: InstallKind,
+  version?: string | null,
+): { short: string; title: string } {
+  const tier = postClientTierLabel(kind);
+  const hint = postClientTierHint(kind);
+  const title = version?.trim()
+    ? `Posted from ${tier} (${hint}), version ${version.trim()}`
+    : `Posted from ${tier} (${hint})`;
+  const short = version?.trim() ? `${tier} · ${version.trim()}` : tier;
+  return { short, title };
+}
+
+export async function getPostClientMetadata(): Promise<{
+  clientInstallKind: InstallKind;
+  clientVersion: string | null;
+}> {
+  const clientInstallKind = detectInstallKind();
+  let clientVersion: string | null = null;
+  if (clientInstallKind === 'android-apk') {
+    const apk = await readCurrentApkVersion();
+    clientVersion = apk.versionName;
+  } else {
+    clientVersion = readStoredWebVersion();
+  }
+  return { clientInstallKind, clientVersion };
+}
+
 export async function recordInstalledApkVersion(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {

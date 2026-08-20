@@ -848,6 +848,10 @@ export interface FeedPost {
   imageUrls: string[];
   status: 'active' | 'hidden' | 'removed';
   postedAsNeighbor?: boolean;
+  /** Install kind at post time: browser, pwa, ios-pwa, or android-apk. */
+  clientInstallKind?: 'browser' | 'pwa' | 'ios-pwa' | 'android-apk';
+  /** Web deploy version or APK versionName at post time. */
+  clientVersion?: string;
   createdAt: string;
   updatedAt: string;
 }
