@@ -48,6 +48,8 @@ const APK_0020_PUBLISHED_AT = '2026-08-18T21:35:00.000Z';
 const PHOTO_UPLOAD_FIX_PUBLISHED_AT = '2026-08-20T03:30:00.000Z';
 const APK_0022_PUBLISHED_AT = '2026-08-20T03:35:00.000Z';
 const APK_0023_PUBLISHED_AT = '2026-08-20T07:30:00.000Z';
+const EVENT_RECURRENCE_PUBLISHED_AT = '2026-08-20T07:45:00.000Z';
+const APK_0024_PUBLISHED_AT = '2026-08-20T08:00:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -101,6 +103,66 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0024',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0024',
+    'Event posters can schedule repeats by month day, weekday position, or weekly — plus Laundry Love and City of Refuge community events.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0024 (versionCode 24).
+
+Since 0023:
+• Post Event → Repeat on a schedule: month days (4th, 20th), weekday of month (4th Saturday), or every week (Thursday)
+• Live preview shows how many dates will be created before you post
+• Laundry Love (4th Saturdays) and City of Refuge (Thursdays) community resource events added
+
+Already on an older install? Reopening the app still loads the live site for web fixes, but install 0024 for the latest native shell.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0024.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 24
+- src/lib/eventRecurrence.ts + src/components/EventRecurrenceEditor.tsx — schedule builder
+- scripts/seed-laundry-love-city-of-refuge-events-2026.sql — flyer event seeds
+- play-store-assets/release-notes-v0.1.0-0024.txt — Play Console release notes
+
+HISTORY
+2026-08-20 — Event recurrence + community resource seeds merged with staff mode (PR #234), Android beta 0024 built.`,
+    APK_0024_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_event-recurrence-scheduling',
+    '2026-08-20',
+    'Schedule repeat events by month day or weekday',
+    'When posting a free event, turn on Repeat on a schedule to auto-fill dates — every 4th and 20th, every 4th Saturday, every Thursday, and more.',
+    `WHAT NEIGHBORS SEE
+Posting a community event? Under Repeat on a schedule you can now:
+
+• Pick days of the month (e.g. 4th and 20th every month)
+• Pick weekday positions (e.g. 4th Saturday, or 1st/2nd/3rd Monday)
+• Pick weekly days (e.g. every Thursday)
+• Combine multiple rules and preview the dates before posting
+
+Same place, same time — neighbors still RSVP per day.
+
+New community resource events from flyers:
+• Laundry Love — 4th Saturdays at Stockridge Launderland (City Church of Sacramento)
+• City of Refuge — Thursdays, free showers, laundry, and meals
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/lib/eventRecurrence.ts — date generation
+- src/components/EventRecurrenceEditor.tsx + PostEventModal.tsx — UI
+- scripts/seed-laundry-love-city-of-refuge-events-2026.sql
+
+HISTORY
+2026-08-20 — PR #234.`,
+    EVENT_RECURRENCE_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0023',
     '2026-08-20',
@@ -732,6 +794,48 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0024',
+    '2026-08-20',
+    'New Android beta 0024 — event scheduling + community resources',
+    'Post repeat events by month day or weekday, and Laundry Love / City of Refuge are on the calendar. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0024 adds smarter event scheduling and two new community resource series.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0024.
+
+HISTORY
+2026-08-20 — Android beta 0024 with event recurrence scheduling.`,
+    APK_0024_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_event-recurrence',
+    '2026-08-20',
+    'Laundry Love, City of Refuge, and easier repeat events',
+    'Two new free community resource events are on the calendar, and posters can schedule repeats like every 4th Saturday or every Thursday.',
+    `WHAT NEIGHBORS SEE
+Look for these on Events:
+
+• Laundry Love — free laundry help every 4th Saturday at Stockridge Launderland
+• City of Refuge — free showers, laundry, and meals every Thursday on MLK Blvd
+
+Posting an event? Use Repeat on a schedule to auto-fill monthly or weekly dates instead of typing each one.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_event-recurrence-scheduling.
+
+HISTORY
+2026-08-20 — PR #234.`,
+    EVENT_RECURRENCE_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_staff-participation-mode',
     '2026-08-20',
