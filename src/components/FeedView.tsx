@@ -76,9 +76,9 @@ export default function FeedView({
         />
       )}
 
-      {loading && visiblePosts.length === 0 ? (
+      {loading && visiblePosts.length === 0 && !composerOpen ? (
         <ItemGridSkeleton count={3} />
-      ) : visiblePosts.length === 0 ? (
+      ) : visiblePosts.length === 0 && !composerOpen ? (
         <div className="sbn-card text-center py-16 px-8 border-dashed" id="empty_neighbor_feed_state">
           <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
           <h3 className="font-display text-lg font-bold text-app">No posts yet</h3>
