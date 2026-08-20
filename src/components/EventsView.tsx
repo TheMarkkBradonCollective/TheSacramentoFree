@@ -91,7 +91,7 @@ function eventsSortToolbarLabel(mode: 'nearest' | 'newest'): string {
 }
 
 function eventTimeToolbarLabel(filter: EventTimeFilter | null): string {
-  if (!filter) return 'All';
+  if (!filter) return 'Everything';
   return filter === 'upcoming' ? 'Upcoming' : 'Past';
 }
 
@@ -194,19 +194,19 @@ export default function EventsView({
     writeEventsViewMode(mode);
   };
 
-  const activeFilterCount = [
+  /** Filters panel only — toolbar when/sort toggles have their own active styling. */
+  const panelFilterCount = [
     searchTerm.trim() !== '',
     sortBy !== null,
-    timeFilter !== null,
     selectedNeighborhood !== 'All Neighborhoods',
     activeQuickPicks.size > 0,
   ].filter(Boolean).length;
 
-  const hasExtraFilters = activeFilterCount > 0;
+  const hasExtraFilters =
+    panelFilterCount > 0 || timeFilter !== null || gridSortMode === 'nearest';
 
   const clearFilters = () => {
     setSearchTerm('');
-    setTimeFilter(null);
     setSortBy(null);
     setSelectedNeighborhood('All Neighborhoods');
     setActiveQuickPicks(new Set());
@@ -340,17 +340,6 @@ export default function EventsView({
             <div className="inline-flex items-center gap-1 sm:gap-1.5 min-w-0">
               <button
                 type="button"
-                id="events_sort_toggle"
-                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'newest' : 'nearest'))}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
-                aria-pressed={gridSortMode === 'nearest'}
-                aria-label={eventsSortToolbarLabel(gridSortMode)}
-              >
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-                <span>{eventsSortToolbarLabel(gridSortMode)}</span>
-              </button>
-              <button
-                type="button"
                 id="events_time_toggle"
                 onClick={cycleTimeFilter}
                 className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
@@ -362,6 +351,17 @@ export default function EventsView({
                 aria-label={`When: ${eventTimeToolbarLabel(timeFilter)}`}
               >
                 <span>{eventTimeToolbarLabel(timeFilter)}</span>
+              </button>
+              <button
+                type="button"
+                id="events_sort_toggle"
+                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'newest' : 'nearest'))}
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
+                aria-pressed={gridSortMode === 'nearest'}
+                aria-label={eventsSortToolbarLabel(gridSortMode)}
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
+                <span>{eventsSortToolbarLabel(gridSortMode)}</span>
               </button>
             </div>
           </div>
@@ -381,9 +381,9 @@ export default function EventsView({
             >
               <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
               <span className="hidden md:inline">Filters</span>
-              {activeFilterCount > 0 && (
+              {panelFilterCount > 0 && (
                 <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center leading-none">
-                  {activeFilterCount}
+                  {panelFilterCount}
                 </span>
               )}
             </button>

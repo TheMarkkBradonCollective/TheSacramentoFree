@@ -288,10 +288,10 @@ export default function ItemGrid({
     });
   };
 
-  const activeFilterCount = [
+  /** Filters panel only — toolbar type/sort toggles have their own active styling. */
+  const panelFilterCount = [
     searchTerm.trim() !== '',
     sortBy !== null,
-    selectedType !== 'all',
     selectedCategory !== 'All Categories',
     selectedNeighborhood !== 'All Neighborhoods',
     selectedStatus !== 'all',
@@ -299,11 +299,13 @@ export default function ItemGrid({
     activeQuickPicks.size > 0,
   ].filter(Boolean).length;
 
-  const hasExtraFilters = activeFilterCount > 0;
+  const hasExtraFilters =
+    panelFilterCount > 0 ||
+    selectedType !== 'all' ||
+    gridSortMode === 'nearest';
 
   const clearFilters = () => {
     setSearchTerm('');
-    setSelectedType('all');
     setSelectedCategory('All Categories');
     setSelectedNeighborhood('All Neighborhoods');
     setSelectedStatus('all');
@@ -489,9 +491,9 @@ export default function ItemGrid({
             >
               <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
               <span className="hidden md:inline">Filters</span>
-              {activeFilterCount > 0 && (
+              {panelFilterCount > 0 && (
                 <span className="text-[10px] font-bold bg-accent text-on-accent px-1.5 py-0.5 rounded-full min-w-[1.125rem] text-center leading-none">
-                  {activeFilterCount}
+                  {panelFilterCount}
                 </span>
               )}
             </button>
