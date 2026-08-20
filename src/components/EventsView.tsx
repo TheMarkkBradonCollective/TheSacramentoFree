@@ -71,27 +71,8 @@ function eventCreatedMs(event: CommunityEvent): number {
   return new Date(createdAt).getTime();
 }
 
-function compareEventsByDistance(
-  a: CommunityEvent,
-  b: CommunityEvent,
-  getDistanceMeters: (event: CommunityEvent) => number | null,
-): number {
-  const distA = getDistanceMeters(a);
-  const distB = getDistanceMeters(b);
-  if (distA != null && distB != null) {
-    const diff = distA - distB;
-    if (diff !== 0) return diff;
-  } else if (distA != null) return -1;
-  else if (distB != null) return 1;
-  return eventCreatedMs(b) - eventCreatedMs(a);
-}
-
-function eventsSortToolbarLabel(mode: 'nearest' | 'newest'): string {
-  return mode === 'nearest' ? 'All' : 'New';
-}
-
 function eventTimeToolbarLabel(filter: EventTimeFilter | null): string {
-  if (!filter) return 'Everything';
+  if (!filter) return 'All';
   return filter === 'upcoming' ? 'Upcoming' : 'Past';
 }
 
@@ -154,7 +135,6 @@ export default function EventsView({
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<EventQuickPick>>(() => new Set());
   const [viewMode, setViewMode] = useState<FeedViewMode>(() => readEventsViewMode());
-  const [gridSortMode, setGridSortMode] = useState<'nearest' | 'newest'>('nearest');
   const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
 
   // Subscribe to live GPS so we can show distance badges on event cards.
@@ -202,8 +182,7 @@ export default function EventsView({
     activeQuickPicks.size > 0,
   ].filter(Boolean).length;
 
-  const hasExtraFilters =
-    panelFilterCount > 0 || timeFilter !== null || gridSortMode === 'nearest';
+  const hasExtraFilters = panelFilterCount > 0 || timeFilter !== null;
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -274,10 +253,6 @@ export default function EventsView({
     };
 
     const sorted = [...filtered].sort((a, b) => {
-      if (gridSortMode === 'nearest') {
-        return compareEventsByDistance(a, b, getEventDistance);
-      }
-
       if (viewMode === 'grid') {
         return eventCreatedMs(b) - eventCreatedMs(a);
       }
@@ -307,7 +282,6 @@ export default function EventsView({
     userProfile.neighborhood,
     sortBy,
     viewMode,
-    gridSortMode,
     userLocation,
     engagement,
   ]);
@@ -351,17 +325,6 @@ export default function EventsView({
                 aria-label={`When: ${eventTimeToolbarLabel(timeFilter)}`}
               >
                 <span>{eventTimeToolbarLabel(timeFilter)}</span>
-              </button>
-              <button
-                type="button"
-                id="events_sort_toggle"
-                onClick={() => setGridSortMode((mode) => (mode === 'nearest' ? 'newest' : 'nearest'))}
-                className="inline-flex items-center justify-center gap-1 rounded-xl border border-app bg-inset px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-app hover:border-accent/40 transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0"
-                aria-pressed={gridSortMode === 'nearest'}
-                aria-label={eventsSortToolbarLabel(gridSortMode)}
-              >
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-accent" aria-hidden />
-                <span>{eventsSortToolbarLabel(gridSortMode)}</span>
               </button>
             </div>
           </div>
@@ -426,9 +389,6 @@ export default function EventsView({
             </div>
           </div>
         </div>
-        {gridSortMode === 'nearest' && !userLocation && (
-          <p className="text-[10px] text-muted text-center px-1">Turn on location for distance sorting</p>
-        )}
       </div>
 
       {filtersPanelOpen && (
