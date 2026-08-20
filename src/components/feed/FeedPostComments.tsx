@@ -6,6 +6,7 @@ import { buildFeedCommentTree, submitFeedContentReport } from '../../lib/feedApi
 import { isStaffRole } from '../../lib/roles';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import ReportNeighborModal from '../ReportNeighborModal';
+import { PresenceUserAvatar } from '../UserAvatar';
 
 interface FeedPostCommentsProps {
   post: FeedPost;
@@ -70,7 +71,7 @@ function CommentRow({
   return (
     <li className="space-y-2">
       <div
-        className="bg-inset rounded-xl p-3 border border-app"
+        className="item-feed-card p-3"
         style={{ marginLeft: `${Math.min(node.depth, 4) * 0.75}rem` }}
       >
         <div className="flex items-start gap-2">
@@ -80,14 +81,11 @@ function CommentRow({
             className="flex items-center gap-2 min-w-0 flex-1 text-left"
             disabled={!onViewProfile}
           >
-            <img
-              src={
-                node.userPhoto ||
-                `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(node.userName)}`
-              }
-              alt=""
-              className="w-7 h-7 rounded-full border border-app shrink-0"
-              referrerPolicy="no-referrer"
+            <PresenceUserAvatar
+              uid={node.userId}
+              src={node.userPhoto}
+              name={node.userName}
+              size="xs"
             />
             <div className="min-w-0">
               <span className="text-xs font-bold text-app">{node.userName}</span>
@@ -219,7 +217,7 @@ export default function FeedPostComments({
   };
 
   return (
-    <section className="border-t border-app px-4 py-3 space-y-3 bg-surface/50">
+    <section className="space-y-3">
       <div className="flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-muted" />
         <h4 className="text-xs font-semibold text-muted uppercase tracking-wide">
@@ -269,7 +267,7 @@ export default function FeedPostComments({
         <button
           type="button"
           onClick={() => void submitTopLevel()}
-          className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0"
+          className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
         >
           Comment
         </button>

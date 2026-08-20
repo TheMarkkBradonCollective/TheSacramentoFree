@@ -1331,23 +1331,29 @@ export default function ChatSystem({
                   <div className="min-w-0 flex-1">
                     {isCommunity ? (
                       <>
-                        <p className="font-display font-semibold text-sm text-app truncate">
+                        <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+                          Chat
+                        </span>
+                        <p className="font-display font-bold text-sm text-app truncate mt-0.5">
                           {displayTitleHeader}
                         </p>
                         <p className="text-xs text-muted mt-0.5">{communityChatSubtitle(selectedChat.id)}</p>
                       </>
                     ) : (
                       <>
+                        <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+                          Chat
+                        </span>
                         <button
                           type="button"
                           onClick={() => onViewProfile?.(getRecipientInfo(selectedChat).otherId)}
-                          className="font-display font-semibold text-sm text-app truncate text-left hover:text-accent cursor-pointer w-full"
+                          className="font-display font-bold text-sm text-app truncate text-left hover:text-accent cursor-pointer w-full mt-0.5"
                           title={displayTitleHeader}
                         >
                           {otherName}
                         </button>
                         <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 shrink-0" />
+                          <MapPin className="w-3 h-3 shrink-0 text-accent" />
                           <span>
                             {selectedChat.itemId || selectedChat.eventId
                               ? 'Coordination chat'
@@ -1414,9 +1420,12 @@ export default function ChatSystem({
 
                   {messages.length === 0 ? (
                     <div className="flex justify-center py-10 px-4">
-                      <div className="chat-empty-card">
-                        <MessageSquare className="w-8 h-8 text-accent mx-auto mb-2" />
-                        <p className="text-sm font-display font-semibold text-app">Start the conversation</p>
+                      <div className="sbn-card text-center py-10 px-6 border-dashed max-w-xs">
+                        <span className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft border border-accent/25 text-accent mb-3">
+                          <MessageSquare className="w-6 h-6" />
+                        </span>
+                        <p className="text-xs font-bold text-accent uppercase tracking-wider">Chat</p>
+                        <p className="text-sm font-display font-bold text-app mt-1.5">Start the conversation</p>
                         <p className="text-xs text-muted mt-1.5 leading-relaxed">
                           Say hello to coordinate pickup, ask a question, or share details.
                         </p>

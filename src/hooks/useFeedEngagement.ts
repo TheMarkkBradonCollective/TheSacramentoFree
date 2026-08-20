@@ -158,8 +158,9 @@ export function useFeedEngagement(
   );
 
   const toggleReaction = useCallback(
-    async (postId: string, emoji: FeedReactionEmoji) => {
+    async (postId: string, emoji: FeedReactionEmoji, postAuthorId?: string) => {
       if (!uid) return;
+      if (postAuthorId && postAuthorId === uid) return;
       await toggleFeedPostReaction(postId, uid, emoji);
       void reload([postId]);
     },

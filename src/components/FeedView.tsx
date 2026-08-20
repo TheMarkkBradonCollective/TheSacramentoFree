@@ -1,6 +1,6 @@
 import { useMemo, useState, Fragment } from 'react';
-import { AlertCircle, Plus } from 'lucide-react';
-import type { UserProfile } from '../types';
+import { Newspaper, Plus, Sparkles } from 'lucide-react';
+import type { FeedPost, UserProfile } from '../types';
 import { useFeedEngagement } from '../hooks/useFeedEngagement';
 import { useFeedPosts } from '../hooks/useFeedPosts';
 import FeedPostComposer from './feed/FeedPostComposer';
@@ -11,12 +11,14 @@ interface FeedViewProps {
   userProfile: UserProfile;
   blockedUserIds?: Set<string>;
   onViewProfile?: (userId: string) => void;
+  onViewFeedPost?: (post: FeedPost) => void;
 }
 
 export default function FeedView({
   userProfile,
   blockedUserIds = new Set(),
   onViewProfile,
+  onViewFeedPost,
 }: FeedViewProps) {
   const { posts, loading, creating, publishPost, removePost } = useFeedPosts(userProfile);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -79,9 +81,15 @@ export default function FeedView({
       {loading && visiblePosts.length === 0 && !composerOpen ? (
         <ItemGridSkeleton count={3} />
       ) : visiblePosts.length === 0 && !composerOpen ? (
-        <div className="sbn-card text-center py-16 px-8 border-dashed" id="empty_neighbor_feed_state">
-          <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
-          <h3 className="font-display text-lg font-bold text-app">No posts yet</h3>
+        <div className="sbn-card text-center py-12 px-6 border-dashed" id="empty_neighbor_feed_state">
+          <span className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent-soft border border-accent/25 text-accent mb-3">
+            <Newspaper className="w-7 h-7" aria-hidden />
+          </span>
+          <p className="text-xs font-bold text-accent uppercase tracking-wider flex items-center justify-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            Neighbor feed
+          </p>
+          <h3 className="font-display text-lg font-bold text-app mt-2">No posts yet</h3>
           <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
             Share a thought or photo with neighbors — comments, reactions, and votes live here.
           </p>
@@ -101,6 +109,7 @@ export default function FeedView({
                 post={post}
                 userProfile={userProfile}
                 engagement={engagement}
+                onViewPost={onViewFeedPost}
                 onViewProfile={onViewProfile}
                 onDeletePost={removePost}
               />

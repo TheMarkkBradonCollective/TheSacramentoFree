@@ -6,12 +6,14 @@ import { useEventsEngagement } from './hooks/useEventsEngagement';
 import { useEventsRealtime } from './hooks/useEventsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
-import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent } from './types';
+import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent, FeedPost } from './types';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
 import NewListingModal, { type NewListingModalMode } from './components/NewListingModal';
-import ItemDetailView from './components/ItemDetailView';
+import FeedPostDetailView from './components/feed/FeedPostDetailView';
+import { deleteFeedPost } from './lib/feedApi';
+import { isStaffRole } from './lib/roles';
 import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
 import PostEventModal from './components/PostEventModal';
@@ -195,6 +197,7 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [addEventDatesMode, setAddEventDatesMode] = useState(false);
   const [detailItem, setDetailItem] = useState<ItemPost | null>(null);
+  const [detailFeedPost, setDetailFeedPost] = useState<FeedPost | null>(null);
   const [detailNavigateOnOpen, setDetailNavigateOnOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<CommunityEvent | null>(null);
   const [detailEventNavigateOnOpen, setDetailEventNavigateOnOpen] = useState(false);
@@ -1437,6 +1440,34 @@ export default function App() {
     openDetailItem(item, false);
   }, [openDetailItem]);
 
+  const handleViewFeedPost = useCallback((post: FeedPost) => {
+    setDetailFeedPost(post);
+  }, []);
+
+  const handleDeleteFeedPost = useCallback(
+    async (post: FeedPost) => {
+      if (!userProfile) return;
+      const isStaff = isStaffRole(userProfile.role);
+      const ok = await confirm({
+        title: 'Delete post?',
+        message:
+          isStaff && post.userId !== userProfile.uid
+            ? 'Remove this neighbor post as staff?'
+            : 'Delete your post for everyone?',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      });
+      if (!ok) return;
+      const result = await deleteFeedPost(post.id, userProfile.uid, isStaff);
+      if (!result.ok) {
+        await alert({ title: 'Could not delete', message: result.errorMessage || 'Try again.' });
+        return;
+      }
+      setDetailFeedPost(null);
+    },
+    [userProfile, confirm, alert],
+  );
+
   const handleNavigateItem = useCallback(
     (item: ItemPost) => {
       openDetailItem(item, true);
@@ -1813,6 +1844,7 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
                   onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
@@ -1873,6 +1905,7 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
                   onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
@@ -1933,6 +1966,7 @@ export default function App() {
                   itemsHydrated={itemsHydrated}
                   eventsHydrated={eventsHydrated}
                   onViewItem={handleViewItem}
+                  onViewFeedPost={handleViewFeedPost}
                   onNavigateItem={handleNavigateItem}
                   onRepostPost={handleRepostPost}
                   onDeletePost={handleDeletePost}
@@ -2027,7 +2061,7 @@ export default function App() {
                   currentUserId={userProfile.uid}
                   currentUserProfile={userProfile}
                   listingHints={visibleItems}
-                  nested={Boolean(detailItem || detailEvent)}
+                  nested={Boolean(detailItem || detailEvent || detailFeedPost)}
                   onClose={() => setViewProfileUid(null)}
                   onOpenChat={handleOpenChatFromProfile}
                   onViewPost={handleViewItem}
@@ -2050,6 +2084,17 @@ export default function App() {
                     setShowDirectMessageModal(false);
                     handleOpenChatFromProfile(chatId);
                   }}
+                />
+              )}
+
+              {detailFeedPost && userProfile && (
+                <FeedPostDetailView
+                  post={detailFeedPost}
+                  userProfile={userProfile}
+                  blockedUserIds={blockedUserIds}
+                  onClose={() => setDetailFeedPost(null)}
+                  onViewProfile={handleViewProfile}
+                  onDeletePost={(post) => void handleDeleteFeedPost(post)}
                 />
               )}
 

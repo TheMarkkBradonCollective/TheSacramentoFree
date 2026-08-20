@@ -290,15 +290,16 @@ export async function toggleFeedPostReaction(
   if (!FEED_REACTION_EMOJI.includes(emoji)) return false;
 
   try {
-    const { data: existing } = await supabase
+    const { data: existingRows } = await supabase
       .from('feed_post_reactions')
       .select('emoji')
       .eq('postId', postId)
-      .eq('userId', userId)
-      .eq('emoji', emoji)
-      .maybeSingle();
+      .eq('userId', userId);
 
-    if (existing) {
+    const existing = existingRows ?? [];
+    const hasSame = existing.some((row) => String(row.emoji) === emoji);
+
+    if (hasSame) {
       const { error } = await supabase
         .from('feed_post_reactions')
         .delete()
@@ -306,6 +307,15 @@ export async function toggleFeedPostReaction(
         .eq('userId', userId)
         .eq('emoji', emoji);
       return !error;
+    }
+
+    if (existing.length > 0) {
+      const { error: clearError } = await supabase
+        .from('feed_post_reactions')
+        .delete()
+        .eq('postId', postId)
+        .eq('userId', userId);
+      if (clearError) return false;
     }
 
     const { error } = await supabase.from('feed_post_reactions').insert({
