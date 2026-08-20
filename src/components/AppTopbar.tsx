@@ -10,7 +10,7 @@ interface AppTopbarProps {
   title?: string;
   onOpenAwards: () => void;
   awardsButtonGlow?: boolean;
-  /** Contextual primary action, e.g. "+ Post" on Feed, "+ Post event" on Events. */
+  /** Contextual primary action, e.g. "+ Post" on Stuff, "+ Post event" on Events. */
   action?: ReactNode;
   /** Opens the staff sidebar drawer — hamburger sits top-left where the logo lives in the shell. */
   onToggleSidebar?: () => void;

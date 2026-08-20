@@ -397,6 +397,9 @@ export default function SacramentoMapView({
   commentsLocked = false,
 }: SacramentoMapViewProps) {
   const isStaffViewer = isStaffActingOfficial(userProfile);
+
+  const neighborListingUsesNavigate = (post: ItemPost): boolean =>
+    post.userId !== userProfile.uid && post.status === 'active' && !isStaffViewer;
   const openItemDetail = onViewItem || onItemDetail;
   const { confirm, alert } = useConfirm();
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -1732,7 +1735,10 @@ export default function SacramentoMapView({
                           )
                         ) : (
                           <>
-                            {!isStaffViewer && onClaimSubmitted &&
+                            {!isStaffViewer &&
+                              onClaimSubmitted &&
+                              selectedPost &&
+                              !neighborListingUsesNavigate(selectedPost) &&
                               canOfferContactlessClaim(
                                 selectedPost,
                                 userProfile.uid,
@@ -1748,6 +1754,7 @@ export default function SacramentoMapView({
                                 compact
                               />
                             )}
+                            {selectedPost && neighborListingUsesNavigate(selectedPost) ? null : (
                             <button
                               type="button"
                               onClick={() =>
@@ -1772,6 +1779,7 @@ export default function SacramentoMapView({
                                 </>
                               )}
                             </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -2303,7 +2311,10 @@ export default function SacramentoMapView({
                       )
                     ) : (
                       <>
-                        {!isStaffViewer && onClaimSubmitted &&
+                        {!isStaffViewer &&
+                          onClaimSubmitted &&
+                          selectedPost &&
+                          !neighborListingUsesNavigate(selectedPost) &&
                           canOfferContactlessClaim(
                             selectedPost,
                             userProfile.uid,
@@ -2319,6 +2330,7 @@ export default function SacramentoMapView({
                             compact
                           />
                         )}
+                        {selectedPost && neighborListingUsesNavigate(selectedPost) ? null : (
                         <button
                           id="map_message_btn"
                           onClick={() =>
@@ -2343,6 +2355,7 @@ export default function SacramentoMapView({
                             </>
                           )}
                         </button>
+                        )}
                       </>
                     )}
                   </div>

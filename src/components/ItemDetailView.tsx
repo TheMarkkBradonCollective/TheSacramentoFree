@@ -96,6 +96,8 @@ export default function ItemDetailView({
   const isStaffViewer = isStaffActingOfficial(userProfile);
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
+  const showNeighborNavigate =
+    !isOwner && !isStaffViewer && item.status === 'active' && isOpenForCoordination;
 
   const { isSaved, toggleSaved } = useSavedItems(currentUserId);
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
@@ -554,7 +556,8 @@ export default function ItemDetailView({
                   </button>
                 ) : (
                   isOpenForCoordination &&
-                  onMessage && (
+                  onMessage &&
+                  !showNeighborNavigate && (
                     <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary flex-1">
                       <MessageSquare className="w-4 h-4" />
                       Message
@@ -562,7 +565,11 @@ export default function ItemDetailView({
                   )
                 )}
               </div>
-              {item.status === 'active' && userProfile && onClaimSubmitted && !isStaffViewer && (
+              {item.status === 'active' &&
+                userProfile &&
+                onClaimSubmitted &&
+                !isStaffViewer &&
+                !showNeighborNavigate && (
                 <ClaimAtPickupButton
                   item={item}
                   user={userProfile}

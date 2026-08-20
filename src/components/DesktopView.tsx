@@ -35,6 +35,7 @@ interface DesktopViewProps {
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onStaffListingChat?: (item: ItemPost) => void;
+  onStaffEventChat?: (event: CommunityEvent) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
   onNavigateItem?: (item: ItemPost) => void;
@@ -98,6 +99,7 @@ export default function DesktopView({
   canAccessEvents = true,
   onInitiateChat,
   onStaffListingChat,
+  onStaffEventChat,
   onClaimSubmitted,
   onViewItem,
   onNavigateItem,
@@ -277,6 +279,7 @@ export default function DesktopView({
                       engagement={eventsEngagement}
                       onViewEvent={onViewEvent}
                       onNavigateEvent={onNavigateEvent}
+                      onStaffEventChat={onStaffEventChat}
                       onViewProfile={onViewProfile}
                       onRefresh={onRefreshEvents}
                       isLoading={isEventsLoading}

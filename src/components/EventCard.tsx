@@ -1,5 +1,5 @@
-import { Calendar, Eye, MapPin, Navigation, Repeat } from 'lucide-react';
-import { CommunityEvent } from '../types';
+import { Calendar, Eye, LifeBuoy, MapPin, Navigation, Repeat } from 'lucide-react';
+import { CommunityEvent, UserProfile } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
 import EventStatusBadge from './EventStatusBadge';
@@ -8,6 +8,7 @@ import ListingImage from './ListingImage';
 import { isEventPast, resolveEventStatus } from '../lib/eventRsvp';
 import { isSeriesEvent } from '../lib/eventSeries';
 import { formatRouteDistance } from '../lib/mapRoute';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 
 interface EventCardProps {
   event: CommunityEvent;
@@ -22,6 +23,9 @@ interface EventCardProps {
   distanceMeters?: number | null;
   /** Open navigation to this event (map-view parity). */
   onNavigate?: () => void;
+  userProfile?: UserProfile;
+  /** Staff opens reverse support thread about this event. */
+  onStaffChat?: () => void;
 }
 
 function formatEventDate(iso: string): string {
@@ -54,11 +58,14 @@ export default function EventCard({
   seriesUpcomingCount,
   distanceMeters,
   onNavigate,
+  userProfile,
+  onStaffChat,
 }: EventCardProps) {
   const eventStatus = resolveEventStatus(event);
   const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
   const inactive = isCancelled || isPast;
+  const isStaffViewer = isStaffActingOfficial(userProfile);
   const rsvpState = engagement.getRsvpsForEvent(event.id);
   const comments = engagement.getCommentsForEvent(event.id);
   const coverImage = event.imageUrl;
@@ -170,12 +177,17 @@ export default function EventCard({
               <Eye className="w-3.5 h-3.5" />
               <span className="hidden sm:inline ml-1">View</span>
             </button>
-            {onNavigate && !isCancelled && !isPast && (
+            {isStaffViewer && onStaffChat ? (
+              <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+                <LifeBuoy className="w-3.5 h-3.5" />
+                <span className="ml-1">Staff chat</span>
+              </button>
+            ) : !isStaffViewer && onNavigate && !isCancelled && !isPast ? (
               <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm">
                 <Navigation className="w-3.5 h-3.5" />
                 <span className="ml-1">Navigate</span>
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

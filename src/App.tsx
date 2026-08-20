@@ -1735,6 +1735,7 @@ export default function App() {
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}
@@ -1793,6 +1794,7 @@ export default function App() {
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}
@@ -1851,6 +1853,7 @@ export default function App() {
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
+                  onStaffEventChat={handleStaffEventOutreach}
                   onClaimSubmitted={handleClaimSubmitted}
                   onLogout={handleLogOut}
                   onUpdateProfile={(updated) => setUserProfile(updated)}

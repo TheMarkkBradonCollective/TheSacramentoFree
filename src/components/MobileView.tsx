@@ -40,6 +40,7 @@ interface MobileViewProps {
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
   onStaffListingChat?: (item: ItemPost) => void;
+  onStaffEventChat?: (event: CommunityEvent) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
   onNavigateItem?: (item: ItemPost) => void;
@@ -107,6 +108,7 @@ export default function MobileView({
   canAccessEvents = true,
   onInitiateChat,
   onStaffListingChat,
+  onStaffEventChat,
   onClaimSubmitted,
   onViewItem,
   onNavigateItem,
@@ -292,7 +294,7 @@ export default function MobileView({
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <div className="sbn-page-header"><h2>{IN_APP.eventsTitle}</h2></div>
-                  <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
+                  <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onStaffEventChat={onStaffEventChat} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
                 </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
                   <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
@@ -466,6 +468,7 @@ export default function MobileView({
               engagement={eventsEngagement}
               onViewEvent={onViewEvent}
               onNavigateEvent={onNavigateEvent}
+              onStaffEventChat={onStaffEventChat}
               onViewProfile={onViewProfile}
               onRefresh={onRefreshEvents}
               isLoading={isEventsLoading}

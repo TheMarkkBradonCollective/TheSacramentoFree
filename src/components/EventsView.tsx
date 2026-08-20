@@ -9,13 +9,14 @@ import {
 } from 'lucide-react';
 import { CommunityEvent, SACRAMENTO_NEIGHBORHOODS, UserProfile } from '../types';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
-import { isEventUpcoming } from '../lib/eventRsvp';
+import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { buildSeriesUpcomingCountMap, collapseEventSeriesForDisplay } from '../lib/eventSeries';
 import { EVENTS } from '../siteContent';
 import FilterLabeledSwitch from './FilterLabeledSwitch';
 import CollapsibleFilterSection from './CollapsibleFilterSection';
 import EventCard from './EventCard';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
 
 interface EventsViewProps {
@@ -24,6 +25,7 @@ interface EventsViewProps {
   engagement: EventsEngagementApi;
   onViewEvent: (event: CommunityEvent) => void;
   onNavigateEvent?: (event: CommunityEvent) => void;
+  onStaffEventChat?: (event: CommunityEvent) => void;
   onViewProfile: (userId: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
@@ -106,6 +108,7 @@ export default function EventsView({
   engagement,
   onViewEvent,
   onNavigateEvent,
+  onStaffEventChat,
   onViewProfile,
   onRefresh,
   isLoading = false,
@@ -136,6 +139,19 @@ export default function EventsView({
   const getEventDistance = (event: CommunityEvent): number | null => {
     if (!userLocation || event.locationLat == null || event.locationLng == null) return null;
     return haversineMeters(userLocation, { lat: event.locationLat, lng: event.locationLng });
+  };
+
+  const eventHasMapPin = (event: CommunityEvent): boolean =>
+    typeof event.locationLat === 'number' &&
+    typeof event.locationLng === 'number' &&
+    Number.isFinite(event.locationLat) &&
+    Number.isFinite(event.locationLng);
+
+  const canNavigateToEvent = (event: CommunityEvent): boolean => {
+    if (event.userId === userProfile.uid) return false;
+    if (isStaffActingOfficial(userProfile)) return false;
+    if (resolveEventStatus(event) === 'cancelled' || isEventPast(event)) return false;
+    return eventHasMapPin(event);
   };
 
   const hasExtraFilters =
@@ -423,6 +439,7 @@ export default function EventsView({
               <EventCard
                 event={event}
                 currentUserId={userProfile.uid}
+                userProfile={userProfile}
                 engagement={engagement}
                 onViewEvent={onViewEvent}
                 onViewProfile={onViewProfile}
@@ -431,7 +448,16 @@ export default function EventsView({
                   event.seriesId ? seriesUpcomingCounts.get(event.seriesId) : undefined
                 }
                 distanceMeters={getEventDistance(event)}
-                onNavigate={() => (onNavigateEvent ?? onViewEvent)(event)}
+                onNavigate={
+                  canNavigateToEvent(event)
+                    ? () => (onNavigateEvent ?? onViewEvent)(event)
+                    : undefined
+                }
+                onStaffChat={
+                  onStaffEventChat && isStaffActingOfficial(userProfile)
+                    ? () => onStaffEventChat(event)
+                    : undefined
+                }
               />
             </div>
           ))}

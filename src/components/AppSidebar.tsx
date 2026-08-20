@@ -20,6 +20,7 @@ import type { CSSProperties } from 'react';
 import type { UserProfile } from '../types';
 import type { AnyTab } from '../lib/appTabs';
 import { isStaffRole, roleLabel, roleRank, roleTheme } from '../lib/roles';
+import { IN_APP } from '../siteContent';
 import BrandLogo from './BrandLogo';
 import { PresenceUserAvatar } from './UserAvatar';
 
@@ -34,7 +35,7 @@ interface SidebarItem {
 
 const NAV_ITEMS: SidebarItem[] = [
   // Community
-  { id: 'feed', label: 'Feed', icon: List, section: 'community' },
+  { id: 'feed', label: IN_APP.feedTabLabel, icon: List, section: 'community' },
   { id: 'events', label: 'Events', icon: CalendarDays, section: 'community' },
   { id: 'map', label: 'Map', icon: Map, section: 'community' },
   { id: 'chats', label: 'Chats', icon: MessageSquare, section: 'community' },
