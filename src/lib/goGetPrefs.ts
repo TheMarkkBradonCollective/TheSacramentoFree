@@ -145,7 +145,7 @@ export async function persistUserGoGetSettings(
 ): Promise<{ ok: boolean; profile?: UserProfile; errorMessage?: string }> {
   const updated = mergeGoGetPrefsIntoProfile({ ...profile, ...patch });
   writeStoredGoGetPrefs(profileToStoredGoGetPrefs(updated));
-  const result = await upsertSupabaseProfile(updated);
+  const result = await upsertSupabaseProfile(updated, { scope: 'preferences' });
   if (!result.ok) return result;
   return { ok: true, profile: updated };
 }

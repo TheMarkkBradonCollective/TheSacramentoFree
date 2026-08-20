@@ -148,6 +148,13 @@ export default function UserProfileView({
   }, [userProfile.uid]);
 
   useEffect(() => {
+    if (isSaving || isPhotoUploading) return;
+    setDisplayName(userProfile.displayName);
+    setNeighborhood(userProfile.neighborhood);
+    setBio(userProfile.bio || '');
+  }, [userProfile.uid, userProfile.displayName, userProfile.neighborhood, userProfile.bio, isSaving, isPhotoUploading]);
+
+  useEffect(() => {
     if (!onOpenAwards) return;
     let cancelled = false;
     setAwardsLoading(true);

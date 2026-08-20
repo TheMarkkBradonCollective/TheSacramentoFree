@@ -739,6 +739,7 @@ export function profileFromListingAuthor(
 
 export async function upsertSupabaseProfile(
   profile: UserProfile,
+  options: { scope?: 'full' | 'preferences' } = {},
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
     const email = profile.email?.trim();
@@ -752,11 +753,80 @@ export async function upsertSupabaseProfile(
       ),
     );
 
+    const scope = options.scope ?? 'full';
+
+    if (scope === 'preferences') {
+      const prefsPayload = {
+        goGetEnabled: profileForSave.goGetEnabled === true,
+        pickupAvailability: profileForSave.pickupAvailability ?? null,
+        goGetRingDurationSeconds: normalizeGoGetRingDuration(profileForSave.goGetRingDurationSeconds),
+        goGetRingPattern: normalizeGoGetRingPattern(profileForSave.goGetRingPattern),
+        navigationSettings: profileForSave.navigationSettings ?? null,
+        appPreferences: profileForSave.appPreferences ?? null,
+        staffInteractionMode:
+          profileForSave.staffInteractionMode === 'neighbor' ? 'neighbor' : 'staff',
+      };
+
+      let { error } = await supabase.from('users').update(prefsPayload).eq('uid', profileForSave.uid);
+
+      if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+        const wantsGoGetPrefs =
+          prefsPayload.goGetEnabled === true ||
+          prefsPayload.pickupAvailability != null ||
+          prefsPayload.goGetRingDurationSeconds !== 140 ||
+          prefsPayload.goGetRingPattern !== 'ring';
+        if (/pickupAvailability|goGetRing/i.test(`${error.code || ''} ${error.message || ''}`) && wantsGoGetPrefs) {
+          return {
+            ok: false,
+            errorMessage:
+              'Go Get settings could not be saved. Run scripts/supabase-migration-aug-20-2026-go-get-ring-availability.sql in the Supabase SQL editor, then try again.',
+          };
+        }
+        if (/navigationSettings/i.test(`${error.code || ''} ${error.message || ''}`) && prefsPayload.navigationSettings != null) {
+          return {
+            ok: false,
+            errorMessage:
+              'Navigation settings could not be saved. Run scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql in the Supabase SQL editor, then try again.',
+          };
+        }
+        if (/staffInteractionMode/i.test(`${error.code || ''} ${error.message || ''}`) && isStaffRole(profileForSave.role)) {
+          return {
+            ok: false,
+            errorMessage:
+              'Staff/user mode could not be saved. Run scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql in the Supabase SQL editor, then try again.',
+          };
+        }
+        const {
+          goGetEnabled: _goGet,
+          staffInteractionMode: _mode,
+          pickupAvailability: _avail,
+          goGetRingDurationSeconds: _ringDur,
+          goGetRingPattern: _ringPat,
+          navigationSettings: _nav,
+          appPreferences: _prefs,
+          ...legacyPrefs
+        } = prefsPayload;
+        ({ error } = await supabase.from('users').update(legacyPrefs).eq('uid', profileForSave.uid));
+      }
+
+      if (error) {
+        handleSupabaseError(error, 'users');
+        return { ok: false, errorMessage: error.message };
+      }
+
+      setSupabaseConfigurationState(true);
+      return { ok: true };
+    }
+
     const photoURL = photoUrlForProfileUpsert(profileForSave);
+    const displayName = profileForSave.displayName.trim();
+    if (!displayName) {
+      return { ok: false, errorMessage: 'Display name is required.' };
+    }
 
     const payload = {
       uid: profileForSave.uid,
-      displayName: profileForSave.displayName.trim(),
+      displayName,
       ...(photoURL !== undefined ? { photoURL } : {}),
       email,
       neighborhood: profileForSave.neighborhood,

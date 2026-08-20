@@ -136,7 +136,7 @@ export async function persistUserNavigationSettings(
   });
   writeStoredNavPrefs({ uid: profile.uid, settings: navigationSettings });
   const updated: UserProfile = { ...profile, navigationSettings };
-  const result = await upsertSupabaseProfile(updated);
+  const result = await upsertSupabaseProfile(updated, { scope: 'preferences' });
   if (!result.ok) return result;
   return { ok: true, profile: updated };
 }

@@ -112,7 +112,7 @@ export async function persistUserAppPreferencesCached(
   const appPreferences = mergeAppPreferences(mergeStoredAppPreferencesIntoProfile(profile).appPreferences, patch);
   writeStoredAppPrefs({ uid: profile.uid, appPreferences });
   const updated: UserProfile = { ...profile, appPreferences };
-  const result = await upsertSupabaseProfile(updated);
+  const result = await upsertSupabaseProfile(updated, { scope: 'preferences' });
   if (!result.ok) return result;
   return { ok: true, profile: updated };
 }
