@@ -168,7 +168,7 @@ export default function MobileView({
   // For staff, the type is AnyTab; for regular users, it's AppTab.
   // We cast activeTab back to AppTab for views that only accept AppTab.
   const setActiveTab = setActiveTabRaw;
-  const communityTab = isStaff
+  const communityTab = showStaffConsole
     ? (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
       ? (activeTab as AppTab)
       : 'feed'

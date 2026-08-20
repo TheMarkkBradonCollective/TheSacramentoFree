@@ -56,6 +56,7 @@ const APK_0027_PUBLISHED_AT = '2026-08-20T09:45:00.000Z';
 const APK_0028_PUBLISHED_AT = '2026-08-20T10:20:00.000Z';
 const APK_0029_PUBLISHED_AT = '2026-08-20T10:40:00.000Z';
 const APK_0030_PUBLISHED_AT = '2026-08-20T11:05:00.000Z';
+const APK_0031_PUBLISHED_AT = '2026-08-20T13:10:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
@@ -110,6 +111,34 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0031',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0031',
+    'Launcher icon fix plus nav banner pinned to top, chat listing/event previews, profile stats layout, and listing type badges.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0031 (versionCode 31).
+
+Since 0030:
+• Nav banner stays pinned to the top; map camera keeps you centered
+• Coordination chats show the listing or event preview at the top
+• Profile stats: three cards on top, two below
+• Listing cards show only the type badge (Given / Looking / Trade)
+• Listing detail header scrolls correctly
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0031.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 31
+- play-store-assets/release-notes-v0.1.0-0031.txt
+
+HISTORY
+2026-08-20 — /runit release merging PRs #245–#252; Android beta 0031 built.`,
+    APK_0031_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0030',
     '2026-08-20',
@@ -1007,6 +1036,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0031',
+    '2026-08-20',
+    'New Android beta 0031 — nav, chats, profile, listings',
+    'Nav banner pinned to top, chat previews, profile stats layout, listing type badges. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0031 bundles launcher icon fix, nav improvements, chat previews, profile stats layout, and cleaner listing type badges.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0031.
+
+HISTORY
+2026-08-20 — Android beta 0031 /runit release.`,
+    APK_0031_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0030',
     '2026-08-20',

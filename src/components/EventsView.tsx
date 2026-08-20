@@ -406,13 +406,14 @@ export default function EventsView({
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort events</p>
             <div className="flex flex-wrap gap-2">
               {SORT_OPTIONS.map(({ value, label }) => (
-                <FilterLabeledSwitch
-                  key={value}
-                  id={`events_sort_${value}`}
-                  label={label}
-                  checked={sortBy === value}
-                  onChange={handleSortSwitch(value)}
-                />
+                <span key={value} className="contents">
+                  <FilterLabeledSwitch
+                    id={`events_sort_${value}`}
+                    label={label}
+                    checked={sortBy === value}
+                    onChange={handleSortSwitch(value)}
+                  />
+                </span>
               ))}
             </div>
           </div>
@@ -421,13 +422,14 @@ export default function EventsView({
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">When</p>
             <div className="flex flex-wrap gap-2" id="events_time_filter">
               {TIME_FILTER_OPTIONS.map(({ value, label }) => (
-                <FilterLabeledSwitch
-                  key={value}
-                  id={`events_time_${value}`}
-                  label={label}
-                  checked={timeFilter === value}
-                  onChange={handleTimeSwitch(value)}
-                />
+                <span key={value} className="contents">
+                  <FilterLabeledSwitch
+                    id={`events_time_${value}`}
+                    label={label}
+                    checked={timeFilter === value}
+                    onChange={handleTimeSwitch(value)}
+                  />
+                </span>
               ))}
             </div>
           </div>
@@ -436,13 +438,14 @@ export default function EventsView({
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
             <div className="flex flex-wrap gap-2">
               {EVENT_QUICK_PICKS.map(({ id, label }) => (
-                <FilterLabeledSwitch
-                  key={id}
-                  id={`events_quick_pick_${id}`}
-                  label={label}
-                  checked={activeQuickPicks.has(id)}
-                  onChange={handleQuickPickSwitch(id)}
-                />
+                <span key={id} className="contents">
+                  <FilterLabeledSwitch
+                    id={`events_quick_pick_${id}`}
+                    label={label}
+                    checked={activeQuickPicks.has(id)}
+                    onChange={handleQuickPickSwitch(id)}
+                  />
+                </span>
               ))}
             </div>
           </div>

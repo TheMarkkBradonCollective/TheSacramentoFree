@@ -748,7 +748,7 @@ export default function SacramentoMapView({
   };
 
   // Filter items in real time for accuracy
-  const activeItems = useMemo(() => {
+  const activeItems = useMemo((): ItemPost[] => {
     if (showingEvents) return [];
 
     return items.filter((item) => {
@@ -772,12 +772,15 @@ export default function SacramentoMapView({
   }, [items, sType, sCat, sNeigh, sTerm, showingEvents]);
 
   useEffect(() => {
-    const posterIds = [...new Set(activeItems.map((i) => i.userId).filter((uid): uid is string => Boolean(uid) && uid !== userProfile.uid))];
-    if (posterIds.length === 0) {
+    const posterIds = activeItems
+      .map((i) => i.userId)
+      .filter((uid) => uid !== userProfile.uid);
+    const uniquePosterIds = Array.from(new Set<string>(posterIds));
+    if (uniquePosterIds.length === 0) {
       setPosterCoordByUid({});
       return;
     }
-    void getUserPickupCoordinationByIds(posterIds).then(setPosterCoordByUid);
+    void getUserPickupCoordinationByIds(uniquePosterIds).then(setPosterCoordByUid);
   }, [activeItems, userProfile.uid]);
 
   const activeEvents = useMemo(() => {

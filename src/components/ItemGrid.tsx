@@ -461,24 +461,26 @@ export default function ItemGrid({
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Sort feed</p>
             <div className="flex flex-wrap gap-2">
               {PRIMARY_FEED_SORTS.map(({ value, label }) => (
-                <FilterLabeledSwitch
-                  key={value}
-                  id={`feed_sort_${value}`}
-                  label={label}
-                  checked={sortBy === value}
-                  onChange={handleSortSwitch(value)}
-                />
+                <span key={value} className="contents">
+                  <FilterLabeledSwitch
+                    id={`feed_sort_${value}`}
+                    label={label}
+                    checked={sortBy === value}
+                    onChange={handleSortSwitch(value)}
+                  />
+                </span>
               ))}
             </div>
             <div className="grid grid-cols-3 gap-2 pt-1" id="feed_type_filter">
               {LISTING_POST_TYPES.map((type) => (
-                <FilterLabeledSwitch
-                  key={type}
-                  id={`type_${type}_switch`}
-                  label={getPostTypeFilterLabel(type)}
-                  checked={selectedType === type}
-                  onChange={handleTypeSwitch(type)}
-                />
+                <span key={type} className="contents">
+                  <FilterLabeledSwitch
+                    id={`type_${type}_switch`}
+                    label={getPostTypeFilterLabel(type)}
+                    checked={selectedType === type}
+                    onChange={handleTypeSwitch(type)}
+                  />
+                </span>
               ))}
             </div>
           </div>
@@ -487,13 +489,14 @@ export default function ItemGrid({
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Quick picks</p>
             <div className="flex flex-wrap gap-2">
               {QUICK_PICKS.map(({ id, label }) => (
-                <FilterLabeledSwitch
-                  key={id}
-                  id={`quick_pick_${id}`}
-                  label={label}
-                  checked={activeQuickPicks.has(id)}
-                  onChange={handleQuickPickSwitch(id)}
-                />
+                <span key={id} className="contents">
+                  <FilterLabeledSwitch
+                    id={`quick_pick_${id}`}
+                    label={label}
+                    checked={activeQuickPicks.has(id)}
+                    onChange={handleQuickPickSwitch(id)}
+                  />
+                </span>
               ))}
             </div>
           </div>
