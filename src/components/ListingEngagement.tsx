@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useBrowseOnly } from '../contexts/BrowseOnlyContext';
 import { ChevronDown, ChevronUp, Flag, MessageSquare, Trash2 } from 'lucide-react';
 import { ItemComment, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
@@ -41,7 +40,6 @@ export default function ListingEngagement({
   variant = 'card',
   commenterRoles,
 }: ListingEngagementProps) {
-  const browseOnly = useBrowseOnly();
   const DETAIL_PREVIEW_COUNT = 5;
   const isOwner = posterUserId === currentUserId;
   const { userVote, upvotes, downvotes } = voteState;
@@ -79,9 +77,9 @@ export default function ListingEngagement({
       <div className={`flex items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2 sm:mt-4' : ''}`}>
         <button
           type="button"
-          disabled={isOwner || browseOnly}
+          disabled={isOwner}
           onClick={() => onVote('up')}
-          className={voteBtnClass(userVote === 'up', isOwner || browseOnly)}
+          className={voteBtnClass(userVote === 'up', isOwner)}
           title={isOwner ? "You can't vote on your own listing" : 'Interested'}
         >
           <ChevronUp className="w-4 h-4" />
@@ -92,10 +90,10 @@ export default function ListingEngagement({
         </span>
         <button
           type="button"
-          disabled={isOwner || browseOnly}
+          disabled={isOwner}
           onClick={() => onVote('down')}
           className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-            isOwner || browseOnly
+            isOwner
               ? 'opacity-50 cursor-not-allowed border-app text-muted'
               : userVote === 'down'
                 ? 'bg-inset border-app text-app'
@@ -213,7 +211,6 @@ export default function ListingEngagement({
               )}
             </>
           )}
-          {!browseOnly && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -236,7 +233,6 @@ export default function ListingEngagement({
               Post
             </button>
           </form>
-          )}
         </div>
       )}
 

@@ -67,12 +67,9 @@ export default function ItemCard({
   onViewProfile,
   distanceMeters,
   onNavigate,
-<<<<<<< HEAD
   onStaffChat,
   showPickupCoordination = true,
-=======
   layout = 'list',
->>>>>>> origin/cursor/feed-list-grid-view-2609
 }: ItemCardProps) {
   const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;

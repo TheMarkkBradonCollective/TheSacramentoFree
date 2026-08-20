@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useBrowseOnly } from '../contexts/BrowseOnlyContext';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 import { Chat, Message, UserProfile, ItemPost, MessageRequest, PendingChatCompose, SupportTicket } from '../types';
 import {
@@ -132,7 +131,6 @@ export default function ChatSystem({
   onViewRelatedListing,
   onViewRelatedEvent,
 }: ChatSystemProps) {
-  const browseOnly = useBrowseOnly();
   const [chats, setChats] = useState<Chat[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<MessageRequest[]>([]);
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null);
@@ -1581,9 +1579,7 @@ export default function ChatSystem({
                       onChange={(e) => setInputText(e.target.value)}
                       onFocus={scrollToBottom}
                       placeholder={
-                        browseOnly
-                          ? 'View-only review account'
-                          : isStaffCommunityChat(selectedChat.id) && !userIsStaff
+                        isStaffCommunityChat(selectedChat.id) && !userIsStaff
                           ? 'Staff only'
                           : isChatDisabled
                             ? 'This chat is read-only'
@@ -1594,7 +1590,6 @@ export default function ChatSystem({
                       maxLength={2000}
                       required
                       disabled={
-                        browseOnly ||
                         !!isChatDisabled ||
                         (isStaffCommunityChat(selectedChat.id) && !userIsStaff)
                       }
@@ -1604,7 +1599,6 @@ export default function ChatSystem({
                       type="submit"
                       id="message_send_btn"
                       disabled={
-                        browseOnly ||
                         !inputText.trim() ||
                         isSending ||
                         !!isChatDisabled ||
