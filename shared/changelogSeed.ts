@@ -57,6 +57,7 @@ const APK_0028_PUBLISHED_AT = '2026-08-20T10:20:00.000Z';
 const APK_0029_PUBLISHED_AT = '2026-08-20T10:40:00.000Z';
 const APK_0030_PUBLISHED_AT = '2026-08-20T11:05:00.000Z';
 const APK_0031_PUBLISHED_AT = '2026-08-20T13:10:00.000Z';
+const APK_0032_PUBLISHED_AT = '2026-08-20T13:28:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
@@ -111,6 +112,31 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0032',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0032',
+    'Staff/User mode now gates staff notifications; listing and event detail headers scroll with the page.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0032 (versionCode 32).
+
+Since 0031:
+• Staff/User mode switch also controls staff and director push alerts
+• Listing and event detail toolbars scroll with content — no pinned header or bottom Back button
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0032.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 32
+- play-store-assets/release-notes-v0.1.0-0032.txt
+
+HISTORY
+2026-08-20 — /runit release merging PRs #254–#255; Android beta 0032 built.`,
+    APK_0032_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0031',
     '2026-08-20',
@@ -1036,6 +1062,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0032',
+    '2026-08-20',
+    'New Android beta 0032 — staff mode notifications, detail headers',
+    'Staff/User mode gates staff alerts; listing and event detail headers scroll with the page. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0032 ties staff notifications to Staff/User mode and simplifies listing and event detail headers.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0032.
+
+HISTORY
+2026-08-20 — Android beta 0032 /runit release.`,
+    APK_0032_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0031',
     '2026-08-20',
