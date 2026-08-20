@@ -194,7 +194,7 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
                           onClick={() => onViewProfile(user.uid)}
                           className="shrink-0"
                         >
-                          <UserAvatar src={user.photoURL} name={user.displayName} size="sm" />
+                          <UserAvatar uid={user.uid} src={user.photoURL} name={user.displayName} size="sm" />
                         </button>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">

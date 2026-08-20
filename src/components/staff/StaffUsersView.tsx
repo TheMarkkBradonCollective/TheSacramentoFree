@@ -295,7 +295,7 @@ export default function StaffUsersView({ actor, onViewProfile }: StaffUsersViewP
                           onClick={() => onViewProfile(user.uid)}
                           className="flex items-center gap-2 text-left hover:text-accent"
                         >
-                          <UserAvatar src={user.photoURL} name={user.displayName} size="xs" />
+                          <UserAvatar uid={user.uid} src={user.photoURL} name={user.displayName} size="xs" />
                           <div className="min-w-0">
                             <p className="font-semibold text-app truncate max-w-[160px]">{user.displayName}</p>
                             <p className="text-muted truncate max-w-[160px]">{user.email}</p>

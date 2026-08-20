@@ -32,6 +32,33 @@ export function useFeedPosts(userProfile: UserProfile | null) {
     );
   }, [reload]);
 
+  useEffect(() => {
+    if (!userProfile) return;
+
+    return subscribePostgresChanges(
+      { channelName: 'live-feed-author-photos', table: 'users', event: 'UPDATE' },
+      (payload) => {
+        const row = payload.new as Record<string, unknown> | null;
+        if (!row?.uid) return;
+
+        const uid = String(row.uid);
+        const displayName = typeof row.displayName === 'string' ? row.displayName : undefined;
+        const photoURL = row.photoURL != null ? String(row.photoURL) : undefined;
+
+        setPosts((prev) =>
+          prev.map((post) => {
+            if (post.userId !== uid) return post;
+            return {
+              ...post,
+              ...(displayName ? { userDisplayName: displayName } : {}),
+              ...(photoURL !== undefined ? { userPhotoURL: photoURL || undefined } : {}),
+            };
+          }),
+        );
+      },
+    );
+  }, [userProfile]);
+
   const publishPost = useCallback(
     async (input: { text: string; imageFiles: File[] }) => {
       if (!userProfile) return false;

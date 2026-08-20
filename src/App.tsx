@@ -731,7 +731,20 @@ export default function App() {
     setSessionUser((prev) => (prev?.id === user.id ? prev : user));
     setUserProfile((prev) => {
       if (prev?.uid === user.id) return prev;
-      return profileFromAuthUser(user);
+      const base = profileFromAuthUser(user);
+      const cached = readCachedProfile();
+      if (cached?.uid === user.id) {
+        return {
+          ...base,
+          displayName: cached.displayName || base.displayName,
+          photoURL: cached.photoURL || base.photoURL,
+          neighborhood: cached.neighborhood || base.neighborhood,
+          bio: cached.bio ?? base.bio,
+          role: cached.role ?? base.role,
+          staffInteractionMode: cached.staffInteractionMode ?? base.staffInteractionMode,
+        };
+      }
+      return base;
     });
     setIsAuthLoading(false);
     setAuthBootstrapping(false);
@@ -1004,7 +1017,7 @@ export default function App() {
   useItemsRealtime(sessionReady, setItems);
   useSavedItemPushAlerts(sessionReady, userProfile?.uid, items);
   useEventsRealtime(sessionReady, setEvents);
-  useAuthorProfilesRealtime(sessionReady, setItems);
+  useAuthorProfilesRealtime(sessionReady, setItems, setEvents);
 
   useEffect(() => {
     if (!detailEvent) return;

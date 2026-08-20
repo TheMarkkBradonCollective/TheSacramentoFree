@@ -7,6 +7,8 @@ import StarRating from './StarRating';
 import ContentVoteButtons, { OWN_CONTENT_VOTE_DISABLED_REASON } from './ContentVoteButtons';
 import HorizontalSnapRow, { SnapSlide } from './HorizontalSnapRow';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { useUserDisplayInfo } from '../hooks/useUserDisplayInfo';
+import { PresenceUserAvatar } from './UserAvatar';
 
 interface CommunityReviewsProps {
   userProfile?: UserProfile | null;
@@ -28,6 +30,7 @@ function formatReviewDate(iso: string): string {
 
 function ReviewCard({
   review,
+  livePhoto,
   voteState,
   onVote,
   onRequireSignIn,
@@ -36,6 +39,7 @@ function ReviewCard({
   showVotes = true,
 }: {
   review: AppReview;
+  livePhoto?: string;
   voteState: ContentVoteState;
   onVote: (direction: 'up' | 'down') => void;
   onRequireSignIn?: () => void;
@@ -46,14 +50,12 @@ function ReviewCard({
   return (
     <div className="bg-inset rounded-xl p-3 border border-app">
       <div className="flex items-start gap-3">
-        <img
-          src={
-            review.userPhoto ||
-            `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(review.userName)}`
-          }
-          alt=""
-          className="w-9 h-9 rounded-full border border-app shrink-0 object-cover"
-          referrerPolicy="no-referrer"
+        <PresenceUserAvatar
+          uid={review.userId}
+          src={livePhoto ?? review.userPhoto}
+          name={review.userName}
+          size="sm"
+          showStatus={false}
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -235,6 +237,7 @@ export default function CommunityReviews({
   const { otherReviews, loading, averageRating, myReview, submitReview, removeMyReview, reviews } =
     useAppReviews(userProfile, blockedUserIds);
   const reviewIds = useMemo(() => otherReviews.map((r) => r.id), [otherReviews]);
+  const reviewerInfo = useUserDisplayInfo(otherReviews.map((review) => review.userId));
   const withVotes = showVotes && !preview;
   const { getVoteState, handleVote } = useCommunityContentVotes(
     'review',
@@ -289,6 +292,7 @@ export default function CommunityReviews({
   const renderReviewCard = (review: AppReview, votesEnabled: boolean) => (
     <ReviewCard
       review={review}
+      livePhoto={reviewerInfo[review.userId]?.photoURL}
       voteState={votesEnabled ? getVoteState(review.id) : EMPTY_VOTE}
       onVote={(dir) => handleVote(review.id, dir, { blockSelfId: review.userId })}
       onRequireSignIn={onRequireSignIn}

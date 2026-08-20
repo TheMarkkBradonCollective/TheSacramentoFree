@@ -459,15 +459,32 @@ export async function syncProfilePhotoAcrossApp(
   displayName?: string,
 ): Promise<void> {
   const safePhoto = sanitizePhotoUrlForDb(photoURL);
+  const trimmedName = displayName?.trim();
 
   try {
-    await supabase.from('items').update({ userPhotoURL: safePhoto }).eq('userId', uid);
+    const listingPatch: Record<string, string | null> = { userPhotoURL: safePhoto };
+    if (trimmedName) listingPatch.userDisplayName = trimmedName;
+    await supabase.from('items').update(listingPatch).eq('userId', uid);
 
-    if (displayName?.trim()) {
-      await supabase.from('items').update({ userDisplayName: displayName.trim() }).eq('userId', uid);
-    }
+    const eventPatch: Record<string, string | null> = { userPhotoURL: safePhoto };
+    if (trimmedName) eventPatch.userDisplayName = trimmedName;
+    await supabase.from('events').update(eventPatch).eq('userId', uid);
 
-    await supabase.from('item_comments').update({ userPhoto: safePhoto }).eq('userId', uid);
+    const feedPatch: Record<string, string | null> = { userPhotoURL: safePhoto };
+    if (trimmedName) feedPatch.userDisplayName = trimmedName;
+    await supabase.from('feed_posts').update(feedPatch).eq('userId', uid);
+
+    const commentPhotoPatch = { userPhoto: safePhoto };
+    await Promise.all([
+      supabase.from('item_comments').update(commentPhotoPatch).eq('userId', uid),
+      supabase.from('event_comments').update(commentPhotoPatch).eq('userId', uid),
+      supabase.from('feed_post_comments').update(commentPhotoPatch).eq('userId', uid),
+      supabase.from('app_reviews').update(commentPhotoPatch).eq('userId', uid),
+      supabase.from('app_update_comments').update(commentPhotoPatch).eq('userId', uid),
+      supabase.from('help_announcement_comments').update(commentPhotoPatch).eq('userId', uid),
+    ]);
+
+    await supabase.from('message_requests').update({ fromUserPhoto: safePhoto }).eq('fromUserId', uid);
 
     const { data: chats } = await supabase.from('chats').select('id, participantIds, participantPhotos');
     for (const chat of chats ?? []) {
@@ -541,11 +558,21 @@ export function profileFromAuthUser(user: {
 }): UserProfile {
   const email = user.email?.trim() || '';
   const meta = user.user_metadata ?? {};
+  const providerPhoto =
+    typeof meta.avatar_url === 'string'
+      ? meta.avatar_url
+      : typeof meta.picture === 'string'
+        ? meta.picture
+        : undefined;
+  const photoURL =
+    providerPhoto && sanitizePhotoUrlForDb(providerPhoto)
+      ? sanitizePhotoUrlForDb(providerPhoto)!
+      : `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.id)}`;
 
   return {
     uid: user.id,
     displayName: String(meta.displayName || email.split('@')[0] || 'Sacramento Neighbor'),
-    photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.id)}`,
+    photoURL,
     email: email || 'neighbor@sacramentobuynothing.org',
     neighborhood: String(meta.neighborhood || 'Midtown'),
     bio: typeof meta.bio === 'string' ? meta.bio : undefined,
@@ -6922,6 +6949,16 @@ export async function findOrCreateStaffEventOutreachTicket(params: {
   }
 }
 
+async function enrichSupportTicketsWithPhotos(tickets: SupportTicket[]): Promise<SupportTicket[]> {
+  if (!tickets.length) return tickets;
+  const openerIds = [...new Set(tickets.map((ticket) => ticket.openerUserId).filter(Boolean))];
+  const info = await getUserDisplayInfoByIds(openerIds);
+  return tickets.map((ticket) => ({
+    ...ticket,
+    openerPhotoURL: info[ticket.openerUserId]?.photoURL,
+  }));
+}
+
 export async function getSupportTicketsForUser(userId: string): Promise<SupportTicket[]> {
   try {
     const { data, error } = await supabase
@@ -6931,7 +6968,8 @@ export async function getSupportTicketsForUser(userId: string): Promise<SupportT
       .order('updatedAt', { ascending: false });
 
     if (error) return [];
-    return (data ?? []).map((row) => normalizeTicket(row as Record<string, unknown>));
+    const tickets = (data ?? []).map((row) => normalizeTicket(row as Record<string, unknown>));
+    return enrichSupportTicketsWithPhotos(tickets);
   } catch {
     return [];
   }
@@ -6946,9 +6984,10 @@ export async function getSupportTicketsForStaff(viewer: UserProfile): Promise<Su
 
     if (error) return [];
 
-    return (data ?? [])
+    const tickets = (data ?? [])
       .map((row) => normalizeTicket(row as Record<string, unknown>))
       .filter((ticket) => canViewerAccessTicket(viewer, ticket));
+    return enrichSupportTicketsWithPhotos(tickets);
   } catch {
     return [];
   }
@@ -7009,7 +7048,9 @@ export async function getSupportTicketById(ticketId: string): Promise<SupportTic
       .maybeSingle();
 
     if (error || !data) return null;
-    return normalizeTicket(data as Record<string, unknown>);
+    const ticket = normalizeTicket(data as Record<string, unknown>);
+    const [enriched] = await enrichSupportTicketsWithPhotos([ticket]);
+    return enriched ?? ticket;
   } catch {
     return null;
   }

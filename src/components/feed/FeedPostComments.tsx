@@ -7,6 +7,7 @@ import { isStaffRole } from '../../lib/roles';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import ReportNeighborModal from '../ReportNeighborModal';
 import { PresenceUserAvatar } from '../UserAvatar';
+import { useUserDisplayInfo } from '../../hooks/useUserDisplayInfo';
 
 interface FeedPostCommentsProps {
   post: FeedPost;
@@ -26,6 +27,7 @@ function CommentRow({
   replyText,
   setReplyText,
   onSubmitReply,
+  commenterInfo,
 }: {
   node: FeedPostCommentNode;
   post: FeedPost;
@@ -37,6 +39,7 @@ function CommentRow({
   replyText: string;
   setReplyText: (v: string) => void;
   onSubmitReply: () => void;
+  commenterInfo: Record<string, { photoURL?: string }>;
 }) {
   const { confirm, alert } = useConfirm();
   const [reportOpen, setReportOpen] = useState(false);
@@ -83,7 +86,7 @@ function CommentRow({
           >
             <PresenceUserAvatar
               uid={node.userId}
-              src={node.userPhoto}
+              src={commenterInfo[node.userId]?.photoURL ?? node.userPhoto}
               name={node.userName}
               size="xs"
             />
@@ -170,6 +173,7 @@ function CommentRow({
                 replyText={replyText}
                 setReplyText={setReplyText}
                 onSubmitReply={onSubmitReply}
+                commenterInfo={commenterInfo}
               />
             </Fragment>
           ))}
@@ -201,6 +205,7 @@ export default function FeedPostComments({
 
   const flat = engagement.getComments(post.id);
   const tree = buildFeedCommentTree(flat);
+  const commenterInfo = useUserDisplayInfo(flat.map((comment) => comment.userId));
 
   const submitTopLevel = async () => {
     const ok = await engagement.addComment(post.id, draft, null);
@@ -245,6 +250,7 @@ export default function FeedPostComments({
                 replyText={replyText}
                 setReplyText={setReplyText}
                 onSubmitReply={() => void submitReply()}
+                commenterInfo={commenterInfo}
               />
             </Fragment>
           ))}

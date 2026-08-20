@@ -330,6 +330,7 @@ export default function NeighborProfileView({
           <div className="space-y-5">
             <div className="sbn-card p-6 flex flex-col items-center text-center">
               <UserAvatar
+                uid={profile.uid}
                 src={profile.photoURL}
                 name={profile.displayName}
                 size="xl"

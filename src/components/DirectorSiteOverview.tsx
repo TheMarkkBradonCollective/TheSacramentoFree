@@ -280,6 +280,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
                 className="flex items-center gap-2.5 p-2.5 rounded-xl bg-inset/60 border border-app/60"
               >
                 <UserAvatar
+                  uid={neighbor.uid}
                   src={neighbor.photoURL}
                   name={neighbor.displayName}
                   size="sm"

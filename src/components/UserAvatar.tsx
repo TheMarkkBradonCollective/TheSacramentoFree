@@ -1,5 +1,6 @@
 import { isUserOnline } from '../lib/presence';
 import { usePresence } from '../contexts/PresenceContext';
+import { resolveProfilePhoto } from '../lib/resolveProfilePhoto';
 
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -21,6 +22,8 @@ const DOT_CLASS: Record<AvatarSize, string> = {
 
 interface UserAvatarProps {
   src?: string | null;
+  /** Stable uid for dicebear fallback when src is missing. */
+  uid?: string;
   name: string;
   size?: AvatarSize;
   lastActiveAt?: string | null;
@@ -32,6 +35,7 @@ interface UserAvatarProps {
 
 export default function UserAvatar({
   src,
+  uid,
   name,
   size = 'md',
   lastActiveAt,
@@ -41,9 +45,7 @@ export default function UserAvatar({
   borderClassName = 'border-app',
 }: UserAvatarProps) {
   const online = showStatus && isUserOnline(lastActiveAt);
-  const photo =
-    src?.trim() ||
-    `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(name || 'neighbor')}`;
+  const photo = resolveProfilePhoto({ snapshot: src, uid: uid || name, name });
 
   return (
     <span className={`relative inline-block shrink-0 ${className}`}>
@@ -69,6 +71,7 @@ export function PresenceUserAvatar({
   src,
   name,
   size = 'md',
+  showStatus = true,
   className = '',
   imgClassName = '',
   borderClassName = 'border-app',
@@ -77,6 +80,7 @@ export function PresenceUserAvatar({
   src?: string | null;
   name: string;
   size?: AvatarSize;
+  showStatus?: boolean;
   className?: string;
   imgClassName?: string;
   borderClassName?: string;
@@ -85,8 +89,10 @@ export function PresenceUserAvatar({
   return (
     <UserAvatar
       src={src}
+      uid={uid}
       name={name}
       size={size}
+      showStatus={showStatus}
       lastActiveAt={lastActiveAt}
       className={className}
       imgClassName={imgClassName}

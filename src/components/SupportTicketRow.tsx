@@ -40,7 +40,7 @@ export default function SupportTicketRow({
       ].join(' ')}
     >
       <img
-        src={avatarImageUrl(null, avatarSeed, avatarUid)}
+        src={avatarImageUrl(showOpener ? ticket.openerPhotoURL : null, avatarSeed, avatarUid)}
         alt=""
         className="w-10 h-10 rounded-full border border-app object-cover shrink-0 bg-inset"
         referrerPolicy="no-referrer"

@@ -400,6 +400,7 @@ export default function ItemCard({
             className="flex items-center gap-1.5 sm:gap-2 min-w-0 text-left hover:opacity-90 cursor-pointer"
           >
             <UserAvatar
+              uid={item.userId}
               src={item.userPhotoURL}
               name={item.userDisplayName}
               size="sm"

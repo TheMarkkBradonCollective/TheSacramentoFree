@@ -21,7 +21,7 @@ export function optimizedImageUrl(
 export function avatarImageUrl(url: string | undefined | null, displayName: string, uid: string): string {
   const optimized = optimizedImageUrl(url, { width: 96, quality: 80 });
   if (optimized) return optimized;
-  return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(displayName || uid)}`;
+  return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(uid || displayName)}`;
 }
 
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif', 'bmp']);
