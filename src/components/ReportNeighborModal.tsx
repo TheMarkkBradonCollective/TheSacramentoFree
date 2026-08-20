@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { UserProfile } from '../types';
 import { submitUserReport } from '../supabase';
 import { INVALID_IMAGE_FILE_MESSAGE, isLikelyImageFile } from '../lib/imageUrl';
 import { Camera, Flag, X } from 'lucide-react';
+import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
 interface ReportNeighborModalProps {
   reporter: UserProfile;
@@ -30,6 +32,8 @@ export default function ReportNeighborModal({
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useDismissOnEscape(onClose);
 
   const handleProofChange = (file: File | null) => {
     if (file && !isLikelyImageFile(file)) {
@@ -74,8 +78,8 @@ export default function ReportNeighborModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[80] bg-black/60 flex items-end sm:items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[120] bg-black/60 flex items-end sm:items-center justify-center p-4 sbn-mobile-prompt-offset">
       <div
         className="sbn-card w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto"
         role="dialog"
@@ -174,6 +178,7 @@ export default function ReportNeighborModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
