@@ -6,6 +6,7 @@ import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from '../../lib/feedReact
 import { isStaffRole } from '../../lib/roles';
 import { PresenceUserAvatar } from '../UserAvatar';
 import ReportNeighborModal from '../ReportNeighborModal';
+import FeedPostClientBadge from './FeedPostClientBadge';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
 interface FeedPostCardProps {
@@ -101,6 +102,15 @@ export default function FeedPostCard({
               <span className="truncate">{post.neighborhood}</span>
               <span className="text-subtle">·</span>
               <span className="shrink-0">{timeLabel(post.createdAt)}</span>
+              {post.clientInstallKind ? (
+                <>
+                  <span className="text-subtle">·</span>
+                  <FeedPostClientBadge
+                    installKind={post.clientInstallKind}
+                    version={post.clientVersion}
+                  />
+                </>
+              ) : null}
             </p>
           </div>
         </header>

@@ -3,6 +3,14 @@ import type { FeedPost, FeedPostComment, FeedPostCommentNode, FeedPostReaction, 
 import { compressImageIfNeeded, guessImageContentType } from './imageUrl';
 import { commentPostedAsNeighbor } from './staffInteractionMode';
 import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from './feedReactions';
+import { getPostClientMetadata, type InstallKind } from './installContext';
+
+const FEED_CLIENT_KINDS = new Set<InstallKind>(['browser', 'pwa', 'ios-pwa', 'android-apk']);
+
+function normalizeClientInstallKind(value: unknown): FeedPost['clientInstallKind'] | undefined {
+  if (typeof value !== 'string' || !FEED_CLIENT_KINDS.has(value as InstallKind)) return undefined;
+  return value as FeedPost['clientInstallKind'];
+}
 
 function sanitizeStorageKey(value: string, maxLen = 120): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, maxLen) || 'upload';
@@ -33,6 +41,11 @@ function normalizeFeedPost(row: Record<string, unknown>): FeedPost {
     imageUrls,
     status: (row.status === 'hidden' || row.status === 'removed' ? row.status : 'active') as FeedPost['status'],
     postedAsNeighbor: row.postedAsNeighbor === true || row.posted_as_neighbor === true,
+    clientInstallKind: normalizeClientInstallKind(row.clientInstallKind ?? row.client_install_kind),
+    clientVersion:
+      typeof (row.clientVersion ?? row.client_version) === 'string'
+        ? String(row.clientVersion ?? row.client_version)
+        : undefined,
     createdAt: String(row.createdAt ?? row.created_at ?? new Date().toISOString()),
     updatedAt: String(row.updatedAt ?? row.updated_at ?? new Date().toISOString()),
   };
@@ -144,6 +157,7 @@ export async function createFeedPost(
   }
 
   const now = new Date().toISOString();
+  const { clientInstallKind, clientVersion } = await getPostClientMetadata();
   const payload = {
     id: postId,
     userId: profile.uid,
@@ -154,6 +168,8 @@ export async function createFeedPost(
     imageUrls,
     status: 'active',
     postedAsNeighbor: commentPostedAsNeighbor(profile),
+    clientInstallKind,
+    clientVersion,
     createdAt: now,
     updatedAt: now,
   };
