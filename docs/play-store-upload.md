@@ -5,8 +5,8 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 ## What is already done
 
 - Release signing keystore: `android/app/sac-buynothing-release.keystore`
-- `versionCode` **28**, `versionName` **0.1.0**
-- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0028.aab` (and legacy `sac-buy-nothing.aab`)
+- `versionCode` **29**, `versionName` **0.1.0**
+- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`
 - Firebase push configured (client + server)
@@ -69,7 +69,7 @@ npm run android:aab
 Upload file (same build as the sideload APK):
 
 ```
-public/downloads/sac-buy-nothing-beta-v0.1.0.0028.aab
+public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab
 ```
 
 Legacy alias: `public/downloads/sac-buy-nothing.aab`
@@ -254,29 +254,27 @@ After saving the list, copy the **opt-in link** and share it — testers must op
 
 ---
 
-## Step 6 — Release (current: beta v0.1.0.0028)
+## Step 6 — Release (current: beta v0.1.0.0029)
 
 1. **Testing → Internal testing → Create release** (or Production when ready)
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0028.aab` (or `sac-buy-nothing.aab`)
-3. Release name: `0.1.0 (28)`
-4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0028.txt`:
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab` (or `sac-buy-nothing.aab`)
+3. Release name: `0.1.0 (29)`
+4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0029.txt`:
 
 ```
-Android beta v0.1.0.0028 (versionCode 28)
+Android beta v0.1.0.0029 (versionCode 29)
 
-What's new:
-• Community Stuff opens in photo grid view by default
-• Filters hide behind one button — cleaner app-style feed
-• Tap Nearest first to switch to Newest in grid view
-• Events tab matches Stuff: grid/list toggle, filters, compact tiles
-• Messages inbox drops the duplicate title block
-• Listing cards show Given / Looking / Trade under votes
+What's new (Android app):
+• Turn-by-turn navigation: heading-up map, real lane guidance, walk / bike / drive
+• Voice reads the same detailed instructions as the screen
+• Recenter announces the next turn
+• Navigation settings in Account and the in-nav gear
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ```
 
 5. Add yourself as an internal tester → install from opt-in link
-6. Verify: sign-in, Stuff grid default, Filters button, Events grid, Messages inbox, type row on list cards, status bar / nav bar spacing, push
+6. Verify: sign-in, in-app Navigate, walk/bike/drive, heading-up, lane guidance, spoken turn card, nav settings, Stuff grid, status bar / nav bar spacing, push
 7. Promote to **Production** when ready → **Send for review**
 
 **Current release manifest:** `play-store-assets/current-release.json`
@@ -288,7 +286,7 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 For reference — first Play upload used versionCode 8:
 
 1. **Testing → Internal testing → Create release**
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0028.aab` (or `sac-buy-nothing.aab`)
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab` (or `sac-buy-nothing.aab`)
 3. Release name: `0.1.0 (8)`
 4. Release notes:
 

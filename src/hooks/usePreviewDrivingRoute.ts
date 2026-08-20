@@ -6,6 +6,7 @@ import {
   type LatLng,
 } from '../lib/mapRoute';
 import { fetchNavigationRoute, type NavigationRouteResult } from '../lib/navigationRoute';
+import { readNavigationSettings, subscribeNavigationSettings, type NavTravelMode } from '../lib/navigationSettings';
 
 /** Refetch when the user has actually moved this far from the last route origin. */
 const START_MOVE_REFETCH_M = 85;
@@ -31,9 +32,12 @@ export function usePreviewDrivingRoute(
   const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const [navRoute, setNavRoute] = useState<NavigationRouteResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [travelMode, setTravelMode] = useState<NavTravelMode>(() => readNavigationSettings().travelMode);
   const fetchIdRef = useRef(0);
-  const lastFetchedRef = useRef<{ start: LatLng; end: LatLng; key: string | null } | null>(null);
+  const lastFetchedRef = useRef<{ start: LatLng; end: LatLng; key: string | null; mode: NavTravelMode } | null>(null);
   const hasPreviewRef = useRef(false);
+
+  useEffect(() => subscribeNavigationSettings((settings) => setTravelMode(settings.travelMode)), []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -57,12 +61,13 @@ export function usePreviewDrivingRoute(
     const destChanged =
       !last ||
       last.key !== destKey ||
+      last.mode !== travelMode ||
       haversineMeters(last.end, end) >= DEST_MOVE_REFETCH_M;
     const startMoved = !last || haversineMeters(last.start, start) >= START_MOVE_REFETCH_M;
 
     if (last && !destChanged && !startMoved) return;
 
-    lastFetchedRef.current = { start, end, key: destKey };
+    lastFetchedRef.current = { start, end, key: destKey, mode: travelMode };
     const fetchId = ++fetchIdRef.current;
 
     if (destChanged) {
@@ -76,7 +81,7 @@ export function usePreviewDrivingRoute(
       setLoading(true);
     }
 
-    void fetchNavigationRoute(start, end).then(async (navResult) => {
+    void fetchNavigationRoute(start, end, travelMode).then(async (navResult) => {
       if (fetchId !== fetchIdRef.current) return;
 
       if (navResult) {
@@ -89,7 +94,7 @@ export function usePreviewDrivingRoute(
         return;
       }
 
-      const fallback = await fetchDrivingRoute(start, end);
+      const fallback = await fetchDrivingRoute(start, end, travelMode);
       if (fetchId !== fetchIdRef.current) return;
 
       hasPreviewRef.current = true;
@@ -99,7 +104,7 @@ export function usePreviewDrivingRoute(
       setDurationSeconds(fallback.durationSeconds);
       setLoading(false);
     });
-  }, [enabled, destinationKey, start?.lat, start?.lng, end?.lat, end?.lng]);
+  }, [enabled, destinationKey, start?.lat, start?.lng, end?.lat, end?.lng, travelMode]);
 
-  return { coords, distanceMeters, durationSeconds, navRoute, loading };
+  return { coords, distanceMeters, durationSeconds, navRoute, loading, travelMode };
 }

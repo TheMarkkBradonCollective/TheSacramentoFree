@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { fetchOsrmDrivingRoute } from '../_lib/osrmRoute';
+import { fetchOsrmDrivingRoute, parseTravelMode } from '../_lib/osrmRoute';
 import { isInSacramentoServiceArea, parseRouteEndpoints } from '../_lib/mapCoords';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -18,10 +18,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Route must stay within the Sacramento service area' });
     }
 
-    const route = await fetchOsrmDrivingRoute(parsed.from, parsed.to);
+    const travelMode = parseTravelMode(req.query.mode ?? req.query.profile);
+    const route = await fetchOsrmDrivingRoute(parsed.from, parsed.to, travelMode);
 
     if (!route) {
-      return res.status(502).json({ error: 'Could not calculate driving route' });
+      return res.status(502).json({ error: 'Could not calculate route' });
     }
 
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600');

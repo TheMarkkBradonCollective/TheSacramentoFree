@@ -9,29 +9,29 @@ import {
   Compass,
   CornerUpLeft,
   CornerUpRight,
-  Layers,
   LocateFixed,
   Map as MapIcon,
   Mic,
   Navigation,
   RotateCcw,
+  Settings2,
   Share2,
   Volume2,
   VolumeX,
   WifiOff,
+  X,
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
-import { haversineMeters, geolocationAgeMs, openDrivingDirections } from '../lib/mapRoute';
+import { haversineMeters, geolocationAgeMs, openDrivingDirections, googleMapsDirectionsUrl } from '../lib/mapRoute';
 import { projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
 import NavManeuverShield from './navigation/NavManeuverShield';
+import NavigationSettingsForm from './NavigationSettingsForm';
+import NavTravelModeSwitcher from './NavTravelModeSwitcher';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { touchActiveNavSession } from '../lib/navigationSession';
 import { useTheme } from '../theme/ThemeContext';
 import {
-  activeLaneIndices,
   bearingAlongRoute,
-  bearingDegrees,
-  estimateLaneCount,
   estimateSpeedLimitMph,
   fetchNavigationRoute,
   findCurrentStepIndex,
@@ -39,21 +39,40 @@ import {
   formatNavDistance,
   formatNavDuration,
   formatSpeedMph,
-  getActiveVoiceCueStep,
-  maneuverIconKind,
+  getDisplayedNavGuidance,
   remainingRouteMeters,
   shouldFireVoiceCue,
-  shouldShowLaneGuidance,
-  smoothHeadingDegrees,
+  maneuverIconKind,
   type ManeuverIconKind,
   type NavigationRouteResult,
-  type NavigationStep,
 } from '../lib/navigationRoute';
 import {
-  buildRouteSummaryVoice,
-  buildStepVoiceCue,
+  fetchOsmLanes,
+  highlightLanesForManeuver,
+  laneArrowSymbol,
+  shouldRenderLaneGuidance,
+  type NavLane,
+} from '../lib/navLanes';
+import {
+  requestCompassPermission,
+  resolveNavHeading,
+  subscribeDeviceCompass,
+} from '../lib/navHeading';
+import {
+  readNavigationSettings,
+  subscribeNavigationSettings,
+  travelModeGerund,
+  travelModeVerb,
+  writeNavigationSettings,
+  type NavigationSettings,
+  type NavTravelMode,
+} from '../lib/navigationSettings';
+import {
+  buildDisplayedGuidanceVoice,
+  buildStartBriefingVoice,
+  distanceCueKeysForStep,
   NavigationVoice,
-  VOICE_CUE_THRESHOLDS,
+  voiceCueThresholdsForMode,
 } from '../lib/navigationVoice';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
@@ -119,36 +138,29 @@ function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean 
   );
 }
 
-function laneArrowForKind(kind: ManeuverIconKind): string {
-  switch (kind) {
-    case 'left':
-    case 'slight-left':
-    case 'uturn':
-      return '↰';
-    case 'right':
-    case 'slight-right':
-    case 'roundabout':
-      return '↱';
-    default:
-      return '↑';
-  }
-}
+function NavLaneGuidance({ lanes, maneuverKind }: { lanes: NavLane[]; maneuverKind: ManeuverIconKind }) {
+  const highlighted = highlightLanesForManeuver(lanes, maneuverKind);
+  if (!shouldRenderLaneGuidance(highlighted, maneuverKind, true)) return null;
 
-function NavLaneGuidance({ laneCount, maneuverKind }: { laneCount: number; maneuverKind: ManeuverIconKind }) {
-  if (laneCount < 2 || !shouldShowLaneGuidance(maneuverKind)) return null;
-
-  const active = new Set(activeLaneIndices(laneCount, maneuverKind));
-  const arrow = laneArrowForKind(maneuverKind);
+  const activeIndexes = highlighted.flatMap((lane, index) => (lane.valid ? [index + 1] : []));
 
   return (
-    <div className="sbn-nav-lane" aria-label={`Use lane ${[...active].map((i) => i + 1).join(' or ')}`}>
-      {Array.from({ length: laneCount }, (_, index) => (
+    <div
+      className="sbn-nav-lane"
+      aria-label={
+        activeIndexes.length > 0
+          ? `${highlighted.length} lanes. Use lane ${activeIndexes.join(' or ')}`
+          : `${highlighted.length} lanes`
+      }
+    >
+      {highlighted.map((lane, index) => (
         <div
-          key={index}
-          className={`sbn-nav-lane-slot text-sm font-black ${active.has(index) ? 'sbn-nav-lane-slot-active' : ''}`}
-          aria-hidden={!active.has(index)}
+          key={`${lane.indications.join('-')}-${index}`}
+          className={`sbn-nav-lane-slot text-sm font-black ${lane.valid ? 'sbn-nav-lane-slot-active' : ''}`}
+          title={lane.indications.join(', ') || 'Lane'}
+          aria-hidden={!lane.valid}
         >
-          {active.has(index) ? arrow : ''}
+          {laneArrowSymbol(lane.indications)}
         </div>
       ))}
     </div>
@@ -231,10 +243,12 @@ interface NavigationDetailsSheetProps {
   route: NavigationRouteResult;
   stepIndex: number;
   voiceOn: boolean;
+  travelMode: NavTravelMode;
   onVoiceToggle: () => void;
   onOverview: () => void;
   onShare: () => void;
   onRecenter: () => void;
+  onSettings: () => void;
   onExit: () => void;
 }
 
@@ -249,10 +263,12 @@ function NavigationDetailsSheet({
   route,
   stepIndex,
   voiceOn,
+  travelMode,
   onVoiceToggle,
   onOverview,
   onShare,
   onRecenter,
+  onSettings,
   onExit,
 }: NavigationDetailsSheetProps) {
   const dragStartYRef = useRef(0);
@@ -347,8 +363,11 @@ function NavigationDetailsSheet({
             <button type="button" onClick={onVoiceToggle} className="sbn-nav-sheet-action" aria-label={voiceOn ? 'Mute voice' : 'Enable voice'} title={voiceOn ? 'Mute' : 'Voice on'}>
               {voiceOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
-            <button type="button" onClick={onRecenter} className="sbn-nav-sheet-action" aria-label="Recenter" title="Recenter">
+            <button type="button" onClick={onRecenter} className="sbn-nav-sheet-action" aria-label="Center on you" title="Center on you">
               <LocateFixed className="w-4 h-4" />
+            </button>
+            <button type="button" onClick={onSettings} className="sbn-nav-sheet-action" aria-label="Navigation settings" title="Settings">
+              <Settings2 className="w-4 h-4" />
             </button>
             <button type="button" onClick={onShare} className="sbn-nav-sheet-action" aria-label="Share trip" title="Share trip">
               <Share2 className="w-4 h-4" />
@@ -358,7 +377,7 @@ function NavigationDetailsSheet({
           <div className="py-1">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--sbn-nav-text-secondary)]">Trip summary</h3>
             <p className="text-sm mt-1 text-[var(--sbn-nav-text-secondary)]">
-              {formatNavDistance(route.distanceMeters)} total · {formatNavDuration(route.durationSeconds)} drive
+              {formatNavDistance(route.distanceMeters)} total · {formatNavDuration(route.durationSeconds)} {travelModeGerund(travelMode)}
             </p>
             <p className="text-sm font-semibold mt-0.5 truncate text-[var(--sbn-nav-text)]">{destinationLabel}</p>
           </div>
@@ -561,22 +580,28 @@ function resetMapBearing(map: L.Map | null): void {
   pane.style.transformOrigin = '';
 }
 
-function applyMapBearing(map: L.Map, center: LatLng, heading: number, northUp: boolean): void {
-  const pane = map.getPane('mapPane');
-  if (!pane) return;
-
-  if (northUp) {
-    resetMapBearing(map);
+function applyHeadingUpRotation(
+  rotator: HTMLElement | null,
+  map: L.Map | null,
+  center: LatLng,
+  heading: number,
+  northUp: boolean,
+): void {
+  if (!rotator) return;
+  if (northUp || !map) {
+    rotator.style.transform = '';
+    rotator.style.transformOrigin = '50% 50%';
     return;
   }
 
   try {
     const point = map.latLngToContainerPoint([center.lat, center.lng]);
-    pane.style.transformOrigin = `${point.x}px ${point.y}px`;
-    pane.style.transform = `rotate(${-heading}deg)`;
+    rotator.style.transformOrigin = `${point.x}px ${point.y}px`;
+    rotator.style.transform = `rotate(${-heading}deg) scale(1.42)`;
   } catch (error) {
     console.warn('Could not rotate navigation map:', error);
-    resetMapBearing(map);
+    rotator.style.transform = '';
+    rotator.style.transformOrigin = '50% 50%';
   }
 }
 
@@ -594,6 +619,7 @@ export default function MapNavigationView({
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRotatorRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
@@ -632,11 +658,14 @@ export default function MapNavigationView({
   const routeFetchedForDestRef = useRef<string | null>(null);
   const routeRequestIdRef = useRef(0);
   const lastBearingApplyRef = useRef(0);
+  const compassHeadingRef = useRef<number | null>(null);
+  const settingsRef = useRef<NavigationSettings>(readNavigationSettings());
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS = 10;
+  const NAV_GPS_FOLLOW_METERS_DRIVING = 10;
+  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 4;
   const NAV_UI_TICK_MS = 900;
   const NAV_MAP_SYNC_MS = 450;
   const NAV_ROUTE_DRAW_MIN_METERS = 14;
@@ -664,15 +693,25 @@ export default function MapNavigationView({
   const [stepIndex, setStepIndex] = useState(0);
   const [followUser, setFollowUser] = useState(true);
   followUserRef.current = followUser;
-  const [northUp, setNorthUp] = useState(false);
+  const [northUp, setNorthUp] = useState(() => !readNavigationSettings().headingUp);
   const northUpRef = useRef(false);
   northUpRef.current = northUp;
-  const [voiceOn, setVoiceOn] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(() => readNavigationSettings().voiceEnabled);
   const [arrived, setArrived] = useState(false);
   const [rerouting, setRerouting] = useState(false);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [sheetSnap, setSheetSnap] = useState<NavSheetSnap>('collapsed');
-  const [mapStyle, setMapStyle] = useState<NavMapStyle>(() => (theme === 'light' ? 'light' : 'dark'));
+  const [navSettings, setNavSettings] = useState<NavigationSettings>(() => readNavigationSettings());
+  settingsRef.current = navSettings;
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [osmLanes, setOsmLanes] = useState<NavLane[] | null>(null);
+  const osmLanesRef = useRef<NavLane[] | null>(null);
+  osmLanesRef.current = osmLanes;
+  const [mapStyle, setMapStyle] = useState<NavMapStyle>(() => {
+    const settings = readNavigationSettings();
+    if (!settings.followAppTheme) return theme === 'light' ? 'light' : 'dark';
+    return theme === 'light' ? 'light' : 'dark';
+  });
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [voicePhrase, setVoicePhrase] = useState('');
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -718,7 +757,22 @@ export default function MapNavigationView({
     routeAnnouncedRef.current = false;
   }, [initialRoute, route]);
 
-  const currentStep: NavigationStep | undefined = route?.steps[stepIndex];
+  const displayedGuidance = useMemo(
+    () =>
+      getDisplayedNavGuidance({
+        route,
+        stepIndex,
+        arrived,
+        destinationLabel,
+        userPos: logicPosRef.current,
+        travelMode: navSettings.travelMode,
+        showLaneGuidance: navSettings.showLaneGuidance,
+        osmLanes,
+      }),
+    [route, stepIndex, arrived, destinationLabel, userPos, navSettings.travelMode, navSettings.showLaneGuidance, osmLanes],
+  );
+
+  const distanceToManeuver = displayedGuidance.distanceMeters;
 
   const remainingMeters = useMemo(() => {
     if (!route) return 0;
@@ -731,13 +785,6 @@ export default function MapNavigationView({
     return Math.max(0, Math.round(route.durationSeconds * ratio));
   }, [route, remainingMeters, arrived]);
 
-  const distanceToManeuver = useMemo(() => {
-    if (!route) return 0;
-    const cueStep = getActiveVoiceCueStep(route.steps, stepIndex);
-    if (!cueStep) return 0;
-    return haversineMeters(logicPosRef.current, cueStep.location);
-  }, [route, stepIndex, userPos]);
-
   const bannerScale = useMemo(() => {
     if (arrived) return 1;
     if (distanceToManeuver < 80) return 1.05;
@@ -745,9 +792,48 @@ export default function MapNavigationView({
     return 1;
   }, [distanceToManeuver, arrived]);
 
+  const speakGuidanceCard = useCallback(
+    (
+      key: string,
+      extra?: {
+        prefix?: string;
+        route?: NavigationRouteResult | null;
+        stepIndex?: number;
+        arrived?: boolean;
+        userPos?: LatLng;
+      },
+    ) => {
+      const settings = settingsRef.current;
+      const route = extra?.route ?? routeRef.current;
+      const stepIndex = extra?.stepIndex ?? stepIndexRef.current;
+      const guidance = getDisplayedNavGuidance({
+        route,
+        stepIndex,
+        arrived: extra?.arrived ?? arrivedRef.current,
+        destinationLabel: destinationLabelRef.current,
+        userPos: extra?.userPos ?? logicPosRef.current,
+        travelMode: settings.travelMode,
+        showLaneGuidance: settings.showLaneGuidance,
+        osmLanes: osmLanesRef.current,
+      });
+      voiceRef.current.speak(buildDisplayedGuidanceVoice({ guidance, prefix: extra?.prefix }), key);
+      if (!guidance.arrived && guidance.cueStep) {
+        voiceRef.current.markSpoken(
+          distanceCueKeysForStep(
+            stepIndex,
+            guidance.cueStep.distanceMeters,
+            guidance.distanceMeters,
+            voiceCueThresholdsForMode(settings.travelMode),
+          ),
+        );
+      }
+    },
+    [],
+  );
+
   const loadRoute = useCallback(async (from: LatLng, to: LatLng, isReroute = false) => {
     const requestId = ++routeRequestIdRef.current;
-    const result = await fetchNavigationRoute(from, to);
+    const result = await fetchNavigationRoute(from, to, settingsRef.current.travelMode);
     if (requestId !== routeRequestIdRef.current) return null;
 
     if (!result) {
@@ -769,11 +855,17 @@ export default function MapNavigationView({
 
     if (isReroute) {
       voiceRef.current.clearSpokenKeys();
-      voiceRef.current.speak('Route updated', `reroute-done-${requestId}`);
+      speakGuidanceCard(`reroute-done-${requestId}`, {
+        prefix: 'Route updated',
+        route: result,
+        stepIndex: 0,
+        arrived: false,
+        userPos: from,
+      });
     }
 
     return result;
-  }, []);
+  }, [speakGuidanceCard]);
 
   const fitRouteOverview = useCallback((options?: { force?: boolean }) => {
     const map = mapRef.current;
@@ -806,7 +898,11 @@ export default function MapNavigationView({
 
   useEffect(() => {
     voiceRef.current.prime();
-    voiceRef.current.setEnabled(true);
+    voiceRef.current.setEnabled(readNavigationSettings().voiceEnabled);
+    void requestCompassPermission();
+    const unsubscribeCompass = subscribeDeviceCompass((degrees) => {
+      compassHeadingRef.current = degrees;
+    });
 
     const unsubscribeSpeaking = voiceRef.current.subscribeSpeaking((speaking, phrase) => {
       setVoiceSpeaking(speaking);
@@ -836,9 +932,11 @@ export default function MapNavigationView({
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
-        // Always re-request — OS may have released the lock without clearing our ref.
         void requestWakeLock();
         touchActiveNavSession();
+        if (typeof window !== 'undefined' && window.speechSynthesis?.paused) {
+          window.speechSynthesis.resume();
+        }
       }
     };
     const onPageHide = () => {
@@ -851,6 +949,7 @@ export default function MapNavigationView({
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', onPageHide);
       unsubscribeSpeaking();
+      unsubscribeCompass();
       void wakeLockRef.current?.release();
       wakeLockRef.current = null;
       voiceRef.current.cancel();
@@ -858,19 +957,47 @@ export default function MapNavigationView({
   }, []);
 
   useEffect(() => {
-    const destKey = `${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`;
+    return subscribeNavigationSettings((next) => {
+      settingsRef.current = next;
+      setNavSettings(next);
+      setVoiceOn(next.voiceEnabled);
+      voiceRef.current.setEnabled(next.voiceEnabled);
+      setNorthUp((current) => {
+        if (followUserRef.current) return !next.headingUp;
+        return current;
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (navSettings.followAppTheme) {
+      setMapStyle(theme === 'light' ? 'light' : 'dark');
+    }
+  }, [theme, navSettings.followAppTheme]);
+
+  useEffect(() => {
+    const destPart = `${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`;
+    const destKey = `${destPart}:${navSettings.travelMode}`;
     if (routeFetchedForDestRef.current === destKey && routeRef.current) {
       setLoading(false);
       setLoadingStage('ready');
       return;
     }
+    const previousKey = routeFetchedForDestRef.current;
+    const switchingMode =
+      !!previousKey &&
+      previousKey.startsWith(`${destPart}:`) &&
+      previousKey !== destKey &&
+      !!routeRef.current;
     routeFetchedForDestRef.current = destKey;
 
     let cancelled = false;
     setError(null);
-    routeAnnouncedRef.current = false;
-    arrivedRef.current = false;
-    setArrived(false);
+    if (!switchingMode) {
+      routeAnnouncedRef.current = false;
+      arrivedRef.current = false;
+      setArrived(false);
+    }
 
     const from = userPosRef.current;
     const prefetch = initialRouteRef.current;
@@ -878,6 +1005,7 @@ export default function MapNavigationView({
     const prefetchStillFresh =
       !!prefetch &&
       !!prefetchOrigin &&
+      (prefetch.travelMode ?? 'driving') === navSettings.travelMode &&
       haversineMeters(from, { lat: prefetchOrigin[0], lng: prefetchOrigin[1] }) <= NAV_INITIAL_ROUTE_FRESH_M;
 
     // Use a fresh prefetch as a fast placeholder, but always refetch from the
@@ -895,7 +1023,7 @@ export default function MapNavigationView({
       if (!cancelled && !prefetchStillFresh) setLoadingStage('routing');
     }, 450);
 
-    void loadRoute(from, destination, false).then((result) => {
+    void loadRoute(from, destination, switchingMode).then((result) => {
       if (cancelled) return;
       window.clearTimeout(locateTimer);
       if (!result) {
@@ -908,7 +1036,7 @@ export default function MapNavigationView({
         setError(
           offline
             ? 'You appear to be offline. Check your connection and try again.'
-            : 'Could not load driving directions. Our routing service may be busy — try again shortly.',
+            : 'Could not load directions. Our routing service may be busy — try again shortly.',
         );
         setLoading(false);
         return;
@@ -924,23 +1052,46 @@ export default function MapNavigationView({
       window.clearTimeout(locateTimer);
       routeRequestIdRef.current += 1;
     };
-  }, [destination.lat, destination.lng, loadRoute]);
+  }, [destination.lat, destination.lng, loadRoute, navSettings.travelMode]);
 
   useEffect(() => {
     if (!route || routeAnnouncedRef.current || !voiceOn) return;
     routeAnnouncedRef.current = true;
-    const departStep = route.steps.find((step) => step.maneuverType === 'depart') ?? route.steps[0];
-    voiceRef.current.speak(navigationStartMessage ?? `Starting navigation to ${destinationLabel}`, 'nav-start');
+    const settings = settingsRef.current;
+    const guidance = getDisplayedNavGuidance({
+      route,
+      stepIndex: 0,
+      arrived: false,
+      destinationLabel,
+      userPos: logicPosRef.current,
+      travelMode: settings.travelMode,
+      showLaneGuidance: settings.showLaneGuidance,
+      osmLanes: osmLanesRef.current,
+    });
+    voiceRef.current.speak(
+      buildStartBriefingVoice({
+        startMessage: navigationStartMessage ?? `Starting navigation to ${destinationLabel}`,
+        destinationLabel,
+        distanceMeters: route.distanceMeters,
+        durationSeconds: route.durationSeconds,
+        travelVerb: travelModeVerb(settings.travelMode),
+        guidance,
+      }),
+      'nav-start',
+    );
+    if (guidance.cueStep) {
+      voiceRef.current.markSpoken(
+        distanceCueKeysForStep(
+          0,
+          guidance.cueStep.distanceMeters,
+          guidance.distanceMeters,
+          voiceCueThresholdsForMode(settings.travelMode),
+        ),
+      );
+    }
     for (const [index, message] of (navigationFollowUpMessages ?? []).entries()) {
       voiceRef.current.speak(message, `nav-followup-${index}`);
     }
-    if (departStep) {
-      voiceRef.current.speak(departStep.instruction, 'nav-depart');
-    }
-    voiceRef.current.speak(
-      buildRouteSummaryVoice(destinationLabel, route.distanceMeters, route.durationSeconds),
-      'nav-summary',
-    );
   }, [route, destinationLabel, navigationStartMessage, navigationFollowUpMessages, voiceOn]);
 
   useEffect(() => {
@@ -1099,7 +1250,7 @@ export default function MapNavigationView({
       }
 
       centerMapWithLookahead(map, start, 17);
-      applyMapBearing(map, start, headingRef.current, northUpRef.current);
+      applyHeadingUpRotation(mapRotatorRef.current, map, start, headingRef.current, northUpRef.current);
       if (userMarkerRef.current) {
         const markerHeading = northUpRef.current ? headingRef.current : 0;
         userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
@@ -1170,14 +1321,16 @@ export default function MapNavigationView({
     if (!followUserRef.current) return;
 
     const last = lastNavPanRef.current;
-    const movedEnough = !last || haversineMeters(last, next) >= NAV_GPS_FOLLOW_METERS;
+    const followMeters =
+      settingsRef.current.travelMode === 'driving' ? NAV_GPS_FOLLOW_METERS_DRIVING : NAV_GPS_FOLLOW_METERS_WALK_BIKE;
+    const movedEnough = !last || haversineMeters(last, next) >= followMeters;
     const now = Date.now();
     const bearingDue = now - lastBearingApplyRef.current >= NAV_MAP_SYNC_MS;
 
     if (!movedEnough) {
       if (!northUpRef.current && bearingDue) {
         lastBearingApplyRef.current = now;
-        applyMapBearing(map, next, nextHeading, false);
+        applyHeadingUpRotation(mapRotatorRef.current, map, next, nextHeading, false);
       }
       return;
     }
@@ -1193,7 +1346,7 @@ export default function MapNavigationView({
       const liveMap = mapRef.current;
       if (!target || !liveMap || !followUserRef.current) return;
       centerMapWithLookahead(liveMap, target, Math.max(liveMap.getZoom(), 17));
-      applyMapBearing(liveMap, target, headingRef.current, northUpRef.current);
+      applyHeadingUpRotation(mapRotatorRef.current, liveMap, target, headingRef.current, northUpRef.current);
     });
   }, []);
 
@@ -1241,21 +1394,19 @@ export default function MapNavigationView({
       displayedPosRef.current = displayPos;
 
       const dest = destinationRef.current;
-      const destLabel = destinationLabelRef.current;
-
-      let nextHeading = headingRef.current;
       const gpsHeading = position.coords.heading;
       const speed = position.coords.speed;
 
-      if (speed != null && speed >= 1.4 && lastGpsPosRef.current) {
-        nextHeading = bearingDegrees(lastGpsPosRef.current, snapped);
-      } else if (gpsHeading != null && !Number.isNaN(gpsHeading) && gpsHeading >= 0) {
-        nextHeading = gpsHeading;
-      } else if (activeRoute) {
-        nextHeading = bearingAlongRoute(activeRoute.coords, snapped);
-      }
-
-      nextHeading = smoothHeadingDegrees(headingRef.current, nextHeading);
+      let nextHeading = resolveNavHeading({
+        previous: headingRef.current,
+        gpsHeading,
+        lastPosition: lastGpsPosRef.current,
+        currentPosition: snapped,
+        routeCoords: activeRoute?.coords,
+        compassHeading: compassHeadingRef.current,
+        speedMps: speed,
+        travelMode: settingsRef.current.travelMode,
+      });
       lastGpsPosRef.current = snapped;
 
       const now = Date.now();
@@ -1314,24 +1465,11 @@ export default function MapNavigationView({
         arrivedRef.current = true;
         setArrived(true);
         if (voiceOnRef.current) {
-          const arriveStep = activeRoute?.steps.at(-1);
-          voiceRef.current.speak(
-            buildStepVoiceCue(
-              arriveStep ?? {
-                id: 'arrive',
-                distanceMeters: 0,
-                durationSeconds: 0,
-                name: '',
-                instruction: 'Arrive at pickup',
-                maneuverType: 'arrive',
-                location: dest,
-              },
-              0,
-              'arrival',
-              destLabel,
-            ),
-            'arrival',
-          );
+          speakGuidanceCard('arrival', {
+            arrived: true,
+            route: activeRoute,
+            userPos: snapped,
+          });
         }
         return;
       }
@@ -1341,26 +1479,42 @@ export default function MapNavigationView({
           coords: activeRoute.coords,
           distanceMeters: activeRoute.distanceMeters,
         });
+        let spokeStepChange = false;
         if (nextIdx !== stepIndexRef.current) {
           stepIndexRef.current = nextIdx;
           setStepIndex(nextIdx);
-          const step = activeRoute.steps[nextIdx];
-          if (voiceOnRef.current && step) {
-            voiceRef.current.speak(step.instruction, `step-change-${nextIdx}`);
+          if (voiceOnRef.current && activeRoute.steps[nextIdx]) {
+            speakGuidanceCard(`step-change-${nextIdx}`, {
+              route: activeRoute,
+              stepIndex: nextIdx,
+              userPos: snapped,
+            });
+            spokeStepChange = true;
           }
         }
 
-        const step = activeRoute.steps[stepIndexRef.current];
-        const cueStep = getActiveVoiceCueStep(activeRoute.steps, stepIndexRef.current);
-        if (voiceOnRef.current && cueStep && cueStep.maneuverType !== 'arrive') {
-          const dist = haversineMeters(snapped, cueStep.location);
-          for (const kind of ['far', 'medium', 'near', 'now'] as const) {
-            if (shouldFireVoiceCue(cueStep.distanceMeters, dist, kind, VOICE_CUE_THRESHOLDS)) {
-              voiceRef.current.speak(
-                buildStepVoiceCue(cueStep, VOICE_CUE_THRESHOLDS[kind], kind, destLabel),
-                `cue-${stepIndexRef.current}-${kind}`,
-              );
-              break;
+        const settings = settingsRef.current;
+        const cueThresholds = voiceCueThresholdsForMode(settings.travelMode);
+        if (voiceOnRef.current && !spokeStepChange) {
+          const guidance = getDisplayedNavGuidance({
+            route: activeRoute,
+            stepIndex: stepIndexRef.current,
+            arrived: false,
+            destinationLabel: destinationLabelRef.current,
+            userPos: snapped,
+            travelMode: settings.travelMode,
+            showLaneGuidance: settings.showLaneGuidance,
+            osmLanes: osmLanesRef.current,
+          });
+          if (guidance.cueStep && guidance.cueStep.maneuverType !== 'arrive') {
+            for (const kind of ['far', 'medium', 'near', 'now'] as const) {
+              if (shouldFireVoiceCue(guidance.cueStep.distanceMeters, guidance.distanceMeters, kind, cueThresholds)) {
+                voiceRef.current.speak(
+                  buildDisplayedGuidanceVoice({ guidance }),
+                  `cue-${stepIndexRef.current}-${kind}`,
+                );
+                break;
+              }
             }
           }
         }
@@ -1379,7 +1533,7 @@ export default function MapNavigationView({
               setRerouting(true);
               const rerouteKey = `reroute-${Date.now()}`;
               if (voiceOnRef.current) {
-                voiceRef.current.speak(buildStepVoiceCue(step!, 0, 'reroute'), rerouteKey);
+                voiceRef.current.speak('Recalculating route.', rerouteKey);
               }
               void loadRoute(raw, dest, true).then((result) => {
                 if (!result) {
@@ -1398,7 +1552,7 @@ export default function MapNavigationView({
         }
       }
     },
-    [loadRoute, syncNavigationMap],
+    [loadRoute, speakGuidanceCard, syncNavigationMap],
   );
 
   handleGpsUpdateRef.current = handleGpsUpdate;
@@ -1430,24 +1584,45 @@ export default function MapNavigationView({
     setVoiceOn((on) => {
       const next = !on;
       voiceRef.current.setEnabled(next);
+      if (next) voiceRef.current.prime();
+      writeNavigationSettings({ voiceEnabled: next });
       return next;
     });
+  };
+
+  const speakRecenterCue = () => {
+    const settings = settingsRef.current;
+    if (!settings.voiceEnabled || !settings.speakOnRecenter) return;
+    voiceRef.current.prime();
+    voiceRef.current.setEnabled(true);
+    speakGuidanceCard(`recenter-${Date.now()}`, { prefix: 'Centered on you' });
   };
 
   const handleRecenter = () => {
     setFollowUser(true);
     followUserRef.current = true;
-    setNorthUp(false);
+    const headingUp = settingsRef.current.headingUp;
+    setNorthUp(!headingUp);
     lastNavPanRef.current = null;
     const pos = userPosRef.current;
     const map = mapRef.current;
     if (!map) return;
-    centerMapWithLookahead(map, pos, 17);
-    applyMapBearing(map, pos, headingRef.current, false);
-    if (userMarkerRef.current) {
-      userMarkerRef.current.setIcon(createNavUserIcon(0));
-      lastMarkerHeadingRef.current = 0;
+    if (headingUp) {
+      map.setView([pos.lat, pos.lng], 17, { animate: false });
+      applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, false);
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setIcon(createNavUserIcon(0));
+        lastMarkerHeadingRef.current = 0;
+      }
+    } else {
+      applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, true);
+      centerMapWithLookahead(map, pos, 17);
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
+        lastMarkerHeadingRef.current = headingRef.current;
+      }
     }
+    speakRecenterCue();
   };
 
   const handleOverview = () => {
@@ -1456,6 +1631,7 @@ export default function MapNavigationView({
     setNorthUp(true);
     const map = mapRef.current;
     if (!map) return;
+    applyHeadingUpRotation(mapRotatorRef.current, map, userPosRef.current, headingRef.current, true);
     resetMapBearing(map);
     if (userMarkerRef.current) {
       userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
@@ -1466,6 +1642,7 @@ export default function MapNavigationView({
   };
 
   const handleMapStyleCycle = () => {
+    writeNavigationSettings({ followAppTheme: false });
     setMapStyle((current) => {
       if (current === 'dark') return 'light';
       if (current === 'light') return 'standard';
@@ -1475,7 +1652,7 @@ export default function MapNavigationView({
 
   const handleShareTrip = async () => {
     const summary = `${formatNavDuration(remainingSeconds)} · ${formatNavDistance(remainingMeters)} to ${destinationLabel}`;
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`;
+    const mapsUrl = googleMapsDirectionsUrl(destination, userPosRef.current, navSettings.travelMode);
     try {
       if (navigator.share) {
         await navigator.share({ title: 'Sacramento Buy Nothing navigation', text: summary, url: mapsUrl });
@@ -1504,7 +1681,7 @@ export default function MapNavigationView({
     routeAnnouncedRef.current = false;
     void loadRoute(userPosRef.current, destination, false).then((result) => {
       if (!result) {
-        setError('Could not load driving directions. Try again in a moment.');
+        setError('Could not load directions. Try again in a moment.');
         setLoading(false);
         return;
       }
@@ -1513,45 +1690,20 @@ export default function MapNavigationView({
   };
 
   const showFatalError = Boolean(error && !route);
-  const navigationCueStep =
-    route && !arrived ? getActiveVoiceCueStep(route.steps, stepIndex) ?? currentStep : currentStep;
-  const onConnectorStep =
-    currentStep?.maneuverType === 'depart' ||
-    currentStep?.maneuverType === 'continue' ||
-    currentStep?.maneuverType === 'new name';
-
-  const maneuverKind = route
-    ? arrived
-      ? 'arrive'
-      : maneuverIconKind(navigationCueStep)
-    : 'arrive';
-  const bannerStreet = arrived
-    ? destinationLabel
-    : onConnectorStep
-      ? currentStep?.name?.trim() || navigationCueStep?.name?.trim() || 'Continue on route'
-      : navigationCueStep?.name?.trim() ||
-        currentStep?.name?.trim() ||
-        (maneuverKind === 'arrive' ? destinationLabel : 'Continue on route');
-  const bannerInstruction = arrived
-    ? undefined
-    : onConnectorStep
-      ? navigationCueStep?.instruction
-      : navigationCueStep?.instruction || currentStep?.instruction;
-  const currentRoadLabel = arrived
-    ? destinationLabel
-    : onConnectorStep
-      ? currentStep?.name?.trim() || navigationCueStep?.name?.trim() || bannerStreet
-      : navigationCueStep?.name?.trim() || currentStep?.name?.trim() || bannerStreet;
-
-  const laneGuidanceStep = navigationCueStep ?? currentStep;
-  const laneCount = estimateLaneCount(laneGuidanceStep);
-  const speedLimitMph = estimateSpeedLimitMph(currentStep ?? navigationCueStep);
+  const maneuverKind = displayedGuidance.maneuverKind;
+  const bannerStreet = displayedGuidance.street;
+  const bannerInstruction = displayedGuidance.instruction;
+  const currentRoadLabel = displayedGuidance.currentRoad;
+  const thenLine = displayedGuidance.thenLine;
+  const displayLanes = displayedGuidance.lanes;
+  const speedLimitMph = estimateSpeedLimitMph(displayedGuidance.currentStep ?? displayedGuidance.cueStep);
+  const showSpeedCard = navSettings.travelMode === 'driving';
 
   useEffect(() => {
     const map = mapRef.current;
     const pos = userPosRef.current;
     if (!map || !followUserRef.current) return;
-    applyMapBearing(map, pos, headingRef.current, northUp);
+    applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, northUp);
     if (userMarkerRef.current) {
       const markerHeading = northUp ? headingRef.current : 0;
       userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
@@ -1559,14 +1711,39 @@ export default function MapNavigationView({
     }
   }, [northUp]);
 
+  useEffect(() => {
+    if (navSettings.travelMode !== 'driving' || !navSettings.showLaneGuidance) {
+      setOsmLanes(null);
+      return;
+    }
+    const step = displayedGuidance.cueStep ?? displayedGuidance.currentStep;
+    if (!step || (step.lanes && step.lanes.length > 0) || maneuverKind === 'arrive') {
+      setOsmLanes(null);
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    void fetchOsmLanes(step.location, controller.signal, step.name).then((lanes) => {
+      if (!cancelled) setOsmLanes(lanes);
+    });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [navSettings.travelMode, navSettings.showLaneGuidance, displayedGuidance.cueStep, displayedGuidance.currentStep, maneuverKind]);
+
   return (
     <div
       className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}`}
       id="map_navigation_view"
       style={{ background: 'var(--sbn-nav-bg)' }}
     >
-      <div className="relative flex-1 min-h-0">
-        <div ref={mapContainerRef} className="absolute inset-0 z-0" />
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        <div className="sbn-nav-map-stage">
+          <div ref={mapRotatorRef} className="sbn-nav-map-rotator">
+            <div ref={mapContainerRef} className="sbn-nav-map-canvas" />
+          </div>
+        </div>
 
         {loading && !route && <NavLoadingOverlay stage={loadingStage} destinationLabel={destinationLabel} />}
 
@@ -1582,7 +1759,7 @@ export default function MapNavigationView({
                 <button type="button" onClick={handleRetryRoute} className="sbn-nav-primary-btn">
                   Try again
                 </button>
-                <button type="button" onClick={() => openDrivingDirections(destination, origin)} className="sbn-nav-secondary-btn">
+                <button type="button" onClick={() => openDrivingDirections(destination, origin, navSettings.travelMode)} className="sbn-nav-secondary-btn">
                   Open in Apple / Google Maps
                 </button>
                 <button type="button" onClick={handleExit} className="sbn-nav-tertiary-btn">
@@ -1643,10 +1820,16 @@ export default function MapNavigationView({
                           isCompact ? 'text-lg' : 'text-[1.65rem] sm:text-[1.85rem]'
                         }`}
                       >
-                        {bannerStreet}
+                        {bannerInstruction ?? bannerStreet}
                       </p>
-                      {bannerInstruction && !isCompact ? (
-                        <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">{bannerInstruction}</p>
+                      <p className="text-sm font-semibold mt-1 truncate text-[var(--sbn-nav-text-secondary)]">
+                        {bannerStreet}
+                        {currentRoadLabel && currentRoadLabel !== bannerStreet ? ` · now on ${currentRoadLabel}` : ''}
+                      </p>
+                      {thenLine ? (
+                        <p className={`font-semibold truncate text-[var(--sbn-nav-text-secondary)] opacity-80 ${isCompact ? 'text-[10px] mt-0.5' : 'text-[11px] mt-1'}`}>
+                          {thenLine}
+                        </p>
                       ) : null}
                     </>
                   )}
@@ -1659,8 +1842,8 @@ export default function MapNavigationView({
                 </p>
               )}
 
-              {!loading && !arrived && !isCompact && (
-                <NavLaneGuidance laneCount={laneCount} maneuverKind={maneuverKind} />
+              {!loading && !arrived && (
+                <NavLaneGuidance lanes={displayLanes} maneuverKind={maneuverKind} />
               )}
             </motion.div>
 
@@ -1676,8 +1859,15 @@ export default function MapNavigationView({
                   the sheet when there's little vertical room left for it. */}
               {sheetSnap === 'collapsed' && (
                 <>
-                  <div className="absolute left-3 bottom-3 pointer-events-auto">
-                    <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} compact={isCompact} />
+                  <div className="absolute left-3 bottom-3 pointer-events-auto flex flex-col gap-2 w-[10.75rem]">
+                    {showSpeedCard && (
+                      <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} compact={isCompact} />
+                    )}
+                    <NavTravelModeSwitcher
+                      variant="nav"
+                      value={navSettings.travelMode}
+                      onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
+                    />
                   </div>
 
                   <div
@@ -1688,8 +1878,10 @@ export default function MapNavigationView({
                     <button
                       type="button"
                       onClick={() => {
-                        setNorthUp((value) => !value);
+                        const nextNorthUp = !northUp;
+                        setNorthUp(nextNorthUp);
                         setShowHeading(true);
+                        writeNavigationSettings({ headingUp: !nextNorthUp });
                       }}
                       className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${northUp ? '' : 'sbn-nav-fab-active'}`}
                       title={northUp ? 'North up — tap for heading up' : 'Heading up — tap for north up'}
@@ -1716,19 +1908,19 @@ export default function MapNavigationView({
                       type="button"
                       onClick={handleRecenter}
                       className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${followUser ? 'sbn-nav-fab-active' : ''}`}
-                      title="Recenter on you"
-                      aria-label="Recenter on you"
+                      title="Center on you and speak the next turn"
+                      aria-label="Center on you"
                     >
                       <LocateFixed className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
                     </button>
                     <button
                       type="button"
-                      onClick={handleMapStyleCycle}
-                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''}`}
-                      title={`Map style: ${mapStyle}`}
-                      aria-label="Change map style"
+                      onClick={() => setSettingsOpen(true)}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${settingsOpen ? 'sbn-nav-fab-active' : ''}`}
+                      title="Navigation settings"
+                      aria-label="Navigation settings"
                     >
-                      <Layers className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
+                      <Settings2 className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
                     </button>
                     <button
                       type="button"
@@ -1750,7 +1942,10 @@ export default function MapNavigationView({
 
                   {!arrived && currentRoadLabel && (
                     <div className="absolute inset-x-0 bottom-3 flex justify-center px-20 pointer-events-none">
-                      <div className="sbn-nav-road-pill truncate">{currentRoadLabel}</div>
+                      <div className="sbn-nav-road-pill truncate">
+                        {currentRoadLabel}
+                        {gpsAccuracy != null ? ` · ±${Math.round(gpsAccuracy)}m` : ''}
+                      </div>
                     </div>
                   )}
                 </>
@@ -1771,16 +1966,46 @@ export default function MapNavigationView({
                 route={route}
                 stepIndex={stepIndex}
                 voiceOn={voiceOn}
+                travelMode={navSettings.travelMode}
                 onVoiceToggle={handleVoiceToggle}
                 onOverview={handleOverview}
                 onShare={() => void handleShareTrip()}
                 onRecenter={handleRecenter}
+                onSettings={() => setSettingsOpen(true)}
                 onExit={handleExit}
               />
             </div>
           )}
         </div>
       </div>
+
+      {settingsOpen && (
+        <div className="sbn-nav-settings-overlay" role="dialog" aria-modal="true" aria-labelledby="nav_settings_title">
+          <div className="sbn-nav-settings-card sbn-nav-glass pointer-events-auto">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h2 id="nav_settings_title" className="text-base font-display font-bold text-[var(--sbn-nav-text)]">
+                Navigation settings
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(false)}
+                className="sbn-nav-sheet-action"
+                aria-label="Close settings"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <NavigationSettingsForm
+              variant="nav"
+              settings={navSettings}
+              onChange={(patch) => writeNavigationSettings(patch)}
+            />
+            <button type="button" onClick={handleMapStyleCycle} className="sbn-nav-secondary-btn mt-4">
+              Map tiles: {mapStyle}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

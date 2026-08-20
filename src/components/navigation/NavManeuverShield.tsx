@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ManeuverIconKind } from '../../lib/navigationRoute';
 
 interface NavManeuverShieldProps {
@@ -6,6 +7,7 @@ interface NavManeuverShieldProps {
 }
 
 export default function NavManeuverShield({ kind, className = 'w-14 h-14' }: NavManeuverShieldProps) {
+  const fillId = useId();
   const arrow =
     kind === 'left' ? (
       <path d="M34 30 L22 42 L22 36 L14 36 L14 48 L22 48 L22 42 Z" fill="currentColor" />
@@ -28,13 +30,13 @@ export default function NavManeuverShield({ kind, className = 'w-14 h-14' }: Nav
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden>
       <defs>
-        <linearGradient id="sbn-nav-shield-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#eef2f7" />
+        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--sbn-nav-card-solid)" />
+          <stop offset="100%" stopColor="var(--sbn-nav-surface)" />
         </linearGradient>
       </defs>
-      <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#sbn-nav-shield-bg)" />
-      <rect x="6" y="6" width="52" height="52" rx="14" fill="none" stroke="rgba(15,23,42,0.12)" strokeWidth="1.5" />
+      <rect x="6" y="6" width="52" height="52" rx="14" fill={`url(#${fillId})`} />
+      <rect x="6" y="6" width="52" height="52" rx="14" fill="none" stroke="var(--sbn-nav-glass-border)" strokeWidth="1.5" />
       <g className="text-accent" transform="translate(0, 2)">
         {arrow}
       </g>
