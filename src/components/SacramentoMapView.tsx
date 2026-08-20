@@ -38,6 +38,7 @@ import {
 } from '../lib/navigationSession';
 import MapNavigationView from './MapNavigationView';
 import { unlockNavigationSpeech } from '../lib/navigationVoice';
+import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
 import { MapPin, MessageSquare, LifeBuoy, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
@@ -181,15 +182,6 @@ function createItemBlipIcon(item: ItemPost, color: string, isSelected: boolean):
     iconAnchor: [12, 12],
   });
 }
-
-const MAP_TILE_OPTIONS = {
-  maxZoom: 19,
-  updateWhenIdle: true,
-  updateWhenZooming: false,
-  keepBuffer: 3,
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
-} as const;
 
 const GPS_FOLLOW_PAN_METERS = 25;
 const GPS_STATE_UPDATE_METERS = 40;
@@ -902,7 +894,7 @@ export default function SacramentoMapView({
     );
 
     // Apply soft, beautiful CartoDB Voyager tile layer with NO labels/city-icons to keep the focus solely on the user's listing blips
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', MAP_TILE_OPTIONS).addTo(map);
+    L.tileLayer(SBN_MAP_TILE_URL, SBN_MAP_TILE_OPTIONS).addTo(map);
 
     // Dynamic Markers Layer Group
     const markersGroup = L.layerGroup().addTo(map);

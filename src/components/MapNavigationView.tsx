@@ -76,6 +76,7 @@ import {
   voiceCueThresholdsForMode,
 } from '../lib/navigationVoice';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
 
 export interface NavProgressUpdate {
   lat: number;
@@ -109,14 +110,6 @@ type NavLoadingStage = 'locating' | 'routing' | 'ready';
 const NAV_BRAND = '#FF4500';
 const NAV_BRAND_LIGHT = '#FF6B2E';
 const NAV_ROUTE_GLOW = 'rgba(255, 69, 0, 0.42)';
-
-type NavMapStyle = 'dark' | 'light' | 'standard';
-
-const NAV_TILE_URLS: Record<NavMapStyle, string> = {
-  dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png',
-  standard: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-};
 
 function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean }) {
   if (!visible || !phrase) return null;
@@ -746,11 +739,6 @@ export default function MapNavigationView({
   const [osmLanes, setOsmLanes] = useState<NavLane[] | null>(null);
   const osmLanesRef = useRef<NavLane[] | null>(null);
   osmLanesRef.current = osmLanes;
-  const [mapStyle, setMapStyle] = useState<NavMapStyle>(() => {
-    const settings = readNavigationSettings();
-    if (!settings.followAppTheme) return theme === 'light' ? 'light' : 'dark';
-    return theme === 'light' ? 'light' : 'dark';
-  });
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [voicePhrase, setVoicePhrase] = useState('');
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -1002,12 +990,6 @@ export default function MapNavigationView({
   }, []);
 
   useEffect(() => {
-    if (navSettings.followAppTheme) {
-      setMapStyle(theme === 'light' ? 'light' : 'dark');
-    }
-  }, [theme, navSettings.followAppTheme]);
-
-  useEffect(() => {
     const destPart = `${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`;
     const destKey = `${destPart}:${navSettings.travelMode}`;
     if (routeFetchedForDestRef.current === destKey && routeRef.current) {
@@ -1139,13 +1121,7 @@ export default function MapNavigationView({
       markerZoomAnimation: false,
     }).setView([start.lat, start.lng], 16);
 
-    const tileLayer = L.tileLayer(NAV_TILE_URLS[mapStyle], {
-      maxZoom: 19,
-      updateWhenIdle: true,
-      updateWhenZooming: false,
-      keepBuffer: 3,
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-    }).addTo(map);
+    const tileLayer = L.tileLayer(SBN_MAP_TILE_URL, SBN_MAP_TILE_OPTIONS).addTo(map);
     tileLayerRef.current = tileLayer;
 
     const routeLayer = L.layerGroup().addTo(map);
@@ -1204,10 +1180,6 @@ export default function MapNavigationView({
       displayedPosRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    tileLayerRef.current?.setUrl(NAV_TILE_URLS[mapStyle]);
-  }, [mapStyle]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1677,15 +1649,6 @@ export default function MapNavigationView({
     fitRouteOverview({ force: true });
   };
 
-  const handleMapStyleCycle = () => {
-    writeNavigationSettings({ followAppTheme: false });
-    setMapStyle((current) => {
-      if (current === 'dark') return 'light';
-      if (current === 'light') return 'standard';
-      return 'dark';
-    });
-  };
-
   const handleShareTrip = async () => {
     const summary = `${formatNavDuration(remainingSeconds)} · ${formatNavDistance(remainingMeters)} to ${destinationLabel}`;
     const mapsUrl = googleMapsDirectionsUrl(destination, userPosRef.current, navSettings.travelMode);
@@ -2051,9 +2014,6 @@ export default function MapNavigationView({
               settings={navSettings}
               onChange={(patch) => writeNavigationSettings(patch)}
             />
-            <button type="button" onClick={handleMapStyleCycle} className="sbn-nav-secondary-btn mt-4">
-              Map tiles: {mapStyle}
-            </button>
           </div>
         </div>
       )}

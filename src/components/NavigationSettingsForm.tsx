@@ -162,7 +162,7 @@ export default function NavigationSettingsForm({
         <ToggleRow
           id={variant === 'nav' ? 'nav_setting_theme' : 'profile_nav_theme'}
           title="Follow app theme"
-          description="Navigation chrome and map tiles match light or dark mode from Account."
+          description="Navigation chrome matches light or dark mode from Account. The map uses the same tiles as the community map."
           checked={settings.followAppTheme}
           onChange={(followAppTheme) => onChange({ followAppTheme })}
           icon={Moon}
