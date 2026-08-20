@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronUp, Flag, MapPin, MessageSquare, Trash2 } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
@@ -34,6 +34,33 @@ const voteBtnClass = (active: boolean, disabled: boolean) =>
         : 'border-app text-muted hover:border-accent'
   }`;
 
+function VoteCountPill({
+  direction,
+  count,
+  active = false,
+}: {
+  direction: 'up' | 'down';
+  count: number;
+  active?: boolean;
+}) {
+  const Icon = direction === 'up' ? ChevronUp : ChevronDown;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border tabular-nums ${
+        active
+          ? direction === 'up'
+            ? 'bg-accent-soft border-accent text-accent'
+            : 'bg-inset border-app text-app'
+          : 'border-app text-muted bg-inset/50'
+      }`}
+      aria-hidden
+    >
+      <Icon className="w-4 h-4" />
+      {count}
+    </span>
+  );
+}
+
 export default function FeedPostCard({
   post,
   userProfile,
@@ -48,7 +75,6 @@ export default function FeedPostCard({
   const reactions = engagement.getReactionState(post.id);
   const comments = engagement.getComments(post.id);
   const expanded = engagement.expandedComments[post.id] ?? false;
-  const score = votes.upvotes - votes.downvotes;
   const cover = post.imageUrls[0];
   const extraPhotos = Math.max(0, post.imageUrls.length - 1);
 
@@ -56,9 +82,31 @@ export default function FeedPostCard({
   const canDelete = isOwn || isStaff;
   const canReport = !isOwn;
 
-  const reactionSummary = useMemo(() => {
-    return FEED_REACTION_EMOJI.filter((emoji) => (reactions.counts[emoji] ?? 0) > 0);
-  }, [reactions.counts]);
+  const reactionRow = (
+    <div className="flex flex-wrap gap-1.5">
+      {FEED_REACTION_EMOJI.map((emoji) => {
+        const active = reactions.mine.has(emoji);
+        const count = reactions.counts[emoji] ?? 0;
+        return (
+          <button
+            key={emoji}
+            type="button"
+            onClick={() => void engagement.toggleReaction(post.id, emoji as FeedReactionEmoji)}
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm border transition-colors ${
+              active
+                ? 'border-accent bg-accent-soft text-accent'
+                : 'border-app bg-inset text-muted hover:border-accent/40'
+            }`}
+            aria-label={`React ${emoji}`}
+            aria-pressed={active}
+          >
+            <span>{emoji}</span>
+            {count > 0 && <span className="text-[10px] font-bold tabular-nums">{count}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <article className="item-feed-card sbn-feed-post overflow-hidden" id={`feed_post_${post.id}`}>
@@ -169,38 +217,40 @@ export default function FeedPostCard({
           </div>
         )}
 
-        <div className="flex items-center gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-app">
-          <button
-            type="button"
-            disabled={!canVote}
-            onClick={() => engagement.handleVote(post.id, 'up', post.userId)}
-            className={voteBtnClass(votes.userVote === 'up', !canVote)}
-            title={canVote ? 'Upvote' : "You can't vote on your own post"}
-            aria-label="Upvote"
-          >
-            <ChevronUp className="w-4 h-4" />
-            {votes.upvotes}
-          </button>
-          <span className="text-xs font-bold text-app min-w-[1.5rem] text-center tabular-nums">
-            {score > 0 ? `+${score}` : score}
-          </span>
-          <button
-            type="button"
-            disabled={!canVote}
-            onClick={() => engagement.handleVote(post.id, 'down', post.userId)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-              !canVote
-                ? 'opacity-50 cursor-not-allowed border-app text-muted'
-                : votes.userVote === 'down'
-                  ? 'bg-inset border-app text-app'
-                  : 'border-app text-muted hover:border-app'
-            }`}
-            title={canVote ? 'Not for me' : "You can't vote on your own post"}
-            aria-label="Downvote"
-          >
-            <ChevronDown className="w-4 h-4" />
-            {votes.downvotes}
-          </button>
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-app">
+          {canVote ? (
+            <>
+              <button
+                type="button"
+                onClick={() => engagement.handleVote(post.id, 'up', post.userId)}
+                className={voteBtnClass(votes.userVote === 'up', false)}
+                title="Upvote"
+                aria-label="Upvote"
+              >
+                <ChevronUp className="w-4 h-4" />
+                <span className="tabular-nums">{votes.upvotes}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => engagement.handleVote(post.id, 'down', post.userId)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  votes.userVote === 'down'
+                    ? 'bg-inset border-app text-app'
+                    : 'border-app text-muted hover:border-app'
+                }`}
+                title="Not for me"
+                aria-label="Downvote"
+              >
+                <ChevronDown className="w-4 h-4" />
+                <span className="tabular-nums">{votes.downvotes}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <VoteCountPill direction="up" count={votes.upvotes} />
+              <VoteCountPill direction="down" count={votes.downvotes} />
+            </>
+          )}
           <button
             type="button"
             onClick={() => engagement.toggleComments(post.id)}
@@ -211,41 +261,11 @@ export default function FeedPostCard({
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            {comments.length}
+            <span className="tabular-nums">{comments.length}</span>
           </button>
-          {reactionSummary.length > 0 && !expanded && (
-            <span className="inline-flex items-center gap-0.5 text-sm" aria-hidden>
-              {reactionSummary.slice(0, 4).map((emoji) => (
-                <span key={emoji}>{emoji}</span>
-              ))}
-            </span>
-          )}
         </div>
 
-        {expanded && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {FEED_REACTION_EMOJI.map((emoji) => {
-              const active = reactions.mine.has(emoji);
-              const count = reactions.counts[emoji] ?? 0;
-              return (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => void engagement.toggleReaction(post.id, emoji as FeedReactionEmoji)}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm border transition-colors ${
-                    active
-                      ? 'border-accent bg-accent-soft text-accent'
-                      : 'border-app bg-inset text-muted hover:border-accent/40'
-                  }`}
-                  aria-label={`React ${emoji}`}
-                >
-                  <span>{emoji}</span>
-                  {count > 0 && <span className="text-[10px] font-bold">{count}</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <div className="mt-2.5">{reactionRow}</div>
 
         {expanded && (
           <div className="mt-3">
