@@ -45,6 +45,7 @@ const APK_0017_PUBLISHED_AT = '2026-08-18T13:30:00.000Z';
 const APK_0018_PUBLISHED_AT = '2026-08-18T14:00:00.000Z';
 const APK_0019_PUBLISHED_AT = '2026-08-18T14:15:00.000Z';
 const APK_0020_PUBLISHED_AT = '2026-08-18T21:35:00.000Z';
+const PHOTO_UPLOAD_FIX_PUBLISHED_AT = '2026-08-20T03:30:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
 const EVENT_SERIES_PUBLISHED_AT = '2026-07-29T18:00:00.000Z';
@@ -98,6 +99,29 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_photo-upload-fix',
+    '2026-08-20',
+    'Photo uploads work again on Android and the website',
+    'Posting a listing with photos failed for some neighbors on the Play Store app and website. That is fixed — reopen the app and try adding photos when you post.',
+    `WHAT NEIGHBORS SEE
+If you could sign in but got "Could not upload photos" when posting a giveaway, event, or profile photo, that is fixed now.
+
+Reopen the Sacramento Buy Nothing app or refresh the website, then try posting with photos again. You do not need a new install from the Play Store — the app loads the live site.
+
+This also fixes screenshot uploads on reports and support tickets.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- src/supabase.ts — listing, event, profile, report, and ticket uploads now use auth-scoped storage paths ({userId}/...).
+- src/lib/imageUrl.ts — Android gallery picks with missing MIME types are accepted by file extension.
+- scripts/verify-photo-upload-paths.mjs — static audit for all eight upload surfaces.
+
+HISTORY
+2026-08-20 — PR #232. Storage RLS required user-scoped paths; uploads used flat filenames. Android WebView often omits image MIME types from gallery picks.`,
+    PHOTO_UPLOAD_FIX_PUBLISHED_AT,
+  ),
   update(
     '2026-08-18_apk-0020',
     '2026-08-18',
@@ -644,6 +668,25 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_photo-upload-fix',
+    '2026-08-20',
+    'Photo uploads fixed — try posting again',
+    'If adding photos while posting failed on the Android app or website, reopen the app and try again. No new install needed.',
+    `WHAT NEIGHBORS SEE
+Some neighbors could log in but could not attach photos when posting listings or events. That is fixed.
+
+Reopen the app or refresh the page, then post with photos as usual. Play Store installs pick up the fix automatically.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_photo-upload-fix (PR #232).
+
+HISTORY
+2026-08-20 — Photo upload fix for Android Play Store app and website.`,
+    PHOTO_UPLOAD_FIX_PUBLISHED_AT,
+  ),
   news(
     '2026-08-18_apk-0015-download',
     '2026-08-18',
