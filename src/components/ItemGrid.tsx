@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
 import {
   ArrowDownUp,
@@ -28,7 +28,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_TYPE_FILTERS, LISTING_POST_TYPES, getPostTypeFilterLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
@@ -77,16 +77,27 @@ const QUICK_PICKS: { id: QuickPick; label: string }[] = [
   { id: 'needs_pickup', label: 'Needs pickup' },
 ];
 
-const FEED_TYPE_OPTIONS: { value: ListingTypeFilter; label: string; id: string }[] = [
-  { value: 'all', label: 'Everything', id: 'feed_type_all' },
-  { value: 'giveaway', label: 'Giving', id: 'feed_type_giving' },
-  { value: 'looking', label: 'Looking', id: 'feed_type_looking' },
-  { value: 'trade', label: 'Trading', id: 'feed_type_trading' },
-];
-
 function feedSortToolbarLabel(mode: 'nearest' | 'new', compact: boolean): string {
   if (compact) return mode === 'nearest' ? 'Near' : 'New';
   return mode === 'nearest' ? 'Nearest' : 'Newest';
+}
+
+function feedTypeToolbarLabel(type: ListingTypeFilter): string {
+  switch (type) {
+    case 'all':
+      return 'Everything';
+    case 'giveaway':
+      return 'Giving';
+    case 'looking':
+      return 'Looking';
+    case 'trade':
+      return 'Trading';
+  }
+}
+
+function needsPickupListing(item: ItemPost): boolean {
+  if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
+  return /pickup|curb|porch/i.test(item.category);
 }
 
 const ALL_FEED_SORT_OPTIONS: { value: FeedSortMode; label: string }[] = [
@@ -135,11 +146,6 @@ function FilterPanelToggleSection<T extends string>({
       />
     </div>
   );
-}
-
-function needsPickupListing(item: ItemPost): boolean {
-  if (item.status === 'pending_pickup' || item.status === 'on_hold') return true;
-  return /pickup|curb|porch/i.test(item.category);
 }
 
 interface ItemGridProps {
@@ -313,9 +319,13 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set());
   };
 
-  const handleToolbarTypeChange = (type: ListingTypeFilter) => {
-    setSelectedType(type);
-    if (type !== 'all') setSelectedCategory('All Categories');
+  const cycleTypeFilter = () => {
+    setSelectedType((current) => {
+      const idx = LISTING_TYPE_FILTERS.indexOf(current);
+      const next = LISTING_TYPE_FILTERS[(idx + 1) % LISTING_TYPE_FILTERS.length];
+      if (next !== 'all') setSelectedCategory('All Categories');
+      return next;
+    });
   };
 
   const categoryFilterOptions = useMemo(() => {
@@ -455,14 +465,20 @@ export default function ItemGrid({
                 <span className="sm:hidden">{feedSortToolbarLabel(gridSortMode, true)}</span>
                 <span className="hidden sm:inline">{feedSortToolbarLabel(gridSortMode, false)}</span>
               </button>
-              <FilterToggleGroup
-                id="feed_type_group"
-                ariaLabel="Listing type"
-                options={FEED_TYPE_OPTIONS}
-                value={selectedType}
-                onChange={handleToolbarTypeChange}
-                compact
-              />
+              <button
+                type="button"
+                id="feed_type_toggle"
+                onClick={cycleTypeFilter}
+                className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap min-w-0 shrink-0 ${
+                  selectedType !== 'all'
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-app bg-inset text-app hover:border-accent/40'
+                }`}
+                aria-pressed={selectedType !== 'all'}
+                aria-label={`Listing type: ${feedTypeToolbarLabel(selectedType)}`}
+              >
+                <span>{feedTypeToolbarLabel(selectedType)}</span>
+              </button>
             </div>
           </div>
 
