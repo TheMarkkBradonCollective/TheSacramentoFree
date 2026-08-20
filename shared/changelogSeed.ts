@@ -58,6 +58,7 @@ const APK_0029_PUBLISHED_AT = '2026-08-20T10:40:00.000Z';
 const APK_0030_PUBLISHED_AT = '2026-08-20T11:05:00.000Z';
 const APK_0031_PUBLISHED_AT = '2026-08-20T13:10:00.000Z';
 const APK_0032_PUBLISHED_AT = '2026-08-20T13:28:00.000Z';
+const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
@@ -112,6 +113,31 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0033',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0033',
+    'Staff mode box title follows the toggle; location permission switch now shows Allowed when GPS works.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0033 (versionCode 33).
+
+Since 0032:
+• Staff mode settings card title switches between Staff mode and User mode
+• Location permission toggle correctly shows Allowed after GPS is granted on Android
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0033.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 33
+- play-store-assets/release-notes-v0.1.0-0033.txt
+
+HISTORY
+2026-08-20 — /runit release merging PRs #256–#257; Android beta 0033 built.`,
+    APK_0033_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0032',
     '2026-08-20',
