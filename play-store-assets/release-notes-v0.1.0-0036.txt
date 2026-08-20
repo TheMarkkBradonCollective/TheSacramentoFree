@@ -1,0 +1,9 @@
+Android beta v0.1.0.0036 (versionCode 36)
+
+What's new:
+• New nav — Feed tab (neighbor wall coming soon), Stuff for listings, account in header
+• Footer: Feed | Stuff | Map | Events | Messages
+• Bell panel — badges moved into notifications; cleaner header
+• Looking and Trade tags use orange shades like Giving
+
+Download (sideload): https://www.sacramentobuynothing.com/download
