@@ -502,6 +502,7 @@ export default function SacramentoMapView({
   const [isLocating, setIsLocating] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
   const lastFitDestKeyRef = useRef<string | null>(null);
+  const lastFitCoordsKeyRef = useRef<string | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const routeEndpointsRef = useRef<{ start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null>(null);
   const routeCoordsRef = useRef<[number, number][] | null>(null);
@@ -519,7 +520,28 @@ export default function SacramentoMapView({
 
   useEffect(() => {
     routeAutoFitEnabledRef.current = true;
+    lastFitCoordsKeyRef.current = null;
   }, [selectedPost?.id, selectedEvent?.id]);
+
+  const [selectionCardHeight, setSelectionCardHeight] = useState(0);
+  const hasMapSelection = Boolean(selectedPost || selectedEvent);
+
+  useEffect(() => {
+    const cardEl = selectionCardRef.current;
+    const mapRoot = mapContainerRef.current?.parentElement;
+    if (!cardEl || !mapRoot || !isFullScreenMobile) return;
+
+    const syncCardStack = () => {
+      const height = hasMapSelection ? Math.ceil(cardEl.getBoundingClientRect().height) : 0;
+      setSelectionCardHeight(height);
+      mapRoot.style.setProperty('--sbn-map-card-stack', `${height}px`);
+    };
+
+    syncCardStack();
+    const observer = new ResizeObserver(syncCardStack);
+    observer.observe(cardEl);
+    return () => observer.disconnect();
+  }, [hasMapSelection, isFullScreenMobile, selectedPost?.id, selectedEvent?.id]);
 
   const fitRouteToAvailableView = useCallback(
     (options?: { force?: boolean }) => {
@@ -545,7 +567,7 @@ export default function SacramentoMapView({
       map.fitBounds(coords, {
         paddingTopLeft: padding.topLeft,
         paddingBottomRight: padding.bottomRight,
-        maxZoom: 14,
+        maxZoom: 16,
         animate: false,
       });
       window.requestAnimationFrame(() => {
@@ -1043,6 +1065,9 @@ export default function SacramentoMapView({
           setSlideDirection('right');
           setSelectedPost(item);
           setSelectedEvent(null);
+          routeAutoFitEnabledRef.current = true;
+          setFollowUser(false);
+          followUserRef.current = false;
           map.setView([lat, lng], map.getZoom(), { animate: false });
         },
       );
@@ -1065,6 +1090,9 @@ export default function SacramentoMapView({
           setSlideDirection('right');
           setSelectedEvent(event);
           setSelectedPost(null);
+          routeAutoFitEnabledRef.current = true;
+          setFollowUser(false);
+          followUserRef.current = false;
           map.setView([lat, lng], map.getZoom(), { animate: false });
         },
       );
@@ -1442,10 +1470,23 @@ export default function SacramentoMapView({
     routeLayer.clearLayers();
 
     const activeTargetId = selectedPost?.id ?? selectedEvent?.id ?? null;
-    if (!activeTargetId || !routeDestination || !routeCoords || routeCoords.length < 2) return;
+    if (!activeTargetId || !routeDestination || !routeCoords || routeCoords.length < 2) {
+      lastFitCoordsKeyRef.current = null;
+      return;
+    }
 
     const destKey = `${routeDestination.lat.toFixed(5)},${routeDestination.lng.toFixed(5)}`;
     const destChanged = destKey !== lastFitDestKeyRef.current;
+    const coordsFitKey = `${routeCoords.length}:${routeCoords[0][0].toFixed(4)},${routeCoords[0][1].toFixed(4)}:${routeCoords[routeCoords.length - 1][0].toFixed(4)},${routeCoords[routeCoords.length - 1][1].toFixed(4)}`;
+    const coordsChanged = coordsFitKey !== lastFitCoordsKeyRef.current;
+
+    if (destChanged) {
+      lastFitDestKeyRef.current = destKey;
+      routeAutoFitEnabledRef.current = true;
+    }
+    if (coordsChanged) {
+      lastFitCoordsKeyRef.current = coordsFitKey;
+    }
 
     L.polyline(routeCoords, {
       color: '#FF4500',
@@ -1463,16 +1504,25 @@ export default function SacramentoMapView({
       lineJoin: 'round',
     }).addTo(routeLayer);
 
-    if (destChanged) {
-      lastFitDestKeyRef.current = destKey;
-      fitRouteToAvailableView();
+    if (destChanged || coordsChanged) {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => fitRouteToAvailableView({ force: destChanged }));
+      });
     }
   }, [selectedPost?.id, selectedEvent?.id, routeDestination?.lat, routeDestination?.lng, routeCoords, fitRouteToAvailableView]);
+
+  useEffect(() => {
+    if (!hasMapSelection || selectionCardHeight <= 0) return;
+    if (!routeCoordsRef.current || routeCoordsRef.current.length < 2) return;
+    const id = window.requestAnimationFrame(() => fitRouteToAvailableView());
+    return () => window.cancelAnimationFrame(id);
+  }, [selectionCardHeight, hasMapSelection, fitRouteToAvailableView]);
 
   useEffect(() => {
     if (!routeDestination) {
       routeEndpointsRef.current = null;
       lastFitDestKeyRef.current = null;
+      lastFitCoordsKeyRef.current = null;
       return;
     }
     const start = userLocationRef.current ?? userLocation;
@@ -1498,7 +1548,10 @@ export default function SacramentoMapView({
   // Immersive mobile layout implementation
   if (isFullScreenMobile) {
     return (
-      <div id="sacramento_interactive_map_view" className="relative w-full h-full overflow-hidden font-sans">
+      <div
+        id="sacramento_interactive_map_view"
+        className={`relative w-full h-full overflow-hidden font-sans${hasMapSelection ? ' sbn-map-has-selection' : ''}`}
+      >
         {navigationOverlay}
         {/* Immersive Leaflet Container */}
         <div 
@@ -1537,7 +1590,7 @@ export default function SacramentoMapView({
         <button
           type="button"
           onClick={handleLocateUser}
-          className={`absolute sbn-map-edge-bottom left-4 z-20 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
+          className={`absolute sbn-map-float-btn left-4 w-11 h-11 rounded-full shadow-app flex items-center justify-center transition-all active:scale-95 cursor-pointer border pointer-events-auto ${
             isLocating
               ? 'bg-accent text-on-accent border-accent'
               : followUser
@@ -1551,7 +1604,7 @@ export default function SacramentoMapView({
           <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
         </button>
 
-        <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute sbn-map-edge-bottom right-4 z-20" />
+        <MapCreateFab onOpenNewPost={onOpenNewPost} className="absolute sbn-map-float-btn right-4" />
 
         {/* Location error toast */}
         {locationError && (
@@ -1634,7 +1687,7 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Selected listing/event floating panel */}
-        <div ref={selectionCardRef} className="absolute sbn-map-edge-bottom left-4 right-4 z-30 pointer-events-none">
+        <div ref={selectionCardRef} className="absolute sbn-map-selection-dock left-4 right-4 z-30 pointer-events-none">
           <AnimatePresence>
             {selectedEvent && currentEventIndex >= 0 && (
               <MapSelectedEventCard
