@@ -104,17 +104,6 @@ export default function ListingEngagement({
           <ChevronDown className="w-4 h-4" />
           {downvotes}
         </button>
-        {variant === 'card' && onToggleComments && (
-          <button
-            type="button"
-            onClick={onToggleComments}
-            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors border-app text-muted hover:border-accent"
-            title="Open listing to view all comments"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            {comments.length}
-          </button>
-        )}
         {variant === 'detail' && (
           <span className="ml-auto text-xs text-muted flex items-center gap-1">
             <MessageSquare className="w-3.5 h-3.5" />
