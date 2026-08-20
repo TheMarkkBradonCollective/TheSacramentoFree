@@ -32,6 +32,7 @@ interface TabletViewProps {
   activeTab: AnyTab;
   setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
+  onOpenNewStuff: () => void;
   onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
@@ -103,6 +104,7 @@ export default function TabletView({
   activeTab,
   setActiveTab,
   onOpenNewPost,
+  onOpenNewStuff,
   onOpenNewEvent,
   canAccessEvents = true,
   onInitiateChat,
@@ -248,7 +250,7 @@ export default function TabletView({
                     onViewProfile={onViewProfile}
                     onRefresh={onRefresh}
                     isLoading={!itemsHydrated}
-                    onOpenNewPost={onOpenNewPost}
+                    onOpenNewPost={onOpenNewStuff}
                   />
               </ScrollPage>
             )}
@@ -270,6 +272,8 @@ export default function TabletView({
                     onViewProfile={onViewProfile}
                     onRefresh={onRefreshEvents}
                     isLoading={isEventsLoading}
+                    onOpenNewEvent={onOpenNewEvent}
+                    canAccessEvents={canAccessEvents}
                   />
               </ScrollPage>
             )}

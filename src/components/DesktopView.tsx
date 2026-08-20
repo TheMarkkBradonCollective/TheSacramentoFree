@@ -31,6 +31,7 @@ interface DesktopViewProps {
   activeTab: AnyTab;
   setActiveTab: (tab: AnyTab) => void;
   onOpenNewPost: () => void;
+  onOpenNewStuff: () => void;
   onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
   onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
@@ -96,6 +97,7 @@ export default function DesktopView({
   activeTab,
   setActiveTab,
   onOpenNewPost,
+  onOpenNewStuff,
   onOpenNewEvent,
   canAccessEvents = true,
   onInitiateChat,
@@ -242,7 +244,7 @@ export default function DesktopView({
                       onViewProfile={onViewProfile}
                       onRefresh={onRefresh}
                       isLoading={!itemsHydrated}
-                      onOpenNewPost={onOpenNewPost}
+                      onOpenNewPost={onOpenNewStuff}
                     />
                   </div>
                   <DashboardRail
@@ -274,6 +276,8 @@ export default function DesktopView({
                       onViewProfile={onViewProfile}
                       onRefresh={onRefreshEvents}
                       isLoading={isEventsLoading}
+                      onOpenNewEvent={onOpenNewEvent}
+                      canAccessEvents={canAccessEvents}
                     />
                   </div>
                   <DashboardRail

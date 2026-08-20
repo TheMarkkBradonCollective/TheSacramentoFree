@@ -10,7 +10,7 @@ import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent } from './typ
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
-import NewListingModal from './components/NewListingModal';
+import NewListingModal, { type NewListingModalMode } from './components/NewListingModal';
 import ItemDetailView from './components/ItemDetailView';
 import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
@@ -184,7 +184,7 @@ export default function App() {
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
   const pathnameSeededRef = useRef(false);
   const [activeTab, setActiveTab] = useState<AnyTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
-  const [showNewListingModal, setShowNewListingModal] = useState(false);
+  const [newListingModalMode, setNewListingModalMode] = useState<NewListingModalMode | null>(null);
   const [showGoFundMeDetail, setShowGoFundMeDetail] = useState(false);
   const [legalPanel, setLegalPanel] = useState<'privacy' | 'terms' | null>(null);
   const [showAwardsPanel, setShowAwardsPanel] = useState(false);
@@ -263,7 +263,7 @@ export default function App() {
     setDetailEvent(null);
     setDetailEventNavigateOnOpen(false);
     setViewProfileUid(null);
-    setShowNewListingModal(false);
+    setNewListingModalMode(null);
     setShowGoFundMeDetail(false);
     setLegalPanel(null);
     setShowAwardsPanel(false);
@@ -1668,10 +1668,21 @@ export default function App() {
 
   const accountRestriction = isAccountRestricted(userProfile);
 
-  const openNewListing = () => {
-    setActiveTab('map');
-    setShowNewListingModal(true);
-  };
+  const openNewListingFromMap = useCallback(() => {
+    setNewListingModalMode('both');
+  }, []);
+
+  const openNewStuff = useCallback(() => {
+    setNewListingModalMode('stuff');
+  }, []);
+
+  const openNewEvent = useCallback(() => {
+    setNewListingModalMode('event');
+  }, []);
+
+  const closeNewListingModal = useCallback(() => {
+    setNewListingModalMode(null);
+  }, []);
 
   const reviewPromptEnabled =
     Boolean(userProfile) &&
@@ -1776,7 +1787,9 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewListing}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
+                  onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
@@ -1835,7 +1848,9 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewListing}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
+                  onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
@@ -1894,7 +1909,9 @@ export default function App() {
                   userProfile={userProfile}
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  onOpenNewPost={openNewListing}
+                  onOpenNewPost={openNewListingFromMap}
+                  onOpenNewStuff={openNewStuff}
+                  onOpenNewEvent={openNewEvent}
                   canAccessEvents={canAccessEvents}
                   onInitiateChat={handleInitiateChat}
                   onStaffListingChat={handleStaffListingOutreach}
@@ -2203,21 +2220,20 @@ export default function App() {
                 />
               )}
 
-              {showNewListingModal && (
+              {newListingModalMode && (
                 <NewListingModal
                   userProfile={userProfile}
                   canAccessEvents={canAccessEvents}
                   allEvents={events}
-                  onClose={() => setShowNewListingModal(false)}
+                  mode={newListingModalMode}
+                  onClose={closeNewListingModal}
                   onStuffSuccess={() => {
                     void loadItems(true);
-                    setActiveTab('map');
-                    setShowNewListingModal(false);
+                    closeNewListingModal();
                   }}
                   onEventSuccess={() => {
                     void loadEvents(true);
-                    setActiveTab('map');
-                    setShowNewListingModal(false);
+                    closeNewListingModal();
                   }}
                 />
               )}
