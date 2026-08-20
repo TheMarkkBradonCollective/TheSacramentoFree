@@ -116,6 +116,36 @@ function news(
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
   update(
+    '2026-08-20_apk-0036',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0036',
+    'Feed tab shell, Stuff listings split, account in header, 5-tab footer, orange Looking/Trade badges.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0036 (versionCode 36).
+
+Since 0035:
+• Feed tab placeholder (neighbor wall coming soon); Stuff tab = listings grid
+• Header: logo, bell (badges inside), profile avatar for account/settings
+• Footer: Feed | Stuff | Map | Events | Messages
+• Bell panel — no duplicate Notifications title bar
+• Looking for and Trade tags use orange shades like Giving
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0036.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 36
+- play-store-assets/release-notes-v0.1.0-0036.txt
+- src/lib/appTabs.ts — feed/stuff tab split
+- src/components/FeedView.tsx — community feed placeholder
+
+HISTORY
+2026-08-20 — /runit release merging open PRs; Android beta 0036 built.`,
+    APK_0036_PUBLISHED_AT,
+  ),
+  update(
     '2026-08-20_apk-0035',
     '2026-08-20',
     'New Android download — beta v0.1.0.0035',
@@ -1147,6 +1177,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0036',
+    '2026-08-20',
+    'New Android beta 0036 — Feed tab, header account, 5-tab footer',
+    'Feed placeholder, Stuff listings, account in header, badges in bell, orange Looking/Trade tags. Play Store: upload AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0036: Feed tab shell, Stuff for listings, account via header avatar, 5-tab footer, cleaner bell panel.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0036.
+
+HISTORY
+2026-08-20 — Android beta 0036 /runit release.`,
+    APK_0036_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0035',
     '2026-08-20',
