@@ -62,6 +62,9 @@ function csvEscape(value) {
 }
 
 async function fetchAllUsers() {
+  // Supabase/PostgREST may cap each response below our requested range (often 100 or
+  // 1000 depending on project settings). Paginate until an empty page — do not stop
+  // early when data.length < pageSize or exports truncate at the server cap.
   const pageSize = 1000;
   const rows = [];
   let from = 0;
@@ -77,8 +80,7 @@ async function fetchAllUsers() {
     if (!data?.length) break;
 
     rows.push(...data);
-    if (data.length < pageSize) break;
-    from += pageSize;
+    from += data.length;
   }
 
   return rows;

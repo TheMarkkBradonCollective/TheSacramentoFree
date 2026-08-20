@@ -243,7 +243,15 @@ npm run export:play-testers
 
 Output: `exports/play-testers.csv` — plain list, one Gmail address per line.
 
-**Limits:** Internal testing = **100 testers max**. Closed testing = **2,000 per list**. You cannot add all ~478 neighbors to Internal testing in one list — use **Closed testing** for a larger beta, or paste a short list (yourself + staff + a few neighbors).
+**Limits:** Internal testing = **100 testers max** (Play Console will only show/accept 100 even if your CSV has more). Closed testing = **2,000 per list**. For all ~478 neighbors, use **Closed testing** — not Internal.
+
+**If you only see 100 emails:**
+
+| Cause | Fix |
+|-------|-----|
+| Uploaded to **Internal testing** | Create the list under **Testing → Closed testing → Testers** instead |
+| Ran `npm run export:play-testers:internal` | That script caps at 100 on purpose — use `npm run export:play-testers` |
+| Supabase SQL Editor download | The results table often shows 100 rows; use `npm run export:play-testers` (paginates all pages) or export in batches with `OFFSET` |
 
 After saving the list, copy the **opt-in link** and share it — testers must open it while signed into the same Google account email you added.
 
