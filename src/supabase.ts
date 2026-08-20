@@ -4741,13 +4741,23 @@ function normalizeUserNotificationRow(row: Record<string, unknown>): UserNotific
   };
 }
 
-export async function getUnreadUserNotificationCount(userId: string): Promise<number> {
+export async function getUnreadUserNotificationCount(
+  userId: string,
+  options?: { excludeKinds?: string[] },
+): Promise<number> {
   try {
-    const { count, error } = await supabase
+    let query = supabase
       .from('user_notifications')
       .select('id', { count: 'exact', head: true })
       .eq('userId', userId)
       .is('readAt', null);
+
+    const excludeKinds = options?.excludeKinds?.filter(Boolean) || [];
+    if (excludeKinds.length) {
+      query = query.not('kind', 'in', `(${excludeKinds.join(',')})`);
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       if (error.code === '42P01') return 0;

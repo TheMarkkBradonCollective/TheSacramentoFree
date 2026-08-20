@@ -20,6 +20,7 @@ import {
 import type { UserNotificationItem, UserNotificationKind, UserProfile } from '../types';
 import { useUserNotifications } from '../hooks/useUserNotifications';
 import { parsePushDeepLink, type PushDeepLinkTarget } from '../lib/pushDeepLink';
+import { isStaffModeNotificationKind, receivesStaffNotifications } from '../lib/staffInteractionMode';
 import { isStaffRole } from '../lib/roles';
 import {
   STAFF_APPLY_INVITE,
@@ -168,8 +169,13 @@ interface UserNotificationsListProps {
 
 export default function UserNotificationsList({ user, onNavigate, onViewed }: UserNotificationsListProps) {
   const { items, loading } = useUserNotifications(user.uid);
+  const receivesStaffNotis = receivesStaffNotifications(user);
   const dbInvites = items.filter(isStaffApplyInviteItem);
-  const otherItems = items.filter((item) => !isStaffApplyInviteItem(item));
+  const otherItems = items.filter((item) => {
+    if (isStaffApplyInviteItem(item)) return false;
+    if (!receivesStaffNotis && isStaffModeNotificationKind(item.kind)) return false;
+    return true;
+  });
   const showInvite = !isStaffRole(user.role);
   const inviteSeen = isStaffApplyInviteSeen(user.uid);
   const seededInvite =
