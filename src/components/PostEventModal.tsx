@@ -161,6 +161,23 @@ export default function PostEventModal({
     setErrorMsg('');
   }, [editEvent, addOccurrencesOnly]);
 
+  useEffect(() => {
+    if (editEvent || !navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocationLat(latitude);
+        setLocationLng(longitude);
+        const closest = findClosestNeighborhoodByLatLng(latitude, longitude);
+        setNeighborhood(closest);
+        setLocation((current) => (current.trim() ? current : closest));
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+    );
+  }, [editEvent]);
+
   const handleImagePick = (file: File | null) => {
     if (!file) return;
     if (!isLikelyImageFile(file)) {
@@ -582,6 +599,10 @@ export default function PostEventModal({
                   setLocationLat(lat);
                   setLocationLng(lng);
                   setNeighborhood(findClosestNeighborhoodByLatLng(lat, lng));
+                }}
+                onClear={() => {
+                  setLocationLat(null);
+                  setLocationLng(null);
                 }}
               />
             </div>

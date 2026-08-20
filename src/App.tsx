@@ -1663,9 +1663,11 @@ export default function App() {
   const accountRestriction = isAccountRestricted(userProfile);
 
   const openNewPost = () => {
+    setActiveTab('map');
     setShowPostModal(true);
   };
   const openNewEvent = () => {
+    setActiveTab('map');
     setShowPostEventModal(true);
   };
 
@@ -2192,7 +2194,7 @@ export default function App() {
                   }}
                   onSuccess={() => {
                     void loadItems(true);
-                    setActiveTab('feed');
+                    if (!editingItem) setActiveTab('map');
                     setShowPostModal(false);
                     setEditingItem(null);
                   }}
@@ -2212,7 +2214,7 @@ export default function App() {
                   }}
                   onSuccess={() => {
                     void loadEvents(true);
-                    setActiveTab('events');
+                    if (!editingEvent) setActiveTab('map');
                     setShowPostEventModal(false);
                     setEditingEvent(null);
                     setAddEventDatesMode(false);

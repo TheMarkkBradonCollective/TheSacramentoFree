@@ -160,17 +160,7 @@ export default function TabletView({
     ? (activeTab as AppTab)
     : 'feed';
 
-  const topbarAction = !onStaffTab ? (
-    communityTab === 'feed' ? (
-      <button type="button" onClick={onOpenNewPost} className="sbn-btn sbn-btn-primary sbn-btn-sm" id="topbar_new_post_btn">
-        <Plus className="w-4 h-4" />
-      </button>
-    ) : communityTab === 'events' && canAccessEvents ? (
-      <button type="button" onClick={onOpenNewEvent} className="sbn-btn sbn-btn-primary sbn-btn-sm" id="topbar_new_event_btn">
-        <Plus className="w-4 h-4" />
-      </button>
-    ) : null
-  ) : null;
+  const topbarAction = null;
 
   const theme = roleTheme(profileUiRole(userProfile));
 
@@ -294,6 +284,9 @@ export default function TabletView({
                 onViewEvent={onViewEvent}
                 onEditItem={onEditItem}
                 mapVisible={communityTab === 'map'}
+                onOpenNewPost={onOpenNewPost}
+                onOpenNewEvent={canAccessEvents ? onOpenNewEvent : undefined}
+                canAccessEvents={canAccessEvents}
                 itemsHydrated={itemsHydrated}
                 eventsHydrated={eventsHydrated}
                 eventsEngagement={eventsEngagement}

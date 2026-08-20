@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, ISO_DELIVERY_PREFS, PostType, mapGPSToPercent, NEIGHBORHOOD_COORDS, findClosestNeighborhood, findClosestNeighborhoodByLatLng } from '../types';
 import { createSupabaseItem, updateSupabaseItem, uploadItemImage, getListingSubitems, replaceListingSubitems } from '../supabase';
 import {
@@ -103,6 +103,36 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
     }
   }, [editItem]);
 
+  const applyGpsPosition = useCallback((latitude: number, longitude: number) => {
+    const coords = mapGPSToPercent(latitude, longitude);
+    setCustomCoords(coords);
+    const closest = findClosestNeighborhoodByLatLng(latitude, longitude);
+    setNeighborhood(closest);
+    setGpsStatus(
+      `Using your current location in ${closest.toUpperCase()} — change or remove the pin if needed.`,
+    );
+    setShowMiniMap(true);
+  }, []);
+
+  useEffect(() => {
+    if (editItem || !navigator.geolocation) return;
+
+    setGpsLoading(true);
+    setGpsStatus('Setting pickup spot to your current location…');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        applyGpsPosition(position.coords.latitude, position.coords.longitude);
+        setGpsLoading(false);
+      },
+      () => {
+        setGpsStatus('Could not detect location — set a pin manually with GPS or the map.');
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+    );
+  }, [editItem, applyGpsPosition]);
+
   const handleDetectGPS = () => {
     setGpsLoading(true);
     setGpsStatus('Accessing browser location sensors...');
@@ -114,14 +144,8 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
-        const coords = mapGPSToPercent(latitude, longitude);
-        setCustomCoords(coords);
-        const closest = findClosestNeighborhoodByLatLng(latitude, longitude);
-        setNeighborhood(closest);
-        setGpsStatus(`Detected precise GPS: ${coords.x.toFixed(1)}%, ${coords.y.toFixed(1)}% inside ${closest.toUpperCase()} Sector 🟢`);
+        applyGpsPosition(position.coords.latitude, position.coords.longitude);
         setGpsLoading(false);
-        setShowMiniMap(true);
       },
       (error) => {
         console.warn('GPS location fetch error:', error);
@@ -134,6 +158,12 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
       },
       { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
     );
+  };
+
+  const handleClearPin = () => {
+    setCustomCoords(null);
+    setGpsStatus('Map pin removed — use GPS, the map, or your neighborhood to set a new spot.');
+    setShowMiniMap(false);
   };
 
   const totalPhotoCount = savedImageUrls.length + pendingImages.length;
@@ -662,10 +692,19 @@ export default function PostItemModal({ userProfile, editItem = null, onClose, o
             )}
 
             {customCoords && (
-              <p className="text-[10px] font-semibold text-accent flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 shrink-0" />
-                GPS pin set — neighbors {locationIsPublic || categoryRequiresGps(activeCategory) ? 'can' : 'cannot'} see it on the map until you share in chat.
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[10px] font-semibold text-accent flex items-center gap-1.5 flex-1 min-w-[12rem]">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  GPS pin set — neighbors {locationIsPublic || categoryRequiresGps(activeCategory) ? 'can' : 'cannot'} see it on the map until you share in chat.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleClearPin}
+                  className="sbn-btn sbn-btn-ghost sbn-btn-sm shrink-0"
+                >
+                  Remove pin
+                </button>
+              </div>
             )}
 
             {/* Micro Sacramento Map Picker */}

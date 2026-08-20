@@ -53,6 +53,49 @@ import { getPostTypeMapDetailLabel, getPostTypeMapLabel, isEventsMapFilter, type
 import { pickSoonestPerEventSeries } from '../lib/eventSeries';
 import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
 
+function MapCreateFabStack({
+  onOpenNewPost,
+  onOpenNewEvent,
+  canAccessEvents = false,
+  className = '',
+}: {
+  onOpenNewPost?: () => void;
+  onOpenNewEvent?: () => void;
+  canAccessEvents?: boolean;
+  className?: string;
+}) {
+  if (!onOpenNewPost && !(canAccessEvents && onOpenNewEvent)) return null;
+
+  return (
+    <div className={`flex flex-col gap-2 pointer-events-auto ${className}`}>
+      {canAccessEvents && onOpenNewEvent ? (
+        <button
+          type="button"
+          onClick={onOpenNewEvent}
+          className="sbn-fab"
+          aria-label="Post event"
+          title="Post event"
+          id="map_new_event_btn"
+        >
+          <CalendarDays className="w-6 h-6" />
+        </button>
+      ) : null}
+      {onOpenNewPost ? (
+        <button
+          type="button"
+          onClick={onOpenNewPost}
+          className="sbn-fab"
+          aria-label="Create listing"
+          title="Create listing"
+          id="map_new_post_btn"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 interface SacramentoMapViewProps {
   items: ItemPost[];
   events?: CommunityEvent[];
@@ -75,6 +118,8 @@ interface SacramentoMapViewProps {
   colorGuideOpen?: boolean;
   onColorGuideOpenChange?: (open: boolean) => void;
   onOpenNewPost?: () => void;
+  onOpenNewEvent?: () => void;
+  canAccessEvents?: boolean;
   /** Hide mobile header/nav while navigating or showing nav prompts. */
   onImmersiveModeChange?: (active: boolean) => void;
   /** When false, defer nav session restore until listings have finished loading. */
@@ -389,6 +434,8 @@ export default function SacramentoMapView({
   colorGuideOpen: colorGuideOpenProp,
   onColorGuideOpenChange,
   onOpenNewPost,
+  onOpenNewEvent,
+  canAccessEvents = false,
   onImmersiveModeChange,
   itemsHydrated = true,
   eventsHydrated = true,
@@ -1528,17 +1575,12 @@ export default function SacramentoMapView({
           <Compass className={`w-5 h-5 ${isLocating ? 'animate-spin' : ''}`} />
         </button>
 
-        {onOpenNewPost && (
-          <button
-            type="button"
-            onClick={onOpenNewPost}
-            className="sbn-fab absolute sbn-map-edge-bottom right-4 z-20 pointer-events-auto"
-            aria-label="New post"
-            id="mobile_map_new_post_btn"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        )}
+        <MapCreateFabStack
+          onOpenNewPost={onOpenNewPost}
+          onOpenNewEvent={onOpenNewEvent}
+          canAccessEvents={canAccessEvents}
+          className="absolute sbn-map-edge-bottom right-4 z-20"
+        />
 
         {/* Location error toast */}
         {locationError && (
@@ -2084,6 +2126,13 @@ export default function SacramentoMapView({
             <Compass className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
           </button>
         </div>
+
+        <MapCreateFabStack
+          onOpenNewPost={onOpenNewPost}
+          onOpenNewEvent={onOpenNewEvent}
+          canAccessEvents={canAccessEvents}
+          className="absolute bottom-3 left-3 z-10"
+        />
 
         {/* Category Color Guide Drawer Overlay */}
         <AnimatePresence>
