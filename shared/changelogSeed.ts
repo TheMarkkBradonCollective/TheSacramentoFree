@@ -1089,6 +1089,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
   news(
+    '2026-08-20_apk-0033',
+    '2026-08-20',
+    'New Android beta 0033 — staff mode title, location toggle fix',
+    'Staff mode card title follows the toggle; location permission switch shows Allowed when GPS works. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0033 fixes the staff mode settings title and the location permission toggle on Android.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0033.
+
+HISTORY
+2026-08-20 — Android beta 0033 /runit release.`,
+    APK_0033_PUBLISHED_AT,
+  ),
+  news(
     '2026-08-20_apk-0032',
     '2026-08-20',
     'New Android beta 0032 — staff mode notifications, detail headers',

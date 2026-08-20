@@ -3,22 +3,22 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.1.0 (31)
+  0.1.0 (32)
 
 Beta label (for your records / changelog):
-  beta v0.1.0.0031
+  beta v0.1.0.0032
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0031.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0032.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0031.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0032.apk
 
 Package name:
   org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.1.0.0031.aab
+  public/downloads/sac-buy-nothing-beta-v0.1.0.0032.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -26,12 +26,11 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta v0.1.0.0031 (versionCode 31)
+Android beta v0.1.0.0032 (versionCode 32)
 
 What's new:
-• Nav banner pinned to top; chat shows listing or event preview
-• Profile stats layout and listing type badges
-• Listing detail header scroll fix
+• Staff/User mode now controls staff and director notifications
+• Listing and event detail headers scroll with the page; no duplicate back button
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ───────────────────────────────────────────────────────────────
@@ -39,8 +38,8 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 Steps:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Internal testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0031.aab
-  4. Release name: 0.1.0 (31)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0032.aab
+  4. Release name: 0.1.0 (32)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Internal testing
 
