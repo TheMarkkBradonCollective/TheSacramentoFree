@@ -87,7 +87,7 @@ function compareEventsByDistance(
 }
 
 function eventsSortToolbarLabel(mode: 'nearest' | 'newest'): string {
-  return mode === 'nearest' ? 'Near' : 'New';
+  return mode === 'nearest' ? 'All' : 'New';
 }
 
 function eventTimeToolbarLabel(filter: EventTimeFilter | null): string {
