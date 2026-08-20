@@ -90,6 +90,8 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
+import { confirmDeleteFeedPost, confirmDeleteListing, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
+import { getOwnerCompletedActionLabel } from './lib/postType';
 import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
 import { useAwardsGlow } from './hooks/useAwardsGlow';
@@ -1240,6 +1242,16 @@ export default function App() {
     status: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold',
   ) => {
     if (!detailItem || !userProfile) return;
+
+    if (status === 'withdrawn') {
+      const ok = await confirmWithdrawListing(confirm, detailItem.title);
+      if (!ok) return;
+    } else if (status === 'completed') {
+      const actionLabel = getOwnerCompletedActionLabel(detailItem.type);
+      const ok = await confirmMarkListingCompleted(confirm, detailItem.title, actionLabel);
+      if (!ok) return;
+    }
+
     if (status === 'completed' && completedActionNeedsAttribution(detailItem, userProfile)) {
       setPickupAttributionMode('complete');
       setPickupAttributionItem(detailItem);
@@ -1284,12 +1296,7 @@ export default function App() {
     async (post: ItemPost) => {
       if (!userProfile || post.userId !== userProfile.uid || post.status !== 'withdrawn') return;
 
-      const confirmed = await confirm({
-        title: 'Delete listing',
-        message: `Permanently delete "${post.title}"? This cannot be undone.`,
-        confirmLabel: 'Delete',
-        variant: 'danger',
-      });
+      const confirmed = await confirmDeleteListing(confirm, post.title);
       if (!confirmed) return;
 
       setDetailUpdating(true);
@@ -1493,15 +1500,7 @@ export default function App() {
     async (post: FeedPost) => {
       if (!userProfile) return;
       const isStaff = isStaffRole(userProfile.role);
-      const ok = await confirm({
-        title: 'Delete post?',
-        message:
-          isStaff && post.userId !== userProfile.uid
-            ? 'Remove this neighbor post as staff?'
-            : 'Delete your post for everyone?',
-        confirmLabel: 'Delete',
-        variant: 'danger',
-      });
+      const ok = await confirmDeleteFeedPost(confirm, isStaff && post.userId !== userProfile.uid);
       if (!ok) return;
       const result = await deleteFeedPost(post.id, userProfile.uid, isStaff);
       if (!result.ok) {

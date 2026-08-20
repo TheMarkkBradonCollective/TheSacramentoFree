@@ -13,6 +13,7 @@ import { useCommunityContentVotes } from './useCommunityContentVotes';
 import type { FeedReactionEmoji } from '../lib/feedReactions';
 import { isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmRemoveFeedComment } from '../lib/destructiveConfirm';
 
 export function useFeedEngagement(
   postIds: string[],
@@ -136,12 +137,7 @@ export function useFeedEngagement(
   const removeComment = useCallback(
     async (postId: string, commentId: string) => {
       if (!uid) return false;
-      const ok = await confirm({
-        title: 'Remove comment?',
-        message: isStaff ? 'Delete this comment for everyone?' : 'Remove your comment?',
-        confirmLabel: 'Remove',
-        variant: 'danger',
-      });
+      const ok = await confirmRemoveFeedComment(confirm, isStaff);
       if (!ok) return false;
       const result = await deleteFeedPostComment(commentId, uid, isStaff);
       if (!result.ok) {
