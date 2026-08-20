@@ -1,11 +1,7 @@
 Android beta v0.1.0.0034 (versionCode 34)
 
 What's new:
-• New listing flow on Map — Stuff or Event toggle with GPS default pin
-• Message neighbors from Messages (compose + role labels on search)
-• Neighbor profiles open on top of listing detail (no extra back tap)
-• Completed listings hidden from feed (still on profile history)
-• 30-day listing expiry with warning before auto-withdraw
-• Staff Team Management hidden on profiles when in User mode
+• Map + New — post Stuff or Events with GPS pin
+• DMs compose restored; listings expire after 30 days
 
 Download (sideload): https://www.sacramentobuynothing.com/download

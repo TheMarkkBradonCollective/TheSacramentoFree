@@ -148,17 +148,14 @@ HISTORY
     '2026-08-20_apk-0034',
     '2026-08-20',
     'New Android download — beta v0.1.0.0034',
-    'Map-only New listing flow (Stuff/Event), DM compose with role labels, listing expiry, and feed polish.',
+    'Map + New for Stuff or Events; DMs compose back; 30-day listing expiry.',
     `WHAT NEIGHBORS SEE
 Play Store testers and sideload installs: beta v0.1.0.0034 (versionCode 34).
 
 Since 0033:
-• Map tab + opens unified New listing — Stuff (give/look/trade) or Event with GPS default pin
-• Messages compose: search neighbors, role labels, message requests restored
-• View neighbor profile from a listing without tapping back first
-• Completed listings removed from feed; still visible on profile history
-• Listings expire after 30 days (warning, then auto-withdraw; reset on owner edit)
-• Staff Team Management hidden on neighbor profiles in User mode
+• Map + New — post Stuff or Events with GPS pin
+• Messages compose and message requests restored
+• Listings expire after 30 days
 
 Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0034.aab
 Sideload: https://www.sacramentobuynothing.com/download
@@ -1173,9 +1170,9 @@ HISTORY
     '2026-08-20_apk-0034',
     '2026-08-20',
     'New Android beta 0034 — New listing on Map, DMs, listing expiry',
-    'Post Stuff or Events from the Map tab; compose DMs with role labels; 30-day listing expiry. Play Store: upload AAB; sideload: Download page.',
+    'Map + New for Stuff or Events; DMs compose back; 30-day listing expiry.',
     `WHAT NEIGHBORS SEE
-Beta v0.1.0.0034: unified New listing on Map, restored message requests, neighbor profile fix, feed hides completed listings, 30-day listing expiry.
+Beta v0.1.0.0034: Map + New listing, restored DMs, 30-day listing expiry.
 
 Play Store: upload the new AAB to Internal testing and roll out to testers.
 Sideload: https://www.sacramentobuynothing.com/download
