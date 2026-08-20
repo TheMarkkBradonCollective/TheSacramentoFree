@@ -27,7 +27,7 @@ import {
   VOTE_COOLDOWN_MAX_NEW_VOTES,
   VOTE_COOLDOWN_WINDOW_MS,
 } from './lib/voteCooldown';
-import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, ROLE_RANK, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
+import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isEventPostChatReadOnly, isListingOpenForCoordination, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, ROLE_RANK, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 import {
   deriveApplicantStaffApplyState,
   isStaffApplyRole,
@@ -1683,6 +1683,22 @@ export async function getUserDisplayInfoByIds(
 
 export async function getOrCreateSupabaseChat(chatId: string, initialPayload: any): Promise<boolean> {
   try {
+    const itemId = String(initialPayload?.itemId || '').trim();
+    if (itemId) {
+      const item = await getSupabaseItemById(itemId);
+      if (!item || !isListingOpenForCoordination(item.status)) {
+        return false;
+      }
+    }
+
+    const eventId = String(initialPayload?.eventId || '').trim();
+    if (eventId) {
+      const event = await getSupabaseEventById(eventId);
+      if (!event || isEventPostChatReadOnly(resolveEventStatus(event))) {
+        return false;
+      }
+    }
+
     // Check if chat exists
     const { data: existingChat, error: checkError } = await supabase
       .from('chats')

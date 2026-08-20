@@ -31,6 +31,7 @@ import { SubItemAvailabilityList } from './SubItemPicker';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import StaffListingActions from './StaffListingActions';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import { isListingOpenForCoordination } from '../lib/roles';
 import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import { isStaffRole } from '../lib/roles';
 import { getListingSubitems, itemHasRecordedAppClaim, getUserDisplayInfoByIds } from '../supabase';
@@ -99,8 +100,7 @@ export default function ItemDetailView({
   const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const isOwner = item.userId === currentUserId;
   const isStaffViewer = isStaffActingOfficial(userProfile);
-  const isOpenForCoordination =
-    item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
+  const isOpenForCoordination = isListingOpenForCoordination(item.status);
   const showNeighborNavigate =
     supportsInAppNavigation() &&
     !isOwner &&

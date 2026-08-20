@@ -172,6 +172,13 @@ export default defineConfig(({mode}) => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
     build: {
+      // Keep large, infrequently-changing third-party libraries in their own
+      // long-cache-friendly vendor chunks, and force staff/moderation-only
+      // views into a dedicated chunk so they never get merged with the
+      // community map/chat/profile code that every signed-in user needs
+      // (Rollup's default chunking otherwise groups modules by identical
+      // dynamic-import reachability, which would bundle them together since
+      // both are only reachable from the device shells).
       rollupOptions: {
         output: {
           manualChunks(id: string) {

@@ -13,6 +13,7 @@ import { extractListingImageUrls } from '../lib/listingContent';
 import { getListingNavigateLabel } from '../lib/listingMapActions';
 import { formatRouteDistance } from '../lib/mapRoute';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
+import { isListingOpenForCoordination } from '../lib/roles';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
 import UserAvatar from './UserAvatar';
@@ -224,7 +225,7 @@ export default function ItemCard({
             {isStaffViewer ? 'Navigate' : getListingNavigateLabel(item)}
           </span>
         </button>
-      ) : !isStaffViewer ? (
+      ) : !isStaffViewer && isListingOpenForCoordination(item.status) ? (
         <button
           type="button"
           onClick={onMessage}

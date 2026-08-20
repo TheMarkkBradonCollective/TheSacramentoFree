@@ -8,6 +8,11 @@ export type ChatCategoryFilter = 'everyone' | 'dm' | 'support' | 'groups';
 
 export type ChatStatusFilter = 'all' | 'live' | 'closed' | 'archived';
 
+/** Status sub-tabs (All / Live / Closed / Archived) apply only to DM and Support inboxes. */
+export function categoryHasStatusTabs(category: ChatCategoryFilter): boolean {
+  return category === 'dm' || category === 'support';
+}
+
 const CATEGORY_FILTER_KEY = 'sbn_chat_category_filter_v1';
 const STATUS_FILTER_KEY = 'sbn_chat_status_filter_v1';
 
@@ -133,10 +138,11 @@ export function filterInboxEntries(
   statusFilter: ChatStatusFilter,
   context: InboxFilterContext,
 ): InboxEntry[] {
+  const effectiveStatusFilter = categoryHasStatusTabs(categoryFilter) ? statusFilter : 'all';
   return entries.filter(
     (entry) =>
       matchesCategoryFilter(entry, categoryFilter) &&
-      matchesStatusFilter(entry, statusFilter, context),
+      matchesStatusFilter(entry, effectiveStatusFilter, context),
   );
 }
 
@@ -144,19 +150,20 @@ export function emptyInboxFilterMessage(
   categoryFilter: ChatCategoryFilter,
   statusFilter: ChatStatusFilter,
 ): { title: string; description: string } {
-  if (statusFilter === 'archived') {
+  const effectiveStatusFilter = categoryHasStatusTabs(categoryFilter) ? statusFilter : 'all';
+  if (effectiveStatusFilter === 'archived') {
     return {
       title: 'Nothing archived',
       description: 'Archived chats and closed support tickets will appear here.',
     };
   }
-  if (statusFilter === 'closed') {
+  if (effectiveStatusFilter === 'closed') {
     return {
       title: 'No closed conversations',
       description: 'Closed support tickets and finished listing or event chats show up here.',
     };
   }
-  if (statusFilter === 'live') {
+  if (effectiveStatusFilter === 'live') {
     return {
       title: 'No live conversations',
       description: 'Open chats and support tickets will appear here.',

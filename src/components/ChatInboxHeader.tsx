@@ -4,7 +4,11 @@ import type { UserProfile } from '../types';
 import { canViewStaffReports } from '../lib/roles';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import type { ChatFeedbackPanel } from './ChatFeedbackSection';
-import type { ChatCategoryFilter, ChatStatusFilter } from '../lib/chatInboxFilters';
+import {
+  categoryHasStatusTabs,
+  type ChatCategoryFilter,
+  type ChatStatusFilter,
+} from '../lib/chatInboxFilters';
 
 interface ChatInboxHeaderProps {
   onStartConversation?: () => void;
@@ -111,13 +115,15 @@ export default function ChatInboxHeader({
         value={categoryFilter}
         onChange={onCategoryFilterChange}
       />
-      <FilterTabRow
-        id="chat_status_tabs"
-        ariaLabel="Chat status"
-        tabs={STATUS_TABS}
-        value={statusFilter}
-        onChange={onStatusFilterChange}
-      />
+      {categoryHasStatusTabs(categoryFilter) ? (
+        <FilterTabRow
+          id="chat_status_tabs"
+          ariaLabel="Chat status"
+          tabs={STATUS_TABS}
+          value={statusFilter}
+          onChange={onStatusFilterChange}
+        />
+      ) : null}
 
       <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0" id="chat_view_mode_bar">
         <div className="shrink-0">

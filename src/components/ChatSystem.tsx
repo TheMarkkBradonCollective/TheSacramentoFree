@@ -28,7 +28,7 @@ import {
   communityChatTitle,
   communityChatSubtitle,
 } from '../lib/communityChats';
-import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffReports, canViewStaffTicketInbox, isStaffRole } from '../lib/roles';
+import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffReports, canViewStaffTicketInbox, isEventPostChatReadOnly, isListingPostChatReadOnly, isStaffRole } from '../lib/roles';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
 import type { SupportTicketLastMessage } from '../lib/supportChat';
@@ -206,6 +206,7 @@ export default function ChatSystem({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedChatWasLiveRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     setChatGoGetSession(null);
@@ -291,6 +292,35 @@ export default function ChatSystem({
   }, [selectedChat?.eventId, selectedChat?.id, linkedEventFromFeed]);
 
   const resolvedLinkedEvent = linkedEventFromFeed ?? fetchedLinkedEvent ?? undefined;
+
+  useEffect(() => {
+    if (!selectedChat || isCommunityChat(selectedChat.id)) {
+      selectedChatWasLiveRef.current = null;
+      return;
+    }
+
+    const linkedItem = resolvedLinkedItem;
+    const linkedEvent = resolvedLinkedEvent;
+    const isClosed =
+      (linkedItem && isListingPostChatReadOnly(linkedItem.status)) ||
+      (linkedEvent && isEventPostChatReadOnly(resolveEventStatus(linkedEvent)));
+
+    const wasLive = selectedChatWasLiveRef.current;
+    selectedChatWasLiveRef.current = !isClosed;
+
+    if (wasLive === true && isClosed) {
+      setSelectedChat(null);
+      setMessages([]);
+      onClearPendingChatCompose?.();
+      onClearInitialChat();
+    }
+  }, [
+    selectedChat,
+    resolvedLinkedItem,
+    resolvedLinkedEvent,
+    onClearPendingChatCompose,
+    onClearInitialChat,
+  ]);
 
   const handleStartGoGetFromChat = useCallback(
     async (linkedItem: ItemPost, otherUserId: string, otherUserName: string) => {

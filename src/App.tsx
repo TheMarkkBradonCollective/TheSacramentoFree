@@ -14,7 +14,8 @@ import NewListingModal, { type NewListingModalMode } from './components/NewListi
 import FeedPostDetailView from './components/feed/FeedPostDetailView';
 import ItemDetailView from './components/ItemDetailView';
 import { deleteFeedPost, getFeedPostById } from './lib/feedApi';
-import { isStaffRole } from './lib/roles';
+import { isStaffRole, isListingOpenForCoordination } from './lib/roles';
+import { isEventUpcoming } from './lib/eventRsvp';
 import PickupAttributionModal from './components/PickupAttributionModal';
 import EventDetailView from './components/EventDetailView';
 import PostEventModal from './components/PostEventModal';
@@ -1372,6 +1373,7 @@ export default function App() {
   const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
+    if (item && !isListingOpenForCoordination(item.status)) return;
 
     if (isStaffActingOfficial(userProfile) && item) {
       void handleStaffListingOutreach(item);
@@ -1401,6 +1403,7 @@ export default function App() {
   ) => {
     if (!userProfile) return;
     if (blockedUserIds.has(hostUid)) return;
+    if (event && (!isEventUpcoming(event) || event.status === 'cancelled')) return;
 
     if (isStaffActingOfficial(userProfile) && event) {
       void handleStaffEventOutreach(event);
