@@ -430,8 +430,8 @@ export default function ItemGrid({
                 id="feed_new_listing_btn"
                 onClick={onOpenNewPost}
                 className="inline-flex items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold text-on-accent hover:bg-accent-hover transition-colors cursor-pointer whitespace-nowrap"
-                aria-label="New listing"
-                title="New listing"
+                aria-label="New stuff listing"
+                title="New stuff listing"
               >
                 <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
                 <span>New</span>
