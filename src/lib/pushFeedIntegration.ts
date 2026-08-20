@@ -2,6 +2,7 @@ import { supabase } from '../supabase';
 import {
   notifyFeedComment,
   notifyFeedDownvote,
+  notifyFeedPost,
   notifyFeedReaction,
   notifyFeedUpvote,
 } from './pushEvents';
@@ -12,9 +13,27 @@ async function getFeedPostAuthorId(postId: string): Promise<string | null> {
   return data?.userId ? String(data.userId) : null;
 }
 
+export async function pushAfterFeedPost(post: {
+  id: string;
+  userId: string;
+  userDisplayName: string;
+  text: string;
+  neighborhood: string;
+}) {
+  const preview = post.text.trim().slice(0, 80) || 'New community post';
+  await notifyFeedPost({
+    postId: post.id,
+    authorUserId: post.userId,
+    authorName: post.userDisplayName || 'A neighbor',
+    preview,
+    neighborhood: post.neighborhood || 'Sacramento area',
+  });
+}
+
 export async function pushAfterFeedComment(comment: {
   id?: string;
   postId: string;
+  parentCommentId?: string | null;
   userId: string;
   userName: string;
   text: string;
@@ -25,13 +44,40 @@ export async function pushAfterFeedComment(comment: {
   const preview = comment.text.trim();
   if (!preview) return;
 
-  await notifyFeedComment({
-    postId: comment.postId,
-    authorUserId: authorId,
-    commenterName: comment.userName || 'A neighbor',
-    preview,
-    commentId: comment.id,
+  const recipients: Array<{ userId: string; title: string; tagSuffix: string }> = [];
+  recipients.push({
+    userId: authorId,
+    title: 'New comment on your feed post',
+    tagSuffix: 'owner',
   });
+
+  if (comment.parentCommentId) {
+    const { data: parent } = await supabase
+      .from('feed_post_comments')
+      .select('userId')
+      .eq('id', comment.parentCommentId)
+      .maybeSingle();
+    const parentAuthorId = parent?.userId ? String(parent.userId) : '';
+    if (parentAuthorId && parentAuthorId !== comment.userId && parentAuthorId !== authorId) {
+      recipients.push({
+        userId: parentAuthorId,
+        title: 'New reply to your comment',
+        tagSuffix: 'reply',
+      });
+    }
+  }
+
+  for (const recipient of recipients) {
+    await notifyFeedComment({
+      postId: comment.postId,
+      authorUserId: recipient.userId,
+      commenterName: comment.userName || 'A neighbor',
+      preview,
+      commentId: comment.id ? `${comment.id}-${recipient.tagSuffix}` : undefined,
+      title: recipient.title,
+      parentCommentId: comment.parentCommentId ?? undefined,
+    });
+  }
 }
 
 export async function pushAfterFeedReaction(params: {

@@ -1,12 +1,13 @@
 import { runPushSend } from './runPushSend';
 import { getSupabaseAdmin } from './supabaseAdmin';
-import { shouldThrottleVoteNotify } from './voteNotifyCooldown';
+import { shouldThrottleFeedVoteNotify } from './voteNotifyCooldown';
 
 type FeedPostRow = {
   id?: string;
   userId?: string;
   text?: string;
   userDisplayName?: string;
+  neighborhood?: string;
 };
 
 function feedPostUrl(postId: string): string {
@@ -23,7 +24,7 @@ async function getFeedPost(postId: string): Promise<FeedPostRow | null> {
   const supabaseAdmin = await getSupabaseAdmin();
   const { data } = await supabaseAdmin
     .from('feed_posts')
-    .select('id, userId, text, userDisplayName')
+    .select('id, userId, text, userDisplayName, neighborhood')
     .eq('id', postId)
     .eq('status', 'active')
     .maybeSingle();
@@ -37,11 +38,48 @@ async function sendFeedPush(
   return runPushSend(callerId, payload);
 }
 
+export async function runFeedPostNotify(
+  callerId: string,
+  post: {
+    id?: string;
+    userId?: string;
+    userDisplayName?: string;
+    text?: string;
+    neighborhood?: string;
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const postId = String(post.id || '');
+  const authorId = String(post.userId || callerId);
+  if (!postId) {
+    return { status: 200, body: { ok: true, skipped: 'missing post id' } };
+  }
+
+  const displayName = String(post.userDisplayName || 'A neighbor').trim() || 'A neighbor';
+  const preview = postPreview(String(post.text || ''), 80);
+  const neighborhood = String(post.neighborhood || 'Sacramento area').trim() || 'Sacramento area';
+
+  return sendFeedPush(authorId, {
+    eventType: 'feed_post',
+    title: 'New community feed post',
+    body: `${displayName} in ${neighborhood}: ${preview}`,
+    url: feedPostUrl(postId),
+    neighborhood,
+    excludeUserIds: [authorId],
+    tag: `feed-post-${postId}`,
+    data: {
+      feedPostId: postId,
+      actorName: displayName,
+      actorUserId: authorId,
+    },
+  });
+}
+
 export async function runFeedCommentNotify(
   callerId: string,
   comment: {
     id?: string;
     postId?: string;
+    parentCommentId?: string | null;
     userId?: string;
     userName?: string;
     text?: string;
@@ -66,23 +104,71 @@ export async function runFeedCommentNotify(
     return { status: 200, body: { ok: true, skipped: 'empty comment' } };
   }
 
-  if (!ownerId || ownerId === commenterId) {
+  const supabaseAdmin = await getSupabaseAdmin();
+  const parentCommentId = comment.parentCommentId ? String(comment.parentCommentId) : '';
+  let parentAuthorId = '';
+  if (parentCommentId) {
+    const { data: parent } = await supabaseAdmin
+      .from('feed_post_comments')
+      .select('userId')
+      .eq('id', parentCommentId)
+      .maybeSingle();
+    parentAuthorId = String((parent as { userId?: string } | null)?.userId || '');
+  }
+
+  const alerts: Array<{
+    recipientId: string;
+    title: string;
+    tag: string;
+  }> = [];
+
+  if (ownerId && ownerId !== commenterId) {
+    alerts.push({
+      recipientId: ownerId,
+      title: 'New comment on your feed post',
+      tag: `feed-comment-${commentId}-owner`,
+    });
+  }
+
+  if (parentAuthorId && parentAuthorId !== commenterId && parentAuthorId !== ownerId) {
+    alerts.push({
+      recipientId: parentAuthorId,
+      title: 'New reply to your comment',
+      tag: `feed-comment-${commentId}-reply`,
+    });
+  }
+
+  if (!alerts.length) {
     return { status: 200, body: { ok: true, skipped: 'no comment alert needed' } };
   }
 
-  return sendFeedPush(commenterId, {
-    eventType: 'feed_comment',
-    title: 'New comment on your feed post',
-    body: `${commenterName}: ${preview}`,
-    url: feedPostUrl(postId),
-    recipientUserIds: [ownerId],
-    tag: `feed-comment-${commentId}`,
-    data: {
-      feedPostId: postId,
-      actorName: commenterName,
-      actorUserId: commenterId,
+  const results = await Promise.all(
+    alerts.map((alert) =>
+      sendFeedPush(commenterId, {
+        eventType: 'feed_comment',
+        title: alert.title,
+        body: `${commenterName}: ${preview}`,
+        url: feedPostUrl(postId),
+        recipientUserIds: [alert.recipientId],
+        tag: alert.tag,
+        data: {
+          feedPostId: postId,
+          actorName: commenterName,
+          actorUserId: commenterId,
+        },
+      }),
+    ),
+  );
+
+  const sent = results.reduce((sum, r) => sum + Number(r.body.sent || 0), 0);
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      sent,
+      handlers: results.map((r) => r.body),
     },
-  });
+  };
 }
 
 export async function runFeedReactionNotify(
@@ -160,7 +246,7 @@ export async function runFeedVoteNotify(
     return { status: 200, body: { ok: true, skipped: 'no vote alert needed' } };
   }
 
-  if (await shouldThrottleVoteNotify(voterUserId)) {
+  if (await shouldThrottleFeedVoteNotify(voterUserId)) {
     return { status: 200, body: { ok: true, skipped: 'vote notify cooldown' } };
   }
 

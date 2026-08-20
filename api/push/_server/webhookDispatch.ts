@@ -26,7 +26,7 @@ import { runAppUpdateNotify } from './appUpdateNotify';
 import { runReportNotify } from './reportNotify';
 import { runSupportNotify, type SupportNotifyEvent } from './supportNotify';
 import { isStaffRole } from './staffRoles';
-import { runFeedCommentNotify, runFeedReactionNotify, runFeedVoteNotify } from './feedNotify';
+import { runFeedCommentNotify, runFeedPostNotify, runFeedReactionNotify, runFeedVoteNotify } from './feedNotify';
 import { getSupabaseAdmin } from './supabaseAdmin';
 
 type WebhookPayload = {
@@ -304,9 +304,20 @@ export async function runSupabasePushWebhook(
     return runFeedCommentNotify(String(record.userId || 'system'), {
       id: String(record.id || ''),
       postId: String(record.postId || ''),
+      parentCommentId: record.parentCommentId == null ? null : String(record.parentCommentId),
       userId: String(record.userId || ''),
       userName: String(record.userName || 'A neighbor'),
       text: String(record.text || ''),
+    });
+  }
+
+  if (table === 'feed_posts') {
+    return runFeedPostNotify(String(record.userId || 'system'), {
+      id: String(record.id || ''),
+      userId: String(record.userId || ''),
+      userDisplayName: String(record.userDisplayName || 'A neighbor'),
+      text: String(record.text || ''),
+      neighborhood: String(record.neighborhood || 'Sacramento area'),
     });
   }
 

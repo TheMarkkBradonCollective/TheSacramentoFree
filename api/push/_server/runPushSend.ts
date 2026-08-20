@@ -98,7 +98,8 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
     eventType === 'new_item' ||
     eventType === 'new_request' ||
     eventType === 'nearby_item' ||
-    eventType === 'nearby_request'
+    eventType === 'nearby_request' ||
+    eventType === 'feed_post'
   ) {
     const { data: users } = await supabaseAdmin.from('users').select('uid, neighborhood');
     const listingNeighborhood = body.neighborhood || '';
@@ -109,6 +110,7 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
         : null;
     const isRequest = eventType === 'new_request' || eventType === 'nearby_request';
     const nearbyOnly = eventType === 'nearby_item' || eventType === 'nearby_request';
+    const isFeedPost = eventType === 'feed_post';
 
     const prefsMap = await getPreferencesForUsers((users || []).map((u) => String((u as { uid: string }).uid)));
 
@@ -125,6 +127,13 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
         const inRadius =
           itemLatLng &&
           withinRadius(viewerNeighborhood, listingNeighborhood, itemLatLng, prefs.nearbyRadiusMiles);
+
+        if (isFeedPost) {
+          if (prefs.newListings && sameCity) return true;
+          if (prefs.nearbyListings && (sameCity || inRadius)) return true;
+          if (prefs.announcements) return true;
+          return false;
+        }
 
         if (nearbyOnly) {
           if (!prefs[isRequest ? 'requests' : 'nearbyListings']) return false;

@@ -843,7 +843,15 @@ export default function App() {
     profileSyncRef.current = user.id;
 
     try {
-      const fromDb = await withTimeout(getSupabaseProfile(user.id), 6000, null);
+      const { data, error } = await supabase.from('users').select('*').eq('uid', user.id).maybeSingle();
+
+      if (error) {
+        console.warn('Background profile sync skipped (transient fetch error):', error.message);
+        return;
+      }
+
+      if (data) {
+        const fromDb = await getSupabaseProfile(user.id);
         if (fromDb) {
           const localMode = readStaffInteractionModePref(fromDb.uid);
           const merged =
@@ -851,8 +859,9 @@ export default function App() {
           setUserProfile(merged);
           writeCachedProfile(merged);
           applyUserPreferencesToDevice(merged);
-          return;
         }
+        return;
+      }
 
       const seed = profileFromAuthUser(user);
       await upsertSupabaseProfile(seed);

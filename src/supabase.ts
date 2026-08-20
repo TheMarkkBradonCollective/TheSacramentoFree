@@ -704,21 +704,6 @@ export async function upsertSupabaseProfile(
 
     const photoURL = sanitizePhotoUrlForDb(profile.photoURL);
 
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('uid, createdAt')
-      .eq('uid', profile.uid)
-      .maybeSingle();
-    const isNewNeighbor = !existingUser;
-    const createdAtMs = existingUser
-      ? Date.parse(String((existingUser as { createdAt?: string }).createdAt || ''))
-      : NaN;
-    // Auth trigger may insert users before first profile save — still alert directors then.
-    const isRecentSignupProfile =
-      Boolean(existingUser) &&
-      Number.isFinite(createdAtMs) &&
-      Date.now() - createdAtMs < 24 * 60 * 60 * 1000;
-
     const payload = {
       uid: profile.uid,
       displayName: profile.displayName.trim(),
@@ -786,20 +771,6 @@ export async function upsertSupabaseProfile(
 
     if (photoURL) {
       void syncProfilePhotoAcrossApp(profile.uid, photoURL, payload.displayName);
-    }
-
-    if ((isNewNeighbor || isRecentSignupProfile) && normalizeUserRole(profile.role) !== 'director') {
-      await runPushTask(() =>
-        import('./lib/pushIntegration').then((m) =>
-          m.pushDirectorAlert({
-            category: 'join',
-            title: `New neighbor — ${payload.displayName}`,
-            body: `${payload.neighborhood} · joined Sacramento Buy Nothing`,
-            tag: `director-join-${profile.uid}`,
-            excludeUserIds: [profile.uid],
-          }),
-        ),
-      );
     }
 
     setSupabaseConfigurationState(true);
