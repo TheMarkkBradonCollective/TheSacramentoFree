@@ -33,6 +33,7 @@ import ReportNeighborModal from './ReportNeighborModal';
 import { ItemPost } from '../types';
 import RoleBadge from './RoleBadge';
 import { ASSIGNABLE_ROLE_OPTIONS, isDirectorRole, isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { MessageRequest } from '../types';
 import ProfilePostList from './ProfilePostList';
@@ -86,7 +87,8 @@ export default function NeighborProfileView({
   const [requestBusy, setRequestBusy] = useState(false);
 
   const isSelf = userId === currentUserId;
-  const isDirector = isDirectorRole(currentUserProfile?.role);
+  const canManageTeamRoles =
+    !isSelf && isDirectorRole(currentUserProfile?.role) && isStaffActingOfficial(currentUserProfile);
 
   const [selectedRole, setSelectedRole] = useState<UserProfile['role']>('user');
   const [roleMsg, setRoleMsg] = useState('');
@@ -512,7 +514,7 @@ export default function NeighborProfileView({
               />
             </div>
 
-            {isDirector && !isSelf && (
+            {canManageTeamRoles && (
               <div className="sbn-card p-5 border border-amber-500/25 bg-amber-500/5">
                 <div className="flex items-center gap-2 mb-4">
                   <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
