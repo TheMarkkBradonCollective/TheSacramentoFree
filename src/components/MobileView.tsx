@@ -345,7 +345,7 @@ export default function MobileView({
           showTitle
           compact
         />
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center shrink-0">
           <TopbarActions
             userProfile={userProfile}
             onOpenAccount={openAccount}
