@@ -42,8 +42,6 @@ import { getItemMapDestination } from '../lib/itemLocation';
 import { isNativeApp } from '../lib/nativePlatform';
 import {
   readFeedViewMode,
-  readHideFulfilledFromFeed,
-  readHideGivenFromFeed,
   shouldHideCompletedListing,
   writeFeedViewMode,
   writeHideFulfilledFromFeed,
@@ -164,10 +162,10 @@ export default function ItemGrid({
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('All Neighborhoods');
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
   const [selectedVoteFilter, setSelectedVoteFilter] = useState<VoteFilter>('all');
-  const [sortBy, setSortBy] = useState<FeedSortMode>('new');
+  const [sortBy, setSortBy] = useState<FeedSortMode | null>(null);
   const [activeQuickPicks, setActiveQuickPicks] = useState<Set<QuickPick>>(() => new Set());
-  const [hideGiven, setHideGiven] = useState(() => readHideGivenFromFeed());
-  const [hideFulfilled, setHideFulfilled] = useState(() => readHideFulfilledFromFeed());
+  const [hideGiven, setHideGiven] = useState(false);
+  const [hideFulfilled, setHideFulfilled] = useState(false);
   const [viewMode, setViewMode] = useState<FeedViewMode>(() => readFeedViewMode());
   const [gridSortMode, setGridSortMode] = useState<'nearest' | 'new'>('nearest');
   const [filtersPanelOpen, setFiltersPanelOpen] = useState(false);
@@ -243,7 +241,7 @@ export default function ItemGrid({
       setSortBy(value);
       return;
     }
-    if (sortBy === value) setSortBy('new');
+    if (sortBy === value) setSortBy(null);
   };
 
   const handleTypeSwitch = (type: ListingTypeFilter) => (checked: boolean) => {
@@ -269,7 +267,7 @@ export default function ItemGrid({
 
   const activeFilterCount = [
     searchTerm.trim() !== '',
-    sortBy !== 'new',
+    sortBy !== null,
     selectedType !== 'all',
     selectedCategory !== 'All Categories',
     selectedNeighborhood !== 'All Neighborhoods',
@@ -289,7 +287,7 @@ export default function ItemGrid({
     setSelectedNeighborhood('All Neighborhoods');
     setSelectedStatus('all');
     setSelectedVoteFilter('all');
-    setSortBy('new');
+    setSortBy(null);
     setActiveQuickPicks(new Set());
     setHideGiven(false);
     setHideFulfilled(false);
@@ -341,7 +339,7 @@ export default function ItemGrid({
       return [...filtered].sort((a, b) => compareFeedItems(a, b, 'new', getEngagement));
     }
 
-    return [...filtered].sort((a, b) => compareFeedItems(a, b, sortBy, getEngagement));
+    return [...filtered].sort((a, b) => compareFeedItems(a, b, sortBy ?? 'new', getEngagement));
   }, [
     items,
     searchTerm,
@@ -622,7 +620,7 @@ export default function ItemGrid({
             id="filter_sort_select"
             label="More sort options"
             icon={ArrowDownUp}
-            value={sortBy}
+            value={sortBy ?? 'new'}
             onChange={(v) => setSortBy(v as FeedSortMode)}
           >
             <optgroup label="Popular">
