@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Calendar, LifeBuoy, MapPin, Pencil, Repeat } from 'lucide-react';
+import { ArrowLeft, Calendar, LifeBuoy, MapPin, MessageSquare, Pencil, Repeat } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
@@ -27,6 +27,7 @@ interface EventDetailViewProps {
   onEdit?: () => void;
   onAddDates?: () => void;
   onCancel?: () => void;
+  onMessage?: () => void;
   onViewProfile: (userId: string) => void;
   onStaffChat?: () => void;
   onEventStaffAction?: () => void;
@@ -79,6 +80,7 @@ export default function EventDetailView({
   onEdit,
   onAddDates,
   onCancel,
+  onMessage,
   onViewProfile,
   onStaffChat,
   onEventStaffAction,
@@ -96,6 +98,7 @@ export default function EventDetailView({
   const isStaffViewer = isStaffActingOfficial(userProfile);
   const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
+  const isOpenForCoordination = isEventUpcoming(event) && !isCancelled;
   const canEdit = isOwner && isEventEditable(event);
   const canAddDates = isOwner && !isCancelled && onAddDates;
   const seriesSiblings = getSeriesSiblings(allEvents, event);
@@ -170,11 +173,20 @@ export default function EventDetailView({
                 <span className="hidden sm:inline ml-1">Edit</span>
               </button>
             )}
-            {isStaffViewer && !isOwner && onStaffChat && (
+            {isStaffViewer && !isOwner && onStaffChat ? (
               <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm">
                 <LifeBuoy className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline ml-1">Staff chat</span>
               </button>
+            ) : (
+              !isOwner &&
+              isOpenForCoordination &&
+              onMessage && (
+                <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline ml-1">Message</span>
+                </button>
+              )
             )}
           </div>
         </div>

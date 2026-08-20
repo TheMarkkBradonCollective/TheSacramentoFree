@@ -266,6 +266,8 @@ export interface Chat {
   lastMessageSenderId?: string;
   itemId?: string;
   itemTitle?: string;
+  eventId?: string;
+  eventTitle?: string;
 }
 
 /** Compose UI before the chat row exists in the database (first outbound message creates it). */
@@ -276,6 +278,8 @@ export interface PendingChatCompose {
   otherUserPhoto?: string;
   itemId?: string;
   itemTitle?: string;
+  eventId?: string;
+  eventTitle?: string;
 }
 
 export interface Message {

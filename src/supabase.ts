@@ -1520,9 +1520,12 @@ async function fetchCommunityChatRows(includeStaffChat: boolean): Promise<Chat[]
 
 export async function getSupabaseChats(
   userId: string,
-  options?: { userRole?: UserProfile['role'] },
+  options?: { userRole?: UserProfile['role']; staffInteractionMode?: UserProfile['staffInteractionMode'] },
 ): Promise<Chat[]> {
-  const includeStaffChat = isStaffRole(options?.userRole);
+  const includeStaffChat =
+    isStaffRole(options?.userRole) &&
+    (options?.staffInteractionMode === undefined ||
+      options.staffInteractionMode !== 'neighbor');
   try {
     // Filter server-side using JSONB containment so we only fetch this user's chats.
     const { data, error } = await supabase
@@ -1644,7 +1647,9 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
         .update({
           lastMessageAt: new Date().toISOString(),
           itemId: initialPayload.itemId || '',
-          itemTitle: initialPayload.itemTitle || ''
+          itemTitle: initialPayload.itemTitle || '',
+          eventId: initialPayload.eventId || '',
+          eventTitle: initialPayload.eventTitle || '',
         })
         .eq('id', chatId);
 
@@ -1663,7 +1668,9 @@ export async function getOrCreateSupabaseChat(chatId: string, initialPayload: an
         lastMessageAt: initialPayload.lastMessageAt ? new Date(initialPayload.lastMessageAt).toISOString() : new Date().toISOString(),
         lastMessageSenderId: initialPayload.lastMessageSenderId || '',
         itemId: initialPayload.itemId || '',
-        itemTitle: initialPayload.itemTitle || ''
+        itemTitle: initialPayload.itemTitle || '',
+        eventId: initialPayload.eventId || '',
+        eventTitle: initialPayload.eventTitle || '',
       };
 
       const { error: insertError } = await supabase
@@ -3695,6 +3702,23 @@ export async function deleteSupabaseItemComment(
 /**
  * --- COMMUNITY EVENTS ---
  */
+export async function getSupabaseEventById(eventId: string): Promise<CommunityEvent | null> {
+  if (!eventId) return null;
+  try {
+    const { data, error } = await supabase.from('community_events').select('*').eq('id', eventId).maybeSingle();
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return null;
+    }
+    if (!data) return null;
+    setSupabaseConfigurationState(true);
+    return normalizeSupabaseEvent(data as CommunityEvent);
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return null;
+  }
+}
+
 export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
   return {
     ...row,

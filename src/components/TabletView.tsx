@@ -13,7 +13,8 @@ import { IN_APP } from '../siteContent';
 import AppSidebar from './AppSidebar';
 import AppTopbar from './AppTopbar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
-import { isStaffRole, roleTheme } from '../lib/roles';
+import { roleTheme } from '../lib/roles';
+import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
@@ -151,10 +152,10 @@ export default function TabletView({
   onViewEventId,
 }: TabletViewProps) {
   useScrollInputOnFocus();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => isStaffRole(userProfile.role));
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => hasStaffConsoleAccess(userProfile));
   const [violationsFocusSessionId, setViolationsFocusSessionId] = useState<string | null>(null);
   const onStaffTab = isStaffTab(activeTab);
-  const isStaff = isStaffRole(userProfile.role);
+  const showStaffConsole = hasStaffConsoleAccess(userProfile);
   const communityTab: AppTab = (['feed', 'events', 'map', 'chats', 'profile'] as string[]).includes(activeTab)
     ? (activeTab as AppTab)
     : 'feed';
@@ -171,7 +172,7 @@ export default function TabletView({
     ) : null
   ) : null;
 
-  const theme = roleTheme(userProfile.role);
+  const theme = roleTheme(profileUiRole(userProfile));
 
   return (
     <div
@@ -183,11 +184,11 @@ export default function TabletView({
         userProfile={userProfile}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        variant={isStaff ? 'expanded' : 'rail'}
-        collapsed={isStaff ? sidebarCollapsed : false}
-        fullyHiddenWhenCollapsed={isStaff}
+        variant={showStaffConsole ? 'expanded' : 'rail'}
+        collapsed={showStaffConsole ? sidebarCollapsed : false}
+        fullyHiddenWhenCollapsed={showStaffConsole}
         onCollapse={() => setSidebarCollapsed(true)}
-        autoCollapseOnNavigate={isStaff}
+        autoCollapseOnNavigate={showStaffConsole}
       />
 
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
@@ -198,7 +199,7 @@ export default function TabletView({
           onOpenAwards={onOpenAwards ?? (() => {})}
           awardsButtonGlow={awardsButtonGlow}
           action={topbarAction}
-          onToggleSidebar={isStaff ? () => setSidebarCollapsed((c) => !c) : undefined}
+          onToggleSidebar={showStaffConsole ? () => setSidebarCollapsed((c) => !c) : undefined}
         />
 
         {onStaffTab ? (
@@ -315,6 +316,7 @@ export default function TabletView({
                   pendingChatCompose={pendingChatCompose}
                   onClearPendingChatCompose={onClearPendingChatCompose}
                   items={items}
+                  events={events}
                   blockedUserIds={blockedUserIds}
                   onViewProfile={onViewProfile}
                   onItemsChanged={onRefresh}

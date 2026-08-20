@@ -20,6 +20,7 @@ import type { CSSProperties } from 'react';
 import type { UserProfile } from '../types';
 import type { AnyTab } from '../lib/appTabs';
 import { isStaffRole, roleLabel, roleRank, roleTheme } from '../lib/roles';
+import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
 import { IN_APP } from '../siteContent';
 import BrandLogo from './BrandLogo';
 import { PresenceUserAvatar } from './UserAvatar';
@@ -89,8 +90,8 @@ export default function AppSidebar({
   const isSlideDrawer = overlay && fullyHiddenWhenCollapsed;
   const isFullyHidden = fullyHiddenWhenCollapsed && collapsed && !isRail && !isSlideDrawer;
   const isCollapsed = isRail || collapsed;
-  const theme = roleTheme(userProfile.role);
-  const isStaff = isStaffRole(userProfile.role);
+  const theme = roleTheme(profileUiRole(userProfile));
+  const showStaffConsole = hasStaffConsoleAccess(userProfile);
 
   const selectTab = (id: AnyTab) => {
     onTabChange(id);
@@ -100,11 +101,11 @@ export default function AppSidebar({
   };
 
   const communityItems = NAV_ITEMS.filter((i) => i.section === 'community');
-  const staffItems = NAV_ITEMS.filter(
-    (i) => i.section === 'staff' && actorRank >= (i.minRank ?? 0),
-  );
+  const staffItems = showStaffConsole
+    ? NAV_ITEMS.filter((i) => i.section === 'staff' && actorRank >= (i.minRank ?? 0))
+    : [];
 
-  const roleName = roleLabel(userProfile.role);
+  const roleName = showStaffConsole ? roleLabel(userProfile.role) : roleLabel('user');
   const drawerOpen = isSlideDrawer && !collapsed;
   const isOverlayDrawer = isSlideDrawer ? drawerOpen : overlay && !isFullyHidden && !isCollapsed;
 
@@ -163,7 +164,7 @@ export default function AppSidebar({
           {/* Logo */}
           <div className={`flex items-center gap-2 px-3 py-4 border-b border-app ${isCollapsed ? 'justify-center' : ''}`}>
             {isCollapsed ? (
-              isStaff ? (
+              showStaffConsole ? (
                 <ShieldCheck className="w-6 h-6 shrink-0" style={{ color: theme.accent }} />
               ) : (
                 <BrandLogo imgClassName="h-7 w-7 object-cover rounded-lg shrink-0" showTitle={false} />

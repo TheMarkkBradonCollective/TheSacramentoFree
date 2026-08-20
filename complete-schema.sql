@@ -98,11 +98,14 @@ CREATE TABLE IF NOT EXISTS public.chats (
   "lastMessageAt" TIMESTAMPTZ DEFAULT NOW(),
   "lastMessageSenderId" TEXT,
   "itemId" TEXT,
-  "itemTitle" TEXT
+  "itemTitle" TEXT,
+  "eventId" TEXT,
+  "eventTitle" TEXT
 );
 
 ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS chats_item_id_idx ON public.chats ("itemId");
+CREATE INDEX IF NOT EXISTS chats_event_id_idx ON public.chats ("eventId");
 CREATE INDEX IF NOT EXISTS chats_last_message_at_idx ON public.chats ("lastMessageAt" DESC);
 
 -- 4. Chat messages

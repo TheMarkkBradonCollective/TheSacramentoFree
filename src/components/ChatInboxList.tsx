@@ -1,4 +1,4 @@
-import { Box, Globe, LifeBuoy, MessageSquare, Shield, UserPlus } from 'lucide-react';
+import { Box, CalendarDays, Globe, LifeBuoy, MessageSquare, Shield, UserPlus } from 'lucide-react';
 import type { Chat, MessageRequest } from '../types';
 import { communityChatSubtitle, communityChatTitle, isCommunityChat, isGlobalCommunityChat } from '../lib/communityChats';
 import { chatInboxRowClass, type InboxEntry } from '../lib/chatInbox';
@@ -51,7 +51,7 @@ export default function ChatInboxList({
         <ChatSectionEmptyState
           icon={MessageSquare}
           title="No messages yet"
-          description="Browse Stuff and message a neighbor from any listing, or contact support if you need help."
+          description="Browse Stuff or Events and message a neighbor from any listing or event, or contact support if you need help."
         />
       </div>
     );
@@ -172,6 +172,11 @@ export default function ChatInboxList({
                   <p className="text-[10px] text-accent truncate mt-0.5 flex items-center gap-1">
                     <Box className="w-3 h-3 shrink-0" />
                     {chat.itemTitle}
+                  </p>
+                ) : chat.eventTitle ? (
+                  <p className="text-[10px] text-fuchsia-400 truncate mt-0.5 flex items-center gap-1">
+                    <CalendarDays className="w-3 h-3 shrink-0" />
+                    {chat.eventTitle}
                   </p>
                 ) : null}
                 <p className="text-xs text-muted truncate mt-0.5">

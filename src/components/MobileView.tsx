@@ -14,7 +14,8 @@ import BrandLogo from './BrandLogo';
 import TopbarActions from './TopbarActions';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
-import { isStaffRole, roleTheme } from '../lib/roles';
+import { roleTheme } from '../lib/roles';
+import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
 import { isNativeApp } from '../lib/nativePlatform';
 import AppSidebar from './AppSidebar';
 import AppTopbar from './AppTopbar';
@@ -161,9 +162,9 @@ export default function MobileView({
   useKeyboardInset();
   useScrollInputOnFocus();
 
-  const isStaff = isStaffRole(userProfile.role);
+  const showStaffConsole = hasStaffConsoleAccess(userProfile);
   const isNative = isNativeApp();
-  const theme = roleTheme(userProfile.role);
+  const theme = roleTheme(profileUiRole(userProfile));
   // For staff, the type is AnyTab; for regular users, it's AppTab.
   // We cast activeTab back to AppTab for views that only accept AppTab.
   const setActiveTab = setActiveTabRaw;
@@ -173,7 +174,7 @@ export default function MobileView({
       : 'feed'
     : (activeTab as AppTab);
 
-  if (isStaff) {
+  if (showStaffConsole) {
     const onStaffTab = isStaffTab(activeTab);
     const staffEyebrow = onStaffTab ? 'Staff console' : 'Community';
     const staffTitle = onStaffTab
@@ -287,7 +288,7 @@ export default function MobileView({
                   <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onStaffEventChat={onStaffEventChat} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} />
                 </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
-                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
+                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} events={events} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={() => setActiveTab('feed')} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
                 </div>
                 <ScrollPage
                   className={`bg-app ${communityTab === 'profile' ? '' : 'hidden'}`}
@@ -465,6 +466,7 @@ export default function MobileView({
             pendingChatCompose={pendingChatCompose}
             onClearPendingChatCompose={onClearPendingChatCompose}
             items={items}
+            events={events}
             blockedUserIds={blockedUserIds}
             onViewProfile={onViewProfile}
             onItemsChanged={onRefresh}
