@@ -6,7 +6,7 @@ import { getPostTypeBadgeClass, getPostTypeLabel, getPostTypeCompletedLabel } fr
 import { extractListingImageUrls } from '../lib/listingContent';
 import { getListingNavigateLabel } from '../lib/listingMapActions';
 import { formatRouteDistance } from '../lib/mapRoute';
-import { isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
 import UserAvatar from './UserAvatar';
@@ -67,7 +67,7 @@ export default function ItemCard({
 }: ItemCardProps) {
   const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;
-  const isStaffViewer = isStaffRole(userProfile?.role);
+  const isStaffViewer = isStaffActingOfficial(userProfile);
   const inactive = item.status === 'completed' || item.status === 'withdrawn';
 
   const dateLabel = item.createdAt

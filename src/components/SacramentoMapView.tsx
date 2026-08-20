@@ -24,7 +24,7 @@ import {
   openDrivingDirections,
   type LatLng,
 } from '../lib/mapRoute';
-import { isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { remainingRouteMeters } from '../lib/navigationRoute';
 import { usePreviewDrivingRoute } from '../hooks/usePreviewDrivingRoute';
 import { subscribeLiveGeolocation, getLastLiveLatLng, retainLiveGeolocation } from '../lib/liveGeolocation';
@@ -396,7 +396,7 @@ export default function SacramentoMapView({
   eventsEngagement,
   commentsLocked = false,
 }: SacramentoMapViewProps) {
-  const isStaffViewer = isStaffRole(userProfile.role);
+  const isStaffViewer = isStaffActingOfficial(userProfile);
   const openItemDetail = onViewItem || onItemDetail;
   const { confirm, alert } = useConfirm();
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);

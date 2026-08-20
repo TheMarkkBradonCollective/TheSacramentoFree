@@ -1,0 +1,9 @@
+Android beta v0.1.0.0023 (versionCode 23)
+
+What's new:
+• Staff can switch between Staff mode and Neighbor mode in Account settings
+• Staff mode keeps your title on comments and uses support threads on listings
+• Neighbor mode lets staff message, navigate, claim, and Go Get like any neighbor
+• Staff moderation tools and sidebar stay available in both modes
+
+Download (sideload): https://www.sacramentobuynothing.com/download
