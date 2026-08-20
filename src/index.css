@@ -180,6 +180,27 @@ html.sbn-session-restore #root:empty {
   background: var(--sbn-nav-map-bg);
 }
 
+#map_navigation_view .sbn-nav-map-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--sbn-nav-map-bg);
+}
+
+#map_navigation_view .sbn-nav-map-rotator {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  transition: transform 0.12s linear;
+}
+
+#map_navigation_view .sbn-nav-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
 #map_navigation_view .leaflet-control-attribution {
   margin-right: 0.5rem;
   margin-bottom: calc(var(--sbn-nav-sheet-height, 8.5rem) + 0.35rem);
@@ -432,8 +453,9 @@ html.sbn-session-restore #root:empty {
 }
 
 #map_navigation_view .sbn-nav-lane-slot {
-  width: 2.15rem;
-  height: 1.75rem;
+  min-width: 2.15rem;
+  height: 1.85rem;
+  padding: 0 0.15rem;
   border-radius: 0.45rem;
   display: flex;
   align-items: center;
@@ -637,6 +659,42 @@ html.sbn-session-restore #root:empty {
 #map_navigation_view .sbn-nav-step-current {
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 32%, transparent);
+}
+
+#map_navigation_view .sbn-nav-mode-chip {
+  background: var(--sbn-nav-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--sbn-nav-text);
+  border: 1px solid var(--sbn-nav-glass-border);
+  border-radius: 9999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  box-shadow: var(--sbn-nav-shadow);
+}
+
+#map_navigation_view .sbn-nav-settings-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.75rem;
+  padding-bottom: max(0.75rem, var(--sbn-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--sbn-nav-bg) 55%, transparent);
+}
+
+#map_navigation_view .sbn-nav-settings-card {
+  width: min(26rem, 100%);
+  max-height: min(82vh, 40rem);
+  overflow-y: auto;
+  border-radius: 1.5rem;
+  padding: 1.15rem 1.1rem 1.25rem;
 }
 
 #map_navigation_view .sbn-nav-dest-pin {

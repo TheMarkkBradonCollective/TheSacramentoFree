@@ -1,5 +1,12 @@
 import type { LatLng } from './osrmRoute';
 
+export type OsrmTravelMode = 'driving' | 'walking' | 'cycling';
+
+export interface NavigationLanePayload {
+  indications: string[];
+  valid: boolean;
+}
+
 export interface NavigationStepPayload {
   id: string;
   distanceMeters: number;
@@ -9,6 +16,7 @@ export interface NavigationStepPayload {
   maneuverType: string;
   maneuverModifier?: string;
   location: LatLng;
+  lanes?: NavigationLanePayload[];
 }
 
 export interface NavigationRoutePayload {
@@ -16,12 +24,20 @@ export interface NavigationRoutePayload {
   distanceMeters: number;
   durationSeconds: number;
   steps: NavigationStepPayload[];
+  travelMode: OsrmTravelMode;
 }
 
-const OSRM_ENDPOINTS = [
-  'https://router.project-osrm.org',
-  'https://routing.openstreetmap.de/routed-car',
-] as const;
+const OSRM_PROFILE_ENDPOINTS: Record<OsrmTravelMode, readonly string[]> = {
+  driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
+  cycling: ['https://routing.openstreetmap.de/routed-bike'],
+  walking: ['https://routing.openstreetmap.de/routed-foot'],
+};
+
+export function parseTravelMode(value: unknown): OsrmTravelMode {
+  if (value === 'walking' || value === 'foot') return 'walking';
+  if (value === 'cycling' || value === 'biking' || value === 'bike') return 'cycling';
+  return 'driving';
+}
 
 function bearingModifierToPhrase(modifier?: string): string | null {
   if (!modifier) return null;
@@ -97,6 +113,29 @@ function formatManeuverInstruction(
   }
 }
 
+function parseOsrmLanes(raw: unknown): NavigationLanePayload[] {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  return raw.map((entry) => {
+    const lane = entry as { indications?: unknown; valid?: unknown };
+    const indications = Array.isArray(lane.indications)
+      ? lane.indications.map((value) => String(value).toLowerCase().trim()).filter(Boolean)
+      : [];
+    return {
+      indications: indications.length > 0 ? indications : ['straight'],
+      valid: lane.valid === true,
+    };
+  });
+}
+
+function lanesFromIntersections(intersections: unknown): NavigationLanePayload[] | undefined {
+  if (!Array.isArray(intersections)) return undefined;
+  for (const intersection of intersections) {
+    const lanes = parseOsrmLanes((intersection as { lanes?: unknown })?.lanes);
+    if (lanes.length > 0) return lanes;
+  }
+  return undefined;
+}
+
 function parseOsrmSteps(data: unknown): NavigationStepPayload[] {
   const route = (data as { routes?: Array<{ legs?: Array<{ steps?: unknown[] }> }> })?.routes?.[0];
   const rawSteps = route?.legs?.[0]?.steps;
@@ -108,6 +147,7 @@ function parseOsrmSteps(data: unknown): NavigationStepPayload[] {
       duration?: number;
       name?: string;
       maneuver?: { type?: string; modifier?: string; location?: [number, number] };
+      intersections?: unknown;
     };
     const maneuver = s.maneuver ?? {};
     const coords = maneuver.location;
@@ -119,6 +159,7 @@ function parseOsrmSteps(data: unknown): NavigationStepPayload[] {
     const maneuverModifier = maneuver.modifier ? String(maneuver.modifier) : undefined;
     const name = String(s.name ?? '');
     const isArrival = maneuverType === 'arrive' || index === rawSteps.length - 1;
+    const lanes = lanesFromIntersections(s.intersections);
 
     return {
       id: `step-${index}`,
@@ -129,18 +170,21 @@ function parseOsrmSteps(data: unknown): NavigationStepPayload[] {
       maneuverModifier,
       location,
       instruction: formatManeuverInstruction(maneuverType, maneuverModifier, name, isArrival),
+      ...(lanes ? { lanes } : {}),
     };
   });
 }
 
-/** Fetch turn-by-turn driving route with OSRM steps (server-side). */
+/** Fetch turn-by-turn route with OSRM steps for driving, walking, or cycling. */
 export async function fetchOsrmNavigationRoute(
   from: LatLng,
   to: LatLng,
+  travelMode: OsrmTravelMode = 'driving',
 ): Promise<NavigationRoutePayload | null> {
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
+  const endpoints = OSRM_PROFILE_ENDPOINTS[travelMode];
 
-  for (const base of OSRM_ENDPOINTS) {
+  for (const base of endpoints) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 14_000);
 
@@ -165,6 +209,7 @@ export async function fetchOsrmNavigationRoute(
         distanceMeters: Number(route.distance),
         durationSeconds: Number(route.duration),
         steps,
+        travelMode,
       };
     } catch {
       // try next mirror

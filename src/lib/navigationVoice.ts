@@ -47,8 +47,23 @@ export function buildRouteSummaryVoice(
   destinationLabel: string,
   distanceMeters: number,
   durationSeconds: number,
+  travelVerb = 'Drive',
 ): string {
-  return `Drive ${formatNavDistance(distanceMeters)} to ${destinationLabel}. About ${formatNavDuration(durationSeconds)}.`;
+  return `${travelVerb} ${formatNavDistance(distanceMeters)} to ${destinationLabel}. About ${formatNavDuration(durationSeconds)}.`;
+}
+
+export function buildRecenterVoiceCue(
+  step: NavigationStep | undefined,
+  distanceMeters: number,
+  destinationLabel: string,
+): string {
+  if (!step) return `Centered on you. Continue toward ${destinationLabel}.`;
+  if (step.maneuverType === 'arrive') return `Centered on you. Approaching ${destinationLabel}.`;
+  const instruction = step.instruction.replace(/^Arrive at pickup$/i, `arrive at ${destinationLabel}`);
+  if (distanceMeters > 80) {
+    return `Centered on you. In ${voiceDistancePhrase(distanceMeters)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}`;
+  }
+  return `Centered on you. ${instruction}`;
 }
 
 export class NavigationVoice {

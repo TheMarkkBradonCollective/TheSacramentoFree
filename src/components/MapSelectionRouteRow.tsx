@@ -1,5 +1,7 @@
 import { Compass, Navigation } from 'lucide-react';
 import { formatRouteDistance, formatRouteDuration, type LatLng } from '../lib/mapRoute';
+import { readNavigationSettings, subscribeNavigationSettings, travelModeGerund, type NavTravelMode } from '../lib/navigationSettings';
+import { useEffect, useState } from 'react';
 
 export interface MapSelectionRouteRowProps {
   locationHint: string;
@@ -29,6 +31,9 @@ export default function MapSelectionRouteRow({
   onOpenExternalMaps,
   navigateLabel = 'Navigate',
 }: MapSelectionRouteRowProps) {
+  const [travelMode, setTravelMode] = useState<NavTravelMode>(() => readNavigationSettings().travelMode);
+  useEffect(() => subscribeNavigationSettings((settings) => setTravelMode(settings.travelMode)), []);
+
   if (!routeEndpoints) {
     return (
       <div className="mt-2 pt-2 border-t border-app">
@@ -48,7 +53,7 @@ export default function MapSelectionRouteRow({
               {durationSeconds != null && durationSeconds > 0 && (
                 <span className="text-muted font-semibold">
                   {' '}
-                  · {formatRouteDuration(durationSeconds)} drive
+                  · {formatRouteDuration(durationSeconds)} {travelModeGerund(travelMode)}
                 </span>
               )}
             </p>

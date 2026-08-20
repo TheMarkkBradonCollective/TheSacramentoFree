@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { fetchOsrmNavigationRoute } from '../_lib/osrmNavigation';
+import { fetchOsrmNavigationRoute, parseTravelMode } from '../_lib/osrmNavigation';
 import { isInSacramentoServiceArea, parseRouteEndpoints } from '../_lib/mapCoords';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -18,13 +18,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Route must stay within the Sacramento service area' });
     }
 
-    const route = await fetchOsrmNavigationRoute(parsed.from, parsed.to);
+    const travelMode = parseTravelMode(req.query.mode ?? req.query.profile);
+    const route = await fetchOsrmNavigationRoute(parsed.from, parsed.to, travelMode);
 
     if (!route) {
       return res.status(502).json({ error: 'Could not calculate navigation route' });
     }
 
-    res.setHeader('Cache-Control', 'public, max-age=120, s-maxage=300');
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120');
     return res.status(200).json(route);
   } catch (err) {
     console.error('[api/map/navigation]', err);

@@ -1,6 +1,11 @@
 import type { LatLng } from './mapRoute';
 import { haversineMeters } from './mapRoute';
 import { apiUrl } from './appOrigin';
+import { lanesFromOsrmIntersections, type NavLane } from './navLanes';
+import type { NavTravelMode } from './navigationSettings';
+
+export type { NavLane };
+export type { NavTravelMode };
 
 export interface NavigationStep {
   id: string;
@@ -11,6 +16,7 @@ export interface NavigationStep {
   maneuverType: string;
   maneuverModifier?: string;
   location: LatLng;
+  lanes?: NavLane[];
 }
 
 export interface NavigationRouteResult {
@@ -18,12 +24,14 @@ export interface NavigationRouteResult {
   distanceMeters: number;
   durationSeconds: number;
   steps: NavigationStep[];
+  travelMode: NavTravelMode;
 }
 
-const OSRM_ENDPOINTS = [
-  'https://router.project-osrm.org',
-  'https://routing.openstreetmap.de/routed-car',
-] as const;
+const OSRM_PROFILE_ENDPOINTS: Record<NavTravelMode, readonly string[]> = {
+  driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
+  cycling: ['https://routing.openstreetmap.de/routed-bike'],
+  walking: ['https://routing.openstreetmap.de/routed-foot'],
+};
 
 export function bearingModifierToPhrase(modifier?: string): string | null {
   if (!modifier) return null;
@@ -111,6 +119,7 @@ function parseOsrmSteps(data: unknown): NavigationStep[] {
       duration?: number;
       name?: string;
       maneuver?: { type?: string; modifier?: string; location?: [number, number] };
+      intersections?: unknown;
     };
     const maneuver = s.maneuver ?? {};
     const coords = maneuver.location;
@@ -122,6 +131,7 @@ function parseOsrmSteps(data: unknown): NavigationStep[] {
     const maneuverModifier = maneuver.modifier ? String(maneuver.modifier) : undefined;
     const name = String(s.name ?? '');
     const isArrival = maneuverType === 'arrive' || index === rawSteps.length - 1;
+    const lanes = lanesFromOsrmIntersections(s.intersections);
 
     return {
       id: `step-${index}`,
@@ -132,18 +142,36 @@ function parseOsrmSteps(data: unknown): NavigationStep[] {
       maneuverModifier,
       location,
       instruction: formatManeuverInstruction(maneuverType, maneuverModifier, name, isArrival),
+      ...(lanes.length > 0 ? { lanes } : {}),
     };
   });
 }
 
-/** Fetch turn-by-turn driving route with OSRM steps (API-first, OSRM mirror fallback). */
-export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<NavigationRouteResult | null> {
-  const viaApi = await fetchNavigationRouteFromApi(from, to);
+function normalizeFetchedRoute(data: NavigationRouteResult, travelMode: NavTravelMode): NavigationRouteResult | null {
+  if (!Array.isArray(data.coords) || data.coords.length < 2 || !Array.isArray(data.steps) || data.steps.length === 0) {
+    return null;
+  }
+  return {
+    coords: data.coords,
+    distanceMeters: Number(data.distanceMeters),
+    durationSeconds: Number(data.durationSeconds),
+    steps: data.steps,
+    travelMode: data.travelMode === 'walking' || data.travelMode === 'cycling' ? data.travelMode : travelMode,
+  };
+}
+
+/** Fetch turn-by-turn route with OSRM steps (API-first, profile-aware OSRM fallback). */
+export async function fetchNavigationRoute(
+  from: LatLng,
+  to: LatLng,
+  travelMode: NavTravelMode = 'driving',
+): Promise<NavigationRouteResult | null> {
+  const viaApi = await fetchNavigationRouteFromApi(from, to, travelMode);
   if (viaApi) return viaApi;
 
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
-  for (const base of OSRM_ENDPOINTS) {
+  for (const base of OSRM_PROFILE_ENDPOINTS[travelMode]) {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 16_000);
 
@@ -165,6 +193,7 @@ export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<Na
         distanceMeters: Number(route.distance),
         durationSeconds: Number(route.duration),
         steps,
+        travelMode,
       };
     } catch {
       // try next mirror
@@ -176,7 +205,11 @@ export async function fetchNavigationRoute(from: LatLng, to: LatLng): Promise<Na
   return null;
 }
 
-async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<NavigationRouteResult | null> {
+async function fetchNavigationRouteFromApi(
+  from: LatLng,
+  to: LatLng,
+  travelMode: NavTravelMode,
+): Promise<NavigationRouteResult | null> {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 16_000);
 
@@ -186,6 +219,7 @@ async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<Na
       fromLng: String(from.lng),
       toLat: String(to.lat),
       toLng: String(to.lng),
+      mode: travelMode,
     });
     const res = await fetch(apiUrl(`/api/map/navigation?${params.toString()}`), {
       signal: controller.signal,
@@ -194,16 +228,7 @@ async function fetchNavigationRouteFromApi(from: LatLng, to: LatLng): Promise<Na
     if (!res.ok) return null;
 
     const data = (await res.json()) as NavigationRouteResult;
-    if (!Array.isArray(data.coords) || data.coords.length < 2 || !Array.isArray(data.steps) || data.steps.length === 0) {
-      return null;
-    }
-
-    return {
-      coords: data.coords,
-      distanceMeters: Number(data.distanceMeters),
-      durationSeconds: Number(data.durationSeconds),
-      steps: data.steps,
-    };
+    return normalizeFetchedRoute(data, travelMode);
   } catch {
     return null;
   } finally {
@@ -439,15 +464,19 @@ export function estimateSpeedLimitMph(step?: NavigationStep | null): number {
   }
 }
 
-/** Best-effort lane count from street type (OSRM does not provide real lane data). */
+/**
+ * Last-resort lane count when OSM/OSRM did not provide lanes.
+ * Prefer real `step.lanes` over this estimate.
+ */
 export function estimateLaneCount(step?: NavigationStep | null): number {
+  if (step?.lanes && step.lanes.length > 0) return step.lanes.length;
   switch (roadClassFromStep(step)) {
     case 'freeway':
       return 4;
     case 'arterial':
       return 3;
     case 'local':
-      return 2;
+      return 0;
   }
 }
 

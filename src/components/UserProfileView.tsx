@@ -37,6 +37,7 @@ import ProfileAwardsSection from './ProfileAwardsSection';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
 import ThemeSettings from './ThemeSettings';
+import AccountNavigationSettings from './AccountNavigationSettings';
 import SystemPermissionsSettings from './SystemPermissionsSettings';
 import GoGetSettings from './GoGetSettings';
 import StaffModeSettings from './StaffModeSettings';
@@ -545,6 +546,7 @@ export default function UserProfileView({
 
           <SystemPermissionsSettings />
           <ThemeSettings />
+          <AccountNavigationSettings />
           <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           {usingApk && (
             <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
