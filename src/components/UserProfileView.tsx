@@ -604,6 +604,143 @@ export default function UserProfileView({
           className={fullBleed ? sectionShell : 'sbn-section'}
           id="profile_tab_panel_settings"
         >
+          <div
+            className="min-w-0 overflow-hidden mb-5 pb-5 border-b border-app"
+            id="pwa_installs_section"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Smartphone className="w-4 h-4 text-accent" />
+              <h3 className="text-sm font-bold text-app uppercase tracking-wider">Install app</h3>
+            </div>
+            <p className="text-xs text-muted mb-4 leading-relaxed">
+              Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience.
+              Home screen install is free for everyone; Google Play is for native Android; free APK sideload is only for our
+              first 500 neighbors.
+            </p>
+
+            <div className="flex flex-col gap-2 mb-4 min-w-0">
+              <a
+                href={SITE.playStoreBetaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+              >
+                <Store className="w-4 h-4 shrink-0" />
+                <span>Get it from Play Store</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={openDownloadPage}
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4 shrink-0" />
+                <span>{canDownloadApk ? 'Compare Play, APK & home screen' : 'Compare Play & home screen'}</span>
+              </button>
+
+              {canDownloadApk && apkDownloadHref ? (
+                <TrackedDownloadLink
+                  href={apkDownloadHref}
+                  download={latestApk?.fileName || 'sac-buy-nothing.apk'}
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+                >
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>
+                    {apkVersionLoading
+                      ? 'Loading APK…'
+                      : latestApk?.betaLabel
+                        ? usingApk && apkStatus === 'update-available'
+                          ? `Update to ${latestApk.betaLabel}`
+                          : `Download ${latestApk.betaLabel}`
+                        : 'Download latest APK'}
+                  </span>
+                </TrackedDownloadLink>
+              ) : null}
+            </div>
+
+            {!canDownloadApk && apkAccessMessage ? (
+              <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4 leading-relaxed">
+                {apkAccessMessage}
+              </p>
+            ) : null}
+
+            {isAppInstalled ? (
+              <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl" id="pwa_installed_badge">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-xs font-bold text-emerald-400">App installed on this device</span>
+              </div>
+            ) : canPromptInstall ? (
+              <button
+                onClick={() => void promptInstall()}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+                id="pwa_install_direct_trigger"
+              >
+                <Download className="w-4 h-4" />
+                <span>Install app</span>
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex border-b border-app overflow-x-auto gap-0">
+                  {(['ios', 'android', 'chrome'] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setActiveManualPlatform(p)}
+                      className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+                        activeManualPlatform === p
+                          ? 'border-accent text-accent'
+                          : 'border-transparent text-subtle hover:text-muted'
+                      }`}
+                    >
+                      {p === 'ios' ? 'iPhone' : p === 'android' ? 'Android' : 'Desktop'}
+                    </button>
+                  ))}
+                </div>
+                <div className="bg-inset border border-app p-4 rounded-xl text-xs text-muted space-y-2 leading-relaxed">
+                  {activeManualPlatform === 'ios' && (
+                    <ol className="list-decimal list-inside space-y-2 pl-1">
+                      <li>Open in <strong className="text-app">Safari</strong>.</li>
+                      <li>Tap the <strong className="text-app">Share</strong> button <Share2 className="inline w-3.5 h-3.5 mx-1" />.</li>
+                      <li>Tap <strong className="text-app">Add to Home Screen</strong>, then <strong className="text-app">Add</strong>.</li>
+                    </ol>
+                  )}
+                  {activeManualPlatform === 'android' && (
+                    <ol className="list-decimal list-inside space-y-2 pl-1">
+                      {canDownloadApk ? (
+                        <li>
+                          <strong className="text-app">APK (first 500 neighbors):</strong> open{' '}
+                          <button
+                            type="button"
+                            onClick={openDownloadPage}
+                            className="text-accent font-bold underline underline-offset-2 cursor-pointer"
+                          >
+                            download page
+                          </button>{' '}
+                          or use the APK button above.
+                        </li>
+                      ) : (
+                        <li>
+                          <strong className="text-app">Google Play:</strong> use{' '}
+                          <strong className="text-app">Download from Play Store</strong> above if you are on the invite list.
+                        </li>
+                      )}
+                      <li>
+                        <strong className="text-app">Or Chrome home screen:</strong> tap the three-dot menu{' '}
+                        <strong className="text-app">(⋮)</strong> → <strong className="text-app">Install app</strong> or{' '}
+                        <strong className="text-app">Add to Home Screen</strong>.
+                      </li>
+                    </ol>
+                  )}
+                  {activeManualPlatform === 'chrome' && (
+                    <ol className="list-decimal list-inside space-y-2 pl-1">
+                      <li>Look for the install icon in your browser's address bar.</li>
+                      <li>Click it and select <strong className="text-app">Install</strong>.</li>
+                    </ol>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <p className="text-xs text-muted mb-5 leading-relaxed">
             Permissions, theme, navigation voice, and other app preferences.
           </p>
@@ -620,142 +757,6 @@ export default function UserProfileView({
       {activeTab === 'account' ? (
         <div id="profile_tab_panel_account" className={fullBleed ? 'flex flex-col min-w-0 w-full gap-6' : 'space-y-6'}>
       <StaffModeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
-      <div
-        className={`${fullBleed ? `${sectionShell} shadow-none` : 'sbn-section'} animate-fade-in min-w-0 overflow-hidden`}
-        id="pwa_installs_section"
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <Smartphone className="w-4 h-4 text-accent" />
-          <h3 className="text-sm font-bold text-app uppercase tracking-wider">Install app</h3>
-        </div>
-        <p className="text-xs text-muted mb-4 leading-relaxed">
-          Install Sacramento Buy Nothing as an app for faster loads, push notifications, and a full-screen experience.
-          Home screen install is free for everyone; Google Play is for native Android; free APK sideload is only for our
-          first 500 neighbors.
-        </p>
-
-        <div className="flex flex-col gap-2 mb-4 min-w-0">
-          <a
-            href={SITE.playStoreBetaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
-          >
-            <Store className="w-4 h-4 shrink-0" />
-            <span>Get it from Play Store</span>
-          </a>
-
-          <button
-            type="button"
-            onClick={openDownloadPage}
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
-          >
-            <Download className="w-4 h-4 shrink-0" />
-            <span>{canDownloadApk ? 'Compare Play, APK & home screen' : 'Compare Play & home screen'}</span>
-          </button>
-
-          {canDownloadApk && apkDownloadHref ? (
-            <TrackedDownloadLink
-              href={apkDownloadHref}
-              download={latestApk?.fileName || 'sac-buy-nothing.apk'}
-              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
-            >
-              <Download className="w-4 h-4 shrink-0" />
-              <span>
-                {apkVersionLoading
-                  ? 'Loading APK…'
-                  : latestApk?.betaLabel
-                    ? usingApk && apkStatus === 'update-available'
-                      ? `Update to ${latestApk.betaLabel}`
-                      : `Download ${latestApk.betaLabel}`
-                    : 'Download latest APK'}
-              </span>
-            </TrackedDownloadLink>
-          ) : null}
-        </div>
-
-        {!canDownloadApk && apkAccessMessage ? (
-          <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2 mb-4 leading-relaxed">
-            {apkAccessMessage}
-          </p>
-        ) : null}
-
-        {isAppInstalled ? (
-          <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl" id="pwa_installed_badge">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <span className="text-xs font-bold text-emerald-400">App installed on this device</span>
-          </div>
-        ) : canPromptInstall ? (
-          <button
-            onClick={() => void promptInstall()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
-            id="pwa_install_direct_trigger"
-          >
-            <Download className="w-4 h-4" />
-            <span>Install app</span>
-          </button>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex border-b border-app overflow-x-auto gap-0">
-              {(['ios', 'android', 'chrome'] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setActiveManualPlatform(p)}
-                  className={`shrink-0 py-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
-                    activeManualPlatform === p
-                      ? 'border-accent text-accent'
-                      : 'border-transparent text-subtle hover:text-muted'
-                  }`}
-                >
-                  {p === 'ios' ? 'iPhone' : p === 'android' ? 'Android' : 'Desktop'}
-                </button>
-              ))}
-            </div>
-            <div className="bg-inset border border-app p-4 rounded-xl text-xs text-muted space-y-2 leading-relaxed">
-              {activeManualPlatform === 'ios' && (
-                <ol className="list-decimal list-inside space-y-2 pl-1">
-                  <li>Open in <strong className="text-app">Safari</strong>.</li>
-                  <li>Tap the <strong className="text-app">Share</strong> button <Share2 className="inline w-3.5 h-3.5 mx-1" />.</li>
-                  <li>Tap <strong className="text-app">Add to Home Screen</strong>, then <strong className="text-app">Add</strong>.</li>
-                </ol>
-              )}
-              {activeManualPlatform === 'android' && (
-                <ol className="list-decimal list-inside space-y-2 pl-1">
-                  {canDownloadApk ? (
-                    <li>
-                      <strong className="text-app">APK (first 500 neighbors):</strong> open{' '}
-                      <button
-                        type="button"
-                        onClick={openDownloadPage}
-                        className="text-accent font-bold underline underline-offset-2 cursor-pointer"
-                      >
-                        download page
-                      </button>{' '}
-                      or use the APK button above.
-                    </li>
-                  ) : (
-                    <li>
-                      <strong className="text-app">Google Play:</strong> use{' '}
-                      <strong className="text-app">Download from Play Store</strong> above if you are on the invite list.
-                    </li>
-                  )}
-                  <li>
-                    <strong className="text-app">Or Chrome home screen:</strong> tap the three-dot menu{' '}
-                    <strong className="text-app">(⋮)</strong> → <strong className="text-app">Install app</strong> or{' '}
-                    <strong className="text-app">Add to Home Screen</strong>.
-                  </li>
-                </ol>
-              )}
-              {activeManualPlatform === 'chrome' && (
-                <ol className="list-decimal list-inside space-y-2 pl-1">
-                  <li>Look for the install icon in your browser's address bar.</li>
-                  <li>Click it and select <strong className="text-app">Install</strong>.</li>
-                </ol>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
 
       {!isStaffRole(userProfile.role) ? (
         <div className={fullBleed ? sectionShell : 'sbn-section'} id="account_staff_apply_section">
