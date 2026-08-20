@@ -27,13 +27,13 @@ VALUES (
     (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
     'Midtown'
   ),
-  'Hey neighbors — welcome to the Feed!
+  'What''s up y''all — Feed is live!
 
-This is your space to share thoughts, photos, and little moments with the Sacramento Buy Nothing community — not just Stuff listings. Celebrate a great pickup, ask a question, or say hi to the neighborhood.
+Not just for listing stuff anymore. Drop a photo, say hey, talk about a pickup that went smooth, ask the neighborhood something… whatever.
 
-You can comment, react, and vote here just like anywhere else in the app. I built this so we stay connected beyond giving and getting — and I''d love to hear what you think.
+Comment, react, vote — same as everywhere else in the app. I wanted a spot where we''re not ONLY talking about free couches 😂
 
-— Markeith',
+Say hi when you get a minute. Let me know what you think.',
   '[]'::jsonb,
   'active',
   false,
