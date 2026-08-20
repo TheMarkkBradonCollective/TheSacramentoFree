@@ -29,7 +29,7 @@ import { useItemsEngagement } from '../hooks/useItemsEngagement';
 import { useSavedItems } from '../hooks/useSavedItems';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { SITE } from '../siteContent';
-import { LISTING_TYPE_FILTERS, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
+import { LISTING_TYPE_FILTERS, getOwnerCompletedActionLabel, getPostTypeCardColumnLabel, type ListingTypeFilter } from '../lib/postType';
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
@@ -43,6 +43,8 @@ import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
 import { getItemMapDestination } from '../lib/itemLocation';
 import { isNativeApp } from '../lib/nativePlatform';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmMarkListingCompleted, confirmWithdrawListing } from '../lib/destructiveConfirm';
 import {
   readFeedViewMode,
   isClosedCommunityListing,
@@ -211,6 +213,7 @@ export default function ItemGrid({
   const [attributionItem, setAttributionItem] = useState<ItemPost | null>(null);
 
   const { savedIds, toggleSaved, isSaved } = useSavedItems(userProfile.uid);
+  const { confirm } = useConfirm();
 
   // Subscribe to live GPS so we can show distance badges on cards.
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
@@ -255,7 +258,18 @@ export default function ItemGrid({
     newStatus: 'completed' | 'withdrawn' | 'active' | 'pending_pickup' | 'on_hold',
   ) => {
     const item = items.find((entry) => entry.id === itemId);
-    if (item && newStatus === 'completed' && completedActionNeedsAttribution(item, userProfile)) {
+    if (!item) return;
+
+    if (newStatus === 'withdrawn') {
+      const ok = await confirmWithdrawListing(confirm, item.title);
+      if (!ok) return;
+    } else if (newStatus === 'completed') {
+      const actionLabel = getOwnerCompletedActionLabel(item.type);
+      const ok = await confirmMarkListingCompleted(confirm, item.title, actionLabel);
+      if (!ok) return;
+    }
+
+    if (newStatus === 'completed' && completedActionNeedsAttribution(item, userProfile)) {
       setAttributionItem(item);
       return;
     }

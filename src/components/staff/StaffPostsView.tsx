@@ -25,6 +25,13 @@ import {
 } from '../../supabase';
 import { getPostTypeLabel } from '../../lib/postType';
 import { resolveEventStatus } from '../../lib/eventRsvp';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import {
+  confirmStaffCancelEvent,
+  confirmStaffDeleteEvent,
+  confirmStaffDeleteListing,
+  confirmStaffWithdrawListing,
+} from '../../lib/destructiveConfirm';
 import { useStaffPermission } from '../../hooks/useStaffPermission';
 import NoPermissionModal from './NoPermissionModal';
 
@@ -137,6 +144,7 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
   >({});
 
   const perm = useStaffPermission(actor);
+  const { confirm } = useConfirm();
 
   const loadClaimsForItem = async (itemId: string) => {
     const claims = await getAppClaimsForItem(itemId);
@@ -228,35 +236,43 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
     else { void load(); setExpandedRow(null); }
   };
 
-  const handleWithdraw = (row: StaffContentRow) => {
+  const handleWithdraw = async (row: StaffContentRow) => {
     if (!row.item || !perm.checkModeratePost()) return;
+    const ok = await confirmStaffWithdrawListing(confirm, row.title);
+    if (!ok) return;
     void run(row.id, () => staffWithdrawListing(row.item!, actor));
   };
 
-  const handleDeleteItem = (row: StaffContentRow) => {
+  const handleDeleteItem = async (row: StaffContentRow) => {
     if (!row.item || !perm.checkModeratePost()) return;
+    const ok = await confirmStaffDeleteListing(confirm, row.title);
+    if (!ok) return;
     void run(row.id, () => staffDeleteListing(row.item!, actor));
   };
 
-  const handleCancelEvent = (row: StaffContentRow) => {
+  const handleCancelEvent = async (row: StaffContentRow) => {
     if (!row.event || !perm.checkModeratePost()) return;
+    const ok = await confirmStaffCancelEvent(confirm, row.title);
+    if (!ok) return;
     void run(row.id, () => staffCancelEvent(row.event!, actor));
   };
 
-  const handleDeleteEvent = (row: StaffContentRow) => {
+  const handleDeleteEvent = async (row: StaffContentRow) => {
     if (!row.event || !perm.checkModeratePost()) return;
+    const ok = await confirmStaffDeleteEvent(confirm, row.title);
+    if (!ok) return;
     void run(row.id, () => staffDeleteEvent(row.event!, actor));
   };
 
-  const handleStaffCompleteListing = (row: StaffContentRow) => {
+  const handleStaffCompleteListing = async (row: StaffContentRow) => {
     if (!row.item || !perm.checkModeratePost()) return;
-    if (
-      !window.confirm(
-        `Mark "${row.title}" completed without naming a neighbor? Use when pickup happened off-app or the wrong claimer was recorded.`,
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Mark completed?',
+      message: `Mark "${row.title}" completed without naming a neighbor? Use when pickup happened off-app or the wrong claimer was recorded.`,
+      confirmLabel: 'Mark completed',
+      cancelLabel: 'Cancel',
+    });
+    if (!ok) return;
     void run(row.id, () => staffCompleteListingWithoutClaimer(row.item!, actor));
   };
 

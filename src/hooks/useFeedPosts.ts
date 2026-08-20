@@ -5,6 +5,7 @@ import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { UserProfile } from '../types';
 import { isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { confirmDeleteFeedPost } from '../lib/destructiveConfirm';
 
 export function useFeedPosts(userProfile: UserProfile | null) {
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -51,14 +52,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
   const removePost = useCallback(
     async (post: FeedPost) => {
       if (!userProfile) return false;
-      const ok = await confirm({
-        title: 'Delete post?',
-        message: isStaff && post.userId !== userProfile.uid
-          ? 'Remove this neighbor post as staff?'
-          : 'Delete your post for everyone?',
-        confirmLabel: 'Delete',
-        variant: 'danger',
-      });
+      const ok = await confirmDeleteFeedPost(confirm, isStaff && post.userId !== userProfile.uid);
       if (!ok) return false;
       const result = await deleteFeedPost(post.id, userProfile.uid, isStaff);
       if (!result.ok) {
