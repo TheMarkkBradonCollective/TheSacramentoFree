@@ -105,6 +105,7 @@ import { isNativeApp } from './lib/nativePlatform';
 import { applyUserPreferencesToDevice } from './lib/appPreferences';
 import {
   clearLocalNativeSessionId,
+  readLocalNativeSessionId,
   registerNativeAppSession,
   subscribeNativeAppSessionGuard,
   verifyNativeAppSession,
@@ -963,6 +964,11 @@ export default function App() {
             if (!cancelled) void registerNativeAppSession(session.user.id);
           }, 0);
         }
+        if (event === 'INITIAL_SESSION' && isNativeApp() && !readLocalNativeSessionId(session.user.id)) {
+          setTimeout(() => {
+            if (!cancelled) void registerNativeAppSession(session.user.id);
+          }, 0);
+        }
         if (event === 'SIGNED_IN' && !alreadyInApp) {
           const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
           const hasDeepLink = Boolean(pendingPath && parsePushDeepLink(pendingPath));
@@ -1314,23 +1320,27 @@ export default function App() {
     if (!userId || !isNativeApp()) return;
 
     let cancelled = false;
+    const revokedMessage = 'You signed in on another device. This app was signed out.';
+
+    const handleNativeSessionRevoked = () => {
+      void (async () => {
+        await alert({ message: revokedMessage });
+        if (!cancelled) void handleLogOutRef.current?.();
+      })();
+    };
 
     void verifyNativeAppSession(userId).then((status) => {
       if (cancelled || status !== 'revoked') return;
-      setErrorMsg('You signed in on another device. This app was signed out.');
-      void handleLogOutRef.current?.();
+      handleNativeSessionRevoked();
     });
 
-    const unsub = subscribeNativeAppSessionGuard(userId, () => {
-      setErrorMsg('You signed in on another device. This app was signed out.');
-      void handleLogOutRef.current?.();
-    });
+    const unsub = subscribeNativeAppSessionGuard(userId, handleNativeSessionRevoked);
 
     return () => {
       cancelled = true;
       unsub();
     };
-  }, [sessionUser?.id]);
+  }, [sessionUser?.id, alert]);
 
   // Onboarding Complete Handler
   const handleOnboardingComplete = (newProfile: UserProfile) => {

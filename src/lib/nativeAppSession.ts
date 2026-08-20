@@ -4,6 +4,9 @@ import { getOrCreateDeviceId } from './deviceTracking';
 
 const STORAGE_KEY_PREFIX = 'sbn_native_app_session_v1:';
 
+/** In-flight native session registrations — ignore self-triggered realtime events. */
+const pendingRegistrationByUser = new Map<string, string>();
+
 function storageKey(userId: string): string {
   return `${STORAGE_KEY_PREFIX}${userId}`;
 }
@@ -29,11 +32,26 @@ export function writeLocalNativeSessionId(userId: string, sessionId: string): vo
 
 export function clearLocalNativeSessionId(userId: string): void {
   if (typeof window === 'undefined') return;
+  pendingRegistrationByUser.delete(userId);
   try {
     window.localStorage.removeItem(storageKey(userId));
   } catch {
     /* ignore */
   }
+}
+
+function markRegistrationPending(userId: string, sessionId: string): void {
+  pendingRegistrationByUser.set(userId, sessionId);
+}
+
+function clearRegistrationPending(userId: string): void {
+  pendingRegistrationByUser.delete(userId);
+}
+
+function isRegistrationPending(userId: string, sessionId?: string | null): boolean {
+  const pendingId = pendingRegistrationByUser.get(userId);
+  if (!pendingId) return false;
+  return sessionId ? pendingId === sessionId : true;
 }
 
 /** Claim the sole native app slot for this account (signs out other APK/AAB installs). */
@@ -44,32 +62,42 @@ export async function registerNativeAppSession(userId: string): Promise<string |
   const deviceId = getOrCreateDeviceId();
   const now = new Date().toISOString();
 
-  const { error } = await supabase.from('native_app_sessions').upsert(
-    {
-      userId,
-      sessionId,
-      deviceId,
-      updatedAt: now,
-    },
-    { onConflict: 'userId' },
-  );
-
-  if (error) {
-    console.warn('Native app session registration failed:', error.message);
-    return null;
-  }
-
+  // Write local first so verify/guard see the new id before realtime fires.
   writeLocalNativeSessionId(userId, sessionId);
-  return sessionId;
+  markRegistrationPending(userId, sessionId);
+
+  try {
+    const { error } = await supabase.from('native_app_sessions').upsert(
+      {
+        userId,
+        sessionId,
+        deviceId,
+        updatedAt: now,
+      },
+      { onConflict: 'userId' },
+    );
+
+    if (error) {
+      console.warn('Native app session registration failed:', error.message);
+      clearLocalNativeSessionId(userId);
+      return null;
+    }
+
+    return sessionId;
+  } finally {
+    clearRegistrationPending(userId);
+  }
 }
 
 export async function verifyNativeAppSession(userId: string): Promise<'valid' | 'revoked' | 'skip'> {
   if (!isNativeApp() || !userId) return 'skip';
+  if (isRegistrationPending(userId)) return 'valid';
 
   const localId = readLocalNativeSessionId(userId);
+  const localDeviceId = getOrCreateDeviceId();
   const { data, error } = await supabase
     .from('native_app_sessions')
-    .select('sessionId')
+    .select('sessionId, deviceId')
     .eq('userId', userId)
     .maybeSingle();
 
@@ -79,14 +107,21 @@ export async function verifyNativeAppSession(userId: string): Promise<'valid' | 
   }
 
   const remoteId = typeof data?.sessionId === 'string' ? data.sessionId : null;
+  const remoteDeviceId = typeof data?.deviceId === 'string' ? data.deviceId : null;
+
   if (!remoteId) {
     if (localId) return 'revoked';
     return 'valid';
   }
 
   if (!localId) {
-    writeLocalNativeSessionId(userId, remoteId);
-    return 'valid';
+    // Legacy rows may lack deviceId — fail open; registration will refresh on sign-in/resume.
+    if (!remoteDeviceId) return 'valid';
+    if (remoteDeviceId === localDeviceId) {
+      writeLocalNativeSessionId(userId, remoteId);
+      return 'valid';
+    }
+    return 'revoked';
   }
 
   return localId === remoteId ? 'valid' : 'revoked';
@@ -110,6 +145,8 @@ export function subscribeNativeAppSessionGuard(
         filter: `userId=eq.${userId}`,
       },
       (payload) => {
+        if (isRegistrationPending(userId)) return;
+
         const nextId =
           typeof (payload.new as { sessionId?: string } | null)?.sessionId === 'string'
             ? (payload.new as { sessionId: string }).sessionId

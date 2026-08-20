@@ -37,3 +37,17 @@ DROP POLICY IF EXISTS "native_app_sessions_delete_own" ON public.native_app_sess
 CREATE POLICY "native_app_sessions_delete_own"
   ON public.native_app_sessions FOR DELETE
   USING (auth.uid()::text = "userId");
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'native_app_sessions'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.native_app_sessions;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
