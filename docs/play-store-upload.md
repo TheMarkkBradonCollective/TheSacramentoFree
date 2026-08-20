@@ -5,8 +5,8 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 ## What is already done
 
 - Release signing keystore: `android/app/sac-buynothing-release.keystore`
-- `versionCode` **29**, `versionName` **0.1.0**
-- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab` (and legacy `sac-buy-nothing.aab`)
+- `versionCode` **30**, `versionName` **0.1.0**
+- Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Regenerate graphics: `npm run android:play-assets`
 - Firebase push configured (client + server)
@@ -254,21 +254,18 @@ After saving the list, copy the **opt-in link** and share it — testers must op
 
 ---
 
-## Step 6 — Release (current: beta v0.1.0.0029)
+## Step 6 — Release (current: beta v0.1.0.0030)
 
 1. **Testing → Internal testing → Create release** (or Production when ready)
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0029.aab` (or `sac-buy-nothing.aab`)
-3. Release name: `0.1.0 (29)`
-4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0029.txt`:
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab` (or `sac-buy-nothing.aab`)
+3. Release name: `0.1.0 (30)`
+4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0030.txt`:
 
 ```
-Android beta v0.1.0.0029 (versionCode 29)
+Android beta v0.1.0.0030 (versionCode 30)
 
 What's new (Android app):
-• Turn-by-turn navigation: heading-up map, real lane guidance, walk / bike / drive
-• Voice reads the same detailed instructions as the screen
-• Recenter announces the next turn
-• Navigation settings in Account and the in-nav gear
+• Launcher icon now matches the PWA — full-bleed orange, no white ring around the edges
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ```

@@ -55,6 +55,7 @@ const APK_0026_PUBLISHED_AT = '2026-08-20T09:30:00.000Z';
 const APK_0027_PUBLISHED_AT = '2026-08-20T09:45:00.000Z';
 const APK_0028_PUBLISHED_AT = '2026-08-20T10:20:00.000Z';
 const APK_0029_PUBLISHED_AT = '2026-08-20T10:40:00.000Z';
+const APK_0030_PUBLISHED_AT = '2026-08-20T11:05:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
 const SIGNED_APK_PUBLISHED_AT = '2026-07-29T16:00:00.000Z';
@@ -109,6 +110,33 @@ function news(
 /** Latest Update posts — merged with Supabase so neighbors always see current release notes.
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0030',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0030',
+    'Launcher icon now matches the PWA — full-bleed orange with no white ring around the edges.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0030 (versionCode 30).
+
+Since 0029:
+• Home-screen launcher icon is full-bleed orange like the PWA — no white ring around the artwork
+
+Already on 0029? Reopening the app still loads the live site for web fixes, but install 0030 for the corrected launcher icon.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 30
+- scripts/generate-android-assets.mjs — full-bleed launcher icon generation
+- play-store-assets/release-notes-v0.1.0-0030.txt
+
+HISTORY
+2026-08-20 — Android launcher icon white-edge fix (PR #246); Android beta 0030 built.`,
+    APK_0030_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0029',
     '2026-08-20',
@@ -979,6 +1007,26 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — community-facing announcements. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0030',
+    '2026-08-20',
+    'New Android beta 0030 — launcher icon fix',
+    'Home-screen icon now matches the PWA — full-bleed orange, no white ring. Play Store: upload the new AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0030 fixes the Android launcher icon so it matches the PWA — full-bleed orange with no white ring around the edges.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0030.
+
+HISTORY
+2026-08-20 — Android beta 0030 with launcher icon fix.`,
+    APK_0030_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0029',
     '2026-08-20',

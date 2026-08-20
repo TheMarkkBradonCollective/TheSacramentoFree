@@ -1,0 +1,6 @@
+Android beta v0.1.0.0030 (versionCode 30)
+
+What's new (Android app):
+• Launcher icon now matches the PWA — full-bleed orange, no white ring around the edges
+
+Download (sideload): https://www.sacramentobuynothing.com/download
