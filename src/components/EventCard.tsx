@@ -182,7 +182,8 @@ export default function EventCard({
                 <LifeBuoy className="w-3.5 h-3.5" />
                 <span className="ml-1">Staff chat</span>
               </button>
-            ) : !isStaffViewer && onNavigate && !isCancelled && !isPast ? (
+            ) : null}
+            {onNavigate && !isCancelled && !isPast ? (
               <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm">
                 <Navigation className="w-3.5 h-3.5" />
                 <span className="ml-1">Navigate</span>

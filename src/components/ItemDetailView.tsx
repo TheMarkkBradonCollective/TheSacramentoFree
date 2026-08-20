@@ -97,7 +97,7 @@ export default function ItemDetailView({
   const isOpenForCoordination =
     item.status === 'active' || item.status === 'on_hold' || item.status === 'pending_pickup';
   const showNeighborNavigate =
-    !isOwner && !isStaffViewer && item.status === 'active' && isOpenForCoordination;
+    !isOwner && item.status === 'active' && isOpenForCoordination;
 
   const { isSaved, toggleSaved } = useSavedItems(currentUserId);
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
@@ -326,7 +326,7 @@ export default function ItemDetailView({
             {/* Renders itself only when there's a pickup pin OR an already-active Go Get
                 session — the latter matters for Looking/Trade, where the destination is
                 wherever the fulfiller is, not the listing's own (often absent) pin. */}
-            {userProfile && !isStaffViewer && (
+            {userProfile && (
               <ItemDetailNavigation
                 item={item}
                 currentUserId={currentUserId}

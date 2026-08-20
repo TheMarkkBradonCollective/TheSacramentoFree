@@ -399,7 +399,7 @@ export default function SacramentoMapView({
   const isStaffViewer = isStaffActingOfficial(userProfile);
 
   const neighborListingUsesNavigate = (post: ItemPost): boolean =>
-    post.userId !== userProfile.uid && post.status === 'active' && !isStaffViewer;
+    post.userId !== userProfile.uid && post.status === 'active';
   const openItemDetail = onViewItem || onItemDetail;
   const { confirm, alert } = useConfirm();
   const [selectedPost, setSelectedPost] = useState<ItemPost | null>(null);
@@ -1256,8 +1256,6 @@ export default function SacramentoMapView({
   // Events navigate straight from the map pin. Curb alerts use "Pick Up" (direct nav, no poster notification).
   // Other types start their coordination flow (Go Get / Drop off / Meet up).
   const handleNavigateRequest = useCallback(async () => {
-    if (isStaffViewer) return;
-
     if (selectedEvent) {
       openNavigation();
       return;
@@ -1266,6 +1264,18 @@ export default function SacramentoMapView({
     if (!selectedPost) return;
     if (selectedPost.userId === userProfile.uid) {
       openNavigation();
+      return;
+    }
+
+    if (isStaffViewer) {
+      const staffDestination =
+        getItemMapDestination(selectedPost, userProfile.uid) ??
+        getItemMapDestination(selectedPost, selectedPost.userId);
+      if (staffDestination) {
+        openNavigation();
+        return;
+      }
+      openItemDetail?.(selectedPost);
       return;
     }
 
@@ -1348,7 +1358,7 @@ export default function SacramentoMapView({
     if (result.ok && result.session?.status === 'active') openNavigation();
     else if (!result.ok) await alert({ title: 'Could not start', message: result.errorMessage || 'Could not start Go Get.' });
     else openItemDetail?.(selectedPost);
-  }, [selectedEvent, selectedPost, userProfile, openNavigation, openItemDetail, confirm, alert]);
+  }, [selectedEvent, selectedPost, userProfile, isStaffViewer, openNavigation, openItemDetail, confirm, alert]);
 
   const handleOpenExternalMaps = useCallback(() => {
     if (!routeEndpoints) return;
@@ -1595,7 +1605,7 @@ export default function SacramentoMapView({
                 durationSeconds={routeDurationSeconds}
                 routeOnMap={isRoadGeometry(routeCoords)}
                 hasLiveGps={!!userLocation}
-                canNavigate={!isStaffViewer && hasGpsFix && !!routeDestination}
+                canNavigate={hasGpsFix && !!routeDestination}
                 onStartNavigation={handleNavigateRequest}
                 onOpenExternalMaps={handleOpenExternalMaps}
               />
@@ -1698,8 +1708,14 @@ export default function SacramentoMapView({
                         durationSeconds={routeDurationSeconds}
                         routeOnMap={isRoadGeometry(routeCoords)}
                         hasLiveGps={!!userLocation}
-                        canNavigate={!isStaffViewer && hasGpsFix && !!routeDestination}
-                        navigateLabel={selectedPost ? getListingNavigateLabel(selectedPost) : 'Navigate'}
+                        canNavigate={hasGpsFix && !!routeDestination}
+                        navigateLabel={
+                          selectedPost
+                            ? isStaffViewer
+                              ? 'Navigate'
+                              : getListingNavigateLabel(selectedPost)
+                            : 'Navigate'
+                        }
                         onStartNavigation={handleNavigateRequest}
                         onOpenExternalMaps={handleOpenExternalMaps}
                       />
@@ -1754,7 +1770,11 @@ export default function SacramentoMapView({
                                 compact
                               />
                             )}
-                            {selectedPost && neighborListingUsesNavigate(selectedPost) ? null : (
+                            {selectedPost &&
+                            neighborListingUsesNavigate(selectedPost) &&
+                            !isStaffViewer
+                              ? null
+                              : (
                             <button
                               type="button"
                               onClick={() =>
@@ -2162,7 +2182,7 @@ export default function SacramentoMapView({
             durationSeconds={routeDurationSeconds}
             routeOnMap={isRoadGeometry(routeCoords)}
             hasLiveGps={!!userLocation}
-                    canNavigate={!isStaffViewer && hasGpsFix && !!routeDestination}
+                    canNavigate={hasGpsFix && !!routeDestination}
             onStartNavigation={handleNavigateRequest}
             onOpenExternalMaps={handleOpenExternalMaps}
           />
@@ -2272,8 +2292,14 @@ export default function SacramentoMapView({
                     durationSeconds={routeDurationSeconds}
                     routeOnMap={isRoadGeometry(routeCoords)}
                     hasLiveGps={!!userLocation}
-                    canNavigate={!isStaffViewer && hasGpsFix && !!routeDestination}
-                    navigateLabel={selectedPost ? getListingNavigateLabel(selectedPost) : 'Navigate'}
+                    canNavigate={hasGpsFix && !!routeDestination}
+                    navigateLabel={
+                      selectedPost
+                        ? isStaffViewer
+                          ? 'Navigate'
+                          : getListingNavigateLabel(selectedPost)
+                        : 'Navigate'
+                    }
                     onStartNavigation={handleNavigateRequest}
                     onOpenExternalMaps={handleOpenExternalMaps}
                   />
@@ -2330,7 +2356,11 @@ export default function SacramentoMapView({
                             compact
                           />
                         )}
-                        {selectedPost && neighborListingUsesNavigate(selectedPost) ? null : (
+                        {selectedPost &&
+                        neighborListingUsesNavigate(selectedPost) &&
+                        !isStaffViewer
+                          ? null
+                          : (
                         <button
                           id="map_message_btn"
                           onClick={() =>

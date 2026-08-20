@@ -285,14 +285,12 @@ export default function EventDetailView({
             </div>
           )}
 
-          {!isStaffViewer && (
-            <EventDetailNavigation
-              event={event}
-              currentUserId={currentUserId}
-              autoStartNavigation={startNavigationOnOpen}
-              onAutoStartNavigationConsumed={onStartNavigationConsumed}
-            />
-          )}
+          <EventDetailNavigation
+            event={event}
+            currentUserId={currentUserId}
+            autoStartNavigation={startNavigationOnOpen}
+            onAutoStartNavigationConsumed={onStartNavigationConsumed}
+          />
 
           {isStaffViewer && !isOwner && userProfile && (
             <section className="sbn-card p-4 border border-role-accent/20">

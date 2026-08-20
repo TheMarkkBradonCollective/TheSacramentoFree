@@ -212,18 +212,19 @@ export default function ItemCard({
           <LifeBuoy className="w-3.5 h-3.5" />
           <span className="ml-1">Staff chat</span>
         </button>
+      ) : null}
+      {onNavigate && item.status === 'active' ? (
+        <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+          <Navigation className="w-3.5 h-3.5" />
+          <span className="ml-1">
+            {isStaffViewer ? 'Navigate' : getListingNavigateLabel(item)}
+          </span>
+        </button>
       ) : !isStaffViewer ? (
-        onNavigate && item.status === 'active' ? (
-          <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-            <Navigation className="w-3.5 h-3.5" />
-            <span className="ml-1">{getListingNavigateLabel(item)}</span>
-          </button>
-        ) : (
-          <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline ml-1">Message</span>
-          </button>
-        )
+        <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline ml-1">Message</span>
+        </button>
       ) : null}
     </div>
   ) : (

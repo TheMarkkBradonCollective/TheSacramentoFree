@@ -69,6 +69,7 @@ import GoGetShareLocationToggle from './goget/GoGetShareLocationToggle';
 import ReportGoGetViolationDialog from './goget/ReportGoGetViolationDialog';
 import { confirmGoGetAsRequester, confirmGoGetTripStart, confirmDropOffAsFulfiller, confirmMeetUp } from './goget/goGetSafetyConfirm';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 
 interface ItemDetailNavigationProps {
   item: ItemPost;
@@ -163,6 +164,7 @@ export default function ItemDetailNavigation({
   const autoStartAttemptedRef = useRef(false);
 
   const isOwner = item.userId === currentUserId;
+  const isStaffOfficial = isStaffActingOfficial(userProfile);
 
   useEffect(() => {
     autoStartAttemptedRef.current = false;
@@ -419,6 +421,10 @@ export default function ItemDetailNavigation({
       openNavigation();
       return;
     }
+    if (isStaffOfficial) {
+      openNavigation();
+      return;
+    }
     if (item.type === 'looking') {
       void handleStartDropOff();
       return;
@@ -428,7 +434,7 @@ export default function ItemDetailNavigation({
       return;
     }
     void handleStartGoGet();
-  }, [isOwner, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
+  }, [isOwner, isStaffOfficial, item.type, openNavigation, handleStartDropOff, handleStartMeetUp, handleStartGoGet]);
 
   useEffect(() => {
     if (!autoStartNavigation || autoStartAttemptedRef.current || !sessionLoaded) return;
@@ -940,7 +946,7 @@ export default function ItemDetailNavigation({
               routeOnMap={isRoadGeometry(routeCoords)}
               hasLiveGps={!!userLocation}
               canNavigate={!!userLocation}
-              navigateLabel={isOwner ? 'Navigate' : getListingNavigateLabel(item)}
+              navigateLabel={isOwner || isStaffOfficial ? 'Navigate' : getListingNavigateLabel(item)}
               onStartNavigation={() => (isOwner ? openNavigation() : void handleListingNavigation())}
               onOpenExternalMaps={() => {
                 if (!routeEndpoints) {

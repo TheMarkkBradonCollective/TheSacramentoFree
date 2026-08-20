@@ -149,7 +149,6 @@ export default function EventsView({
 
   const canNavigateToEvent = (event: CommunityEvent): boolean => {
     if (event.userId === userProfile.uid) return false;
-    if (isStaffActingOfficial(userProfile)) return false;
     if (resolveEventStatus(event) === 'cancelled' || isEventPast(event)) return false;
     return eventHasMapPin(event);
   };
