@@ -232,6 +232,11 @@ export function isListingPostChatReadOnly(status?: string): boolean {
   return status === 'completed' || status === 'withdrawn';
 }
 
+/** Neighbors may coordinate pickup via chat while the listing is still open. */
+export function isListingOpenForCoordination(status?: string): boolean {
+  return status === 'active' || status === 'on_hold' || status === 'pending_pickup';
+}
+
 /** Event coordination chat is read-only once the event is past or cancelled. */
 export function isEventPostChatReadOnly(status?: string): boolean {
   return status === 'past' || status === 'cancelled';
