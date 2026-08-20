@@ -56,7 +56,7 @@ export default function StaffModeSettings({ userProfile, onUpdateProfile }: Staf
 
   return (
     <div
-      className="w-full mt-3 p-3 rounded-xl border border-app bg-inset text-left"
+      className="w-full p-3 rounded-xl border border-app bg-inset text-left"
       id="profile_staff_mode_settings"
     >
       <div className="flex items-center justify-between gap-3">
