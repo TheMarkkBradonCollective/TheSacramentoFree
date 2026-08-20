@@ -10,7 +10,7 @@ import { useNotificationsHubUnread } from '../hooks/useNotificationsHubUnread';
 import HeaderActionButton from '../components/HeaderActionButton';
 import type { PushDeepLinkTarget } from '../lib/pushDeepLink';
 import { isStaffRole } from '../lib/roles';
-import { isStaffApplyInviteSeen, markStaffApplyInviteSeen } from '../lib/staffApplyInvite';
+import { markStaffApplyInviteSeen } from '../lib/staffApplyInvite';
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts' | 'awards';
 
@@ -150,7 +150,6 @@ export function NotificationsHubProvider({
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationsHubTab>('notifications');
-  const [inviteSeen, setInviteSeen] = useState(true);
   const [focusAnnouncementId, setFocusAnnouncementId] = useState<string | null>(null);
   const [focusUpdateId, setFocusUpdateId] = useState<string | null>(null);
 
@@ -162,18 +161,7 @@ export function NotificationsHubProvider({
     markTabSeen,
   } = useNotificationsHubUnread(userProfile?.uid, userProfile);
 
-  useEffect(() => {
-    if (!userProfile || isStaffRole(userProfile.role)) {
-      setInviteSeen(true);
-      return;
-    }
-    setInviteSeen(isStaffApplyInviteSeen(userProfile.uid));
-  }, [userProfile]);
-
-  const inviteUnread = userProfile && !isStaffRole(userProfile.role) && !inviteSeen ? 1 : 0;
-  const notifyUnread = unreadNotifications + inviteUnread;
-
-  const unreadCounts = { unreadNotifications: notifyUnread, unreadAnnouncements, unreadUpdates };
+  const unreadCounts = { unreadNotifications, unreadAnnouncements, unreadUpdates };
 
   const openHub = useCallback((initialTab: NotificationsHubTab = 'notifications', focus?: NotificationsHubFocus) => {
     const resolved = resolveHubTab(initialTab);
@@ -197,23 +185,19 @@ export function NotificationsHubProvider({
 
   useEffect(() => {
     if (!open || !userProfile) return;
-    // Notify (user_notifications) is marked read when its list mounts — not on hub open —
-    // so opening the bell on Alerts/Updates does not clear unread glow early.
-    if (tab === 'notifications') return;
     void markTabSeen(tab);
   }, [open, tab, userProfile, markTabSeen]);
 
-  const handleNotificationsViewed = useCallback(() => {
+  const handleNotificationsViewed = useCallback(async () => {
     if (userProfile && !isStaffRole(userProfile.role)) {
       markStaffApplyInviteSeen(userProfile.uid);
-      setInviteSeen(true);
     }
-    void markTabSeen('notifications');
+    await markTabSeen('notifications');
   }, [markTabSeen, userProfile]);
 
   const value = useMemo(
-    () => ({ openHub, shouldGlow: shouldGlow || inviteUnread > 0 }),
-    [openHub, shouldGlow, inviteUnread],
+    () => ({ openHub, shouldGlow }),
+    [openHub, shouldGlow],
   );
 
   const selectTab = (next: NotificationsHubTab) => {

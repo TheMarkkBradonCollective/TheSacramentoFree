@@ -253,11 +253,11 @@ interface UserNotificationsListProps {
   user: UserProfile;
   onNavigate?: (target: PushDeepLinkTarget) => void;
   /** Called when the Notify list is shown so the hub can clear unread state. */
-  onViewed?: () => void;
+  onViewed?: () => void | Promise<void>;
 }
 
 export default function UserNotificationsList({ user, onNavigate, onViewed }: UserNotificationsListProps) {
-  const { items, loading } = useUserNotifications(user.uid);
+  const { items, loading, reload } = useUserNotifications(user.uid);
   const receivesStaffNotis = receivesStaffNotifications(user);
   const dbInvites = items.filter(isStaffApplyInviteItem);
   const otherItems = items.filter((item) => {
@@ -273,11 +273,18 @@ export default function UserNotificationsList({ user, onNavigate, onViewed }: Us
       : null;
   const inviteCards = seededInvite ? [seededInvite] : showInvite ? dbInvites : [];
 
-  // Mark read only once the Notify list is actually shown.
+  // Mark read once the Notify list is shown, then refresh so unread styling clears.
   useEffect(() => {
-    if (showInvite) markStaffApplyInviteSeen(user.uid);
-    onViewed?.();
-  }, [user.uid, showInvite, onViewed]);
+    let cancelled = false;
+    void (async () => {
+      if (showInvite) markStaffApplyInviteSeen(user.uid);
+      await onViewed?.();
+      if (!cancelled) await reload();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.uid, showInvite, onViewed, reload]);
 
   if (loading) {
     return <p className="text-sm text-muted">Loading your notifications…</p>;
