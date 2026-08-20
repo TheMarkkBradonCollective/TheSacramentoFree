@@ -34,6 +34,9 @@ interface ChatSupportSectionProps {
   onClearInitialTicketId?: () => void;
   onViewRelatedListing?: (itemId: string) => void;
   onViewRelatedEvent?: (eventId: string) => void;
+  onArchiveTicket?: (ticketId: string) => void;
+  onUnarchiveTicket?: (ticketId: string) => void;
+  supportTicketArchived?: boolean;
   /** Compact rows for the chat sidebar */
   compact?: boolean;
   className?: string;
@@ -51,6 +54,9 @@ export default function ChatSupportSection({
   onClearInitialTicketId,
   onViewRelatedListing,
   onViewRelatedEvent,
+  onArchiveTicket,
+  onUnarchiveTicket,
+  supportTicketArchived = false,
   compact = false,
   className = '',
 }: ChatSupportSectionProps) {
@@ -268,6 +274,7 @@ export default function ChatSupportSection({
         </header>
         <div className="flex-1 min-h-0 overflow-hidden">
           <ScrollPage
+            pinToBottom
             contentClassName="p-4"
             footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
           >
@@ -350,6 +357,13 @@ export default function ChatSupportSection({
             showTicketMeta={false}
             onViewRelatedListing={onViewRelatedListing}
             onViewRelatedEvent={onViewRelatedEvent}
+            isArchived={supportTicketArchived}
+            onArchive={
+              onArchiveTicket ? () => onArchiveTicket(activeTicket.id) : undefined
+            }
+            onUnarchive={
+              onUnarchiveTicket ? () => onUnarchiveTicket(activeTicket.id) : undefined
+            }
             onClosed={() => {
               void getSupportTicketById(activeTicket.id).then((t) => {
                 if (t) setActiveTicket(t);
@@ -391,7 +405,7 @@ export default function ChatSupportSection({
         </div>
       </header>
       <div className="flex-1 min-h-0 overflow-hidden">
-        <ScrollPage footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}>
+        <ScrollPage pinToBottom footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}>
         {!isStaffInbox ? (
           <ChatSidebarRow
             id="chat_support_row_new"

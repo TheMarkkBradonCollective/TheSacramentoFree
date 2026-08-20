@@ -58,6 +58,11 @@ const migrationMarkers = [
     label: 'Staff interaction mode',
   },
   {
+    file: 'scripts/supabase-migration-aug-20-2026-neighbor-feed.sql',
+    markers: ['feed_posts', 'feed_post_comments', 'feed_post_reactions', "'feed_post'"],
+    label: 'Neighbor feed',
+  },
+  {
     file: 'scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql',
     markers: ['navigationSettings', 'appPreferences', 'native_app_sessions'],
     label: 'User prefs + native app session',

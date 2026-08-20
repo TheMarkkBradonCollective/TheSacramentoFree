@@ -45,6 +45,8 @@ function formatWhen(iso: string): string {
 function kindIcon(kind: UserNotificationKind) {
   switch (kind) {
     case 'comment':
+    case 'feed_comment':
+    case 'feed_reaction':
       return MessageSquare;
     case 'message':
     case 'message_request':
@@ -66,8 +68,10 @@ function kindIcon(kind: UserNotificationKind) {
     case 'saved_item':
       return Heart;
     case 'upvote':
+    case 'feed_upvote':
       return ArrowUp;
     case 'downvote':
+    case 'feed_downvote':
       return ArrowDown;
     case 'claim':
     case 'gift':
@@ -93,8 +97,10 @@ function kindIcon(kind: UserNotificationKind) {
 function kindColor(kind: UserNotificationKind): string {
   switch (kind) {
     case 'upvote':
+    case 'feed_upvote':
       return 'text-emerald-400 bg-emerald-500/10';
     case 'downvote':
+    case 'feed_downvote':
       return 'text-amber-400 bg-amber-500/10';
     case 'claim':
     case 'claim_request':
@@ -105,6 +111,9 @@ function kindColor(kind: UserNotificationKind): string {
     case 'message':
     case 'message_request':
     case 'community_chat':
+    case 'comment':
+    case 'feed_comment':
+    case 'feed_reaction':
       return 'text-sky-400 bg-sky-500/10';
     case 'announcement':
     case 'app_update':
@@ -118,8 +127,64 @@ function kindColor(kind: UserNotificationKind): string {
 
 function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget | null {
   if (item.url) {
-    return parsePushDeepLink(item.url);
+    const fromUrl = parsePushDeepLink(item.url);
+    if (fromUrl) return fromUrl;
   }
+
+  const feedKinds = ['feed_comment', 'feed_reaction', 'feed_upvote', 'feed_downvote'] as const;
+  if (item.itemId && feedKinds.includes(item.kind as (typeof feedKinds)[number])) {
+    return { tab: 'feed', feedPostId: item.itemId };
+  }
+
+  if (item.kind === 'claim_request') {
+    if (item.url) {
+      const requestMatch = item.url.match(/\/requests\/([^/?#]+)/);
+      if (requestMatch) return { tab: 'chats', requestId: requestMatch[1] };
+    }
+    if (item.itemId) return { tab: 'stuff', listingId: item.itemId };
+    return { tab: 'chats' };
+  }
+
+  if (item.kind === 'message_request') {
+    return { tab: 'chats', messageRequests: true };
+  }
+
+  if (item.kind === 'message') {
+    return { tab: 'chats' };
+  }
+
+  if (item.kind === 'community_chat') {
+    return { tab: 'chats', conversationId: 'community-global' };
+  }
+
+  if (item.kind === 'staff_chat') {
+    return { tab: 'chats', conversationId: 'community-staff' };
+  }
+
+  if (item.kind === 'director_alert') {
+    return { tab: 'profile', directorOverview: true };
+  }
+
+  if (item.kind === 'staff_report') {
+    return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
+  }
+
+  if (item.kind === 'app_update') {
+    return { notificationsTab: 'updates' };
+  }
+
+  if (item.kind === 'announcement') {
+    return { notificationsTab: 'announcements' };
+  }
+
+  if (item.kind === 'support' || item.kind === 'staff_support') {
+    return { tab: 'chats', chatSupportView: 'list' };
+  }
+
+  if (item.kind === 'staff_apply') {
+    return { tab: 'profile', staffApply: true };
+  }
+
   if (
     item.itemId &&
     (item.kind === 'comment' ||
@@ -127,6 +192,8 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
       item.kind === 'downvote' ||
       item.kind === 'new_listing' ||
       item.kind === 'nearby_listing' ||
+      item.kind === 'new_request' ||
+      item.kind === 'nearby_request' ||
       item.kind === 'saved_item' ||
       item.kind === 'claim' ||
       item.kind === 'gift' ||
@@ -136,27 +203,7 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
   ) {
     return { tab: 'stuff', listingId: item.itemId };
   }
-  if (item.kind === 'message' || item.kind === 'message_request') {
-    return { tab: 'chats' };
-  }
-  if (item.kind === 'community_chat') {
-    return { tab: 'chats', conversationId: 'community-global' };
-  }
-  if (item.kind === 'staff_chat') {
-    return { tab: 'chats', conversationId: 'community-staff' };
-  }
-  if (item.kind === 'app_update') {
-    return { notificationsTab: 'updates' };
-  }
-  if (item.kind === 'announcement') {
-    return { notificationsTab: 'announcements' };
-  }
-  if (item.kind === 'support' || item.kind === 'staff_support') {
-    return { tab: 'chats', chatSupportView: 'list' };
-  }
-  if (item.kind === 'staff_apply') {
-    return { tab: 'profile', staffApply: true };
-  }
+
   return null;
 }
 

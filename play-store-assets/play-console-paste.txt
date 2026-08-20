@@ -3,22 +3,22 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.1.0 (36)
+  0.1.0 (40)
 
 Beta label (for your records / changelog):
-  beta v0.1.0.0036
+  beta v0.1.0.0040
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0036.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0040.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0036.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0040.apk
 
 Package name:
   org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.1.0.0036.aab
+  public/downloads/sac-buy-nothing-beta-v0.1.0.0040.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -26,13 +26,20 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta v0.1.0.0036 (versionCode 36)
+Android beta v0.1.0.0040 (versionCode 40)
 
 What's new:
-• New nav — Feed tab (neighbor wall coming soon), Stuff for listings, account in header
-• Footer: Feed | Stuff | Map | Events | Messages
-• Bell panel — badges moved into notifications; cleaner header
-• Looking and Trade tags use orange shades like Giving
+• Feed cards — votes, reactions, and comment count; tap for full post page
+• Push alerts when neighbors comment, react, or vote on your feed posts
+• Notification bar icon — hands + money logo (not a heart)
+• Notification taps go to the right place — feed, chats, listings, message requests
+• Message-request alerts open your inbox (not a bogus chat)
+• Listing contact button says Request on giveaways and asks
+• Reminder after posting to check DMs, comments, and notifications
+• Map route preview fills the screen — you near the bottom, destination toward the top
+• Map compass and + buttons hide while a route is showing
+• Removed redundant Post badge on neighbor feed cards
+• Welcome feed post — casual founder intro to kick off neighbor chit-chat
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ───────────────────────────────────────────────────────────────
@@ -40,8 +47,8 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 Steps:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Internal testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0036.aab
-  4. Release name: 0.1.0 (36)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0040.aab
+  4. Release name: 0.1.0 (40)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Internal testing
 

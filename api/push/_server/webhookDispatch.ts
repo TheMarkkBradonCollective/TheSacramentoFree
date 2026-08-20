@@ -26,6 +26,7 @@ import { runAppUpdateNotify } from './appUpdateNotify';
 import { runReportNotify } from './reportNotify';
 import { runSupportNotify, type SupportNotifyEvent } from './supportNotify';
 import { isStaffRole } from './staffRoles';
+import { runFeedCommentNotify, runFeedReactionNotify, runFeedVoteNotify } from './feedNotify';
 import { getSupabaseAdmin } from './supabaseAdmin';
 
 type WebhookPayload = {
@@ -94,7 +95,9 @@ async function handleItemStatusUpdate(
   const pending: Promise<{ status: number; body: Record<string, unknown> }>[] = [];
 
   // pending_pickup uses pickup_scheduled; skip generic listing_status noise.
-  if (status !== 'pending_pickup') {
+  // completed giveaways/trades use runItemCompletedNotify (item_gifted / traded) — avoid duplicate status alert.
+  const skipGenericStatus = status === 'completed' && item.type !== 'looking';
+  if (status !== 'pending_pickup' && !skipGenericStatus) {
     pending.push(runListingStatusNotify(callerId, item, previousStatus));
   }
   pending.push(runSavedItemsStatusNotify(callerId, item, previousStatus));
@@ -177,6 +180,28 @@ export async function runSupabasePushWebhook(
           fromUserName: String(record.fromUserName || ''),
         });
       }
+    }
+
+    if (table === 'community_content_votes' && body.record && body.old_record) {
+      const record = body.record;
+      const oldRecord = body.old_record;
+      const targetType = String(record.targetType || '');
+      if (targetType !== 'feed_post') {
+        return { status: 200, body: { ok: true, skipped: 'not a feed post vote' } };
+      }
+      const voteType = String(record.voteType || '');
+      const oldVote = String(oldRecord.voteType || '');
+      if (voteType !== 'up' && voteType !== 'down') {
+        return { status: 200, body: { ok: true, skipped: 'invalid vote type' } };
+      }
+      if (oldVote === voteType) {
+        return { status: 200, body: { ok: true, skipped: 'vote unchanged' } };
+      }
+      return runFeedVoteNotify(String(record.userId || 'system'), {
+        postId: String(record.targetId || ''),
+        userId: String(record.userId || ''),
+        voteType: voteType as 'up' | 'down',
+      });
     }
 
     return { status: 200, body: { ok: true, skipped: `update on ${table} not handled` } };
@@ -272,6 +297,40 @@ export async function runSupabasePushWebhook(
       userId: String(record.userId || ''),
       userName: String(record.userName || 'A neighbor'),
       text: String(record.text || ''),
+    });
+  }
+
+  if (table === 'feed_post_comments') {
+    return runFeedCommentNotify(String(record.userId || 'system'), {
+      id: String(record.id || ''),
+      postId: String(record.postId || ''),
+      userId: String(record.userId || ''),
+      userName: String(record.userName || 'A neighbor'),
+      text: String(record.text || ''),
+    });
+  }
+
+  if (table === 'feed_post_reactions') {
+    return runFeedReactionNotify(String(record.userId || 'system'), {
+      postId: String(record.postId || ''),
+      userId: String(record.userId || ''),
+      emoji: String(record.emoji || ''),
+    });
+  }
+
+  if (table === 'community_content_votes') {
+    const targetType = String(record.targetType || '');
+    if (targetType !== 'feed_post') {
+      return { status: 200, body: { ok: true, skipped: 'not a feed post vote' } };
+    }
+    const voteType = String(record.voteType || '');
+    if (voteType !== 'up' && voteType !== 'down') {
+      return { status: 200, body: { ok: true, skipped: 'invalid vote type' } };
+    }
+    return runFeedVoteNotify(String(record.userId || 'system'), {
+      postId: String(record.targetId || ''),
+      userId: String(record.userId || ''),
+      voteType: voteType as 'up' | 'down',
     });
   }
 

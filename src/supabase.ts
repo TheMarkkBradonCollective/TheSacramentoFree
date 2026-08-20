@@ -5270,6 +5270,11 @@ export async function setSupabaseCommunityContentVote(
     }
 
     setSupabaseConfigurationState(true);
+    if (targetType === 'feed_post') {
+      void import('./lib/pushFeedIntegration').then((m) =>
+        m.pushAfterFeedVote({ postId: targetId, voterUserId: userId, voteType }),
+      );
+    }
     return { ok: true };
   } catch {
     return { ok: false, reason: 'error' };
@@ -6591,6 +6596,8 @@ export async function submitUserReport(params: {
   reportedUserName?: string;
   proofImageUrl?: string | null;
   proofFile?: File | null;
+  feedPostId?: string;
+  feedCommentId?: string;
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const subject = params.subject.trim();
   const body = params.body.trim();
@@ -6618,6 +6625,8 @@ export async function submitUserReport(params: {
       source: 'manual',
       status: 'new',
       createdAt: new Date().toISOString(),
+      ...(params.feedPostId ? { feedPostId: params.feedPostId } : {}),
+      ...(params.feedCommentId ? { feedCommentId: params.feedCommentId } : {}),
     });
 
     if (error) {

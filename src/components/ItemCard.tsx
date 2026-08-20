@@ -4,9 +4,10 @@ import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
 import {
   getPostTypeBadgeClass,
-  getPostTypeLabel,
   getPostTypeCompletedLabel,
   getPostTypeCardColumnLabel,
+  getPostTypeGridBadgeLabel,
+  getListingContactButtonLabel,
 } from '../lib/postType';
 import { extractListingImageUrls } from '../lib/listingContent';
 import { getListingNavigateLabel } from '../lib/listingMapActions';
@@ -224,9 +225,14 @@ export default function ItemCard({
           </span>
         </button>
       ) : !isStaffViewer ? (
-        <button type="button" onClick={onMessage} aria-label="Message about this listing" className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+        <button
+          type="button"
+          onClick={onMessage}
+          aria-label={`${getListingContactButtonLabel(item.type)} about this listing`}
+          className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
+        >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline ml-1">Message</span>
+          <span className="hidden sm:inline ml-1">{getListingContactButtonLabel(item.type)}</span>
         </button>
       ) : null}
     </div>
@@ -268,8 +274,10 @@ export default function ItemCard({
               </div>
             )}
             <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
-              <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[9px] py-0.5 shadow-sm`}>
-                {getPostTypeLabel(item.type)}
+              <span
+                className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[8px] px-1 py-0 leading-none whitespace-nowrap shadow-sm`}
+              >
+                {getPostTypeGridBadgeLabel(item.type)}
               </span>
               {item.status === 'completed' && (
                 <span className="sbn-badge sbn-badge-done text-[9px] py-0.5 shadow-sm">
@@ -370,7 +378,6 @@ export default function ItemCard({
           comments={comments}
           commentsExpanded={commentsExpanded}
           onVote={onVote}
-          onToggleComments={onViewDetail}
           onAddComment={onAddComment}
           onDeleteComment={onDeleteComment}
           userProfile={userProfile}

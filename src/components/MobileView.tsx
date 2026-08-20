@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useKeyboardInset, useScrollInputOnFocus } from '../hooks/useKeyboardInset';
-import { CommunityEvent, ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, FeedPost, ItemPost, PendingChatCompose, UserProfile } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
@@ -45,6 +45,7 @@ interface MobileViewProps {
   onStaffEventChat?: (event: CommunityEvent) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem: (item: ItemPost) => void;
+  onViewFeedPost?: (post: FeedPost) => void;
   onNavigateItem?: (item: ItemPost) => void;
   onRepostPost?: (item: ItemPost) => void;
   onDeletePost?: (item: ItemPost) => void;
@@ -54,6 +55,8 @@ interface MobileViewProps {
   onUpdateProfile: (profile: UserProfile) => void;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialFocusMessageRequests?: boolean;
+  onClearInitialFocusMessageRequests?: () => void;
   pendingChatCompose?: PendingChatCompose | null;
   onClearPendingChatCompose?: () => void;
   onDeleteAccount?: () => void | Promise<void>;
@@ -87,10 +90,14 @@ interface MobileViewProps {
   onStartDirectMessage?: () => void;
 }
 
-const MOBILE_FOOTER_NAV = [
+const MOBILE_NAV_LEFT = [
   { id: 'feed' as const, label: IN_APP.feedTabLabel, icon: Newspaper },
   { id: 'stuff' as const, label: IN_APP.stuffTabLabel, icon: List },
-  { id: 'map' as const, label: 'Map', icon: Map },
+] as const;
+
+const MOBILE_NAV_MAP = { id: 'map' as const, label: 'Map', icon: Map };
+
+const MOBILE_NAV_RIGHT = [
   { id: 'events' as const, label: IN_APP.eventsTabLabel, icon: CalendarDays },
   { id: 'chats' as const, label: IN_APP.chatsTabLabel, icon: MessageSquare },
 ] as const;
@@ -110,6 +117,7 @@ export default function MobileView({
   onStaffEventChat,
   onClaimSubmitted,
   onViewItem,
+  onViewFeedPost,
   onNavigateItem,
   onRepostPost,
   onDeletePost,
@@ -119,6 +127,8 @@ export default function MobileView({
   onUpdateProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialFocusMessageRequests = false,
+  onClearInitialFocusMessageRequests,
   pendingChatCompose = null,
   onClearPendingChatCompose,
   onDeleteAccount,
@@ -278,14 +288,16 @@ export default function MobileView({
                   className={communityTab === 'feed' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'feed'}
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
-                  <FeedView />
+                  <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onViewFeedPost={onViewFeedPost} />
                 </ScrollPage>
                 <ScrollPage
                   className={communityTab === 'stuff' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'stuff'}
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <ItemGrid items={items} userProfile={userProfile} engagement={engagement} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onViewItem={onViewItem} onNavigateItem={onNavigateItem} onViewProfile={onViewProfile} onRefresh={onRefresh} isLoading={!itemsHydrated} onOpenNewPost={onOpenNewStuff} />
@@ -294,17 +306,19 @@ export default function MobileView({
                   className={communityTab === 'events' ? '' : 'hidden'}
                   aria-hidden={communityTab !== 'events'}
                   contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <EventsPanel events={events} userProfile={userProfile} engagement={eventsEngagement} onViewEvent={onViewEvent} onNavigateEvent={onNavigateEvent} onStaffEventChat={onStaffEventChat} onViewProfile={onViewProfile} onRefresh={onRefreshEvents} isLoading={isEventsLoading} onOpenNewEvent={onOpenNewEvent} canAccessEvents={canAccessEvents} />
                 </ScrollPage>
                 <div className={`h-full w-full min-h-0 overflow-hidden ${communityTab === 'chats' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'chats'}>
-                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} events={events} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={onStartDirectMessage} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
+                  <ChatSystem userProfile={userProfile} initialSelectedChatId={initialSelectedChatId} onClearInitialChat={onClearInitialChat} initialFocusMessageRequests={initialFocusMessageRequests} onClearInitialFocusMessageRequests={onClearInitialFocusMessageRequests} initialSupportTicketId={initialSupportTicketId} onClearInitialSupportTicket={onClearInitialSupportTicket} initialChatSupportView={initialChatSupportView} onClearInitialChatSupportView={onClearInitialChatSupportView} initialChatFeedbackPanel={initialChatFeedbackPanel} onClearInitialChatFeedbackPanel={onClearInitialChatFeedbackPanel} pendingChatCompose={pendingChatCompose} onClearPendingChatCompose={onClearPendingChatCompose} items={items} events={events} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onItemsChanged={onRefresh} onOpenGoFundMe={onOpenGoFundMe} onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} onStartDirectMessage={onStartDirectMessage} onViewRelatedListing={onViewListingId} onViewRelatedEvent={onViewEventId} fullBleed className="h-full min-h-0" />
                 </div>
                 <ScrollPage
                   className={`bg-app ${communityTab === 'profile' ? '' : 'hidden'}`}
                   aria-hidden={communityTab !== 'profile'}
                   contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
+                  pinToBottom
                   footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
                 >
                   <UserProfileView userProfile={userProfile} userPosts={items.filter((item) => item.userId === userProfile.uid)} onViewPost={onViewItem} onRepostPost={onRepostPost} onDeletePost={onDeletePost} onUpdateProfile={onUpdateProfile} onProfilePhotoSaved={onRefresh} onDeleteAccount={onDeleteAccount} onLogout={onLogout} onViewProfile={onViewProfile} onOpenAwards={onOpenAwards} onOpenDownload={onOpenDownload} scrollToDirectorOverview={scrollToDirectorOverview} onClearScrollToDirectorOverview={onClearScrollToDirectorOverview} fullBleed />
@@ -404,9 +418,10 @@ export default function MobileView({
           id="mobile_feed_dock"
           aria-hidden={communityTab !== 'feed'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
-          <FeedView />
+          <FeedView userProfile={userProfile} blockedUserIds={blockedUserIds} onViewProfile={onViewProfile} onViewFeedPost={onViewFeedPost} />
         </ScrollPage>
 
         <ScrollPage
@@ -414,7 +429,8 @@ export default function MobileView({
           id="mobile_directory_drawer"
           aria-hidden={communityTab !== 'stuff'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <ItemGrid
               items={items}
@@ -435,7 +451,8 @@ export default function MobileView({
           id="mobile_events_dock"
           aria-hidden={communityTab !== 'events'}
           contentClassName="max-w-2xl mx-auto w-full px-3 pt-2"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <EventsPanel
               events={events}
@@ -461,6 +478,8 @@ export default function MobileView({
             userProfile={userProfile}
             initialSelectedChatId={initialSelectedChatId}
             onClearInitialChat={onClearInitialChat}
+            initialFocusMessageRequests={initialFocusMessageRequests}
+            onClearInitialFocusMessageRequests={onClearInitialFocusMessageRequests}
             initialSupportTicketId={initialSupportTicketId}
             onClearInitialSupportTicket={onClearInitialSupportTicket}
             initialChatSupportView={initialChatSupportView}
@@ -490,7 +509,8 @@ export default function MobileView({
           id="mobile_profile_dock"
           aria-hidden={communityTab !== 'profile'}
           contentClassName="max-w-2xl mx-auto min-w-0 w-full overflow-x-hidden"
-          footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
+          pinToBottom
+                  footer={<PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />}
         >
             <div className="sbn-page-header px-4 pt-4 pb-2">
               <h2>{IN_APP.profileTitle}</h2>
@@ -516,24 +536,57 @@ export default function MobileView({
       </main>
 
       <footer id="mobile_sticky_footer_nav" className={`sbn-mobile-nav${mapImmersiveNav ? ' sbn-mobile-chrome-hidden' : ''}`}>
-        <div className="sbn-mobile-nav-bar sbn-mobile-nav-bar-flat">
-          {MOBILE_FOOTER_NAV.map(({ id, label, icon: Icon }) => {
-            const isActive = communityTab === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                id={`mobile_nav_${id}`}
-                onClick={() => setActiveTab(id)}
-                aria-label={label}
-                aria-current={isActive ? 'page' : undefined}
-                className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
-              >
-                <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                <span>{label}</span>
-              </button>
-            );
-          })}
+        <div className="sbn-mobile-nav-bar">
+          <div className="sbn-mobile-nav-side">
+            {MOBILE_NAV_LEFT.map(({ id, label, icon: Icon }) => {
+              const isActive = communityTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  id={`mobile_nav_${id}`}
+                  onClick={() => setActiveTab(id)}
+                  aria-label={label}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
+                >
+                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            id="mobile_nav_map"
+            onClick={() => setActiveTab(MOBILE_NAV_MAP.id)}
+            aria-label={MOBILE_NAV_MAP.label}
+            aria-current={communityTab === MOBILE_NAV_MAP.id ? 'page' : undefined}
+            className={`sbn-mobile-nav-map ${communityTab === MOBILE_NAV_MAP.id ? 'sbn-mobile-nav-map-active' : ''}`}
+          >
+            <Map className="w-6 h-6" strokeWidth={communityTab === MOBILE_NAV_MAP.id ? 2.5 : 2} />
+          </button>
+
+          <div className="sbn-mobile-nav-side">
+            {MOBILE_NAV_RIGHT.map(({ id, label, icon: Icon }) => {
+              const isActive = communityTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  id={`mobile_nav_${id}`}
+                  onClick={() => setActiveTab(id)}
+                  aria-label={label}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`sbn-mobile-nav-item flex-1 min-w-0 ${isActive ? 'sbn-mobile-nav-item-active' : ''}`}
+                >
+                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </footer>
     </div>

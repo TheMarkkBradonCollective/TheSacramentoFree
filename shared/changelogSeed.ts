@@ -61,6 +61,11 @@ const APK_0032_PUBLISHED_AT = '2026-08-20T13:28:00.000Z';
 const APK_0034_PUBLISHED_AT = '2026-08-20T14:10:00.000Z';
 const APK_0035_PUBLISHED_AT = '2026-08-20T14:55:00.000Z';
 const APK_0036_PUBLISHED_AT = '2026-08-20T15:40:00.000Z';
+const APK_0037_PUBLISHED_AT = '2026-08-20T16:10:00.000Z';
+const APK_0038_PUBLISHED_AT = '2026-08-20T16:35:00.000Z';
+const APK_0039_PUBLISHED_AT = '2026-08-20T16:55:00.000Z';
+const APK_0040_PUBLISHED_AT = '2026-08-20T17:40:00.000Z';
+const APK_0041_PUBLISHED_AT = '2026-08-20T17:25:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -115,6 +120,170 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-20_apk-0041',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0041',
+    'Notification deep-link audit, message-request inbox fix, welcome feed post copy.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0041 (versionCode 41).
+
+Since 0040:
+• Notification taps land on the right screen — feed posts, chats, listings, message requests, director alerts
+• Message-request alerts open your pending-requests inbox (not a fake chat)
+• Feed notification inbox items link to feed posts correctly
+• Welcome feed post — casual founder intro to kick off neighbor chit-chat
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase if the welcome post is not live yet.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0041.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 41
+- play-store-assets/release-notes-v0.1.0-0041.txt
+- src/lib/pushDeepLink.ts — notification URL parsing
+- src/components/UserNotificationsList.tsx — inbox tap targets
+- scripts/seed-welcome-feed-post-2026.sql — welcome post copy
+
+HISTORY
+2026-08-20 — /runit release (PRs #282–#283); Android beta 0041 built.`,
+    APK_0041_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0040',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0040',
+    'Feed engagement, notification deep links, map route preview, listing Request button, feed polish.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0040 (versionCode 40).
+
+Since 0039:
+• Feed cards — votes, reactions, comment count; tap for full post
+• Push when someone comments, reacts, or votes on your feed post
+• Notification bar icon — hands + money logo
+• Notification taps land on the right screen — feed, chats, listings, message requests
+• Message-request alerts open pending-requests inbox (not a fake chat)
+• Listing contact button says Request on giveaways and asks; post-submit check-back reminder
+• Map route preview fills the screen; compass and + hide while route is showing
+• Removed redundant Post badge on neighbor feed cards
+• Welcome feed post — founder intro to kick off chit-chat
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase if the welcome post is not live yet.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0040.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 40
+- play-store-assets/release-notes-v0.1.0-0040.txt
+- src/lib/pushDeepLink.ts — notification URL parsing
+- src/components/SacramentoMapView.tsx — route preview fit
+- src/components/feed/FeedPostCard.tsx — feed card engagement
+- scripts/seed-welcome-feed-post-2026.sql — welcome post copy
+
+HISTORY
+2026-08-20 — /runit release (consolidated PRs #279–#287); Android beta 0040 rebuilt.`,
+    APK_0040_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0039',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0039',
+    'Feed post detail page, one reaction per user, separate up/down votes, own-post engagement rules.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0039 (versionCode 39).
+
+Since 0038:
+• Feed — tap a card to open the full post; comments live on the detail page
+• One emoji reaction per neighbor (picking a new one replaces the old)
+• Upvotes and downvotes shown separately (not a combined score)
+• Your own posts hide vote/reaction buttons — neighbors engage, you comment
+• Feed cards show Comment + count only; votes and reactions on the detail page
+• Feed & Chat visual polish matching Stuff and Events
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0039.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase for the founder welcome post.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 39
+- play-store-assets/release-notes-v0.1.0-0039.txt
+- src/components/feed/FeedPostDetailView.tsx — full post overlay
+- src/components/feed/FeedPostCard.tsx — card tap + comment only
+- src/lib/feedApi.ts — single reaction replace logic
+
+HISTORY
+2026-08-20 — /runit release (PR #278); Android beta 0039 built.`,
+    APK_0039_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0038',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0038',
+    'Feed & Chat style parity with Stuff/Events, legal footer below the fold, compact Looking tags on grid.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0038 (versionCode 38).
+
+Since 0037:
+• Feed & Chat — same toolbar/card style as Stuff and Events
+• Legal footer (privacy/terms) only appears when you scroll down on short pages
+• Stuff grid — type badges say "Looking" in a compact pill (not huge "Looking for")
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0038.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 38
+- play-store-assets/release-notes-v0.1.0-0038.txt
+- src/components/FeedView.tsx, ChatInboxHeader.tsx — page style parity
+- src/components/PageScrollFooter.tsx — footer below fold
+- src/lib/postType.ts — getPostTypeGridBadgeLabel
+
+HISTORY
+2026-08-20 — /runit release (PR #275); Android beta 0038 built.`,
+    APK_0038_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-20_apk-0037',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0037',
+    'Live neighbor Feed, Chat makeover, map route zoom-to-fit, lower map controls.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0037 (versionCode 37).
+
+Since 0036:
+• Neighbor Feed — posts (text/photos), nested comments, emoji reactions, votes, report/delete
+• Chat tab (was Messages) — messenger-style inbox header and bubbles
+• Map — route line zooms to fit when you select a listing; GPS/+ buttons sit lower
+• Square Map button centered in footer
+
+Supabase: run scripts/supabase-migration-aug-20-2026-neighbor-feed.sql for Feed tables.
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0037.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 37
+- play-store-assets/release-notes-v0.1.0-0037.txt
+- src/components/FeedView.tsx — live neighbor feed
+- src/components/SacramentoMapView.tsx — route fit + control placement
+
+HISTORY
+2026-08-20 — /runit release; Android beta 0037 built.`,
+    APK_0037_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0036',
     '2026-08-20',
@@ -1177,6 +1346,110 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-20_apk-0041',
+    '2026-08-20',
+    'New Android beta 0041 — notification deep links, welcome feed post',
+    'Taps go to the right place; message requests open inbox; welcome chit-chat post.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0041: full notification navigation audit, message-request inbox fix, welcome feed post copy.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0041.
+
+HISTORY
+2026-08-20 — Android beta 0041 /runit release (PRs #282–#283).`,
+    APK_0041_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0040',
+    '2026-08-20',
+    'New Android beta 0040 — feed, notifications, map route preview, listing Request',
+    'Consolidated release: feed engagement, notification deep links, map UX, listing Request button.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0040: feed card engagement and push, notification deep links, map route preview fit, listing Request button, feed polish.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0040.
+
+HISTORY
+2026-08-20 — Android beta 0040 /runit release (consolidated PRs #279–#287).`,
+    APK_0040_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0039',
+    '2026-08-20',
+    'New Android beta 0039 — Feed post detail, engagement rules',
+    'Tap feed cards for full post; one reaction, separate votes; own posts hide vote/react controls.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0039: Feed post detail page, engagement rules (one reaction, separate up/down), own-post controls hidden, Feed/Chat polish.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/seed-welcome-feed-post-2026.sql in Supabase for the founder welcome post.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0039.
+
+HISTORY
+2026-08-20 — Android beta 0039 /runit release (PR #278).`,
+    APK_0039_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0038',
+    '2026-08-20',
+    'New Android beta 0038 — Feed/Chat polish, footer scroll, compact Looking tags',
+    'Feed & Chat match other tabs; legal footer below fold; smaller Looking badges on Stuff grid.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0038: Feed & Chat UI matches Stuff/Events, scroll-to-see legal footer, compact "Looking" grid tags.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0038.
+
+HISTORY
+2026-08-20 — Android beta 0038 /runit release (PR #275).`,
+    APK_0038_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-20_apk-0037',
+    '2026-08-20',
+    'New Android beta 0037 — live Feed, Chat makeover, map route fit',
+    'Neighbor wall with posts and comments, Chat tab, map zooms to route. Play Store: upload AAB; sideload: Download page.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0037: live neighbor Feed, Chat makeover, map route zoom-to-fit, lower map controls.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-20-2026-neighbor-feed.sql in Supabase for Feed.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-20_apk-0037.
+
+HISTORY
+2026-08-20 — Android beta 0037 /runit release.`,
+    APK_0037_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0036',
     '2026-08-20',

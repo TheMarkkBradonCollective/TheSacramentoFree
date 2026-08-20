@@ -40,6 +40,22 @@ import ChatInboxHeader from './ChatInboxHeader';
 import ChatInboxList from './ChatInboxList';
 import { buildInboxEntries } from '../lib/chatInbox';
 import {
+  emptyInboxFilterMessage,
+  filterInboxEntries,
+  readChatCategoryFilter,
+  readChatStatusFilter,
+  writeChatCategoryFilter,
+  writeChatStatusFilter,
+  type ChatCategoryFilter,
+  type ChatStatusFilter,
+} from '../lib/chatInboxFilters';
+import {
+  archiveInboxConversation,
+  isInboxArchived,
+  readArchivedInboxKeys,
+  unarchiveInboxConversation,
+} from '../lib/chatInboxArchive';
+import {
   getMessageGroupMeta,
   messageBubbleClass,
   messageGroupSpacing,
@@ -60,6 +76,8 @@ import {
   Shield,
   Trash2,
   Undo2,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 import { formatPickupLocationMessage } from '../lib/itemLocation';
 import { formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
@@ -87,6 +105,8 @@ interface ChatSystemProps {
   userProfile: UserProfile;
   initialSelectedChatId: string | null;
   onClearInitialChat: () => void;
+  initialFocusMessageRequests?: boolean;
+  onClearInitialFocusMessageRequests?: () => void;
   initialSupportTicketId?: string | null;
   onClearInitialSupportTicket?: () => void;
   initialChatSupportView?: 'list' | 'new' | null;
@@ -115,6 +135,8 @@ export default function ChatSystem({
   userProfile,
   initialSelectedChatId,
   onClearInitialChat,
+  initialFocusMessageRequests = false,
+  onClearInitialFocusMessageRequests,
   initialSupportTicketId = null,
   onClearInitialSupportTicket,
   initialChatSupportView = null,
@@ -159,6 +181,14 @@ export default function ChatSystem({
   const [errorMsg, setErrorMsg] = useState('');
   const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<ChatCategoryFilter>(() => readChatCategoryFilter());
+  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>(() => readChatStatusFilter());
+  const [archivedKeys, setArchivedKeys] = useState(() => readArchivedInboxKeys(userProfile.uid));
+
+  useEffect(() => {
+    setArchivedKeys(readArchivedInboxKeys(userProfile.uid));
+  }, [userProfile.uid]);
+
   const userIsStaff = isStaffRole(userProfile.role) && isStaffActingOfficial(userProfile);
   const staffActingOfficial = isStaffActingOfficial(userProfile);
   const canStaffReports = canViewStaffReports(userProfile.role) && isStaffActingOfficial(userProfile);
@@ -383,6 +413,15 @@ export default function ChatSystem({
   };
 
   useEffect(() => {
+    if (!initialFocusMessageRequests) return;
+    setSelectedChat(null);
+    setSupportView(null);
+    setSupportOpenTicketId(null);
+    setMessages([]);
+    onClearInitialFocusMessageRequests?.();
+  }, [initialFocusMessageRequests, onClearInitialFocusMessageRequests]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages, selectedChat]);
 
@@ -415,7 +454,9 @@ export default function ChatSystem({
         setIncomingRequests(visibleRequests);
         setIsChatsLoading(false);
 
-        if (initialSelectedChatId) {
+        if (initialFocusMessageRequests) {
+          setSelectedChat(null);
+        } else if (initialSelectedChatId) {
           let target = visibleChats.find((c) => c.id === initialSelectedChatId);
           if (!target && staffActingOfficial) {
             const fetched = await getSupabaseChatById(initialSelectedChatId);
@@ -1059,6 +1100,77 @@ export default function ChatSystem({
     [chats, supportTickets, supportPreviews, incomingRequests],
   );
 
+  const filteredInboxEntries = useMemo(
+    () =>
+      filterInboxEntries(inboxEntries, categoryFilter, statusFilter, {
+        archivedKeys,
+        items,
+        events,
+      }),
+    [inboxEntries, categoryFilter, statusFilter, archivedKeys, items, events],
+  );
+
+  const emptyInboxCopy = useMemo(
+    () => emptyInboxFilterMessage(categoryFilter, statusFilter),
+    [categoryFilter, statusFilter],
+  );
+
+  const handleCategoryFilterChange = (filter: ChatCategoryFilter) => {
+    setCategoryFilter(filter);
+    writeChatCategoryFilter(filter);
+  };
+
+  const handleStatusFilterChange = (filter: ChatStatusFilter) => {
+    setStatusFilter(filter);
+    writeChatStatusFilter(filter);
+  };
+
+  const handleArchiveChat = useCallback(
+    (chatId: string) => {
+      setArchivedKeys(archiveInboxConversation(userProfile.uid, 'chat', chatId));
+      setSelectedChat(null);
+      onClearInitialChat();
+      onClearPendingChatCompose?.();
+    },
+    [userProfile.uid, onClearInitialChat, onClearPendingChatCompose],
+  );
+
+  const handleUnarchiveChat = useCallback(
+    (chatId: string) => {
+      setArchivedKeys(unarchiveInboxConversation(userProfile.uid, 'chat', chatId));
+    },
+    [userProfile.uid],
+  );
+
+  const handleArchiveSupportTicket = useCallback(
+    (ticketId: string) => {
+      setArchivedKeys(archiveInboxConversation(userProfile.uid, 'support', ticketId));
+      setSupportView(null);
+      setSupportOpenTicketId(null);
+      onClearInitialSupportTicket?.();
+    },
+    [userProfile.uid, onClearInitialSupportTicket],
+  );
+
+  const handleUnarchiveSupportTicket = useCallback(
+    (ticketId: string) => {
+      setArchivedKeys(unarchiveInboxConversation(userProfile.uid, 'support', ticketId));
+    },
+    [userProfile.uid],
+  );
+
+  const selectedChatArchived =
+    selectedChat && !isCommunityChat(selectedChat.id)
+      ? isInboxArchived(userProfile.uid, 'chat', selectedChat.id)
+      : false;
+
+  const selectedSupportTicket = supportOpenTicketId
+    ? supportTickets.find((ticket) => ticket.id === supportOpenTicketId) ?? null
+    : null;
+  const selectedSupportArchived = selectedSupportTicket
+    ? isInboxArchived(userProfile.uid, 'support', selectedSupportTicket.id)
+    : false;
+
   const getFormattedChatTitle = (chat: Chat) => {
     if (isCommunityChat(chat.id)) return communityChatTitle(chat.id);
     const contextTitle = chat.eventTitle || chat.itemTitle;
@@ -1143,12 +1255,16 @@ export default function ChatSystem({
       {/* Conversation list */}
       <div
         id="chats_sidebar"
-        className={`flex flex-col min-h-0 shrink-0 w-full md:w-80 lg:w-[22rem] md:border-r md:border-app/30 ${
+        className={`flex flex-col min-h-0 shrink-0 w-full md:w-80 lg:w-[22rem] md:border-r md:border-app/30 chat-inbox-panel ${
           fullBleed ? 'bg-app' : 'bg-surface/80'
         } ${selectedChat || supportView ? 'hidden md:flex' : 'flex'}`}
       >
         <ChatInboxHeader
           userProfile={userProfile}
+          categoryFilter={categoryFilter}
+          statusFilter={statusFilter}
+          onCategoryFilterChange={handleCategoryFilterChange}
+          onStatusFilterChange={handleStatusFilterChange}
           onStartConversation={onStartDirectMessage}
           onNewSupport={!isStaffSupportInbox ? () => openSupport('new') : undefined}
           onOpenFeedbackPanel={setFeedbackPanel}
@@ -1156,6 +1272,7 @@ export default function ChatSystem({
         />
         <div className="flex-1 min-h-0 overflow-hidden" id="chat_rooms_scrollable">
           <ScrollPage
+            pinToBottom={fullBleed && !selectedChat && !supportView}
             footer={
               fullBleed && !selectedChat && !supportView ? (
                 <PageScrollFooter pinToBottom onOpenPrivacy={onOpenPrivacy} onOpenTerms={onOpenTerms} />
@@ -1163,13 +1280,15 @@ export default function ChatSystem({
             }
           >
             <ChatInboxList
-              entries={inboxEntries}
+              entries={filteredInboxEntries}
               loading={isChatsLoading || supportTicketsLoading}
               isStaffSupportInbox={isStaffSupportInbox}
               selectedChatId={selectedChat?.id ?? null}
               supportOpenTicketId={supportOpenTicketId}
               supportActive={!!supportView}
               requestBusyId={requestBusyId}
+              emptyTitle={emptyInboxCopy.title}
+              emptyDescription={emptyInboxCopy.description}
               getFormattedChatTitle={getFormattedChatTitle}
               getRecipientInfo={getRecipientInfo}
               formatTime={formatTime}
@@ -1204,6 +1323,9 @@ export default function ChatSystem({
               setSupportOpenTicketId(null);
               onClearInitialSupportTicket?.();
             }}
+            onArchiveTicket={handleArchiveSupportTicket}
+            onUnarchiveTicket={handleUnarchiveSupportTicket}
+            supportTicketArchived={selectedSupportArchived}
             onViewRelatedListing={onViewRelatedListing}
             onViewRelatedEvent={onViewRelatedEvent}
             className="h-full"
@@ -1330,23 +1452,29 @@ export default function ChatSystem({
                   <div className="min-w-0 flex-1">
                     {isCommunity ? (
                       <>
-                        <p className="font-display font-semibold text-sm text-app truncate">
+                        <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+                          Chat
+                        </span>
+                        <p className="font-display font-bold text-sm text-app truncate mt-0.5">
                           {displayTitleHeader}
                         </p>
                         <p className="text-xs text-muted mt-0.5">{communityChatSubtitle(selectedChat.id)}</p>
                       </>
                     ) : (
                       <>
+                        <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
+                          Chat
+                        </span>
                         <button
                           type="button"
                           onClick={() => onViewProfile?.(getRecipientInfo(selectedChat).otherId)}
-                          className="font-display font-semibold text-sm text-app truncate text-left hover:text-accent cursor-pointer w-full"
+                          className="font-display font-bold text-sm text-app truncate text-left hover:text-accent cursor-pointer w-full mt-0.5"
                           title={displayTitleHeader}
                         >
                           {otherName}
                         </button>
                         <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 shrink-0" />
+                          <MapPin className="w-3 h-3 shrink-0 text-accent" />
                           <span>
                             {selectedChat.itemId || selectedChat.eventId
                               ? 'Coordination chat'
@@ -1357,23 +1485,47 @@ export default function ChatSystem({
                     )}
                   </div>
 
-                  {!isCommunity &&
-                  canDeleteDirectChat(
-                    userProfile,
-                    selectedChat,
-                    linkedItem ?? null,
-                    linkedEvent ?? null,
-                  ) ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteChat(linkedItem, linkedEvent)}
-                      disabled={deletingChat}
-                      className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset shrink-0 disabled:opacity-50"
-                      title="Delete conversation"
-                      aria-label="Delete conversation"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  {!isCommunity ? (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {selectedChatArchived ? (
+                        <button
+                          type="button"
+                          onClick={() => handleUnarchiveChat(selectedChat.id)}
+                          className="p-2 rounded-full text-muted hover:text-accent hover:bg-inset"
+                          title="Unarchive conversation"
+                          aria-label="Unarchive conversation"
+                        >
+                          <ArchiveRestore className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void handleArchiveChat(selectedChat.id)}
+                          className="p-2 rounded-full text-muted hover:text-accent hover:bg-inset"
+                          title="Archive conversation"
+                          aria-label="Archive conversation"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canDeleteDirectChat(
+                        userProfile,
+                        selectedChat,
+                        linkedItem ?? null,
+                        linkedEvent ?? null,
+                      ) ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteChat(linkedItem, linkedEvent)}
+                          disabled={deletingChat}
+                          className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-inset disabled:opacity-50"
+                          title="Delete conversation"
+                          aria-label="Delete conversation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </header>
 
@@ -1413,9 +1565,12 @@ export default function ChatSystem({
 
                   {messages.length === 0 ? (
                     <div className="flex justify-center py-10 px-4">
-                      <div className="chat-empty-card">
-                        <MessageSquare className="w-8 h-8 text-accent mx-auto mb-2" />
-                        <p className="text-sm font-display font-semibold text-app">Start the conversation</p>
+                      <div className="sbn-card text-center py-10 px-6 border-dashed max-w-xs">
+                        <span className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft border border-accent/25 text-accent mb-3">
+                          <MessageSquare className="w-6 h-6" />
+                        </span>
+                        <p className="text-xs font-bold text-accent uppercase tracking-wider">Chat</p>
+                        <p className="text-sm font-display font-bold text-app mt-1.5">Start the conversation</p>
                         <p className="text-xs text-muted mt-1.5 leading-relaxed">
                           Say hello to coordinate pickup, ask a question, or share details.
                         </p>

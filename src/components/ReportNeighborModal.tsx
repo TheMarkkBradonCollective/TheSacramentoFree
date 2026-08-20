@@ -10,6 +10,8 @@ interface ReportNeighborModalProps {
   reportedUserName: string;
   onClose: () => void;
   onSubmitted?: () => void;
+  feedPostId?: string;
+  feedCommentId?: string;
 }
 
 export default function ReportNeighborModal({
@@ -18,6 +20,8 @@ export default function ReportNeighborModal({
   reportedUserName,
   onClose,
   onSubmitted,
+  feedPostId,
+  feedCommentId,
 }: ReportNeighborModalProps) {
   const [subject, setSubject] = useState(`Report: ${reportedUserName}`);
   const [body, setBody] = useState('');
@@ -56,6 +60,8 @@ export default function ReportNeighborModal({
       reportedUserId,
       reportedUserName,
       proofFile,
+      feedPostId,
+      feedCommentId,
     });
 
     setSubmitting(false);

@@ -1,4 +1,4 @@
-import { Box, CalendarDays, Globe, LifeBuoy, MessageSquare, Shield, UserPlus } from 'lucide-react';
+import { Box, CalendarDays, Globe, LifeBuoy, MessageSquare, Shield, Sparkles, UserPlus } from 'lucide-react';
 import type { Chat, MessageRequest } from '../types';
 import { communityChatSubtitle, communityChatTitle, isCommunityChat, isGlobalCommunityChat } from '../lib/communityChats';
 import { chatInboxRowClass, type InboxEntry } from '../lib/chatInbox';
@@ -14,6 +14,8 @@ interface ChatInboxListProps {
   supportOpenTicketId: string | null;
   supportActive: boolean;
   requestBusyId: string | null;
+  emptyTitle: string;
+  emptyDescription: string;
   getFormattedChatTitle: (chat: Chat) => string;
   getRecipientInfo: (chat: Chat) => { otherId: string; otherName: string; otherPhoto: string };
   formatTime: (value: unknown) => string;
@@ -32,6 +34,8 @@ export default function ChatInboxList({
   supportOpenTicketId,
   supportActive,
   requestBusyId,
+  emptyTitle,
+  emptyDescription,
   getFormattedChatTitle,
   getRecipientInfo,
   formatTime,
@@ -47,12 +51,15 @@ export default function ChatInboxList({
 
   if (entries.length === 0) {
     return (
-      <div className="px-3 py-8 flex justify-center">
-        <ChatSectionEmptyState
-          icon={MessageSquare}
-          title="No messages yet"
-          description="Browse Stuff or Events and message a neighbor from any listing or event, or contact support if you need help."
-        />
+      <div className="sbn-card text-center py-12 px-6 border-dashed mx-3 mt-2" id="empty_chat_inbox_state">
+        <span className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent-soft border border-accent/25 text-accent mb-3">
+          <MessageSquare className="w-7 h-7" aria-hidden />
+        </span>
+        <p className="text-xs font-bold text-accent uppercase tracking-wider flex items-center justify-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5" />
+          Chat
+        </p>
+        <ChatSectionEmptyState title={emptyTitle} description={emptyDescription} />
       </div>
     );
   }
@@ -68,7 +75,7 @@ export default function ChatInboxList({
             `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(request.fromUserName)}`;
 
           return (
-            <div key={entry.id} className="chat-inbox-request" id={`inbox_request_${request.id}`}>
+            <div key={entry.id} className="chat-inbox-request item-feed-card" id={`inbox_request_${request.id}`}>
               <div className="flex items-start gap-3">
                 <button
                   type="button"
@@ -127,22 +134,24 @@ export default function ChatInboxList({
                 className={chatInboxRowClass(isSelected)}
               >
                 <span
-                  className={`shrink-0 w-11 h-11 rounded-full border border-app flex items-center justify-center ${
-                    isGlobal ? 'bg-emerald-500/10 text-emerald-500' : 'bg-violet-500/10 text-violet-500'
+                  className={`chat-inbox-row__media ${
+                    isGlobal ? 'text-emerald-500' : 'text-violet-500'
                   }`}
                 >
                   {isGlobal ? <Globe className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
                 </span>
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-sm font-semibold text-app truncate">{title}</p>
-                    {chat.lastMessageAt ? (
-                      <span className="text-[10px] text-subtle shrink-0">{formatTime(chat.lastMessageAt)}</span>
-                    ) : null}
+                <div className="chat-inbox-row__body">
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-sm font-display font-bold text-app truncate">{title}</p>
+                      {chat.lastMessageAt ? (
+                        <span className="text-[10px] text-subtle shrink-0">{formatTime(chat.lastMessageAt)}</span>
+                      ) : null}
+                    </div>
+                    <p className="text-[10px] text-muted truncate mt-0.5">
+                      {chat.lastMessageText || communityChatSubtitle(chat.id)}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted truncate mt-0.5">
-                    {chat.lastMessageText || communityChatSubtitle(chat.id)}
-                  </p>
                 </div>
               </button>
             );
@@ -159,30 +168,34 @@ export default function ChatInboxList({
               onClick={() => onSelectChat(chat)}
               className={chatInboxRowClass(isSelected)}
             >
-              <PresenceUserAvatar uid={otherId} src={otherPhoto} name={displayTitle} size="md" />
-              <div className="flex-1 min-w-0 text-left">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-sm font-semibold text-app truncate" title={displayTitle}>
-                    {displayTitle}
-                  </p>
-                  {chat.lastMessageAt ? (
-                    <span className="text-[10px] text-subtle shrink-0">{formatTime(chat.lastMessageAt)}</span>
+              <span className="chat-inbox-row__media">
+                <PresenceUserAvatar uid={otherId} src={otherPhoto} name={displayTitle} size="md" />
+              </span>
+              <div className="chat-inbox-row__body">
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-sm font-display font-bold text-app truncate" title={displayTitle}>
+                      {displayTitle}
+                    </p>
+                    {chat.lastMessageAt ? (
+                      <span className="text-[10px] text-subtle shrink-0">{formatTime(chat.lastMessageAt)}</span>
+                    ) : null}
+                  </div>
+                  {chat.itemTitle ? (
+                    <p className="text-[10px] text-accent truncate mt-0.5 flex items-center gap-1">
+                      <Box className="w-3 h-3 shrink-0" />
+                      {chat.itemTitle}
+                    </p>
+                  ) : chat.eventTitle ? (
+                    <p className="text-[10px] text-accent truncate mt-0.5 flex items-center gap-1">
+                      <CalendarDays className="w-3 h-3 shrink-0" />
+                      {chat.eventTitle}
+                    </p>
                   ) : null}
+                  <p className="text-[10px] sm:text-xs text-muted truncate mt-0.5">
+                    {chat.lastMessageText || 'Start the conversation'}
+                  </p>
                 </div>
-                {chat.itemTitle ? (
-                  <p className="text-[10px] text-accent truncate mt-0.5 flex items-center gap-1">
-                    <Box className="w-3 h-3 shrink-0" />
-                    {chat.itemTitle}
-                  </p>
-                ) : chat.eventTitle ? (
-                  <p className="text-[10px] text-fuchsia-400 truncate mt-0.5 flex items-center gap-1">
-                    <CalendarDays className="w-3 h-3 shrink-0" />
-                    {chat.eventTitle}
-                  </p>
-                ) : null}
-                <p className="text-xs text-muted truncate mt-0.5">
-                  {chat.lastMessageText || 'Start the conversation'}
-                </p>
               </div>
             </button>
           );
@@ -199,24 +212,30 @@ export default function ChatInboxList({
             onClick={() => onOpenSupportTicket(ticket.id)}
             className={chatInboxRowClass(isSelected)}
           >
-            <span className="shrink-0 w-11 h-11 rounded-full border border-app bg-sky-500/10 text-sky-400 flex items-center justify-center">
+            <span className="chat-inbox-row__media text-sky-500">
               <LifeBuoy className="w-5 h-5" />
             </span>
-            <div className="flex-1 min-w-0 text-left">
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="text-sm font-semibold text-app truncate">{title}</p>
-                <span className="text-[10px] text-subtle shrink-0">
-                  {formatTime(preview?.createdAt || ticket.updatedAt)}
-                </span>
+            <div className="chat-inbox-row__body">
+              <div className="flex-1 min-w-0 text-left">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-display font-bold text-app truncate">{title}</p>
+                  <span className="text-[10px] text-subtle shrink-0">
+                    {formatTime(preview?.createdAt || ticket.updatedAt)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-muted truncate mt-0.5">
+                  {isStaffSupportInbox ? ticket.subject : 'Support chat'}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted truncate mt-0.5">{supportMessagePreview(preview)}</p>
               </div>
-              <p className="text-[10px] text-muted truncate mt-0.5">
-                {isStaffSupportInbox ? ticket.subject : 'Support chat'}
-              </p>
-              <p className="text-xs text-muted truncate mt-0.5">{supportMessagePreview(preview)}</p>
+              {ticket.status === 'open' ? (
+                <span className="shrink-0 w-2 h-2 rounded-full bg-emerald-400" title="Open" />
+              ) : (
+                <span className="shrink-0 text-[9px] font-bold uppercase text-muted" title="Closed">
+                  Closed
+                </span>
+              )}
             </div>
-            {ticket.status === 'open' ? (
-              <span className="shrink-0 w-2 h-2 rounded-full bg-emerald-400" title="Open" />
-            ) : null}
           </button>
         );
       })}
