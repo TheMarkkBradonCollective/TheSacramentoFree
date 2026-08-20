@@ -107,6 +107,36 @@ function news(
  * Seed rows win on id so a deploy ships copy immediately; live-only posts still appear. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
   update(
+    '2026-08-20_apk-0027',
+    '2026-08-20',
+    'New Android download — beta v0.1.0.0027',
+    'Same app features as 0026, plus a fix so navigation and Go Get stay Android-only (website is message + mark).',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0027 (versionCode 27).
+
+Since 0026:
+• Navigation and Go Get gated to the Android app only — website stays message + mark
+
+Android app only (unchanged from 0026):
+• Staff Navigate on Stuff and Events
+• Go Get ring + pickup availability (opt-in in Account)
+• List/grid feed toggle
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0027.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 27
+- src/lib/goGetCoordinationGating.ts — supportsInAppNavigation()
+- play-store-assets/release-notes-v0.1.0-0027.txt
+
+HISTORY
+2026-08-20 — Native-only navigation gating; Android beta 0027 for Play upload after 0026.`,
+    APK_0027_PUBLISHED_AT,
+  ),
+  update(
     '2026-08-20_apk-0026',
     '2026-08-20',
     'New Android download — beta v0.1.0.0026',

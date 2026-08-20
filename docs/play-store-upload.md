@@ -69,7 +69,7 @@ npm run android:aab
 Upload file (same build as the sideload APK):
 
 ```
-public/downloads/sac-buy-nothing-beta-v0.1.0.0026.aab
+public/downloads/sac-buy-nothing-beta-v0.1.0.0027.aab
 ```
 
 Legacy alias: `public/downloads/sac-buy-nothing.aab`
@@ -254,22 +254,23 @@ After saving the list, copy the **opt-in link** and share it — testers must op
 
 ---
 
-## Step 6 — Release (current: beta v0.1.0.0026)
+## Step 6 — Release (current: beta v0.1.0.0027)
 
 1. **Testing → Internal testing → Create release** (or Production when ready)
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0026.aab` (or `sac-buy-nothing.aab`)
-3. Release name: `0.1.0 (26)`
-4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0026.txt`:
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0027.aab` (or `sac-buy-nothing.aab`)
+3. Release name: `0.1.0 (27)`
+4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0027.txt`:
 
 ```
-Android beta v0.1.0.0026 (versionCode 26)
+Android beta v0.1.0.0027 (versionCode 27)
 
 What's new (Android app only):
 • Staff Navigate on Stuff and Events
 • Go Get ring + pickup availability (opt-in in Account)
 • List/grid feed toggle
+• Navigation and Go Get no longer appear on the website — app only
 
-Website: message and mark listings as before — no in-app navigation or Go Get.
+Website: message and mark listings only.
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ```
@@ -287,7 +288,7 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 For reference — first Play upload used versionCode 8:
 
 1. **Testing → Internal testing → Create release**
-2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0026.aab` (or `sac-buy-nothing.aab`)
+2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0027.aab` (or `sac-buy-nothing.aab`)
 3. Release name: `0.1.0 (8)`
 4. Release notes:
 
