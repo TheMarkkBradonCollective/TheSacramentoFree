@@ -19,6 +19,7 @@ export interface PickupNeighborCandidate {
   displayName: string;
   photoURL?: string;
   neighborhood?: string;
+  role?: UserProfile['role'];
   source: 'chat' | 'interest' | 'search';
 }
 

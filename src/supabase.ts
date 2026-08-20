@@ -3060,7 +3060,7 @@ export async function getPickupNeighborCandidates(
     if (voterIds.length > 0) {
       const { data: users } = await supabase
         .from('users_public')
-        .select('uid, displayName, photoURL, neighborhood')
+        .select('uid, displayName, photoURL, neighborhood, role')
         .in('uid', voterIds);
 
       for (const row of users || []) {
@@ -3069,6 +3069,7 @@ export async function getPickupNeighborCandidates(
           displayName: String((row as { displayName?: string }).displayName || 'Neighbor'),
           photoURL: (row as { photoURL?: string }).photoURL || undefined,
           neighborhood: (row as { neighborhood?: string }).neighborhood || undefined,
+          role: (row as { role?: UserProfile['role'] }).role,
           source: 'interest',
         });
       }
@@ -3091,7 +3092,7 @@ export async function searchPickupNeighbors(
   try {
     const { data, error } = await supabase
       .from('users_public')
-      .select('uid, displayName, photoURL, neighborhood')
+      .select('uid, displayName, photoURL, neighborhood, role')
       .neq('uid', ownerUserId)
       .ilike('displayName', `%${trimmed}%`)
       .limit(limit);
@@ -3106,6 +3107,7 @@ export async function searchPickupNeighbors(
       displayName: String((row as { displayName?: string }).displayName || 'Neighbor'),
       photoURL: (row as { photoURL?: string }).photoURL || undefined,
       neighborhood: (row as { neighborhood?: string }).neighborhood || undefined,
+      role: (row as { role?: UserProfile['role'] }).role,
       source: 'search' as const,
     }));
   } catch {

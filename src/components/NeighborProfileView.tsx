@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   Ban,
@@ -52,6 +53,8 @@ interface NeighborProfileViewProps {
   onRepostPost?: (post: ItemPost) => void;
   onDeletePost?: (post: ItemPost) => void;
   onBlockListChanged?: () => void;
+  /** Stack above an open listing or event detail sheet. */
+  nested?: boolean;
 }
 
 export default function NeighborProfileView({
@@ -65,6 +68,7 @@ export default function NeighborProfileView({
   onRepostPost,
   onDeletePost,
   onBlockListChanged,
+  nested = false,
 }: NeighborProfileViewProps) {
   const hintListing = listingHints.find((item) => item.userId === userId);
 
@@ -160,6 +164,14 @@ export default function NeighborProfileView({
       unsubBlocks();
     };
   }, [userId, currentUserId, currentUserProfile, hintListing?.id]);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   const handleRoleSave = async () => {
     if (!profile || !selectedRole) return;
@@ -278,14 +290,14 @@ export default function NeighborProfileView({
     .slice()
     .sort((a, b) => new Date(b.updatedAt as any).getTime() - new Date(a.updatedAt as any).getTime());
 
-  return (
+  const panel = (
     <div
-      className="sbn-app-sheet overflow-y-auto"
+      className={`sbn-app-sheet ${nested ? 'sbn-app-sheet-nested' : ''} flex flex-col min-h-0 font-sans`}
       role="dialog"
       aria-modal="true"
       id="neighbor_profile_overlay"
     >
-      <header className="sticky top-0 z-10 sbn-glass-nav sbn-safe-top px-4 min-h-14 flex items-center gap-3">
+      <header className="shrink-0 sbn-glass-nav sbn-safe-top border-b border-app px-4 min-h-14 flex items-center gap-3">
         <button
           type="button"
           onClick={onClose}
@@ -303,6 +315,7 @@ export default function NeighborProfileView({
         )}
       </header>
 
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
       <div className="sbn-page-content pb-12">
         {loading && !profile && !blockStatus.theyBlockedMe ? (
           <p className="text-center text-sm text-muted py-16">Loading profile…</p>
@@ -603,6 +616,9 @@ export default function NeighborProfileView({
           }}
         />
       )}
+      </div>
     </div>
   );
+
+  return createPortal(panel, document.body);
 }
