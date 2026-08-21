@@ -1,10 +1,15 @@
 import { ABOUT, COMMON_ITEMS, SITE } from '../../../siteContent';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
+import { useBrand } from '../../../preview/useBrand';
+import { NEWSPAPER } from '../../../preview/newspaperBrand';
 
 export default function AboutPage() {
+  const { newspaper, copy } = useBrand();
+  const title = newspaper ? `What is ${NEWSPAPER.name}?` : `🌎 ${ABOUT.title}`;
+  const subtitle = copy(ABOUT.body);
   return (
-    <PublicPageShell title={`🌎 ${ABOUT.title}`} subtitle={ABOUT.body}>
+    <PublicPageShell title={title} subtitle={subtitle}>
       <PublicCard>
         <p className="text-xs font-bold text-muted uppercase tracking-wider">Members can</p>
         <ul className="mt-3 space-y-2 text-sm text-muted font-semibold">

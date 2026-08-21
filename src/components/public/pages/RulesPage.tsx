@@ -2,12 +2,18 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 import { RULES } from '../../../siteContent';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
+import { useNewspaperSkin } from '../../../preview/NewspaperSkinContext';
 
 export default function RulesPage() {
+  const { enabled: newspaper } = useNewspaperSkin();
   return (
     <PublicPageShell
-      title="Community rules"
-      subtitle="Keep the circle safe, generous, and free for everyone in Sacramento."
+      title={newspaper ? 'House rules' : 'Community rules'}
+      subtitle={
+        newspaper
+          ? 'Keep the gazette safe, generous, and free for everyone in Sacramento.'
+          : 'Keep the circle safe, generous, and free for everyone in Sacramento.'
+      }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <PublicCard>

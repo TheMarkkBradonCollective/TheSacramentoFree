@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Gift } from 'lucide-react';
 import { APP_LOGO_SRC, SITE } from '../siteContent';
+import { NEWSPAPER } from '../preview/newspaperBrand';
+import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 
 interface BrandLogoProps {
   className?: string;
@@ -45,11 +47,28 @@ export default function BrandLogo({
   compact = false,
 }: BrandLogoProps) {
   const [failed, setFailed] = useState(false);
-  const title = SITE.name;
-  const tagline = subtitle ?? SITE.tagline;
+  const { enabled: newspaper } = useNewspaperSkin();
+  const title = newspaper ? NEWSPAPER.name : SITE.name;
+  const tagline = subtitle ?? (newspaper ? NEWSPAPER.tagline : SITE.tagline);
   const logoClass = compact
     ? 'h-8 w-8 object-cover rounded-lg shrink-0'
     : imgClassName;
+
+  if (newspaper) {
+    return (
+      <div className={className}>
+        <div className="tsf-logo-mark shrink-0" aria-label={NEWSPAPER.name}>
+          <span className="tsf-logo-the">{NEWSPAPER.the}</span>
+          <span className="tsf-logo-name">{NEWSPAPER.title}</span>
+        </div>
+        {showTitle && !compact && (
+          <p className={`text-muted truncate ${compact ? 'text-[10px] leading-snug mt-0.5' : 'text-[11px]'}`}>
+            {tagline}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   if (failed) {
     return (

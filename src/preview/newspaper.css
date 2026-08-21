@@ -1,0 +1,616 @@
+/* The Sacramento Free — preview-only grey NYT-style newspaper reskin.
+   Same DOM, same layout, same flows — tokens, typography, and chrome only.
+   Applied when html has .newspaper-preview */
+
+html.newspaper-preview {
+  --font-sans: "Libre Baskerville", "Source Serif 4", Georgia, "Times New Roman", Times, serif;
+  --font-display: "Playfair Display", "Libre Baskerville", Georgia, "Times New Roman", Times, serif;
+  --font-masthead: "Playfair Display", Georgia, "Times New Roman", Times, serif;
+  --tsf-rule-thin: 1px solid var(--color-border-strong);
+  --tsf-rule-thick: 3px double var(--color-border-strong);
+  --color-brand-orange: #121212;
+  --color-brand-orange-hover: #000000;
+  --color-brand-orange-light: #e8e8e4;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-pill: 0;
+  --radius-card: 0;
+}
+
+html.newspaper-preview.light,
+html.newspaper-preview:not(.dark) {
+  --color-bg: #ececea;
+  --color-bg-secondary: #e2e2de;
+  --color-surface: #f7f7f4;
+  --color-surface-hover: #efefeb;
+  --color-inset: #e8e8e4;
+  --color-border: #c8c8c2;
+  --color-border-strong: #121212;
+  --color-text: #121212;
+  --color-text-muted: #4a4a46;
+  --color-text-subtle: #6e6e68;
+  --color-accent: #121212;
+  --color-accent-hover: #000000;
+  --color-accent-soft: #deded8;
+  --color-on-accent: #ffffff;
+  --color-card: #f7f7f4;
+  --color-card-muted: #efefeb;
+  --color-danger: #8b0000;
+  --color-danger-soft: #f0e4e4;
+  --color-shadow: rgba(18, 18, 18, 0.05);
+  --color-shadow-lg: rgba(18, 18, 18, 0.1);
+}
+
+html.newspaper-preview.dark {
+  --color-bg: #0f0f0f;
+  --color-bg-secondary: #0a0a0a;
+  --color-surface: #181816;
+  --color-surface-hover: #20201c;
+  --color-inset: #121210;
+  --color-border: #333330;
+  --color-border-strong: #ececea;
+  --color-text: #f4f4f0;
+  --color-text-muted: #b4b4ae;
+  --color-text-subtle: #888882;
+  --color-accent: #f4f4f0;
+  --color-accent-hover: #ffffff;
+  --color-accent-soft: rgba(244, 244, 240, 0.08);
+  --color-on-accent: #121212;
+  --color-card: #181816;
+  --color-card-muted: #121210;
+  --color-danger: #e07a7a;
+  --color-danger-soft: rgba(224, 122, 122, 0.12);
+  --color-shadow: rgba(0, 0, 0, 0.45);
+  --color-shadow-lg: rgba(0, 0, 0, 0.6);
+}
+
+html.newspaper-preview,
+html.newspaper-preview body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+html.newspaper-preview body {
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #f2f2ee 0%, var(--color-bg) 8%, var(--color-bg) 100%);
+  background-size: 180px 180px, 100% 100%;
+}
+
+html.newspaper-preview.dark body {
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #141412 0%, var(--color-bg) 100%);
+}
+
+html.newspaper-preview .font-display {
+  font-family: var(--font-display);
+}
+
+html.newspaper-preview .font-sans {
+  font-family: var(--font-sans);
+}
+
+html.newspaper-preview .mesh-bg {
+  background-color: var(--color-bg);
+  background-image: none;
+}
+
+html.newspaper-preview .sbn-hero-glow {
+  background-color: transparent;
+  background-image: none;
+}
+
+html.newspaper-preview .sbn-hero-glow::before {
+  display: none;
+}
+
+/* ── Edition dateline ── */
+html.newspaper-preview .tsf-edition-bar {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+html.newspaper-preview .tsf-edition-bar__inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.35rem 1rem;
+}
+
+html.newspaper-preview .tsf-edition-bar__city {
+  font-family: var(--font-masthead);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--color-text);
+  text-align: center;
+}
+
+html.newspaper-preview .tsf-edition-bar__meta {
+  text-align: right;
+}
+
+html.newspaper-preview .tsf-edition-bar__rule--thin {
+  height: 1px;
+  background: var(--color-border-strong);
+}
+
+html.newspaper-preview .tsf-edition-bar__rule--thick {
+  height: 3px;
+  border-top: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+/* ── Masthead (hero + nav wordmark) ── */
+html.newspaper-preview .tsf-hero-masthead {
+  text-align: center;
+  padding: 0.5rem 0 1rem;
+  border-top: var(--tsf-rule-thick);
+  border-bottom: var(--tsf-rule-thin);
+  margin-bottom: 0.25rem;
+}
+
+html.newspaper-preview .tsf-hero-masthead .tsf-logo-mark {
+  align-items: center;
+  border-left: none;
+  padding-left: 0;
+  margin: 0 auto;
+}
+
+html.newspaper-preview .tsf-hero-masthead .tsf-logo-the {
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
+}
+
+html.newspaper-preview .tsf-hero-masthead .tsf-logo-name {
+  font-family: var(--font-masthead);
+  font-size: clamp(2rem, 7vw, 3.25rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-top: 0.15rem;
+}
+
+html.newspaper-preview .tsf-masthead-tagline {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+html.newspaper-preview .sbn-glass-nav .tsf-logo-mark {
+  border-left: 2px solid var(--color-text);
+  padding-left: 0.35rem;
+}
+
+html.newspaper-preview .sbn-glass-nav .tsf-logo-name {
+  font-family: var(--font-masthead);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* ── Front-page headline ── */
+html.newspaper-preview .tsf-front-page-hed {
+  font-family: var(--font-masthead);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  border-bottom: var(--tsf-rule-thin);
+  padding-bottom: 0.75rem;
+}
+
+html.newspaper-preview .tsf-front-page-hed .text-accent {
+  font-style: italic;
+  font-weight: 700;
+}
+
+/* ── Nav — section index ── */
+html.newspaper-preview .sbn-glass-nav {
+  background: var(--color-surface);
+  border-bottom: var(--tsf-rule-thick);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+html.newspaper-preview .sbn-nav-tab {
+  border-radius: 0;
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: transparent;
+}
+
+html.newspaper-preview .sbn-nav-tab:hover {
+  color: var(--color-text);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+html.newspaper-preview .sbn-nav-tab-active {
+  color: var(--color-text);
+  background: transparent;
+}
+
+html.newspaper-preview .sbn-nav-tab-active::after {
+  display: none;
+}
+
+html.newspaper-preview .sbn-nav-tab-active {
+  border-bottom: 2px solid var(--color-text);
+}
+
+/* ── Square corners ── */
+html.newspaper-preview .sbn-card,
+html.newspaper-preview .sbn-card-elevated,
+html.newspaper-preview .sbn-btn,
+html.newspaper-preview .sbn-chip,
+html.newspaper-preview .sbn-badge,
+html.newspaper-preview .sbn-input,
+html.newspaper-preview .sbn-stat-pill,
+html.newspaper-preview .item-feed-card,
+html.newspaper-preview .item-feed-tile,
+html.newspaper-preview .sbn-section,
+html.newspaper-preview .chat-inbox-row,
+html.newspaper-preview [class*='rounded-xl'],
+html.newspaper-preview [class*='rounded-2xl'],
+html.newspaper-preview [class*='rounded-lg'],
+html.newspaper-preview [class*='rounded-full'] {
+  border-radius: 0;
+}
+
+/* ── Buttons ── */
+html.newspaper-preview .sbn-btn {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+
+html.newspaper-preview .sbn-btn-primary {
+  background: var(--color-text);
+  border: 1px solid var(--color-text);
+  color: var(--color-on-accent);
+}
+
+html.newspaper-preview .sbn-btn-primary:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+html.newspaper-preview .sbn-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--color-text);
+  color: var(--color-text);
+}
+
+/* ── Page headers ── */
+html.newspaper-preview .sbn-page-header {
+  border-bottom: var(--tsf-rule-thick);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+html.newspaper-preview .sbn-page-header h1 {
+  font-family: var(--font-masthead);
+  font-size: clamp(1.85rem, 4vw, 3rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+html.newspaper-preview .sbn-page-header p {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ── Cards & classifieds ── */
+html.newspaper-preview .sbn-card,
+html.newspaper-preview .sbn-card-elevated,
+html.newspaper-preview .item-feed-card,
+html.newspaper-preview .item-feed-tile,
+html.newspaper-preview .sbn-hero-preview-card,
+html.newspaper-preview .sbn-section {
+  border: 1px solid var(--color-border-strong);
+  box-shadow: none;
+  background: var(--color-surface);
+}
+
+html.newspaper-preview .item-feed-card,
+html.newspaper-preview .item-feed-tile {
+  border-style: solid;
+  border-width: 1px 1px 2px;
+}
+
+html.newspaper-preview .sbn-chip,
+html.newspaper-preview .sbn-badge {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+html.newspaper-preview .sbn-badge-give {
+  background: var(--color-text);
+  color: var(--color-on-accent);
+  border-color: var(--color-text);
+}
+
+/* ── Signed-in top bar ── */
+html.newspaper-preview .sbn-topbar,
+html.newspaper-preview .sbn-topbar-compact {
+  background: var(--color-surface);
+  border-bottom: var(--tsf-rule-thick);
+  box-shadow: none;
+}
+
+html.newspaper-preview .sbn-topbar-title {
+  font-family: var(--font-masthead);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+html.newspaper-preview .sbn-topbar-eyebrow {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.58rem;
+}
+
+/* ── Bottom tab bar ── */
+html.newspaper-preview .sbn-tab-bar,
+html.newspaper-preview [class*='bottom-nav'],
+html.newspaper-preview nav[aria-label='Main navigation'] {
+  background: var(--color-surface);
+  border-top: var(--tsf-rule-thick);
+  box-shadow: none;
+}
+
+html.newspaper-preview .sbn-tab-btn {
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Section heads inside app ── */
+html.newspaper-preview .sbn-section-title,
+html.newspaper-preview .DepthSection h2,
+html.newspaper-preview h2.font-display {
+  font-family: var(--font-masthead);
+  font-weight: 900;
+  border-bottom: var(--tsf-rule-thin);
+  padding-bottom: 0.35rem;
+}
+
+/* ── Stats & pills ── */
+html.newspaper-preview .sbn-stat-pill {
+  border: 1px solid var(--color-border);
+  background: var(--color-inset);
+}
+
+html.newspaper-preview .sbn-stat-icon {
+  border-radius: 0;
+}
+
+/* ── Auth panel ── */
+html.newspaper-preview .sbn-auth-brand-panel {
+  background: linear-gradient(180deg, #121212 0%, #2a2a28 100%);
+  color: #f4f4f0;
+}
+
+html.newspaper-preview .sbn-native-hero {
+  background: #121212;
+}
+
+/* ── Links ── */
+html.newspaper-preview a:not(.sbn-btn):not([class*='btn']) {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
+/* ── Preview banner ── */
+html.newspaper-preview .tsf-preview-banner,
+.tsf-preview-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  padding: 0.45rem 1rem;
+  background: #121212;
+  color: #f4f4f0;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  line-height: 1.45;
+  border-bottom: 1px solid #000;
+}
+
+html.newspaper-preview .tsf-preview-banner p,
+.tsf-preview-banner p {
+  margin: 0;
+  max-width: 52rem;
+}
+
+html.newspaper-preview .tsf-preview-banner strong,
+.tsf-preview-banner strong {
+  font-family: var(--font-display, Georgia, serif);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+html.newspaper-preview .tsf-preview-banner button,
+.tsf-preview-banner button {
+  flex-shrink: 0;
+  border: 1px solid rgba(244, 244, 240, 0.45);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f4f4f0;
+  background: transparent;
+  cursor: pointer;
+}
+
+html.newspaper-preview .tsf-preview-banner button:hover,
+.tsf-preview-banner button:hover {
+  background: #f4f4f0;
+  color: #121212;
+}
+
+.tsf-root {
+  background: var(--color-bg);
+}
+
+/* ── Wordmark (compact) ── */
+html.newspaper-preview .tsf-logo-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 0.95;
+}
+
+html.newspaper-preview .tsf-logo-the {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-logo-name {
+  font-family: var(--font-masthead);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+html.newspaper-preview .sbn-page-content > .space-y-4 > * + *,
+html.newspaper-preview .sbn-section + .sbn-section {
+  border-top: var(--tsf-rule-thin);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+html.newspaper-preview .sbn-back-btn {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+
+html.newspaper-preview .sbn-footer,
+html.newspaper-preview footer {
+  border-top: var(--tsf-rule-thick);
+  font-size: 0.75rem;
+}
+
+html.newspaper-preview .text-accent {
+  color: var(--color-text);
+}
+
+html.newspaper-preview .bg-accent-soft {
+  background: var(--color-accent-soft);
+}
+
+html.newspaper-preview .border-accent {
+  border-color: var(--color-border-strong);
+}
+
+html.newspaper-preview .ring-accent\/30,
+html.newspaper-preview [class*='ring-accent'] {
+  --tw-ring-color: color-mix(in srgb, var(--color-text) 25%, transparent);
+}
+
+html.newspaper-preview img[alt='Sacramento Buy Nothing'] {
+  display: none;
+}
+
+/* ── Map & listing grid ── */
+html.newspaper-preview .leaflet-container {
+  border: 1px solid var(--color-border-strong);
+}
+
+html.newspaper-preview .sbn-input,
+html.newspaper-preview .sbn-input-tray input,
+html.newspaper-preview textarea.sbn-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  font-family: var(--font-sans);
+}
+
+html.newspaper-preview .sbn-input:focus {
+  box-shadow: inset 0 0 0 1px var(--color-text);
+}
+
+/* ── Feed composer ── */
+html.newspaper-preview .sbn-feed-composer {
+  border: var(--tsf-rule-thick);
+  background: var(--color-surface);
+}
+
+/* ── Guest listing preview on home ── */
+html.newspaper-preview .sbn-hero-preview-card {
+  border: var(--tsf-rule-thick);
+}
+
+html.newspaper-preview .sbn-hero-preview-card > p:first-child {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .sbn-hero-preview-feature + .sbn-hero-preview-feature {
+  border-top: 1px dotted var(--color-border);
+}
+
+/* ── Modals / sheets keep structure, newspaper chrome ── */
+html.newspaper-preview .sbn-app-sheet,
+html.newspaper-preview .sbn-modal-panel {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+}
+
+html.newspaper-preview h1,
+html.newspaper-preview h2,
+html.newspaper-preview h3,
+html.newspaper-preview .sbn-topbar-title {
+  font-family: var(--font-display);
+}
+
+html.newspaper-preview p,
+html.newspaper-preview li,
+html.newspaper-preview label,
+html.newspaper-preview input,
+html.newspaper-preview textarea,
+html.newspaper-preview select {
+  font-family: var(--font-sans);
+}

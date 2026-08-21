@@ -4,6 +4,7 @@ import App from './App.tsx';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import { ThemeProvider } from './theme/ThemeContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
+import { NewspaperSkinProvider } from './preview/NewspaperSkinContext';
 import { initCapacitorApp } from './capacitor/init';
 import { recordInstalledWebVersion } from './lib/installContext';
 import { isNativeApp } from './lib/nativePlatform';
@@ -26,9 +27,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppErrorBoundary>
       <ThemeProvider>
-        <ConfirmProvider>
-          <App />
-        </ConfirmProvider>
+        <NewspaperSkinProvider>
+          <ConfirmProvider>
+            <App />
+          </ConfirmProvider>
+        </NewspaperSkinProvider>
       </ThemeProvider>
     </AppErrorBoundary>
   </StrictMode>,

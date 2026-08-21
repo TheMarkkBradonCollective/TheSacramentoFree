@@ -1,12 +1,18 @@
 import { HOW_IT_WORKS } from '../../../siteContent';
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
+import { useNewspaperSkin } from '../../../preview/NewspaperSkinContext';
 
 export default function HowItWorksPage() {
+  const { enabled: newspaper } = useNewspaperSkin();
   return (
     <PublicPageShell
-      title="How it works"
-      subtitle="Four steps to give, request, and pick up — always 100% free."
+      title={newspaper ? 'How this paper works' : 'How it works'}
+      subtitle={
+        newspaper
+          ? 'Four steps to give, request, and pick up — always 100% free, like the rest of the gazette.'
+          : 'Four steps to give, request, and pick up — always 100% free.'
+      }
     >
       <PublicCard>
         <ol className="space-y-6">

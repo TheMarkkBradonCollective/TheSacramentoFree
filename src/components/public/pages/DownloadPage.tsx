@@ -18,6 +18,8 @@ import { useInstallVersions, type VersionStatus } from '../../../hooks/useInstal
 import { apkWebsiteAccessMessage } from '../../../lib/apkWebsiteAccess';
 import { SITE } from '../../../siteContent';
 import type { UserProfile } from '../../../types';
+import { useNewspaperSkin } from '../../../preview/NewspaperSkinContext';
+import { NEWSPAPER } from '../../../preview/newspaperBrand';
 
 interface DownloadPageProps {
   /** When set, show a back control for signed-in app users instead of public nav back. */
@@ -93,6 +95,7 @@ function ComparisonRow({
 }
 
 function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
+  const { enabled: newspaper } = useNewspaperSkin();
   const {
     installKind,
     installLabel,
@@ -131,16 +134,24 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           Back to app
         </button>
         <header className="sbn-page-header">
-          <h1>Download the app</h1>
-          <p>Google Play for most neighbors, home screen for everyone, and free APK sideload for our first 500 joiners.</p>
+          <h1>{newspaper ? 'Get the paper' : 'Download the app'}</h1>
+          <p>
+            {newspaper
+              ? `Take ${NEWSPAPER.name} with you — Google Play on Android or add to your home screen.`
+              : 'Google Play for most neighbors, home screen for everyone, and free APK sideload for our first 500 joiners.'}
+          </p>
         </header>
         <div className="space-y-4 min-w-0">{renderBody()}</div>
       </div>
     </div>
   ) : (
     <PublicPageShell
-      title="Download the app"
-      subtitle={`Get ${SITE.shortName} on your phone — Google Play on Android or add to your home screen.`}
+      title={newspaper ? 'Get the paper' : 'Download the app'}
+      subtitle={
+        newspaper
+          ? `Take ${NEWSPAPER.name} with you — Google Play on Android or add to your home screen.`
+          : `Get ${SITE.shortName} on your phone — Google Play on Android or add to your home screen.`
+      }
       className="min-w-0 overflow-x-hidden"
     >
       {renderBody()}

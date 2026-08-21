@@ -8,6 +8,7 @@ import GuestListingPreview from '../GuestListingPreview';
 import HomeDownloadButtons from '../HomeDownloadButtons';
 import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
 import { SITE, SUPPORT } from '../../../siteContent';
+import { useBrand } from '../../../preview/useBrand';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
 
@@ -45,6 +46,11 @@ export default function HomePage({
   onViewListing,
   onRequireSignIn,
 }: HomePageProps) {
+  const { name, tagline, copy } = useBrand();
+  const description = copy(SITE.description);
+  const principles = SITE.principles.map((line) => copy(line));
+  const freeRule = copy(SITE.freeRule);
+
   return (
     <HomeScrollStage>
       <TrademarkNoticeBanner />
@@ -52,23 +58,26 @@ export default function HomePage({
       <section className="px-4 sbn-hero-glow pb-4">
         <div className="lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:items-center max-w-3xl lg:max-w-none mx-auto">
           <div>
-            <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl mb-6" />
+            <div className="tsf-hero-masthead">
+              <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl" />
+              <p className="tsf-masthead-tagline">{tagline}</p>
+            </div>
 
             <span className="sbn-badge sbn-badge-give">
               <Heart className="w-3 h-3 inline mr-1" />
-              {SITE.name}
+              {name}
             </span>
 
-            <h1 className="mt-6 font-display text-4xl md:text-5xl lg:text-6xl font-bold text-app leading-[1.08] tracking-tight">
+            <h1 className="tsf-front-page-hed mt-6 font-display text-4xl md:text-5xl lg:text-6xl font-bold text-app leading-[1.08] tracking-tight">
               Give freely.
               <br />
               <span className="text-accent">Ask kindly.</span>
             </h1>
 
-            <p className="mt-5 text-base lg:text-lg text-muted leading-relaxed max-w-lg">{SITE.description}</p>
+            <p className="mt-5 text-base lg:text-lg text-muted leading-relaxed max-w-lg">{description}</p>
 
             <ul className="mt-6 flex flex-wrap gap-2">
-              {SITE.principles.map((line) => (
+              {principles.map((line) => (
                 <li key={line} className="sbn-chip text-xs">
                   {line}
                 </li>
@@ -86,7 +95,7 @@ export default function HomePage({
 
             <HomeDownloadButtons onNavigate={onNavigate} />
 
-            <p className="mt-5 text-sm font-semibold text-accent">{SITE.freeRule}</p>
+            <p className="mt-5 text-sm font-semibold text-accent">{freeRule}</p>
           </div>
 
           {/* Live preview panel — desktop only, uses the space a stretched single column used to leave empty */}

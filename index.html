@@ -34,6 +34,24 @@
             document.documentElement.classList.add('capacitor-android');
           }
         }
+        var host = (location.hostname || '').replace(/^www\./, '');
+        var params = new URLSearchParams(location.search);
+        var hashQ = location.hash.indexOf('?') >= 0
+          ? new URLSearchParams(location.hash.slice(location.hash.indexOf('?') + 1))
+          : null;
+        var skin = params.get('skin') || (hashQ && hashQ.get('skin'));
+        var stored = sessionStorage.getItem('sbn_newspaper_preview');
+        var production = host === 'sacramentobuynothing.com';
+        var native = document.documentElement.classList.contains('capacitor-native');
+        var newspaper =
+          skin === 'newspaper' ||
+          (skin !== 'original' && stored === '1') ||
+          (skin !== 'original' && stored !== '0' && !production && !native);
+        if (newspaper) {
+          document.documentElement.classList.add('newspaper-preview');
+          document.title = 'The Sacramento Free — All the news that’s free to give';
+          if (meta) meta.setAttribute('content', t === 'light' ? '#f3ead6' : '#1a1612');
+        }
       })();
     </script>
   </head>

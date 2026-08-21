@@ -3,6 +3,8 @@ import { AlertCircle, ArrowLeft, CheckCircle2, FileText, Gift, Info, Lock, Mail,
 import { SACRAMENTO_NEIGHBORHOODS } from '../../types';
 import { PRIVACY, RULES, SITE } from '../../siteContent';
 import { usePublicRoute } from '../../public/usePublicRoute';
+import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
+import { NEWSPAPER } from '../../preview/newspaperBrand';
 import { supabase } from '../../supabase';
 import BrandLogo from '../BrandLogo';
 
@@ -29,6 +31,8 @@ export default function AuthPage({
   isAuthLoading,
 }: AuthPageProps) {
   const { navigate } = usePublicRoute();
+  const { enabled: newspaper } = useNewspaperSkin();
+  const brandName = newspaper ? NEWSPAPER.name : SITE.name;
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -140,9 +144,11 @@ export default function AuthPage({
       <div className="hidden lg:flex lg:w-[42%] xl:w-[38%] sbn-auth-brand-panel flex-col justify-between p-10 lg:p-12">
         <div className="relative z-10 flex items-center gap-3">
           <BrandLogo imgClassName="h-11 w-11 object-cover rounded-xl shadow-lg" showTitle={false} />
-          <span className="font-display font-bold text-lg text-white">
-            Sacramento <span className="text-white/80">Buy Nothing</span>
-          </span>
+          {newspaper ? null : (
+            <span className="font-display font-bold text-lg text-white">
+              Sacramento <span className="text-white/80">Buy Nothing</span>
+            </span>
+          )}
         </div>
 
         <div className="relative z-10">
@@ -175,10 +181,12 @@ export default function AuthPage({
             <div className="sbn-native-hero flex items-center gap-3">
               <BrandLogo imgClassName="h-10 w-10 object-cover rounded-xl shrink-0" showTitle={false} />
               <div className="min-w-0">
-                <p className="font-display font-bold text-white leading-tight">{SITE.name}</p>
+                {newspaper ? null : (
+                  <p className="font-display font-bold text-white leading-tight">{brandName}</p>
+                )}
                 <p className="text-[11px] text-white/85 mt-0.5 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 shrink-0" />
-                  {SITE.freeRule}
+                  {newspaper ? NEWSPAPER.tagline : SITE.freeRule}
                 </p>
               </div>
             </div>
