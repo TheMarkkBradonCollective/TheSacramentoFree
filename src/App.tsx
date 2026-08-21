@@ -103,6 +103,7 @@ import ReviewPromptModal from './components/ReviewPromptModal';
 import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
 import { isNativeApp } from './lib/nativePlatform';
 import { applyUserPreferencesToDevice } from './lib/appPreferences';
+import { mergeProfileFromDbRead } from './lib/profilePersistence';
 import {
   clearLocalNativeSessionId,
   readLocalNativeSessionId,
@@ -188,6 +189,7 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
+  const profileSyncedUidRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
   const loadItemsRef = useRef<
     (isBackground?: boolean, attempt?: number, options?: { guest?: boolean }) => Promise<void>
@@ -832,6 +834,7 @@ export default function App() {
     if (user?.id && lastSignedInUserIdRef.current && lastSignedInUserIdRef.current !== user.id) {
       clearLocalNativeSessionId(lastSignedInUserIdRef.current);
       clearAuthenticatedUiState();
+      profileSyncedUidRef.current = null;
     }
     if (user?.id) lastSignedInUserIdRef.current = user.id;
     setSessionUser((prev) => (prev?.id === user.id ? prev : user));
@@ -869,6 +872,7 @@ export default function App() {
 
   const syncProfileFromDb = useCallback(async (user: any) => {
     if (!user?.id) return;
+    if (profileSyncedUidRef.current === user.id) return;
     if (profileSyncRef.current === user.id) return;
     profileSyncRef.current = user.id;
 
@@ -883,9 +887,13 @@ export default function App() {
       if (data) {
         const fromDb = await getSupabaseProfile(user.id);
         if (fromDb) {
-          setUserProfile(fromDb);
-          writeCachedProfile(fromDb);
-          applyUserPreferencesToDevice(fromDb);
+          setUserProfile((prev) => {
+            const merged = mergeProfileFromDbRead(prev, fromDb);
+            writeCachedProfile(merged);
+            applyUserPreferencesToDevice(merged);
+            return merged;
+          });
+          profileSyncedUidRef.current = user.id;
         }
         return;
       }
@@ -1305,6 +1313,7 @@ export default function App() {
       await supabase.auth.signOut();
     } catch (_) {}
     lastSignedInUserIdRef.current = null;
+    profileSyncedUidRef.current = null;
     clearActiveNavSession();
     clearSessionCache();
     clearAuthenticatedUiState();

@@ -1,5 +1,7 @@
 /** Guards for profile identity fields — prevent defaults from overwriting saved neighbor data. */
 
+import type { UserProfile } from '../types';
+
 export function isDicebearAvatarUrl(url?: string | null): boolean {
   if (!url) return false;
   return url.includes('api.dicebear.com/');
@@ -89,4 +91,26 @@ export function resolveIdentityDisplayName(params: {
   }
 
   return incoming;
+}
+
+/** Merge a DB profile row into in-memory state without downgrading saved identity. */
+export function mergeProfileFromDbRead(prev: UserProfile | null, fromDb: UserProfile): UserProfile {
+  if (!prev || prev.uid !== fromDb.uid) return fromDb;
+
+  const email = fromDb.email || prev.email;
+  const displayName = resolveIdentityDisplayName({
+    existingDisplayName: prev.displayName,
+    incomingDisplayName: fromDb.displayName,
+    email,
+  });
+
+  const incomingPhoto = photoUrlForProfileUpsert(fromDb.photoURL);
+  const prevPhoto = photoUrlForProfileUpsert(prev.photoURL);
+  const photoURL = incomingPhoto || prevPhoto || fromDb.photoURL || prev.photoURL;
+
+  return {
+    ...fromDb,
+    displayName,
+    photoURL,
+  };
 }
