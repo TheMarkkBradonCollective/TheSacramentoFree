@@ -2849,7 +2849,14 @@ DROP POLICY IF EXISTS "items_update_own" ON public.items;
 DROP POLICY IF EXISTS "items_delete_own" ON public.items;
 
 CREATE POLICY "items_select_authenticated" ON public.items
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND (
+      status IN ('active', 'pending_pickup', 'on_hold')
+      OR "userId" = auth.uid()::text
+      OR public.is_staff()
+    )
+  );
 
 CREATE POLICY "items_select_public_active" ON public.items
   FOR SELECT USING (status = 'active');
@@ -2940,6 +2947,10 @@ CREATE POLICY "chats_insert" ON public.chats
 CREATE POLICY "chats_update" ON public.chats
   FOR UPDATE USING (public.can_write_chat(id))
   WITH CHECK (public.can_write_chat(id));
+
+DROP POLICY IF EXISTS "chats_delete" ON public.chats;
+CREATE POLICY "chats_delete" ON public.chats
+  FOR DELETE USING (public.can_write_chat(id) OR public.is_staff());
 
 DROP POLICY IF EXISTS "Allow public read messages" ON public.messages;
 DROP POLICY IF EXISTS "Allow insert messages" ON public.messages;
@@ -3401,7 +3412,7 @@ CREATE POLICY "event_comments_update" ON public.event_comments
 CREATE POLICY "event_comments_delete" ON public.event_comments
   FOR DELETE USING (
     auth.uid()::text = "userId"
-    AND (public.events_unlocked() OR public.is_staff())
+    OR public.is_staff()
   );
 
 DROP POLICY IF EXISTS "Allow read app reviews" ON public.app_reviews;

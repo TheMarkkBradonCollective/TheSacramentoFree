@@ -1,40 +1,44 @@
 import { useCallback, useEffect, useState } from 'react';
-import { syncSavedItemBookmark } from '../supabase';
-
-const SAVED_ITEMS_KEY = 'sbn_saved_items_v1';
-
-function readSavedIds(): Set<string> {
-  try {
-    const raw = localStorage.getItem(SAVED_ITEMS_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set<string>(parsed.filter((v): v is string => typeof v === 'string'));
-  } catch {
-    return new Set();
-  }
-}
-
-function writeSavedIds(ids: Set<string>) {
-  try {
-    localStorage.setItem(SAVED_ITEMS_KEY, JSON.stringify([...ids]));
-  } catch {
-    // storage quota exceeded — fail silently
-  }
-}
+import {
+  fetchSavedItemIds,
+  migrateLocalSavedItemsToDb,
+  readLocalSavedItemIds,
+  syncSavedItemBookmark,
+  writeLocalSavedItemIds,
+} from '../supabase';
 
 export function useSavedItems(userId?: string) {
-  const [savedIds, setSavedIds] = useState<Set<string>>(readSavedIds);
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set(readLocalSavedItemIds(userId)));
+
+  useEffect(() => {
+    setSavedIds(new Set(readLocalSavedItemIds(userId)));
+    if (!userId) return;
+
+    let cancelled = false;
+    void (async () => {
+      await migrateLocalSavedItemsToDb(userId);
+      const fromDb = await fetchSavedItemIds(userId);
+      if (cancelled) return;
+      const merged = new Set([...readLocalSavedItemIds(userId), ...fromDb]);
+      writeLocalSavedItemIds(userId, [...merged]);
+      setSavedIds(merged);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === SAVED_ITEMS_KEY) {
-        setSavedIds(readSavedIds());
+      if (!e.key) return;
+      if (e.key === 'sbn_saved_items_v1' || (userId && e.key === `sbn_saved_items_v1:${userId}`)) {
+        setSavedIds(new Set(readLocalSavedItemIds(userId)));
       }
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  }, [userId]);
 
   const toggleSaved = useCallback(
     (itemId: string) => {
@@ -46,11 +50,15 @@ export function useSavedItems(userId?: string) {
         } else {
           next.delete(itemId);
         }
-        writeSavedIds(next);
+        writeLocalSavedItemIds(userId, [...next]);
         if (userId) {
           void syncSavedItemBookmark(userId, itemId, willSave);
         }
-        window.dispatchEvent(new StorageEvent('storage', { key: SAVED_ITEMS_KEY }));
+        window.dispatchEvent(
+          new StorageEvent('storage', {
+            key: userId ? `sbn_saved_items_v1:${userId}` : 'sbn_saved_items_v1',
+          }),
+        );
         return next;
       });
     },

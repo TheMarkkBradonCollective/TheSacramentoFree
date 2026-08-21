@@ -910,7 +910,8 @@ export async function upsertSupabaseProfile(
       email,
       neighborhood: profileForSave.neighborhood,
       bio: profileForSave.bio?.trim() || null,
-      ...prefsPayload,
+      // Identity saves must not write local prefs over cloud settings.
+      ...(!existing ? prefsPayload : {}),
     };
 
     if (!existing) {
@@ -1605,6 +1606,53 @@ export async function updateSupabaseItemStatus(
 
 const SAVED_ITEMS_STORAGE_KEY = 'sbn_saved_items_v1';
 
+function savedItemsStorageKey(userId?: string | null): string {
+  return userId ? `${SAVED_ITEMS_STORAGE_KEY}:${userId}` : SAVED_ITEMS_STORAGE_KEY;
+}
+
+export function readLocalSavedItemIds(userId?: string | null): string[] {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const scoped = userId ? localStorage.getItem(savedItemsStorageKey(userId)) : null;
+    const legacy = localStorage.getItem(SAVED_ITEMS_STORAGE_KEY);
+    const raw = scoped || legacy;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((v): v is string => typeof v === 'string');
+  } catch {
+    return [];
+  }
+}
+
+export function writeLocalSavedItemIds(userId: string | null | undefined, ids: string[]): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const key = savedItemsStorageKey(userId);
+    localStorage.setItem(key, JSON.stringify(ids));
+    if (userId) localStorage.removeItem(SAVED_ITEMS_STORAGE_KEY);
+  } catch {
+    // storage quota exceeded — fail silently
+  }
+}
+
+export async function fetchSavedItemIds(userId: string): Promise<string[]> {
+  if (!userId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('saved_items')
+      .select('itemId')
+      .eq('userId', userId);
+    if (error) return readLocalSavedItemIds(userId);
+    const ids = (data || [])
+      .map((row) => String((row as { itemId?: string }).itemId || ''))
+      .filter(Boolean);
+    return ids;
+  } catch {
+    return readLocalSavedItemIds(userId);
+  }
+}
+
 export async function syncSavedItemBookmark(
   userId: string,
   itemId: string,
@@ -1632,11 +1680,7 @@ export async function syncSavedItemBookmark(
 export async function migrateLocalSavedItemsToDb(userId: string): Promise<void> {
   if (!userId || typeof localStorage === 'undefined') return;
   try {
-    const raw = localStorage.getItem(SAVED_ITEMS_STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return;
-    const itemIds = parsed.filter((v): v is string => typeof v === 'string');
+    const itemIds = readLocalSavedItemIds(userId);
     if (!itemIds.length) return;
 
     const rows = itemIds.map((itemId) => ({
@@ -1645,6 +1689,7 @@ export async function migrateLocalSavedItemsToDb(userId: string): Promise<void> 
       createdAt: new Date().toISOString(),
     }));
     await supabase.from('saved_items').upsert(rows, { onConflict: 'userId,itemId', ignoreDuplicates: true });
+    writeLocalSavedItemIds(userId, itemIds);
   } catch {
     // non-fatal
   }
@@ -3956,13 +4001,12 @@ export async function createSupabaseItemComment(comment: ItemComment): Promise<b
 export async function deleteSupabaseItemComment(
   commentId: string,
   userId: string,
+  isStaff = false,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
-    const { error, count } = await supabase
-      .from('item_comments')
-      .delete({ count: 'exact' })
-      .eq('id', commentId)
-      .eq('userId', userId);
+    let query = supabase.from('item_comments').delete({ count: 'exact' }).eq('id', commentId);
+    if (!isStaff) query = query.eq('userId', userId);
+    const { error, count } = await query;
 
     if (error) {
       handleSupabaseError(error, 'item_comments');
@@ -4566,13 +4610,12 @@ export async function createSupabaseEventComment(comment: EventComment): Promise
 export async function deleteSupabaseEventComment(
   commentId: string,
   userId: string,
+  isStaff = false,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
-    const { error, count } = await supabase
-      .from('event_comments')
-      .delete({ count: 'exact' })
-      .eq('id', commentId)
-      .eq('userId', userId);
+    let query = supabase.from('event_comments').delete({ count: 'exact' }).eq('id', commentId);
+    if (!isStaff) query = query.eq('userId', userId);
+    const { error, count } = await query;
 
     if (error) {
       handleSupabaseError(error, 'event_comments');

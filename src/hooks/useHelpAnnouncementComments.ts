@@ -8,6 +8,7 @@ import {
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 export function useHelpAnnouncementComments(
   announcementIds: string[],
@@ -18,6 +19,7 @@ export function useHelpAnnouncementComments(
     {},
   );
   const uid = userProfile?.uid ?? '';
+  const { alert } = useConfirm();
   const announcementIdSetRef = useRef(new Set<string>());
 
   const getCommentsForAnnouncement = useCallback(
@@ -110,9 +112,14 @@ export function useHelpAnnouncementComments(
       [announcementId]: [...current, newComment],
     }));
 
-    createSupabaseHelpAnnouncementComment(newComment).catch((err) => {
+    createSupabaseHelpAnnouncementComment(newComment).then((ok) => {
+      if (ok) return;
+      setCommentsByAnnouncement((prev) => ({ ...prev, [announcementId]: current }));
+      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
+    }).catch((err) => {
       console.warn('Failed to persist announcement comment:', err);
       setCommentsByAnnouncement((prev) => ({ ...prev, [announcementId]: current }));
+      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
     });
   };
 
@@ -126,7 +133,7 @@ export function useHelpAnnouncementComments(
     const result = await deleteSupabaseHelpAnnouncementComment(commentId, uid);
     if (!result.ok) {
       setCommentsByAnnouncement((prev) => ({ ...prev, [announcementId]: current }));
-      console.warn('Failed to delete announcement comment:', result.errorMessage);
+      void alert({ title: 'Could not delete comment', message: result.errorMessage || 'Please try again.' });
     }
   };
 

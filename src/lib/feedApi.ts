@@ -151,10 +151,22 @@ export async function createFeedPost(
 
   const postId = `feed_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const imageUrls: string[] = [];
+  const failedUploads: number[] = [];
 
   for (let i = 0; i < input.imageFiles.length; i++) {
     const url = await uploadFeedPostImage(input.imageFiles[i], postId, i);
     if (url) imageUrls.push(url);
+    else failedUploads.push(i + 1);
+  }
+
+  if (input.imageFiles.length > 0 && imageUrls.length === 0) {
+    return { ok: false, errorMessage: 'Photos could not be uploaded. Please try again.' };
+  }
+  if (failedUploads.length > 0) {
+    return {
+      ok: false,
+      errorMessage: `${failedUploads.length} photo${failedUploads.length === 1 ? '' : 's'} could not be uploaded. Please try again.`,
+    };
   }
 
   const now = new Date().toISOString();

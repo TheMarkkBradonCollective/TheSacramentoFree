@@ -22,19 +22,20 @@ export function applyEventRealtimeChange(
   }
 
   if (!row) return prev;
-  const event = normalizeSupabaseEvent(row);
 
   if (eventType === 'INSERT') {
+    const event = normalizeSupabaseEvent(row);
     const without = prev.filter((e) => e.id !== event.id);
     return sortEventsByStartDate([...without, event]);
   }
 
   if (eventType === 'UPDATE') {
-    const exists = prev.some((e) => e.id === event.id);
-    if (!exists) return sortEventsByStartDate([...prev, event]);
-    const current = prev.find((e) => e.id === event.id);
+    const incomingId = row.id || oldId;
+    const current = incomingId ? prev.find((e) => e.id === incomingId) : undefined;
+    const merged = current ? mergeDefinedEventFields(current, row) : row;
+    const event = normalizeSupabaseEvent(merged);
+    if (!current) return sortEventsByStartDate([...prev, event]);
     if (
-      current &&
       current.updatedAt === event.updatedAt &&
       current.status === event.status &&
       current.title === event.title
@@ -45,6 +46,16 @@ export function applyEventRealtimeChange(
   }
 
   return prev;
+}
+
+function mergeDefinedEventFields(current: CommunityEvent, incoming: CommunityEvent): CommunityEvent {
+  const next: CommunityEvent = { ...current };
+  for (const [key, value] of Object.entries(incoming as unknown as Record<string, unknown>)) {
+    if (value !== undefined && value !== null) {
+      (next as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+  return next;
 }
 
 /** Live community events — new posts, edits, and cancellations without refresh. */

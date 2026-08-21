@@ -8,6 +8,7 @@ import {
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 export function useAppUpdateComments(
   updateIds: string[],
@@ -16,6 +17,7 @@ export function useAppUpdateComments(
 ) {
   const [commentsByUpdate, setCommentsByUpdate] = useState<Record<string, AppUpdateComment[]>>({});
   const uid = userProfile?.uid ?? '';
+  const { alert } = useConfirm();
   const updateIdSetRef = useRef(new Set<string>());
 
   const getCommentsForUpdate = useCallback(
@@ -106,9 +108,14 @@ export function useAppUpdateComments(
       [updateId]: [...current, newComment],
     }));
 
-    createSupabaseAppUpdateComment(newComment).catch((err) => {
+    createSupabaseAppUpdateComment(newComment).then((ok) => {
+      if (ok) return;
+      setCommentsByUpdate((prev) => ({ ...prev, [updateId]: current }));
+      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
+    }).catch((err) => {
       console.warn('Failed to persist update comment:', err);
       setCommentsByUpdate((prev) => ({ ...prev, [updateId]: current }));
+      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
     });
   };
 
@@ -122,7 +129,7 @@ export function useAppUpdateComments(
     const result = await deleteSupabaseAppUpdateComment(commentId, uid);
     if (!result.ok) {
       setCommentsByUpdate((prev) => ({ ...prev, [updateId]: current }));
-      console.warn('Failed to delete update comment:', result.errorMessage);
+      void alert({ title: 'Could not delete comment', message: result.errorMessage || 'Please try again.' });
     }
   };
 
