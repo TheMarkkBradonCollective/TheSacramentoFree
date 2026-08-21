@@ -17,6 +17,7 @@ import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
 import { roleTheme } from '../lib/roles';
 import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
+import { workspaceShellClassName } from '../lib/workspaceShell';
 import { isNativeApp } from '../lib/nativePlatform';
 import AppSidebar from './AppSidebar';
 import AppTopbar from './AppTopbar';
@@ -207,7 +208,7 @@ export default function MobileView({
     return (
       <div
         id="mobile_device_workspace"
-        className="flex h-screen bg-app text-app overflow-hidden"
+        className={workspaceShellClassName()}
         style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as React.CSSProperties}
       >
         {!sidebarCollapsed && (

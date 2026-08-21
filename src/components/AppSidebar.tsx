@@ -121,7 +121,7 @@ export default function AppSidebar({
           : isFullyHidden
             ? 'w-0 border-r-0 overflow-hidden pointer-events-none'
             : `transition-all duration-200 ${isCollapsed ? 'w-14' : 'w-60'}`
-      } ${isOverlayDrawer ? 'sbn-sidebar-overlay fixed inset-y-0 left-0 z-50 shadow-xl' : ''}`;
+      } ${isOverlayDrawer ? 'sbn-sidebar-overlay fixed left-0 z-50 shadow-xl' : ''}`;
 
   return (
     <aside

@@ -15,6 +15,7 @@ import AppTopbar from './AppTopbar';
 import { type AnyTab, type AppTab, isStaffTab } from '../lib/appTabs';
 import { roleTheme } from '../lib/roles';
 import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
+import { workspaceShellClassName } from '../lib/workspaceShell';
 import StaffUsersView from './staff/StaffUsersView';
 import StaffPostsView from './staff/StaffPostsView';
 import StaffTeamView from './staff/StaffTeamView';
@@ -180,7 +181,7 @@ export default function TabletView({
   return (
     <div
       id="tablet_device_workspace"
-      className="flex h-screen bg-app text-app overflow-hidden"
+      className={workspaceShellClassName()}
       style={{ '--sbn-role-accent': theme.accent, '--sbn-role-soft': theme.soft } as CSSProperties}
     >
       <AppSidebar
