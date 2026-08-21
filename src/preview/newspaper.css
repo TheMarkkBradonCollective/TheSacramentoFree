@@ -1985,7 +1985,255 @@ html.newspaper-preview .tsf-root .home-scroll-stage {
   }
 }
 
-/* ════════════════════ 25. Front page composition ════════════════════ */
+/* ════════════════════ 25. Broadsheet front page ════════════════════ */
+
+html.newspaper-preview .tsf-edition {
+  width: 100%;
+  max-width: none;
+  padding: 0.85rem 1rem 2.75rem;
+}
+
+@media (min-width: 768px) {
+  html.newspaper-preview .tsf-edition {
+    padding: 1rem 1.35rem 3rem;
+  }
+}
+
+@media (min-width: 1100px) {
+  html.newspaper-preview .tsf-edition {
+    padding: 0.35rem 1.75rem 3.5rem;
+  }
+}
+
+html.newspaper-preview .tsf-edition .tsf-legal-notice,
+html.newspaper-preview .tsf-legal-notice {
+  margin: 0 0 1rem;
+  max-width: none;
+  border: 0;
+  border-top: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0.7rem 0;
+}
+
+html.newspaper-preview .tsf-edition__section {
+  margin-top: 1.75rem;
+  padding-top: 0.35rem;
+  border-top: var(--tsf-rule-thick);
+}
+
+html.newspaper-preview .tsf-broadsheet {
+  display: grid;
+  grid-template-areas:
+    "lead"
+    "right"
+    "left";
+  gap: 1.35rem 0;
+  align-items: start;
+}
+
+html.newspaper-preview .tsf-broadsheet__left { grid-area: left; }
+html.newspaper-preview .tsf-broadsheet__lead { grid-area: lead; min-width: 0; }
+html.newspaper-preview .tsf-broadsheet__right { grid-area: right; }
+
+@media (min-width: 768px) {
+  html.newspaper-preview .tsf-broadsheet {
+    grid-template-columns: minmax(0, 1.55fr) minmax(15rem, 0.88fr);
+    grid-template-areas:
+      "lead right"
+      "left right";
+    gap: 1.25rem 0;
+  }
+
+  html.newspaper-preview .tsf-broadsheet__right {
+    border-left: 1px solid var(--color-border-strong);
+    padding-left: 1.25rem;
+    margin-left: 1.25rem;
+  }
+
+  html.newspaper-preview .tsf-broadsheet__left {
+    border-top: 1px solid var(--color-border-strong);
+    padding-top: 1rem;
+  }
+}
+
+@media (min-width: 1100px) {
+  html.newspaper-preview .tsf-broadsheet {
+    grid-template-columns: minmax(12.25rem, 0.7fr) minmax(0, 1.5fr) minmax(14.75rem, 0.82fr);
+    grid-template-areas: "left lead right";
+    gap: 0;
+  }
+
+  html.newspaper-preview .tsf-broadsheet__left {
+    border-top: 0;
+    border-right: 1px solid var(--color-border-strong);
+    padding: 0 1.25rem 0 0;
+  }
+
+  html.newspaper-preview .tsf-broadsheet__lead {
+    padding: 0 1.5rem;
+  }
+
+  html.newspaper-preview .tsf-broadsheet__right {
+    margin-left: 0;
+    padding-left: 1.35rem;
+  }
+}
+
+html.newspaper-preview .tsf-gazetteer {
+  margin: 0.35rem 0 0.5rem;
+  border-top: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+html.newspaper-preview .tsf-gazetteer__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.42rem 0;
+  border-bottom: 1px dotted var(--color-border);
+}
+
+html.newspaper-preview .tsf-gazetteer__row:last-child {
+  border-bottom: 0;
+}
+
+html.newspaper-preview .tsf-gazetteer dt {
+  font-family: var(--font-news-sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-gazetteer dd {
+  margin: 0;
+  font-family: var(--font-masthead);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+html.newspaper-preview .tsf-rule-box {
+  margin-top: 0.85rem;
+  padding-top: 0.7rem;
+  border-top: var(--tsf-rule-thick);
+}
+
+html.newspaper-preview .tsf-rule-box__list {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+html.newspaper-preview .tsf-rule-box__list li {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  line-height: 1.35;
+  padding: 0.28rem 0;
+  border-bottom: 1px dotted var(--color-border);
+}
+
+html.newspaper-preview .tsf-rule-box__foot {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-news-sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+html.newspaper-preview .tsf-lead-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+html.newspaper-preview .tsf-broadsheet__lead .tsf-front-page-hed {
+  margin: 0.2rem 0 0.75rem;
+  font-size: clamp(1.85rem, 5.4vw, 3.35rem);
+  border-bottom: var(--tsf-rule-hair);
+}
+
+html.newspaper-preview .tsf-broadsheet__lead .tsf-lede {
+  margin-top: 0.85rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+html.newspaper-preview .tsf-trend {
+  margin: 0.35rem 0 1rem;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border-strong);
+}
+
+html.newspaper-preview .tsf-trend li {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr);
+  gap: 0.55rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+html.newspaper-preview .tsf-trend__num {
+  font-family: var(--font-masthead);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+html.newspaper-preview .tsf-trend__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+html.newspaper-preview .tsf-trend__kicker {
+  font-family: var(--font-news-sans);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-trend__hed {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+html.newspaper-preview .tsf-trend__body:hover .tsf-trend__hed {
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+html.newspaper-preview .tsf-notice--box {
+  margin-top: 0.35rem;
+  padding-top: 0.85rem;
+  border-top: var(--tsf-rule-thick);
+}
+
+/* ════════════════════ 25b. Legacy two-column front ════════════════════ */
 
 html.newspaper-preview .tsf-front {
   display: grid;

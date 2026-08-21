@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, FileText, HandHeart, Heart, MapPin, MessageCircle, MessageSquare, PackageCheck, Shield, Sparkles, Star, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
 import TrademarkNoticeBanner from '../TrademarkNoticeBanner';
@@ -7,14 +8,17 @@ import CommunityStatsBar from '../../CommunityStatsBar';
 import GuestListingPreview from '../GuestListingPreview';
 import HomeDownloadButtons from '../HomeDownloadButtons';
 import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
-import { SITE, SUPPORT } from '../../../siteContent';
+import { COMMUNITY_SLOGAN, SITE, SUPPORT } from '../../../siteContent';
 import { useBrand } from '../../../preview/useBrand';
 import { NEWSPAPER } from '../../../preview/newspaperBrand';
 import NewspaperSectionHead from '../../../preview/NewspaperSectionHead';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
 import { extractListingImageUrls } from '../../../lib/listingContent';
+import { stripListingMetadata } from '../../../lib/itemLocation';
+import { getPostTypeGridBadgeLabel } from '../../../lib/postType';
 import ListingImage from '../../ListingImage';
+import { getCommunityStats, type CommunityStats } from '../../../supabase';
 
 const HERO_FEATURES: { icon: typeof PackageCheck; title: string; blurb: string }[] = [
   { icon: PackageCheck, title: 'Post in seconds', blurb: 'Snap a photo, write a few words, done.' },
@@ -49,6 +53,48 @@ export default function HomePage(props: HomePageProps) {
   return <OriginalHomePage {...props} />;
 }
 
+function listingCover(item: ItemPost): string | undefined {
+  return (item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item))[0];
+}
+
+function listingDate(createdAt: ItemPost['createdAt']): string {
+  if (!createdAt) return '';
+  const ms =
+    typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt
+      ? (createdAt as { seconds: number }).seconds * 1000
+      : new Date(createdAt as string | number).getTime();
+  if (Number.isNaN(ms)) return '';
+  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function NewspaperGazetteer({ items }: { items: ItemPost[] }) {
+  const [dbStats, setDbStats] = useState<CommunityStats | null>(null);
+  useEffect(() => {
+    void getCommunityStats().then(setDbStats);
+  }, []);
+
+  const activeListings = items.filter((item) => item.status === 'active').length;
+  const itemsGiven = items.filter((item) => item.type === 'giveaway' && item.status === 'completed').length;
+  const rows: { label: string; value: string }[] = [
+    ...(dbStats?.memberCount != null
+      ? [{ label: 'Neighbors', value: dbStats.memberCount.toLocaleString() }]
+      : []),
+    { label: 'On the porch', value: activeListings.toLocaleString() },
+    { label: 'Given away', value: itemsGiven.toLocaleString() },
+  ];
+
+  return (
+    <dl className="tsf-gazetteer">
+      {rows.map((row) => (
+        <div key={row.label} className="tsf-gazetteer__row">
+          <dt>{row.label}</dt>
+          <dd>{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function NewspaperFrontPage({
   onNavigate,
   items = [],
@@ -60,75 +106,157 @@ function NewspaperFrontPage({
   const description = copy(SITE.description);
   const principles = SITE.principles.map((line) => copy(line));
   const freeRule = copy(SITE.freeRule);
-  const plate = items.find((item) => {
-    if (item.status !== 'active') return false;
-    return Boolean((item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item))[0]);
-  });
-  const plateSrc = plate
-    ? (plate.imageUrls?.length ? plate.imageUrls : extractListingImageUrls(plate))[0]
-    : undefined;
+
+  const activeItems = useMemo(
+    () => items.filter((item) => item.status === 'active'),
+    [items],
+  );
+  const lead = useMemo(() => {
+    const withPhoto = activeItems.find((item) => Boolean(listingCover(item)));
+    return withPhoto ?? activeItems[0] ?? null;
+  }, [activeItems]);
+  const leadCover = lead ? listingCover(lead) : undefined;
+  const leadDek = lead ? stripListingMetadata(lead.description) : '';
+  const trending = useMemo(
+    () => activeItems.filter((item) => item.id !== lead?.id).slice(0, 5),
+    [activeItems, lead],
+  );
+  const usedIds = useMemo(
+    () => [lead?.id, ...trending.map((item) => item.id)].filter(Boolean) as string[],
+    [lead, trending],
+  );
 
   return (
-    <HomeScrollStage>
+    <div className="tsf-edition">
+      <TrademarkNoticeBanner />
+
       <p className="tsf-folio">{NEWSPAPER.standfirst}</p>
 
-      <section className="tsf-front">
-        <article>
-          <p className="tsf-kicker">Lead story · {NEWSPAPER.edition}</p>
-          <h1 className="tsf-front-page-hed mt-2 font-display font-bold text-app">
-            Give freely.
-            <br />
-            <span className="text-accent">Ask kindly.</span>
-          </h1>
-          {plate && plateSrc && onViewListing && (
-            <figure className="tsf-plate">
-              <button type="button" onClick={() => onViewListing(plate)} className="tsf-plate__btn">
-                <ListingImage src={plateSrc} alt={plate.title} width={960} className="tsf-plate__img" />
-              </button>
-              <figcaption className="tsf-plate__cap">{plate.title}</figcaption>
-            </figure>
-          )}
-          <p className="tsf-lede mt-5 text-base lg:text-lg text-muted leading-relaxed">{description}</p>
-          <ul className="tsf-front__principles">
-            {principles.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary">
-              Sign in or join
-            </button>
-            <button type="button" onClick={() => onNavigate('about')} className="sbn-btn sbn-btn-secondary">
-              Learn more
-            </button>
-          </div>
-          <HomeDownloadButtons onNavigate={onNavigate} />
-          <p className="mt-5 text-sm font-semibold text-accent">{freeRule}</p>
-        </article>
-
-        <aside className="tsf-front__rail">
-          <p className="tsf-kicker">Live in Sacramento</p>
-          <CommunityStatsBar items={items} variant="stacked" />
+      <section className="tsf-broadsheet" aria-label="Front page">
+        <aside className="tsf-broadsheet__left">
+          <p className="tsf-kicker">In this edition</p>
+          <NewspaperGazetteer items={items} />
           {HERO_FEATURES.map(({ title, blurb }) => (
             <div className="tsf-brief" key={title}>
               <p className="tsf-brief__hed">{title}</p>
               <p className="tsf-brief__dek">{blurb}</p>
             </div>
           ))}
+          <div className="tsf-rule-box">
+            <p className="tsf-kicker">Rules of the paper</p>
+            <ul className="tsf-rule-box__list">
+              {principles.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+            <p className="tsf-rule-box__foot">{freeRule}</p>
+          </div>
+        </aside>
+
+        <article className="tsf-broadsheet__lead">
+          {lead && onViewListing ? (
+            <>
+              <p className="tsf-kicker">
+                Lead classified · {getPostTypeGridBadgeLabel(lead.type)} · {lead.neighborhood}
+              </p>
+              <h1 className="tsf-front-page-hed">{lead.title}</h1>
+              {leadCover ? (
+                <figure className="tsf-plate">
+                  <button type="button" onClick={() => onViewListing(lead)} className="tsf-plate__btn">
+                    <ListingImage src={leadCover} alt={lead.title} width={960} className="tsf-plate__img" />
+                  </button>
+                  <figcaption className="tsf-plate__cap">
+                    {lead.neighborhood}
+                    {listingDate(lead.createdAt) ? ` · ${listingDate(lead.createdAt)}` : ''}
+                  </figcaption>
+                </figure>
+              ) : null}
+              {leadDek ? <p className="tsf-lede">{leadDek}</p> : null}
+              <p className="tsf-byline">
+                Posted in {lead.neighborhood}
+                {lead.userDisplayName ? ` · ${lead.userDisplayName}` : ''}
+              </p>
+              <div className="tsf-lead-actions">
+                <button type="button" onClick={() => onViewListing(lead)} className="sbn-btn sbn-btn-secondary">
+                  Read the listing
+                </button>
+                {onRequireSignIn ? (
+                  <button type="button" onClick={onRequireSignIn} className="sbn-btn sbn-btn-primary">
+                    Sign in to claim
+                  </button>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="tsf-kicker">Lead story · {NEWSPAPER.edition}</p>
+              <h1 className="tsf-front-page-hed">{COMMUNITY_SLOGAN}</h1>
+              <p className="tsf-lede">{description}</p>
+              <p className="tsf-byline">{NEWSPAPER.cityLine} · {NEWSPAPER.edition}</p>
+              <div className="tsf-lead-actions">
+                <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary">
+                  Sign in or join
+                </button>
+                <button type="button" onClick={() => onNavigate('about')} className="sbn-btn sbn-btn-secondary">
+                  Learn more
+                </button>
+              </div>
+            </>
+          )}
+          <HomeDownloadButtons onNavigate={onNavigate} />
+        </article>
+
+        <aside className="tsf-broadsheet__right">
+          <p className="tsf-kicker">On the porch</p>
+          {isItemsLoading && trending.length === 0 ? (
+            <p className="tsf-brief__dek">Setting type…</p>
+          ) : trending.length === 0 ? (
+            <p className="tsf-brief__dek">No other listings in this edition yet.</p>
+          ) : (
+            <ol className="tsf-trend">
+              {trending.map((item, index) => (
+                <li key={item.id}>
+                  <span className="tsf-trend__num">{index + 1}</span>
+                  <button
+                    type="button"
+                    className="tsf-trend__body"
+                    onClick={() => (onViewListing ? onViewListing(item) : onNavigate('login'))}
+                  >
+                    <span className="tsf-trend__kicker">
+                      {getPostTypeGridBadgeLabel(item.type)} · {item.neighborhood}
+                    </span>
+                    <span className="tsf-trend__hed">{item.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+          <button type="button" onClick={() => onNavigate('login')} className="tsf-notice tsf-notice--box">
+            <p className="tsf-kicker">Subscribe</p>
+            <h2 className="tsf-notice__hed">Join the edition</h2>
+            <p className="tsf-notice__body">Sign in to post, message, and claim — free, like the paper.</p>
+            <span className="tsf-notice__cta">
+              Sign in / Join <ArrowRight className="w-4 h-4" />
+            </span>
+          </button>
         </aside>
       </section>
 
-      <p className="tsf-pull-quote">“{copy(SITE.tagline)}”</p>
-
       {onViewListing && onRequireSignIn && (
-        <section id="guest_listing_preview">
-          <NewspaperSectionHead label="Classifieds" blurb="Give. Get. Share." index="Today's edition" />
+        <section id="guest_listing_preview" className="tsf-edition__section">
+          <NewspaperSectionHead
+            label="Classifieds"
+            blurb="Give. Get. Share."
+            index={`${Math.max(activeItems.length - 1, 0)} more`}
+          />
           <GuestListingPreview
             items={items}
             isLoading={isItemsLoading}
             onViewItem={onViewListing}
             onRequireSignIn={onRequireSignIn}
             embedded
+            maxItems={12}
+            excludeIds={usedIds}
           />
         </section>
       )}
@@ -160,8 +288,8 @@ function NewspaperFrontPage({
         </section>
       </div>
 
-      <section className="mt-10">
-        <NewspaperSectionHead label="Sections" blurb="An index to the rest of the paper." />
+      <section className="tsf-edition__section">
+        <NewspaperSectionHead label="Inside" blurb="An index to the rest of the paper." />
         <nav className="tsf-index" aria-label="Paper sections">
           {EXPLORE_LINKS.map(({ route, title, blurb }) => (
             <button key={route} type="button" onClick={() => onNavigate(route)} className="tsf-index__row">
@@ -177,7 +305,7 @@ function NewspaperFrontPage({
           </button>
         </nav>
       </section>
-    </HomeScrollStage>
+    </div>
   );
 }
 

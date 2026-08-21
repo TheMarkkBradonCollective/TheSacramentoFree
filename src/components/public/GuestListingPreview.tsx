@@ -16,6 +16,10 @@ interface GuestListingPreviewProps {
   onRequireSignIn: () => void;
   /** When nested inside the home page section layout */
   embedded?: boolean;
+  /** Cap how many listings print on a newspaper page. */
+  maxItems?: number;
+  /** Skip these listing ids (already used as the lead / trending). */
+  excludeIds?: string[];
 }
 
 function formatClassifiedDate(createdAt: unknown): string {
@@ -34,19 +38,25 @@ export default function GuestListingPreview({
   onViewItem,
   onRequireSignIn,
   embedded = false,
+  maxItems,
+  excludeIds,
 }: GuestListingPreviewProps) {
   const { enabled: newspaperSkin } = useNewspaperSkin();
   const [searchTerm, setSearchTerm] = useState('');
 
   const previewItems = useMemo(() => {
-    const active = items.filter((item) => item.status === 'active');
+    const skip = new Set(excludeIds ?? []);
+    const active = items.filter((item) => item.status === 'active' && !skip.has(item.id));
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return active;
-    return active.filter((item) => {
-      const haystack = `${item.title} ${item.description} ${item.category} ${item.neighborhood}`.toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [items, searchTerm]);
+    const matched = q
+      ? active.filter((item) => {
+          const haystack = `${item.title} ${item.description} ${item.category} ${item.neighborhood}`.toLowerCase();
+          return haystack.includes(q);
+        })
+      : active;
+    if (typeof maxItems === 'number') return matched.slice(0, maxItems);
+    return matched;
+  }, [items, searchTerm, maxItems, excludeIds]);
 
   const searchField = (
     <div className="relative">
