@@ -9,6 +9,8 @@ import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
 interface PublicNavProps {
   route: PublicRoute;
   onNavigate: (route: PublicRoute) => void;
+  /** Home already prints the masthead on large screens — hide the duplicate lockup there. */
+  hideBrandOnLarge?: boolean;
 }
 
 const ALL_COMMUNITY_LINKS: { route: PublicRoute; label: string }[] = [
@@ -48,7 +50,7 @@ function useDropdownMenu(onClose: () => void) {
   return menuId;
 }
 
-export default function PublicNav({ route, onNavigate }: PublicNavProps) {
+export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false }: PublicNavProps) {
   // Already inside the installed app — advertising the download is redundant.
   const COMMUNITY_LINKS = useMemo(
     () => (isNativeApp() ? ALL_COMMUNITY_LINKS.filter((l) => l.route !== 'download') : ALL_COMMUNITY_LINKS),
@@ -105,7 +107,7 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
           type="button"
           onClick={() => onNavigate('home')}
           aria-label={newspaper ? 'The Sacramento Free home' : 'Sacramento Buy Nothing home'}
-          className="shrink-0"
+          className={`shrink-0 ${hideBrandOnLarge ? 'lg:hidden' : ''}`}
         >
           <BrandLogo
             imgClassName={

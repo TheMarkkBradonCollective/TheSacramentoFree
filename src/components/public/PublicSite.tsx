@@ -137,22 +137,19 @@ export default function PublicSite({
     <>
       <NewspaperEditionBar />
       {newspaper && (
-        <>
-          {route === 'home' ? (
-            <>
-              <div className="hidden lg:block">
-                <NewspaperMasthead variant="front" onHomeClick={() => navigateSection('home')} />
-              </div>
-              <div className="lg:hidden">
-                <NewspaperMasthead variant="banner" onHomeClick={() => navigateSection('home')} />
-              </div>
-            </>
-          ) : (
-            <NewspaperMasthead variant="banner" onHomeClick={() => navigateSection('home')} />
-          )}
-        </>
+        route === 'home' ? (
+          <div className="hidden lg:block">
+            <NewspaperMasthead variant="front" onHomeClick={() => navigateSection('home')} />
+          </div>
+        ) : (
+          <NewspaperMasthead variant="banner" onHomeClick={() => navigateSection('home')} />
+        )
       )}
-      <PublicNav route={route} onNavigate={navigateSection} />
+      <PublicNav
+        route={route}
+        onNavigate={navigateSection}
+        hideBrandOnLarge={newspaper && route === 'home'}
+      />
       <main className="flex-1 min-h-0 overflow-hidden">
         <ScrollPage ref={mainRef} footer={<PageScrollFooter />}>
           {renderPage()}
