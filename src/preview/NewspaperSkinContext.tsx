@@ -43,7 +43,7 @@ function readEnabled(): boolean {
 
 export function newspaperThemeColor(theme: 'light' | 'dark', newspaper = true): string {
   if (!newspaper) return theme === 'light' ? '#ffffff' : '#0b0b0c';
-  return theme === 'light' ? '#f4f4f0' : '#111111';
+  return theme === 'light' ? '#e6e5e0' : '#0c0c0b';
 }
 
 function applyNewspaperClass(enabled: boolean) {

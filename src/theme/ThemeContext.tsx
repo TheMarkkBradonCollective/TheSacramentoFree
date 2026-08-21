@@ -28,8 +28,8 @@ function applyThemeToDocument(theme: Theme) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
     const newspaper = root.classList.contains('newspaper-preview');
-    const light = newspaper ? '#f3ead6' : '#ffffff';
-    const dark = newspaper ? '#1a1612' : '#0b0b0c';
+    const light = newspaper ? '#e6e5e0' : '#ffffff';
+    const dark = newspaper ? '#0c0c0b' : '#0b0b0c';
     meta.setAttribute('content', theme === 'light' ? light : dark);
   }
 }
