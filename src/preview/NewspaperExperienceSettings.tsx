@@ -39,7 +39,7 @@ const CONTROLS: Control[] = [
   {
     key: 'reducedMotion',
     label: 'Reduced motion',
-    blurb: 'Hold every page still. Overrides immersive mode.',
+    blurb: 'Hold every page still. Follows your device until you change it.',
     icon: Waves,
   },
 ];
@@ -69,6 +69,8 @@ export default function NewspaperExperienceSettings() {
       <ul className="tsf-experience-list">
         {CONTROLS.map(({ key, label, blurb, icon: Icon }) => {
           const isMotionOverridden = key === 'immersiveMode' && motionReduced;
+          // Reduced motion shows the resolved state, which may come from the device.
+          const checked = key === 'reducedMotion' ? motionReduced : Boolean(prefs[key]);
           return (
             <li key={key} className="tsf-experience-row">
               <span className="tsf-experience-row__icon" aria-hidden>
@@ -84,9 +86,9 @@ export default function NewspaperExperienceSettings() {
               </div>
               <LabeledSwitch
                 id={`newspaper_experience_${key}_switch`}
-                checked={prefs[key]}
+                checked={checked}
                 onChange={(next) => setPref(key, next)}
-                ariaLabel={`${label} ${prefs[key] ? 'on' : 'off'}`}
+                ariaLabel={`${label} ${checked ? 'on' : 'off'}`}
               />
             </li>
           );

@@ -26,8 +26,12 @@ export interface NewspaperExperiencePrefs {
   notificationSounds: boolean;
   /** Page-turn animation, ink washes, press effects. */
   immersiveMode: boolean;
-  /** User override on top of the OS reduced-motion setting. */
-  reducedMotion: boolean;
+  /**
+   * `null` follows the operating system. Once the reader touches the switch
+   * their choice wins, so someone whose OS reduces motion can still opt into
+   * the paper — and the switch never looks broken.
+   */
+  reducedMotion: boolean | null;
 }
 
 interface NewspaperExperienceValue {
@@ -60,7 +64,7 @@ export function defaultNewspaperPrefs(compact = isCompactDevice()): NewspaperExp
     typewriterSounds: false,
     notificationSounds: true,
     immersiveMode: !compact,
-    reducedMotion: prefersReducedMotion(),
+    reducedMotion: null,
   };
 }
 
@@ -78,7 +82,7 @@ function readPrefs(): NewspaperExperiencePrefs {
       notificationSounds:
         typeof parsed.notificationSounds === 'boolean' ? parsed.notificationSounds : fallback.notificationSounds,
       immersiveMode: typeof parsed.immersiveMode === 'boolean' ? parsed.immersiveMode : fallback.immersiveMode,
-      reducedMotion: typeof parsed.reducedMotion === 'boolean' ? parsed.reducedMotion : fallback.reducedMotion,
+      reducedMotion: typeof parsed.reducedMotion === 'boolean' ? parsed.reducedMotion : null,
     };
   } catch {
     return fallback;
@@ -128,7 +132,7 @@ export function NewspaperExperienceProvider({ children }: { children: ReactNode 
     };
   }, []);
 
-  const motionReduced = systemReducedMotion || prefs.reducedMotion;
+  const motionReduced = prefs.reducedMotion ?? systemReducedMotion;
 
   // Autoplay policy: the audio context can only start inside a real gesture.
   useEffect(() => {

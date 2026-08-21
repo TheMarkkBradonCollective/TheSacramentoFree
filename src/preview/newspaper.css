@@ -1663,18 +1663,20 @@ html.tsf-immersive.newspaper-preview .sbn-page-content {
 
 /* ───────────────────── 22. Accessibility ───────────────────── */
 
-/* The OS preference wins outright, and the in-app switch mirrors it. */
+/* The OS preference is the default and the switch starts from it, but a reader
+   who deliberately turns reduced motion off still gets the paper. `tsf-calm-motion`
+   carries the resolved answer, so scoping to it respects that choice either way. */
 @media (prefers-reduced-motion: reduce) {
-  .tsf-page-turn,
-  .tsf-page-turn__leaf,
-  .tsf-page-turn__shadow {
+  html.tsf-calm-motion .tsf-page-turn,
+  html.tsf-calm-motion .tsf-page-turn__leaf,
+  html.tsf-calm-motion .tsf-page-turn__shadow {
     animation: none !important;
     display: none !important;
   }
 
-  html.newspaper-preview *,
-  html.newspaper-preview *::before,
-  html.newspaper-preview *::after {
+  html.newspaper-preview.tsf-calm-motion *,
+  html.newspaper-preview.tsf-calm-motion *::before,
+  html.newspaper-preview.tsf-calm-motion *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;

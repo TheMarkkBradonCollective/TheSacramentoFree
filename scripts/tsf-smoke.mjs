@@ -199,6 +199,38 @@ try {
     (await calm.evaluate(() => window.__tsfTurns)) === 0,
   );
 
+  // A reader who explicitly turns reduced motion off should get the paper back,
+  // even though their device asks for stillness.
+  await calm.evaluate(() => {
+    const raw = localStorage.getItem('sbn_newspaper_experience_v1');
+    const prefs = raw ? JSON.parse(raw) : {};
+    localStorage.setItem(
+      'sbn_newspaper_experience_v1',
+      JSON.stringify({ ...prefs, reducedMotion: false, immersiveMode: true }),
+    );
+  });
+  await calm.reload({ waitUntil: 'networkidle2', timeout: 60000 });
+  await new Promise((r) => setTimeout(r, 1500));
+
+  check(
+    'explicit opt-in overrides the device motion setting',
+    await calm.evaluate(() => document.documentElement.classList.contains('tsf-immersive')),
+  );
+
+  await calm.evaluate(() => {
+    window.__tsfTurns = 0;
+    new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.nodeType === 1 && node.classList?.contains('tsf-page-turn')) window.__tsfTurns += 1;
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+    [...document.querySelectorAll('a, button')].find((el) => /rules/i.test(el.textContent || ''))?.click();
+  });
+  await new Promise((r) => setTimeout(r, 900));
+  check('opted-in reader sees the page turn', (await calm.evaluate(() => window.__tsfTurns)) > 0);
+
   const focusRule = await calm.evaluate(() => {
     for (const sheet of document.styleSheets) {
       let rules;
