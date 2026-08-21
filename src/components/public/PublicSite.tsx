@@ -135,16 +135,20 @@ export default function PublicSite({
 
   const paperChrome = (
     <>
-      <NewspaperEditionBar />
-      {newspaper && (
-        route === 'home' ? (
-          <div className="hidden lg:block">
-            <NewspaperMasthead variant="front" onHomeClick={() => navigateSection('home')} />
-          </div>
-        ) : (
+      {newspaper && route === 'home' ? (
+        <div className="lg:hidden">
+          <NewspaperEditionBar />
+        </div>
+      ) : null}
+      {newspaper && route === 'home' ? (
+        <div className="hidden lg:block">
+          <NewspaperMasthead variant="front" onHomeClick={() => navigateSection('home')} />
+        </div>
+      ) : newspaper ? (
+        <div className="hidden lg:block">
           <NewspaperMasthead variant="banner" onHomeClick={() => navigateSection('home')} />
-        )
-      )}
+        </div>
+      ) : null}
       <PublicNav
         route={route}
         onNavigate={navigateSection}

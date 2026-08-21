@@ -101,7 +101,7 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
   return (
     <header className={`sticky top-0 z-50 sbn-glass-nav sbn-safe-top ${newspaper ? 'tsf-section-bar' : ''}`}>
       <div
-        className={`max-w-5xl mx-auto px-4 ${newspaper ? 'h-[4.25rem]' : 'h-14'} flex items-center gap-3 justify-between`}
+        className={`max-w-5xl mx-auto px-4 ${newspaper ? 'h-[3.75rem]' : 'h-14'} flex items-center gap-3 justify-between min-w-0`}
       >
         <button
           type="button"
@@ -112,7 +112,7 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
           <BrandLogo
             imgClassName={
               newspaper
-                ? 'h-11 w-auto max-w-[min(72vw,13.5rem)] object-contain'
+                ? 'h-10 w-10 max-w-[2.5rem] max-h-[2.5rem] object-contain'
                 : 'h-8 w-auto max-w-[130px] object-contain rounded-lg'
             }
           />
@@ -225,7 +225,11 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
       </div>
 
       {menuOpen && (
-        <nav className="tsf-section-index lg:hidden border-t border-app px-4 py-3 flex flex-col gap-1 bg-surface">
+        <nav
+          className={`tsf-section-index lg:hidden border-t border-app px-4 py-3 flex flex-col gap-1 ${
+            newspaper ? '' : 'bg-surface'
+          }`}
+        >
           {PRIMARY_NAV.map(({ route: r, label }) => (
             <button key={r} type="button" onClick={() => navigateMobile(r)} className={mobileLinkClass(r)}>
               {label}

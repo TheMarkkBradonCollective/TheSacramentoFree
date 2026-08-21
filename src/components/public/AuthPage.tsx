@@ -176,21 +176,21 @@ export default function AuthPage({
       {/* Form panel */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 lg:py-14">
         <div className="w-full max-w-md">
-          {/* Compact brand hero — mobile/tablet only (no split panel at this width) */}
-          <div className="lg:hidden mb-6">
-            <div className="sbn-native-hero flex items-center gap-3">
-              <BrandLogo imgClassName="h-16 w-auto max-w-[160px] object-contain shrink-0" showTitle={false} />
-              <div className="min-w-0">
-                {newspaper ? null : (
+          {/* Compact brand hero — mobile/tablet only; nav already shows the lockup in newspaper mode */}
+          {!newspaper ? (
+            <div className="lg:hidden mb-6">
+              <div className="sbn-native-hero flex items-center gap-3">
+                <BrandLogo imgClassName="h-16 w-auto max-w-[160px] object-contain shrink-0" showTitle={false} />
+                <div className="min-w-0">
                   <p className="font-display font-bold text-white leading-tight">{brandName}</p>
-                )}
-                <p className="text-[11px] text-white/85 mt-0.5 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 shrink-0" />
-                  {newspaper ? NEWSPAPER.tagline : SITE.freeRule}
-                </p>
+                  <p className="text-[11px] text-white/85 mt-0.5 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 shrink-0" />
+                    {SITE.freeRule}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
           <button
             type="button"

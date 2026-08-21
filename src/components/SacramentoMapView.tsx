@@ -285,40 +285,42 @@ function MapSelectedEventCard({
       className={`${compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}${isCancelled ? ' opacity-60' : ''}`}
       id={compact ? 'mobile_map_event_detail_card' : 'map_event_detail_card'}
     >
-      <div className={`absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg ${compact ? '' : 'top-2.5 py-0.5'}`}>
+      <div className={`flex items-center justify-end gap-1 ${compact ? 'mb-2' : 'mb-2.5'}`}>
+        <div className={`flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 rounded-lg ${compact ? 'py-1' : 'py-0.5'}`}>
+          <button
+            type="button"
+            onClick={onPrev}
+            disabled={total <= 1}
+            aria-label="Previous event"
+            className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+          >
+            <ChevronLeft className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+          </button>
+          <span className={`font-bold font-mono text-muted text-center ${compact ? 'text-[9px] min-w-[24px]' : 'text-[10px] min-w-[28px]'}`}>
+            {currentIndex + 1}/{total}
+          </span>
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={total <= 1}
+            aria-label="Next event"
+            className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+          >
+            <ChevronRight className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+          </button>
+        </div>
+
         <button
           type="button"
-          onClick={onPrev}
-          disabled={total <= 1}
-          aria-label="Previous event"
-          className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+          onClick={onClose}
+          aria-label="Close event details"
+          className="text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
         >
-          <ChevronLeft className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-        </button>
-        <span className={`font-bold font-mono text-muted text-center ${compact ? 'text-[9px] min-w-[24px]' : 'text-[10px] min-w-[28px]'}`}>
-          {currentIndex + 1}/{total}
-        </span>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={total <= 1}
-          aria-label="Next event"
-          className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-        >
-          <ChevronRight className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+          <X className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close event details"
-        className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
-      >
-        <X className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-      </button>
-
-      <div className={`flex gap-3 ${compact ? 'mt-2' : 'gap-4 text-left'}`}>
+      <div className={`flex gap-3 ${compact ? '' : 'gap-4 text-left'}`}>
         <div
           className={`shrink-0 rounded-xl border border-app flex items-center justify-center ${compact ? 'w-16 h-16' : 'w-20 h-20 sm:w-24 sm:h-24'}`}
           style={{ backgroundColor: `${EVENT_MAP_COLOR}22` }}
@@ -1809,41 +1811,41 @@ export default function SacramentoMapView({
                 id="mobile_map_detail_floating_card"
                 className="pointer-events-auto sbn-card p-4 shadow-2xl w-full"
               >
-                {/* Sliding Pagination Controls */}
-                <div className="absolute top-3 right-12 flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 py-1 rounded-lg">
+                <div className="flex items-center justify-end gap-1 mb-2">
+                  <div className="flex items-center space-x-1 bg-inset border border-app px-2 py-1 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={handlePrevPost}
+                      disabled={activeItems.length <= 1}
+                      aria-label="Previous listing"
+                      className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[9px] font-bold font-mono text-muted min-w-[24px] text-center">
+                      {currentIndex + 1}/{activeItems.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleNextPost}
+                      disabled={activeItems.length <= 1}
+                      aria-label="Next listing"
+                      className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={handlePrevPost}
-                    disabled={activeItems.length <= 1}
-                    aria-label="Previous listing"
-                    className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                    onClick={() => setSelectedPost(null)}
+                    aria-label="Close listing details"
+                    className="text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
                   >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-[9px] font-bold font-mono text-muted min-w-[24px] text-center">
-                    {currentIndex + 1}/{activeItems.length}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleNextPost}
-                    disabled={activeItems.length <= 1}
-                    aria-label="Next listing"
-                    className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedPost(null)}
-                  aria-label="Close listing details"
-                  className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-
-                <div className="flex gap-3 mt-2">
+                <div className="flex gap-3">
                   {(() => {
                     const photos = selectedPost.imageUrls?.length
                       ? selectedPost.imageUrls
@@ -1872,8 +1874,8 @@ export default function SacramentoMapView({
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider ${
+                      <div className="flex items-center gap-1.5 flex-wrap pr-1">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider shrink-0 ${
                           selectedPost.type === 'giveaway'
                             ? 'bg-accent text-on-accent'
                             : selectedPost.type === 'trade'
@@ -1882,7 +1884,7 @@ export default function SacramentoMapView({
                         }`}>
                           {getPostTypeMapLabel(selectedPost.type)}
                         </span>
-                        <span className="text-[8px] font-bold font-mono uppercase tracking-wider" style={{ color: getCategoryColor(selectedPost.category) }}>
+                        <span className="text-[8px] font-bold font-mono uppercase tracking-wider min-w-0 truncate" style={{ color: getCategoryColor(selectedPost.category) }}>
                           {selectedPost.category}
                         </span>
                       </div>
@@ -2406,44 +2408,44 @@ export default function SacramentoMapView({
             id="map_item_detail_card"
             className="border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl"
           >
-            {/* Sliding Pagination Controls */}
-            <div className="absolute top-2.5 right-12 flex items-center space-x-1.5 pointer-events-auto bg-inset border border-app px-2 py-0.5 rounded-lg animate-fade-in">
+            <div className="flex items-center justify-end gap-1 mb-2.5">
+              <div className="flex items-center space-x-1.5 pointer-events-auto bg-inset border border-app px-2 py-0.5 rounded-lg">
+                <button
+                  type="button"
+                  onClick={handlePrevPost}
+                  disabled={activeItems.length <= 1}
+                  className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                  title="Slide Left"
+                  aria-label="Previous listing"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[10px] font-bold font-mono text-muted min-w-[28px] text-center">
+                  {currentIndex + 1}/{activeItems.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNextPost}
+                  disabled={activeItems.length <= 1}
+                  className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+                  title="Slide Right"
+                  aria-label="Next listing"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
               <button
+                id="close_map_card_btn"
                 type="button"
-                onClick={handlePrevPost}
-                disabled={activeItems.length <= 1}
-                className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                title="Slide Left"
-                aria-label="Previous listing"
+                onClick={() => setSelectedPost(null)}
+                className="text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
+                title="Close panel"
+                aria-label="Close listing details"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-[10px] font-bold font-mono text-muted min-w-[28px] text-center">
-                {currentIndex + 1}/{activeItems.length}
-              </span>
-              <button
-                type="button"
-                onClick={handleNextPost}
-                disabled={activeItems.length <= 1}
-                className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                title="Slide Right"
-                aria-label="Next listing"
-              >
-                <ChevronRight className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-
-            {/* Close buttons */}
-            <button
-              id="close_map_card_btn"
-              type="button"
-              onClick={() => setSelectedPost(null)}
-              className="absolute top-3 right-3 text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
-              title="Close panel"
-              aria-label="Close listing details"
-            >
-              <X className="w-4 h-4" />
-            </button>
 
             <div className="flex gap-4 text-left">
               {/* Cargo Image preview */}

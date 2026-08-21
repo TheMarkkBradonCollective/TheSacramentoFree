@@ -346,7 +346,7 @@ export default function MobileView({
       >
         <div className="sbn-mobile-header-row">
         <BrandLogo
-          imgClassName="h-10 w-auto max-w-[min(58vw,13.5rem)] object-contain shrink-0"
+          imgClassName="h-9 w-9 max-w-[2.25rem] max-h-[2.25rem] object-contain shrink-0"
           showTitle={false}
         />
         <div className="flex items-center shrink-0">
@@ -394,27 +394,29 @@ export default function MobileView({
             commentsLocked={!canAccessEvents}
           />
           {!mapImmersiveNav && (
-          <div className="absolute top-3 left-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
-            <div className="flex gap-2 overflow-x-auto flex-1 min-w-0 pb-1">
+          <div className="absolute top-3 left-3 right-3 z-20 flex flex-col gap-1.5 pointer-events-auto">
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar min-w-0 -mx-0.5 px-0.5">
               {MAP_CONTENT_FILTERS.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setSelectedMobileType(t)}
-                  className={`sbn-chip shrink-0 ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
+                  className={`sbn-chip shrink-0 sbn-map-filter-chip ${selectedMobileType === t ? 'sbn-chip-active' : ''}`}
                 >
                   {getMapContentFilterLabel(t)}
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => setColorGuideOpen(true)}
-              className="sbn-chip shrink-0"
-              id="mobile_map_color_index_btn"
-            >
-              🎨 Index
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setColorGuideOpen(true)}
+                className="sbn-chip shrink-0 sbn-map-filter-chip"
+                id="mobile_map_color_index_btn"
+              >
+                🎨 Index
+              </button>
+            </div>
           </div>
           )}
         </div>
