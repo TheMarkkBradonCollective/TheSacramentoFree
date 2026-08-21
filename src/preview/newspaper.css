@@ -48,6 +48,47 @@ html.newspaper-preview {
   --radius-pill: 0;
   --radius-card: 0;
 
+  /* ── Every colour in the paper is ink ──
+     Tailwind v4 compiles each colour utility down to var(--color-<family>-<shade>),
+     so remapping the palette here converts the entire application — including
+     hover states, gradients, rings and opacity modifiers — without touching a
+     single component's class list. */
+  /* Neutral ramp — every Tailwind colour utility resolves through these. */
+  --color-orange-50: oklch(97.5% 0 0); --color-amber-50: oklch(97.5% 0 0); --color-yellow-50: oklch(97.5% 0 0); --color-lime-50: oklch(97.5% 0 0); --color-green-50: oklch(97.5% 0 0); --color-emerald-50: oklch(97.5% 0 0); --color-teal-50: oklch(97.5% 0 0); --color-cyan-50: oklch(97.5% 0 0); --color-sky-50: oklch(97.5% 0 0); --color-blue-50: oklch(97.5% 0 0); --color-indigo-50: oklch(97.5% 0 0); --color-violet-50: oklch(97.5% 0 0); --color-purple-50: oklch(97.5% 0 0); --color-fuchsia-50: oklch(97.5% 0 0); --color-pink-50: oklch(97.5% 0 0); --color-rose-50: oklch(97.5% 0 0); --color-slate-50: oklch(97.5% 0 0); --color-gray-50: oklch(97.5% 0 0); --color-zinc-50: oklch(97.5% 0 0); --color-neutral-50: oklch(97.5% 0 0); --color-stone-50: oklch(97.5% 0 0);
+  --color-orange-100: oklch(94.5% 0 0); --color-amber-100: oklch(94.5% 0 0); --color-yellow-100: oklch(94.5% 0 0); --color-lime-100: oklch(94.5% 0 0); --color-green-100: oklch(94.5% 0 0); --color-emerald-100: oklch(94.5% 0 0); --color-teal-100: oklch(94.5% 0 0); --color-cyan-100: oklch(94.5% 0 0); --color-sky-100: oklch(94.5% 0 0); --color-blue-100: oklch(94.5% 0 0); --color-indigo-100: oklch(94.5% 0 0); --color-violet-100: oklch(94.5% 0 0); --color-purple-100: oklch(94.5% 0 0); --color-fuchsia-100: oklch(94.5% 0 0); --color-pink-100: oklch(94.5% 0 0); --color-rose-100: oklch(94.5% 0 0); --color-slate-100: oklch(94.5% 0 0); --color-gray-100: oklch(94.5% 0 0); --color-zinc-100: oklch(94.5% 0 0); --color-neutral-100: oklch(94.5% 0 0); --color-stone-100: oklch(94.5% 0 0);
+  --color-orange-200: oklch(89.0% 0 0); --color-amber-200: oklch(89.0% 0 0); --color-yellow-200: oklch(89.0% 0 0); --color-lime-200: oklch(89.0% 0 0); --color-green-200: oklch(89.0% 0 0); --color-emerald-200: oklch(89.0% 0 0); --color-teal-200: oklch(89.0% 0 0); --color-cyan-200: oklch(89.0% 0 0); --color-sky-200: oklch(89.0% 0 0); --color-blue-200: oklch(89.0% 0 0); --color-indigo-200: oklch(89.0% 0 0); --color-violet-200: oklch(89.0% 0 0); --color-purple-200: oklch(89.0% 0 0); --color-fuchsia-200: oklch(89.0% 0 0); --color-pink-200: oklch(89.0% 0 0); --color-rose-200: oklch(89.0% 0 0); --color-slate-200: oklch(89.0% 0 0); --color-gray-200: oklch(89.0% 0 0); --color-zinc-200: oklch(89.0% 0 0); --color-neutral-200: oklch(89.0% 0 0); --color-stone-200: oklch(89.0% 0 0);
+  --color-orange-300: oklch(80.5% 0 0); --color-amber-300: oklch(80.5% 0 0); --color-yellow-300: oklch(80.5% 0 0); --color-lime-300: oklch(80.5% 0 0); --color-green-300: oklch(80.5% 0 0); --color-emerald-300: oklch(80.5% 0 0); --color-teal-300: oklch(80.5% 0 0); --color-cyan-300: oklch(80.5% 0 0); --color-sky-300: oklch(80.5% 0 0); --color-blue-300: oklch(80.5% 0 0); --color-indigo-300: oklch(80.5% 0 0); --color-violet-300: oklch(80.5% 0 0); --color-purple-300: oklch(80.5% 0 0); --color-fuchsia-300: oklch(80.5% 0 0); --color-pink-300: oklch(80.5% 0 0); --color-rose-300: oklch(80.5% 0 0); --color-slate-300: oklch(80.5% 0 0); --color-gray-300: oklch(80.5% 0 0); --color-zinc-300: oklch(80.5% 0 0); --color-neutral-300: oklch(80.5% 0 0); --color-stone-300: oklch(80.5% 0 0);
+  --color-orange-400: oklch(69.5% 0 0); --color-amber-400: oklch(69.5% 0 0); --color-yellow-400: oklch(69.5% 0 0); --color-lime-400: oklch(69.5% 0 0); --color-green-400: oklch(69.5% 0 0); --color-emerald-400: oklch(69.5% 0 0); --color-teal-400: oklch(69.5% 0 0); --color-cyan-400: oklch(69.5% 0 0); --color-sky-400: oklch(69.5% 0 0); --color-blue-400: oklch(69.5% 0 0); --color-indigo-400: oklch(69.5% 0 0); --color-violet-400: oklch(69.5% 0 0); --color-purple-400: oklch(69.5% 0 0); --color-fuchsia-400: oklch(69.5% 0 0); --color-pink-400: oklch(69.5% 0 0); --color-rose-400: oklch(69.5% 0 0); --color-slate-400: oklch(69.5% 0 0); --color-gray-400: oklch(69.5% 0 0); --color-zinc-400: oklch(69.5% 0 0); --color-neutral-400: oklch(69.5% 0 0); --color-stone-400: oklch(69.5% 0 0);
+  --color-orange-500: oklch(58.5% 0 0); --color-amber-500: oklch(58.5% 0 0); --color-yellow-500: oklch(58.5% 0 0); --color-lime-500: oklch(58.5% 0 0); --color-green-500: oklch(58.5% 0 0); --color-emerald-500: oklch(58.5% 0 0); --color-teal-500: oklch(58.5% 0 0); --color-cyan-500: oklch(58.5% 0 0); --color-sky-500: oklch(58.5% 0 0); --color-blue-500: oklch(58.5% 0 0); --color-indigo-500: oklch(58.5% 0 0); --color-violet-500: oklch(58.5% 0 0); --color-purple-500: oklch(58.5% 0 0); --color-fuchsia-500: oklch(58.5% 0 0); --color-pink-500: oklch(58.5% 0 0); --color-rose-500: oklch(58.5% 0 0); --color-slate-500: oklch(58.5% 0 0); --color-gray-500: oklch(58.5% 0 0); --color-zinc-500: oklch(58.5% 0 0); --color-neutral-500: oklch(58.5% 0 0); --color-stone-500: oklch(58.5% 0 0);
+  --color-orange-600: oklch(49.0% 0 0); --color-amber-600: oklch(49.0% 0 0); --color-yellow-600: oklch(49.0% 0 0); --color-lime-600: oklch(49.0% 0 0); --color-green-600: oklch(49.0% 0 0); --color-emerald-600: oklch(49.0% 0 0); --color-teal-600: oklch(49.0% 0 0); --color-cyan-600: oklch(49.0% 0 0); --color-sky-600: oklch(49.0% 0 0); --color-blue-600: oklch(49.0% 0 0); --color-indigo-600: oklch(49.0% 0 0); --color-violet-600: oklch(49.0% 0 0); --color-purple-600: oklch(49.0% 0 0); --color-fuchsia-600: oklch(49.0% 0 0); --color-pink-600: oklch(49.0% 0 0); --color-rose-600: oklch(49.0% 0 0); --color-slate-600: oklch(49.0% 0 0); --color-gray-600: oklch(49.0% 0 0); --color-zinc-600: oklch(49.0% 0 0); --color-neutral-600: oklch(49.0% 0 0); --color-stone-600: oklch(49.0% 0 0);
+  --color-orange-700: oklch(40.0% 0 0); --color-amber-700: oklch(40.0% 0 0); --color-yellow-700: oklch(40.0% 0 0); --color-lime-700: oklch(40.0% 0 0); --color-green-700: oklch(40.0% 0 0); --color-emerald-700: oklch(40.0% 0 0); --color-teal-700: oklch(40.0% 0 0); --color-cyan-700: oklch(40.0% 0 0); --color-sky-700: oklch(40.0% 0 0); --color-blue-700: oklch(40.0% 0 0); --color-indigo-700: oklch(40.0% 0 0); --color-violet-700: oklch(40.0% 0 0); --color-purple-700: oklch(40.0% 0 0); --color-fuchsia-700: oklch(40.0% 0 0); --color-pink-700: oklch(40.0% 0 0); --color-rose-700: oklch(40.0% 0 0); --color-slate-700: oklch(40.0% 0 0); --color-gray-700: oklch(40.0% 0 0); --color-zinc-700: oklch(40.0% 0 0); --color-neutral-700: oklch(40.0% 0 0); --color-stone-700: oklch(40.0% 0 0);
+  --color-orange-800: oklch(31.0% 0 0); --color-amber-800: oklch(31.0% 0 0); --color-yellow-800: oklch(31.0% 0 0); --color-lime-800: oklch(31.0% 0 0); --color-green-800: oklch(31.0% 0 0); --color-emerald-800: oklch(31.0% 0 0); --color-teal-800: oklch(31.0% 0 0); --color-cyan-800: oklch(31.0% 0 0); --color-sky-800: oklch(31.0% 0 0); --color-blue-800: oklch(31.0% 0 0); --color-indigo-800: oklch(31.0% 0 0); --color-violet-800: oklch(31.0% 0 0); --color-purple-800: oklch(31.0% 0 0); --color-fuchsia-800: oklch(31.0% 0 0); --color-pink-800: oklch(31.0% 0 0); --color-rose-800: oklch(31.0% 0 0); --color-slate-800: oklch(31.0% 0 0); --color-gray-800: oklch(31.0% 0 0); --color-zinc-800: oklch(31.0% 0 0); --color-neutral-800: oklch(31.0% 0 0); --color-stone-800: oklch(31.0% 0 0);
+  --color-orange-900: oklch(22.5% 0 0); --color-amber-900: oklch(22.5% 0 0); --color-yellow-900: oklch(22.5% 0 0); --color-lime-900: oklch(22.5% 0 0); --color-green-900: oklch(22.5% 0 0); --color-emerald-900: oklch(22.5% 0 0); --color-teal-900: oklch(22.5% 0 0); --color-cyan-900: oklch(22.5% 0 0); --color-sky-900: oklch(22.5% 0 0); --color-blue-900: oklch(22.5% 0 0); --color-indigo-900: oklch(22.5% 0 0); --color-violet-900: oklch(22.5% 0 0); --color-purple-900: oklch(22.5% 0 0); --color-fuchsia-900: oklch(22.5% 0 0); --color-pink-900: oklch(22.5% 0 0); --color-rose-900: oklch(22.5% 0 0); --color-slate-900: oklch(22.5% 0 0); --color-gray-900: oklch(22.5% 0 0); --color-zinc-900: oklch(22.5% 0 0); --color-neutral-900: oklch(22.5% 0 0); --color-stone-900: oklch(22.5% 0 0);
+  --color-orange-950: oklch(15.0% 0 0); --color-amber-950: oklch(15.0% 0 0); --color-yellow-950: oklch(15.0% 0 0); --color-lime-950: oklch(15.0% 0 0); --color-green-950: oklch(15.0% 0 0); --color-emerald-950: oklch(15.0% 0 0); --color-teal-950: oklch(15.0% 0 0); --color-cyan-950: oklch(15.0% 0 0); --color-sky-950: oklch(15.0% 0 0); --color-blue-950: oklch(15.0% 0 0); --color-indigo-950: oklch(15.0% 0 0); --color-violet-950: oklch(15.0% 0 0); --color-purple-950: oklch(15.0% 0 0); --color-fuchsia-950: oklch(15.0% 0 0); --color-pink-950: oklch(15.0% 0 0); --color-rose-950: oklch(15.0% 0 0); --color-slate-950: oklch(15.0% 0 0); --color-gray-950: oklch(15.0% 0 0); --color-zinc-950: oklch(15.0% 0 0); --color-neutral-950: oklch(15.0% 0 0); --color-stone-950: oklch(15.0% 0 0);
+
+  /* Proof-mark red — the only hue left, reserved for danger states. */
+  --color-red-50: oklch(97.5% 0.012 27);
+  --color-red-100: oklch(94.5% 0.022 27);
+  --color-red-200: oklch(89.0% 0.038 27);
+  --color-red-300: oklch(80.5% 0.058 27);
+  --color-red-400: oklch(69.5% 0.078 27);
+  --color-red-500: oklch(58.5% 0.095 27);
+  --color-red-600: oklch(49.0% 0.098 27);
+  --color-red-700: oklch(40.0% 0.09 27);
+  --color-red-800: oklch(31.0% 0.078 27);
+  --color-red-900: oklch(22.5% 0.062 27);
+  --color-red-950: oklch(15.0% 0.042 27);
+
+  /* Staff ranks keep their hierarchy, expressed as ink weight rather than hue. */
+  --sbn-role-city_moderator: color-mix(in srgb, var(--color-text) 58%, var(--color-bg));
+  --sbn-role-city_moderator-soft: color-mix(in srgb, var(--color-text) 9%, transparent);
+  --sbn-role-city_administrator: color-mix(in srgb, var(--color-text) 72%, var(--color-bg));
+  --sbn-role-city_administrator-soft: color-mix(in srgb, var(--color-text) 11%, transparent);
+  --sbn-role-city_manager: color-mix(in srgb, var(--color-text) 86%, var(--color-bg));
+  --sbn-role-city_manager-soft: color-mix(in srgb, var(--color-text) 13%, transparent);
+  --sbn-role-director: var(--color-text);
+  --sbn-role-director-soft: color-mix(in srgb, var(--color-text) 15%, transparent);
+
   /* Newsprint grain, reused everywhere instead of an image download. */
   --tsf-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
   --tsf-grain-fine: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='0.03'/%3E%3C/svg%3E");
@@ -850,6 +891,56 @@ html.newspaper-preview .sbn-classified-column .item-feed-card {
 
 html.newspaper-preview .sbn-classified-column .item-feed-card:last-child {
   border-bottom-width: 0;
+}
+
+/* ─────────── 10b. Status badges — set in ink, not in colour ─────────── */
+
+/* These carry meaning, so they keep distinct treatments: filled for done,
+   ruled for withdrawn, outlined for the rest. */
+html.newspaper-preview .sbn-badge-done,
+html.newspaper-preview.dark .sbn-badge-done {
+  background: var(--color-text);
+  color: var(--color-on-accent);
+  border-color: var(--color-text);
+}
+
+html.newspaper-preview .sbn-badge-withdrawn,
+html.newspaper-preview.dark .sbn-badge-withdrawn {
+  background: transparent;
+  color: var(--color-text-subtle);
+  border-color: var(--color-text-subtle);
+  text-decoration: line-through;
+}
+
+html.newspaper-preview .sbn-badge-ask,
+html.newspaper-preview .sbn-badge-trade,
+html.newspaper-preview.dark .sbn-badge-ask,
+html.newspaper-preview.dark .sbn-badge-trade {
+  background: var(--color-inset);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+/* Awards: gold leaf becomes engraved ink. */
+html.newspaper-preview .sbn-award-progress-fill {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-text) 0 4px,
+    color-mix(in srgb, var(--color-text) 70%, var(--color-surface)) 4px 8px
+  );
+  box-shadow: none;
+}
+
+html.newspaper-preview .sbn-award-sparkle {
+  background: var(--color-text);
+  box-shadow: none;
+}
+
+/* Strip the orange glows that framed the original brand. */
+html.newspaper-preview [class*='glow'],
+html.newspaper-preview .sbn-award-card,
+html.newspaper-preview .push-celebration-lights__edge {
+  box-shadow: none;
 }
 
 /* ───────────────────── 11. Page headers ───────────────────── */
