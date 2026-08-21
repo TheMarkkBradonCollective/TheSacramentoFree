@@ -42,11 +42,10 @@
         var skin = params.get('skin') || (hashQ && hashQ.get('skin'));
         var stored = sessionStorage.getItem('sbn_newspaper_preview');
         var production = host === 'sacramentobuynothing.com';
-        var native = document.documentElement.classList.contains('capacitor-native');
         var newspaper =
           skin === 'newspaper' ||
           (skin !== 'original' && stored === '1') ||
-          (skin !== 'original' && stored !== '0' && !production && !native);
+          (skin !== 'original' && stored !== '0' && !production);
         if (newspaper) {
           document.documentElement.classList.add('newspaper-preview');
           document.title = 'The Sacramento Free — All the news that’s free to give';

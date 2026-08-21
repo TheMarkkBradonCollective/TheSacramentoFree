@@ -25,9 +25,10 @@ function readSkinFromLocation(): boolean | null {
 }
 
 function defaultNewspaperEnabled(): boolean {
-  // Live production and the native apps stay on the original brand unless opted in.
+  // Live production on the current domain stays original until the move.
+  // Native closed-testing builds and non-production web default to The Sacramento Free.
   if (typeof window === 'undefined') return true;
-  if (isNewspaperProductionHost() || isNativeApp()) return false;
+  if (isNewspaperProductionHost()) return false;
   return true;
 }
 
@@ -114,7 +115,8 @@ export function isNewspaperSkinActive(): boolean {
 }
 
 export function shouldShowNewspaperPreviewBanner(enabled: boolean): boolean {
-  if (enabled) return true;
-  if (typeof window === 'undefined') return true;
-  return !isNewspaperProductionHost() && !isNativeApp();
+  if (typeof window === 'undefined') return false;
+  // No preview chrome on the live domain or in the native closed-testing app.
+  if (isNewspaperProductionHost() || isNativeApp()) return false;
+  return true;
 }
