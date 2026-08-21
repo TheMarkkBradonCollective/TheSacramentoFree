@@ -11,7 +11,7 @@ interface BrandLogoProps {
   showTitle?: boolean;
   /** Defaults to SITE.tagline */
   subtitle?: string;
-  /** Square logo + name/slogan stack — fits mobile headers */
+  /** Square app icon only — collapsed rail, native chrome, launcher contexts. */
   compact?: boolean;
 }
 
@@ -73,13 +73,16 @@ export default function BrandLogo({
   const { enabled: newspaper } = useNewspaperSkin();
   const title = newspaper ? NEWSPAPER.name : SITE.name;
   const tagline = subtitle ?? (newspaper ? NEWSPAPER.tagline : SITE.tagline);
-  const useSiteLockup = newspaper && !compact && !isNativeApp();
+  const iconOnly = compact;
+  const useSiteLockup = newspaper && !isNativeApp() && !iconOnly;
   const src = useSiteLockup ? SITE_LOGO_SRC : APP_LOGO_SRC;
-  const logoClass = compact
+  const logoClass = iconOnly
     ? 'h-8 w-8 object-cover rounded-lg shrink-0'
     : useSiteLockup
       ? siteLockupClass(imgClassName)
       : imgClassName;
+  // Lockup image already includes the wordmark — avoid duplicate header text.
+  const showTitleBlock = showTitle && !useSiteLockup;
 
   if (failed) {
     return (
@@ -87,7 +90,7 @@ export default function BrandLogo({
         <div className="w-9 h-9 bg-accent text-on-accent rounded-lg flex items-center justify-center shrink-0">
           <Gift className="w-5 h-5" />
         </div>
-        {showTitle && <BrandTitleBlock title={title} subtitle={tagline} compact={compact} />}
+        {showTitleBlock && <BrandTitleBlock title={title} subtitle={tagline} compact={compact} />}
       </div>
     );
   }
@@ -100,7 +103,7 @@ export default function BrandLogo({
         className={logoClass}
         onError={() => setFailed(true)}
       />
-      {showTitle && <BrandTitleBlock title={title} subtitle={tagline} compact={compact} />}
+      {showTitleBlock && <BrandTitleBlock title={title} subtitle={tagline} compact={compact} />}
     </div>
   );
 }

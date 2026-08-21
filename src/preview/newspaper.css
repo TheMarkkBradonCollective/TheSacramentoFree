@@ -770,6 +770,12 @@ html.newspaper-preview .sbn-mobile-header {
   box-shadow: none;
 }
 
+html.newspaper-preview .sbn-mobile-header img.tsf-lockup {
+  height: 2.125rem;
+  width: auto;
+  max-width: min(52vw, 12.5rem);
+}
+
 html.newspaper-preview .sbn-tab-bar,
 html.newspaper-preview .sbn-mobile-nav-bar,
 html.newspaper-preview nav[aria-label='Main navigation'] {
