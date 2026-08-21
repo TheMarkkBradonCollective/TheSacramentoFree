@@ -3,22 +3,22 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.1.0 (45)
+  0.1.0 (47)
 
 Beta label (for your records / changelog):
-  beta v0.1.0.0045
+  beta v0.1.0.0047
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0045.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0047.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0045.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0047.apk
 
 Package name:
   org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.1.0.0045.aab
+  public/downloads/sac-buy-nothing-beta-v0.1.0.0047.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -26,12 +26,15 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta v0.1.0.0045 (versionCode 45)
+Android beta v0.1.0.0047 (versionCode 47)
 
 What's new:
-• Settings save across devices — Go Get, navigation, staff mode, feed & Events filters
-• Install app moved to top of Settings tab
-• Brand orange accents on toggles and active toolbar buttons
+• Stops false “signed in on another device” sign-out when you are only using this phone
+• Forgot-password email now opens a screen to choose a new password
+• Listing updates, comments, and conversation delete show an error if they fail
+• Withdrawn listings stay private; live listing cards no longer blank out
+• Saved items follow your account; feed photos no longer drop silently
+• Notification taps no longer yank you back to an old tab while using the app
 
 Download (sideload): https://www.sacramentobuynothing.com/download
 ───────────────────────────────────────────────────────────────
@@ -39,8 +42,8 @@ Download (sideload): https://www.sacramentobuynothing.com/download
 Steps:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Internal testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0045.aab
-  4. Release name: 0.1.0 (45)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0047.aab
+  4. Release name: 0.1.0 (47)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Internal testing
 
