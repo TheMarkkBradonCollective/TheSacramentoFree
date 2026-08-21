@@ -4,11 +4,11 @@ export const REBRAND_ANNOUNCEMENT_ID = '2026-08-21_rebrand-letter';
 
 export const REBRAND_ANNOUNCEMENT_DATE = '2026-08-21';
 
-export const REBRAND_ANNOUNCEMENT_TITLE = 'From Mark — I almost got you';
+export const REBRAND_ANNOUNCEMENT_TITLE = 'I almost got you — please read';
 
 /** Short teaser in News list and push preview. */
 export const REBRAND_ANNOUNCEMENT_BODY =
-  'I opened with bad news on purpose. We are not shutting down — read the letter.';
+  'I opened heavy on purpose. We are still here — read the full letter.';
 
 /** Full letter — popup + News detail. Not a traditional release note. */
 export const REBRAND_ANNOUNCEMENT_LETTER = `Neighbors,
@@ -60,7 +60,7 @@ export const REBRAND_ANNOUNCEMENT_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 /** Updates tab — professional product note (News has the personal letter). */
 export const REBRAND_UPDATE_ID = '2026-08-21_trademark-rebrand-notice';
 
-export const REBRAND_UPDATE_TITLE = 'From Mark — something on the home page';
+export const REBRAND_UPDATE_TITLE = 'Something worth reading when you visit';
 
 export const REBRAND_UPDATE_BODY =
   'Home page notice, a one-time letter when you visit, and a brief pause on big new builds.';
