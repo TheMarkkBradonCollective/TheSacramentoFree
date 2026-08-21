@@ -1,0 +1,10 @@
+The Sacramento Free — Android beta v0.2.0.0001 (versionCode 1)
+
+A complete visual reface of the same app. Same pages, features, and flows.
+
+What's new:
+• The Sacramento Free newspaper identity — grayscale ink, editorial masthead, classified blocks
+• Page-turn transitions, typewriter/press sounds, and a Newspaper experience control in Settings
+• Original Sacramento Buy Nothing orange brand remains available via ?skin=original
+
+Download (sideload): https://www.sacramentobuynothing.com/download
