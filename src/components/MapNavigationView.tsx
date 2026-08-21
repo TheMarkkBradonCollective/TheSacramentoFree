@@ -653,7 +653,7 @@ export default function MapNavigationView({
   const arrivedRef = useRef(false);
   const routeAnnouncedRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const followUserRef = useRef(true);
+  const followUserRef = useRef(false);
   const userPosRef = useRef<LatLng>(origin);
   const logicPosRef = useRef<LatLng>(origin);
   const headingRef = useRef(0);
@@ -706,7 +706,7 @@ export default function MapNavigationView({
   const [heading, setHeading] = useState(0);
   const [speedMph, setSpeedMph] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
-  const [followUser, setFollowUser] = useState(true);
+  const [followUser, setFollowUser] = useState(false);
   followUserRef.current = followUser;
   const [voiceOn, setVoiceOn] = useState(() => readNavigationSettings().voiceEnabled);
   const [arrived, setArrived] = useState(false);
@@ -902,7 +902,8 @@ export default function MapNavigationView({
       start,
       end: dest,
       padding,
-      maxZoom: 17,
+      maxZoom: 16,
+      minZoom: 11,
     });
     window.requestAnimationFrame(() => {
       isProgrammaticMapMoveRef.current = false;
@@ -1106,7 +1107,7 @@ export default function MapNavigationView({
       fadeAnimation: false,
       zoomAnimation: false,
       markerZoomAnimation: false,
-    }).setView([start.lat, start.lng], 16);
+    }).setView([start.lat, start.lng], 13);
 
     const tileLayer = L.tileLayer(SBN_MAP_TILE_URL, SBN_MAP_TILE_OPTIONS).addTo(map);
     tileLayerRef.current = tileLayer;
@@ -1228,11 +1229,6 @@ export default function MapNavigationView({
       hasFittedRouteRef.current = true;
       const start = userPosRef.current;
 
-      // Before the device has moved, GPS gives us no heading, so the "look ahead"
-      // camera bias defaulted to north — if the road actually heads any other way,
-      // the route could render almost entirely off-screen on the very first frame.
-      // Orient using the route's own initial bearing instead so the road ahead is
-      // always visible from the moment navigation opens.
       if (route.coords.length >= 2) {
         const initialHeading = bearingAlongRoute(route.coords, start);
         headingRef.current = initialHeading;
@@ -1240,23 +1236,21 @@ export default function MapNavigationView({
         setHeading(initialHeading);
       }
 
-      followUserRef.current = true;
-      setFollowUser(true);
-      centerMapOnUser(map, start, 17);
-      applyHeadingUpRotation(mapRotatorRef.current, map, start, headingRef.current, northUpRef.current);
-      window.requestAnimationFrame(() => {
-        const live = mapRef.current;
-        if (!live || !followUserRef.current) return;
-        centerMapOnUser(live, userPosRef.current, Math.max(live.getZoom(), 17));
-        applyHeadingUpRotation(mapRotatorRef.current, live, userPosRef.current, headingRef.current, northUpRef.current);
-      });
+      followUserRef.current = false;
+      setFollowUser(false);
+      routeOverviewLockedRef.current = false;
+      applyHeadingUpRotation(mapRotatorRef.current, map, start, headingRef.current, true);
+      resetMapBearing(map);
       if (userMarkerRef.current) {
-        const markerHeading = northUpRef.current ? headingRef.current : 0;
-        userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
-        lastMarkerHeadingRef.current = markerHeading;
+        userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
+        lastMarkerHeadingRef.current = headingRef.current;
       }
+      window.requestAnimationFrame(() => {
+        fitRouteOverview({ force: true });
+        window.requestAnimationFrame(() => fitRouteOverview({ force: true }));
+      });
     }
-  }, [route, destination]);
+  }, [route, destination, fitRouteOverview]);
 
   useEffect(() => {
     const map = mapRef.current;

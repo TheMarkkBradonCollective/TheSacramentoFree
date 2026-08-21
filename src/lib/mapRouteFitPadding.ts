@@ -87,6 +87,18 @@ function routeOverflowsInnerViewport(
   return false;
 }
 
+function pointNearBounds(map: L.Map, point: LatLngLike, bounds: L.LatLngBounds, maxMeters = 500): boolean {
+  const latlng = L.latLng(point.lat, point.lng);
+  if (bounds.contains(latlng)) return true;
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const clamped = L.latLng(
+    Math.min(ne.lat, Math.max(sw.lat, latlng.lat)),
+    Math.min(ne.lng, Math.max(sw.lng, latlng.lng)),
+  );
+  return map.distance(latlng, clamped) <= maxMeters;
+}
+
 /**
  * Fit an active route so the whole path fills the visible map hole
  * (the area not covered by the listing card / nav sheet) — Uber-style.
@@ -100,7 +112,7 @@ export function fitRoutePreviewToViewport(options: {
   maxZoom?: number;
   minZoom?: number;
 }): void {
-  const { map, routeCoords, start, end, maxZoom = 17 } = options;
+  const { map, routeCoords, start, end, maxZoom = 16 } = options;
   map.invalidateSize({ animate: false });
 
   const size = map.getSize();
@@ -108,11 +120,15 @@ export function fitRoutePreviewToViewport(options: {
 
   const padding = clampFitPadding(size, options.padding);
   const bounds = L.latLngBounds(routeCoords.map(([lat, lng]) => L.latLng(lat, lng)));
-  if (start) bounds.extend(L.latLng(start.lat, start.lng));
-  if (end) bounds.extend(L.latLng(end.lat, end.lng));
   if (!bounds.isValid()) return;
 
-  const zMin = options.minZoom ?? map.getMinZoom();
+  // Only include GPS / pin if they sit next to the road line. A stale or
+  // far-away start (wrong city, 0,0) used to explode the bounds and zoom
+  // the camera to a nonsense spot.
+  if (start && pointNearBounds(map, start, bounds)) bounds.extend(L.latLng(start.lat, start.lng));
+  if (end && pointNearBounds(map, end, bounds)) bounds.extend(L.latLng(end.lat, end.lng));
+
+  const zMin = options.minZoom ?? 11;
   const zMax = Math.min(maxZoom, map.getMaxZoom());
 
   map.fitBounds(bounds, {

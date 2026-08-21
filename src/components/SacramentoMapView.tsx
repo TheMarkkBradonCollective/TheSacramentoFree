@@ -590,7 +590,8 @@ export default function SacramentoMapView({
         start,
         end: dest,
         padding,
-        maxZoom: 17,
+        maxZoom: 16,
+        minZoom: 11,
       });
       window.requestAnimationFrame(() => {
         isProgrammaticMapMoveRef.current = false;
@@ -783,6 +784,14 @@ export default function SacramentoMapView({
 
   /** Re-enable follow mode and center on the latest GPS fix. */
   const handleLocateUser = () => {
+    if (routePreviewActiveRef.current) {
+      setFollowUser(false);
+      followUserRef.current = false;
+      routeAutoFitEnabledRef.current = true;
+      fitRouteToAvailableView({ force: true });
+      return;
+    }
+
     setFollowUser(true);
     followUserRef.current = true;
 
@@ -1090,7 +1099,6 @@ export default function SacramentoMapView({
           routeAutoFitEnabledRef.current = true;
           setFollowUser(false);
           followUserRef.current = false;
-          map.setView([lat, lng], map.getZoom(), { animate: false });
         },
       );
     } else {
@@ -1115,7 +1123,6 @@ export default function SacramentoMapView({
           routeAutoFitEnabledRef.current = true;
           setFollowUser(false);
           followUserRef.current = false;
-          map.setView([lat, lng], map.getZoom(), { animate: false });
         },
       );
     } else {
