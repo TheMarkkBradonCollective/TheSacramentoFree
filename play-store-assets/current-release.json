@@ -6,6 +6,8 @@
   "aabFile": "public/downloads/sac-buy-nothing-beta-v0.2.0.0051.aab",
   "aabLegacyFile": "public/downloads/sac-buy-nothing.aab",
   "aabDownloadUrl": "https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0051.aab",
+  "playStoreBetaUrl": "https://play.google.com/apps/testing/org.sacramentobuynothing.app",
+  "playStoreListingUrl": "https://play.google.com/store/apps/details?id=org.sacramentobuynothing.app",
   "releaseNotesFile": "play-store-assets/release-notes-v0.2.0-0051.txt",
   "sideloadApk": "public/downloads/sac-buy-nothing-beta-v0.2.0.0051.apk",
   "builtAt": "2026-08-21T22:34:18.943Z"

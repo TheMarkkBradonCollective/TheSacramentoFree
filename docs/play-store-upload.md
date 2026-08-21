@@ -15,7 +15,7 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 
 1. **Phone screenshots** — already captured at `play-store-assets/screenshots/` (feed, map, events, messages, account, home). Play Console → Store presence → Main store listing.
 2. **Set app price** — Play Console → Monetize → Products → set your paid download price.
-3. **Upload the AAB** — Play Console → Testing → Internal testing → Create release → upload `dist/android/sac-buy-nothing-release.aab`.
+3. **Upload the AAB** — Play Console → Testing → **Closed testing** → Create release → upload `dist/android/sac-buy-nothing-release.aab`.
 4. **Contact email** — use your support address (e.g. `support@sacbuynothing.org` from `.env.example`).
 5. **Play reviewer account** — run `npm run play:reviewer-account` (see below).
 
@@ -256,9 +256,23 @@ After saving the list, copy the **opt-in link** and share it — testers must op
 
 ---
 
+## Closed testing opt-in (share this — not internal testing)
+
+Neighbors on your tester list should open this link on Android while signed into the Gmail you added:
+
+```
+https://play.google.com/apps/testing/org.sacramentobuynothing.app
+```
+
+Then install from the store listing: `https://play.google.com/store/apps/details?id=org.sacramentobuynothing.app`
+
+The old **internal testing** URL (`https://play.google.com/apps/internaltest/4701336413298152827`) can stay valid in Play Console until you halt that track. Do not share it anymore — upload new builds to **Closed testing** only.
+
+---
+
 ## Step 6 — Release (current: beta v0.1.0.0030)
 
-1. **Testing → Internal testing → Create release** (or Production when ready)
+1. **Testing → Closed testing → Create release** (or Production when ready)
 2. Upload `public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab` (or `sac-buy-nothing.aab`)
 3. Release name: `0.1.0 (30)`
 4. Release notes — copy from `play-store-assets/release-notes-v0.1.0-0030.txt`:
@@ -272,7 +286,7 @@ What's new (Android app):
 Download (sideload): https://www.sacramentobuynothing.com/download
 ```
 
-5. Add yourself as an internal tester → install from opt-in link
+5. Add yourself as a closed tester → install from the closed-testing opt-in link above
 6. Verify: sign-in, in-app Navigate, walk/bike/drive, heading-up, lane guidance, spoken turn card, nav settings, Stuff grid, status bar / nav bar spacing, push
 7. Promote to **Production** when ready → **Send for review**
 
@@ -298,7 +312,7 @@ First Google Play release of SacramentoBuyNothing for Sacramento neighbors.
 • Account, privacy, and terms flows built in
 ```
 
-5. Add yourself as an internal tester → install from opt-in link
+5. Add yourself as a closed tester → install from the closed-testing opt-in link above
 6. Verify: sign-in, feed, map, location prompt, push, account deletion
 7. Promote to **Production** when ready → **Send for review**
 
