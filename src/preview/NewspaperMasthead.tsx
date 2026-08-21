@@ -1,3 +1,4 @@
+import { SITE_LOGO_SRC } from '../siteContent';
 import { formatNewspaperDate, NEWSPAPER } from './newspaperBrand';
 import { useNewspaperSkin } from './NewspaperSkinContext';
 
@@ -8,31 +9,40 @@ interface NewspaperMastheadProps {
   onHomeClick?: () => void;
 }
 
-/** Two rivers meeting — Sacramento and American — as an original flourish. */
-function RiverMark() {
-  return (
-    <svg className="tsf-masthead__rivers" viewBox="0 0 280 28" aria-hidden="true" focusable="false">
-      <path
-        d="M4 12 C 36 4, 68 20, 102 11 S 170 5, 210 14 256 8, 276 12"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.45"
-      />
-      <path
-        d="M4 18 C 48 24, 90 10, 132 18 S 210 24, 276 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="0.95"
-        opacity="0.75"
-      />
-      <circle cx="140" cy="14.5" r="1.7" fill="currentColor" />
-    </svg>
+function MastheadLockup({
+  variant,
+  onHomeClick,
+}: {
+  variant: NewspaperMastheadProps['variant'];
+  onHomeClick?: () => void;
+}) {
+  const img = (
+    <img
+      src={SITE_LOGO_SRC}
+      alt={NEWSPAPER.name}
+      className={`tsf-masthead__lockup tsf-masthead__lockup--${variant ?? 'front'}`}
+    />
   );
+
+  if (onHomeClick) {
+    return (
+      <button
+        type="button"
+        className="tsf-masthead__wordmark"
+        onClick={onHomeClick}
+        aria-label={`${NEWSPAPER.name} home`}
+      >
+        {img}
+      </button>
+    );
+  }
+
+  return <div className="tsf-masthead__wordmark">{img}</div>;
 }
 
 /**
- * The nameplate for The Sacramento Free. The publication title is not a page
- * headline — the lead story carries the h1.
+ * The nameplate for The Sacramento Free. Uses the uploaded lockup artwork so
+ * the masthead title and slogan match the header logo exactly.
  */
 export default function NewspaperMasthead({
   variant = 'front',
@@ -56,29 +66,8 @@ export default function NewspaperMasthead({
       )}
 
       <div className="tsf-masthead__crest">
-        <RiverMark />
-        {onHomeClick ? (
-          <button
-            type="button"
-            className="tsf-masthead__wordmark"
-            onClick={onHomeClick}
-            aria-label={`${NEWSPAPER.name} home`}
-          >
-            <span className="tsf-masthead__the">{NEWSPAPER.the}</span>
-            <span className="tsf-masthead__name">{NEWSPAPER.title.split(' ')[0]}</span>
-            <span className="tsf-masthead__free">{NEWSPAPER.title.split(' ')[1]}</span>
-          </button>
-        ) : (
-          <p className="tsf-masthead__wordmark">
-            <span className="tsf-masthead__the">{NEWSPAPER.the}</span>
-            <span className="tsf-masthead__name">{NEWSPAPER.title.split(' ')[0]}</span>
-            <span className="tsf-masthead__free">{NEWSPAPER.title.split(' ')[1]}</span>
-          </p>
-        )}
-        <RiverMark />
+        <MastheadLockup variant={variant} onHomeClick={onHomeClick} />
       </div>
-
-      <p className="tsf-masthead__tagline">{NEWSPAPER.tagline}</p>
 
       {variant === 'front' && (
         <>

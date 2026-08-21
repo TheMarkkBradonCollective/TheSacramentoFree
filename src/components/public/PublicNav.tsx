@@ -99,7 +99,7 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
   return (
     <header className={`sticky top-0 z-50 sbn-glass-nav sbn-safe-top ${newspaper ? 'tsf-section-bar' : ''}`}>
       <div
-        className={`max-w-5xl mx-auto px-4 h-14 flex items-center gap-3 justify-between`}
+        className={`max-w-5xl mx-auto px-4 ${newspaper ? 'h-[4.25rem]' : 'h-14'} flex items-center gap-3 justify-between`}
       >
         <button
           type="button"
@@ -110,7 +110,7 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
           <BrandLogo
             imgClassName={
               newspaper
-                ? 'h-11 w-auto max-w-[168px] object-contain'
+                ? 'h-11 w-auto max-w-[min(72vw,13.5rem)] object-contain'
                 : 'h-8 w-auto max-w-[130px] object-contain rounded-lg'
             }
           />

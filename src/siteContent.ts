@@ -2,6 +2,8 @@
 export const APP_LOGO_SRC = '/Logo.png';
 /** Website lockup — masthead, tagline, and hands. */
 export const SITE_LOGO_SRC = '/TheSacramentoFree.png';
+/** Community slogan — matches the lockup artwork. */
+export const COMMUNITY_SLOGAN = 'Give freely. Ask kindly.';
 
 export const SITE = {
   name: 'SacramentoBuyNothing',

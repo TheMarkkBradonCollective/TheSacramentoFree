@@ -172,7 +172,7 @@ export default function AppSidebar({
                 <BrandLogo compact showTitle={false} />
               )
             ) : (
-              <BrandLogo imgClassName="h-11 w-auto max-w-[160px] object-contain" showTitle={false} />
+              <BrandLogo imgClassName="h-12 w-auto max-w-[min(72vw,11rem)] object-contain" showTitle={false} />
             )}
           </div>
 

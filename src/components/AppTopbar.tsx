@@ -57,7 +57,7 @@ export default function AppTopbar({
         )}
         {brandLockup ? (
           <BrandLogo
-            imgClassName="h-9 w-auto max-w-[200px] object-contain shrink-0"
+            imgClassName="h-10 w-auto max-w-[min(58vw,13.5rem)] object-contain shrink-0"
             showTitle={false}
             className="flex items-center gap-2 min-w-0"
           />
