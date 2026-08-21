@@ -68,10 +68,78 @@ async function upsertRowsWithStableTimestamps(
   return { count: payload.length };
 }
 
+async function pruneRowsNotInSeed(
+  table: 'app_updates' | 'help_announcements',
+  allowedIds: string[],
+): Promise<{ pruned: number; error?: string }> {
+  const admin = await getSupabaseAdmin();
+  const { data: existingRows, error: readError } = await admin.from(table).select('id');
+  if (readError) {
+    return { pruned: 0, error: readError.message };
+  }
+
+  const allowed = new Set(allowedIds);
+  const staleIds = (existingRows || [])
+    .map((row) => String((row as { id: string }).id))
+    .filter((id) => !allowed.has(id));
+
+  if (!staleIds.length) {
+    return { pruned: 0 };
+  }
+
+  const { error } = await admin.from(table).delete().in('id', staleIds);
+  if (error) {
+    return { pruned: 0, error: error.message };
+  }
+
+  return { pruned: staleIds.length };
+}
+
+async function pruneChangelogVotes(
+  allowedUpdateIds: string[],
+  allowedAnnouncementIds: string[],
+): Promise<{ pruned: number; error?: string }> {
+  const admin = await getSupabaseAdmin();
+  const { data: voteRows, error: readError } = await admin
+    .from('community_content_votes')
+    .select('id, targetType, targetId')
+    .in('targetType', ['update', 'announcement']);
+
+  if (readError) {
+    return { pruned: 0, error: readError.message };
+  }
+
+  const allowedUpdates = new Set(allowedUpdateIds);
+  const allowedAnnouncements = new Set(allowedAnnouncementIds);
+  const staleVoteIds = (voteRows || [])
+    .filter((row) => {
+      const targetType = String((row as { targetType: string }).targetType);
+      const targetId = String((row as { targetId: string }).targetId);
+      if (targetType === 'update') return !allowedUpdates.has(targetId);
+      if (targetType === 'announcement') return !allowedAnnouncements.has(targetId);
+      return false;
+    })
+    .map((row) => String((row as { id: string }).id));
+
+  if (!staleVoteIds.length) {
+    return { pruned: 0 };
+  }
+
+  const { error } = await admin.from('community_content_votes').delete().in('id', staleVoteIds);
+  if (error) {
+    return { pruned: 0, error: error.message };
+  }
+
+  return { pruned: staleVoteIds.length };
+}
+
 export async function publishChangelogToSupabase(): Promise<{
   ok: boolean;
   updates: number;
   announcements: number;
+  prunedUpdates?: number;
+  prunedAnnouncements?: number;
+  prunedVotes?: number;
   error?: string;
   ids?: { updates: string[]; announcements: string[] };
 }> {
@@ -92,13 +160,37 @@ export async function publishChangelogToSupabase(): Promise<{
     };
   }
 
+  const updateIds = updateRows.map((row) => row.id);
+  const announcementIds = newsRows.map((row) => row.id);
+
+  const [pruneUpdatesResult, pruneNewsResult, pruneVotesResult] = await Promise.all([
+    pruneRowsNotInSeed('app_updates', updateIds),
+    pruneRowsNotInSeed('help_announcements', announcementIds),
+    pruneChangelogVotes(updateIds, announcementIds),
+  ]);
+
+  if (pruneUpdatesResult.error || pruneNewsResult.error || pruneVotesResult.error) {
+    return {
+      ok: false,
+      updates: updatesResult.count,
+      announcements: newsResult.count,
+      prunedUpdates: pruneUpdatesResult.pruned,
+      prunedAnnouncements: pruneNewsResult.pruned,
+      prunedVotes: pruneVotesResult.pruned,
+      error: pruneUpdatesResult.error || pruneNewsResult.error || pruneVotesResult.error,
+    };
+  }
+
   return {
     ok: true,
     updates: updatesResult.count,
     announcements: newsResult.count,
+    prunedUpdates: pruneUpdatesResult.pruned,
+    prunedAnnouncements: pruneNewsResult.pruned,
+    prunedVotes: pruneVotesResult.pruned,
     ids: {
-      updates: updateRows.map((row) => row.id),
-      announcements: newsRows.map((row) => row.id),
+      updates: updateIds,
+      announcements: announcementIds,
     },
   };
 }

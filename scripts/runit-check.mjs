@@ -101,8 +101,14 @@ for (const { file, markers, label: migrationLabel } of migrationMarkers) {
 
 // --- Changelog seed for current APK ---
 const changelog = read('shared/changelogSeed.ts');
+const changelogSeedsCleared =
+  /SEEDED_APP_UPDATES:\s*SeededAppUpdate\[\]\s*=\s*\[\]/.test(changelog);
 const apkSeedId = `apk-${build}`;
-if (!changelog.includes(apkSeedId) && !changelog.includes(`apk-${versionCode}`)) {
+if (
+  !changelogSeedsCleared &&
+  !changelog.includes(apkSeedId) &&
+  !changelog.includes(`apk-${versionCode}`)
+) {
   warnings.push(`shared/changelogSeed.ts has no seed for current build (${apkSeedId})`);
 }
 
