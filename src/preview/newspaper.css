@@ -1329,15 +1329,14 @@ html.newspaper-preview .tsf-experience-row__blurb {
   z-index: 900;
   pointer-events: none;
   overflow: hidden;
-  perspective: 2400px;
-  perspective-origin: center;
+  perspective: 2000px;
+  perspective-origin: 50% 50%;
 }
 
 .tsf-page-turn__leaf {
   position: absolute;
-  inset: 0;
   transform-style: preserve-3d;
-  will-change: transform, opacity;
+  will-change: transform;
   backface-visibility: hidden;
 }
 
@@ -1346,81 +1345,90 @@ html.newspaper-preview .tsf-experience-row__blurb {
   inset: 0;
   backface-visibility: hidden;
   background-color: var(--color-surface);
+  /* Grain, column rules, and lines of type, so the leaf reads as a printed
+     page rather than a blank white panel sweeping past. */
   background-image: var(--tsf-grain),
-    linear-gradient(100deg, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0) 18%, rgba(0, 0, 0, 0) 78%, rgba(0, 0, 0, 0.1) 100%);
+    repeating-linear-gradient(90deg, transparent 0 31%, color-mix(in srgb, var(--color-text) 14%, transparent) 31% calc(31% + 1px)),
+    repeating-linear-gradient(180deg, transparent 0 7px, color-mix(in srgb, var(--color-text) 7%, transparent) 7px 8px),
+    linear-gradient(95deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.02) 12%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.06) 100%);
+  box-shadow: 0 0 40px -8px var(--color-shadow-lg);
 }
 
 .tsf-page-turn__face--back {
   transform: rotateY(180deg);
   background-image: var(--tsf-grain),
-    linear-gradient(260deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.02) 35%, rgba(0, 0, 0, 0.08) 100%);
+    repeating-linear-gradient(180deg, transparent 0 7px, color-mix(in srgb, var(--color-text) 5%, transparent) 7px 8px),
+    linear-gradient(265deg, rgba(0, 0, 0, 0.24) 0%, rgba(0, 0, 0, 0.04) 30%, rgba(0, 0, 0, 0.1) 100%);
 }
 
+/* The shadow the lifted leaf casts on the page beneath it. */
 .tsf-page-turn__shadow {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0) 45%);
   opacity: 0;
-  will-change: opacity, transform;
+  will-change: opacity;
 }
 
-/* Desktop: a full broadsheet leaf swinging over on its spine. */
+/* ── Desktop: the right-hand leaf of an open spread swings across ──
+   Only half the screen is ever covered, so the reader keeps their place. */
 .tsf-page-turn--sheet .tsf-page-turn__leaf {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  right: 0;
   transform-origin: left center;
-  animation: tsf-leaf-forward var(--tsf-turn-ms, 560ms) cubic-bezier(0.42, 0.02, 0.24, 1) forwards;
+  animation: tsf-leaf-forward var(--tsf-turn-ms, 560ms) cubic-bezier(0.36, 0.06, 0.28, 1) forwards;
 }
 
 .tsf-page-turn--sheet.tsf-page-turn--back .tsf-page-turn__leaf {
+  left: 0;
+  right: 50%;
   transform-origin: right center;
   animation-name: tsf-leaf-back;
 }
 
 .tsf-page-turn--sheet .tsf-page-turn__shadow {
-  animation: tsf-turn-shadow var(--tsf-turn-ms, 560ms) ease-out forwards;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.26) 50%, rgba(0, 0, 0, 0) 50.1%);
+  animation: tsf-turn-shadow var(--tsf-turn-ms, 560ms) ease-in-out forwards;
 }
 
 @keyframes tsf-leaf-forward {
   0% {
     transform: rotateY(0deg);
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
   }
   100% {
-    transform: rotateY(-172deg);
-    opacity: 0;
+    transform: rotateY(-180deg);
   }
 }
 
 @keyframes tsf-leaf-back {
   0% {
     transform: rotateY(0deg);
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
   }
   100% {
-    transform: rotateY(172deg);
-    opacity: 0;
+    transform: rotateY(180deg);
   }
 }
 
 @keyframes tsf-turn-shadow {
-  0% {
-    opacity: 0.5;
-    transform: translateX(0);
-  }
+  0%,
   100% {
     opacity: 0;
-    transform: translateX(60%);
+  }
+  45% {
+    opacity: 1;
   }
 }
 
-/* Mobile: a single sheet sliding away — quick, quiet, no 3D cost. */
+/* ── Mobile: a restrained paper slide, never a blank flash ── */
 .tsf-page-turn--compact .tsf-page-turn__leaf {
+  inset: 0;
   animation: tsf-sheet-slide 240ms cubic-bezier(0.3, 0, 0.2, 1) forwards;
+}
+
+.tsf-page-turn--compact .tsf-page-turn__face {
+  opacity: 0.5;
+  box-shadow: none;
 }
 
 .tsf-page-turn--compact .tsf-page-turn__face--back,
@@ -1430,11 +1438,11 @@ html.newspaper-preview .tsf-experience-row__blurb {
 
 @keyframes tsf-sheet-slide {
   0% {
-    transform: translateX(0);
-    opacity: 0.96;
+    transform: translateX(6%);
+    opacity: 0.9;
   }
   100% {
-    transform: translateX(-18%);
+    transform: translateX(-10%);
     opacity: 0;
   }
 }
