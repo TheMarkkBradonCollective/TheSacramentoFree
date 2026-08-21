@@ -7,5 +7,6 @@ What's new:
 • Withdrawn listings stay private; live listing cards no longer blank out
 • Saved items follow your account; feed photos no longer drop silently
 • Notification taps no longer yank you back to an old tab while using the app
+• When a route is on the map, the path zooms to fill the screen above the card
 
 Download (sideload): https://www.sacramentobuynothing.com/download

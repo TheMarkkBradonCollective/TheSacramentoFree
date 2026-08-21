@@ -555,20 +555,17 @@ export default function SacramentoMapView({
         mapElement: mapEl,
         obstructingElements: [selectionCardRef.current],
         defaults: {
-          top: isFullScreenMobile ? 80 : 56,
-          bottom: isFullScreenMobile ? 56 : 48,
-          left: 48,
-          right: 56,
+          top: isFullScreenMobile ? 56 : 40,
+          bottom: isFullScreenMobile ? 20 : 32,
+          left: 28,
+          right: 28,
         },
-        margin: 16,
+        margin: 12,
       });
 
       const cardStack = hasMapSelection ? selectionCardHeight : 0;
-      const routePreviewOnMap =
-        (routeCoordsRef.current?.length ?? 0) >= 2 && Boolean(routeEndpointsRef.current?.end);
-      const floatControls = isFullScreenMobile && hasMapSelection && !routePreviewOnMap ? 56 : 0;
-      const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 72 : 48);
-      const bottom = Math.max(measured.bottomRight[1], cardStack + floatControls + 20);
+      const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 52 : 40);
+      const bottom = Math.max(measured.bottomRight[1], cardStack > 0 ? cardStack + 12 : measured.bottomRight[1]);
 
       const start = userLocationRef.current ?? userLocation;
       const dest = routeEndpointsRef.current?.end;
@@ -578,26 +575,22 @@ export default function SacramentoMapView({
       };
 
       isProgrammaticMapMoveRef.current = true;
-      if (start && dest) {
-        fitRoutePreviewToViewport({
-          map,
-          routeCoords: coords,
-          start,
-          end: dest,
-          padding,
-          maxZoom: 17,
+      map.invalidateSize({ animate: false });
+      if (map.getSize().x < 32 || map.getSize().y < 32) {
+        window.requestAnimationFrame(() => {
+          isProgrammaticMapMoveRef.current = false;
+          fitRouteToAvailableView(options);
         });
-      } else {
-        const bounds = L.latLngBounds(coords);
-        if (start) bounds.extend([start.lat, start.lng]);
-        if (dest) bounds.extend([dest.lat, dest.lng]);
-        map.fitBounds(bounds, {
-          paddingTopLeft: padding.topLeft,
-          paddingBottomRight: padding.bottomRight,
-          maxZoom: 17,
-          animate: false,
-        });
+        return;
       }
+      fitRoutePreviewToViewport({
+        map,
+        routeCoords: coords,
+        start,
+        end: dest,
+        padding,
+        maxZoom: 17,
+      });
       window.requestAnimationFrame(() => {
         isProgrammaticMapMoveRef.current = false;
       });
