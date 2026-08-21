@@ -80,7 +80,6 @@ WHERE TO LOOK IN CODE
 - shared/rebrandAnnouncement2026.ts — letter, home notice, feed cliff-hanger
 - src/components/RebrandAnnouncementModal.tsx — one-time popup
 - src/components/public/TrademarkNoticeBanner.tsx — home page notice
-- scripts/supabase-migration-aug-21-2026-rebrand-letter.sql
 
 HISTORY
 2026-08-21 — Rebrand announcement (PR #328).`;

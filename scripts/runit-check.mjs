@@ -21,11 +21,6 @@ function exists(file) {
 
 const { versionName, versionCode, build, label } = readAppVersion();
 const schema = read('complete-schema.sql');
-const migrationsDir = path.join(root, 'scripts');
-const migrationFiles = fs
-  .readdirSync(migrationsDir)
-  .filter((f) => f.startsWith('supabase-migration-') && f.endsWith('.sql'))
-  .sort();
 
 // --- Version / release manifest ---
 const releaseManifestPath = 'play-store-assets/current-release.json';
@@ -45,67 +40,54 @@ if (!exists(releaseNotesFile)) {
   warnings.push(`Missing release notes: ${releaseNotesFile}`);
 }
 
-// --- Migration ↔ complete-schema sync ---
-const migrationMarkers = [
+// --- complete-schema.sql required markers ---
+const schemaMarkers = [
   {
-    file: 'scripts/supabase-migration-aug-20-2026-go-get-ring-availability.sql',
     markers: ['pickupAvailability', 'goGetRingDurationSeconds', 'ringExpiresAt', 'awaiting_schedule'],
     label: 'Go Get ring / pickup availability',
   },
   {
-    file: 'scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql',
     markers: ['staffInteractionMode', 'postedAsNeighbor'],
     label: 'Staff interaction mode',
   },
   {
-    file: 'scripts/supabase-migration-aug-20-2026-neighbor-feed.sql',
     markers: ['feed_posts', 'feed_post_comments', 'feed_post_reactions', "'feed_post'"],
     label: 'Neighbor feed',
   },
   {
-    file: 'scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql',
     markers: ['navigationSettings', 'appPreferences', 'native_app_sessions'],
     label: 'User prefs + native app session',
   },
   {
-    file: 'scripts/supabase-migration-aug-20-2026-notification-prefs-granular.sql',
     markers: ['feedReplies', 'friendRequests', 'eventRsvps', 'discussionComments'],
     label: 'Granular notification preferences',
   },
   {
-    file: 'scripts/supabase-migration-aug-21-2026-audit-rls.sql',
     markers: ['chats_delete', "status IN ('active', 'pending_pickup', 'on_hold')"],
     label: 'Audit RLS (listing privacy + chat delete)',
   },
   {
-    file: 'scripts/supabase-migration-aug-21-2026-audit-48.sql',
     markers: ['delete_own_listing', 'delete_own_event'],
     label: 'Audit 48 cascade deletes',
   },
   {
-    file: 'scripts/supabase-migration-aug-21-2026-storage-items-auth.sql',
     markers: ['audit-49-storage-items-auth', 'items_storage_insert'],
     label: 'Listing photo storage auth',
   },
   {
-    file: 'scripts/supabase-migration-aug-18-2026-app-device-stats.sql',
     markers: ['app_device_downloads', 'app_device_installs', 'staff_read_app_device_downloads'],
     label: 'App device download/install stats',
   },
   {
-    file: 'scripts/supabase-migration-aug-18-2026-staff-outreach-tickets.sql',
     markers: ['ticketSource', 'support_tickets_source_check', 'support_tickets_staff_listing_open_idx'],
     label: 'Staff outreach support tickets',
   },
 ];
 
-for (const { file, markers, label: migrationLabel } of migrationMarkers) {
-  if (!exists(file)) continue;
+for (const { markers, label: schemaLabel } of schemaMarkers) {
   const missing = markers.filter((m) => !schema.includes(m));
   if (missing.length > 0) {
-    errors.push(
-      `complete-schema.sql missing ${migrationLabel} (${missing.join(', ')}) — merge ${file} first`,
-    );
+    errors.push(`complete-schema.sql missing ${schemaLabel} (${missing.join(', ')})`);
   }
 }
 
@@ -137,11 +119,8 @@ if (!exists(apkPath)) {
   warnings.push(`APK not built yet: ${apkPath}`);
 }
 
-// --- Pending incremental migrations list ---
-const latestMigration = migrationFiles.at(-1);
 console.log(`\n/runit pre-flight — ${label} (versionCode ${versionCode})`);
-console.log(`Latest migration file: ${latestMigration ?? 'none'}`);
-console.log(`Migrations on disk: ${migrationFiles.length}`);
+console.log('Database schema: complete-schema.sql (single source of truth)');
 
 if (warnings.length) {
   console.log('\nWarnings:');

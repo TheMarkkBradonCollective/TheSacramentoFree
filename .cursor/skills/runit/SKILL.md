@@ -20,10 +20,10 @@ npm run runit:check        # pre-flight only
 ## Before running
 
 1. **Bump version** in `android/app/build.gradle` (`versionCode` must increase; update `versionName` if needed).
-2. **Merge migrations** — any new `scripts/supabase-migration-*.sql` must be folded into `complete-schema.sql`. `npm run runit:check` fails if markers are missing.
+2. **Schema** — all database changes go in `complete-schema.sql` (the only SQL file). `npm run runit:check` fails if required markers are missing.
 3. **Release notes** — add `play-store-assets/release-notes-v{versionName}-{build}.txt` (hyphen before build, e.g. `0028`).
 4. **Changelog seed** — add an APK entry in `shared/changelogSeed.ts` with id `{date}_apk-{build}`.
-5. **Supabase** — run incremental migration SQL in the Supabase SQL editor (do not re-paste full schema on production).
+5. **Supabase** — re-run `complete-schema.sql` in the Supabase SQL editor after schema changes.
 
 ## What /runit does (in order)
 
@@ -31,7 +31,7 @@ npm run runit:check        # pre-flight only
 |------|--------|
 | **0** | **Merge all open PRs into `main`** (`scripts/runit-merge-open-prs.sh` via `gh pr merge`) |
 | 1 | `npm run lint` + `node scripts/runit-check.mjs` |
-| 2 | Verify `complete-schema.sql` includes all migration markers |
+| 2 | Verify `complete-schema.sql` includes required schema markers |
 | 3 | `npm run build` (website → `dist/`) |
 | 4 | `npm run android:aab` (Play Store bundle) |
 | 5 | `npm run android:apk` (sideload APK) |

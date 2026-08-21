@@ -65,9 +65,8 @@ APK_URL="https://www.sacramentobuynothing.com/downloads/${APK_FILE}"
 # ── 2. complete-schema.sql must include all migration markers ───
 echo ""
 echo "── Step 2: Verify complete-schema.sql ──"
-echo "  If runit-check reported blocking errors, merge pending scripts/supabase-migration-*.sql"
-echo "  into complete-schema.sql before continuing."
-echo "  Production DB: run incremental migrations in Supabase SQL editor (not full re-paste)."
+echo "  If runit-check reported blocking errors, update complete-schema.sql before continuing."
+echo "  Production DB: re-run complete-schema.sql in the Supabase SQL editor after schema changes."
 
 # ── 3. Website build ───────────────────────────────────────────
 echo ""
@@ -127,8 +126,8 @@ fi
 echo ""
 echo "── Step 7: Manual checklist (agent must verify) ──"
 echo "  □ Bump versionCode/versionName in android/app/build.gradle (if new release)"
-echo "  □ Merge any new scripts/supabase-migration-*.sql into complete-schema.sql"
-echo "  □ Run incremental migrations in Supabase SQL editor"
+echo "  □ Update complete-schema.sql when the database schema changes"
+echo "  □ Re-run complete-schema.sql in Supabase SQL editor after schema changes"
 echo "  □ Add/update ${RELEASE_NOTES}"
 echo "  □ Add APK seed entry in shared/changelogSeed.ts (id: $(date +%Y-%m-%d)_apk-${BUILD})"
 echo "  □ Deploy website (Vercel auto-deploys on push to main)"
@@ -184,7 +183,7 @@ node scripts/runit-play-console-summary.mjs --write
 # ── 11. Supabase reminder ───────────────────────────────────────
 echo ""
 echo "Supabase SQL:"
-echo "  Run any new scripts/supabase-migration-*.sql in SQL editor"
+echo "  Re-run complete-schema.sql in the SQL editor after schema changes"
 echo "  (or wait for cron /api/cron/publish-changelog every 4h for neighbor Updates/News)"
 echo ""
 echo "Done."

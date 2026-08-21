@@ -783,20 +783,20 @@ function prefsColumnMigrationHint(
     prefsPayload.goGetRingDurationSeconds !== 140 ||
     prefsPayload.goGetRingPattern !== 'ring';
   if (/pickupAvailability|goGetRing/i.test(errText) && wantsGoGetPrefs) {
-    return 'Go Get settings could not be saved. Run scripts/supabase-migration-aug-20-2026-go-get-ring-availability.sql in the Supabase SQL editor, then try again.';
+    return 'Go Get settings could not be saved. Re-run complete-schema.sql in the Supabase SQL editor, then try again.';
   }
   if (/navigationSettings/i.test(errText) && prefsPayload.navigationSettings != null) {
-    return 'Navigation settings could not be saved. Run scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql in the Supabase SQL editor, then try again.';
+    return 'Navigation settings could not be saved. Re-run complete-schema.sql in the Supabase SQL editor, then try again.';
   }
   if (
     /appPreferences/i.test(errText) &&
     prefsPayload.appPreferences != null &&
     !appPreferencesIsEmpty(prefsPayload.appPreferences)
   ) {
-    return 'App settings could not be saved. Run scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql in the Supabase SQL editor, then try again.';
+    return 'App settings could not be saved. Re-run complete-schema.sql in the Supabase SQL editor, then try again.';
   }
   if (/staffInteractionMode/i.test(errText) && isStaffRole(profileForSave.role)) {
-    return 'Staff/user mode could not be saved. Run scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql in the Supabase SQL editor, then try again.';
+    return 'Staff/user mode could not be saved. Re-run complete-schema.sql in the Supabase SQL editor, then try again.';
   }
   return null;
 }
@@ -1452,7 +1452,7 @@ export async function createSupabaseItem(
       console.error('createSupabaseItem error:', error.code, error.message, error.details, error.hint);
       handleSupabaseError(error, 'items');
       const hint = isMissingImageUrlColumnError(error)
-        ? ' Database is missing the imageUrl column — run the SQL fix in Supabase (see databaseSQL.txt).'
+        ? ' Database is missing the imageUrl column — re-run complete-schema.sql in the Supabase SQL editor.'
         : '';
       return { ok: false, errorMessage: (error.message || 'Could not save listing.') + hint };
     }
@@ -1524,7 +1524,7 @@ export async function updateSupabaseItem(
       console.error('updateSupabaseItem error:', error.code, error.message);
       handleSupabaseError(error, 'items');
       const hint = isMissingImageUrlColumnError(error)
-        ? ' Database is missing the imageUrl column — run the SQL fix in Supabase (see databaseSQL.txt).'
+        ? ' Database is missing the imageUrl column — re-run complete-schema.sql in the Supabase SQL editor.'
         : '';
       return { ok: false, errorMessage: (error.message || 'Could not update listing.') + hint };
     }
@@ -6340,7 +6340,7 @@ export async function sendFriendRequest(params: {
       if (error.code === '42P01') {
         return {
           ok: false,
-          errorMessage: 'Friend requests table missing — run scripts/supabase-migration-aug-20-2026-friend-requests.sql.',
+          errorMessage: 'Friend requests table missing — re-run complete-schema.sql in the Supabase SQL editor.',
         };
       }
       return { ok: false, errorMessage: error.message };
