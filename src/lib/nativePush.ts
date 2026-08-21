@@ -99,11 +99,8 @@ export async function initNativePushHandlers(onNotificationClick: (url: string) 
     if (url) onNotificationClick(url);
   });
 
-  await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    const url = String(notification.data?.url || '').trim();
-    if (url && document.visibilityState === 'visible') {
-      onNotificationClick(url);
-    }
+  await PushNotifications.addListener('pushNotificationReceived', () => {
+    // Foreground delivery should not hijack navigation. Taps are handled above.
   });
 }
 

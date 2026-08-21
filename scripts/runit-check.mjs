@@ -72,6 +72,11 @@ const migrationMarkers = [
     markers: ['feedReplies', 'friendRequests', 'eventRsvps', 'discussionComments'],
     label: 'Granular notification preferences',
   },
+  {
+    file: 'scripts/supabase-migration-aug-21-2026-audit-rls.sql',
+    markers: ['chats_delete', "status IN ('active', 'pending_pickup', 'on_hold')"],
+    label: 'Audit RLS (listing privacy + chat delete)',
+  },
 ];
 
 for (const { file, markers, label: migrationLabel } of migrationMarkers) {

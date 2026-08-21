@@ -22,19 +22,22 @@ export function applyItemRealtimeChange(
   }
 
   if (!row) return prev;
-  const item = normalizeSupabaseItem(row);
 
   if (eventType === 'INSERT') {
+    const item = normalizeSupabaseItem(row);
     const without = prev.filter((i) => i.id !== item.id);
     return sortItemsNewestFirst([item, ...without]);
   }
 
   if (eventType === 'UPDATE') {
-    const exists = prev.some((i) => i.id === item.id);
-    if (!exists) return sortItemsNewestFirst([item, ...prev]);
-    const current = prev.find((i) => i.id === item.id);
+    const incomingId = row.id || oldId;
+    const current = incomingId ? prev.find((i) => i.id === incomingId) : undefined;
+    const merged = current
+      ? mergeDefinedItemFields(current, row)
+      : row;
+    const item = normalizeSupabaseItem(merged);
+    if (!current) return sortItemsNewestFirst([item, ...prev]);
     if (
-      current &&
       current.updatedAt === item.updatedAt &&
       current.status === item.status &&
       current.title === item.title
@@ -45,6 +48,16 @@ export function applyItemRealtimeChange(
   }
 
   return prev;
+}
+
+function mergeDefinedItemFields(current: ItemPost, incoming: ItemPost): ItemPost {
+  const next: ItemPost = { ...current };
+  for (const [key, value] of Object.entries(incoming as unknown as Record<string, unknown>)) {
+    if (value !== undefined && value !== null) {
+      (next as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+  return next;
 }
 
 /** Live listing feed — new posts, edits, claims, and deletes without refresh. */

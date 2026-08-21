@@ -12,6 +12,7 @@ import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { isStaffRole } from '../lib/roles';
 
 export interface PostVoteState {
   userVote: 'up' | 'down' | null;
@@ -29,6 +30,7 @@ export function useItemsEngagement(
   const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
 
   const uid = userProfile?.uid ?? '';
+  const isStaff = userProfile ? isStaffRole(userProfile.role) : false;
   const { alert } = useConfirm();
   const itemIdSetRef = useRef(new Set<string>());
 
@@ -219,9 +221,14 @@ export function useItemsEngagement(
       [itemId]: [...current, newComment],
     }));
 
-    createSupabaseItemComment(newComment).catch((err) => {
+    void createSupabaseItemComment(newComment).then((ok) => {
+      if (ok) return;
+      setItemComments((prev) => ({ ...prev, [itemId]: current }));
+      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
+    }).catch((err) => {
       console.warn('Failed to persist comment:', err);
       setItemComments((prev) => ({ ...prev, [itemId]: current }));
+      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
     });
   };
 
@@ -232,10 +239,10 @@ export function useItemsEngagement(
     const next = current.filter((c) => c.id !== commentId);
     setItemComments((prev) => ({ ...prev, [itemId]: next }));
 
-    const result = await deleteSupabaseItemComment(commentId, uid);
+    const result = await deleteSupabaseItemComment(commentId, uid, isStaff);
     if (!result.ok) {
       setItemComments((prev) => ({ ...prev, [itemId]: current }));
-      console.warn('Failed to delete comment:', result.errorMessage);
+      void alert({ title: 'Could not delete comment', message: result.errorMessage || 'Please try again.' });
     }
   };
 

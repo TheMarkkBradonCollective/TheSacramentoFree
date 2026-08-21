@@ -12,13 +12,19 @@ interface ThemeSettingsProps {
 export default function ThemeSettings({ userProfile, onUpdateProfile }: ThemeSettingsProps) {
   const { theme, setTheme } = useTheme();
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const chooseTheme = (next: 'light' | 'dark') => {
     setTheme(next);
     setSaving(true);
+    setErrorMessage('');
     void persistUserAppPreferences(userProfile, { theme: next }).then((result) => {
       setSaving(false);
-      if (result.ok && result.profile) onUpdateProfile(result.profile);
+      if (result.ok && result.profile) {
+        onUpdateProfile(result.profile);
+        return;
+      }
+      setErrorMessage(result.errorMessage || 'Theme could not be saved to your account.');
     });
   };
 
@@ -60,6 +66,9 @@ export default function ThemeSettings({ userProfile, onUpdateProfile }: ThemeSet
           Dark
         </button>
       </div>
+      {errorMessage ? (
+        <p className="text-xs text-red-600 font-semibold">{errorMessage}</p>
+      ) : null}
     </section>
   );
 }

@@ -85,6 +85,7 @@ const APK_0043_PUBLISHED_AT = '2026-08-20T20:30:00.000Z';
 const APK_0044_PUBLISHED_AT = '2026-08-20T21:00:00.000Z';
 const APK_0045_PUBLISHED_AT = '2026-08-20T21:30:00.000Z';
 const APK_0046_PUBLISHED_AT = '2026-08-20T22:35:00.000Z';
+const APK_0047_PUBLISHED_AT = '2026-08-21T02:00:00.000Z';
 const REBRAND_LETTER_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
@@ -147,6 +148,39 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
     REBRAND_UPDATE_BODY,
     REBRAND_UPDATE_DETAIL,
     REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-21_apk-0047',
+    '2026-08-21',
+    'New Android download — beta v0.1.0.0047',
+    'Stops false “another device” sign-out, password reset, and listing/comment reliability.',
+    `WHAT NEIGHBORS SEE
+Play Store testers and sideload installs: beta v0.1.0.0047 (versionCode 47).
+
+Since 0046:
+• Native app no longer signs you out when you are only using this phone
+• Forgot-password email now lets you choose a new password
+• Listing status, comments, and conversation delete show an error if they fail
+• Withdrawn listings stay private; live listing cards no longer blank out
+• Saved items follow your account; feed photos no longer drop silently
+• Notification taps no longer yank you back to an old tab while you are using the app
+
+Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0047.aab
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-21-2026-audit-rls.sql in the Supabase SQL editor before rollout.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 47
+- play-store-assets/release-notes-v0.1.0-0047.txt
+- src/lib/nativeAppSession.ts — same-device session reclaim
+- scripts/supabase-migration-aug-21-2026-audit-rls.sql
+
+HISTORY
+2026-08-21 — /runit release; Android beta 0047 built.`,
+    APK_0047_PUBLISHED_AT,
   ),
   update(
     '2026-08-20_apk-0046',
@@ -1578,6 +1612,28 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
     REBRAND_ANNOUNCEMENT_BODY,
     REBRAND_ANNOUNCEMENT_LETTER,
     REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-21_apk-0047',
+    '2026-08-21',
+    'New Android beta 0047 — stay signed in on this phone',
+    'False “another device” sign-out is fixed; password reset and listing/comment errors now show.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0047: the app stays signed in on this device, forgot-password actually finishes, and listing/comment/chat failures tell you instead of failing silently.
+
+Play Store: upload the new AAB to Internal testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run the audit RLS migration in Supabase before rollout.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-21_apk-0047.
+
+HISTORY
+2026-08-21 — Android beta 0047 /runit release.`,
+    APK_0047_PUBLISHED_AT,
   ),
   news(
     '2026-08-20_apk-0046',

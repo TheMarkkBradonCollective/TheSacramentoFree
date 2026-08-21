@@ -477,3 +477,90 @@ export default function AuthPage({
     </div>
   );
 }
+
+export function PasswordRecoveryForm({ onComplete }: { onComplete: () => void }) {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (password.length < 6) {
+      setLocalError('Use at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match.');
+      return;
+    }
+    setLocalLoading(true);
+    setLocalError('');
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      onComplete();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not update password. Please try again.';
+      setLocalError(message);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 mesh-bg" id="password_recovery_form">
+      <div className="w-full max-w-md bg-card border border-app rounded-2xl p-6 shadow-lg">
+        <h1 className="text-lg font-black text-app">Choose a new password</h1>
+        <p className="text-sm text-muted mt-1">This finishes the reset link from your email.</p>
+        {localError ? (
+          <p className="mt-3 text-sm text-red-600 font-semibold flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            {localError}
+          </p>
+        ) : null}
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+          <label htmlFor="auth-reset-password" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+            New password
+          </label>
+          <div className="relative">
+            <Lock className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              id="auth-reset-password"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full pl-9 pr-3 py-2.5 bg-inset border border-app rounded-xl text-sm text-app"
+              placeholder="Min 6 chars"
+            />
+          </div>
+          <label htmlFor="auth-reset-confirm" className="block text-[11px] font-bold text-muted uppercase tracking-wide">
+            Confirm password
+          </label>
+          <div className="relative">
+            <Lock className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              id="auth-reset-confirm"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full pl-9 pr-3 py-2.5 bg-inset border border-app rounded-xl text-sm text-app"
+              placeholder="Repeat password"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={localLoading}
+            className="w-full py-3 rounded-xl bg-accent hover:bg-accent-hover text-on-accent text-xs font-black uppercase tracking-wider disabled:opacity-60"
+          >
+            {localLoading ? 'Saving…' : 'Save password'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
