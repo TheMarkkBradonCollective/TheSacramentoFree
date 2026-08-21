@@ -74,7 +74,7 @@ import {
   unlockNavigationSpeech,
   voiceCueThresholdsForMode,
 } from '../lib/navigationVoice';
-import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
 import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
 
 export interface NavProgressUpdate {
@@ -912,16 +912,21 @@ export default function MapNavigationView({
     const padding = measureMapFitPadding({
       mapElement: mapEl,
       obstructingElements: [sheet, banner],
-      defaults: { top: 112, bottom: 136, left: 48, right: 56 },
-      margin: 20,
+      defaults: { top: 88, bottom: 120, left: 28, right: 28 },
+      margin: 16,
     });
 
     isProgrammaticMapMoveRef.current = true;
-    map.fitBounds(activeRoute.coords, {
-      paddingTopLeft: padding.topLeft,
-      paddingBottomRight: padding.bottomRight,
-      maxZoom: 15,
-      animate: false,
+    map.invalidateSize({ animate: false });
+    const start = userPosRef.current;
+    const dest = destinationRef.current;
+    fitRoutePreviewToViewport({
+      map,
+      routeCoords: activeRoute.coords,
+      start,
+      end: dest,
+      padding,
+      maxZoom: 17,
     });
     window.requestAnimationFrame(() => {
       isProgrammaticMapMoveRef.current = false;

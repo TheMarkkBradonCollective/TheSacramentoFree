@@ -164,6 +164,7 @@ Since 0046:
 • Withdrawn listings stay private; live listing cards no longer blank out
 • Saved items follow your account; feed photos no longer drop silently
 • Notification taps no longer yank you back to an old tab while you are using the app
+• When a route is on the map, the path zooms to fill the screen above the card
 
 Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0047.aab
 Sideload: https://www.sacramentobuynothing.com/download
@@ -176,6 +177,7 @@ WHERE TO LOOK IN CODE
 - android/app/build.gradle — versionCode 47
 - play-store-assets/release-notes-v0.1.0-0047.txt
 - src/lib/nativeAppSession.ts — same-device session reclaim
+- src/lib/mapRouteFitPadding.ts — route fills the visible map
 - scripts/supabase-migration-aug-21-2026-audit-rls.sql
 
 HISTORY
@@ -1619,7 +1621,7 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
     'New Android beta 0047 — stay signed in on this phone',
     'False “another device” sign-out is fixed; password reset and listing/comment errors now show.',
     `WHAT NEIGHBORS SEE
-Beta v0.1.0.0047: the app stays signed in on this device, forgot-password actually finishes, and listing/comment/chat failures tell you instead of failing silently.
+Beta v0.1.0.0047: the app stays signed in on this device, forgot-password actually finishes, listing/comment/chat failures tell you instead of failing silently, and an active route zooms to fill the map above the card.
 
 Play Store: upload the new AAB to Internal testing and roll out to testers.
 Sideload: https://www.sacramentobuynothing.com/download

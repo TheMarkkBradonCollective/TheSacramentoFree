@@ -16,36 +16,58 @@ export function measureMapFitPadding(options: {
   defaults?: { top?: number; bottom?: number; left?: number; right?: number };
   margin?: number;
 }): MapFitPadding {
-  const { mapElement, obstructingElements = [], defaults = {}, margin = 16 } = options;
+  const { mapElement, obstructingElements = [], defaults = {}, margin = 12 } = options;
   const mapRect = mapElement.getBoundingClientRect();
 
-  let top = defaults.top ?? 48;
-  let bottom = defaults.bottom ?? 48;
-  const left = defaults.left ?? 48;
-  const right = defaults.right ?? 48;
+  let top = defaults.top ?? 28;
+  let bottom = defaults.bottom ?? 28;
+  const left = defaults.left ?? 28;
+  const right = defaults.right ?? 28;
+  const midY = mapRect.top + mapRect.height / 2;
 
   for (const el of obstructingElements) {
     if (!el) continue;
     const rect = el.getBoundingClientRect();
     const intersectsVertically = rect.bottom > mapRect.top && rect.top < mapRect.bottom;
-    if (!intersectsVertically) continue;
+    const intersectsHorizontally = rect.right > mapRect.left && rect.left < mapRect.right;
+    if (!intersectsVertically || !intersectsHorizontally) continue;
 
-    if (rect.top >= mapRect.top && rect.top < mapRect.bottom) {
+    const coversMostOfWidth = rect.width >= mapRect.width * 0.45;
+    if (!coversMostOfWidth) continue;
+
+    if (rect.top >= midY) {
       const overlapFromBottom = mapRect.bottom - rect.top;
-      if (overlapFromBottom > 0) {
-        bottom = Math.max(bottom, overlapFromBottom + margin);
-      }
-    }
-
-    if (rect.top < mapRect.top && rect.bottom > mapRect.top) {
+      if (overlapFromBottom > 0) bottom = Math.max(bottom, overlapFromBottom + margin);
+    } else {
       const overlapFromTop = rect.bottom - mapRect.top;
-      if (overlapFromTop > 0) {
-        top = Math.max(top, overlapFromTop + margin);
-      }
+      if (overlapFromTop > 0) top = Math.max(top, overlapFromTop + margin);
     }
   }
 
   return { topLeft: [left, top], bottomRight: [right, bottom] };
+}
+
+function clampFitPadding(size: L.Point, padding: MapFitPadding, minInner = 96): MapFitPadding {
+  let left = Math.max(8, padding.topLeft[0]);
+  let top = Math.max(8, padding.topLeft[1]);
+  let right = Math.max(8, padding.bottomRight[0]);
+  let bottom = Math.max(8, padding.bottomRight[1]);
+
+  if (left + right > size.x - minInner) {
+    const scale = Math.max(0.15, (size.x - minInner) / Math.max(1, left + right));
+    left *= scale;
+    right *= scale;
+  }
+  if (top + bottom > size.y - minInner) {
+    const scale = Math.max(0.15, (size.y - minInner) / Math.max(1, top + bottom));
+    top *= scale;
+    bottom *= scale;
+  }
+
+  return {
+    topLeft: [Math.round(left), Math.round(top)],
+    bottomRight: [Math.round(right), Math.round(bottom)],
+  };
 }
 
 function routeOverflowsInnerViewport(
@@ -65,92 +87,56 @@ function routeOverflowsInnerViewport(
   return false;
 }
 
-function alignRouteEndpointsOnScreen(
-  map: L.Map,
-  startLL: L.LatLng,
-  endLL: L.LatLng,
-  anchorX: number,
-  startAnchorY: number,
-  endAnchorY: number,
-): void {
-  const startPt = map.latLngToContainerPoint(startLL);
-  const endPt = map.latLngToContainerPoint(endLL);
-  const panY = (startAnchorY - startPt.y + endAnchorY - endPt.y) / 2;
-  const panX = anchorX - (startPt.x + endPt.x) / 2;
-  if (Math.abs(panX) > 0.5 || Math.abs(panY) > 0.5) {
-    map.panBy(L.point(panX, panY), { animate: false });
-  }
-}
-
 /**
- * Fit a route preview so the user sits near the bottom (above the card) and the
- * destination sits toward the top of the visible map — zoomed in enough to read
- * the path without manual pinch-zoom.
+ * Fit an active route so the whole path fills the visible map hole
+ * (the area not covered by the listing card / nav sheet) — Uber-style.
  */
 export function fitRoutePreviewToViewport(options: {
   map: L.Map;
   routeCoords: [number, number][];
-  start: LatLngLike;
-  end: LatLngLike;
+  start?: LatLngLike | null;
+  end?: LatLngLike | null;
   padding: MapFitPadding;
   maxZoom?: number;
   minZoom?: number;
 }): void {
-  const { map, routeCoords, start, end, padding, maxZoom = 17, minZoom } = options;
+  const { map, routeCoords, start, end, maxZoom = 17 } = options;
+  map.invalidateSize({ animate: false });
+
   const size = map.getSize();
-  if (size.x <= 0 || size.y <= 0 || routeCoords.length < 2) return;
+  if (size.x < 32 || size.y < 32 || routeCoords.length < 2) return;
+
+  const padding = clampFitPadding(size, options.padding);
+  const bounds = L.latLngBounds(routeCoords.map(([lat, lng]) => L.latLng(lat, lng)));
+  if (start) bounds.extend(L.latLng(start.lat, start.lng));
+  if (end) bounds.extend(L.latLng(end.lat, end.lng));
+  if (!bounds.isValid()) return;
+
+  const zMin = options.minZoom ?? map.getMinZoom();
+  const zMax = Math.min(maxZoom, map.getMaxZoom());
+
+  map.fitBounds(bounds, {
+    paddingTopLeft: padding.topLeft,
+    paddingBottomRight: padding.bottomRight,
+    maxZoom: zMax,
+    animate: false,
+  });
+
+  if (map.getZoom() < zMin) {
+    map.setZoom(zMin, { animate: false });
+  }
 
   const innerLeft = padding.topLeft[0];
   const innerTop = padding.topLeft[1];
   const innerRight = size.x - padding.bottomRight[0];
   const innerBottom = size.y - padding.bottomRight[1];
-  const innerWidth = Math.max(48, innerRight - innerLeft);
-  const innerHeight = Math.max(48, innerBottom - innerTop);
 
-  const startLL = L.latLng(start.lat, start.lng);
-  const endLL = L.latLng(end.lat, end.lng);
-
-  const startAnchorY = innerTop + innerHeight * 0.86;
-  const endAnchorY = innerTop + innerHeight * 0.14;
-  const anchorX = innerLeft + innerWidth * 0.5;
-  const targetVertSpan = Math.max(32, startAnchorY - endAnchorY);
-
-  const zMin = minZoom ?? map.getMinZoom();
-  const zMax = Math.min(maxZoom, map.getMaxZoom());
-
-  const endpointSpanMeters = startLL.distanceTo(endLL);
-  if (endpointSpanMeters < 35) {
-    map.setView(startLL, Math.min(zMax, 16), { animate: false });
-    return;
-  }
-
-  let chosenZoom = zMin;
-  for (let z = zMax; z >= zMin; z -= 1) {
-    const s = map.project(startLL, z);
-    const e = map.project(endLL, z);
-    const vertSpan = Math.abs(e.y - s.y);
-    const horizSpan = Math.abs(e.x - s.x);
-    if (vertSpan <= targetVertSpan * 0.96 && horizSpan <= innerWidth * 0.94) {
-      chosenZoom = z;
-      break;
-    }
-    if (z === zMin) chosenZoom = zMin;
-  }
-
-  const midLat = (start.lat + end.lat) / 2;
-  const midLng = (start.lng + end.lng) / 2;
-  map.setView([midLat, midLng], chosenZoom, { animate: false });
-  alignRouteEndpointsOnScreen(map, startLL, endLL, anchorX, startAnchorY, endAnchorY);
-
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    if (
-      !routeOverflowsInnerViewport(map, routeCoords, innerLeft, innerTop, innerRight, innerBottom)
-    ) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (!routeOverflowsInnerViewport(map, routeCoords, innerLeft, innerTop, innerRight, innerBottom)) {
       break;
     }
     const z = map.getZoom();
     if (z <= zMin) break;
     map.setZoom(z - 1, { animate: false });
-    alignRouteEndpointsOnScreen(map, startLL, endLL, anchorX, startAnchorY, endAnchorY);
   }
 }
