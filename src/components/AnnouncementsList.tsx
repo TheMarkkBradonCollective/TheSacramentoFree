@@ -10,6 +10,7 @@ import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmDeleteAnnouncement } from '../lib/destructiveConfirm';
+import { REBRAND_ANNOUNCEMENT_ID, REBRAND_ANNOUNCEMENT_LETTER } from '../../shared/rebrandAnnouncement2026';
 
 interface AnnouncementsListProps {
   userProfile?: UserProfile | null;
@@ -112,8 +113,10 @@ export default function AnnouncementsList({
           {announcements.map((announcement) => {
             const expanded = expandedId === announcement.id;
             const summary = announcement.body;
+            const isLetter = announcement.id === REBRAND_ANNOUNCEMENT_ID;
             const fullStory = announcement.detail?.trim() || '';
-            const hasFullStory = Boolean(fullStory);
+            const letterText = isLetter ? REBRAND_ANNOUNCEMENT_LETTER : fullStory;
+            const hasFullStory = isLetter || Boolean(fullStory);
             const comments = getCommentsForAnnouncement(announcement.id);
             const editable = canEdit(announcement);
             const isOwnAnnouncement = signedIn && announcement.postedByUserId === userProfile?.uid;
@@ -134,37 +137,49 @@ export default function AnnouncementsList({
                         {formatAnnouncementDate(announcement.date)}
                       </time>
                       <h2 className="mt-1 text-base font-black text-app">{announcement.title}</h2>
-                      <p className="mt-1 text-[11px] text-muted">
-                        Posted by {announcement.authorName} · {announcement.authorTitle}
-                      </p>
-                      <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap font-semibold">
-                        {summary}
-                      </p>
+                      {!isLetter ? (
+                        <p className="mt-1 text-[11px] text-muted">
+                          Posted by {announcement.authorName} · {announcement.authorTitle}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-[11px] text-muted italic">A personal letter — not a release note</p>
+                      )}
+                      {!isLetter ? (
+                        <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap font-semibold">
+                          {summary}
+                        </p>
+                      ) : null}
                       {hasFullStory ? (
                         <>
-                          {expanded ? (
-                            <p className="mt-3 text-sm text-muted leading-relaxed whitespace-pre-wrap font-normal border-t border-app pt-3">
-                              {fullStory}
-                            </p>
+                          {isLetter || expanded ? (
+                            <div
+                              className={`mt-3 text-sm text-app leading-relaxed whitespace-pre-wrap ${
+                                isLetter ? 'font-serif border-t-2 border-app pt-4' : 'text-muted font-normal border-t border-app pt-3'
+                              }`}
+                            >
+                              {letterText}
+                            </div>
                           ) : null}
-                          <button
-                            type="button"
-                            onClick={() => setExpandedId(expanded ? null : announcement.id)}
-                            className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent"
-                            aria-expanded={expanded}
-                          >
-                            {expanded ? (
-                              <>
-                                <ChevronUp className="w-4 h-4" aria-hidden />
-                                Tap to collapse full story
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="w-4 h-4" aria-hidden />
-                                Tap for full story
-                              </>
-                            )}
-                          </button>
+                          {!isLetter ? (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedId(expanded ? null : announcement.id)}
+                              className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent"
+                              aria-expanded={expanded}
+                            >
+                              {expanded ? (
+                                <>
+                                  <ChevronUp className="w-4 h-4" aria-hidden />
+                                  Tap to collapse full story
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-4 h-4" aria-hidden />
+                                  Tap for full story
+                                </>
+                              )}
+                            </button>
+                          ) : null}
                         </>
                       ) : null}
                     </div>

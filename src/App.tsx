@@ -114,6 +114,9 @@ import {
   verifyNativeAppSession,
 } from './lib/nativeAppSession';
 import { hasSeenGoGetFirstRunPrompt } from './lib/goGetFirstRunState';
+import RebrandAnnouncementModal from './components/RebrandAnnouncementModal';
+import { hasSeenRebrandAnnouncement, markRebrandAnnouncementSeen } from './lib/rebrandAnnouncementState';
+import { REBRAND_ANNOUNCEMENT_ID } from '../shared/rebrandAnnouncement2026';
 import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
@@ -212,6 +215,7 @@ export default function App() {
   const [showStaffApplyPanel, setShowStaffApplyPanel] = useState(false);
   const [privacyGateOpen, setPrivacyGateOpen] = useState(false);
   const [termsGateOpen, setTermsGateOpen] = useState(false);
+  const [rebrandLetterOpen, setRebrandLetterOpen] = useState(() => !hasSeenRebrandAnnouncement());
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [addEventDatesMode, setAddEventDatesMode] = useState(false);
@@ -2017,11 +2021,33 @@ export default function App() {
     setNewListingModalMode(null);
   }, []);
 
+  const dismissRebrandLetter = useCallback(() => {
+    markRebrandAnnouncementSeen();
+    setRebrandLetterOpen(false);
+  }, []);
+
+  const handleOpenRebrandNews = useCallback(() => {
+    markRebrandAnnouncementSeen();
+    setRebrandLetterOpen(false);
+    openNotificationsHub('announcements', { announcementId: REBRAND_ANNOUNCEMENT_ID });
+  }, []);
+
+  const showRebrandLetterModal =
+    rebrandLetterOpen &&
+    !authBootstrapping &&
+    !showDownloadPage &&
+    (!sessionUser ||
+      (Boolean(userProfile) &&
+        !privacyGateOpen &&
+        !termsGateOpen &&
+        !accountRestriction.restricted));
+
   const reviewPromptEnabled =
     Boolean(userProfile) &&
     !privacyGateOpen &&
     !termsGateOpen &&
-    !accountRestriction.restricted;
+    !accountRestriction.restricted &&
+    !rebrandLetterOpen;
 
   const {
     promptKind: reviewPromptKind,
@@ -2749,6 +2775,7 @@ export default function App() {
         userProfile &&
         isNativeApp() &&
         !hasSeenGoGetFirstRunPrompt() &&
+        !rebrandLetterOpen &&
         !privacyGateOpen &&
         !termsGateOpen && (
           <GoGetFirstRunPrompt
@@ -2757,6 +2784,13 @@ export default function App() {
             onOpenNotificationSettings={() => openNotificationsHub('alerts')}
           />
         )}
+
+      {showRebrandLetterModal && (
+        <RebrandAnnouncementModal
+          onDismiss={dismissRebrandLetter}
+          onOpenNews={sessionReady ? handleOpenRebrandNews : undefined}
+        />
+      )}
     </div>
   );
 }

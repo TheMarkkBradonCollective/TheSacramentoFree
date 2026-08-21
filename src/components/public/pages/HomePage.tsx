@@ -1,5 +1,6 @@
 import { ArrowRight, FileText, HandHeart, Heart, MapPin, MessageCircle, MessageSquare, PackageCheck, Shield, Sparkles, Star, Users } from 'lucide-react';
 import BrandLogo from '../../BrandLogo';
+import TrademarkNoticeBanner from '../TrademarkNoticeBanner';
 import LeadershipMessagesCarousel from '../../LeadershipMessagesCarousel';
 import CommunityReviews from '../../CommunityReviews';
 import CommunityStatsBar from '../../CommunityStatsBar';
@@ -46,6 +47,8 @@ export default function HomePage({
 }: HomePageProps) {
   return (
     <HomeScrollStage>
+      <TrademarkNoticeBanner />
+
       <section className="px-4 sbn-hero-glow pb-4">
         <div className="lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:items-center max-w-3xl lg:max-w-none mx-auto">
           <div>

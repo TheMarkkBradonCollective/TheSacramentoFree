@@ -1,4 +1,16 @@
 import { CHANGELOG_AUTHOR_UID } from './changelogAuthor';
+import {
+  REBRAND_ANNOUNCEMENT_BODY,
+  REBRAND_ANNOUNCEMENT_DATE,
+  REBRAND_ANNOUNCEMENT_ID,
+  REBRAND_ANNOUNCEMENT_LETTER,
+  REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  REBRAND_ANNOUNCEMENT_TITLE,
+  REBRAND_UPDATE_BODY,
+  REBRAND_UPDATE_DETAIL,
+  REBRAND_UPDATE_ID,
+  REBRAND_UPDATE_TITLE,
+} from './rebrandAnnouncement2026';
 
 export interface SeededAppUpdate {
   id: string;
@@ -73,6 +85,7 @@ const APK_0043_PUBLISHED_AT = '2026-08-20T20:30:00.000Z';
 const APK_0044_PUBLISHED_AT = '2026-08-20T21:00:00.000Z';
 const APK_0045_PUBLISHED_AT = '2026-08-20T21:30:00.000Z';
 const APK_0046_PUBLISHED_AT = '2026-08-20T22:35:00.000Z';
+const REBRAND_LETTER_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -127,6 +140,14 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    REBRAND_UPDATE_ID,
+    REBRAND_ANNOUNCEMENT_DATE,
+    REBRAND_UPDATE_TITLE,
+    REBRAND_UPDATE_BODY,
+    REBRAND_UPDATE_DETAIL,
+    REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0046',
     '2026-08-20',
@@ -1550,6 +1571,14 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    REBRAND_ANNOUNCEMENT_ID,
+    REBRAND_ANNOUNCEMENT_DATE,
+    REBRAND_ANNOUNCEMENT_TITLE,
+    REBRAND_ANNOUNCEMENT_BODY,
+    REBRAND_ANNOUNCEMENT_LETTER,
+    REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
   news(
     '2026-08-20_apk-0046',
     '2026-08-20',
