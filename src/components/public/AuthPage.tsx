@@ -143,7 +143,7 @@ export default function AuthPage({
       {/* Brand story panel — desktop/tablet-landscape only */}
       <div className="hidden lg:flex lg:w-[42%] xl:w-[38%] sbn-auth-brand-panel flex-col justify-between p-10 lg:p-12">
         <div className="relative z-10 flex items-center gap-3">
-          <BrandLogo imgClassName="h-11 w-11 object-cover rounded-xl shadow-lg" showTitle={false} />
+          <BrandLogo imgClassName="h-24 w-auto max-w-[220px] object-contain" showTitle={false} />
           {newspaper ? null : (
             <span className="font-display font-bold text-lg text-white">
               Sacramento <span className="text-white/80">Buy Nothing</span>
@@ -179,7 +179,7 @@ export default function AuthPage({
           {/* Compact brand hero — mobile/tablet only (no split panel at this width) */}
           <div className="lg:hidden mb-6">
             <div className="sbn-native-hero flex items-center gap-3">
-              <BrandLogo imgClassName="h-10 w-10 object-cover rounded-xl shrink-0" showTitle={false} />
+              <BrandLogo imgClassName="h-16 w-auto max-w-[160px] object-contain shrink-0" showTitle={false} />
               <div className="min-w-0">
                 {newspaper ? null : (
                   <p className="font-display font-bold text-white leading-tight">{brandName}</p>

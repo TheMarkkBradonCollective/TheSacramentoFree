@@ -201,7 +201,7 @@ function OriginalHomePage({
         <div className="lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:items-center max-w-3xl lg:max-w-none mx-auto">
           <div>
             <div className="tsf-hero-masthead">
-              <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl" />
+              <BrandLogo imgClassName="h-16 w-auto max-w-[220px] object-contain rounded-xl" />
               <p className="tsf-masthead-tagline">{tagline}</p>
             </div>
 

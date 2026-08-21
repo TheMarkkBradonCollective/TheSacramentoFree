@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Gift } from 'lucide-react';
-import { APP_LOGO_SRC, SITE } from '../siteContent';
+import { APP_LOGO_SRC, SITE_LOGO_SRC, SITE } from '../siteContent';
 import { NEWSPAPER } from '../preview/newspaperBrand';
 import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
+import { isNativeApp } from '../lib/nativePlatform';
 
 interface BrandLogoProps {
   className?: string;
@@ -50,25 +51,11 @@ export default function BrandLogo({
   const { enabled: newspaper } = useNewspaperSkin();
   const title = newspaper ? NEWSPAPER.name : SITE.name;
   const tagline = subtitle ?? (newspaper ? NEWSPAPER.tagline : SITE.tagline);
+  const useSiteLockup = !compact && !isNativeApp();
+  const src = useSiteLockup ? SITE_LOGO_SRC : APP_LOGO_SRC;
   const logoClass = compact
     ? 'h-8 w-8 object-cover rounded-lg shrink-0'
     : imgClassName;
-
-  if (newspaper) {
-    return (
-      <div className={className}>
-        <div className="tsf-logo-mark shrink-0" aria-label={NEWSPAPER.name}>
-          <span className="tsf-logo-the">{NEWSPAPER.the}</span>
-          <span className="tsf-logo-name">{NEWSPAPER.title}</span>
-        </div>
-        {showTitle && !compact && (
-          <p className={`text-muted truncate ${compact ? 'text-[10px] leading-snug mt-0.5' : 'text-[11px]'}`}>
-            {tagline}
-          </p>
-        )}
-      </div>
-    );
-  }
 
   if (failed) {
     return (
@@ -84,8 +71,8 @@ export default function BrandLogo({
   return (
     <div className={className}>
       <img
-        src={APP_LOGO_SRC}
-        alt="Sacramento Buy Nothing"
+        src={src}
+        alt={newspaper ? NEWSPAPER.name : 'Sacramento Buy Nothing'}
         className={logoClass}
         onError={() => setFailed(true)}
       />
