@@ -3,22 +3,22 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.2.0 (50)
+  0.2.0 (51)
 
 Beta label (for your records / changelog):
-  beta v0.2.0.0050
+  beta v0.2.0.0051
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0050.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0051.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0050.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0051.apk
 
 Package name:
   org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.2.0.0050.aab
+  public/downloads/sac-buy-nothing-beta-v0.2.0.0051.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -26,19 +26,19 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta 0.2.0 (50)
+Android beta 0.2.0 (51)
 
-• Newspaper look on the website and app
-• Sacramento Free lockup on the site
-• Hands app icon
-• Status and notification bars are black
+• Smaller Sacramento Free lockup on the website and app
+• Home, sign-in, and map no longer overlap or cut off
+• Map filters and listing cards fit on the screen
+• Notification inboxes can be cleared with the schema run
 ───────────────────────────────────────────────────────────────
 
 Steps:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Internal testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.2.0.0050.aab
-  4. Release name: 0.2.0 (50)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.2.0.0051.aab
+  4. Release name: 0.2.0 (51)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Internal testing
 
