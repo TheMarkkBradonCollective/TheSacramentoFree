@@ -77,13 +77,22 @@ try {
   check('immersive mode active on desktop', motion.immersive, JSON.stringify(motion));
 
   check('masthead rendered', (await page.$$('.tsf-masthead')).length > 0);
+  const wordmark = await page.evaluate(() => ({
+    name: document.querySelector('.tsf-masthead__name')?.textContent.trim() || '',
+    free: document.querySelector('.tsf-masthead__free')?.textContent.trim() || '',
+  }));
   check(
     'masthead wordmark reads correctly',
-    (await page.$eval('.tsf-masthead__name', (el) => el.textContent.trim())) === 'Sacramento Free',
+    wordmark.name === 'Sacramento' && wordmark.free === 'Free',
+    `${wordmark.name} / ${wordmark.free}`,
   );
 
   const mastheadSize = await page.$eval('.tsf-masthead__name', (el) => parseFloat(getComputedStyle(el).fontSize));
   check('masthead is dramatic (>= 56px on desktop)', mastheadSize >= 56, `${mastheadSize}px`);
+
+  check('paper sits on a desk', (await page.$$('.tsf-desk .tsf-paper')).length > 0);
+  check('front page uses lead + rail', (await page.$$('.tsf-front .tsf-front__rail')).length > 0);
+  check('section index uses dotted leaders', (await page.$$('.tsf-index__row')).length >= 8);
 
   const fonts = await page.evaluate(() => {
     const root = getComputedStyle(document.documentElement);
@@ -93,7 +102,8 @@ try {
       typewriter: root.getPropertyValue('--font-typewriter').trim(),
     };
   });
-  check('serif body type', /Libre Baskerville|Source Serif/.test(fonts.body), fonts.body.slice(0, 48));
+  check('serif body type', /Newsreader|Libre Baskerville|Source Serif/.test(fonts.body), fonts.body.slice(0, 48));
+  check('masthead face is Fraunces', /Fraunces/.test(fonts.masthead), fonts.masthead.slice(0, 48));
   check('typewriter face registered', /Courier Prime/.test(fonts.typewriter), fonts.typewriter.slice(0, 48));
 
   const offenders = await page.evaluate(COLLECT_COLOURS);

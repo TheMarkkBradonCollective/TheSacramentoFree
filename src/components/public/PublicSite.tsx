@@ -129,13 +129,8 @@ export default function PublicSite({
     }
   };
 
-  return (
-    <div
-      className={`min-h-screen h-dvh bg-app text-app flex flex-col overflow-hidden ${
-        newspaper ? 'tsf-root' : 'font-sans'
-      }`}
-    >
-      <NewspaperPreviewBanner />
+  const paperChrome = (
+    <>
       <NewspaperEditionBar />
       <PublicNav route={route} onNavigate={navigateSection} />
       <main className="flex-1 min-h-0 overflow-hidden">
@@ -143,6 +138,23 @@ export default function PublicSite({
           {renderPage()}
         </ScrollPage>
       </main>
+    </>
+  );
+
+  return (
+    <div
+      className={`min-h-screen h-dvh bg-app text-app flex flex-col overflow-hidden ${
+        newspaper ? 'tsf-root' : 'font-sans'
+      }`}
+    >
+      <NewspaperPreviewBanner />
+      {newspaper ? (
+        <div className="tsf-desk">
+          <div className="tsf-paper">{paperChrome}</div>
+        </div>
+      ) : (
+        paperChrome
+      )}
     </div>
   );
 }

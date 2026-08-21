@@ -7,9 +7,30 @@ interface NewspaperMastheadProps {
   className?: string;
 }
 
+/** Two rivers meeting — Sacramento and American — as an original flourish. */
+function RiverMark() {
+  return (
+    <svg className="tsf-masthead__rivers" viewBox="0 0 220 18" aria-hidden="true" focusable="false">
+      <path
+        d="M2 11 C 28 3, 52 15, 78 9 S 130 4, 160 11 200 6, 218 10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.15"
+      />
+      <path
+        d="M2 14 C 36 18, 70 8, 104 14 S 168 18, 218 12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="0.7"
+        opacity="0.7"
+      />
+    </svg>
+  );
+}
+
 /**
- * The front-page crest for The Sacramento Free: information strip, engraved
- * wordmark, dateline, and the rules that frame them.
+ * The front-page crest for The Sacramento Free: information strip, stacked
+ * wordmark, river flourish, dateline, and the rules that frame them.
  */
 export default function NewspaperMasthead({ variant = 'front', className = '' }: NewspaperMastheadProps) {
   const { enabled } = useNewspaperSkin();
@@ -26,12 +47,13 @@ export default function NewspaperMasthead({ variant = 'front', className = '' }:
       <div className="tsf-masthead__rule tsf-masthead__rule--hair" />
 
       <div className="tsf-masthead__crest">
-        <span className="tsf-masthead__ornament" aria-hidden />
+        <RiverMark />
         <h1 className="tsf-masthead__wordmark">
           <span className="tsf-masthead__the">{NEWSPAPER.the}</span>
-          <span className="tsf-masthead__name">{NEWSPAPER.title}</span>
+          <span className="tsf-masthead__name">{NEWSPAPER.title.split(' ')[0]}</span>
+          <span className="tsf-masthead__free">{NEWSPAPER.title.split(' ')[1]}</span>
         </h1>
-        <span className="tsf-masthead__ornament" aria-hidden />
+        <RiverMark />
       </div>
 
       <p className="tsf-masthead__tagline">{NEWSPAPER.tagline}</p>
