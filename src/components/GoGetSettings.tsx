@@ -48,7 +48,7 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
     setAvailability(getPickupAvailability(merged));
     setRingDuration(normalizeGoGetRingDuration(merged.goGetRingDurationSeconds));
     setRingPattern(normalizeGoGetRingPattern(merged.goGetRingPattern));
-  }, [userProfile.uid, userProfile.goGetEnabled, userProfile.pickupAvailability, userProfile.goGetRingDurationSeconds, userProfile.goGetRingPattern]);
+  }, [userProfile.uid]);
 
   const persist = async (patch: Partial<UserProfile>, successMsg?: string) => {
     setSaving(true);
