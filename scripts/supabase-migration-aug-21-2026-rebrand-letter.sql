@@ -18,8 +18,8 @@ INSERT INTO public.app_updates (
 VALUES (
   '2026-08-21_trademark-rebrand-notice',
   '2026-08-21',
-  'Before the next chapter',
-  'Site stays up while we pause big new builds and work toward version 0.2.0.',
+  'Worth reading before you worry',
+  'Site stays up while version 0.2.0 cooks in private — you gotta wait on the reveal.',
   $detail$WHAT NEIGHBORS SEE
 • sacramentobuynothing.com now shows an official trademark notice on the home page — we are independent and working on a distinct name
 • First visit shows a one-time letter from Mark (dismiss it anytime; the full letter also lives in bell → News)
@@ -63,19 +63,19 @@ INSERT INTO public.help_announcements (
 VALUES (
   '2026-08-21_rebrand-letter',
   '2026-08-21',
-  'Time for the next chapter',
-  'Sounds like I am moving on. I am not — version 0.2.0 is next.',
+  'I do not know what else to do',
+  'Sounds like shutdown. Nope — got a good idea. You gotta wait for version 0.2.0.',
   $detail$Neighbors,
 
-I have to start with the part I didn't want to write.
+I'm going to be honest — I'm kind of defeated on this one.
 
-I've now learned that our name — "Buy Nothing" — overlaps with trademarks and brands that aren't ours. As a result, we are going to have to discontinue operations: take the site down, pull the apps, and say goodbye.
+Our name — "Buy Nothing" — runs into trademarks and brands that aren't ours. I've turned it over every way I can think of, and I don't know what else to do except shut Sacramento Buy Nothing down: take the site off, pull the apps, and say goodbye.
 
 …
 
 NAWH, I'M JUST GIV'N. 😅
 
-Sacramento Buy Nothing is not shutting down. You're not losing your listings, your messages, or this community. This is not me leaving — it is time for the next chapter.
+Wait — nope. I actually got such a good idea for what comes next. You're gonna have to wait while I cook it, but we're not closing. Your listings, your messages, and this community stay.
 
 Here is what is actually changing:
 
