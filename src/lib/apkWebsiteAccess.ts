@@ -7,7 +7,8 @@ export const APK_WEBSITE_JOIN_RANK_LIMIT = 500;
 export function canDownloadApkFromWebsite(user: UserProfile | null | undefined): boolean {
   if (!user?.uid) return false;
   const rank = user.joinRank;
-  if (typeof rank !== 'number' || !Number.isFinite(rank)) return false;
+  // Older rows may have no joinRank yet — do not block testers/sideload.
+  if (typeof rank !== 'number' || !Number.isFinite(rank)) return true;
   return rank >= 1 && rank <= APK_WEBSITE_JOIN_RANK_LIMIT;
 }
 

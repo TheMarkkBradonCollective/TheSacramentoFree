@@ -41,6 +41,11 @@ export function normalizeChatInboxPreferences(raw: unknown): ChatInboxPreference
   const prefs: ChatInboxPreferences = {};
   if (isChatCategoryFilter(source.category)) prefs.category = source.category;
   if (isChatStatusFilter(source.status)) prefs.status = source.status;
+  if (Array.isArray(source.archivedKeys)) {
+    prefs.archivedKeys = source.archivedKeys.filter(
+      (key): key is string => typeof key === 'string' && key.length > 0,
+    );
+  }
   return prefs;
 }
 

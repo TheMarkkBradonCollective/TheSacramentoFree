@@ -9,7 +9,7 @@ import {
 } from './appPrefsCache';
 
 export type FeedListingQuickPick = 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
-export type FeedStatusFilter = 'all' | 'active' | 'pending_pickup' | 'on_hold';
+export type FeedStatusFilter = 'all' | 'active' | 'pending_pickup' | 'on_hold' | 'completed';
 export type FeedVoteFilter = 'all' | 'i_interested' | 'has_interest' | 'has_comments';
 
 const FEED_SORTS: FeedSortMode[] = [
@@ -17,7 +17,7 @@ const FEED_SORTS: FeedSortMode[] = [
   ...MORE_FEED_SORTS.map((s) => s.value),
 ];
 const FEED_QUICK_PICKS: FeedListingQuickPick[] = ['saved', 'my_neighborhood', 'with_photos', 'needs_pickup'];
-const FEED_STATUS_FILTERS: FeedStatusFilter[] = ['all', 'active', 'pending_pickup', 'on_hold'];
+const FEED_STATUS_FILTERS: FeedStatusFilter[] = ['all', 'active', 'pending_pickup', 'on_hold', 'completed'];
 const FEED_VOTE_FILTERS: FeedVoteFilter[] = ['all', 'i_interested', 'has_interest', 'has_comments'];
 
 export type FeedFilterState = {

@@ -72,6 +72,7 @@ const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'active', label: 'Available' },
   { value: 'pending_pickup', label: 'Pending pickup' },
   { value: 'on_hold', label: 'On hold' },
+  { value: 'completed', label: 'Given / fulfilled' },
 ];
 
 const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
@@ -439,7 +440,11 @@ export default function ItemGrid({
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) => {
       if (item.status === 'withdrawn') return false;
-      if (isClosedCommunityListing(item)) return false;
+      if (selectedStatus === 'completed') {
+        if (!isClosedCommunityListing(item)) return false;
+      } else if (isClosedCommunityListing(item)) {
+        return false;
+      }
 
       const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
       if (!searchString.includes(searchTerm.toLowerCase())) return false;

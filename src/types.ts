@@ -25,7 +25,7 @@ export interface EventsFilterPreferences {
 }
 
 export type FeedListingQuickPick = 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';
-export type FeedStatusFilter = 'all' | 'active' | 'pending_pickup' | 'on_hold';
+export type FeedStatusFilter = 'all' | 'active' | 'pending_pickup' | 'on_hold' | 'completed';
 export type FeedVoteFilter = 'all' | 'i_interested' | 'has_interest' | 'has_comments';
 
 export interface FeedFilterPreferences {
@@ -47,6 +47,7 @@ export type ChatStatusFilter = 'all' | 'live' | 'closed' | 'archived';
 export interface ChatInboxPreferences {
   category?: ChatCategoryFilter;
   status?: ChatStatusFilter;
+  archivedKeys?: string[];
 }
 
 export interface AppPreferences {

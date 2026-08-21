@@ -3,6 +3,7 @@ import {
   Activity,
   Ban,
   Download,
+  Copy,
   Flag,
   LifeBuoy,
   Package,
@@ -101,6 +102,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
   const [loading, setLoading] = useState(true);
   const [exportingTesters, setExportingTesters] = useState(false);
   const [exportTestersError, setExportTestersError] = useState<string | null>(null);
+  const [exportTestersNotice, setExportTestersNotice] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const data = await getDirectorSiteOverview();
@@ -108,9 +110,46 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
     setLoading(false);
   }, []);
 
+  const deliverPlayTestersCsv = async (csv: string) => {
+    const count = csv.split('\n').filter((line) => line.trim()).length;
+    const file = new File([csv], 'play-testers.csv', { type: 'text/csv;charset=utf-8' });
+
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Play testers' });
+        setExportTestersNotice(`Shared ${count} tester emails.`);
+        return;
+      }
+    } catch {
+      /* share cancelled or unsupported — try download / copy */
+    }
+
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = 'play-testers.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch {
+      /* ignore and copy */
+    }
+
+    try {
+      await navigator.clipboard.writeText(csv);
+      setExportTestersNotice(`Copied ${count} emails. Paste into Play Console testers.`);
+    } catch {
+      window.prompt('Copy these emails for Play Console:', csv);
+      setExportTestersNotice(`Showing ${count} emails to copy.`);
+    }
+  };
+
   const downloadPlayTesters = useCallback(async () => {
     setExportingTesters(true);
     setExportTestersError(null);
+    setExportTestersNotice(null);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -132,15 +171,8 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         throw new Error(text || 'Could not export tester emails.');
       }
 
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = objectUrl;
-      link.download = 'play-testers.csv';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(objectUrl);
+      const csv = await res.text();
+      await deliverPlayTestersCsv(csv);
     } catch (err) {
       setExportTestersError(err instanceof Error ? err.message : 'Could not export tester emails.');
     } finally {
@@ -311,7 +343,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <div>
           <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Play Console testers</h4>
           <p className="text-[11px] text-muted mt-1 leading-snug">
-            Download every neighbor email as a Play-ready CSV — one tap, no SQL batches.
+            On a phone this copies or shares every neighbor email. On a computer it also downloads a CSV.
           </p>
         </div>
         <button
@@ -320,9 +352,18 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           disabled={exportingTesters}
           className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold disabled:opacity-60"
         >
-          <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
-          {exportingTesters ? 'Preparing CSV…' : 'Download Play tester emails'}
+          {exportingTesters ? (
+            <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+          ) : (
+            <Copy className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+          )}
+          {exportingTesters ? 'Preparing CSV…' : 'Get Play tester emails'}
         </button>
+        {exportTestersNotice && (
+          <p className="text-[11px] text-emerald-400 leading-snug" role="status">
+            {exportTestersNotice}
+          </p>
+        )}
         {exportTestersError && (
           <p className="text-[11px] text-red-400 leading-snug" role="alert">
             {exportTestersError}

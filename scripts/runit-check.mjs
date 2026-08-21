@@ -82,6 +82,11 @@ const migrationMarkers = [
     markers: ['delete_own_listing', 'delete_own_event'],
     label: 'Audit 48 cascade deletes',
   },
+  {
+    file: 'scripts/supabase-migration-aug-21-2026-storage-items-auth.sql',
+    markers: ['audit-49-storage-items-auth', 'items_storage_insert'],
+    label: 'Listing photo storage auth',
+  },
 ];
 
 for (const { file, markers, label: migrationLabel } of migrationMarkers) {

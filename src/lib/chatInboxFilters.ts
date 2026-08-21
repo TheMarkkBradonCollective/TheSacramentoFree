@@ -11,7 +11,7 @@ import type {
 import { isCommunityChat } from './communityChats';
 import { isEventPostChatReadOnly, isListingPostChatReadOnly } from './roles';
 import type { InboxEntry } from './chatInbox';
-import { inboxArchiveKey } from './chatInboxArchive';
+import { inboxArchiveKey, readArchivedInboxKeys } from './chatInboxArchive';
 import { readStoredAppPrefs } from './appPrefsCache';
 import { mergeAppPreferences } from './appPreferencesModel';
 
@@ -92,12 +92,16 @@ export function writeChatStatusFilter(value: ChatStatusFilter): void {
 export function resolveChatInboxFilters(profile: UserProfile): {
   category: ChatCategoryFilter;
   status: ChatStatusFilter;
+  archivedKeys: string[];
 } {
   const stored = readStoredAppPrefs(profile.uid)?.appPreferences;
   const merged = mergeAppPreferences(profile.appPreferences, stored ?? {});
+  const localArchived = [...readArchivedInboxKeys(profile.uid)];
+  const cloudArchived = merged.chatInbox?.archivedKeys ?? [];
   return {
     category: merged.chatInbox?.category ?? readChatCategoryFilter(),
     status: merged.chatInbox?.status ?? readChatStatusFilter(),
+    archivedKeys: [...new Set([...cloudArchived, ...localArchived])],
   };
 }
 

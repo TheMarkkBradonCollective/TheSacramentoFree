@@ -821,7 +821,7 @@ export default function SacramentoMapView({
     if (showingEvents) return [];
 
     return items.filter((item) => {
-      if (item.status !== 'active') return false;
+      if (item.status !== 'active' && item.status !== 'pending_pickup') return false;
 
       // 1. Search text filter
       const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();

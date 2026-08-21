@@ -155,7 +155,7 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
     '2026-08-21_apk-0049',
     '2026-08-21',
     'New Android download — beta v0.1.0.0049',
-    'Feed/chat filters follow your account, Android padding, event errors.',
+    'Feed/chat filters follow your account, Android padding, event errors, phone tester export.',
     `WHAT NEIGHBORS SEE
 Beta v0.1.0.0049.
 
@@ -163,8 +163,13 @@ Beta v0.1.0.0049.
 • Android no longer adds extra space above the status bar
 • Event load failures show an error instead of an empty calendar
 • Hosts can delete a cancelled or past event
+• Play tester emails copy/share on a phone
+• Stuff can show given/fulfilled listings again
+• Map shows pending-pickup pins
 
 Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-21-2026-storage-items-auth.sql in Supabase.
 
 — Mark
 
@@ -1673,12 +1678,14 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
   news(
     '2026-08-21_apk-0049',
     '2026-08-21',
-    'New Android beta 0049 — filters, padding, event errors',
-    'Feed and chat filters follow your account; Android padding and event load errors are fixed.',
+    'New Android beta 0049 — filters, padding, event errors, phone tester export',
+    'Feed and chat filters follow your account; Android padding, event load errors, and phone tester export are fixed.',
     `WHAT NEIGHBORS SEE
-Beta v0.1.0.0049: feed and chat filters follow you across devices, Android no longer double-pads the status bar, event load failures show an error, hosts can delete cancelled or past events.
+Beta v0.1.0.0049: feed and chat filters follow you across devices, Android no longer double-pads the status bar, event load failures show an error, hosts can delete cancelled or past events, Play tester emails copy on a phone, given/fulfilled listings can be shown again.
 
 Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-21-2026-storage-items-auth.sql in Supabase.
 
 — Mark
 
