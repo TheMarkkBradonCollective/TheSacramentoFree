@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 
 OUT_DIR="$ROOT_DIR/play-store-assets"
 LOGO="$ROOT_DIR/assets/icon-fullbleed.png"
-FEATURE_LOGO="$ROOT_DIR/public/Logo.jpeg"
+FEATURE_LOGO="$ROOT_DIR/public/TheSacramentoFree.png"
 
 mkdir -p "$OUT_DIR"
 
@@ -42,8 +42,8 @@ ffmpeg -y -loglevel error \
   -frames:v 1 \
   -filter_complex "[1:v]scale=360:-1,format=rgba[logo];\
 [0:v][logo]overlay=48:(H-h)/2,\
-drawtext=fontfile=${FONT_BOLD}:text='SacramentoBuyNothing':fontsize=44:fontcolor=0x0b0b0c:x=448:y=148,\
-drawtext=fontfile=${FONT_SEMI}:text='Give freely. Ask kindly.':fontsize=32:fontcolor=0xFF4500:x=448:y=214,\
+drawtext=fontfile=${FONT_BOLD}:text='The Sacramento Free':fontsize=44:fontcolor=0x0b0b0c:x=448:y=148,\
+drawtext=fontfile=${FONT_SEMI}:text='Give freely. Ask kindly.':fontsize=32:fontcolor=0x0a0a0a:x=448:y=214,\
 drawtext=fontfile=${FONT_SEMI}:text='No selling  ·  No ads  ·  Sacramento neighbors':fontsize=22:fontcolor=0x52525B:x=448:y=278" \
   "$OUT_DIR/feature-graphic-1024x500.png"
 

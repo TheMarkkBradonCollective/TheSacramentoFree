@@ -1,5 +1,5 @@
 /** Community logo shown in the app UI and PWA install banner. */
-export const APP_LOGO_SRC = '/Logo.jpeg';
+export const APP_LOGO_SRC = '/Logo.png';
 
 export const SITE = {
   name: 'SacramentoBuyNothing',
