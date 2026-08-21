@@ -10,20 +10,21 @@ interface NewspaperMastheadProps {
 /** Two rivers meeting — Sacramento and American — as an original flourish. */
 function RiverMark() {
   return (
-    <svg className="tsf-masthead__rivers" viewBox="0 0 220 18" aria-hidden="true" focusable="false">
+    <svg className="tsf-masthead__rivers" viewBox="0 0 280 28" aria-hidden="true" focusable="false">
       <path
-        d="M2 11 C 28 3, 52 15, 78 9 S 130 4, 160 11 200 6, 218 10"
+        d="M4 12 C 36 4, 68 20, 102 11 S 170 5, 210 14 256 8, 276 12"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.15"
+        strokeWidth="1.45"
       />
       <path
-        d="M2 14 C 36 18, 70 8, 104 14 S 168 18, 218 12"
+        d="M4 18 C 48 24, 90 10, 132 18 S 210 24, 276 16"
         fill="none"
         stroke="currentColor"
-        strokeWidth="0.7"
-        opacity="0.7"
+        strokeWidth="0.95"
+        opacity="0.75"
       />
+      <circle cx="140" cy="14.5" r="1.7" fill="currentColor" />
     </svg>
   );
 }
