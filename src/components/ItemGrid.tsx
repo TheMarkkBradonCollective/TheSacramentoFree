@@ -772,10 +772,10 @@ export default function ItemGrid({
       ) : (
         <div
           className={
-            newspaperSkin
-              ? 'tsf-classified-sheet'
-              : viewMode === 'grid'
-                ? 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5'
+            viewMode === 'grid'
+              ? 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5'
+              : newspaperSkin
+                ? 'tsf-classified-sheet'
                 : 'flex flex-col gap-2 sm:gap-2.5'
           }
           id="items_grid_cards"
@@ -784,7 +784,7 @@ export default function ItemGrid({
             <div key={item.id}>
               <ItemCard
                 item={item}
-                layout={newspaperSkin ? 'list' : viewMode}
+                layout={viewMode}
                 currentUserId={userProfile.uid}
                 voteState={getVotesForPost(item.id)}
                 comments={getCommentsForPost(item.id)}
