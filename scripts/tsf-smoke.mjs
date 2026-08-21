@@ -2,7 +2,7 @@
  * Headless smoke check for The Sacramento Free newspaper skin.
  *
  * Verifies the things a screenshot cannot reliably catch: that the page-turn
- * layer actually mounts on navigation, that the palette really is grayscale,
+ * layer actually mounts on navigation, that the chrome really is ink,
  * and that the original skin is untouched.
  *
  *   node scripts/tsf-smoke.mjs [baseUrl]
@@ -107,7 +107,7 @@ try {
   check('typewriter face registered', /Courier Prime/.test(fonts.typewriter), fonts.typewriter.slice(0, 48));
 
   const offenders = await page.evaluate(COLLECT_COLOURS);
-  check('palette is grayscale', offenders.length === 0, offenders.join(' | ').slice(0, 400));
+  check('chrome is ink (photos may carry colour)', offenders.length === 0, offenders.join(' | ').slice(0, 400));
 
   // ── Page turn on navigation ──
   await page.evaluate(() => {
