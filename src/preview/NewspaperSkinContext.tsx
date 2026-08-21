@@ -42,6 +42,9 @@ function readEnabled(): boolean {
 }
 
 export function newspaperThemeColor(theme: 'light' | 'dark', newspaper = true): string {
+  if (typeof document !== 'undefined' && document.documentElement.classList.contains('capacitor-native')) {
+    return '#000000';
+  }
   if (!newspaper) return theme === 'light' ? '#ffffff' : '#0b0b0c';
   return theme === 'light' ? '#e6e5e0' : '#0c0c0b';
 }

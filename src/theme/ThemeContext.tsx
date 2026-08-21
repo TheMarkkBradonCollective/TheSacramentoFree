@@ -27,10 +27,14 @@ function applyThemeToDocument(theme: Theme) {
   root.style.colorScheme = theme;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    const newspaper = root.classList.contains('newspaper-preview');
-    const light = newspaper ? '#e6e5e0' : '#ffffff';
-    const dark = newspaper ? '#0c0c0b' : '#0b0b0c';
-    meta.setAttribute('content', theme === 'light' ? light : dark);
+    if (root.classList.contains('capacitor-native')) {
+      meta.setAttribute('content', '#000000');
+    } else {
+      const newspaper = root.classList.contains('newspaper-preview');
+      const light = newspaper ? '#e6e5e0' : '#ffffff';
+      const dark = newspaper ? '#0c0c0b' : '#0b0b0c';
+      meta.setAttribute('content', theme === 'light' ? light : dark);
+    }
   }
 }
 

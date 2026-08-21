@@ -28,11 +28,13 @@
         if (localStorage.getItem('sbn_profile_cache_v1')) {
           document.documentElement.classList.add('sbn-session-restore');
         }
-        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        var native = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (native) {
           document.documentElement.classList.add('capacitor-native');
           if (window.Capacitor.getPlatform() === 'android') {
             document.documentElement.classList.add('capacitor-android');
           }
+          if (meta) meta.setAttribute('content', '#000000');
         }
         var params = new URLSearchParams(location.search);
         var hashQ = location.hash.indexOf('?') >= 0
@@ -46,10 +48,11 @@
         if (newspaper) {
           document.documentElement.classList.add('newspaper-preview');
           document.title = 'The Sacramento Free — All the news that’s fit to give';
-          if (meta) meta.setAttribute('content', t === 'light' ? '#e6e5e0' : '#0c0c0b');
+          if (meta && !native) meta.setAttribute('content', t === 'light' ? '#e6e5e0' : '#0c0c0b');
         } else {
           document.title = 'SacramentoBuyNothing — Local Gifting';
         }
+        if (native && meta) meta.setAttribute('content', '#000000');
       })();
     </script>
   </head>
