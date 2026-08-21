@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <title>SacramentoBuyNothing — Local Gifting</title>
+    <title>The Sacramento Free — All the news that’s fit to give</title>
     <meta name="description" content="SacramentoBuyNothing — give away items and request what you need. No selling, no bidding, no flipping. Neighbors helping neighbors." />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/jpeg" href="/Logo.jpeg" />
-    <link rel="apple-touch-icon" href="/Logo.jpeg" />
+    <link rel="icon" type="image/png" href="/Logo.png" />
+    <link rel="apple-touch-icon" href="/Logo.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="SacramentoBuyNothing" />
@@ -28,29 +28,31 @@
         if (localStorage.getItem('sbn_profile_cache_v1')) {
           document.documentElement.classList.add('sbn-session-restore');
         }
-        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        var native = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (native) {
           document.documentElement.classList.add('capacitor-native');
           if (window.Capacitor.getPlatform() === 'android') {
             document.documentElement.classList.add('capacitor-android');
           }
+          if (meta) meta.setAttribute('content', '#000000');
         }
-        var host = (location.hostname || '').replace(/^www\./, '');
         var params = new URLSearchParams(location.search);
         var hashQ = location.hash.indexOf('?') >= 0
           ? new URLSearchParams(location.hash.slice(location.hash.indexOf('?') + 1))
           : null;
         var skin = params.get('skin') || (hashQ && hashQ.get('skin'));
-        var stored = sessionStorage.getItem('sbn_newspaper_preview');
-        var production = host === 'sacramentobuynothing.com';
-        var newspaper =
-          skin === 'newspaper' ||
-          (skin !== 'original' && stored === '1') ||
-          (skin !== 'original' && stored !== '0' && !production);
+        var stored = sessionStorage.getItem('sbn_newspaper_look');
+        var newspaper = stored !== '0';
+        if (skin === 'newspaper') newspaper = true;
+        if (skin === 'original') newspaper = false;
         if (newspaper) {
           document.documentElement.classList.add('newspaper-preview');
-          document.title = 'The Sacramento Free — All the news that’s free to give';
-          if (meta) meta.setAttribute('content', t === 'light' ? '#e6e5e0' : '#0c0c0b');
+          document.title = 'The Sacramento Free — All the news that’s fit to give';
+          if (meta && !native) meta.setAttribute('content', t === 'light' ? '#e6e5e0' : '#0c0c0b');
+        } else {
+          document.title = 'SacramentoBuyNothing — Local Gifting';
         }
+        if (native && meta) meta.setAttribute('content', '#000000');
       })();
     </script>
   </head>

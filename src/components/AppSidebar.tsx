@@ -169,10 +169,10 @@ export default function AppSidebar({
               showStaffConsole ? (
                 <ShieldCheck className="w-6 h-6 shrink-0" style={{ color: theme.accent }} />
               ) : (
-                <BrandLogo imgClassName="h-7 w-7 object-cover rounded-lg shrink-0" showTitle={false} />
+                <BrandLogo compact showTitle={false} />
               )
             ) : (
-              <BrandLogo imgClassName="h-7 w-auto" showTitle={false} />
+              <BrandLogo imgClassName="h-11 w-auto max-w-[160px] object-contain" showTitle={false} />
             )}
           </div>
 

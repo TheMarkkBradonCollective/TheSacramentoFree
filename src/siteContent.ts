@@ -1,5 +1,7 @@
-/** Community logo shown in the app UI and PWA install banner. */
-export const APP_LOGO_SRC = '/Logo.jpeg';
+/** App icon (hands on newsprint) — launcher, PWA, native chrome. */
+export const APP_LOGO_SRC = '/Logo.png';
+/** Website lockup — masthead, tagline, and hands. */
+export const SITE_LOGO_SRC = '/TheSacramentoFree.png';
 
 export const SITE = {
   name: 'SacramentoBuyNothing',

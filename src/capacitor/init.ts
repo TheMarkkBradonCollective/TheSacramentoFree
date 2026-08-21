@@ -16,14 +16,17 @@ export async function initCapacitorApp(): Promise<void> {
   startSafeAreaInsetWatcher();
 
   try {
+    const barColor = '#000000';
     if (isAndroidApp()) {
       // Edge-to-edge Android uses Capacitor SystemBars + --safe-area-inset-* CSS vars.
       await SystemBars.setStyle({ style: SystemBarsStyle.Dark });
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', barColor);
     } else {
       const { StatusBar, Style } = await import('@capacitor/status-bar');
       await StatusBar.setOverlaysWebView({ overlay: false });
       await StatusBar.setStyle({ style: Style.Dark });
-      await StatusBar.setBackgroundColor({ color: '#0b0b0c' });
+      await StatusBar.setBackgroundColor({ color: barColor });
     }
   } catch {
     // Status bar APIs are platform-specific.

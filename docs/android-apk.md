@@ -55,7 +55,7 @@ The first time you run `npm run android:apk`, `scripts/setup-android-keystore.sh
 
 ### App icon and splash (branding)
 
-The web app uses `public/Logo.jpeg` for favicons, the PWA manifest, and in-app UI. Android launcher icons and splash screens are **native** resources under `android/app/src/main/res/` — they are not picked up automatically from the web bundle.
+The web app uses `public/Logo.png` (the uploaded Sacramento Free app icon) for favicons, the PWA manifest, and in-app UI. The original upload is also kept as `public/TheSacramentoFree App Logo.png`. The wordmark lockup is `public/TheSacramentoFree.png`. Android launcher icons and splash screens are **native** resources under `android/app/src/main/res/` — they are not picked up automatically from the web bundle.
 
 Regenerate them from the community logo before building an APK:
 
@@ -63,7 +63,7 @@ Regenerate them from the community logo before building an APK:
 npm run android:assets
 ```
 
-This paints the white JPEG canvas with the logo orange, writes full-bleed launcher mipmaps (no 16.7% adaptive inset), and runs `@capacitor/assets` for splash screens. Requires `ffmpeg`. `npm run android:apk` and `npm run android:apk:debug` run this step automatically.
+This paints a full-bleed newsprint launcher from `public/Logo.png`, writes mipmaps (no 16.7% adaptive inset), and runs `@capacitor/assets` for splash screens. Requires `ffmpeg`. `npm run android:apk` and `npm run android:apk:debug` run this step automatically.
 
 **Neighbors:** share the in-app download page at [www.sacramentobuynothing.com/download](https://www.sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
 

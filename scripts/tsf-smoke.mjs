@@ -60,6 +60,14 @@ try {
   const consoleErrors = [];
   page.on('pageerror', (err) => consoleErrors.push(String(err)));
 
+  // ── Default look (50) is newspaper, no query required ──
+  await page.goto(BASE, { waitUntil: 'networkidle2', timeout: 60000 });
+  await new Promise((r) => setTimeout(r, 800));
+  check(
+    'default look is newspaper',
+    await page.evaluate(() => document.documentElement.classList.contains('newspaper-preview')),
+  );
+
   // ── Newspaper skin ──
   await page.goto(`${BASE}/?skin=newspaper`, { waitUntil: 'networkidle2', timeout: 60000 });
   await new Promise((r) => setTimeout(r, 1500));

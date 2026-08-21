@@ -2,8 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { isNativeApp } from '../lib/nativePlatform';
 import { NEWSPAPER, isNewspaperProductionHost } from './newspaperBrand';
 
-const STORAGE_KEY = 'sbn_newspaper_preview';
+const STORAGE_KEY = 'sbn_newspaper_look';
 export const NEWSPAPER_CLASS = 'newspaper-preview';
+const ORIGINAL_DOCUMENT_TITLE = 'SacramentoBuyNothing — Local Gifting';
 
 interface NewspaperSkinContextValue {
   enabled: boolean;
@@ -25,10 +26,8 @@ function readSkinFromLocation(): boolean | null {
 }
 
 function defaultNewspaperEnabled(): boolean {
-  // Live production on the current domain stays original until the move.
-  // Native closed-testing builds and non-production web default to The Sacramento Free.
-  if (typeof window === 'undefined') return true;
-  if (isNewspaperProductionHost()) return false;
+  // 0.2.0 (50) is The Sacramento Free, including production.
+  // Escape hatch: ?skin=original (handled in readEnabled).
   return true;
 }
 
@@ -43,6 +42,9 @@ function readEnabled(): boolean {
 }
 
 export function newspaperThemeColor(theme: 'light' | 'dark', newspaper = true): string {
+  if (typeof document !== 'undefined' && document.documentElement.classList.contains('capacitor-native')) {
+    return '#000000';
+  }
   if (!newspaper) return theme === 'light' ? '#ffffff' : '#0b0b0c';
   return theme === 'light' ? '#e6e5e0' : '#0c0c0b';
 }
@@ -50,9 +52,9 @@ export function newspaperThemeColor(theme: 'light' | 'dark', newspaper = true): 
 function applyNewspaperClass(enabled: boolean) {
   if (typeof document === 'undefined') return;
   document.documentElement.classList.toggle(NEWSPAPER_CLASS, enabled);
-  if (enabled) {
-    document.title = `${NEWSPAPER.name} — ${NEWSPAPER.tagline.replace(/\.$/, '')}`;
-  }
+  document.title = enabled
+    ? `${NEWSPAPER.name} — ${NEWSPAPER.tagline.replace(/\.$/, '')}`
+    : ORIGINAL_DOCUMENT_TITLE;
   const theme: 'light' | 'dark' = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', newspaperThemeColor(theme, enabled));
@@ -116,7 +118,7 @@ export function isNewspaperSkinActive(): boolean {
 
 export function shouldShowNewspaperPreviewBanner(enabled: boolean): boolean {
   if (typeof window === 'undefined') return false;
-  // No preview chrome on the live domain or in the native closed-testing app.
+  // No preview chrome on the live domain (this is the look) or in native.
   if (isNewspaperProductionHost() || isNativeApp()) return false;
   return true;
 }

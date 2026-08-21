@@ -81,7 +81,7 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api/|downloads/|assets/|.*\\.apk|.*\\.aab|android-version\\.json|version\\.json|manifest\\.json|service-worker\\.js|sw\\.js|icon\\.svg|Logo\\.jpeg|favicon\\.ico).*)",
+      "source": "/((?!api/|downloads/|assets/|.*\\.apk|.*\\.aab|android-version\\.json|version\\.json|manifest\\.json|service-worker\\.js|sw\\.js|icon\\.svg|Logo\\.jpeg|Logo\\.png|TheSacramentoFree\\.png|notification-icon\\.png|favicon\\.ico|.*\\.png).*)",
       "destination": "/index.html"
     }
   ],

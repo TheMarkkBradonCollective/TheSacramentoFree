@@ -148,16 +148,16 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
     '2026-08-21_apk-0050',
     '2026-08-21',
     'The Sacramento Free — beta v0.2.0.0050',
-    'Closed testing of the colour newspaper. Same app, same flows, still on sacramentobuynothing.com.',
+    'The Sacramento Free is the look — website lockup, app icon, black bars. Same app, same flows, still on sacramentobuynothing.com.',
     `WHAT NEIGHBORS SEE
 The Sacramento Free, 0.2.0 (50): the same community gifting app, presented as a colour newspaper.
 
 Since 0.1.0 (49):
-• Ink-and-paper identity — stacked masthead, classified columns, editorial section fronts
+• Ink-and-paper identity — uploaded masthead lockup on the website, hands app icon, classified columns
 • Colour photographs, portraits, and map (chrome stays ink)
+• Newspaper is the default look on sacramentobuynothing.com (?skin=original restores orange)
+• Black Android status and notification bars
 • Page-turn transitions, typewriter/press sounds, and a Newspaper experience panel in Settings
-• Native closed-testing builds open as The Sacramento Free
-• Website at sacramentobuynothing.com stays the original brand until we move domains
 
 This is a visual reface only. No routes, queries, or tables changed.
 
@@ -170,8 +170,9 @@ Sideload: https://www.sacramentobuynothing.com/download
 WHERE TO LOOK IN CODE
 - android/app/build.gradle — versionName 0.2.0, versionCode 50
 - play-store-assets/release-notes-v0.2.0-0050.txt
+- public/TheSacramentoFree.png — website lockup; public/Logo.png — app icon
 - src/preview/newspaper.css — ink chrome and colour plates
-- src/preview/NewspaperSkinContext.tsx — production host stays original; native closed test is the paper
+- src/preview/NewspaperSkinContext.tsx — newspaper is the default look
 - scripts/seed-closed-testing-sacramento-free-feed-post-2026.sql — Write/Feed announcement
 
 HISTORY

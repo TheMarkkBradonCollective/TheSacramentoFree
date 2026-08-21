@@ -67,7 +67,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
       <div className="max-w-md w-full sbn-card-elevated p-8 md:p-10">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4" id="onboarding_icon_wrapper">
-            <BrandLogo imgClassName="h-16 w-auto max-w-[200px] object-contain rounded-xl" />
+            <BrandLogo imgClassName="h-16 w-auto max-w-[200px] object-contain" />
           </div>
           <h2 className="text-2xl font-extrabold text-app tracking-tight font-display">
             Welcome in
