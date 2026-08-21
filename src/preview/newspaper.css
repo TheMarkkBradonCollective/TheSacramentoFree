@@ -718,6 +718,20 @@ html.newspaper-preview [class*='rounded-full'] {
   border-radius: 0;
 }
 
+/* Corners hard-coded in the base stylesheet, squared for the paper. */
+html.newspaper-preview .sbn-hero-preview-card,
+html.newspaper-preview .sbn-native-hero,
+html.newspaper-preview .sbn-mobile-header,
+html.newspaper-preview #map_navigation_view .sbn-nav-top-stack,
+html.newspaper-preview #map_navigation_view .sbn-nav-error-card,
+html.newspaper-preview #map_navigation_view .sbn-nav-lane-slot,
+html.newspaper-preview #map_navigation_view .sbn-nav-speed,
+html.newspaper-preview #map_navigation_view .sbn-nav-speed-sign,
+html.newspaper-preview #map_navigation_view .sbn-nav-gps-toast,
+html.newspaper-preview #map_navigation_view .sbn-nav-settings-card {
+  border-radius: 0;
+}
+
 /* Avatars stay round — a portrait in a paper is still a portrait. */
 html.newspaper-preview .sbn-avatar,
 html.newspaper-preview [class*='rounded-full'].sbn-avatar,
@@ -802,6 +816,32 @@ html.newspaper-preview .sbn-hero-preview-card {
 
 html.newspaper-preview .sbn-card-elevated {
   box-shadow: 3px 3px 0 0 var(--color-shadow);
+}
+
+/* The boxed sidebar that runs beside the lead story. */
+html.newspaper-preview .sbn-hero-preview-card {
+  border-width: 3px;
+  padding: 1.35rem;
+}
+
+html.newspaper-preview .sbn-hero-preview-card > p:first-child {
+  font-family: var(--font-news-sans);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border-strong);
+  padding-bottom: 0.45rem;
+}
+
+html.newspaper-preview .sbn-hero-preview-feature + .sbn-hero-preview-feature {
+  border-top: 1px dotted var(--color-border);
+}
+
+/* Nav actions should never break across two lines. */
+html.newspaper-preview .sbn-glass-nav .sbn-btn {
+  white-space: nowrap;
 }
 
 html.newspaper-preview .sbn-chip,
@@ -1118,10 +1158,35 @@ html.tsf-immersive.newspaper-preview .sbn-modal-panel {
 
 /* ───────────────────── 15. Auth & boot ───────────────────── */
 
+/* The brand panel becomes a solid block of ink with the paper's grain in it. */
 html.newspaper-preview .sbn-auth-brand-panel {
-  background: linear-gradient(180deg, #0a0a0a 0%, #262622 100%);
+  background-color: #0a0a0a;
+  background-image: var(--tsf-grain), linear-gradient(165deg, #1c1c19 0%, #0a0a0a 55%, #000000 100%);
   color: #f4f3ee;
-  background-image: var(--tsf-grain);
+  border-right: 3px solid #000;
+}
+
+html.newspaper-preview .sbn-auth-brand-panel::before {
+  display: none;
+}
+
+html.newspaper-preview .sbn-auth-brand-panel h1,
+html.newspaper-preview .sbn-auth-brand-panel h2 {
+  font-family: var(--font-masthead);
+  font-weight: 900;
+}
+
+/* The wordmark sits on ink here, so it has to be printed in reverse. */
+html.newspaper-preview .sbn-auth-brand-panel .tsf-logo-name {
+  color: #f4f3ee;
+}
+
+html.newspaper-preview .sbn-auth-brand-panel .tsf-logo-the {
+  color: rgba(244, 243, 238, 0.7);
+}
+
+html.newspaper-preview .sbn-auth-brand-panel .tsf-logo-mark {
+  border-left-color: rgba(244, 243, 238, 0.6);
 }
 
 html.newspaper-preview .sbn-native-hero,

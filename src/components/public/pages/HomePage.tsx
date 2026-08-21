@@ -192,9 +192,9 @@ export default function HomePage({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold text-accent uppercase tracking-widest">Community support</p>
-                <h2 className="mt-1 font-display text-xl font-bold text-app">{SUPPORT.gofundmeTitle}</h2>
-                <p className="mt-2 text-sm text-muted leading-relaxed">{SUPPORT.gofundmeBlurb}</p>
-                <p className="mt-2 text-xs text-subtle leading-relaxed">{SUPPORT.gofundmeCostsSummary}</p>
+                <h2 className="mt-1 font-display text-xl font-bold text-app">{copy(SUPPORT.gofundmeTitle)}</h2>
+                <p className="mt-2 text-sm text-muted leading-relaxed">{copy(SUPPORT.gofundmeBlurb)}</p>
+                <p className="mt-2 text-xs text-subtle leading-relaxed">{copy(SUPPORT.gofundmeCostsSummary)}</p>
                 <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
                   See how to help <ArrowRight className="w-4 h-4" />
                 </span>
@@ -220,7 +220,7 @@ export default function HomePage({
                 <Icon className="w-5 h-5 text-accent" />
               </div>
               <p className="font-display font-bold text-app">{title}</p>
-              <p className="mt-1 text-sm text-muted leading-relaxed">{blurb}</p>
+              <p className="mt-1 text-sm text-muted leading-relaxed">{copy(blurb)}</p>
               <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
                 Read more <ArrowRight className="w-4 h-4" />
               </span>
