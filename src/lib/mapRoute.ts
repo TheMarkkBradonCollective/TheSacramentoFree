@@ -16,6 +16,29 @@ export interface DrivingRouteResult {
 
 const EARTH_RADIUS_M = 6_371_000;
 
+/** Matches api/_lib/mapCoords.ts — keep both boxes in sync. */
+export const SACRAMENTO_SERVICE_AREA = {
+  latMin: 38.0,
+  latMax: 39.1,
+  lngMin: -121.8,
+  lngMax: -120.7,
+} as const;
+
+export function isLatLngInSacramentoServiceArea(point: LatLng): boolean {
+  return (
+    Number.isFinite(point.lat) &&
+    Number.isFinite(point.lng) &&
+    point.lat >= SACRAMENTO_SERVICE_AREA.latMin &&
+    point.lat <= SACRAMENTO_SERVICE_AREA.latMax &&
+    point.lng >= SACRAMENTO_SERVICE_AREA.lngMin &&
+    point.lng <= SACRAMENTO_SERVICE_AREA.lngMax
+  );
+}
+
+export function isRouteInSacramentoServiceArea(from: LatLng, to: LatLng): boolean {
+  return isLatLngInSacramentoServiceArea(from) && isLatLngInSacramentoServiceArea(to);
+}
+
 const OSRM_PROFILE_ENDPOINTS: Record<NavTravelMode, readonly string[]> = {
   driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
   cycling: ['https://routing.openstreetmap.de/routed-bike'],
@@ -229,6 +252,10 @@ export async function fetchDrivingRoute(
   const timeoutId = window.setTimeout(() => controller.abort(), 14_000);
 
   try {
+    if (!isRouteInSacramentoServiceArea(from, to)) {
+      return buildStatsFallback(from, to);
+    }
+
     const viaApi = await fetchRouteFromApi(from, to, controller.signal, travelMode);
     if (viaApi) return viaApi;
 

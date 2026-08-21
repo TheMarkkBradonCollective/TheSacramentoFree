@@ -166,6 +166,7 @@ Beta v0.1.0.0049.
 • Play tester emails copy/share on a phone
 • Stuff can show given/fulfilled listings again
 • Map shows pending-pickup pins
+• Tapping a listing fits the whole route on screen instead of zooming to the wrong street
 
 Sideload: https://www.sacramentobuynothing.com/download
 
@@ -1681,7 +1682,7 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
     'New Android beta 0049 — filters, padding, event errors, phone tester export',
     'Feed and chat filters follow your account; Android padding, event load errors, and phone tester export are fixed.',
     `WHAT NEIGHBORS SEE
-Beta v0.1.0.0049: feed and chat filters follow you across devices, Android no longer double-pads the status bar, event load failures show an error, hosts can delete cancelled or past events, Play tester emails copy on a phone, given/fulfilled listings can be shown again.
+Beta v0.1.0.0049: feed and chat filters follow you across devices, Android no longer double-pads the status bar, event load failures show an error, hosts can delete cancelled or past events, Play tester emails copy on a phone, given/fulfilled listings can be shown again, tapping a listing fits the route on screen.
 
 Sideload: https://www.sacramentobuynothing.com/download
 

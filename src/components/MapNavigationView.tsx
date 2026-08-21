@@ -515,9 +515,9 @@ function withProgrammaticNavCamera(fn: () => void): void {
   try {
     fn();
   } finally {
-    window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
       programmaticNavCamera = false;
-    });
+    }, 360);
   }
 }
 
@@ -894,20 +894,18 @@ export default function MapNavigationView({
 
     isProgrammaticMapMoveRef.current = true;
     map.invalidateSize({ animate: false });
-    const start = userPosRef.current;
     const dest = destinationRef.current;
     fitRoutePreviewToViewport({
       map,
       routeCoords: activeRoute.coords,
-      start,
       end: dest,
       padding,
-      maxZoom: 16,
-      minZoom: 11,
+      maxZoom: 15,
+      minZoom: 9,
     });
-    window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
       isProgrammaticMapMoveRef.current = false;
-    });
+    }, 360);
   }, []);
 
   useEffect(() => {
@@ -1100,14 +1098,16 @@ export default function MapNavigationView({
     if (!mapContainerRef.current || mapRef.current || mapBootstrappedRef.current) return;
     mapBootstrappedRef.current = true;
 
+    const dest = destinationRef.current;
     const start = initialOriginRef.current;
+    const center = dest ?? start;
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
       attributionControl: true,
       fadeAnimation: false,
       zoomAnimation: false,
       markerZoomAnimation: false,
-    }).setView([start.lat, start.lng], 13);
+    }).setView([center.lat, center.lng], 13);
 
     const tileLayer = L.tileLayer(SBN_MAP_TILE_URL, SBN_MAP_TILE_OPTIONS).addTo(map);
     tileLayerRef.current = tileLayer;
