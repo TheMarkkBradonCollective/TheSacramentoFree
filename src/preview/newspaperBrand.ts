@@ -1,4 +1,4 @@
-/** Preview-only brand for The Sacramento Free newspaper skin. Live production copy stays in siteContent.ts. */
+/** The Sacramento Free newspaper look. Original orange remains at ?skin=original. Live product copy stays in siteContent.ts. */
 export const NEWSPAPER = {
   name: 'The Sacramento Free',
   the: 'The',
@@ -13,9 +13,9 @@ export const NEWSPAPER = {
   price: 'Gratis',
   previewLabel: 'Design preview',
   previewNote:
-    'Same app — same pages, features, and flows. This grey newspaper look is a visual reskin only. Production at sacramentobuynothing.com is unchanged.',
+    'Same app — same pages, features, and flows. The Sacramento Free is the look; this is a visual reskin only. Add ?skin=original to see the previous site.',
   originalCta: 'View original site',
-  newspaperCta: 'View newspaper preview',
+  newspaperCta: 'View The Sacramento Free',
   footerByline: 'Printed for neighbors, not for profit.',
 } as const;
 
