@@ -11,6 +11,7 @@ import HeaderActionButton from '../components/HeaderActionButton';
 import type { PushDeepLinkTarget } from '../lib/pushDeepLink';
 import { isStaffRole } from '../lib/roles';
 import { markStaffApplyInviteSeen } from '../lib/staffApplyInvite';
+import { useNewspaperAlertBell } from '../preview/useNewspaperAlerts';
 
 export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts' | 'awards';
 
@@ -162,6 +163,12 @@ export function NotificationsHubProvider({
   } = useNotificationsHubUnread(userProfile?.uid, userProfile);
 
   const unreadCounts = { unreadNotifications, unreadAnnouncements, unreadUpdates };
+
+  useNewspaperAlertBell({
+    notifications: unreadNotifications,
+    announcements: unreadAnnouncements,
+    updates: unreadUpdates,
+  });
 
   const openHub = useCallback((initialTab: NotificationsHubTab = 'notifications', focus?: NotificationsHubFocus) => {
     const resolved = resolveHubTab(initialTab);

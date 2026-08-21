@@ -107,6 +107,12 @@ export function useNewspaperSkin() {
   return ctx ?? { enabled: false, setEnabled: () => {} };
 }
 
+/** Skin check for plain modules that run outside the React tree. */
+export function isNewspaperSkinActive(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.classList.contains(NEWSPAPER_CLASS);
+}
+
 export function shouldShowNewspaperPreviewBanner(enabled: boolean): boolean {
   if (enabled) return true;
   if (typeof window === 'undefined') return true;

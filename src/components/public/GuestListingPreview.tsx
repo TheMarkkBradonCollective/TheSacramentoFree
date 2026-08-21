@@ -7,6 +7,7 @@ import { extractListingImageUrls } from '../../lib/listingContent';
 import ListingImage from '../ListingImage';
 import HorizontalSnapRow, { SnapSlide } from '../HorizontalSnapRow';
 import { SITE } from '../../siteContent';
+import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
 
 interface GuestListingPreviewProps {
   items: ItemPost[];
@@ -24,6 +25,7 @@ export default function GuestListingPreview({
   onRequireSignIn,
   embedded = false,
 }: GuestListingPreviewProps) {
+  const { enabled: newspaperSkin } = useNewspaperSkin();
   const [searchTerm, setSearchTerm] = useState('');
 
   const previewItems = useMemo(() => {
@@ -57,7 +59,7 @@ export default function GuestListingPreview({
             type="search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search listings…"
+            placeholder={newspaperSkin ? 'Search The Free…' : 'Search listings…'}
             className="sbn-input pl-11"
             aria-label="Search listings"
           />
