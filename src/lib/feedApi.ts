@@ -1,5 +1,6 @@
 import { supabase, handleSupabaseError, setSupabaseConfigurationState } from '../supabase';
 import type { FeedPost, FeedPostComment, FeedPostCommentNode, FeedPostReaction, UserProfile } from '../types';
+import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { compressImageIfNeeded, guessImageContentType } from './imageUrl';
 import { commentPostedAsNeighbor } from './staffInteractionMode';
 import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from './feedReactions';
@@ -158,11 +159,12 @@ export async function createFeedPost(
 
   const now = new Date().toISOString();
   const { clientInstallKind, clientVersion } = await getPostClientMetadata();
+  const identity = resolveProfileIdentity(profile);
   const payload = {
     id: postId,
     userId: profile.uid,
-    userDisplayName: profile.displayName.trim(),
-    userPhotoURL: profile.photoURL ?? null,
+    userDisplayName: identity.displayName.trim(),
+    userPhotoURL: identity.photoURL ?? null,
     neighborhood: profile.neighborhood,
     text,
     imageUrls,
@@ -268,13 +270,15 @@ export async function createFeedPostComment(
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, errorMessage: 'Comment cannot be empty.' };
 
+  const identity = resolveProfileIdentity(profile);
+
   const comment: FeedPostComment = {
     id: `fcomment_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     postId,
     parentCommentId: parentCommentId ?? null,
     userId: profile.uid,
-    userName: profile.displayName.trim(),
-    userPhoto: profile.photoURL,
+    userName: identity.displayName.trim(),
+    userPhoto: identity.photoURL,
     userNeighborhood: profile.neighborhood,
     text: trimmed,
     postedAsNeighbor: commentPostedAsNeighbor(profile),

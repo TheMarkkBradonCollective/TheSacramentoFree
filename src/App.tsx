@@ -29,6 +29,7 @@ import {
   getSupabaseProfile, 
   upsertSupabaseProfile,
   profileFromAuthUser,
+  normalizeUserProfileRow,
   getSupabaseItems,
   getSupabaseItemById,
   getSupabaseEvents,
@@ -103,6 +104,8 @@ import ReviewPromptModal from './components/ReviewPromptModal';
 import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
 import { isNativeApp } from './lib/nativePlatform';
 import { applyUserPreferencesToDevice } from './lib/appPreferences';
+import { mergeProfileFromDbRead } from './lib/profilePersistence';
+import { subscribePostgresChanges } from './lib/supabaseRealtime';
 import {
   clearLocalNativeSessionId,
   readLocalNativeSessionId,
@@ -188,6 +191,7 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
+  const profileSyncedUidRef = useRef<string | null>(null);
   const handlingPopStateRef = useRef(false);
   const loadItemsRef = useRef<
     (isBackground?: boolean, attempt?: number, options?: { guest?: boolean }) => Promise<void>
@@ -439,7 +443,7 @@ export default function App() {
 
   const handleUpdateProfile = useCallback(
     (updated: UserProfile) => {
-      setUserProfile(updated);
+      setUserProfile((prev) => mergeProfileFromDbRead(prev, updated));
       if (!isStaffActingOfficial(updated) && isStaffTab(activeTab)) {
         handleTabChange('profile');
       }
@@ -832,6 +836,7 @@ export default function App() {
     if (user?.id && lastSignedInUserIdRef.current && lastSignedInUserIdRef.current !== user.id) {
       clearLocalNativeSessionId(lastSignedInUserIdRef.current);
       clearAuthenticatedUiState();
+      profileSyncedUidRef.current = null;
     }
     if (user?.id) lastSignedInUserIdRef.current = user.id;
     setSessionUser((prev) => (prev?.id === user.id ? prev : user));
@@ -869,6 +874,7 @@ export default function App() {
 
   const syncProfileFromDb = useCallback(async (user: any) => {
     if (!user?.id) return;
+    if (profileSyncedUidRef.current === user.id) return;
     if (profileSyncRef.current === user.id) return;
     profileSyncRef.current = user.id;
 
@@ -883,9 +889,13 @@ export default function App() {
       if (data) {
         const fromDb = await getSupabaseProfile(user.id);
         if (fromDb) {
-          setUserProfile(fromDb);
-          writeCachedProfile(fromDb);
-          applyUserPreferencesToDevice(fromDb);
+          setUserProfile((prev) => {
+            const merged = mergeProfileFromDbRead(prev, fromDb);
+            writeCachedProfile(merged);
+            applyUserPreferencesToDevice(merged);
+            return merged;
+          });
+          profileSyncedUidRef.current = user.id;
         }
         return;
       }
@@ -1147,6 +1157,39 @@ export default function App() {
   useEventsRealtime(sessionReady, setEvents);
   useAuthorProfilesRealtime(sessionReady, setItems, setEvents);
 
+  // Keep signed-in identity stable when users row updates (e.g. lastActiveAt heartbeat).
+  useEffect(() => {
+    const uid = sessionUser?.id;
+    if (!sessionReady || !uid) return;
+
+    return subscribePostgresChanges(
+      {
+        channelName: `live-my-profile-${uid}`,
+        table: 'users',
+        event: 'UPDATE',
+        filter: `uid=eq.${uid}`,
+      },
+      (payload) => {
+        const fromDb = normalizeUserProfileRow(payload.new as Record<string, unknown> | null);
+        if (!fromDb) return;
+        setUserProfile((prev) => {
+          const merged = mergeProfileFromDbRead(prev, fromDb);
+          if (!prev) return merged;
+          if (
+            merged.displayName === prev.displayName &&
+            merged.photoURL === prev.photoURL &&
+            merged.neighborhood === prev.neighborhood &&
+            merged.bio === prev.bio &&
+            merged.role === prev.role
+          ) {
+            return prev;
+          }
+          return merged;
+        });
+      },
+    );
+  }, [sessionReady, sessionUser?.id]);
+
   useEffect(() => {
     if (!detailEvent) return;
     const updated = events.find((e) => e.id === detailEvent.id);
@@ -1305,6 +1348,7 @@ export default function App() {
       await supabase.auth.signOut();
     } catch (_) {}
     lastSignedInUserIdRef.current = null;
+    profileSyncedUidRef.current = null;
     clearActiveNavSession();
     clearSessionCache();
     clearAuthenticatedUiState();

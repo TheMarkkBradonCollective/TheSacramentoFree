@@ -60,7 +60,7 @@ export default function EventEngagement({
   const { userRsvp, going, maybe, notGoing, gone, missed } = rsvpState;
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
-  const commenterInfo = useUserDisplayInfo(comments.map((comment) => comment.userId));
+  const commenterInfo = useUserDisplayInfo(comments.map((comment) => comment.userId), userProfile);
   const { confirm } = useConfirm();
 
   const requestDeleteComment = async (commentId: string) => {

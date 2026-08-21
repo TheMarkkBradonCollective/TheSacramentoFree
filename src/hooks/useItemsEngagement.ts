@@ -9,6 +9,7 @@ import {
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
+import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -200,12 +201,13 @@ export function useItemsEngagement(
     if (!userProfile || !text.trim()) return;
 
     const current = getCommentsForPost(itemId);
+    const identity = resolveProfileIdentity(userProfile);
     const newComment: ItemComment = {
       id: `comment_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       itemId,
       userId: userProfile.uid,
-      userName: userProfile.displayName,
-      userPhoto: userProfile.photoURL,
+      userName: identity.displayName,
+      userPhoto: identity.photoURL,
       text: text.trim(),
       createdAt: new Date().toISOString(),
       userNeighborhood: userProfile.neighborhood || 'Midtown',

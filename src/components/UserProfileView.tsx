@@ -7,9 +7,13 @@ import {
   upsertSupabaseProfile,
   uploadProfilePhoto,
   getSupabaseProfile,
-  isDicebearAvatarUrl,
 } from '../supabase';
 import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../lib/imageUrl';
+import {
+  isDicebearAvatarUrl,
+  photoUrlForProfileUpsert,
+  resolveIdentityDisplayName,
+} from '../lib/profilePersistence';
 import RoleBadge from './RoleBadge';
 import {
   MapPin,
@@ -149,10 +153,16 @@ export default function UserProfileView({
 
   useEffect(() => {
     if (isSaving || isPhotoUploading) return;
-    setDisplayName(userProfile.displayName);
+    setDisplayName((prev) =>
+      resolveIdentityDisplayName({
+        existingDisplayName: prev,
+        incomingDisplayName: userProfile.displayName,
+        email: userProfile.email,
+      }),
+    );
     setNeighborhood(userProfile.neighborhood);
     setBio(userProfile.bio || '');
-  }, [userProfile.uid, userProfile.displayName, userProfile.neighborhood, userProfile.bio, isSaving, isPhotoUploading]);
+  }, [userProfile.uid, userProfile.displayName, userProfile.neighborhood, userProfile.bio, userProfile.email, isSaving, isPhotoUploading]);
 
   useEffect(() => {
     if (!onOpenAwards) return;
@@ -179,10 +189,16 @@ export default function UserProfileView({
 
   useEffect(() => {
     if (isPhotoUploading) return;
-    setPhotoURL(
-      userProfile.photoURL ||
-        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.uid)}`,
-    );
+    setPhotoURL((prev) => {
+      const incomingReal = photoUrlForProfileUpsert(userProfile.photoURL);
+      const prevReal = photoUrlForProfileUpsert(prev);
+      if (incomingReal) return incomingReal;
+      if (prevReal && isDicebearAvatarUrl(userProfile.photoURL)) return prevReal;
+      return (
+        userProfile.photoURL ||
+        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(userProfile.uid)}`
+      );
+    });
   }, [userProfile.photoURL, userProfile.uid, isPhotoUploading]);
 
   // PWA install status — shared listener, see usePwaInstallPrompt.
@@ -380,11 +396,10 @@ export default function UserProfileView({
           <UserAvatar
             uid={userProfile.uid}
             src={photoURL}
-            name={userProfile.displayName}
+            name={displayName}
             size="xl"
             lastActiveAt={userProfile.lastActiveAt}
             borderClassName="border-accent"
-            imgClassName="animate-fade-in"
           />
           <p className="text-[10px] font-semibold text-emerald-400 mt-2">
             {formatLastActive(userProfile.lastActiveAt)}
@@ -407,7 +422,7 @@ export default function UserProfileView({
             onChange={handlePhotoPick}
             className="hidden"
           />
-          <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{userProfile.displayName}</h3>
+          <h3 className="text-xl font-bold text-app mt-4 tracking-tight">{displayName}</h3>
           
           <RoleBadge role={profileUiRole(userProfile)} showForUser />
 

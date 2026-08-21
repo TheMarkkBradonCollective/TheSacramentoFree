@@ -1,21 +1,22 @@
 import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import type { CommunityEvent, FeedPost, ItemPost } from '../types';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { patchDenormalizedAuthorFields } from '../lib/profilePersistence';
 
 function patchAuthorProfile<T extends { userId: string; userDisplayName?: string; userPhotoURL?: string }>(
   rows: T[],
   uid: string,
   displayName?: string,
-  photoURL?: string,
+  photoURL?: string | null,
 ): T[] {
-  return rows.map((row) => {
-    if (row.userId !== uid) return row;
-    return {
-      ...row,
-      ...(displayName ? { userDisplayName: displayName } : {}),
-      ...(photoURL !== undefined ? { userPhotoURL: photoURL || undefined } : {}),
-    };
-  });
+  return rows.map((row) =>
+    patchDenormalizedAuthorFields(row, {
+      authorId: row.userId,
+      uid,
+      displayName,
+      photoURL,
+    }),
+  );
 }
 
 /** Keep author avatars in sync when neighbors update their profile photo. */

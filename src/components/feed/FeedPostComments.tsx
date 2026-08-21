@@ -222,7 +222,10 @@ export default function FeedPostComments({
 
   const flat = engagement.getComments(post.id);
   const tree = buildFeedCommentTree(flat);
-  const commenterInfo = useUserDisplayInfo(flat.map((comment) => comment.userId));
+  const commenterInfo = useUserDisplayInfo(
+    flat.map((comment) => comment.userId),
+    userProfile,
+  );
 
   useEffect(() => {
     const ids = [...new Set(flat.map((comment) => comment.userId).filter(Boolean))] as string[];
