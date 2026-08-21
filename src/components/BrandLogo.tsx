@@ -12,6 +12,8 @@ interface BrandLogoProps {
   subtitle?: string;
   /** Square app icon only — collapsed rail, native chrome, launcher contexts. */
   compact?: boolean;
+  /** Show name + tagline beside a crest-sized lockup (mobile header). */
+  showTitleBesideLockup?: boolean;
 }
 
 /** Keep the uploaded masthead intact — no square crop, rounding, or extra ink frame. */
@@ -73,6 +75,7 @@ export default function BrandLogo({
   showTitle = false,
   subtitle,
   compact = false,
+  showTitleBesideLockup = false,
 }: BrandLogoProps) {
   const [failed, setFailed] = useState(false);
   const { enabled: newspaper } = useNewspaperSkin();
@@ -86,8 +89,9 @@ export default function BrandLogo({
     : useSiteLockup
       ? siteLockupClass(imgClassName)
       : imgClassName;
-  // Lockup image already includes the wordmark — avoid duplicate header text.
-  const showTitleBlock = showTitle && !useSiteLockup;
+  // Full lockup art includes the wordmark — skip duplicate text unless crest-only header.
+  const showTitleBlock = showTitle && (!useSiteLockup || showTitleBesideLockup);
+  const titleCompact = compact || showTitleBesideLockup;
 
   if (failed) {
     return (
@@ -95,7 +99,7 @@ export default function BrandLogo({
         <div className="w-9 h-9 bg-accent text-on-accent rounded-lg flex items-center justify-center shrink-0">
           <Gift className="w-5 h-5" />
         </div>
-        {showTitleBlock && <BrandTitleBlock title={title} subtitle={tagline} compact={compact} />}
+        {showTitleBlock && <BrandTitleBlock title={title} subtitle={tagline} compact={titleCompact} />}
       </div>
     );
   }
@@ -108,7 +112,7 @@ export default function BrandLogo({
         className={logoClass}
         onError={() => setFailed(true)}
       />
-      {showTitleBlock && <BrandTitleBlock title={title} subtitle={tagline} compact={compact} />}
+      {showTitleBlock && <BrandTitleBlock title={title} subtitle={tagline} compact={titleCompact} />}
     </div>
   );
 }
