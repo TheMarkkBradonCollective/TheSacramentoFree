@@ -4,11 +4,11 @@ export const REBRAND_ANNOUNCEMENT_ID = '2026-08-21_rebrand-letter';
 
 export const REBRAND_ANNOUNCEMENT_DATE = '2026-08-21';
 
-export const REBRAND_ANNOUNCEMENT_TITLE = 'I almost got you — please read';
+export const REBRAND_ANNOUNCEMENT_TITLE = 'Time for the next chapter';
 
 /** Short teaser in News list and push preview. */
 export const REBRAND_ANNOUNCEMENT_BODY =
-  'I opened heavy on purpose. We are still here — read the full letter.';
+  'Sounds like I am moving on. I am not — version 0.2.0 is next.';
 
 /** Full letter — popup + News detail. Not a traditional release note. */
 export const REBRAND_ANNOUNCEMENT_LETTER = `Neighbors,
@@ -21,15 +21,15 @@ I've now learned that our name — "Buy Nothing" — overlaps with trademarks an
 
 NAWH, I'M JUST GIV'N. 😅
 
-Sacramento Buy Nothing is not shutting down. You're not losing your listings, your messages, or this community.
+Sacramento Buy Nothing is not shutting down. You're not losing your listings, your messages, or this community. This is not me leaving — it is time for the next chapter.
 
 Here is what is actually changing:
 
-I'm going to stop active development on big new features for a while. The site and apps you use today keep working — post, gift, chat, pick up, all of it. In the background, I'm rebranding us into something that is fully our own. I think the new name and look are genuinely clever — I've been designing it from mobile to desktop to PWA to APK/AAB — but I'm not spilling those beans yet. I want it cooked right before you see it.
+I'm going to stop active development on big new features for a while. The site and apps you use today keep working — post, gift, chat, pick up, all of it. In the background, I'm building **version 0.2.0** — a full rebrand into something that is fully our own. I think the new name and look are genuinely clever — I've been designing it from mobile to desktop to PWA to APK/AAB — but I'm not spilling those beans yet. I want it cooked right before you see it.
 
-When that rebrand ships, it also moves us out of **internal testing** (the small Play Console internal track — basically me plus a tight tester circle) and into **closed testing** (a wider invited Google Play beta before anything public). Same community, same purpose — an identity that is ours alone, with no trademark gray area.
+When version 0.2.0 ships, it also moves us out of **internal testing** (the small Play Console internal track — basically me plus a tight tester circle) and into **closed testing** (a wider invited Google Play beta before anything public). Same community, same purpose — an identity that is ours alone, with no trademark gray area.
 
-Thank you for being here while I get this right. You built this. I'm not walking away from it.
+Thank you for being here while I get this right. You built this. I'm not walking away — just turning the page.
 
 — Mark
 Buy Nothing Director, Sacramento`;
@@ -53,24 +53,24 @@ Our name — "Buy Nothing" — runs into trademarks that aren't ours. On paper, 
 
 NAWH, I'M JUST GIV'N. 😂
 
-We're not closing. ✅ Your listings, messages, and this community stay. I'm pausing big new builds while I rebrand us into something that's fully our own — I'm not showing it yet on purpose. 👀 Full letter in News (bell → News). 🔔`;
+Not a goodbye — the next chapter. ✅ Version 0.2.0 is cooking in private. 👀 Full letter in News (bell → News). 🔔`;
 
 export const REBRAND_ANNOUNCEMENT_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 
 /** Updates tab — professional product note (News has the personal letter). */
 export const REBRAND_UPDATE_ID = '2026-08-21_trademark-rebrand-notice';
 
-export const REBRAND_UPDATE_TITLE = 'Something worth reading when you visit';
+export const REBRAND_UPDATE_TITLE = 'Before the next chapter';
 
 export const REBRAND_UPDATE_BODY =
-  'Home page notice, a one-time letter when you visit, and a brief pause on big new builds.';
+  'Site stays up while we pause big new builds and work toward version 0.2.0.';
 
 export const REBRAND_UPDATE_DETAIL = `WHAT NEIGHBORS SEE
 • sacramentobuynothing.com now shows an official trademark notice on the home page — we are independent and working on a distinct name
 • First visit shows a one-time letter from Mark (dismiss it anytime; the full letter also lives in bell → News)
 • The site and apps stay fully available — post, gift, chat, and events work as they do today
-• Large new feature work pauses while the rebrand is built in private (mobile, desktop, PWA, and Android)
-• When the rebrand ships, the Android app moves from internal testing to closed testing — a wider invited Play beta before any public launch
+• Large new feature work pauses while version 0.2.0 is built in private (mobile, desktop, PWA, and Android)
+• When version 0.2.0 ships, the Android app moves from internal testing to closed testing — a wider invited Play beta before any public launch
 
 Mark's full personal letter is in Notifications → News.
 

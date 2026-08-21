@@ -18,14 +18,14 @@ INSERT INTO public.app_updates (
 VALUES (
   '2026-08-21_trademark-rebrand-notice',
   '2026-08-21',
-  'Something worth reading when you visit',
-  'Home page notice, a one-time letter when you visit, and a brief pause on big new builds.',
+  'Before the next chapter',
+  'Site stays up while we pause big new builds and work toward version 0.2.0.',
   $detail$WHAT NEIGHBORS SEE
 • sacramentobuynothing.com now shows an official trademark notice on the home page — we are independent and working on a distinct name
 • First visit shows a one-time letter from Mark (dismiss it anytime; the full letter also lives in bell → News)
 • The site and apps stay fully available — post, gift, chat, and events work as they do today
-• Large new feature work pauses while the rebrand is built in private (mobile, desktop, PWA, and Android)
-• When the rebrand ships, the Android app moves from internal testing to closed testing — a wider invited Play beta before any public launch
+• Large new feature work pauses while version 0.2.0 is built in private (mobile, desktop, PWA, and Android)
+• When version 0.2.0 ships, the Android app moves from internal testing to closed testing — a wider invited Play beta before any public launch
 
 Mark's full personal letter is in Notifications → News.
 
@@ -63,8 +63,8 @@ INSERT INTO public.help_announcements (
 VALUES (
   '2026-08-21_rebrand-letter',
   '2026-08-21',
-  'I almost got you — please read',
-  'I opened heavy on purpose. We are still here — read the full letter.',
+  'Time for the next chapter',
+  'Sounds like I am moving on. I am not — version 0.2.0 is next.',
   $detail$Neighbors,
 
 I have to start with the part I didn't want to write.
@@ -75,15 +75,15 @@ I've now learned that our name — "Buy Nothing" — overlaps with trademarks an
 
 NAWH, I'M JUST GIV'N. 😅
 
-Sacramento Buy Nothing is not shutting down. You're not losing your listings, your messages, or this community.
+Sacramento Buy Nothing is not shutting down. You're not losing your listings, your messages, or this community. This is not me leaving — it is time for the next chapter.
 
 Here is what is actually changing:
 
-I'm going to stop active development on big new features for a while. The site and apps you use today keep working — post, gift, chat, pick up, all of it. In the background, I'm rebranding us into something that is fully our own. I think the new name and look are genuinely clever — I've been designing it from mobile to desktop to PWA to APK/AAB — but I'm not spilling those beans yet. I want it cooked right before you see it.
+I'm going to stop active development on big new features for a while. The site and apps you use today keep working — post, gift, chat, pick up, all of it. In the background, I'm building **version 0.2.0** — a full rebrand into something that is fully our own. I think the new name and look are genuinely clever — I've been designing it from mobile to desktop to PWA to APK/AAB — but I'm not spilling those beans yet. I want it cooked right before you see it.
 
-When that rebrand ships, it also moves us out of **internal testing** (the small Play Console internal track — basically me plus a tight tester circle) and into **closed testing** (a wider invited Google Play beta before anything public). Same community, same purpose — an identity that is ours alone, with no trademark gray area.
+When version 0.2.0 ships, it also moves us out of **internal testing** (the small Play Console internal track — basically me plus a tight tester circle) and into **closed testing** (a wider invited Google Play beta before anything public). Same community, same purpose — an identity that is ours alone, with no trademark gray area.
 
-Thank you for being here while I get this right. You built this. I'm not walking away from it.
+Thank you for being here while I get this right. You built this. I'm not walking away — just turning the page.
 
 — Mark
 Buy Nothing Director, Sacramento$detail$,
