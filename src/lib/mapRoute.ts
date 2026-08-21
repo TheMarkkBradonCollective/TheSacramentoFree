@@ -63,7 +63,7 @@ export function estimateDrivingStats(from: LatLng, to: LatLng): Pick<DrivingRout
 }
 
 export function isRoadGeometry(coords: [number, number][] | null | undefined): boolean {
-  return Array.isArray(coords) && coords.length > 2;
+  return Array.isArray(coords) && coords.length >= 2;
 }
 
 export function formatRouteDistance(meters: number): string {
@@ -127,42 +127,15 @@ export function openDrivingDirections(
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-function stitchRouteToEndpoints(
-  coords: [number, number][],
-  from: LatLng,
-  to: LatLng,
-): [number, number][] {
-  if (coords.length < 2) {
-    return [
-      [from.lat, from.lng],
-      [to.lat, to.lng],
-    ];
-  }
-
-  const stitched = coords.slice() as [number, number][];
-  const [firstLat, firstLng] = stitched[0];
-  const [lastLat, lastLng] = stitched[stitched.length - 1];
-  const snapMeters = 45;
-
-  if (haversineMeters({ lat: firstLat, lng: firstLng }, from) > snapMeters) {
-    stitched.unshift([from.lat, from.lng]);
-  }
-  if (haversineMeters({ lat: lastLat, lng: lastLng }, to) > snapMeters) {
-    stitched.push([to.lat, to.lng]);
-  }
-
-  return stitched;
-}
-
 function withRoadGeometry(
   coords: [number, number][],
-  from: LatLng,
-  to: LatLng,
+  _from: LatLng,
+  _to: LatLng,
   distanceMeters: number,
   durationSeconds: number,
 ): DrivingRouteResult {
   return {
-    coords: stitchRouteToEndpoints(coords, from, to),
+    coords,
     distanceMeters,
     durationSeconds,
     onRoads: true,
@@ -198,7 +171,7 @@ async function fetchOsrmDirect(
       if (data?.code !== 'Ok' || !coordinates || coordinates.length < 2) continue;
 
       const latLngCoords = coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
-      if (latLngCoords.length <= 2) continue;
+      if (latLngCoords.length < 2) continue;
 
       return withRoadGeometry(
         latLngCoords,

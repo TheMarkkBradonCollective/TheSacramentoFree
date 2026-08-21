@@ -52,6 +52,7 @@ import L from 'leaflet';
 import { getPostTypeMapDetailLabel, getPostTypeMapLabel, getListingContactButtonLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
 import { pickSoonestPerEventSeries } from '../lib/eventSeries';
 import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { ROUTE_LINE_CASING, ROUTE_LINE_MAIN } from '../lib/mapRouteLineStyle';
 
 function MapCreateFab({
   onOpenNewPost,
@@ -560,7 +561,7 @@ export default function SacramentoMapView({
           left: 28,
           right: 28,
         },
-        margin: 12,
+        margin: 18,
       });
 
       const cardStack = hasMapSelection ? selectionCardHeight : 0;
@@ -1513,21 +1514,8 @@ export default function SacramentoMapView({
       lastFitCoordsKeyRef.current = coordsFitKey;
     }
 
-    L.polyline(routeCoords, {
-      color: '#FF4500',
-      weight: 8,
-      opacity: 0.28,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(routeLayer);
-
-    L.polyline(routeCoords, {
-      color: '#FF4500',
-      weight: 4,
-      opacity: 0.92,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(routeLayer);
+    L.polyline(routeCoords, ROUTE_LINE_CASING).addTo(routeLayer);
+    L.polyline(routeCoords, ROUTE_LINE_MAIN).addTo(routeLayer);
 
     if (destChanged || coordsChanged) {
       window.requestAnimationFrame(() => {
