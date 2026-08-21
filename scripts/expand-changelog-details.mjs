@@ -72,7 +72,6 @@ WHERE TO LOOK IN CODE
 - src/lib/pushDeepLink.ts — /news, /announcements, and /notifications/updates aliases for the in-app tabs.
 - android/app/build.gradle + public/android-version.json — beta 0.1.0.0010 (versionCode 10). Existing Capacitor APKs still load the live site, so reopening the old app also picks up the web fix.
 - shared/changelogSeed.ts + complete-schema.sql — this neighbor note and the matching News post. Cron /api/cron/publish-changelog upserts seeds (schedule 40 23 * * *).
-- scripts/supabase-migration-aug-18-2026-outage.sql — paste into the Supabase SQL editor if you need the rows immediately instead of waiting for cron.
 
 HISTORY
 2026-08-18 — After login, both the website and Android app showed the error screen. Public pages still worked. Login itself succeeded; the crash happened on the first signed-in render. Production JS was index-BHuwUyoa.js after the fix (PR #189, merge 9bedf63). Play review account used to reproduce: playstore-review@sacramentobuynothing.com.
@@ -104,7 +103,6 @@ A weekly or monthly gathering is one event series instead of a pile of duplicate
 WHERE TO LOOK IN CODE
 - Event series merge in feed/map (repeat event series work from 2026-07-28 / 2026-07-29).
 - Posters: EventDetailView → Add dates for an existing series.
-- scripts/seed-lucid-fremont-events-2026.sql — Lucid Winery 2026 schedule seed.
 
 HISTORY
 2026-07-28 — Add repeat event series + ability to add upcoming dates (PR #171).
