@@ -2,6 +2,7 @@
 
 import type { UserProfile } from '../types';
 import { readCachedProfile } from './sessionCache';
+import { reconcileProfileWithStoredPreferences } from './profilePrefsReconcile';
 
 export function isDicebearAvatarUrl(url?: string | null): boolean {
   if (!url) return false;
@@ -202,7 +203,7 @@ export function patchDenormalizedCommentAuthorFields<T extends DenormalizedComme
 export function mergeProfileFromDbRead(prev: UserProfile | null, fromDb: UserProfile): UserProfile {
   if (!prev || prev.uid !== fromDb.uid) {
     const resolved = resolveProfileIdentity(fromDb);
-    return { ...fromDb, ...resolved };
+    return reconcileProfileWithStoredPreferences({ ...fromDb, ...resolved });
   }
 
   const email = fromDb.email || prev.email;
@@ -213,9 +214,10 @@ export function mergeProfileFromDbRead(prev: UserProfile | null, fromDb: UserPro
   });
   const photoURL = resolveIdentityPhotoForDisplay(fromDb.photoURL, prev.photoURL);
 
-  return {
+  return reconcileProfileWithStoredPreferences({
     ...fromDb,
+    email,
     displayName,
     photoURL,
-  };
+  });
 }

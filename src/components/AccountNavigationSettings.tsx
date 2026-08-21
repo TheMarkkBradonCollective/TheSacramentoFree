@@ -28,7 +28,7 @@ export default function AccountNavigationSettings({
 
   useEffect(() => {
     setSettings(resolveSettings(userProfile));
-  }, [userProfile.uid, userProfile.navigationSettings]);
+  }, [userProfile.uid]);
 
   useEffect(() => subscribeStoredNavPrefs(userProfile.uid, (stored) => {
     if (stored) setSettings(stored.settings);

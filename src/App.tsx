@@ -108,7 +108,7 @@ import ReviewPromptModal from './components/ReviewPromptModal';
 import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
 import { App as CapacitorApp } from '@capacitor/app';
 import { isNativeApp } from './lib/nativePlatform';
-import { applyUserPreferencesToDevice } from './lib/appPreferences';
+import { applyUserPreferencesToDevice, mergeStoredAppPreferencesIntoProfile } from './lib/appPreferences';
 import { mergeProfileFromDbRead } from './lib/profilePersistence';
 import { subscribePostgresChanges } from './lib/supabaseRealtime';
 import {
@@ -867,27 +867,31 @@ export default function App() {
       const base = profileFromAuthUser(user);
       const cached = readCachedProfile();
       if (cached?.uid === user.id) {
-        return applyStoredStaffModeToProfile(
-          applyStoredNavPrefsToProfile(
-            applyStoredGoGetPrefsToProfile({
-              ...base,
-              displayName: cached.displayName || base.displayName,
-              photoURL: cached.photoURL || base.photoURL,
-              neighborhood: cached.neighborhood || base.neighborhood,
-              bio: cached.bio ?? base.bio,
-              role: cached.role ?? base.role,
-              staffInteractionMode: cached.staffInteractionMode ?? base.staffInteractionMode,
-              goGetEnabled: cached.goGetEnabled === true,
-              pickupAvailability: cached.pickupAvailability,
-              goGetRingDurationSeconds: cached.goGetRingDurationSeconds,
-              goGetRingPattern: cached.goGetRingPattern,
-              navigationSettings: cached.navigationSettings,
-            }),
+        return mergeStoredAppPreferencesIntoProfile(
+          applyStoredStaffModeToProfile(
+            applyStoredNavPrefsToProfile(
+              applyStoredGoGetPrefsToProfile({
+                ...base,
+                displayName: cached.displayName || base.displayName,
+                photoURL: cached.photoURL || base.photoURL,
+                neighborhood: cached.neighborhood || base.neighborhood,
+                bio: cached.bio ?? base.bio,
+                role: cached.role ?? base.role,
+                staffInteractionMode: cached.staffInteractionMode ?? base.staffInteractionMode,
+                goGetEnabled: cached.goGetEnabled === true,
+                pickupAvailability: cached.pickupAvailability,
+                goGetRingDurationSeconds: cached.goGetRingDurationSeconds,
+                goGetRingPattern: cached.goGetRingPattern,
+                navigationSettings: cached.navigationSettings,
+              }),
+            ),
           ),
         );
       }
-      return applyStoredStaffModeToProfile(
-        applyStoredNavPrefsToProfile(applyStoredGoGetPrefsToProfile(base)),
+      return mergeStoredAppPreferencesIntoProfile(
+        applyStoredStaffModeToProfile(
+          applyStoredNavPrefsToProfile(applyStoredGoGetPrefsToProfile(base)),
+        ),
       );
     });
     setIsAuthLoading(false);

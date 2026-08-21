@@ -66,6 +66,10 @@ export function normalizeAppPreferences(raw: unknown): AppPreferences {
   return prefs;
 }
 
+export function appPreferencesIsEmpty(prefs: AppPreferences | null | undefined): boolean {
+  return Object.keys(normalizeAppPreferences(prefs)).length === 0;
+}
+
 export function mergeAppPreferences(
   current: AppPreferences | null | undefined,
   patch: Partial<AppPreferences>,

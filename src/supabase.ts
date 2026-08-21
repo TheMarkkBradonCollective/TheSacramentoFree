@@ -18,7 +18,7 @@ import { mergeGoGetPrefsIntoProfile } from './lib/goGetPrefs';
 import { mergeNavigationPrefsIntoProfile } from './lib/navPrefs';
 import { mergeStaffInteractionModeIntoProfile } from './lib/staffModePrefs';
 import { normalizeNavigationSettings, type NavigationSettings } from './lib/navigationSettings';
-import { normalizeAppPreferences } from './lib/appPreferences';
+import { normalizeAppPreferences, appPreferencesIsEmpty } from './lib/appPreferencesModel';
 import type { PickupAttributionInput, PickupNeighborCandidate } from './lib/pickupAttribution';
 import { getEventsUnlockStatus } from './lib/eventsApi';
 import {
@@ -787,6 +787,13 @@ function prefsColumnMigrationHint(
   }
   if (/navigationSettings/i.test(errText) && prefsPayload.navigationSettings != null) {
     return 'Navigation settings could not be saved. Run scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql in the Supabase SQL editor, then try again.';
+  }
+  if (
+    /appPreferences/i.test(errText) &&
+    prefsPayload.appPreferences != null &&
+    !appPreferencesIsEmpty(prefsPayload.appPreferences)
+  ) {
+    return 'App settings could not be saved. Run scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql in the Supabase SQL editor, then try again.';
   }
   if (/staffInteractionMode/i.test(errText) && isStaffRole(profileForSave.role)) {
     return 'Staff/user mode could not be saved. Run scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql in the Supabase SQL editor, then try again.';

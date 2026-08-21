@@ -16,6 +16,7 @@ import {
 } from './staffInteractionMode';
 import { writeStaffInteractionModePref } from './staffModePrefs';
 import { normalizeAppPreferences } from './appPreferencesModel';
+import { reconcileProfileWithStoredPreferences } from './profilePrefsReconcile';
 
 export { mergeAppPreferences, normalizeAppPreferences } from './appPreferencesModel';
 
@@ -29,17 +30,18 @@ function isTheme(value: unknown): value is Theme {
 
 /** Apply cloud profile prefs to this device (local caches + theme event). */
 export function applyUserPreferencesToDevice(profile: UserProfile): void {
-  writeStoredNavPrefs(profileToStoredNavPrefs(profile));
-  writeStoredGoGetPrefs(profileToStoredGoGetPrefs(profile));
-  writeStoredAppPrefs(profileToStoredAppPrefs(profile));
-  if (isStaffRole(profile.role)) {
+  const reconciled = reconcileProfileWithStoredPreferences(profile);
+  writeStoredNavPrefs(profileToStoredNavPrefs(reconciled));
+  writeStoredGoGetPrefs(profileToStoredGoGetPrefs(reconciled));
+  writeStoredAppPrefs(profileToStoredAppPrefs(reconciled));
+  if (isStaffRole(reconciled.role)) {
     writeStaffInteractionModePref(
-      profile.uid,
-      normalizeStaffInteractionMode(profile.staffInteractionMode ?? DEFAULT_STAFF_INTERACTION_MODE),
+      reconciled.uid,
+      normalizeStaffInteractionMode(reconciled.staffInteractionMode ?? DEFAULT_STAFF_INTERACTION_MODE),
     );
   }
 
-  const prefs = normalizeAppPreferences(profile.appPreferences);
+  const prefs = normalizeAppPreferences(reconciled.appPreferences);
   if (prefs.feedViewMode) writeFeedViewMode(prefs.feedViewMode);
   if (prefs.eventsViewMode) writeEventsViewMode(prefs.eventsViewMode);
   if (prefs.feedContentFilter) writeFeedContentFilter(prefs.feedContentFilter);
