@@ -2377,7 +2377,9 @@ $$;
 -- Public profile view (no email) — use for neighbor lookups.
 -- Includes goGetEnabled so neighbors can see whether the other party
 -- accepts app-supported pickup coordination before starting Go Get.
-CREATE OR REPLACE VIEW public.users_public
+-- DROP first: CREATE OR REPLACE cannot insert columns before createdAt on older DBs.
+DROP VIEW IF EXISTS public.users_public;
+CREATE VIEW public.users_public
 WITH (security_invoker = true) AS
 SELECT
   uid,
