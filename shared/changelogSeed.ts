@@ -153,32 +153,26 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
     '2026-08-21_apk-0047',
     '2026-08-21',
     'New Android download — beta v0.1.0.0047',
-    'Stops false “another device” sign-out, password reset, and listing/comment reliability.',
+    'Stops false sign-out, password reset, map route fit, and error alerts.',
     `WHAT NEIGHBORS SEE
-Play Store testers and sideload installs: beta v0.1.0.0047 (versionCode 47).
+Beta v0.1.0.0047.
 
-Since 0046:
-• Native app no longer signs you out when you are only using this phone
-• Forgot-password email now lets you choose a new password
-• Listing status, comments, and conversation delete show an error if they fail
-• Withdrawn listings stay private; live listing cards no longer blank out
-• Saved items follow your account; feed photos no longer drop silently
-• Notification taps no longer yank you back to an old tab while you are using the app
-• When a route is on the map, the path zooms to fill the screen above the card
+• Stays signed in on this phone
+• Password reset works
+• Map route fills the screen
+• Listing, comment, and chat errors show if they fail
 
-Play Console upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0047.aab
 Sideload: https://www.sacramentobuynothing.com/download
 
-Run scripts/supabase-migration-aug-21-2026-audit-rls.sql in the Supabase SQL editor before rollout.
+Run scripts/supabase-migration-aug-21-2026-audit-rls.sql in Supabase.
 
 — Mark
 
 WHERE TO LOOK IN CODE
 - android/app/build.gradle — versionCode 47
 - play-store-assets/release-notes-v0.1.0-0047.txt
-- src/lib/nativeAppSession.ts — same-device session reclaim
-- src/lib/mapRouteFitPadding.ts — route fills the visible map
-- scripts/supabase-migration-aug-21-2026-audit-rls.sql
+- src/lib/nativeAppSession.ts
+- src/lib/mapRouteFitPadding.ts
 
 HISTORY
 2026-08-21 — /runit release; Android beta 0047 built.`,
@@ -1619,14 +1613,11 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
     '2026-08-21_apk-0047',
     '2026-08-21',
     'New Android beta 0047 — stay signed in on this phone',
-    'False “another device” sign-out is fixed; password reset and listing/comment errors now show.',
+    'Stay signed in, password reset, map route fills the screen.',
     `WHAT NEIGHBORS SEE
-Beta v0.1.0.0047: the app stays signed in on this device, forgot-password actually finishes, listing/comment/chat failures tell you instead of failing silently, and an active route zooms to fill the map above the card.
+Beta v0.1.0.0047: stays signed in on this phone, password reset works, map route fills the screen.
 
-Play Store: upload the new AAB to Internal testing and roll out to testers.
 Sideload: https://www.sacramentobuynothing.com/download
-
-Run the audit RLS migration in Supabase before rollout.
 
 — Mark
 

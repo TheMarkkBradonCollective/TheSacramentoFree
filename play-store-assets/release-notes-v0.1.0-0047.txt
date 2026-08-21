@@ -1,12 +1,6 @@
-Android beta v0.1.0.0047 (versionCode 47)
+Android beta 0.1.0 (47)
 
-What's new:
-• Stops false “signed in on another device” sign-out when you are only using this phone
-• Forgot-password email now opens a screen to choose a new password
-• Listing updates, comments, and conversation delete show an error if they fail
-• Withdrawn listings stay private; live listing cards no longer blank out
-• Saved items follow your account; feed photos no longer drop silently
-• Notification taps no longer yank you back to an old tab while using the app
-• When a route is on the map, the path zooms to fill the screen above the card
-
-Download (sideload): https://www.sacramentobuynothing.com/download
+• Stays signed in on this phone
+• Password reset works
+• Map route fills the screen
+• Listing, comment, and chat errors show if they fail
