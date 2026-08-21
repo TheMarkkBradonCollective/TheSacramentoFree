@@ -55,7 +55,7 @@ The first time you run `npm run android:apk`, `scripts/setup-android-keystore.sh
 
 ### App icon and splash (branding)
 
-The web app uses `public/Logo.png` (the uploaded Sacramento Free app icon) for favicons, the PWA manifest, and in-app UI. The original upload is also kept as `public/App icon TheSacramentoFree.png`. The wordmark lockup is `public/TheSacramentoFree.png`. Android launcher icons and splash screens are **native** resources under `android/app/src/main/res/` — they are not picked up automatically from the web bundle.
+The web app uses `public/Logo.png` (the uploaded Sacramento Free app icon) for favicons, the PWA manifest, and in-app UI. The original upload is also kept as `public/TheSacramentoFree App Logo.png`. The wordmark lockup is `public/TheSacramentoFree.png`. Android launcher icons and splash screens are **native** resources under `android/app/src/main/res/` — they are not picked up automatically from the web bundle.
 
 Regenerate them from the community logo before building an APK:
 

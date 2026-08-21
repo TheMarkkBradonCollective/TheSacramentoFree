@@ -2,7 +2,7 @@
  * Regenerate Android launcher icons and splash screens from public/Logo.png.
  *
  * Logo.png is the uploaded Sacramento Free app icon (ink on newsprint), copied
- * byte-for-byte from public/App icon TheSacramentoFree.png. Launcher mipmaps
+ * byte-for-byte from public/TheSacramentoFree App Logo.png. Launcher mipmaps
  * are scaled from that file with no orange fill and no adaptive inset.
  *
  * Web push keeps the same artwork (public/notification-icon.png). Android
