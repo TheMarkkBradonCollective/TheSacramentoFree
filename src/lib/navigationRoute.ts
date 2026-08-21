@@ -1,5 +1,5 @@
 import type { LatLng } from './mapRoute';
-import { haversineMeters } from './mapRoute';
+import { haversineMeters, isRouteInSacramentoServiceArea } from './mapRoute';
 import { apiUrl } from './appOrigin';
 import { lanesFromOsrmIntersections, type NavLane } from './navLanes';
 import type { NavTravelMode } from './navigationSettings';
@@ -166,6 +166,8 @@ export async function fetchNavigationRoute(
   to: LatLng,
   travelMode: NavTravelMode = 'driving',
 ): Promise<NavigationRouteResult | null> {
+  if (!isRouteInSacramentoServiceArea(from, to)) return null;
+
   const viaApi = await fetchNavigationRouteFromApi(from, to, travelMode);
   if (viaApi) return viaApi;
 

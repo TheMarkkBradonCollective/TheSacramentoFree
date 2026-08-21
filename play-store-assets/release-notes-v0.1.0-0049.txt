@@ -1,0 +1,9 @@
+Android beta 0.1.0 (49)
+
+• Feed and chat filters follow your account
+• Android status bar no longer double-pads
+• Event load failures show an error
+• Hosts can delete cancelled or past events
+• Phone can copy/share Play tester emails
+• Given/fulfilled listings can be shown again
+• Map route fills the screen instead of zooming to the wrong street

@@ -2,8 +2,10 @@ import type { LatLng } from './mapRoute';
 
 const ACTIVE_NAV_STORAGE_KEY = 'sbn_active_nav_session_v1';
 
-/** Max age before an unstopped session is treated as stale (12 hours). */
-const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+/** Max age before an unstopped session is treated as stale (2 hours). */
+const SESSION_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+/** Only auto-open Map if navigation was touched this recently. */
+const AUTO_RESUME_NAV_MS = 30 * 60 * 1000;
 
 export type NavTargetType = 'post' | 'event';
 
@@ -67,6 +69,13 @@ export function readActiveNavSession(userId?: string): ActiveNavSession | null {
 
 export function hasActiveNavSession(userId?: string): boolean {
   return readActiveNavSession(userId) != null;
+}
+
+/** True only while a trip is still fresh enough to yank the user onto Map. */
+export function hasFreshNavSession(userId?: string): boolean {
+  const session = readActiveNavSession(userId);
+  if (!session) return false;
+  return Date.now() - session.updatedAt <= AUTO_RESUME_NAV_MS;
 }
 
 export function saveActiveNavSession(session: Omit<ActiveNavSession, 'updatedAt'>): void {

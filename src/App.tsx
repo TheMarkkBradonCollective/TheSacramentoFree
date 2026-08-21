@@ -36,6 +36,7 @@ import {
   getSupabaseItemById,
   getSupabaseEvents,
   cancelSupabaseEvent,
+  deleteSupabaseEvent,
   updateSupabaseItemStatus,
   deleteSupabaseItem,
   deleteOwnAccount,
@@ -95,7 +96,7 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
-import { confirmDeleteFeedPost, confirmDeleteListing, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
+import { confirmDeleteFeedPost, confirmDeleteListing, confirmDeleteOwnEvent, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
 import { getOwnerCompletedActionLabel } from './lib/postType';
 import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
@@ -121,7 +122,7 @@ import { hasSeenGoGetFirstRunPrompt } from './lib/goGetFirstRunState';
 import RebrandAnnouncementModal from './components/RebrandAnnouncementModal';
 import { hasSeenRebrandAnnouncement, markRebrandAnnouncementSeen } from './lib/rebrandAnnouncementState';
 import { REBRAND_ANNOUNCEMENT_ID } from '../shared/rebrandAnnouncement2026';
-import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
+import { clearActiveNavSession, hasFreshNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
 import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath, normalizePublicPath } from './public/routes';
@@ -199,6 +200,7 @@ export default function App() {
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
   const profileSyncedUidRef = useRef<string | null>(null);
+  const profileSyncedAtRef = useRef(0);
   const handlingPopStateRef = useRef(false);
   const loadItemsRef = useRef<
     (isBackground?: boolean, attempt?: number, options?: { guest?: boolean }) => Promise<void>
@@ -490,7 +492,7 @@ export default function App() {
   }, [refreshLegalGates]);
 
   useEffect(() => {
-    if (!userProfile?.uid || !hasActiveNavSession(userProfile.uid)) return;
+    if (!userProfile?.uid || !hasFreshNavSession(userProfile.uid)) return;
     setActiveTab('map');
     persistActiveTab('map', userProfile.uid);
   }, [userProfile?.uid]);
@@ -888,9 +890,13 @@ export default function App() {
     setAuthBootstrapping(false);
   }, [clearAuthenticatedUiState]);
 
-  const syncProfileFromDb = useCallback(async (user: any) => {
+  const syncProfileFromDb = useCallback(async (user: any, options?: { force?: boolean }) => {
     if (!user?.id) return;
-    if (profileSyncedUidRef.current === user.id) return;
+    const recentlySynced =
+      !options?.force &&
+      profileSyncedUidRef.current === user.id &&
+      Date.now() - profileSyncedAtRef.current < 15_000;
+    if (recentlySynced) return;
     if (profileSyncRef.current === user.id) return;
     profileSyncRef.current = user.id;
 
@@ -912,6 +918,7 @@ export default function App() {
             return merged;
           });
           profileSyncedUidRef.current = user.id;
+          profileSyncedAtRef.current = Date.now();
         }
         return;
       }
@@ -1092,6 +1099,18 @@ export default function App() {
       subscription.unsubscribe();
     };
   }, [applySession, syncProfileFromDb, clearAuthenticatedUiState, resetTabStateForSignOut]);
+
+  useEffect(() => {
+    if (!sessionUser) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      profileSyncedUidRef.current = null;
+      profileSyncedAtRef.current = 0;
+      void syncProfileFromDb(sessionUser, { force: true });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [sessionUser, syncProfileFromDb]);
 
   const loadItems = useCallback(
     async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
@@ -1422,7 +1441,14 @@ export default function App() {
       logoutCleanupDoneRef.current = true;
       await clearNotificationDataOnLogout(signedOutUserId);
       const { error } = await supabase.auth.signOut();
-      if (error) console.warn('Sign-out did not complete cleanly:', error.message);
+      if (error) {
+        console.warn('Sign-out did not complete cleanly:', error.message);
+        void alert({
+          title: 'Signed out on this device',
+          message:
+            'The server sign-out did not finish. You are signed out here. If this device still looks signed in after a refresh, try again.',
+        });
+      }
     } catch (err) {
       console.warn('Sign-out failed:', err);
     }
@@ -1945,9 +1971,13 @@ export default function App() {
         if (existing) {
           openEvent(existing);
         } else {
-          void getSupabaseEvents().then((loaded) => {
-            openEvent(loaded.find((event) => event.id === target.eventId));
-          });
+          void getSupabaseEvents()
+            .then((loaded) => {
+              openEvent(loaded.find((event) => event.id === target.eventId));
+            })
+            .catch(() => {
+              void alert({ message: 'Could not load this event. Try again.' });
+            });
         }
         tabForUrl = 'events';
         navigateToTab('events');
@@ -2707,6 +2737,22 @@ export default function App() {
                       await alert({
                         title: 'Could not cancel event',
                         message: result.errorMessage || 'Could not cancel event.',
+                      });
+                    }
+                  }}
+                  onDelete={async () => {
+                    const confirmed = await confirmDeleteOwnEvent(confirm, detailEvent.title);
+                    if (!confirmed) return;
+                    setDetailEventUpdating(true);
+                    const result = await deleteSupabaseEvent(detailEvent.id);
+                    setDetailEventUpdating(false);
+                    if (result.ok) {
+                      setDetailEvent(null);
+                      void loadEvents(true);
+                    } else {
+                      await alert({
+                        title: 'Could not delete event',
+                        message: result.errorMessage || 'Could not delete event.',
                       });
                     }
                   }}

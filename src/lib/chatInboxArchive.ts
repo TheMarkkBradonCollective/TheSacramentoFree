@@ -33,6 +33,12 @@ export function readArchivedInboxKeys(userId: string): Set<string> {
   return new Set(readRaw(userId));
 }
 
+export function writeArchivedInboxKeys(userId: string, keys: Iterable<string>): Set<string> {
+  const next = [...new Set([...keys].filter((key) => typeof key === 'string' && key.length > 0))];
+  writeRaw(userId, next);
+  return new Set(next);
+}
+
 export function isInboxArchived(userId: string, kind: InboxArchiveKind, id: string): boolean {
   return readArchivedInboxKeys(userId).has(inboxArchiveKey(kind, id));
 }

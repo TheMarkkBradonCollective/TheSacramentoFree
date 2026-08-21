@@ -3667,6 +3667,7 @@ CREATE POLICY "Users manage own saved items" ON public.saved_items
 
 -- ---------------------------------------------------------
 -- 11. STORAGE — path-scoped uploads
+-- audit-49-storage-items-auth
 -- ---------------------------------------------------------
 
 DROP POLICY IF EXISTS "Public read items bucket" ON storage.objects;

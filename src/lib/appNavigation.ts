@@ -1,5 +1,5 @@
 import { AppTab, migrateLegacyStoredTab, parseAppTab } from './appTabs';
-import { hasActiveNavSession } from './navigationSession';
+import { hasFreshNavSession } from './navigationSession';
 
 export const TAB_STORAGE_KEY = 'sbn_active_tab_v2';
 const LEGACY_TAB_STORAGE_KEY = 'sbn_active_tab_v1';
@@ -41,7 +41,7 @@ export function withTabInHistoryState(tab: AppTab) {
 
 export function readPersistedTab(userId?: string): AppTab {
   if (typeof window === 'undefined') return 'map';
-  if (hasActiveNavSession(userId)) return 'map';
+  if (hasFreshNavSession(userId)) return 'map';
 
   const pathTab = parseTabFromPathname(window.location.pathname);
   const historyTab = parseTabFromHistoryState(window.history.state);

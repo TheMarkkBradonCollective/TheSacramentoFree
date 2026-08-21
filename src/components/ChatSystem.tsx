@@ -47,8 +47,7 @@ import { buildInboxEntries } from '../lib/chatInbox';
 import {
   emptyInboxFilterMessage,
   filterInboxEntries,
-  readChatCategoryFilter,
-  readChatStatusFilter,
+  resolveChatInboxFilters,
   writeChatCategoryFilter,
   writeChatStatusFilter,
   type ChatCategoryFilter,
@@ -57,8 +56,8 @@ import {
 import {
   archiveInboxConversation,
   isInboxArchived,
-  readArchivedInboxKeys,
   unarchiveInboxConversation,
+  writeArchivedInboxKeys,
 } from '../lib/chatInboxArchive';
 import {
   getMessageGroupMeta,
@@ -105,6 +104,7 @@ import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
 import ChatListingPreview from './ChatListingPreview';
 import ChatEventPreview from './ChatEventPreview';
 import { resolveEventStatus } from '../lib/eventRsvp';
+import { persistUserAppPreferences } from '../lib/appPreferences';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -186,13 +186,21 @@ export default function ChatSystem({
   const [errorMsg, setErrorMsg] = useState('');
   const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<ChatCategoryFilter>(() => readChatCategoryFilter());
-  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>(() => readChatStatusFilter());
-  const [archivedKeys, setArchivedKeys] = useState(() => readArchivedInboxKeys(userProfile.uid));
+  const [categoryFilter, setCategoryFilter] = useState<ChatCategoryFilter>(
+    () => resolveChatInboxFilters(userProfile).category,
+  );
+  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>(
+    () => resolveChatInboxFilters(userProfile).status,
+  );
+  const [archivedKeys, setArchivedKeys] = useState(() => new Set(resolveChatInboxFilters(userProfile).archivedKeys));
 
   useEffect(() => {
-    setArchivedKeys(readArchivedInboxKeys(userProfile.uid));
-  }, [userProfile.uid]);
+    const next = resolveChatInboxFilters(userProfile);
+    setCategoryFilter(next.category);
+    setStatusFilter(next.status);
+    const archived = writeArchivedInboxKeys(userProfile.uid, next.archivedKeys);
+    setArchivedKeys(archived);
+  }, [userProfile.uid, userProfile.appPreferences]);
 
   const userIsStaff = isStaffRole(userProfile.role) && isStaffActingOfficial(userProfile);
   const staffActingOfficial = isStaffActingOfficial(userProfile);
@@ -1151,49 +1159,59 @@ export default function ChatSystem({
     [categoryFilter, statusFilter],
   );
 
+  const persistInboxFilters = (
+    category: ChatCategoryFilter,
+    status: ChatStatusFilter,
+    archived: Iterable<string> = archivedKeys,
+  ) => {
+    writeChatCategoryFilter(category);
+    writeChatStatusFilter(status);
+    const archivedList = [...new Set([...archived])];
+    writeArchivedInboxKeys(userProfile.uid, archivedList);
+    void persistUserAppPreferences(userProfile, {
+      chatInbox: { category, status, archivedKeys: archivedList },
+    });
+  };
+
   const handleCategoryFilterChange = (filter: ChatCategoryFilter) => {
     setCategoryFilter(filter);
-    writeChatCategoryFilter(filter);
+    persistInboxFilters(filter, statusFilter);
   };
 
   const handleStatusFilterChange = (filter: ChatStatusFilter) => {
     setStatusFilter(filter);
-    writeChatStatusFilter(filter);
+    persistInboxFilters(categoryFilter, filter);
   };
 
-  const handleArchiveChat = useCallback(
-    (chatId: string) => {
-      setArchivedKeys(archiveInboxConversation(userProfile.uid, 'chat', chatId));
-      setSelectedChat(null);
-      onClearInitialChat();
-      onClearPendingChatCompose?.();
-    },
-    [userProfile.uid, onClearInitialChat, onClearPendingChatCompose],
-  );
+  const handleArchiveChat = (chatId: string) => {
+    const next = archiveInboxConversation(userProfile.uid, 'chat', chatId);
+    setArchivedKeys(next);
+    persistInboxFilters(categoryFilter, statusFilter, next);
+    setSelectedChat(null);
+    onClearInitialChat();
+    onClearPendingChatCompose?.();
+  };
 
-  const handleUnarchiveChat = useCallback(
-    (chatId: string) => {
-      setArchivedKeys(unarchiveInboxConversation(userProfile.uid, 'chat', chatId));
-    },
-    [userProfile.uid],
-  );
+  const handleUnarchiveChat = (chatId: string) => {
+    const next = unarchiveInboxConversation(userProfile.uid, 'chat', chatId);
+    setArchivedKeys(next);
+    persistInboxFilters(categoryFilter, statusFilter, next);
+  };
 
-  const handleArchiveSupportTicket = useCallback(
-    (ticketId: string) => {
-      setArchivedKeys(archiveInboxConversation(userProfile.uid, 'support', ticketId));
-      setSupportView(null);
-      setSupportOpenTicketId(null);
-      onClearInitialSupportTicket?.();
-    },
-    [userProfile.uid, onClearInitialSupportTicket],
-  );
+  const handleArchiveSupportTicket = (ticketId: string) => {
+    const next = archiveInboxConversation(userProfile.uid, 'support', ticketId);
+    setArchivedKeys(next);
+    persistInboxFilters(categoryFilter, statusFilter, next);
+    setSupportView(null);
+    setSupportOpenTicketId(null);
+    onClearInitialSupportTicket?.();
+  };
 
-  const handleUnarchiveSupportTicket = useCallback(
-    (ticketId: string) => {
-      setArchivedKeys(unarchiveInboxConversation(userProfile.uid, 'support', ticketId));
-    },
-    [userProfile.uid],
-  );
+  const handleUnarchiveSupportTicket = (ticketId: string) => {
+    const next = unarchiveInboxConversation(userProfile.uid, 'support', ticketId);
+    setArchivedKeys(next);
+    persistInboxFilters(categoryFilter, statusFilter, next);
+  };
 
   const selectedChatArchived =
     selectedChat && !isCommunityChat(selectedChat.id)

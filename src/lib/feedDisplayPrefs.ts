@@ -1,15 +1,13 @@
-import type { FeedPost, ItemPost, FeedViewMode } from '../types';
+import type { FeedPost, ItemPost, FeedViewMode, FeedContentFilter, FeedAudienceScope, UserProfile } from '../types';
+import { readStoredAppPrefs } from './appPrefsCache';
+import { mergeAppPreferences } from './appPreferencesModel';
 
 const VIEW_MODE_KEY = 'sbn_feed_view_mode_v1';
 const EVENTS_VIEW_MODE_KEY = 'sbn_events_view_mode_v1';
 
-export type { FeedViewMode };
-
-export type FeedContentFilter = 'all' | 'text' | 'pictures';
+export type { FeedViewMode, FeedContentFilter, FeedAudienceScope };
 
 const FEED_CONTENT_FILTER_KEY = 'sbn_feed_content_filter_v1';
-
-export type FeedAudienceScope = 'everyone' | 'neighbors' | 'friends';
 
 const FEED_AUDIENCE_SCOPE_KEY = 'sbn_feed_audience_scope_v1';
 
@@ -90,6 +88,18 @@ export function writeFeedContentFilter(value: FeedContentFilter): void {
   } catch {
     /* ignore */
   }
+}
+
+export function resolveFeedDisplayFilters(profile: UserProfile): {
+  contentFilter: FeedContentFilter;
+  audienceScope: FeedAudienceScope;
+} {
+  const stored = readStoredAppPrefs(profile.uid)?.appPreferences;
+  const merged = mergeAppPreferences(profile.appPreferences, stored ?? {});
+  return {
+    contentFilter: merged.feedContentFilter ?? readFeedContentFilter(),
+    audienceScope: merged.feedAudienceScope ?? readFeedAudienceScope(),
+  };
 }
 
 export function feedPostMatchesContentFilter(

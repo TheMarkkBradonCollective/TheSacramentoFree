@@ -28,6 +28,7 @@ export function usePreviewDrivingRoute(
   destinationKey?: string | null,
 ) {
   const [coords, setCoords] = useState<[number, number][] | null>(null);
+  const [coordsKey, setCoordsKey] = useState<string | null>(null);
   const [distanceMeters, setDistanceMeters] = useState<number | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const [navRoute, setNavRoute] = useState<NavigationRouteResult | null>(null);
@@ -47,6 +48,7 @@ export function usePreviewDrivingRoute(
       lastFetchedRef.current = null;
       hasPreviewRef.current = false;
       setCoords(null);
+      setCoordsKey(null);
       setDistanceMeters(null);
       setDurationSeconds(null);
       setNavRoute(null);
@@ -73,6 +75,7 @@ export function usePreviewDrivingRoute(
     if (destChanged) {
       hasPreviewRef.current = false;
       setCoords(null);
+      setCoordsKey(null);
       setDistanceMeters(null);
       setDurationSeconds(null);
       setNavRoute(null);
@@ -88,6 +91,7 @@ export function usePreviewDrivingRoute(
         hasPreviewRef.current = true;
         setNavRoute(navResult);
         setCoords(navResult.coords.length >= 2 ? navResult.coords : null);
+        setCoordsKey(destKey);
         setDistanceMeters(navResult.distanceMeters);
         setDurationSeconds(navResult.durationSeconds);
         setLoading(false);
@@ -100,11 +104,22 @@ export function usePreviewDrivingRoute(
       hasPreviewRef.current = true;
       setNavRoute(null);
       setCoords(fallback.onRoads && isRoadGeometry(fallback.coords) ? fallback.coords : null);
+      setCoordsKey(destKey);
       setDistanceMeters(fallback.distanceMeters);
       setDurationSeconds(fallback.durationSeconds);
       setLoading(false);
     });
   }, [enabled, destinationKey, start?.lat, start?.lng, end?.lat, end?.lng, travelMode]);
 
-  return { coords, distanceMeters, durationSeconds, navRoute, loading, travelMode };
+  const activeKey = destinationKey ?? null;
+  const matchesDest = coordsKey === activeKey;
+
+  return {
+    coords: matchesDest ? coords : null,
+    distanceMeters: matchesDest ? distanceMeters : null,
+    durationSeconds: matchesDest ? durationSeconds : null,
+    navRoute: matchesDest ? navRoute : null,
+    loading: loading || Boolean(end && start && enabled && !matchesDest),
+    travelMode,
+  };
 }
