@@ -5,6 +5,7 @@ export const NEWSPAPER = {
   title: 'Sacramento Free',
   tagline: 'All the news that’s fit to give.',
   city: 'Sacramento, California',
+  price: 'Gratis',
   previewLabel: 'Design preview',
   previewNote:
     'Same app — same pages, features, and flows. This grey newspaper look is a visual reskin only. Production at sacramentobuynothing.com is unchanged.',

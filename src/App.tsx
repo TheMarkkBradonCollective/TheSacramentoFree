@@ -8,6 +8,7 @@ import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
 import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent, FeedPost } from './types';
 import NewspaperPreviewBanner from './components/public/newspaper/NewspaperPreviewBanner';
+import NewspaperEditionBar from './components/public/newspaper/NewspaperEditionBar';
 import PublicSite from './components/public/PublicSite';
 import Onboarding from './components/Onboarding';
 import PostItemModal from './components/PostItemModal';
@@ -2039,6 +2040,7 @@ export default function App() {
   return (
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {sessionUser ? <NewspaperPreviewBanner /> : null}
+      {sessionUser ? <NewspaperEditionBar /> : null}
       {showDownloadPage && sessionUser ? (
         <DownloadPage
           userProfile={userProfile}

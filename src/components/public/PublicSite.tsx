@@ -4,6 +4,7 @@ import { usePublicRoute } from '../../public/usePublicRoute';
 import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
 import PublicNav from './PublicNav';
 import NewspaperPreviewBanner from './newspaper/NewspaperPreviewBanner';
+import NewspaperEditionBar from './newspaper/NewspaperEditionBar';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import HowItWorksPage from './pages/HowItWorksPage';
@@ -126,6 +127,7 @@ export default function PublicSite({
       }`}
     >
       <NewspaperPreviewBanner />
+      <NewspaperEditionBar />
       <PublicNav route={route} onNavigate={navigate} />
       <main className="flex-1 min-h-0 overflow-hidden">
         <ScrollPage ref={mainRef} footer={<PageScrollFooter />}>
