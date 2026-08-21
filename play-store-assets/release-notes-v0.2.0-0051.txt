@@ -1,0 +1,6 @@
+Android beta 0.2.0 (51)
+
+• Smaller Sacramento Free lockup on the website and app
+• Home, sign-in, and map no longer overlap or cut off
+• Map filters and listing cards fit on the screen
+• Notification inboxes can be cleared with the schema run
