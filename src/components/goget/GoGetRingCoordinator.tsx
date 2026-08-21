@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../supabase';
 import type { GoGetSession, UserProfile } from '../../types';
+import { expireGoGetRing } from '../../lib/goGetSessions';
 import { subscribePostgresChanges } from '../../lib/supabaseRealtime';
 import GoGetIncomingRingOverlay from './GoGetIncomingRingOverlay';
 
@@ -37,6 +38,7 @@ function normalizeIncomingSession(row: Record<string, unknown>): GoGetSession | 
 export default function GoGetRingCoordinator({ userProfile }: GoGetRingCoordinatorProps) {
   const [ringSession, setRingSession] = useState<GoGetSession | null>(null);
   const [dismissedId, setDismissedId] = useState<string | null>(null);
+  const [pendingExpire, setPendingExpire] = useState<GoGetSession | null>(null);
 
   useEffect(() => {
     if (!userProfile?.uid) {
@@ -55,7 +57,9 @@ export default function GoGetRingCoordinator({ userProfile }: GoGetRingCoordinat
         .maybeSingle();
       if (!data) return;
       const session = normalizeIncomingSession(data as Record<string, unknown>);
-      if (session && session.id !== dismissedId) setRingSession(session);
+      if (!session || session.id === dismissedId) return;
+      setRingSession(session);
+      setPendingExpire(session);
     };
 
     void load();
@@ -71,6 +75,22 @@ export default function GoGetRingCoordinator({ userProfile }: GoGetRingCoordinat
     );
   }, [userProfile?.uid, dismissedId]);
 
+  // Keep expiry armed after the overlay is dismissed so the requester is not stuck.
+  useEffect(() => {
+    if (!pendingExpire?.ringExpiresAt) return;
+    const session = pendingExpire;
+    const delay = new Date(session.ringExpiresAt as string).getTime() - Date.now() + 250;
+    const id = window.setTimeout(() => {
+      void expireGoGetRing(session).then((result) => {
+        if (!result.ok) return;
+        setDismissedId(session.id);
+        setRingSession(null);
+        setPendingExpire(null);
+      });
+    }, Math.max(0, delay));
+    return () => window.clearTimeout(id);
+  }, [pendingExpire?.id, pendingExpire?.ringExpiresAt]);
+
   if (!userProfile || !ringSession || ringSession.id === dismissedId) return null;
 
   return (
@@ -81,7 +101,11 @@ export default function GoGetRingCoordinator({ userProfile }: GoGetRingCoordinat
         setDismissedId(ringSession.id);
         setRingSession(null);
       }}
-      onSessionResolved={() => setRingSession(null)}
+      onSessionResolved={() => {
+        setDismissedId(ringSession.id);
+        setRingSession(null);
+        setPendingExpire(null);
+      }}
     />
   );
 }

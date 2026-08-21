@@ -342,6 +342,32 @@ export async function expireGoGetRing(
   return { ok: true, session: result.session };
 }
 
+/** End a live ring when the listing is gone — requester should not wait forever. */
+export async function abandonGoGetRing(
+  session: GoGetSession,
+  reason = 'Listing is no longer available',
+): Promise<Result<{ session: GoGetSession }>> {
+  if (session.status !== 'awaiting_availability') {
+    return { ok: false, errorMessage: 'This request is no longer ringing.' };
+  }
+  const result = await updateSession(session.id, {
+    status: 'cancelled',
+    cancelledAt: new Date().toISOString(),
+    cancelReason: reason,
+    fulfillerSharingLocation: false,
+  });
+  if (!result.ok || !result.session) return result;
+
+  await createSupabaseMessage(
+    session.chatId,
+    `❌ This pickup request ended: ${reason}.`,
+    session.fulfillerUserId,
+    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
+  return { ok: true, session: result.session };
+}
+
 /** Requester picks a meet time after the live ring timed out (no urgent ring). */
 export async function requesterProposeScheduledMeet(
   session: GoGetSession,

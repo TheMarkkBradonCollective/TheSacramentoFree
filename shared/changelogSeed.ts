@@ -86,6 +86,7 @@ const APK_0044_PUBLISHED_AT = '2026-08-20T21:00:00.000Z';
 const APK_0045_PUBLISHED_AT = '2026-08-20T21:30:00.000Z';
 const APK_0046_PUBLISHED_AT = '2026-08-20T22:35:00.000Z';
 const APK_0047_PUBLISHED_AT = '2026-08-21T02:00:00.000Z';
+const APK_0048_PUBLISHED_AT = '2026-08-21T04:00:00.000Z';
 const REBRAND_LETTER_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
@@ -148,6 +149,36 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
     REBRAND_UPDATE_BODY,
     REBRAND_UPDATE_DETAIL,
     REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-21_apk-0048',
+    '2026-08-21',
+    'New Android download — beta v0.1.0.0048',
+    'Pickup ring, expired sign-in, RSVP/chat errors, and listing delete.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0048.
+
+• Pickup ring no longer blocks the app if a listing is gone
+• Expired sign-in no longer looks signed in
+• RSVP and chat load errors show if they fail
+• Deleting a listing or event actually removes it
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-21-2026-audit-48.sql in Supabase.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 48
+- play-store-assets/release-notes-v0.1.0-0048.txt
+- src/components/goget/GoGetIncomingRingOverlay.tsx
+- src/lib/nativeAppSession.ts
+- scripts/supabase-migration-aug-21-2026-audit-48.sql
+
+HISTORY
+2026-08-21 — full site audit 48.`,
+    APK_0048_PUBLISHED_AT,
   ),
   update(
     '2026-08-21_apk-0047',
@@ -1608,6 +1639,25 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
     REBRAND_ANNOUNCEMENT_BODY,
     REBRAND_ANNOUNCEMENT_LETTER,
     REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-21_apk-0048',
+    '2026-08-21',
+    'New Android beta 0048 — pickup ring and delete fixes',
+    'Pickup requests no longer freeze the app; expired sign-in and listing delete work.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0048: pickup ring can be dismissed, expired sessions sign you out cleanly, RSVP and chat errors show, deleting a listing actually removes it.
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-21_apk-0048.
+
+HISTORY
+2026-08-21 — Android beta 0048 / full site audit.`,
+    APK_0048_PUBLISHED_AT,
   ),
   news(
     '2026-08-21_apk-0047',

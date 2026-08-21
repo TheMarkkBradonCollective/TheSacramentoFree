@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FeedPost } from '../types';
-import { createFeedPost, deleteFeedPost, getFeedPosts } from '../lib/feedApi';
+import { createFeedPost, deleteFeedPost, getFeedPosts, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted } from '../lib/feedApi';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { patchDenormalizedAuthorFields } from '../lib/profilePersistence';
 import type { UserProfile } from '../types';
@@ -33,6 +33,16 @@ export function useFeedPosts(userProfile: UserProfile | null) {
       },
     );
   }, [reload]);
+
+  useEffect(() => {
+    const onDeleted = (event: Event) => {
+      const id = (event as CustomEvent<{ id?: string }>).detail?.id;
+      if (!id) return;
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+    };
+    window.addEventListener(FEED_POST_DELETED_EVENT, onDeleted);
+    return () => window.removeEventListener(FEED_POST_DELETED_EVENT, onDeleted);
+  }, []);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -88,6 +98,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
         return false;
       }
       setPosts((prev) => prev.filter((p) => p.id !== post.id));
+      notifyFeedPostDeleted(post.id);
       return true;
     },
     [userProfile, isStaff, confirm, alert],

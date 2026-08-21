@@ -488,6 +488,7 @@ export default function ChatSystem({
         setChats(visibleChats);
         setIncomingRequests(visibleRequests);
         setIsChatsLoading(false);
+        setErrorMsg('');
 
         if (initialFocusMessageRequests) {
           setSelectedChat(null);
@@ -535,7 +536,10 @@ export default function ChatSystem({
         }
       } catch (err) {
         console.warn('Failed to load chats from Supabase:', err);
-        if (active) setIsChatsLoading(false);
+        if (active) {
+          setIsChatsLoading(false);
+          setErrorMsg('Could not load conversations. Pull to refresh or try again.');
+        }
       }
     };
 
@@ -622,6 +626,7 @@ export default function ChatSystem({
         const loadedMessages = await getSupabaseMessages(chatId);
         if (!active) return;
         setMessages(loadedMessages);
+        setErrorMsg('');
         if (isCommunityChat(chatId)) {
           const ids = loadedMessages.map((m) => m.senderId);
           const info = await getUserDisplayInfoByIds(ids);
@@ -631,6 +636,7 @@ export default function ChatSystem({
         }
       } catch (err) {
         console.warn('Failed to load messages from Supabase:', err);
+        if (active) setErrorMsg('Could not load messages. Try opening this chat again.');
       }
     };
 

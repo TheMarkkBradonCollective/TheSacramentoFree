@@ -228,9 +228,14 @@ export function useEventsEngagement(
       [eventId]: optimisticState,
     }));
 
-    setSupabaseEventRsvp(eventId, uid, persistStatus).catch((err) => {
+    setSupabaseEventRsvp(eventId, uid, persistStatus).then((ok) => {
+      if (ok) return;
+      setEventRsvps((prev) => ({ ...prev, [eventId]: current }));
+      void alert({ title: 'Could not RSVP', message: 'Your RSVP was not saved. Please try again.' });
+    }).catch((err) => {
       console.warn('Failed to persist RSVP:', err);
       setEventRsvps((prev) => ({ ...prev, [eventId]: current }));
+      void alert({ title: 'Could not RSVP', message: 'Your RSVP was not saved. Please try again.' });
     });
   };
 
