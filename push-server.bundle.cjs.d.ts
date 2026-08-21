@@ -85,6 +85,11 @@ export function runDirectorBroadcastTest(
   params?: { title?: string; body?: string },
 ): Promise<ActionResult>;
 
+/** Export all neighbor emails as Play Console tester CSV (director only). */
+export function runExportPlayTesters(
+  callerId: string,
+): Promise<{ status: number; body: Record<string, unknown> | string; csv?: boolean }>;
+
 /** Fan-out a push notification from a trusted or untrusted client-side caller. */
 export function runPushSend(
   userId: string,
