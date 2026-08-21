@@ -1,13 +1,15 @@
 /** The Sacramento Free newspaper look. Original orange remains at ?skin=original. Live product copy stays in siteContent.ts. */
+import { COMMUNITY_SLOGAN } from '../siteContent';
+
 export const NEWSPAPER = {
   name: 'The Sacramento Free',
   the: 'The',
   title: 'Sacramento Free',
-  tagline: 'All the news that’s fit to give.',
+  tagline: COMMUNITY_SLOGAN,
   city: 'Sacramento, California',
   cityLine: 'Sacramento • California',
   edition: 'Community Edition',
-  motto: 'Free to give. Free to receive.',
+  motto: COMMUNITY_SLOGAN,
   volume: 'Vol. I · No. 1',
   standfirst: 'Sacramento’s Community Exchange',
   price: 'Gratis',

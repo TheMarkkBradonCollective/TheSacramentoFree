@@ -346,7 +346,7 @@ export default function MobileView({
       >
         <div className="sbn-mobile-header-row">
         <BrandLogo
-          imgClassName="h-9 w-auto max-w-[min(52vw,200px)] object-contain shrink-0"
+          imgClassName="h-10 w-auto max-w-[min(58vw,13.5rem)] object-contain shrink-0"
           showTitle={false}
         />
         <div className="flex items-center shrink-0">

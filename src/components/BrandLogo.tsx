@@ -3,7 +3,6 @@ import { Gift } from 'lucide-react';
 import { APP_LOGO_SRC, SITE_LOGO_SRC, SITE } from '../siteContent';
 import { NEWSPAPER } from '../preview/newspaperBrand';
 import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
-import { isNativeApp } from '../lib/nativePlatform';
 
 interface BrandLogoProps {
   className?: string;
@@ -49,13 +48,17 @@ function BrandTitleBlock({
   return (
     <div className="text-left min-w-0">
       <p
-        className={`font-display font-bold text-app leading-tight truncate ${
+        className={`font-bold text-app leading-tight truncate ${
           compact ? 'text-[13px] tracking-tight' : 'text-sm'
-        }`}
+        } tsf-brand-wordmark`}
       >
         {title}
       </p>
-      <p className={`text-muted truncate ${compact ? 'text-[10px] leading-snug mt-0.5' : 'text-[11px]'}`}>
+      <p
+        className={`text-muted truncate tsf-brand-slogan ${
+          compact ? 'text-[10px] leading-snug mt-0.5' : 'text-[11px]'
+        }`}
+      >
         {subtitle}
       </p>
     </div>
@@ -74,7 +77,7 @@ export default function BrandLogo({
   const title = newspaper ? NEWSPAPER.name : SITE.name;
   const tagline = subtitle ?? (newspaper ? NEWSPAPER.tagline : SITE.tagline);
   const iconOnly = compact;
-  const useSiteLockup = newspaper && !isNativeApp() && !iconOnly;
+  const useSiteLockup = newspaper && !iconOnly;
   const src = useSiteLockup ? SITE_LOGO_SRC : APP_LOGO_SRC;
   const logoClass = iconOnly
     ? 'h-8 w-8 object-cover rounded-lg shrink-0'
