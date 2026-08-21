@@ -18,8 +18,8 @@ INSERT INTO public.app_updates (
 VALUES (
   '2026-08-21_trademark-rebrand-notice',
   '2026-08-21',
-  'Trademark notice + rebrand in progress — site stays open',
-  'Official home-page notice, one-time letter popup, and a pause on big new builds while we develop our own name and look.',
+  'From Mark — something on the home page',
+  'Home page notice, a one-time letter when you visit, and a brief pause on big new builds.',
   $detail$WHAT NEIGHBORS SEE
 • sacramentobuynothing.com now shows an official trademark notice on the home page — we are independent and working on a distinct name
 • First visit shows a one-time letter from Mark (dismiss it anytime; the full letter also lives in bell → News)
@@ -63,8 +63,8 @@ INSERT INTO public.help_announcements (
 VALUES (
   '2026-08-21_rebrand-letter',
   '2026-08-21',
-  'A letter from Mark (read this — I almost got you)',
-  'Trademark reality check… then a fake shutdown… then the truth: we stay open, I pause big new builds, and cook a rebrand in private.',
+  'From Mark — I almost got you',
+  'I opened with bad news on purpose. We are not shutting down — read the letter.',
   $detail$Neighbors,
 
 I have to start with the part I didn't want to write.
