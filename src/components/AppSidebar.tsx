@@ -20,6 +20,7 @@ import type { CSSProperties } from 'react';
 import type { UserProfile } from '../types';
 import { type AnyTab } from '../lib/appTabs';
 import { isStaffRole, roleLabel, roleRank, roleTheme } from '../lib/roles';
+import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 import { hasStaffConsoleAccess, profileUiRole } from '../lib/staffInteractionMode';
 import { IN_APP } from '../siteContent';
 import BrandLogo from './BrandLogo';
@@ -91,6 +92,7 @@ export default function AppSidebar({
   const isFullyHidden = fullyHiddenWhenCollapsed && collapsed && !isRail && !isSlideDrawer;
   const isCollapsed = isRail || collapsed;
   const theme = roleTheme(profileUiRole(userProfile));
+  const { enabled: newspaper } = useNewspaperSkin();
   const showStaffConsole = hasStaffConsoleAccess(userProfile);
 
   const selectTab = (id: AnyTab) => {
@@ -234,7 +236,7 @@ export default function AppSidebar({
                 className="px-1 pt-3 pb-1 text-[9px] font-black uppercase tracking-widest font-mono"
                 style={{ color: theme.accent }}
               >
-                Staff
+                {newspaper ? 'Editorial desks' : 'Staff'}
               </p>
             )}
             {isCollapsed && <div className="mx-1 my-2 border-t border-app" />}

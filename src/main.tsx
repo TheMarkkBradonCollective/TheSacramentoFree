@@ -5,6 +5,8 @@ import AppErrorBoundary from './components/AppErrorBoundary';
 import { ThemeProvider } from './theme/ThemeContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 import { NewspaperSkinProvider } from './preview/NewspaperSkinContext';
+import { NewspaperExperienceProvider } from './preview/NewspaperExperienceContext';
+import NewspaperExperienceLayer from './preview/NewspaperExperienceLayer';
 import { initCapacitorApp } from './capacitor/init';
 import { recordInstalledWebVersion } from './lib/installContext';
 import { isNativeApp } from './lib/nativePlatform';
@@ -28,9 +30,12 @@ createRoot(document.getElementById('root')!).render(
     <AppErrorBoundary>
       <ThemeProvider>
         <NewspaperSkinProvider>
-          <ConfirmProvider>
-            <App />
-          </ConfirmProvider>
+          <NewspaperExperienceProvider>
+            <ConfirmProvider>
+              <App />
+              <NewspaperExperienceLayer />
+            </ConfirmProvider>
+          </NewspaperExperienceProvider>
         </NewspaperSkinProvider>
       </ThemeProvider>
     </AppErrorBoundary>

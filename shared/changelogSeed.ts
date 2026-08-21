@@ -88,6 +88,7 @@ const APK_0046_PUBLISHED_AT = '2026-08-20T22:35:00.000Z';
 const APK_0047_PUBLISHED_AT = '2026-08-21T02:00:00.000Z';
 const APK_0048_PUBLISHED_AT = '2026-08-21T04:00:00.000Z';
 const APK_0049_PUBLISHED_AT = '2026-08-21T05:00:00.000Z';
+const APK_0050_PUBLISHED_AT = '2026-08-21T06:55:00.000Z';
 const REBRAND_LETTER_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
@@ -143,6 +144,40 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    '2026-08-21_apk-0050',
+    '2026-08-21',
+    'The Sacramento Free — beta v0.2.0.0050',
+    'Closed testing of the colour newspaper. Same app, same flows, still on sacramentobuynothing.com.',
+    `WHAT NEIGHBORS SEE
+The Sacramento Free, 0.2.0 (50): the same community gifting app, presented as a colour newspaper.
+
+Since 0.1.0 (49):
+• Ink-and-paper identity — stacked masthead, classified columns, editorial section fronts
+• Colour photographs, portraits, and map (chrome stays ink)
+• Page-turn transitions, typewriter/press sounds, and a Newspaper experience panel in Settings
+• Native closed-testing builds open as The Sacramento Free
+• Website at sacramentobuynothing.com stays the original brand until we move domains
+
+This is a visual reface only. No routes, queries, or tables changed.
+
+Write (Feed) intro: run scripts/seed-closed-testing-sacramento-free-feed-post-2026.sql in Supabase.
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionName 0.2.0, versionCode 50
+- play-store-assets/release-notes-v0.2.0-0050.txt
+- src/preview/newspaper.css — ink chrome and colour plates
+- src/preview/NewspaperSkinContext.tsx — production host stays original; native closed test is the paper
+- scripts/seed-closed-testing-sacramento-free-feed-post-2026.sql — Write/Feed announcement
+
+HISTORY
+2026-08-21 — /runit release 0.2.0 (50).`,
+    APK_0050_PUBLISHED_AT,
+  ),
   update(
     REBRAND_UPDATE_ID,
     REBRAND_ANNOUNCEMENT_DATE,
@@ -1668,6 +1703,32 @@ Install from sacramentobuynothing.com/download, turn on alerts in the bell, and 
 
 /** Latest News posts — Android releases and director announcements (not duplicate change logs). */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  news(
+    '2026-08-21_apk-0050',
+    '2026-08-21',
+    'Closed testing — The Sacramento Free 0.2.0 (50)',
+    'The paper is in closed testing. Same app. Colour newspaper. Still at sacramentobuynothing.com until we move.',
+    `WHAT NEIGHBORS SEE
+Closed testing of The Sacramento Free, beta v0.2.0.0050.
+
+This is the same Sacramento Buy Nothing app — give, get, chat, map — dressed as a colour newspaper. Photos and the map stay in colour. Type and chrome are ink.
+
+We are still on sacramentobuynothing.com until I move us to the new domain. Testers and downloads use that site for now.
+
+Play Store: upload the new AAB to Closed testing and roll out to testers.
+Sideload: https://www.sacramentobuynothing.com/download
+
+If you are on the closed test, you are holding Vol. I No. 1. Tell me what feels right.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-21_apk-0050.
+
+HISTORY
+2026-08-21 — Android beta 0050 /runit closed-testing release.`,
+    APK_0050_PUBLISHED_AT,
+  ),
   news(
     REBRAND_ANNOUNCEMENT_ID,
     REBRAND_ANNOUNCEMENT_DATE,

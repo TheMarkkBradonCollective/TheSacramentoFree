@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import PageScrollFooter, { ScrollPage } from '../PageScrollFooter';
 import { usePublicRoute } from '../../public/usePublicRoute';
 import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
+import { triggerNewspaperPageTurn } from '../../preview/pageTurn';
 import PublicNav from './PublicNav';
 import NewspaperPreviewBanner from './newspaper/NewspaperPreviewBanner';
 import NewspaperEditionBar from './newspaper/NewspaperEditionBar';
+import NewspaperMasthead from '../../preview/NewspaperMasthead';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import HowItWorksPage from './pages/HowItWorksPage';
@@ -53,6 +55,14 @@ export default function PublicSite({
   const { route, navigate } = usePublicRoute();
   const { enabled: newspaper } = useNewspaperSkin();
   const mainRef = useRef<HTMLDivElement>(null);
+
+  const navigateSection = useCallback<typeof navigate>(
+    (next) => {
+      if (next !== route) triggerNewspaperPageTurn();
+      navigate(next);
+    },
+    [navigate, route],
+  );
 
   useEffect(() => {
     if (window.location.hash) return;
@@ -105,12 +115,12 @@ export default function PublicSite({
           />
         );
       case 'not-found':
-        return <NotFoundPage onNavigate={navigate} />;
+        return <NotFoundPage onNavigate={navigateSection} />;
       case 'home':
       default:
         return (
           <HomePage
-            onNavigate={navigate}
+            onNavigate={navigateSection}
             items={items}
             isItemsLoading={isItemsLoading}
             onViewListing={onViewListing}
@@ -120,6 +130,34 @@ export default function PublicSite({
     }
   };
 
+  const paperChrome = (
+    <>
+      <NewspaperEditionBar />
+      {newspaper && (
+        <>
+          {route === 'home' ? (
+            <>
+              <div className="hidden lg:block">
+                <NewspaperMasthead variant="front" onHomeClick={() => navigateSection('home')} />
+              </div>
+              <div className="lg:hidden">
+                <NewspaperMasthead variant="banner" onHomeClick={() => navigateSection('home')} />
+              </div>
+            </>
+          ) : (
+            <NewspaperMasthead variant="banner" onHomeClick={() => navigateSection('home')} />
+          )}
+        </>
+      )}
+      <PublicNav route={route} onNavigate={navigateSection} />
+      <main className="flex-1 min-h-0 overflow-hidden">
+        <ScrollPage ref={mainRef} footer={<PageScrollFooter />}>
+          {renderPage()}
+        </ScrollPage>
+      </main>
+    </>
+  );
+
   return (
     <div
       className={`min-h-screen h-dvh bg-app text-app flex flex-col overflow-hidden ${
@@ -127,13 +165,13 @@ export default function PublicSite({
       }`}
     >
       <NewspaperPreviewBanner />
-      <NewspaperEditionBar />
-      <PublicNav route={route} onNavigate={navigate} />
-      <main className="flex-1 min-h-0 overflow-hidden">
-        <ScrollPage ref={mainRef} footer={<PageScrollFooter />}>
-          {renderPage()}
-        </ScrollPage>
-      </main>
+      {newspaper ? (
+        <div className="tsf-desk">
+          <div className="tsf-paper">{paperChrome}</div>
+        </div>
+      ) : (
+        paperChrome
+      )}
     </div>
   );
 }

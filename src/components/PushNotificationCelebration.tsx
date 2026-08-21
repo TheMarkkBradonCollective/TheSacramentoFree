@@ -6,8 +6,11 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { dismissPushCelebration, isPushCelebrationDismissed } from '../lib/pushCelebrationPrompt';
 import { pauseAppUpdateWatcher } from '../pwa/appUpdateWatcher';
 import { SITE } from '../siteContent';
+import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 
 const CONFETTI_COLORS = ['#FF4500', '#FFB347', '#FFD166', '#FF8C42', '#FFFFFF', '#FFECE6'];
+/** Under the newspaper skin the confetti becomes torn newsprint and ink flecks. */
+const NEWSPRINT_CONFETTI = ['#0a0a0a', '#2b2b27', '#6b6b64', '#c9c9c2', '#f4f3ee', '#faf9f5'];
 
 type ConfettiPiece = {
   id: number;
@@ -20,14 +23,15 @@ type ConfettiPiece = {
   drift: number;
 };
 
-function buildConfetti(count: number): ConfettiPiece[] {
+function buildConfetti(count: number, newspaper: boolean): ConfettiPiece[] {
+  const palette = newspaper ? NEWSPRINT_CONFETTI : CONFETTI_COLORS;
   return Array.from({ length: count }, (_, id) => ({
     id,
     left: 8 + Math.random() * 84,
     delay: Math.random() * 0.35,
     duration: 2.4 + Math.random() * 1.4,
     size: 6 + Math.random() * 8,
-    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+    color: palette[Math.floor(Math.random() * palette.length)],
     rotate: Math.random() * 360,
     drift: -18 + Math.random() * 36,
   }));
@@ -96,7 +100,8 @@ export default function PushNotificationCelebration({
   });
   const [open, setOpen] = useState(false);
   const [enabling, setEnabling] = useState(false);
-  const confetti = useMemo(() => buildConfetti(56), [open]);
+  const { enabled: newspaper } = useNewspaperSkin();
+  const confetti = useMemo(() => buildConfetti(56, newspaper), [open, newspaper]);
 
   useEffect(() => {
     if (permission === 'unsupported' || isSubscribed || isPushCelebrationDismissed()) return;

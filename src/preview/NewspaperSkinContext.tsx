@@ -25,9 +25,10 @@ function readSkinFromLocation(): boolean | null {
 }
 
 function defaultNewspaperEnabled(): boolean {
-  // Live production and the native apps stay on the original brand unless opted in.
+  // Live production on the current domain stays original until the move.
+  // Native closed-testing builds and non-production web default to The Sacramento Free.
   if (typeof window === 'undefined') return true;
-  if (isNewspaperProductionHost() || isNativeApp()) return false;
+  if (isNewspaperProductionHost()) return false;
   return true;
 }
 
@@ -43,7 +44,7 @@ function readEnabled(): boolean {
 
 export function newspaperThemeColor(theme: 'light' | 'dark', newspaper = true): string {
   if (!newspaper) return theme === 'light' ? '#ffffff' : '#0b0b0c';
-  return theme === 'light' ? '#f4f4f0' : '#111111';
+  return theme === 'light' ? '#e6e5e0' : '#0c0c0b';
 }
 
 function applyNewspaperClass(enabled: boolean) {
@@ -107,8 +108,15 @@ export function useNewspaperSkin() {
   return ctx ?? { enabled: false, setEnabled: () => {} };
 }
 
+/** Skin check for plain modules that run outside the React tree. */
+export function isNewspaperSkinActive(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.classList.contains(NEWSPAPER_CLASS);
+}
+
 export function shouldShowNewspaperPreviewBanner(enabled: boolean): boolean {
-  if (enabled) return true;
-  if (typeof window === 'undefined') return true;
-  return !isNewspaperProductionHost() && !isNativeApp();
+  if (typeof window === 'undefined') return false;
+  // No preview chrome on the live domain or in the native closed-testing app.
+  if (isNewspaperProductionHost() || isNativeApp()) return false;
+  return true;
 }

@@ -1,0 +1,10 @@
+The Sacramento Free — Android beta v0.2.0.0050 (versionCode 50)
+
+Closed testing of The Sacramento Free. Same community gifting app — now presented as a colour newspaper.
+
+What's new:
+• The Sacramento Free identity — masthead, classifieds, ink chrome, colour photographs and map
+• Page-turn transitions, typewriter/press sounds, and Newspaper experience controls in Settings
+• Website at sacramentobuynothing.com stays the original brand until we move domains
+
+Download (sideload): https://www.sacramentobuynothing.com/download

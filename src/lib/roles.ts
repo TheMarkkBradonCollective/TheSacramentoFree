@@ -34,10 +34,26 @@ export interface RoleTheme {
 
 export const ROLE_THEME: Record<UserRole, RoleTheme> = {
   user: { accent: 'var(--color-accent)', soft: 'var(--color-accent-soft)', shortLabel: 'Neighbor' },
-  city_moderator: { accent: '#10b981', soft: 'rgba(16, 185, 129, 0.14)', shortLabel: 'Moderator' },
-  city_administrator: { accent: '#0ea5e9', soft: 'rgba(14, 165, 233, 0.14)', shortLabel: 'Administrator' },
-  city_manager: { accent: '#8b5cf6', soft: 'rgba(139, 92, 246, 0.14)', shortLabel: 'Manager' },
-  director: { accent: '#f59e0b', soft: 'rgba(245, 158, 11, 0.16)', shortLabel: 'Director' },
+  city_moderator: {
+    accent: 'var(--sbn-role-city_moderator, #10b981)',
+    soft: 'var(--sbn-role-city_moderator-soft, rgba(16, 185, 129, 0.14))',
+    shortLabel: 'Moderator',
+  },
+  city_administrator: {
+    accent: 'var(--sbn-role-city_administrator, #0ea5e9)',
+    soft: 'var(--sbn-role-city_administrator-soft, rgba(14, 165, 233, 0.14))',
+    shortLabel: 'Administrator',
+  },
+  city_manager: {
+    accent: 'var(--sbn-role-city_manager, #8b5cf6)',
+    soft: 'var(--sbn-role-city_manager-soft, rgba(139, 92, 246, 0.14))',
+    shortLabel: 'Manager',
+  },
+  director: {
+    accent: 'var(--sbn-role-director, #f59e0b)',
+    soft: 'var(--sbn-role-director-soft, rgba(245, 158, 11, 0.16))',
+    shortLabel: 'Director',
+  },
 };
 
 export function roleTheme(role?: UserProfile['role']): RoleTheme {

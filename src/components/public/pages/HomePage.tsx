@@ -9,8 +9,12 @@ import HomeDownloadButtons from '../HomeDownloadButtons';
 import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
 import { SITE, SUPPORT } from '../../../siteContent';
 import { useBrand } from '../../../preview/useBrand';
+import { NEWSPAPER } from '../../../preview/newspaperBrand';
+import NewspaperSectionHead from '../../../preview/NewspaperSectionHead';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
+import { extractListingImageUrls } from '../../../lib/listingContent';
+import ListingImage from '../../ListingImage';
 
 const HERO_FEATURES: { icon: typeof PackageCheck; title: string; blurb: string }[] = [
   { icon: PackageCheck, title: 'Post in seconds', blurb: 'Snap a photo, write a few words, done.' },
@@ -39,7 +43,145 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
   { route: 'neighborhoods', title: 'Sacramento areas', blurb: 'Midtown, Elk Grove, Davis, Roseville, and 39 areas.', icon: MapPin },
 ];
 
-export default function HomePage({
+export default function HomePage(props: HomePageProps) {
+  const { newspaper } = useBrand();
+  if (newspaper) return <NewspaperFrontPage {...props} />;
+  return <OriginalHomePage {...props} />;
+}
+
+function NewspaperFrontPage({
+  onNavigate,
+  items = [],
+  isItemsLoading = false,
+  onViewListing,
+  onRequireSignIn,
+}: HomePageProps) {
+  const { copy } = useBrand();
+  const description = copy(SITE.description);
+  const principles = SITE.principles.map((line) => copy(line));
+  const freeRule = copy(SITE.freeRule);
+  const plate = items.find((item) => {
+    if (item.status !== 'active') return false;
+    return Boolean((item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item))[0]);
+  });
+  const plateSrc = plate
+    ? (plate.imageUrls?.length ? plate.imageUrls : extractListingImageUrls(plate))[0]
+    : undefined;
+
+  return (
+    <HomeScrollStage>
+      <p className="tsf-folio">{NEWSPAPER.standfirst}</p>
+
+      <section className="tsf-front">
+        <article>
+          <p className="tsf-kicker">Lead story · {NEWSPAPER.edition}</p>
+          <h1 className="tsf-front-page-hed mt-2 font-display font-bold text-app">
+            Give freely.
+            <br />
+            <span className="text-accent">Ask kindly.</span>
+          </h1>
+          {plate && plateSrc && onViewListing && (
+            <figure className="tsf-plate">
+              <button type="button" onClick={() => onViewListing(plate)} className="tsf-plate__btn">
+                <ListingImage src={plateSrc} alt={plate.title} width={960} className="tsf-plate__img" />
+              </button>
+              <figcaption className="tsf-plate__cap">{plate.title}</figcaption>
+            </figure>
+          )}
+          <p className="tsf-lede mt-5 text-base lg:text-lg text-muted leading-relaxed">{description}</p>
+          <ul className="tsf-front__principles">
+            {principles.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary">
+              Sign in or join
+            </button>
+            <button type="button" onClick={() => onNavigate('about')} className="sbn-btn sbn-btn-secondary">
+              Learn more
+            </button>
+          </div>
+          <HomeDownloadButtons onNavigate={onNavigate} />
+          <p className="mt-5 text-sm font-semibold text-accent">{freeRule}</p>
+        </article>
+
+        <aside className="tsf-front__rail">
+          <p className="tsf-kicker">Live in Sacramento</p>
+          <CommunityStatsBar items={items} variant="stacked" />
+          {HERO_FEATURES.map(({ title, blurb }) => (
+            <div className="tsf-brief" key={title}>
+              <p className="tsf-brief__hed">{title}</p>
+              <p className="tsf-brief__dek">{blurb}</p>
+            </div>
+          ))}
+        </aside>
+      </section>
+
+      <p className="tsf-pull-quote">“{copy(SITE.tagline)}”</p>
+
+      {onViewListing && onRequireSignIn && (
+        <section id="guest_listing_preview">
+          <NewspaperSectionHead label="Classifieds" blurb="Give. Get. Share." index="Today's edition" />
+          <GuestListingPreview
+            items={items}
+            isLoading={isItemsLoading}
+            onViewItem={onViewListing}
+            onRequireSignIn={onRequireSignIn}
+            embedded
+          />
+        </section>
+      )}
+
+      <div className="tsf-front-deck">
+        <section>
+          <NewspaperSectionHead label="From the desk" blurb="Notes from the community team." />
+          <LeadershipMessagesCarousel onRequireSignIn={onRequireSignIn} />
+        </section>
+        <section>
+          <NewspaperSectionHead label="Letters" blurb="What neighbors are saying." />
+          <CommunityReviews
+            preview
+            onRequireSignIn={onRequireSignIn}
+            onSeeAll={() => onNavigate('reviews')}
+          />
+        </section>
+        <section id="home_support_section">
+          <NewspaperSectionHead label="Public notices" blurb="Keeping the paper free to print." />
+          <button type="button" onClick={() => onNavigate('gofundme')} className="tsf-notice">
+            <p className="tsf-kicker">Community support</p>
+            <h2 className="tsf-notice__hed">{copy(SUPPORT.gofundmeTitle)}</h2>
+            <p className="tsf-notice__body">{copy(SUPPORT.gofundmeBlurb)}</p>
+            <p className="tsf-notice__meta">{copy(SUPPORT.gofundmeCostsSummary)}</p>
+            <span className="tsf-notice__cta">
+              See how to help <ArrowRight className="w-4 h-4" />
+            </span>
+          </button>
+        </section>
+      </div>
+
+      <section className="mt-10">
+        <NewspaperSectionHead label="Sections" blurb="An index to the rest of the paper." />
+        <nav className="tsf-index" aria-label="Paper sections">
+          {EXPLORE_LINKS.map(({ route, title, blurb }) => (
+            <button key={route} type="button" onClick={() => onNavigate(route)} className="tsf-index__row">
+              <span className="tsf-index__title">{title}</span>
+              <span className="tsf-index__leader" aria-hidden="true" />
+              <span className="tsf-index__blurb">{copy(blurb)}</span>
+            </button>
+          ))}
+          <button type="button" onClick={() => onNavigate('login')} className="tsf-index__row">
+            <span className="tsf-index__title">Ready to join?</span>
+            <span className="tsf-index__leader" aria-hidden="true" />
+            <span className="tsf-index__blurb">Sign in to post, message, and claim items.</span>
+          </button>
+        </nav>
+      </section>
+    </HomeScrollStage>
+  );
+}
+
+function OriginalHomePage({
   onNavigate,
   items = [],
   isItemsLoading = false,
@@ -98,7 +240,6 @@ export default function HomePage({
             <p className="mt-5 text-sm font-semibold text-accent">{freeRule}</p>
           </div>
 
-          {/* Live preview panel — desktop only, uses the space a stretched single column used to leave empty */}
           <div className="hidden lg:block">
             <div className="sbn-hero-preview-card">
               <p className="text-[11px] font-black uppercase tracking-widest text-accent">Live in Sacramento</p>
@@ -123,7 +264,6 @@ export default function HomePage({
         </div>
       </section>
 
-      {/* Desktop already shows live stats in the hero preview panel above */}
       <DepthSection depth={2} className="mt-6 lg:hidden">
         <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-3">Community at a glance</p>
         <div className="sbn-card p-1">
@@ -133,6 +273,7 @@ export default function HomePage({
 
       {onViewListing && onRequireSignIn && (
         <DepthSection depth={3} id="guest_listing_preview">
+          <NewspaperSectionHead label="Classifieds" blurb="Give. Get. Share." index="Today's edition" />
           <GuestListingPreview
             items={items}
             isLoading={isItemsLoading}
@@ -144,12 +285,14 @@ export default function HomePage({
       )}
 
       <DepthSection depth={2} className="mt-6">
+        <NewspaperSectionHead label="From the desk" blurb="Notes from the community team." />
         <div className="sbn-card p-1">
           <LeadershipMessagesCarousel onRequireSignIn={onRequireSignIn} />
         </div>
       </DepthSection>
 
       <DepthSection depth={2} className="mt-6">
+        <NewspaperSectionHead label="Letters" blurb="What neighbors are saying." />
         <div className="sbn-card p-1">
           <CommunityReviews
             preview
@@ -160,26 +303,27 @@ export default function HomePage({
       </DepthSection>
 
       <DepthSection depth={2} className="mt-6" id="home_support_section">
+        <NewspaperSectionHead label="Public notices" blurb="Keeping the paper free to print." />
         <button
           type="button"
           onClick={() => onNavigate('gofundme')}
           className="sbn-card p-6 text-left w-full hover:border-accent/40 transition-colors group"
         >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
-                <HandHeart className="w-6 h-6 text-accent" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-bold text-accent uppercase tracking-widest">Community support</p>
-                <h2 className="mt-1 font-display text-xl font-bold text-app">{SUPPORT.gofundmeTitle}</h2>
-                <p className="mt-2 text-sm text-muted leading-relaxed">{SUPPORT.gofundmeBlurb}</p>
-                <p className="mt-2 text-xs text-subtle leading-relaxed">{SUPPORT.gofundmeCostsSummary}</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
-                  See how to help <ArrowRight className="w-4 h-4" />
-                </span>
-              </div>
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-accent-soft flex items-center justify-center shrink-0">
+              <HandHeart className="w-6 h-6 text-accent" />
             </div>
-          </button>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-accent uppercase tracking-widest">Community support</p>
+              <h2 className="mt-1 font-display text-xl font-bold text-app">{copy(SUPPORT.gofundmeTitle)}</h2>
+              <p className="mt-2 text-sm text-muted leading-relaxed">{copy(SUPPORT.gofundmeBlurb)}</p>
+              <p className="mt-2 text-xs text-subtle leading-relaxed">{copy(SUPPORT.gofundmeCostsSummary)}</p>
+              <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
+                See how to help <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </div>
+        </button>
       </DepthSection>
 
       <DepthSection depth={2} className="mt-14">
@@ -198,7 +342,7 @@ export default function HomePage({
                 <Icon className="w-5 h-5 text-accent" />
               </div>
               <p className="font-display font-bold text-app">{title}</p>
-              <p className="mt-1 text-sm text-muted leading-relaxed">{blurb}</p>
+              <p className="mt-1 text-sm text-muted leading-relaxed">{copy(blurb)}</p>
               <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:gap-2 transition-all">
                 Read more <ArrowRight className="w-4 h-4" />
               </span>

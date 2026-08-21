@@ -5,6 +5,11 @@ export const NEWSPAPER = {
   title: 'Sacramento Free',
   tagline: 'All the news that’s fit to give.',
   city: 'Sacramento, California',
+  cityLine: 'Sacramento • California',
+  edition: 'Community Edition',
+  motto: 'Free to give. Free to receive.',
+  volume: 'Vol. I · No. 1',
+  standfirst: 'Sacramento’s Community Exchange',
   price: 'Gratis',
   previewLabel: 'Design preview',
   previewNote:

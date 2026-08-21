@@ -7,6 +7,7 @@ import { extractListingImageUrls } from '../../lib/listingContent';
 import ListingImage from '../ListingImage';
 import HorizontalSnapRow, { SnapSlide } from '../HorizontalSnapRow';
 import { SITE } from '../../siteContent';
+import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
 
 interface GuestListingPreviewProps {
   items: ItemPost[];
@@ -17,6 +18,16 @@ interface GuestListingPreviewProps {
   embedded?: boolean;
 }
 
+function formatClassifiedDate(createdAt: unknown): string {
+  if (!createdAt) return '';
+  const ms =
+    typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt
+      ? (createdAt as { seconds: number }).seconds * 1000
+      : new Date(createdAt as string | number).getTime();
+  if (Number.isNaN(ms)) return '';
+  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export default function GuestListingPreview({
   items,
   isLoading = false,
@@ -24,6 +35,7 @@ export default function GuestListingPreview({
   onRequireSignIn,
   embedded = false,
 }: GuestListingPreviewProps) {
+  const { enabled: newspaperSkin } = useNewspaperSkin();
   const [searchTerm, setSearchTerm] = useState('');
 
   const previewItems = useMemo(() => {
@@ -36,46 +48,119 @@ export default function GuestListingPreview({
     });
   }, [items, searchTerm]);
 
+  const searchField = (
+    <div className="relative">
+      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+      <input
+        type="search"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder={newspaperSkin ? 'Search The Free…' : 'Search listings…'}
+        className="sbn-input pl-11"
+        aria-label="Search listings"
+      />
+    </div>
+  );
+
+  const emptyState = isLoading && items.length === 0 ? (
+    <p className="text-sm text-muted text-center py-12">Loading listings…</p>
+  ) : previewItems.length === 0 ? (
+    <div className={newspaperSkin ? 'tsf-classified-empty' : 'sbn-card text-center py-12 px-6 border-dashed'}>
+      <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
+      <p className="font-display font-bold text-app">No active listings right now</p>
+      <p className="text-sm text-muted mt-2">{SITE.tagline}</p>
+      <button type="button" onClick={onRequireSignIn} className="sbn-btn sbn-btn-primary mt-4">
+        Sign in to post the first one
+      </button>
+    </div>
+  ) : null;
+
   return (
     <section className={embedded ? '' : 'mt-14'} id={embedded ? undefined : 'guest_listing_preview'}>
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
-        <div>
-          <h2 className="font-display text-xl font-bold text-app">Live neighborhood listings</h2>
-          <p className="mt-1 text-sm text-muted">
+      {newspaperSkin ? (
+        <div className="tsf-classified-toolbar">
+          <p className="tsf-classified-toolbar__intro">
             Browse what neighbors are giving and looking for. Sign in to message, comment, or claim.
           </p>
+          <button type="button" onClick={onRequireSignIn} className="sbn-btn sbn-btn-primary shrink-0">
+            Sign in to interact
+          </button>
+          {searchField}
         </div>
-        <button type="button" onClick={onRequireSignIn} className="sbn-btn sbn-btn-primary shrink-0">
-          Sign in to interact
-        </button>
-      </div>
-
-      <div className="sbn-card p-4 mb-4">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search listings…"
-            className="sbn-input pl-11"
-            aria-label="Search listings"
-          />
-        </div>
-      </div>
-
-      {isLoading && items.length === 0 ? (
-        <p className="text-sm text-muted text-center py-12">Loading listings…</p>
-      ) : previewItems.length === 0 ? (
-        <div className="sbn-card text-center py-12 px-6 border-dashed">
-            <AlertCircle className="w-10 h-10 text-muted mx-auto mb-3" />
-            <p className="font-display font-bold text-app">No active listings right now</p>
-            <p className="text-sm text-muted mt-2">{SITE.tagline}</p>
-            <button type="button" onClick={onRequireSignIn} className="sbn-btn sbn-btn-primary mt-4">
-              Sign in to post the first one
+      ) : (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+            <div>
+              <h2 className="font-display text-xl font-bold text-app">Live neighborhood listings</h2>
+              <p className="mt-1 text-sm text-muted">
+                Browse what neighbors are giving and looking for. Sign in to message, comment, or claim.
+              </p>
+            </div>
+            <button type="button" onClick={onRequireSignIn} className="sbn-btn sbn-btn-primary shrink-0">
+              Sign in to interact
             </button>
           </div>
-      ) : (
+          <div className="sbn-card p-4 mb-4">{searchField}</div>
+        </>
+      )}
+
+      {emptyState}
+
+      {!emptyState && newspaperSkin && (
+        <div className="tsf-classified-sheet">
+          {previewItems.map((item) => {
+            const preview = stripListingMetadata(item.description);
+            const date = formatClassifiedDate(item.createdAt);
+            const kicker = [getPostTypeGridBadgeLabel(item.type), item.category].filter(Boolean).join(' — ');
+            const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
+            const cover = photos[0];
+
+            return (
+              <article key={item.id} className="tsf-classified tsf-story">
+                <div className="tsf-story__copy">
+                  <span className="tsf-classified__kicker">{kicker}</span>
+                  <button type="button" onClick={() => onViewItem(item)} className="text-left w-full cursor-pointer">
+                    <h3>{item.title}</h3>
+                    {preview ? <p className="tsf-classified__body line-clamp-3">{preview}</p> : null}
+                  </button>
+                  <p className="tsf-classified__meta">
+                    {[item.neighborhood, date].filter(Boolean).join(' · ')}
+                  </p>
+                  <div className="tsf-classified__actions">
+                    <button
+                      type="button"
+                      onClick={() => onViewItem(item)}
+                      className="sbn-btn sbn-btn-secondary sbn-btn-sm flex-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onRequireSignIn}
+                      className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
+                    >
+                      Sign in
+                    </button>
+                  </div>
+                </div>
+                {cover ? (
+                  <button
+                    type="button"
+                    className="tsf-story__thumb"
+                    onClick={() => onViewItem(item)}
+                    aria-label={`View ${item.title || 'listing'}`}
+                  >
+                    <ListingImage src={cover} alt={item.title} width={240} className="tsf-story__img" />
+                  </button>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {!emptyState && !newspaperSkin && (
         <HorizontalSnapRow label="Live neighborhood listings">
           {previewItems.map((item) => {
             const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);

@@ -52,6 +52,7 @@ import {
   type FeedViewMode,
 } from '../lib/feedDisplayPrefs';
 import { persistUserAppPreferences } from '../lib/appPreferences';
+import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 import {
   readFeedFilterState,
   persistUserFeedFilters,
@@ -191,6 +192,7 @@ export default function ItemGrid({
   isLoading = false,
   onOpenNewPost,
 }: ItemGridProps) {
+  const { enabled: newspaperSkin } = useNewspaperSkin();
   const [coordByUid, setCoordByUid] = useState<
     Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
   >({});
@@ -633,7 +635,7 @@ export default function ItemGrid({
             id="feed_search_input"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search listings…"
+            placeholder={newspaperSkin ? 'Search The Free…' : 'Search listings…'}
             className="sbn-input w-full"
           />
         </div>
@@ -781,7 +783,9 @@ export default function ItemGrid({
           className={
             viewMode === 'grid'
               ? 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5'
-              : 'flex flex-col gap-2 sm:gap-2.5'
+              : newspaperSkin
+                ? 'tsf-classified-sheet'
+                : 'flex flex-col gap-2 sm:gap-2.5'
           }
           id="items_grid_cards"
         >

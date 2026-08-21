@@ -46,6 +46,7 @@ import ThemeSettings from './ThemeSettings';
 import AccountNavigationSettings from './AccountNavigationSettings';
 import SystemPermissionsSettings from './SystemPermissionsSettings';
 import GoGetSettings from './GoGetSettings';
+import NewspaperExperienceSettings from '../preview/NewspaperExperienceSettings';
 import StaffModeSettings from './StaffModeSettings';
 import { isStaffActingOfficial, profileUiRole } from '../lib/staffInteractionMode';
 import CommunityMenuView from './CommunityMenuView';
@@ -781,6 +782,7 @@ export default function UserProfileView({
 
           <SystemPermissionsSettings />
           <ThemeSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
+          <NewspaperExperienceSettings />
           <AccountNavigationSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />
           {usingApk && (
             <GoGetSettings userProfile={userProfile} onUpdateProfile={onUpdateProfile} />

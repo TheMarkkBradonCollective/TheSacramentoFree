@@ -1,4 +1,6 @@
 import type { GoGetRingPattern, UserProfile } from '../types';
+import { isNewspaperSkinActive } from '../preview/NewspaperSkinContext';
+import { playNewspaperSound, unlockNewspaperAudio } from '../preview/newspaperSound';
 
 export const MIN_GO_GET_RING_DURATION = 10;
 export const MAX_GO_GET_RING_DURATION = 140;
@@ -108,6 +110,22 @@ export function startGoGetRingAlert(
     }
 
     if (!useAudio) return;
+
+    // Under the newspaper skin the ring becomes the paper's own signature:
+    // a typewriter running out of line, then the carriage-return bell.
+    if (isNewspaperSkinActive()) {
+      unlockNewspaperAudio();
+      const strikes = pattern === 'single_beep' ? 1 : pattern === 'double_beep' ? 2 : 3;
+      for (let i = 0; i < strikes; i += 1) {
+        window.setTimeout(() => {
+          if (!stopped) playNewspaperSound('key', 0.95);
+        }, i * 190);
+      }
+      window.setTimeout(() => {
+        if (!stopped) playNewspaperSound('notifyImportant', 0.95);
+      }, strikes * 190 + 60);
+      return;
+    }
 
     try {
       audioCtx = audioCtx ?? new AudioContext();

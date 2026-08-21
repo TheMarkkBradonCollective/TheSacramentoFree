@@ -19,6 +19,8 @@ import { RULES } from '../siteContent';
 import { getPostTypeModalTitle } from '../lib/postType';
 import ListingPostedReminderModal from './ListingPostedReminderModal';
 import { openNotificationsHub } from '../contexts/NotificationsHubContext';
+import { useNewspaperExperience } from '../preview/NewspaperExperienceContext';
+import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 
 interface PostItemModalProps {
   userProfile: UserProfile;
@@ -38,6 +40,8 @@ export default function PostItemModal({
 }: PostItemModalProps) {
   const isEditing = !!editItem;
   const isReposting = isEditing && editItem?.status === 'withdrawn';
+  const { play } = useNewspaperExperience();
+  const { enabled: newspaper } = useNewspaperSkin();
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [pickupNotes, setPickupNotes] = useState('');
@@ -344,6 +348,9 @@ export default function PostItemModal({
           return;
         }
       }
+
+      // The presses run — a new classified has gone to print.
+      play('press', 'notification');
 
       if (!isEditing && !isReposting) {
         setPostedListing(listing);
@@ -983,9 +990,14 @@ export default function PostItemModal({
                   <Gift className="w-4 h-4" />
                 )}
               </div>
-              <h3 className="text-base font-bold text-app font-display">
-                {getPostTypeModalTitle(type, isEditing, isReposting)}
-              </h3>
+              <div className="min-w-0">
+                {newspaper && !isEditing && !isReposting ? (
+                  <p className="tsf-kicker">Place a classified</p>
+                ) : null}
+                <h3 className="text-base font-bold text-app font-display">
+                  {getPostTypeModalTitle(type, isEditing, isReposting)}
+                </h3>
+              </div>
             </div>
             <button
               id="close_modal_btn"
