@@ -17,8 +17,10 @@ export const SITE = {
   principles: ['No selling.', 'No bidding.', 'No flipping.', 'Just neighbors helping neighbors.'],
   freeRule: 'Everything posted must be 100% free.',
   downloadHelper: 'Google Play on Android (if invited) or add SacramentoBuyNothing to your home screen — free for everyone.',
-  /** Google Play Internal testing / store opt-in — neighbors need matching Gmail on the tester list. */
-  playStoreBetaUrl: 'https://play.google.com/apps/internaltest/4701336413298152827/join',
+  /** Google Play closed testing — opt in on the web, then install from the store listing. */
+  playStoreBetaUrl: 'https://play.google.com/apps/testing/org.sacramentobuynothing.app',
+  playStoreListingUrl:
+    'https://play.google.com/store/apps/details?id=org.sacramentobuynothing.app',
   joinCta: {
     title: 'Join The Community',
     lines: [
