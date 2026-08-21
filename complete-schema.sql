@@ -16,12 +16,41 @@
 --   (PWA or APK) with notifications on (enforced in app code).
 --
 -- Incremental migrations (existing production DBs — run these, do not
--- replace this file):
---   scripts/supabase-migration-july-2026.sql
---   scripts/supabase-migration-event-series.sql
+-- replace this file). Listed newest-first; all are merged into this script:
+--   scripts/supabase-migration-aug-21-2026-clear-changelog.sql
+--   scripts/supabase-migration-aug-21-2026-rebrand-letter.sql
+--   scripts/supabase-migration-aug-21-2026-storage-items-auth.sql
+--   scripts/supabase-migration-aug-21-2026-audit-48.sql
+--   scripts/supabase-migration-aug-21-2026-audit-rls.sql
+--   scripts/supabase-migration-aug-20-2026-user-prefs-native-session.sql
+--   scripts/supabase-migration-aug-20-2026-staff-interaction-mode.sql
+--   scripts/supabase-migration-aug-20-2026-profile-identity-guard.sql
+--   scripts/supabase-migration-aug-20-2026-notification-prefs-granular.sql
+--   scripts/supabase-migration-aug-20-2026-neighbor-feed.sql
+--   scripts/supabase-migration-aug-20-2026-native-session-realtime.sql
+--   scripts/supabase-migration-aug-20-2026-message-posted-as-neighbor.sql
+--   scripts/supabase-migration-aug-20-2026-listing-expiry.sql
+--   scripts/supabase-migration-aug-20-2026-go-get-ring-availability.sql
+--   scripts/supabase-migration-aug-20-2026-friend-requests.sql
+--   scripts/supabase-migration-aug-20-2026-feed-post-client.sql
+--   scripts/supabase-migration-aug-20-2026-chat-event-context.sql
+--   scripts/supabase-migration-aug-20-2026-changelog-sync.sql
+--   scripts/supabase-migration-aug-20-2026-awards-unlock-250.sql
+--   scripts/supabase-migration-aug-20-2026-news-updates-split.sql
+--   scripts/supabase-migration-aug-18-2026-staff-outreach-tickets.sql
+--   scripts/supabase-migration-aug-18-2026-staff-apply-seat-filled.sql
+--   scripts/supabase-migration-aug-18-2026-staff-applications.sql
+--   scripts/supabase-migration-aug-18-2026-app-device-stats.sql
+--   scripts/supabase-migration-aug-18-2026-listing-photo-urge.sql
 --   scripts/supabase-migration-aug-18-2026-outage.sql
+--   scripts/supabase-migration-aug-18-2026-listing-feed-image-urls.sql
+--   scripts/supabase-migration-aug-18-2026-listing-feed-description.sql
+--   scripts/supabase-migration-from-build-0030.sql
+--   scripts/supabase-migration-feed-push-webhooks.sql (Dashboard webhooks — see footer)
+--   scripts/supabase-migration-event-series.sql
+--   scripts/supabase-migration-july-2026.sql
 -- Neighbor Updates/News copy: shared/changelogSeed.ts
---   (cron /api/cron/publish-changelog upserts seeds every 4 hours — 0 */4 * * *)
+--   (cron /api/cron/publish-changelog upserts + prunes every 4 hours — 0 */4 * * *)
 -- =========================================================
 
 -- =========================================================
@@ -378,17 +407,46 @@ CREATE TABLE IF NOT EXISTS public.support_tickets (
   subject TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'open',
   "closedByUserId" TEXT,
+  "ticketSource" TEXT NOT NULL DEFAULT 'neighbor',
+  "relatedItemId" TEXT,
+  "relatedItemTitle" TEXT,
+  "relatedEventId" TEXT,
+  "relatedEventTitle" TEXT,
+  "initiatedByUserId" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.support_tickets ADD COLUMN IF NOT EXISTS "ticketSource" TEXT NOT NULL DEFAULT 'neighbor';
+ALTER TABLE public.support_tickets ADD COLUMN IF NOT EXISTS "relatedItemId" TEXT;
+ALTER TABLE public.support_tickets ADD COLUMN IF NOT EXISTS "relatedItemTitle" TEXT;
+ALTER TABLE public.support_tickets ADD COLUMN IF NOT EXISTS "relatedEventId" TEXT;
+ALTER TABLE public.support_tickets ADD COLUMN IF NOT EXISTS "relatedEventTitle" TEXT;
+ALTER TABLE public.support_tickets ADD COLUMN IF NOT EXISTS "initiatedByUserId" TEXT;
 
 ALTER TABLE public.support_tickets DROP CONSTRAINT IF EXISTS support_tickets_status_check;
 ALTER TABLE public.support_tickets ADD CONSTRAINT support_tickets_status_check
   CHECK (status IN ('open', 'closed'));
 
+ALTER TABLE public.support_tickets DROP CONSTRAINT IF EXISTS support_tickets_source_check;
+ALTER TABLE public.support_tickets ADD CONSTRAINT support_tickets_source_check
+  CHECK ("ticketSource" IN ('neighbor', 'staff_listing', 'staff_event'));
+
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS support_tickets_opener_idx ON public.support_tickets ("openerUserId");
 CREATE INDEX IF NOT EXISTS support_tickets_status_idx ON public.support_tickets (status, "updatedAt" DESC);
+CREATE INDEX IF NOT EXISTS support_tickets_related_item_idx
+  ON public.support_tickets ("relatedItemId")
+  WHERE "relatedItemId" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS support_tickets_related_event_idx
+  ON public.support_tickets ("relatedEventId")
+  WHERE "relatedEventId" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS support_tickets_staff_listing_open_idx
+  ON public.support_tickets ("openerUserId", "relatedItemId", status)
+  WHERE "ticketSource" = 'staff_listing' AND status = 'open';
+CREATE INDEX IF NOT EXISTS support_tickets_staff_event_open_idx
+  ON public.support_tickets ("openerUserId", "relatedEventId", status)
+  WHERE "ticketSource" = 'staff_event' AND status = 'open';
 
 -- =========================================================
 -- 14. Support ticket messages
@@ -3651,6 +3709,54 @@ REVOKE ALL ON FUNCTION public.review_staff_application(text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.review_staff_application(text, text) TO authenticated;
 
 -- =========================================================
+-- APP DEVICE STATS — unique download + install tracking (Director overview)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.app_device_downloads (
+  "deviceId" TEXT PRIMARY KEY,
+  "apkDownloadedAt" TIMESTAMPTZ,
+  "aabDownloadedAt" TIMESTAMPTZ,
+  "firstSeenAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "lastSeenAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS app_device_downloads_apk_idx
+  ON public.app_device_downloads ("apkDownloadedAt")
+  WHERE "apkDownloadedAt" IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS app_device_downloads_aab_idx
+  ON public.app_device_downloads ("aabDownloadedAt")
+  WHERE "aabDownloadedAt" IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS public.app_device_installs (
+  "deviceId" TEXT NOT NULL,
+  "installKind" TEXT NOT NULL CHECK ("installKind" IN ('pwa', 'ios-pwa', 'android-apk')),
+  "apkVersionCode" INTEGER,
+  "apkVersionName" TEXT,
+  "userId" TEXT REFERENCES public.users(uid) ON DELETE SET NULL,
+  "firstInstalledAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "lastSeenAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY ("deviceId", "installKind")
+);
+
+CREATE INDEX IF NOT EXISTS app_device_installs_kind_idx
+  ON public.app_device_installs ("installKind");
+
+ALTER TABLE public.app_device_downloads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_device_installs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "staff_read_app_device_downloads" ON public.app_device_downloads;
+CREATE POLICY "staff_read_app_device_downloads" ON public.app_device_downloads
+  FOR SELECT USING (
+    public.role_rank(public.current_user_role()) >= public.role_rank('city_administrator')
+  );
+
+DROP POLICY IF EXISTS "staff_read_app_device_installs" ON public.app_device_installs;
+CREATE POLICY "staff_read_app_device_installs" ON public.app_device_installs
+  FOR SELECT USING (
+    public.role_rank(public.current_user_role()) >= public.role_rank('city_administrator')
+  );
+
+-- =========================================================
 -- GO GET VIOLATIONS: strike counting + auto-lock at 6
 --
 -- Runs as a DB trigger (not client-side) so the 6-strike lockout is atomic and
@@ -3787,7 +3893,8 @@ BEGIN
     'go_get_live_locations',
     'go_get_fulfiller_live_locations',
     'user_violations',
-    'native_app_sessions'
+    'app_device_downloads',
+    'app_device_installs'
   ]
   LOOP
     IF NOT EXISTS (

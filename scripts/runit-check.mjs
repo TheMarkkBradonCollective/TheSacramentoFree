@@ -87,6 +87,16 @@ const migrationMarkers = [
     markers: ['audit-49-storage-items-auth', 'items_storage_insert'],
     label: 'Listing photo storage auth',
   },
+  {
+    file: 'scripts/supabase-migration-aug-18-2026-app-device-stats.sql',
+    markers: ['app_device_downloads', 'app_device_installs', 'staff_read_app_device_downloads'],
+    label: 'App device download/install stats',
+  },
+  {
+    file: 'scripts/supabase-migration-aug-18-2026-staff-outreach-tickets.sql',
+    markers: ['ticketSource', 'support_tickets_source_check', 'support_tickets_staff_listing_open_idx'],
+    label: 'Staff outreach support tickets',
+  },
 ];
 
 for (const { file, markers, label: migrationLabel } of migrationMarkers) {
