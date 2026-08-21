@@ -1,15 +1,16 @@
 -- =========================================================
--- AUG 21 2026 — Rebrand / trademark (Updates + News)
--- Run in Supabase SQL Editor on the EXISTING production database.
--- Safe to re-run: ON CONFLICT updates copy in place.
+-- AUG 21 2026 — Rebrand announcement (Updates + News)
+-- Run this ONE script in Supabase SQL Editor on production.
+-- Safe to re-run anytime: ON CONFLICT upserts latest copy in place.
 --
--- Updates = professional product note (bell → Updates)
--- News = director letter / fake shutdown pivot (bell → News)
+--   • bell → Updates  — 2026-08-21_trademark-rebrand-notice
+--   • bell → News     — 2026-08-21_rebrand-letter
 --
--- Canonical copy lives in shared/rebrandAnnouncement2026.ts and
--- shared/changelogSeed.ts. Cron /api/cron/publish-changelog
--- upserts seeds every 4 hours. Use this migration for immediate sync.
+-- Canonical copy: shared/rebrandAnnouncement2026.ts
+-- Cron /api/cron/publish-changelog also upserts from shared/changelogSeed.ts
 -- =========================================================
+
+-- ── Updates (product note) ────────────────────────────────────────────────
 
 INSERT INTO public.app_updates (
   id, date, title, body, detail, "directorName", "directorTitle", "postedByUserId",
@@ -38,7 +39,7 @@ WHERE TO LOOK IN CODE
 - scripts/supabase-migration-aug-21-2026-rebrand-letter.sql
 
 HISTORY
-2026-08-21 — Rebrand announcement (PR #328).$detail$,
+2026-08-21 — Rebrand announcement (PRs #328–#332).$detail$,
   'Markeith White',
   'Buy Nothing Director',
   '204b071f-100c-401d-b76d-40c594e1f132',
@@ -55,6 +56,8 @@ ON CONFLICT (id) DO UPDATE SET
   "postedByUserId" = EXCLUDED."postedByUserId",
   "createdAt" = EXCLUDED."createdAt",
   "updatedAt" = EXCLUDED."updatedAt";
+
+-- ── News (director letter) ────────────────────────────────────────────────
 
 INSERT INTO public.help_announcements (
   id, date, title, body, detail, "authorName", "authorTitle", "postedByUserId",
