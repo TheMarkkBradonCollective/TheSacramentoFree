@@ -19,6 +19,8 @@
 -- Supabase SQL editor and run it for new projects or after schema changes.
 -- Neighbor Updates/News copy: shared/changelogSeed.ts
 --   (cron /api/cron/publish-changelog upserts + prunes every 4 hours — 0 */4 * * *)
+-- Neighbor notification inboxes (bell → Notifications): DELETE below clears all rows.
+--   New alerts are created when activity happens; prefs stay in notification_preferences.
 -- =========================================================
 
 -- =========================================================
@@ -1551,6 +1553,33 @@ BEGIN
   END IF;
 END $$;
 
+-- Clear all neighbor notification inboxes (bell → Notifications).
+-- One-time reset (Aug 2026): runs once, then skipped on re-run via table comment marker.
+-- Does not touch notification_preferences or push_subscriptions.
+DO $$
+BEGIN
+  IF to_regclass('public.user_notifications') IS NULL THEN
+    RETURN;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_description d
+    JOIN pg_class c ON c.oid = d.objoid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname = 'user_notifications'
+      AND d.objsubid = 0
+      AND d.description LIKE '%inbox_cleared_2026_08%'
+  ) THEN
+    RETURN;
+  END IF;
+
+  DELETE FROM public.user_notifications;
+
+  COMMENT ON TABLE public.user_notifications IS
+    'Bell → Notifications inbox. Rows from server on dispatch. inbox_cleared_2026_08';
+END $$;
 
 
 -- =========================================================
