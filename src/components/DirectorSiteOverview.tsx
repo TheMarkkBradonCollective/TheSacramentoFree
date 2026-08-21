@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity,
   Ban,
+  Download,
   Flag,
   LifeBuoy,
   Package,
@@ -11,7 +12,8 @@ import {
   Users,
 } from 'lucide-react';
 import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
-import { getDirectorSiteOverview } from '../supabase';
+import { getDirectorSiteOverview, supabase } from '../supabase';
+import { apiUrl } from '../lib/appOrigin';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -97,11 +99,48 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
   const rootRef = useRef<HTMLDivElement>(null);
   const [overview, setOverview] = useState<DirectorSiteOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exportingTesters, setExportingTesters] = useState(false);
+  const [exportTestersError, setExportTestersError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const data = await getDirectorSiteOverview();
     setOverview(data);
     setLoading(false);
+  }, []);
+
+  const downloadPlayTesters = useCallback(async () => {
+    setExportingTesters(true);
+    setExportTestersError(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        throw new Error('Sign in again to download the tester list.');
+      }
+
+      const res = await fetch(apiUrl('/api/admin/export-play-testers'), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(json?.error || 'Could not export tester emails.');
+      }
+
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = 'play-testers.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      setExportTestersError(err instanceof Error ? err.message : 'Could not export tester emails.');
+    } finally {
+      setExportingTesters(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -261,6 +300,32 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
       <div className="grid grid-cols-2 gap-2">
         <StatTile label="Downloads" value={data.downloadDevicesTotal} sub={downloadSub} accent="text-cyan-400" />
         <StatTile label="Installs" value={data.installDevicesCount} sub={installSub} accent="text-indigo-400" />
+      </div>
+
+      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-2">
+        <div>
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Play Console testers</h4>
+          <p className="text-[11px] text-muted mt-1 leading-snug">
+            Download every neighbor email as a Play-ready CSV — one tap, no SQL batches.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void downloadPlayTesters()}
+          disabled={exportingTesters}
+          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold disabled:opacity-60"
+        >
+          <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+          {exportingTesters ? 'Preparing CSV…' : 'Download Play tester emails'}
+        </button>
+        {exportTestersError && (
+          <p className="text-[11px] text-red-400 leading-snug" role="alert">
+            {exportTestersError}
+          </p>
+        )}
+        <p className="text-[10px] text-muted/80 leading-snug">
+          Upload the file in Play Console → Testing → Closed testing → Testers.
+        </p>
       </div>
 
       <div>

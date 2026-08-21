@@ -238,6 +238,8 @@ SUPABASE_SERVICE_ROLE_KEY="eyJ..." \
 npm run export:play-testers
 ```
 
+**On your phone (director account):** open **Account → Site overview** and tap **Download Play tester emails**. That uses the live site API and paginates past the SQL Editor’s 100-row cap.
+
 Output: `exports/play-testers.csv` — plain list, one Gmail address per line.
 
 **Limits:** Internal testing = **100 testers max** (Play Console will only show/accept 100 even if your CSV has more). Closed testing = **2,000 per list**. For all ~478 neighbors, use **Closed testing** — not Internal.
