@@ -113,8 +113,9 @@ html.newspaper-preview:not(.dark) {
   --color-on-accent: #faf9f5;
   --color-card: #faf9f5;
   --color-card-muted: #f1f0ea;
-  --color-danger: #7a1416;
+  --color-danger: #6f2422;
   --color-danger-soft: #ece2e0;
+  --tsf-on-danger: #faf9f5;
   --color-shadow: rgba(10, 10, 10, 0.07);
   --color-shadow-lg: rgba(10, 10, 10, 0.16);
 }
@@ -139,6 +140,7 @@ html.newspaper-preview.dark {
   --color-card-muted: #111110;
   --color-danger: #d98b8b;
   --color-danger-soft: rgba(217, 139, 139, 0.12);
+  --tsf-on-danger: #14100f;
   --color-shadow: rgba(0, 0, 0, 0.5);
   --color-shadow-lg: rgba(0, 0, 0, 0.7);
 }
@@ -790,10 +792,12 @@ html.newspaper-preview .sbn-btn-ghost:hover:not(:disabled) {
   text-decoration: none;
 }
 
+/* Red ink is the one hue left on the page, so it has to stay legible in both
+   editions: the late edition prints it light, and needs dark type on top. */
 html.newspaper-preview .sbn-btn-danger {
   background: var(--color-danger);
   border: 1px solid var(--color-danger);
-  color: #faf9f5;
+  color: var(--tsf-on-danger);
 }
 
 /* Focus is a printed rule, not a glow. */
@@ -1076,6 +1080,19 @@ html.newspaper-preview .sbn-labeled-switch-label,
 html.newspaper-preview .sbn-filter-switch-name {
   font-family: var(--font-news-sans);
   letter-spacing: 0.1em;
+}
+
+/* The base switches print their "on" state in white, which disappears against
+   the late edition's light accent. Reverse them out of the accent instead. */
+html.newspaper-preview .sbn-switch-on .sbn-switch-thumb,
+html.newspaper-preview .sbn-labeled-switch-on .sbn-labeled-switch-thumb,
+html.newspaper-preview .sbn-filter-switch-on .sbn-filter-switch-thumb {
+  background: var(--color-on-accent);
+}
+
+html.newspaper-preview .sbn-labeled-switch-on .sbn-labeled-switch-label-on,
+html.newspaper-preview .sbn-filter-switch-on .sbn-filter-switch-name {
+  color: var(--color-on-accent);
 }
 
 html.newspaper-preview .sbn-feed-composer {

@@ -12,7 +12,7 @@ export default function AboutPage() {
     <PublicPageShell title={title} subtitle={subtitle}>
       <PublicCard>
         <p className="text-xs font-bold text-muted uppercase tracking-wider">Members can</p>
-        <ul className="mt-3 space-y-2 text-sm text-muted font-semibold">
+        <ul className={`mt-3 space-y-2 text-sm text-muted font-semibold ${newspaper ? 'tsf-columns-2' : ''}`}>
           {ABOUT.memberCan.map((item) => (
             <li key={item} className="flex gap-2">
               <span className="text-accent">•</span>

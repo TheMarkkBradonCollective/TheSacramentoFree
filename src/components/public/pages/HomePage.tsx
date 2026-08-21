@@ -114,7 +114,7 @@ export default function HomePage({
           </div>
 
           {/* Live preview panel — desktop only, uses the space a stretched single column used to leave empty */}
-          <div className="hidden lg:block">
+          <div className={`hidden lg:block ${newspaper ? 'tsf-rule-left' : ''}`}>
             <div className="sbn-hero-preview-card">
               <p className="text-[11px] font-black uppercase tracking-widest text-accent">Live in Sacramento</p>
               <div className="mt-2">
