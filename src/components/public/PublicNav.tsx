@@ -225,7 +225,11 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
       </div>
 
       {menuOpen && (
-        <nav className="tsf-section-index lg:hidden border-t border-app px-4 py-3 flex flex-col gap-1 bg-surface">
+        <nav
+          className={`tsf-section-index lg:hidden border-t border-app px-4 py-3 flex flex-col gap-1 ${
+            newspaper ? '' : 'bg-surface'
+          }`}
+        >
           {PRIMARY_NAV.map(({ route: r, label }) => (
             <button key={r} type="button" onClick={() => navigateMobile(r)} className={mobileLinkClass(r)}>
               {label}

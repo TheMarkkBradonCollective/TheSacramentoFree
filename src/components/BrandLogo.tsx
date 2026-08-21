@@ -17,6 +17,8 @@ interface BrandLogoProps {
 /** Keep the uploaded masthead intact — no square crop, rounding, or extra ink frame. */
 function siteLockupClass(imgClassName: string) {
   const parts = imgClassName.split(/\s+/).filter(Boolean);
+  const hasExplicitSquareCap =
+    parts.some((p) => p.startsWith('max-h-')) && parts.some((p) => p.startsWith('max-w-'));
   const next: string[] = [];
   for (const part of parts) {
     if (part === 'object-cover') {
@@ -24,13 +26,13 @@ function siteLockupClass(imgClassName: string) {
       continue;
     }
     if (part.startsWith('rounded-') || part.startsWith('shadow-')) continue;
-    if (/^w-(7|8|9|11|12|16)$/.test(part)) {
+    if (!hasExplicitSquareCap && /^w-(7|8|9|10|11|12|16)$/.test(part)) {
       next.push('w-auto');
       continue;
     }
     next.push(part);
   }
-  if (!next.some((p) => p.startsWith('max-w-'))) next.push('max-w-[8.5rem]');
+  if (!hasExplicitSquareCap && !next.some((p) => p.startsWith('max-w-'))) next.push('max-w-[8.5rem]');
   if (!next.includes('object-contain')) next.push('object-contain');
   next.push('tsf-lockup');
   return next.join(' ');

@@ -845,9 +845,27 @@ html.newspaper-preview .sbn-mobile-header {
 }
 
 html.newspaper-preview .sbn-mobile-header img.tsf-lockup {
-  height: 2.35rem;
+  height: 2.25rem;
+  width: 2.25rem;
+  max-width: 2.25rem;
+  max-height: 2.25rem;
+  object-fit: contain;
+}
+
+html.newspaper-preview .sbn-topbar img.tsf-lockup {
+  height: 2.25rem;
   width: auto;
-  max-width: min(58vw, 13.5rem);
+  max-width: min(42vw, 7.5rem);
+  max-height: 2.25rem;
+  object-fit: contain;
+}
+
+html.newspaper-preview .sbn-map-filter-chip {
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.55rem;
+  white-space: nowrap;
 }
 
 html.newspaper-preview .sbn-tab-bar,
@@ -1919,6 +1937,17 @@ html.newspaper-preview li {
 /* ───────────────────── 23. Mobile edition ───────────────────── */
 
 @media (max-width: 640px) {
+  html.newspaper-preview .tsf-masthead__lockup--front {
+    max-width: min(52vw, 6.5rem);
+    max-height: min(16vh, 6.5rem);
+  }
+
+  html.newspaper-preview .tsf-masthead__lockup--banner,
+  html.newspaper-preview .tsf-masthead__lockup--compact {
+    max-width: min(40vw, 4rem);
+    max-height: 4rem;
+  }
+
   html.newspaper-preview .tsf-front-page-hed {
     font-size: clamp(2rem, 11vw, 2.75rem);
     line-height: 1.03;
@@ -2698,11 +2727,27 @@ html.newspaper-preview .tsf-section-bar .tsf-section-index {
 
 html.newspaper-preview .tsf-section-bar .tsf-section-index button {
   color: var(--color-on-accent);
+  background: transparent;
+}
+
+html.newspaper-preview .tsf-section-bar .tsf-section-index button:hover {
+  background: color-mix(in srgb, var(--color-on-accent) 8%, transparent);
+  color: var(--color-on-accent);
 }
 
 html.newspaper-preview .tsf-section-bar .tsf-section-index .bg-accent-soft {
   background: var(--color-surface);
   color: var(--color-text);
+}
+
+html.newspaper-preview .tsf-section-bar .tsf-section-index > p {
+  color: color-mix(in srgb, var(--color-on-accent) 62%, transparent);
+}
+
+html.newspaper-preview .tsf-section-bar .tsf-section-index .sbn-btn-primary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-surface);
 }
 
 /* ════════════════════ 26. Dense classifieds ════════════════════ */
