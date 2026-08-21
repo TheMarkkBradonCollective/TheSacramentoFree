@@ -123,7 +123,103 @@ try {
   const turns = await page.evaluate(() => window.__tsfTurns);
   check('page-turn layer mounts on navigation', turns > 0, `${turns} turn(s)`);
 
+  // ── Sound engine: render each voice offline and measure the waveform ──
+  const audio = await page.evaluate(async () => {
+    const mod = await import('/src/preview/newspaperSound.ts');
+    const names = [
+      'key', 'keySpace', 'bell', 'pageTurn', 'press', 'stamp',
+      'notify', 'notifyImportant', 'message', 'paperOpen', 'paperClose', 'ink',
+    ];
+    const out = {};
+    for (const name of names) {
+      const ctx = new OfflineAudioContext(1, 48000 * 2, 48000);
+      mod.renderNewspaperSound(ctx, name, 0.01, ctx.destination);
+      const buffer = await ctx.startRendering();
+      const data = buffer.getChannelData(0);
+      let peak = 0;
+      let sumSquares = 0;
+      let lastAudible = 0;
+      for (let i = 0; i < data.length; i += 1) {
+        const v = Math.abs(data[i]);
+        if (v > peak) peak = v;
+        sumSquares += data[i] * data[i];
+        if (v > 0.001) lastAudible = i;
+      }
+      out[name] = {
+        peak: +peak.toFixed(4),
+        rms: +Math.sqrt(sumSquares / data.length).toFixed(5),
+        ms: Math.round((lastAudible / 48000) * 1000),
+      };
+    }
+    return out;
+  });
+
+  const silent = Object.entries(audio).filter(([, m]) => m.peak < 0.01);
+  check('every sound renders audible output', silent.length === 0, silent.map(([n]) => n).join(', '));
+
+  const clipping = Object.entries(audio).filter(([, m]) => m.peak > 1);
+  check('no sound clips', clipping.length === 0, clipping.map(([n, m]) => `${n}=${m.peak}`).join(', '));
+
+  const tooLong = Object.entries(audio).filter(([, m]) => m.ms > 1800);
+  check('sounds stay short', tooLong.length === 0, tooLong.map(([n, m]) => `${n}=${m.ms}ms`).join(', '));
+  console.log('      ' + Object.entries(audio).map(([n, m]) => `${n} ${m.ms}ms peak ${m.peak}`).join('\n      '));
+
   check('no uncaught page errors', consoleErrors.length === 0, consoleErrors.join(' | ').slice(0, 300));
+
+  // ── Reduced motion must hold the page still ──
+  const calm = await browser.newPage();
+  await calm.setViewport({ width: 1440, height: 900 });
+  await calm.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await calm.goto(`${BASE}/?skin=newspaper`, { waitUntil: 'networkidle2', timeout: 60000 });
+  await new Promise((r) => setTimeout(r, 1500));
+
+  check(
+    'reduced motion disables immersive mode',
+    await calm.evaluate(
+      () =>
+        document.documentElement.classList.contains('tsf-calm-motion') &&
+        !document.documentElement.classList.contains('tsf-immersive'),
+    ),
+  );
+
+  await calm.evaluate(() => {
+    window.__tsfTurns = 0;
+    new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.nodeType === 1 && node.classList?.contains('tsf-page-turn')) window.__tsfTurns += 1;
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+    [...document.querySelectorAll('a, button')].find((el) => /how it works/i.test(el.textContent || ''))?.click();
+  });
+  await new Promise((r) => setTimeout(r, 900));
+  check(
+    'reduced motion skips the page turn',
+    (await calm.evaluate(() => window.__tsfTurns)) === 0,
+  );
+
+  const focusRule = await calm.evaluate(() => {
+    for (const sheet of document.styleSheets) {
+      let rules;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of rules) {
+        if (
+          rule.selectorText?.includes('newspaper-preview') &&
+          rule.selectorText.includes(':focus-visible') &&
+          rule.style?.outline
+        ) {
+          return rule.style.outline;
+        }
+      }
+    }
+    return null;
+  });
+  check('focus states are printed as an outline', Boolean(focusRule), focusRule || 'none found');
 
   // ── Original skin must be untouched ──
   const original = await browser.newPage();

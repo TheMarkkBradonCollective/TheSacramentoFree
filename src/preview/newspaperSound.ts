@@ -22,6 +22,8 @@ export type NewspaperSoundName =
   | 'ink';
 
 type Ctx = AudioContext;
+/** Anything that can schedule nodes — realtime output or an offline render. */
+type RenderCtx = BaseAudioContext;
 
 let ctx: Ctx | null = null;
 let master: GainNode | null = null;
@@ -67,7 +69,7 @@ export function setNewspaperMasterVolume(volume: number): void {
 }
 
 /** One second of white noise, reused by every paper and mechanical sound. */
-function getNoise(audio: Ctx): AudioBuffer {
+function getNoise(audio: RenderCtx): AudioBuffer {
   if (noiseBuffer && noiseBuffer.sampleRate === audio.sampleRate) return noiseBuffer;
   const frames = Math.floor(audio.sampleRate);
   const buffer = audio.createBuffer(1, frames, audio.sampleRate);
@@ -89,7 +91,7 @@ interface NoiseOptions {
   destination: AudioNode;
 }
 
-function noiseBurst(audio: Ctx, options: NoiseOptions): void {
+function noiseBurst(audio: RenderCtx, options: NoiseOptions): void {
   const { start, duration, gain, frequency, endFrequency, q = 1, attack = 0.002, destination } = options;
   const source = audio.createBufferSource();
   source.buffer = getNoise(audio);
@@ -123,7 +125,7 @@ interface ToneOptions {
   destination: AudioNode;
 }
 
-function tone(audio: Ctx, options: ToneOptions): void {
+function tone(audio: RenderCtx, options: ToneOptions): void {
   const { start, duration, gain, frequency, endFrequency, type = 'sine', attack = 0.002, destination } = options;
   const osc = audio.createOscillator();
   osc.type = type;
@@ -141,7 +143,7 @@ function tone(audio: Ctx, options: ToneOptions): void {
 }
 
 /** Struck-metal bell built from inharmonic partials, the way a real bell rings. */
-function bellStrike(audio: Ctx, at: number, gain: number, base: number, decay: number, destination: AudioNode): void {
+function bellStrike(audio: RenderCtx, at: number, gain: number, base: number, decay: number, destination: AudioNode): void {
   const partials: Array<[number, number]> = [
     [1, 1],
     [2.02, 0.5],
@@ -164,7 +166,21 @@ function bellStrike(audio: Ctx, at: number, gain: number, base: number, decay: n
   noiseBurst(audio, { start: at, duration: 0.03, gain: gain * 0.5, frequency: 4200, q: 1.2, destination });
 }
 
-function renderSound(audio: Ctx, name: NewspaperSoundName, at: number, out: AudioNode): void {
+/**
+ * Schedule one sound onto any context. Exported so it can be rendered into an
+ * OfflineAudioContext and measured, which is the only way to prove the
+ * synthesis is actually audible without listening to it.
+ */
+export function renderNewspaperSound(
+  audio: BaseAudioContext,
+  name: NewspaperSoundName,
+  at: number,
+  out: AudioNode,
+): void {
+  renderSound(audio, name, at, out);
+}
+
+function renderSound(audio: RenderCtx, name: NewspaperSoundName, at: number, out: AudioNode): void {
   switch (name) {
     case 'key': {
       // Typebar hitting paper: a wooden click plus a short paper slap.
