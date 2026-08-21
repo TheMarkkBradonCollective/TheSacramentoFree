@@ -5,6 +5,7 @@ export { runSupportNotify } from './supportNotify';
 export { runReportNotify } from './reportNotify';
 export { runPushTest } from './runPushTest';
 export { runDirectorBroadcastTest } from './runDirectorBroadcastTest';
+export { runExportPlayTesters } from './runExportPlayTesters';
 export { runPushSend, type PushSendBody } from './runPushSend';
 export {
   runDirectorCategoryAlert,

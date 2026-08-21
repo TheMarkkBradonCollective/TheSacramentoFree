@@ -123,8 +123,13 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
       });
 
       if (!res.ok) {
-        const json = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(json?.error || 'Could not export tester emails.');
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const json = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(json?.error || 'Could not export tester emails.');
+        }
+        const text = (await res.text().catch(() => '')).trim();
+        throw new Error(text || 'Could not export tester emails.');
       }
 
       const blob = await res.blob();
