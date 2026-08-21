@@ -39,7 +39,7 @@ export default function DiscussionComments({
 }: DiscussionCommentsProps) {
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
-  const commenterInfo = useUserDisplayInfo(comments.map((comment) => comment.userId));
+  const commenterInfo = useUserDisplayInfo(comments.map((comment) => comment.userId), userProfile);
   const [commenterRoles, setCommenterRoles] = useState<Record<string, UserProfile['role']>>({});
   const { confirm } = useConfirm();
   const inputName = `${scope}Comment-${entityId}`;

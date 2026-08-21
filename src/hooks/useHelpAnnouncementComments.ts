@@ -7,6 +7,7 @@ import {
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
+import { resolveProfileIdentity } from '../lib/profilePersistence';
 
 export function useHelpAnnouncementComments(
   announcementIds: string[],
@@ -91,12 +92,13 @@ export function useHelpAnnouncementComments(
     if (!userProfile || !text.trim()) return;
 
     const current = getCommentsForAnnouncement(announcementId);
+    const identity = resolveProfileIdentity(userProfile);
     const newComment: HelpAnnouncementComment = {
       id: `help_announcement_comment_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       announcementId,
       userId: userProfile.uid,
-      userName: userProfile.displayName,
-      userPhoto: userProfile.photoURL,
+      userName: identity.displayName,
+      userPhoto: identity.photoURL,
       text: text.trim(),
       createdAt: new Date().toISOString(),
       userNeighborhood: userProfile.neighborhood || 'Midtown',

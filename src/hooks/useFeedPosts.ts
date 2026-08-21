@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FeedPost } from '../types';
 import { createFeedPost, deleteFeedPost, getFeedPosts } from '../lib/feedApi';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { patchDenormalizedAuthorFields } from '../lib/profilePersistence';
 import type { UserProfile } from '../types';
 import { isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -47,18 +48,18 @@ export function useFeedPosts(userProfile: UserProfile | null) {
         const photoURL = row.photoURL != null ? String(row.photoURL) : undefined;
 
         setPosts((prev) =>
-          prev.map((post) => {
-            if (post.userId !== uid) return post;
-            return {
-              ...post,
-              ...(displayName ? { userDisplayName: displayName } : {}),
-              ...(photoURL !== undefined ? { userPhotoURL: photoURL || undefined } : {}),
-            };
-          }),
+          prev.map((post) =>
+            patchDenormalizedAuthorFields(post, {
+              authorId: post.userId,
+              uid,
+              displayName,
+              photoURL,
+            }),
+          ),
         );
       },
     );
-  }, [userProfile]);
+  }, [userProfile?.uid]);
 
   const publishPost = useCallback(
     async (input: { text: string; imageFiles: File[] }) => {

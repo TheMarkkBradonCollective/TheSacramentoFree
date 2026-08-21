@@ -9,6 +9,7 @@ import {
 } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
+import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { countPastRsvps, effectivePastRsvp } from '../lib/eventRsvp';
 
 export interface EventRsvpState {
@@ -233,12 +234,13 @@ export function useEventsEngagement(
     if (!userProfile || !text.trim()) return;
 
     const current = getCommentsForEvent(eventId);
+    const identity = resolveProfileIdentity(userProfile);
     const newComment: EventComment = {
       id: `event_comment_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       eventId,
       userId: userProfile.uid,
-      userName: userProfile.displayName,
-      userPhoto: userProfile.photoURL,
+      userName: identity.displayName,
+      userPhoto: identity.photoURL,
       text: text.trim(),
       createdAt: new Date().toISOString(),
       userNeighborhood: userProfile.neighborhood || 'Midtown',

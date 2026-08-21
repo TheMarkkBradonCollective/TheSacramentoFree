@@ -411,7 +411,7 @@ function parsePickupAvailabilityColumn(raw: unknown): PickupAvailabilitySchedule
   return normalizePickupAvailability(raw);
 }
 
-function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfile | null {
+export function normalizeUserProfileRow(row: Record<string, unknown> | null): UserProfile | null {
   if (!row) return null;
   const uid = String(row.uid ?? '');
   if (!uid) return null;

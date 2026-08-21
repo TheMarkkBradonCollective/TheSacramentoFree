@@ -29,6 +29,7 @@ import {
   getSupabaseProfile, 
   upsertSupabaseProfile,
   profileFromAuthUser,
+  normalizeUserProfileRow,
   getSupabaseItems,
   getSupabaseItemById,
   getSupabaseEvents,
@@ -104,6 +105,7 @@ import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
 import { isNativeApp } from './lib/nativePlatform';
 import { applyUserPreferencesToDevice } from './lib/appPreferences';
 import { mergeProfileFromDbRead } from './lib/profilePersistence';
+import { subscribePostgresChanges } from './lib/supabaseRealtime';
 import {
   clearLocalNativeSessionId,
   readLocalNativeSessionId,
@@ -441,7 +443,7 @@ export default function App() {
 
   const handleUpdateProfile = useCallback(
     (updated: UserProfile) => {
-      setUserProfile(updated);
+      setUserProfile((prev) => mergeProfileFromDbRead(prev, updated));
       if (!isStaffActingOfficial(updated) && isStaffTab(activeTab)) {
         handleTabChange('profile');
       }
@@ -1154,6 +1156,39 @@ export default function App() {
   useSavedItemPushAlerts(sessionReady, userProfile?.uid, items);
   useEventsRealtime(sessionReady, setEvents);
   useAuthorProfilesRealtime(sessionReady, setItems, setEvents);
+
+  // Keep signed-in identity stable when users row updates (e.g. lastActiveAt heartbeat).
+  useEffect(() => {
+    const uid = sessionUser?.id;
+    if (!sessionReady || !uid) return;
+
+    return subscribePostgresChanges(
+      {
+        channelName: `live-my-profile-${uid}`,
+        table: 'users',
+        event: 'UPDATE',
+        filter: `uid=eq.${uid}`,
+      },
+      (payload) => {
+        const fromDb = normalizeUserProfileRow(payload.new as Record<string, unknown> | null);
+        if (!fromDb) return;
+        setUserProfile((prev) => {
+          const merged = mergeProfileFromDbRead(prev, fromDb);
+          if (!prev) return merged;
+          if (
+            merged.displayName === prev.displayName &&
+            merged.photoURL === prev.photoURL &&
+            merged.neighborhood === prev.neighborhood &&
+            merged.bio === prev.bio &&
+            merged.role === prev.role
+          ) {
+            return prev;
+          }
+          return merged;
+        });
+      },
+    );
+  }, [sessionReady, sessionUser?.id]);
 
   useEffect(() => {
     if (!detailEvent) return;
