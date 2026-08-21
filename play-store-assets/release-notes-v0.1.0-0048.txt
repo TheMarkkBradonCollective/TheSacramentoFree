@@ -1,0 +1,6 @@
+Android beta 0.1.0 (48)
+
+• Pickup ring no longer blocks the app
+• Expired sign-in no longer looks signed in
+• RSVP and chat load errors show if they fail
+• Deleting a listing or event actually removes it

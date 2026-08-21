@@ -15,7 +15,7 @@ import PostItemModal from './components/PostItemModal';
 import NewListingModal, { type NewListingModalMode } from './components/NewListingModal';
 import FeedPostDetailView from './components/feed/FeedPostDetailView';
 import ItemDetailView from './components/ItemDetailView';
-import { deleteFeedPost, getFeedPostById } from './lib/feedApi';
+import { deleteFeedPost, getFeedPostById, notifyFeedPostDeleted } from './lib/feedApi';
 import { isStaffRole, isListingOpenForCoordination } from './lib/roles';
 import { isEventUpcoming } from './lib/eventRsvp';
 import PickupAttributionModal from './components/PickupAttributionModal';
@@ -744,7 +744,11 @@ export default function App() {
     if (typeof window === 'undefined') return;
     const syncDownloadRoute = () => setShowDownloadPage(isDownloadRoute());
     window.addEventListener('popstate', syncDownloadRoute);
-    return () => window.removeEventListener('popstate', syncDownloadRoute);
+    window.addEventListener('hashchange', syncDownloadRoute);
+    return () => {
+      window.removeEventListener('popstate', syncDownloadRoute);
+      window.removeEventListener('hashchange', syncDownloadRoute);
+    };
   }, []);
 
   useEffect(() => {
@@ -935,6 +939,20 @@ export default function App() {
     };
 
     const bootFailsafe = setTimeout(finishBootstrap, 4000);
+    let ghostSessionFailsafe: ReturnType<typeof setTimeout> | null = null;
+
+    const clearGhostCachedSession = () => {
+      lastSignedInUserIdRef.current = null;
+      profileSyncRef.current = null;
+      profileSyncedUidRef.current = null;
+      clearSessionCache();
+      clearAuthenticatedUiState();
+      setSessionUser(null);
+      setUserProfile(null);
+      setItems([]);
+      setIsAuthLoading(false);
+      resetTabStateForSignOut();
+    };
 
     const checkSession = async () => {
       try {
@@ -955,6 +973,16 @@ export default function App() {
         setUserProfile(null);
         clearSessionCache();
         clearAuthenticatedUiState();
+      } else if (error && /refresh token|invalid.+jwt|session not found|expired/i.test(error.message || '')) {
+        lastSignedInUserIdRef.current = null;
+        profileSyncRef.current = null;
+        profileSyncedUidRef.current = null;
+        setSessionUser(null);
+        setUserProfile(null);
+        clearSessionCache();
+        clearAuthenticatedUiState();
+        setItems([]);
+        resetTabStateForSignOut();
       }
       } catch (err) {
         if (!cancelled) {
@@ -983,6 +1011,10 @@ export default function App() {
       }
 
       if (session?.user) {
+        if (ghostSessionFailsafe) {
+          clearTimeout(ghostSessionFailsafe);
+          ghostSessionFailsafe = null;
+        }
         const alreadyInApp = !!lastSignedInUserIdRef.current;
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
@@ -1027,9 +1059,18 @@ export default function App() {
           resetTabStateForSignOut();
           return;
         }
-        // INITIAL_SESSION with no user: keep a restored cache. getSession() often
-        // races and would otherwise flash the public site through the signed-in app.
+        // INITIAL_SESSION with no user: keep a restored cache briefly. getSession()
+        // often races and would otherwise flash the public site. If no JWT arrives,
+        // the cached shell is a ghost — clear it so writes don't fail silently.
         if (event === 'INITIAL_SESSION' && hadSessionOnMountRef.current) {
+          if (!ghostSessionFailsafe) {
+            ghostSessionFailsafe = setTimeout(() => {
+              void supabase.auth.getSession().then(({ data: { session: later } }) => {
+                if (cancelled || later?.user) return;
+                clearGhostCachedSession();
+              });
+            }, 2500);
+          }
           return;
         }
         if (event !== 'INITIAL_SESSION') return;
@@ -1047,6 +1088,7 @@ export default function App() {
     return () => {
       cancelled = true;
       clearTimeout(bootFailsafe);
+      if (ghostSessionFailsafe) clearTimeout(ghostSessionFailsafe);
       subscription.unsubscribe();
     };
   }, [applySession, syncProfileFromDb, clearAuthenticatedUiState, resetTabStateForSignOut]);
@@ -1158,6 +1200,7 @@ export default function App() {
       setEvents((current) => (sameFeedSnapshot(current, loaded) ? current : loaded));
     } catch (err) {
       console.warn('Supabase events fetch failed:', err);
+      setErrorMsg('Could not load events. Pull to refresh or try again.');
     } finally {
       setIsEventsLoading(false);
       setEventsHydrated(true);
@@ -1191,16 +1234,25 @@ export default function App() {
         if (!fromDb) return;
         setUserProfile((prev) => {
           const merged = mergeProfileFromDbRead(prev, fromDb);
-          if (!prev) return merged;
+          if (!prev) {
+            applyUserPreferencesToDevice(merged);
+            return merged;
+          }
           if (
             merged.displayName === prev.displayName &&
             merged.photoURL === prev.photoURL &&
             merged.neighborhood === prev.neighborhood &&
             merged.bio === prev.bio &&
-            merged.role === prev.role
+            merged.role === prev.role &&
+            merged.goGetEnabled === prev.goGetEnabled &&
+            merged.staffInteractionMode === prev.staffInteractionMode &&
+            JSON.stringify(merged.appPreferences ?? null) === JSON.stringify(prev.appPreferences ?? null) &&
+            JSON.stringify(merged.pickupAvailability ?? null) === JSON.stringify(prev.pickupAvailability ?? null) &&
+            JSON.stringify(merged.navigationSettings ?? null) === JSON.stringify(prev.navigationSettings ?? null)
           ) {
             return prev;
           }
+          applyUserPreferencesToDevice(merged);
           return merged;
         });
       },
@@ -1756,6 +1808,7 @@ export default function App() {
         return;
       }
       setDetailFeedPost(null);
+      notifyFeedPostDeleted(post.id);
     },
     [userProfile, confirm, alert],
   );

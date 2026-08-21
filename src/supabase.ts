@@ -1697,6 +1697,23 @@ export async function migrateLocalSavedItemsToDb(userId: string): Promise<void> 
 
 export async function deleteSupabaseItem(itemId: string): Promise<boolean> {
   try {
+    const { data, error } = await supabase.rpc('delete_own_listing', { target_item_id: itemId });
+    if (!error) {
+      if (data === true) {
+        setSupabaseConfigurationState(true);
+        return true;
+      }
+      return false;
+    }
+    if (!isMissingRelationOrRpc(error)) {
+      handleSupabaseError(error, 'items');
+      return false;
+    }
+  } catch {
+    // RPC not installed yet — fall through to client cascade.
+  }
+
+  try {
     await supabase.from('item_claim_requests').delete().eq('itemId', itemId);
     await supabase.from('item_claims').delete().eq('itemId', itemId);
     await supabase.from('listing_subitems').delete().eq('itemId', itemId);
@@ -4408,10 +4425,36 @@ export async function cancelSupabaseEvent(
   }
 }
 
-export async function deleteSupabaseEvent(eventId: string): Promise<void> {
-  await supabase.from('event_rsvps').delete().eq('eventId', eventId);
-  await supabase.from('event_comments').delete().eq('eventId', eventId);
-  await supabase.from('community_events').delete().eq('id', eventId);
+export async function deleteSupabaseEvent(eventId: string): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { data, error } = await supabase.rpc('delete_own_event', { target_event_id: eventId });
+    if (!error) {
+      return data === true ? { ok: true } : { ok: false, errorMessage: 'Could not delete event.' };
+    }
+    if (!isMissingRelationOrRpc(error)) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not delete event.' };
+    }
+  } catch {
+    // RPC not installed yet — fall through.
+  }
+
+  try {
+    await supabase.from('event_rsvps').delete().eq('eventId', eventId);
+    await supabase.from('event_comments').delete().eq('eventId', eventId);
+    const { error } = await supabase.from('community_events').delete().eq('id', eventId);
+    if (error) {
+      handleSupabaseError(error, 'community_events');
+      return { ok: false, errorMessage: error.message || 'Could not delete event.' };
+    }
+    return { ok: true };
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'community_events');
+    return {
+      ok: false,
+      errorMessage: err instanceof Error ? err.message : 'Could not delete event.',
+    };
+  }
 }
 
 export async function getSupabaseEventRsvps(eventIds: string[]): Promise<EventRsvp[]> {
@@ -6665,7 +6708,8 @@ export async function staffDeleteEvent(
   if (!canStaffDeleteAccount(actor.role)) return { ok: false, errorMessage: 'City Manager+ only.' };
 
   try {
-    await deleteSupabaseEvent(event.id);
+    const result = await deleteSupabaseEvent(event.id);
+    if (!result.ok) return result;
     await writeModerationAudit({
       actor: actor as import('./types').UserProfile,
       target: { uid: event.userId, displayName: event.userDisplayName },

@@ -120,7 +120,7 @@ export function bridgePathnameToPublicHash(): PublicRoute | null {
 
   const nextHash = publicRouteHref(route);
   try {
-    window.history.replaceState(window.history.state, '', `/${search}${nextHash}`);
+    window.history.replaceState(window.history.state, '', `${pathname}${search}${nextHash}`);
   } catch {
     window.location.hash = nextHash;
   }

@@ -77,6 +77,11 @@ const migrationMarkers = [
     markers: ['chats_delete', "status IN ('active', 'pending_pickup', 'on_hold')"],
     label: 'Audit RLS (listing privacy + chat delete)',
   },
+  {
+    file: 'scripts/supabase-migration-aug-21-2026-audit-48.sql',
+    markers: ['delete_own_listing', 'delete_own_event'],
+    label: 'Audit 48 cascade deletes',
+  },
 ];
 
 for (const { file, markers, label: migrationLabel } of migrationMarkers) {

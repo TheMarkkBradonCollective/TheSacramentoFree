@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, Loader2, Phone, X } from 'lucide-react';
 import type { GoGetSession, ItemPost, UserProfile } from '../../types';
 import {
+  abandonGoGetRing,
   expireGoGetRing,
   isGoGetRingActive,
   respondAvailableNow,
@@ -10,7 +11,7 @@ import {
 } from '../../lib/goGetSessions';
 import { getGoGetRingDuration, getGoGetRingPattern, startGoGetRingAlert, stopGoGetRingAlert } from '../../lib/goGetRing';
 import GoGetAvailabilityPrompt from './GoGetAvailabilityPrompt';
-import { staffGetListingById } from '../../supabase';
+import { getSupabaseItemById } from '../../supabase';
 
 interface GoGetIncomingRingOverlayProps {
   session: GoGetSession;
@@ -26,13 +27,33 @@ export default function GoGetIncomingRingOverlay({
   onSessionResolved,
 }: GoGetIncomingRingOverlayProps) {
   const [item, setItem] = useState<ItemPost | null>(null);
+  const [itemLoadFailed, setItemLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const ringStoppedRef = useRef(false);
 
   useEffect(() => {
-    void staffGetListingById(session.itemId).then(setItem);
+    let cancelled = false;
+    setItem(null);
+    setItemLoadFailed(false);
+    void getSupabaseItemById(session.itemId)
+      .then((next) => {
+        if (cancelled) return;
+        if (next) setItem(next);
+        else setItemLoadFailed(true);
+      })
+      .catch(() => {
+        if (!cancelled) setItemLoadFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [session.itemId]);
+
+  useEffect(() => {
+    if (!itemLoadFailed) return;
+    void abandonGoGetRing(session, 'Listing is no longer available');
+  }, [itemLoadFailed, session.id]);
 
   useEffect(() => {
     const pattern = getGoGetRingPattern(userProfile);
@@ -73,58 +94,72 @@ export default function GoGetIncomingRingOverlay({
     }
   };
 
-  if (!item) {
-    return createPortal(
-      <div className="fixed inset-0 z-[200] bg-black/70 flex items-center justify-center p-4">
-        <Loader2 className="w-8 h-8 text-accent animate-spin" />
+  const shell = (body: ReactNode) =>
+    createPortal(
+      <div
+        className="fixed inset-0 z-[200] bg-black/80 flex flex-col items-center justify-end sm:justify-center p-4 pb-8"
+        role="dialog"
+        aria-modal="true"
+        id="go_get_incoming_ring_overlay"
+      >
+        <div className="w-full max-w-md sbn-card p-5 space-y-4 shadow-2xl border border-accent/40">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Phone className="w-5 h-5 text-accent animate-pulse" />
+              <p className="text-sm font-bold text-app">Pickup request</p>
+            </div>
+            <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-inset text-muted" aria-label="Dismiss">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          {body}
+        </div>
       </div>,
       document.body,
+    );
+
+  if (itemLoadFailed) {
+    return shell(
+      <p className="text-sm text-app leading-snug">
+        This listing is no longer available. The pickup request was cancelled.
+      </p>,
+    );
+  }
+
+  if (!item) {
+    return shell(
+      <div className="flex items-center gap-3 text-sm text-muted">
+        <Loader2 className="w-5 h-5 text-accent animate-spin" />
+        Loading listing…
+      </div>,
     );
   }
 
   const active = isGoGetRingActive(session);
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[200] bg-black/80 flex flex-col items-center justify-end sm:justify-center p-4 pb-8"
-      role="dialog"
-      aria-modal="true"
-      id="go_get_incoming_ring_overlay"
-    >
-      <div className="w-full max-w-md sbn-card p-5 space-y-4 shadow-2xl border border-accent/40">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Phone className="w-5 h-5 text-accent animate-pulse" />
-            <p className="text-sm font-bold text-app">Pickup request</p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-inset text-muted">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return shell(
+    <>
+      <p className="text-sm text-app leading-snug">
+        <strong>{session.requesterName}</strong> wants to Go Get &quot;{item.title}&quot;
+      </p>
 
-        <p className="text-sm text-app leading-snug">
-          <strong>{session.requesterName}</strong> wants to Go Get &quot;{item.title}&quot;
-        </p>
-
-        {active ? (
-          <>
-            <p className="text-xs text-muted flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5" />
-              {remaining > 0 ? `${remaining}s left to respond` : 'Ring ended'}
-            </p>
-            <GoGetAvailabilityPrompt
-              requesterName={session.requesterName}
-              itemTitle={item.title}
-              submitting={busy}
-              onAvailableNow={() => void run(() => respondAvailableNow(session, item))}
-              onProposeWindow={(w) => void run(() => proposeAvailabilityWindow(session, item, w))}
-            />
-          </>
-        ) : (
-          <p className="text-xs text-muted">This request timed out. The picker can schedule a meet instead.</p>
-        )}
-      </div>
-    </div>,
-    document.body,
+      {active ? (
+        <>
+          <p className="text-xs text-muted flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5" />
+            {remaining > 0 ? `${remaining}s left to respond` : 'Ring ended'}
+          </p>
+          <GoGetAvailabilityPrompt
+            requesterName={session.requesterName}
+            itemTitle={item.title}
+            submitting={busy}
+            onAvailableNow={() => void run(() => respondAvailableNow(session, item))}
+            onProposeWindow={(w) => void run(() => proposeAvailabilityWindow(session, item, w))}
+          />
+        </>
+      ) : (
+        <p className="text-xs text-muted">This request timed out. The picker can schedule a meet instead.</p>
+      )}
+    </>,
   );
 }

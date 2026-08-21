@@ -214,6 +214,13 @@ export async function createFeedPost(
   }
 }
 
+export const FEED_POST_DELETED_EVENT = 'sbn:feed-post-deleted';
+
+export function notifyFeedPostDeleted(postId: string): void {
+  if (typeof window === 'undefined' || !postId) return;
+  window.dispatchEvent(new CustomEvent(FEED_POST_DELETED_EVENT, { detail: { id: postId } }));
+}
+
 export async function deleteFeedPost(
   postId: string,
   userId: string,
