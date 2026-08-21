@@ -414,6 +414,56 @@ export const TERMS = {
   viewAgainNote: 'You can read these terms anytime from the home page or your Account tab.',
 } as const;
 
+/** Published standards for Google Play Child Safety (CSAE). */
+export const CHILD_SAFETY = {
+  title: 'Child safety standards',
+  shortTitle: 'Child safety',
+  lastUpdated: 'August 2026',
+  summary:
+    'Sacramento Buy Nothing (The Sacramento Free) has zero tolerance for child sexual abuse and exploitation (CSAE). These standards apply to the app, website, and every neighbor account.',
+  contactEmail: 'support@sacbuynothing.org',
+  sections: [
+    {
+      heading: 'Our commitment',
+      body:
+        'Sacramento Buy Nothing is operated by Markeith White as a local, free neighbor-to-neighbor gifting community. We prohibit any content, behavior, or conduct that sexualizes, exploits, endangers, or harms children. CSAE is not allowed on our platform in any form.',
+    },
+    {
+      heading: 'Prohibited conduct',
+      bullets: [
+        'Child sexual abuse material (CSAM) of any kind.',
+        'Grooming, solicitation, or sexualization of minors.',
+        'Sharing, requesting, or linking to CSAE content.',
+        'Using the app to arrange contact with minors for exploitative purposes.',
+        'Accounts operated by or primarily targeting children under 13.',
+        'Any other conduct that endangers children or violates child-safety laws.',
+      ],
+    },
+    {
+      heading: 'Reporting in the app',
+      bullets: [
+        'Report a neighbor or listing from the in-app report tools.',
+        'Open Chat → Support to flag a safety issue for staff review.',
+        'Use Chat → Feedback to send a safety concern when report tools are not available.',
+      ],
+    },
+    {
+      heading: 'How we respond',
+      bullets: [
+        'Staff review safety reports promptly and may remove content, restrict chat, or disable accounts.',
+        'Confirmed CSAM is removed immediately and the account is permanently banned.',
+        'When required by law, confirmed CSAM is reported to the National Center for Missing & Exploited Children (NCMEC) CyberTipline or the appropriate regional authority.',
+        'We cooperate with law enforcement and Google Play on child-safety enforcement.',
+      ],
+    },
+    {
+      heading: 'Child safety point of contact',
+      body:
+        'Google Play and law enforcement can reach our child-safety contact at support@sacbuynothing.org. Include “Child safety” in the subject line. This contact can speak to our enforcement procedures and take action on CSAE reports.',
+    },
+  ],
+} as const;
+
 export const AWARDS = {
   panelTitle: 'Neighbor Awards',
   panelSubtitle: 'Fun badges for generous neighbors — unlock at 250 members!',

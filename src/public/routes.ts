@@ -12,6 +12,7 @@ export const PUBLIC_ROUTES = {
   privacy: 'privacy',
   'delete-account': 'delete-account',
   terms: 'terms',
+  'child-safety': 'child-safety',
   login: 'login',
   'not-found': 'not-found',
 } as const;
@@ -32,6 +33,7 @@ export const PUBLIC_ROUTE_LIST: PublicRoute[] = [
   'privacy',
   'delete-account',
   'terms',
+  'child-safety',
   'login',
   'not-found',
 ];

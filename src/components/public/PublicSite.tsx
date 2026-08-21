@@ -20,6 +20,7 @@ import GoFundMePage from './pages/GoFundMePage';
 import PrivacyPage from './pages/PrivacyPage';
 import DeleteAccountPage from './pages/DeleteAccountPage';
 import TermsPage from './pages/TermsPage';
+import ChildSafetyPage from './pages/ChildSafetyPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AuthPage from './AuthPage';
 import { ItemPost } from '../../types';
@@ -105,6 +106,8 @@ export default function PublicSite({
         return <DeleteAccountPage />;
       case 'terms':
         return <TermsPage />;
+      case 'child-safety':
+        return <ChildSafetyPage />;
       case 'login':
         return (
           <AuthPage
