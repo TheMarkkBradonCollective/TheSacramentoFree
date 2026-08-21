@@ -56,3 +56,31 @@ NAWH, I'M JUST GIV'N. 😂
 We're not closing. ✅ Your listings, messages, and this community stay. I'm pausing big new builds while I rebrand us into something that's fully our own — I'm not showing it yet on purpose. 👀 Full letter in News (bell → News). 🔔`;
 
 export const REBRAND_ANNOUNCEMENT_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
+
+/** Updates tab — professional product note (News has the personal letter). */
+export const REBRAND_UPDATE_ID = '2026-08-21_trademark-rebrand-notice';
+
+export const REBRAND_UPDATE_TITLE = 'Trademark notice + rebrand in progress — site stays open';
+
+export const REBRAND_UPDATE_BODY =
+  'Official home-page notice, one-time letter popup, and a pause on big new builds while we develop our own name and look.';
+
+export const REBRAND_UPDATE_DETAIL = `WHAT NEIGHBORS SEE
+• sacramentobuynothing.com now shows an official trademark notice on the home page — we are independent and working on a distinct name
+• First visit shows a one-time letter from Mark (dismiss it anytime; the full letter also lives in bell → News)
+• The site and apps stay fully available — post, gift, chat, and events work as they do today
+• Large new feature work pauses while the rebrand is built in private (mobile, desktop, PWA, and Android)
+• When the rebrand ships, the Android app moves from internal testing to closed testing — a wider invited Play beta before any public launch
+
+Mark's full personal letter is in Notifications → News.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- shared/rebrandAnnouncement2026.ts — letter, home notice, feed cliff-hanger
+- src/components/RebrandAnnouncementModal.tsx — one-time popup
+- src/components/public/TrademarkNoticeBanner.tsx — home page notice
+- scripts/supabase-migration-aug-21-2026-rebrand-letter.sql
+
+HISTORY
+2026-08-21 — Rebrand announcement (PR #328).`;

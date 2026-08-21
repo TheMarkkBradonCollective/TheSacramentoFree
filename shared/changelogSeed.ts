@@ -6,6 +6,10 @@ import {
   REBRAND_ANNOUNCEMENT_LETTER,
   REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
   REBRAND_ANNOUNCEMENT_TITLE,
+  REBRAND_UPDATE_BODY,
+  REBRAND_UPDATE_DETAIL,
+  REBRAND_UPDATE_ID,
+  REBRAND_UPDATE_TITLE,
 } from './rebrandAnnouncement2026';
 
 export interface SeededAppUpdate {
@@ -136,6 +140,14 @@ function news(
 
 /** Latest Update posts — product changes only (no Android release/download posts; those live in News). */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  update(
+    REBRAND_UPDATE_ID,
+    REBRAND_ANNOUNCEMENT_DATE,
+    REBRAND_UPDATE_TITLE,
+    REBRAND_UPDATE_BODY,
+    REBRAND_UPDATE_DETAIL,
+    REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
   update(
     '2026-08-20_apk-0046',
     '2026-08-20',
