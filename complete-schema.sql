@@ -4191,6 +4191,7 @@ BEGIN
     'feed_posts',
     'feed_post_comments',
     'feed_post_reactions',
+    'native_app_sessions',
     'go_get_sessions',
     'go_get_live_locations',
     'go_get_fulfiller_live_locations',
