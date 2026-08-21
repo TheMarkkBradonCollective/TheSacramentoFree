@@ -697,9 +697,21 @@ html.newspaper-preview .tsf-section-bar #theme_toggle_btn .text-accent {
   color: var(--color-on-accent);
 }
 
-html.newspaper-preview .tsf-section-bar img {
+html.newspaper-preview .tsf-section-bar img:not(.tsf-lockup) {
   background: var(--tsf-paper);
   box-shadow: 0 0 0 1px var(--tsf-ink);
+}
+
+html.newspaper-preview img.tsf-lockup {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+html.newspaper-preview .tsf-section-bar__icon {
+  border-color: color-mix(in srgb, var(--color-on-accent) 35%, transparent);
+  color: var(--color-on-accent);
+  background: transparent;
 }
 
 html.newspaper-preview .sbn-nav-tab {

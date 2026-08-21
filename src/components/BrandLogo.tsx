@@ -15,6 +15,28 @@ interface BrandLogoProps {
   compact?: boolean;
 }
 
+/** Keep the uploaded masthead intact — no square crop, rounding, or extra ink frame. */
+function siteLockupClass(imgClassName: string) {
+  const parts = imgClassName.split(/\s+/).filter(Boolean);
+  const next: string[] = [];
+  for (const part of parts) {
+    if (part === 'object-cover') {
+      next.push('object-contain');
+      continue;
+    }
+    if (part.startsWith('rounded-') || part.startsWith('shadow-')) continue;
+    if (/^w-(7|8|9|11|12|16)$/.test(part)) {
+      next.push('w-auto');
+      continue;
+    }
+    next.push(part);
+  }
+  if (!next.some((p) => p.startsWith('max-w-'))) next.push('max-w-[220px]');
+  if (!next.includes('object-contain')) next.push('object-contain');
+  next.push('tsf-lockup');
+  return next.join(' ');
+}
+
 function BrandTitleBlock({
   title,
   subtitle,
@@ -51,11 +73,13 @@ export default function BrandLogo({
   const { enabled: newspaper } = useNewspaperSkin();
   const title = newspaper ? NEWSPAPER.name : SITE.name;
   const tagline = subtitle ?? (newspaper ? NEWSPAPER.tagline : SITE.tagline);
-  const useSiteLockup = !compact && !isNativeApp();
+  const useSiteLockup = newspaper && !compact && !isNativeApp();
   const src = useSiteLockup ? SITE_LOGO_SRC : APP_LOGO_SRC;
   const logoClass = compact
     ? 'h-8 w-8 object-cover rounded-lg shrink-0'
-    : imgClassName;
+    : useSiteLockup
+      ? siteLockupClass(imgClassName)
+      : imgClassName;
 
   if (failed) {
     return (
