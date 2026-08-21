@@ -26,17 +26,12 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-The Sacramento Free — Android beta v0.2.0.0050 (versionCode 50)
+Android beta 0.2.0 (50)
 
-Closed testing of The Sacramento Free. Same community gifting app — now presented as a colour newspaper.
-
-What's new:
-• The Sacramento Free identity — masthead lockup on the website, hands app icon, ink chrome, colour photographs and map
-• Newspaper is the default look on sacramentobuynothing.com (use ?skin=original for the old orange brand)
-• Black Android status and notification bars
-• Page-turn transitions, typewriter/press sounds, and Newspaper experience controls in Settings
-
-Download (sideload): https://www.sacramentobuynothing.com/download
+• Newspaper look on the website and app
+• Sacramento Free lockup on the site
+• Hands app icon
+• Status and notification bars are black
 ───────────────────────────────────────────────────────────────
 
 Steps:
