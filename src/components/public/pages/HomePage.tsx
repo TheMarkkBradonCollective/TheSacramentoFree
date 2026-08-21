@@ -9,10 +9,11 @@ import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
 import { SITE, SUPPORT } from '../../../siteContent';
 import { useBrand } from '../../../preview/useBrand';
 import { NEWSPAPER } from '../../../preview/newspaperBrand';
-import NewspaperMasthead from '../../../preview/NewspaperMasthead';
 import NewspaperSectionHead from '../../../preview/NewspaperSectionHead';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
+import { extractListingImageUrls } from '../../../lib/listingContent';
+import ListingImage from '../../ListingImage';
 
 const HERO_FEATURES: { icon: typeof PackageCheck; title: string; blurb: string }[] = [
   { icon: PackageCheck, title: 'Post in seconds', blurb: 'Snap a photo, write a few words, done.' },
@@ -58,10 +59,16 @@ function NewspaperFrontPage({
   const description = copy(SITE.description);
   const principles = SITE.principles.map((line) => copy(line));
   const freeRule = copy(SITE.freeRule);
+  const plate = items.find((item) => {
+    if (item.status !== 'active') return false;
+    return Boolean((item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item))[0]);
+  });
+  const plateSrc = plate
+    ? (plate.imageUrls?.length ? plate.imageUrls : extractListingImageUrls(plate))[0]
+    : undefined;
 
   return (
     <HomeScrollStage>
-      <NewspaperMasthead />
       <p className="tsf-folio">{NEWSPAPER.standfirst}</p>
 
       <section className="tsf-front">
@@ -72,6 +79,14 @@ function NewspaperFrontPage({
             <br />
             <span className="text-accent">Ask kindly.</span>
           </h1>
+          {plate && plateSrc && onViewListing && (
+            <figure className="tsf-plate">
+              <button type="button" onClick={() => onViewListing(plate)} className="tsf-plate__btn">
+                <ListingImage src={plateSrc} alt={plate.title} width={960} className="tsf-plate__img" />
+              </button>
+              <figcaption className="tsf-plate__cap">{plate.title}</figcaption>
+            </figure>
+          )}
           <p className="tsf-lede mt-5 text-base lg:text-lg text-muted leading-relaxed">{description}</p>
           <ul className="tsf-front__principles">
             {principles.map((line) => (

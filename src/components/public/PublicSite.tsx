@@ -6,6 +6,7 @@ import { triggerNewspaperPageTurn } from '../../preview/pageTurn';
 import PublicNav from './PublicNav';
 import NewspaperPreviewBanner from './newspaper/NewspaperPreviewBanner';
 import NewspaperEditionBar from './newspaper/NewspaperEditionBar';
+import NewspaperMasthead from '../../preview/NewspaperMasthead';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import HowItWorksPage from './pages/HowItWorksPage';
@@ -132,6 +133,22 @@ export default function PublicSite({
   const paperChrome = (
     <>
       <NewspaperEditionBar />
+      {newspaper && (
+        <>
+          {route === 'home' ? (
+            <>
+              <div className="hidden lg:block">
+                <NewspaperMasthead variant="front" onHomeClick={() => navigateSection('home')} />
+              </div>
+              <div className="lg:hidden">
+                <NewspaperMasthead variant="banner" onHomeClick={() => navigateSection('home')} />
+              </div>
+            </>
+          ) : (
+            <NewspaperMasthead variant="banner" onHomeClick={() => navigateSection('home')} />
+          )}
+        </>
+      )}
       <PublicNav route={route} onNavigate={navigateSection} />
       <main className="flex-1 min-h-0 overflow-hidden">
         <ScrollPage ref={mainRef} footer={<PageScrollFooter />}>

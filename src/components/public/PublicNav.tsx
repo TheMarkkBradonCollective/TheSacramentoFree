@@ -4,6 +4,7 @@ import ThemeToggle from '../ThemeToggle';
 import BrandLogo from '../BrandLogo';
 import { PUBLIC_NAV, type PublicRoute } from '../../public/routes';
 import { isNativeApp } from '../../lib/nativePlatform';
+import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
 
 interface PublicNavProps {
   route: PublicRoute;
@@ -53,6 +54,7 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
     () => (isNativeApp() ? ALL_COMMUNITY_LINKS.filter((l) => l.route !== 'download') : ALL_COMMUNITY_LINKS),
     [],
   );
+  const { enabled: newspaper } = useNewspaperSkin();
   const [menuOpen, setMenuOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -95,13 +97,19 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 sbn-glass-nav sbn-safe-top">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-        <button type="button" onClick={() => onNavigate('home')} aria-label="Sacramento Buy Nothing home" className="shrink-0">
-          <BrandLogo imgClassName="h-8 w-auto max-w-[130px] object-contain rounded-lg" />
-        </button>
+    <header className={`sticky top-0 z-50 sbn-glass-nav sbn-safe-top ${newspaper ? 'tsf-section-bar' : ''}`}>
+      <div
+        className={`max-w-5xl mx-auto px-4 h-14 flex items-center gap-3 ${
+          newspaper ? 'justify-end lg:justify-between' : 'justify-between'
+        }`}
+      >
+        {!newspaper && (
+          <button type="button" onClick={() => onNavigate('home')} aria-label="Sacramento Buy Nothing home" className="shrink-0">
+            <BrandLogo imgClassName="h-8 w-auto max-w-[130px] object-contain rounded-lg" />
+          </button>
+        )}
 
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav className={`hidden lg:flex items-center gap-1 ${newspaper ? 'flex-1 justify-center' : ''}`}>
           {PRIMARY_NAV.map(({ route: r, label }) => (
             <button key={r} type="button" onClick={() => onNavigate(r)} className={linkClass(r)}>
               {label}
@@ -183,19 +191,23 @@ export default function PublicNav({ route, onNavigate }: PublicNavProps) {
               </div>
             )}
           </div>
+        </nav>
 
-          <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary sbn-btn-sm ml-2">
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
+          <button type="button" onClick={() => onNavigate('login')} className="sbn-btn sbn-btn-primary sbn-btn-sm">
             Sign in / Join
           </button>
           <ThemeToggle />
-        </nav>
+        </div>
 
         <div className="flex lg:hidden items-center gap-2">
           <ThemeToggle />
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            className="p-2 rounded-lg border border-app text-app hover:bg-inset transition-colors"
+            className={`p-2 rounded-lg border border-app text-app hover:bg-inset transition-colors ${
+              newspaper ? 'tsf-section-bar__icon' : ''
+            }`}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

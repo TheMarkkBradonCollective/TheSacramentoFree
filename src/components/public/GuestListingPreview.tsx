@@ -112,34 +112,48 @@ export default function GuestListingPreview({
             const preview = stripListingMetadata(item.description);
             const date = formatClassifiedDate(item.createdAt);
             const kicker = [getPostTypeGridBadgeLabel(item.type), item.category].filter(Boolean).join(' — ');
+            const photos = item.imageUrls?.length ? item.imageUrls : extractListingImageUrls(item);
+            const cover = photos[0];
 
             return (
-              <article key={item.id} className="tsf-classified">
-                <span className="tsf-classified__kicker">{kicker}</span>
-                <button type="button" onClick={() => onViewItem(item)} className="text-left w-full cursor-pointer">
-                  <h3>{item.title}</h3>
-                  {preview ? <p className="tsf-classified__body line-clamp-3">{preview}</p> : null}
-                </button>
-                <p className="tsf-classified__meta">
-                  {[item.neighborhood, date].filter(Boolean).join(' · ')}
-                </p>
-                <div className="tsf-classified__actions">
-                  <button
-                    type="button"
-                    onClick={() => onViewItem(item)}
-                    className="sbn-btn sbn-btn-secondary sbn-btn-sm flex-1"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    View
+              <article key={item.id} className="tsf-classified tsf-story">
+                <div className="tsf-story__copy">
+                  <span className="tsf-classified__kicker">{kicker}</span>
+                  <button type="button" onClick={() => onViewItem(item)} className="text-left w-full cursor-pointer">
+                    <h3>{item.title}</h3>
+                    {preview ? <p className="tsf-classified__body line-clamp-3">{preview}</p> : null}
                   </button>
-                  <button
-                    type="button"
-                    onClick={onRequireSignIn}
-                    className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
-                  >
-                    Sign in
-                  </button>
+                  <p className="tsf-classified__meta">
+                    {[item.neighborhood, date].filter(Boolean).join(' · ')}
+                  </p>
+                  <div className="tsf-classified__actions">
+                    <button
+                      type="button"
+                      onClick={() => onViewItem(item)}
+                      className="sbn-btn sbn-btn-secondary sbn-btn-sm flex-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onRequireSignIn}
+                      className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
+                    >
+                      Sign in
+                    </button>
+                  </div>
                 </div>
+                {cover ? (
+                  <button
+                    type="button"
+                    className="tsf-story__thumb"
+                    onClick={() => onViewItem(item)}
+                    aria-label={`View ${item.title || 'listing'}`}
+                  >
+                    <ListingImage src={cover} alt={item.title} width={240} className="tsf-story__img" />
+                  </button>
+                ) : null}
               </article>
             );
           })}
