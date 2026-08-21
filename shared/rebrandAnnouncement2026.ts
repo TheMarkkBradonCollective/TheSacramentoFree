@@ -4,24 +4,24 @@ export const REBRAND_ANNOUNCEMENT_ID = '2026-08-21_rebrand-letter';
 
 export const REBRAND_ANNOUNCEMENT_DATE = '2026-08-21';
 
-export const REBRAND_ANNOUNCEMENT_TITLE = 'Time for the next chapter';
+export const REBRAND_ANNOUNCEMENT_TITLE = 'I do not know what else to do';
 
 /** Short teaser in News list and push preview. */
 export const REBRAND_ANNOUNCEMENT_BODY =
-  'Sounds like I am moving on. I am not — version 0.2.0 is next.';
+  'Sounds like shutdown. Nope — got a good idea. You gotta wait for version 0.2.0.';
 
 /** Full letter — popup + News detail. Not a traditional release note. */
 export const REBRAND_ANNOUNCEMENT_LETTER = `Neighbors,
 
-I have to start with the part I didn't want to write.
+I'm going to be honest — I'm kind of defeated on this one.
 
-I've now learned that our name — "Buy Nothing" — overlaps with trademarks and brands that aren't ours. As a result, we are going to have to discontinue operations: take the site down, pull the apps, and say goodbye.
+Our name — "Buy Nothing" — runs into trademarks and brands that aren't ours. I've turned it over every way I can think of, and I don't know what else to do except shut Sacramento Buy Nothing down: take the site off, pull the apps, and say goodbye.
 
 …
 
 NAWH, I'M JUST GIV'N. 😅
 
-Sacramento Buy Nothing is not shutting down. You're not losing your listings, your messages, or this community. This is not me leaving — it is time for the next chapter.
+Wait — nope. I actually got such a good idea for what comes next. You're gonna have to wait while I cook it, but we're not closing. Your listings, your messages, and this community stay.
 
 Here is what is actually changing:
 
@@ -45,25 +45,25 @@ The website and app remain fully available while we make that transition. Giftin
 };
 
 /** Short feed post for copy/paste (cliff-hanger). */
-export const REBRAND_FEED_CLIFFHANGER = `I have to lead with the part I didn't want to write. 😬
+export const REBRAND_FEED_CLIFFHANGER = `I'm kind of defeated on this one honestly 😔
 
-Our name — "Buy Nothing" — runs into trademarks that aren't ours. On paper, that means shutting Sacramento Buy Nothing down: site off, apps pulled, done. 💀
+Our name hits trademarks we don't own. I've tried everything I can think of — I don't know what else to do but shut Sacramento Buy Nothing down.
 
 …
 
 NAWH, I'M JUST GIV'N. 😂
 
-Not a goodbye — the next chapter. ✅ Version 0.2.0 is cooking in private. 👀 Full letter in News (bell → News). 🔔`;
+Nope. Got such a good idea — you gotta wait. ✅ Version 0.2.0 is cooking. 👀 Full letter in News (bell → News). 🔔`;
 
 export const REBRAND_ANNOUNCEMENT_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 
 /** Updates tab — professional product note (News has the personal letter). */
 export const REBRAND_UPDATE_ID = '2026-08-21_trademark-rebrand-notice';
 
-export const REBRAND_UPDATE_TITLE = 'Before the next chapter';
+export const REBRAND_UPDATE_TITLE = 'Worth reading before you worry';
 
 export const REBRAND_UPDATE_BODY =
-  'Site stays up while we pause big new builds and work toward version 0.2.0.';
+  'Site stays up while version 0.2.0 cooks in private — you gotta wait on the reveal.';
 
 export const REBRAND_UPDATE_DETAIL = `WHAT NEIGHBORS SEE
 • sacramentobuynothing.com now shows an official trademark notice on the home page — we are independent and working on a distinct name

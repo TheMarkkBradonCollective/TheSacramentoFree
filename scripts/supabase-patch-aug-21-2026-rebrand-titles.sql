@@ -1,30 +1,30 @@
 -- =========================================================
--- AUG 21 2026 — Patch titles: next chapter → version 0.2.0
+-- AUG 21 2026 — Patch copy: defeated shutdown → good idea, wait for 0.2.0
 -- Run in Supabase SQL Editor. Safe to re-run.
 -- =========================================================
 
 UPDATE public.app_updates
 SET
-  title = 'Before the next chapter',
-  body = 'Site stays up while we pause big new builds and work toward version 0.2.0.',
+  title = 'Worth reading before you worry',
+  body = 'Site stays up while version 0.2.0 cooks in private — you gotta wait on the reveal.',
   "updatedAt" = NOW()
 WHERE id = '2026-08-21_trademark-rebrand-notice';
 
 UPDATE public.help_announcements
 SET
-  title = 'Time for the next chapter',
-  body = 'Sounds like I am moving on. I am not — version 0.2.0 is next.',
+  title = 'I do not know what else to do',
+  body = 'Sounds like shutdown. Nope — got a good idea. You gotta wait for version 0.2.0.',
   detail = $detail$Neighbors,
 
-I have to start with the part I didn't want to write.
+I'm going to be honest — I'm kind of defeated on this one.
 
-I've now learned that our name — "Buy Nothing" — overlaps with trademarks and brands that aren't ours. As a result, we are going to have to discontinue operations: take the site down, pull the apps, and say goodbye.
+Our name — "Buy Nothing" — runs into trademarks and brands that aren't ours. I've turned it over every way I can think of, and I don't know what else to do except shut Sacramento Buy Nothing down: take the site off, pull the apps, and say goodbye.
 
 …
 
 NAWH, I'M JUST GIV'N. 😅
 
-Sacramento Buy Nothing is not shutting down. You're not losing your listings, your messages, or this community. This is not me leaving — it is time for the next chapter.
+Wait — nope. I actually got such a good idea for what comes next. You're gonna have to wait while I cook it, but we're not closing. Your listings, your messages, and this community stay.
 
 Here is what is actually changing:
 
