@@ -3,22 +3,22 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.1.0 (48)
+  0.1.0 (49)
 
 Beta label (for your records / changelog):
-  beta v0.1.0.0048
+  beta v0.1.0.0049
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0048.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0049.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0048.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.1.0.0049.apk
 
 Package name:
   org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.1.0.0048.aab
+  public/downloads/sac-buy-nothing-beta-v0.1.0.0049.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -26,7 +26,7 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta 0.1.0 (48)
+Android beta 0.1.0 (49)
 
 • Pickup ring no longer blocks the app
 • Expired sign-in no longer looks signed in
@@ -37,8 +37,8 @@ Android beta 0.1.0 (48)
 Steps:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Internal testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0048.aab
-  4. Release name: 0.1.0 (48)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.1.0.0049.aab
+  4. Release name: 0.1.0 (49)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Internal testing
 
