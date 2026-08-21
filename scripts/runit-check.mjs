@@ -72,6 +72,21 @@ const migrationMarkers = [
     markers: ['feedReplies', 'friendRequests', 'eventRsvps', 'discussionComments'],
     label: 'Granular notification preferences',
   },
+  {
+    file: 'scripts/supabase-migration-aug-21-2026-audit-rls.sql',
+    markers: ['chats_delete', "status IN ('active', 'pending_pickup', 'on_hold')"],
+    label: 'Audit RLS (listing privacy + chat delete)',
+  },
+  {
+    file: 'scripts/supabase-migration-aug-21-2026-audit-48.sql',
+    markers: ['delete_own_listing', 'delete_own_event'],
+    label: 'Audit 48 cascade deletes',
+  },
+  {
+    file: 'scripts/supabase-migration-aug-21-2026-storage-items-auth.sql',
+    markers: ['audit-49-storage-items-auth', 'items_storage_insert'],
+    label: 'Listing photo storage auth',
+  },
 ];
 
 for (const { file, markers, label: migrationLabel } of migrationMarkers) {

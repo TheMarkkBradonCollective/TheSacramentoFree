@@ -4,15 +4,23 @@ import { detectInstallKind, readCurrentApkVersion } from './installContext';
 const DEVICE_ID_KEY = 'sbn_device_id_v1';
 const DEVICE_ID_RE = /^[a-zA-Z0-9_-]{8,64}$/;
 
+let memoryDeviceId: string | null = null;
+
 export function getOrCreateDeviceId(): string {
+  if (memoryDeviceId && DEVICE_ID_RE.test(memoryDeviceId)) return memoryDeviceId;
   try {
     const existing = localStorage.getItem(DEVICE_ID_KEY);
-    if (existing && DEVICE_ID_RE.test(existing)) return existing;
+    if (existing && DEVICE_ID_RE.test(existing)) {
+      memoryDeviceId = existing;
+      return existing;
+    }
     const id = crypto.randomUUID();
     localStorage.setItem(DEVICE_ID_KEY, id);
+    memoryDeviceId = id;
     return id;
   } catch {
-    return crypto.randomUUID();
+    memoryDeviceId ??= crypto.randomUUID();
+    return memoryDeviceId;
   }
 }
 

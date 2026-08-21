@@ -1,0 +1,6 @@
+Android beta 0.1.0 (47)
+
+• Stays signed in on this phone
+• Password reset works
+• Map route fills the screen
+• Listing, comment, and chat errors show if they fail

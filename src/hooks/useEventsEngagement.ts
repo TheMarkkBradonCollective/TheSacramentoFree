@@ -11,6 +11,8 @@ import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealt
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { countPastRsvps, effectivePastRsvp } from '../lib/eventRsvp';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { isStaffRole } from '../lib/roles';
 
 export interface EventRsvpState {
   userRsvp: EventRsvpStatus | null;
@@ -85,6 +87,8 @@ export function useEventsEngagement(
   const [eventComments, setEventComments] = useState<Record<string, EventComment[]>>({});
 
   const uid = userProfile?.uid ?? '';
+  const isStaff = userProfile ? isStaffRole(userProfile.role) : false;
+  const { alert } = useConfirm();
   const eventIdSetRef = useRef(new Set<string>());
 
   const getRsvpsForEvent = useCallback(
@@ -224,9 +228,14 @@ export function useEventsEngagement(
       [eventId]: optimisticState,
     }));
 
-    setSupabaseEventRsvp(eventId, uid, persistStatus).catch((err) => {
+    setSupabaseEventRsvp(eventId, uid, persistStatus).then((ok) => {
+      if (ok) return;
+      setEventRsvps((prev) => ({ ...prev, [eventId]: current }));
+      void alert({ title: 'Could not RSVP', message: 'Your RSVP was not saved. Please try again.' });
+    }).catch((err) => {
       console.warn('Failed to persist RSVP:', err);
       setEventRsvps((prev) => ({ ...prev, [eventId]: current }));
+      void alert({ title: 'Could not RSVP', message: 'Your RSVP was not saved. Please try again.' });
     });
   };
 
@@ -252,9 +261,14 @@ export function useEventsEngagement(
       [eventId]: [...current, newComment],
     }));
 
-    createSupabaseEventComment(newComment).catch((err) => {
+    void createSupabaseEventComment(newComment).then((ok) => {
+      if (ok) return;
+      setEventComments((prev) => ({ ...prev, [eventId]: current }));
+      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
+    }).catch((err) => {
       console.warn('Failed to persist event comment:', err);
       setEventComments((prev) => ({ ...prev, [eventId]: current }));
+      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
     });
   };
 
@@ -265,10 +279,10 @@ export function useEventsEngagement(
     const next = current.filter((c) => c.id !== commentId);
     setEventComments((prev) => ({ ...prev, [eventId]: next }));
 
-    const result = await deleteSupabaseEventComment(commentId, uid);
+    const result = await deleteSupabaseEventComment(commentId, uid, isStaff);
     if (!result.ok) {
       setEventComments((prev) => ({ ...prev, [eventId]: current }));
-      console.warn('Failed to delete event comment:', result.errorMessage);
+      void alert({ title: 'Could not delete comment', message: result.errorMessage || 'Please try again.' });
     }
   };
 

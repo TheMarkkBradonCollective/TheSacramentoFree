@@ -1,4 +1,16 @@
 import { CHANGELOG_AUTHOR_UID } from './changelogAuthor';
+import {
+  REBRAND_ANNOUNCEMENT_BODY,
+  REBRAND_ANNOUNCEMENT_DATE,
+  REBRAND_ANNOUNCEMENT_ID,
+  REBRAND_ANNOUNCEMENT_LETTER,
+  REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  REBRAND_ANNOUNCEMENT_TITLE,
+  REBRAND_UPDATE_BODY,
+  REBRAND_UPDATE_DETAIL,
+  REBRAND_UPDATE_ID,
+  REBRAND_UPDATE_TITLE,
+} from './rebrandAnnouncement2026';
 
 export interface SeededAppUpdate {
   id: string;
@@ -73,8 +85,11 @@ const APK_0043_PUBLISHED_AT = '2026-08-20T20:30:00.000Z';
 const APK_0044_PUBLISHED_AT = '2026-08-20T21:00:00.000Z';
 const APK_0045_PUBLISHED_AT = '2026-08-20T21:30:00.000Z';
 const APK_0046_PUBLISHED_AT = '2026-08-20T22:35:00.000Z';
-const TSF_020_0001_PUBLISHED_AT = '2026-08-21T03:30:00.000Z';
+const APK_0047_PUBLISHED_AT = '2026-08-21T02:00:00.000Z';
+const APK_0048_PUBLISHED_AT = '2026-08-21T04:00:00.000Z';
+const APK_0049_PUBLISHED_AT = '2026-08-21T05:00:00.000Z';
 const APK_0050_PUBLISHED_AT = '2026-08-21T06:55:00.000Z';
+const REBRAND_LETTER_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
 const ANDROID_WWW_PUBLISHED_AT = '2026-08-13T18:00:00.000Z';
@@ -137,7 +152,7 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
     `WHAT NEIGHBORS SEE
 The Sacramento Free, 0.2.0 (50): the same community gifting app, presented as a colour newspaper.
 
-Since 0.1.0 (46):
+Since 0.1.0 (49):
 • Ink-and-paper identity — stacked masthead, classified columns, editorial section fronts
 • Colour photographs, portraits, and map (chrome stays ink)
 • Page-turn transitions, typewriter/press sounds, and a Newspaper experience panel in Settings
@@ -164,31 +179,106 @@ HISTORY
     APK_0050_PUBLISHED_AT,
   ),
   update(
-    '2026-08-21_tsf-0.2.0-0001',
+    REBRAND_UPDATE_ID,
+    REBRAND_ANNOUNCEMENT_DATE,
+    REBRAND_UPDATE_TITLE,
+    REBRAND_UPDATE_BODY,
+    REBRAND_UPDATE_DETAIL,
+    REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-21_apk-0049',
     '2026-08-21',
-    'The Sacramento Free — beta v0.2.0.0001',
-    'A grayscale newspaper reface of the same app. Same pages, features, and flows.',
+    'New Android download — beta v0.1.0.0049',
+    'Feed/chat filters follow your account, Android padding, event errors, phone tester export.',
     `WHAT NEIGHBORS SEE
-The Sacramento Free, 0.2.0 (1): the same community gifting app, presented as a digital newspaper.
+Beta v0.1.0.0049.
 
-Since 0.1.0 (46):
-• Grayscale ink-and-paper identity — masthead, classified blocks, editorial section fronts
-• Page-turn transitions, typewriter/press sounds, and a Newspaper experience panel in Settings
-• Production at sacramentobuynothing.com and the native apps stay on the original brand unless opted in
+• Neighbor-feed and chat inbox filters follow your account across devices
+• Android no longer adds extra space above the status bar
+• Event load failures show an error instead of an empty calendar
+• Hosts can delete a cancelled or past event
+• Play tester emails copy/share on a phone
+• Stuff can show given/fulfilled listings again
+• Map shows pending-pickup pins
+• Tapping a listing fits the whole route on screen instead of zooming to the wrong street
 
-This is a visual reface only. No routes, queries, or tables changed.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-21-2026-storage-items-auth.sql in Supabase.
 
 — Mark
 
 WHERE TO LOOK IN CODE
-- android/app/build.gradle — versionName 0.2.0, versionCode 1
-- play-store-assets/release-notes-v0.2.0-0001.txt
-- src/preview/newspaper.css — token remapping and editorial chrome
-- src/preview/newspaperSound.ts — synthesised newsroom sounds
+- android/app/build.gradle — versionCode 49
+- play-store-assets/release-notes-v0.1.0-0049.txt
+- src/lib/feedDisplayPrefs.ts
+- src/lib/chatInboxFilters.ts
+- src/lib/safeAreaInsets.ts
+- src/supabase.ts — getSupabaseEvents
 
 HISTORY
-2026-08-21 — The Sacramento Free 0.2.0 (1) saved on cursor/sacramento-free-0-2-0-53f0.`,
-    TSF_020_0001_PUBLISHED_AT,
+2026-08-21 — leftover audit 48 work as 49.`,
+    APK_0049_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-21_apk-0048',
+    '2026-08-21',
+    'New Android download — beta v0.1.0.0048',
+    'Pickup ring, expired sign-in, RSVP/chat errors, and listing delete.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0048.
+
+• Pickup ring no longer blocks the app if a listing is gone
+• Expired sign-in no longer looks signed in
+• RSVP and chat load errors show if they fail
+• Deleting a listing or event actually removes it
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-21-2026-audit-48.sql in Supabase.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 48
+- play-store-assets/release-notes-v0.1.0-0048.txt
+- src/components/goget/GoGetIncomingRingOverlay.tsx
+- src/lib/nativeAppSession.ts
+- scripts/supabase-migration-aug-21-2026-audit-48.sql
+
+HISTORY
+2026-08-21 — full site audit 48.`,
+    APK_0048_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-21_apk-0047',
+    '2026-08-21',
+    'New Android download — beta v0.1.0.0047',
+    'Stops false sign-out, password reset, map route fit, and error alerts.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0047.
+
+• Stays signed in on this phone
+• Password reset works
+• Map route fills the screen
+• Listing, comment, and chat errors show if they fail
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-21-2026-audit-rls.sql in Supabase.
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 47
+- play-store-assets/release-notes-v0.1.0-0047.txt
+- src/lib/nativeAppSession.ts
+- src/lib/mapRouteFitPadding.ts
+
+HISTORY
+2026-08-21 — /runit release; Android beta 0047 built.`,
+    APK_0047_PUBLISHED_AT,
   ),
   update(
     '2026-08-20_apk-0046',
@@ -1640,23 +1730,71 @@ HISTORY
     APK_0050_PUBLISHED_AT,
   ),
   news(
-    '2026-08-21_tsf-0.2.0-0001',
+    REBRAND_ANNOUNCEMENT_ID,
+    REBRAND_ANNOUNCEMENT_DATE,
+    REBRAND_ANNOUNCEMENT_TITLE,
+    REBRAND_ANNOUNCEMENT_BODY,
+    REBRAND_ANNOUNCEMENT_LETTER,
+    REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-21_apk-0049',
     '2026-08-21',
-    'The Sacramento Free — 0.2.0 (1)',
-    'A grayscale newspaper reface of the same app. Same pages, features, and flows.',
+    'New Android beta 0049 — filters, padding, event errors, phone tester export',
+    'Feed and chat filters follow your account; Android padding, event load errors, and phone tester export are fixed.',
     `WHAT NEIGHBORS SEE
-Beta v0.2.0.0001: The Sacramento Free. Ink, paper, classifieds, and a page that turns.
+Beta v0.1.0.0049: feed and chat filters follow you across devices, Android no longer double-pads the status bar, event load failures show an error, hosts can delete cancelled or past events, Play tester emails copy on a phone, given/fulfilled listings can be shown again, tapping a listing fits the route on screen.
 
-The original orange Sacramento Buy Nothing look is unchanged on production and in the native apps unless you opt in.
+Sideload: https://www.sacramentobuynothing.com/download
+
+Run scripts/supabase-migration-aug-21-2026-storage-items-auth.sql in Supabase.
 
 — Mark
 
 WHERE TO LOOK IN CODE
-See Update 2026-08-21_tsf-0.2.0-0001.
+See Update 2026-08-21_apk-0049.
 
 HISTORY
-2026-08-21 — The Sacramento Free 0.2.0 (1).`,
-    TSF_020_0001_PUBLISHED_AT,
+2026-08-21 — Android beta 0049 / leftover audit 48.`,
+    APK_0049_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-21_apk-0048',
+    '2026-08-21',
+    'New Android beta 0048 — pickup ring and delete fixes',
+    'Pickup requests no longer freeze the app; expired sign-in and listing delete work.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0048: pickup ring can be dismissed, expired sessions sign you out cleanly, RSVP and chat errors show, deleting a listing actually removes it.
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-21_apk-0048.
+
+HISTORY
+2026-08-21 — Android beta 0048 / full site audit.`,
+    APK_0048_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-21_apk-0047',
+    '2026-08-21',
+    'New Android beta 0047 — stay signed in on this phone',
+    'Stay signed in, password reset, map route fills the screen.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0047: stays signed in on this phone, password reset works, map route fills the screen.
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-21_apk-0047.
+
+HISTORY
+2026-08-21 — Android beta 0047 /runit release.`,
+    APK_0047_PUBLISHED_AT,
   ),
   news(
     '2026-08-20_apk-0046',

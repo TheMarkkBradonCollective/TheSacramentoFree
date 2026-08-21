@@ -51,7 +51,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import L from 'leaflet';
 import { getPostTypeMapDetailLabel, getPostTypeMapLabel, getListingContactButtonLabel, isEventsMapFilter, type MapContentFilter } from '../lib/postType';
 import { pickSoonestPerEventSeries } from '../lib/eventSeries';
-import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { fitRoutePreviewToViewport, frameSelectionPreview, measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { ROUTE_LINE_CASING, ROUTE_LINE_MAIN } from '../lib/mapRouteLineStyle';
 
 function MapCreateFab({
   onOpenNewPost,
@@ -508,7 +509,11 @@ export default function SacramentoMapView({
   const routeCoordsRef = useRef<[number, number][] | null>(null);
   const selectionCardRef = useRef<HTMLDivElement | null>(null);
   const routeAutoFitEnabledRef = useRef(true);
-  const isProgrammaticMapMoveRef = useRef(false);
+  const programmaticMapMoveUntilRef = useRef(0);
+
+  const markProgrammaticMapMove = (ms = 450) => {
+    programmaticMapMoveUntilRef.current = Date.now() + ms;
+  };
 
   // Default coordinate centered around the user's neighborhood
   const userNeighborhood = userProfile?.neighborhood || 'Midtown';
@@ -555,55 +560,86 @@ export default function SacramentoMapView({
         mapElement: mapEl,
         obstructingElements: [selectionCardRef.current],
         defaults: {
-          top: isFullScreenMobile ? 80 : 56,
-          bottom: isFullScreenMobile ? 56 : 48,
-          left: 48,
-          right: 56,
+          top: isFullScreenMobile ? 56 : 40,
+          bottom: isFullScreenMobile ? 20 : 32,
+          left: 28,
+          right: 28,
         },
-        margin: 16,
+        margin: 18,
       });
 
       const cardStack = hasMapSelection ? selectionCardHeight : 0;
-      const routePreviewOnMap =
-        (routeCoordsRef.current?.length ?? 0) >= 2 && Boolean(routeEndpointsRef.current?.end);
-      const floatControls = isFullScreenMobile && hasMapSelection && !routePreviewOnMap ? 56 : 0;
-      const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 72 : 48);
-      const bottom = Math.max(measured.bottomRight[1], cardStack + floatControls + 20);
+      const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 52 : 40);
+      const bottom = Math.max(measured.bottomRight[1], cardStack > 0 ? cardStack + 12 : measured.bottomRight[1]);
 
-      const start = userLocationRef.current ?? userLocation;
       const dest = routeEndpointsRef.current?.end;
       const padding = {
         topLeft: [measured.topLeft[0], top] as [number, number],
         bottomRight: [measured.bottomRight[0], bottom] as [number, number],
       };
 
-      isProgrammaticMapMoveRef.current = true;
-      if (start && dest) {
-        fitRoutePreviewToViewport({
-          map,
-          routeCoords: coords,
-          start,
-          end: dest,
-          padding,
-          maxZoom: 17,
+      markProgrammaticMapMove();
+      map.invalidateSize({ animate: false });
+      if (map.getSize().x < 32 || map.getSize().y < 32) {
+        window.requestAnimationFrame(() => {
+          fitRouteToAvailableView(options);
         });
-      } else {
-        const bounds = L.latLngBounds(coords);
-        if (start) bounds.extend([start.lat, start.lng]);
-        if (dest) bounds.extend([dest.lat, dest.lng]);
-        map.fitBounds(bounds, {
-          paddingTopLeft: padding.topLeft,
-          paddingBottomRight: padding.bottomRight,
-          maxZoom: 17,
-          animate: false,
-        });
+        return;
       }
-      window.requestAnimationFrame(() => {
-        isProgrammaticMapMoveRef.current = false;
+      fitRoutePreviewToViewport({
+        map,
+        routeCoords: coords,
+        end: dest,
+        padding,
+        maxZoom: 15,
+        minZoom: 9,
       });
     },
-    [hasMapSelection, isFullScreenMobile, selectionCardHeight, userLocation],
+    [hasMapSelection, isFullScreenMobile, selectionCardHeight],
   );
+
+  const selectionFitPadding = useCallback((): ReturnType<typeof measureMapFitPadding> => {
+    const mapEl = mapContainerRef.current;
+    if (!mapEl) {
+      return { topLeft: [28, 56], bottomRight: [28, 160] };
+    }
+    const measured = measureMapFitPadding({
+      mapElement: mapEl,
+      obstructingElements: [selectionCardRef.current],
+      defaults: {
+        top: isFullScreenMobile ? 56 : 40,
+        bottom: isFullScreenMobile ? 20 : 32,
+        left: 28,
+        right: 28,
+      },
+      margin: 18,
+    });
+    const cardStack = hasMapSelection ? selectionCardHeight : 0;
+    const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 52 : 40);
+    const bottom = Math.max(measured.bottomRight[1], cardStack > 0 ? cardStack + 12 : measured.bottomRight[1]);
+    return {
+      topLeft: [measured.topLeft[0], top],
+      bottomRight: [measured.bottomRight[0], bottom],
+    };
+  }, [hasMapSelection, isFullScreenMobile, selectionCardHeight]);
+
+  const framePinInView = useCallback(
+    (lat: number, lng: number) => {
+      const map = mapRef.current;
+      if (!map) return;
+      markProgrammaticMapMove();
+      frameSelectionPreview({
+        map,
+        dest: { lat, lng },
+        user: userLocationRef.current,
+        padding: selectionFitPadding(),
+        maxZoom: 15,
+      });
+    },
+    [selectionFitPadding],
+  );
+  const framePinInViewRef = useRef(framePinInView);
+  framePinInViewRef.current = framePinInView;
 
   const lockNavOrigin = useCallback(() => {
     setLockedNavOrigin(resolveNavOrigin());
@@ -738,6 +774,7 @@ export default function SacramentoMapView({
 
     if (!hasInitialMapCenterRef.current) {
       try {
+        markProgrammaticMapMove();
         map.setView([latitude, longitude], 14, { animate: false });
         hasInitialMapCenterRef.current = true;
         lastFollowPanRef.current = nextPos;
@@ -789,11 +826,20 @@ export default function SacramentoMapView({
 
   /** Re-enable follow mode and center on the latest GPS fix. */
   const handleLocateUser = () => {
+    if (routePreviewActiveRef.current) {
+      setFollowUser(false);
+      followUserRef.current = false;
+      routeAutoFitEnabledRef.current = true;
+      fitRouteToAvailableView({ force: true });
+      return;
+    }
+
     setFollowUser(true);
     followUserRef.current = true;
 
     if (userLocationRef.current && mapRef.current) {
       const pos = userLocationRef.current;
+      markProgrammaticMapMove();
       mapRef.current.setView([pos.lat, pos.lng], Math.max(mapRef.current.getZoom(), 14), {
         animate: false,
       });
@@ -828,7 +874,7 @@ export default function SacramentoMapView({
     if (showingEvents) return [];
 
     return items.filter((item) => {
-      if (item.status !== 'active') return false;
+      if (item.status !== 'active' && item.status !== 'pending_pickup') return false;
 
       // 1. Search text filter
       const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
@@ -992,7 +1038,7 @@ export default function SacramentoMapView({
     geoUnsubscribeRef.current = unsubscribeGeo;
 
     const onUserMapInteraction = () => {
-      if (isProgrammaticMapMoveRef.current) return;
+      if (Date.now() < programmaticMapMoveUntilRef.current) return;
       routeAutoFitEnabledRef.current = false;
       setFollowUser(false);
       followUserRef.current = false;
@@ -1096,7 +1142,7 @@ export default function SacramentoMapView({
           routeAutoFitEnabledRef.current = true;
           setFollowUser(false);
           followUserRef.current = false;
-          map.setView([lat, lng], map.getZoom(), { animate: false });
+          framePinInViewRef.current(lat, lng);
         },
       );
     } else {
@@ -1121,7 +1167,7 @@ export default function SacramentoMapView({
           routeAutoFitEnabledRef.current = true;
           setFollowUser(false);
           followUserRef.current = false;
-          map.setView([lat, lng], map.getZoom(), { animate: false });
+          framePinInViewRef.current(lat, lng);
         },
       );
     } else {
@@ -1520,21 +1566,8 @@ export default function SacramentoMapView({
       lastFitCoordsKeyRef.current = coordsFitKey;
     }
 
-    L.polyline(routeCoords, {
-      color: '#FF4500',
-      weight: 8,
-      opacity: 0.28,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(routeLayer);
-
-    L.polyline(routeCoords, {
-      color: '#FF4500',
-      weight: 4,
-      opacity: 0.92,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(routeLayer);
+    L.polyline(routeCoords, ROUTE_LINE_CASING).addTo(routeLayer);
+    L.polyline(routeCoords, ROUTE_LINE_MAIN).addTo(routeLayer);
 
     if (destChanged || coordsChanged) {
       window.requestAnimationFrame(() => {
@@ -1570,15 +1603,22 @@ export default function SacramentoMapView({
     if (start) routeEndpointsRef.current = { start, end: routeDestination };
   }, [routeDestination, userLocation]);
 
-  // Handle programmatically panning/zooming to a selected neighborhood
+  useEffect(() => {
+    if (!routeDestination) return;
+    if (routeCoords && routeCoords.length >= 2) return;
+    framePinInView(routeDestination.lat, routeDestination.lng);
+  }, [routeDestination?.lat, routeDestination?.lng, routeCoords, framePinInView]);
+
+  // Neighborhood filter — don't steal the camera while a listing route is up.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || routePreviewActiveRef.current) return;
 
     if (sNeigh && sNeigh !== 'All Neighborhoods') {
       const parentCoord = NEIGHBORHOOD_COORDS[sNeigh];
       if (parentCoord) {
         const { lat, lng } = convertPercentToLatLng(parentCoord.x, parentCoord.y);
+        markProgrammaticMapMove();
         map.setView([lat, lng], 13, { animate: false });
       }
     }

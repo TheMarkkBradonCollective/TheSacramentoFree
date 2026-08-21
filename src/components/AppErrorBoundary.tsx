@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { supabase } from '../supabase';
 import { clearSessionCache } from '../lib/sessionCache';
+import { clearAllLocalNativeSessionIds } from '../lib/nativeAppSession';
 
 type Props = {
   children: ReactNode;
@@ -28,6 +29,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
     this.signingOut = true;
     try {
       clearSessionCache();
+      clearAllLocalNativeSessionIds();
       await supabase.auth.signOut();
     } catch (err) {
       console.warn('[app] sign-out from error screen failed:', err);

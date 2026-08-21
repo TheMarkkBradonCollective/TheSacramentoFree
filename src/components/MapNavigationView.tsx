@@ -74,8 +74,14 @@ import {
   unlockNavigationSpeech,
   voiceCueThresholdsForMode,
 } from '../lib/navigationVoice';
-import { measureMapFitPadding } from '../lib/mapRouteFitPadding';
+import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
 import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
+import {
+  ROUTE_LINE_CASING,
+  ROUTE_LINE_MAIN,
+  ROUTE_LINE_TRAVELED,
+  ROUTE_LINE_TRAVELED_CASING,
+} from '../lib/mapRouteLineStyle';
 
 export interface NavProgressUpdate {
   lat: number;
@@ -105,10 +111,6 @@ interface MapNavigationViewProps {
 }
 
 type NavLoadingStage = 'locating' | 'routing' | 'ready';
-
-const NAV_BRAND = '#FF4500';
-const NAV_BRAND_LIGHT = '#FF6B2E';
-const NAV_ROUTE_GLOW = 'rgba(255, 69, 0, 0.42)';
 
 function VoiceStatusBar({ phrase, visible }: { phrase: string; visible: boolean }) {
   if (!visible || !phrase) return null;
@@ -446,14 +448,14 @@ function createNavUserIcon(heading: number): L.DivIcon {
 }
 
 type RoutePolylineHandles = {
+  traveledCasing: L.Polyline | null;
   traveled: L.Polyline | null;
-  glow: L.Polyline | null;
-  mid: L.Polyline | null;
-  animated: L.Polyline | null;
+  remainingCasing: L.Polyline | null;
+  remaining: L.Polyline | null;
 };
 
 function emptyRouteHandles(): RoutePolylineHandles {
-  return { traveled: null, glow: null, mid: null, animated: null };
+  return { traveledCasing: null, traveled: null, remainingCasing: null, remaining: null };
 }
 
 function upsertRoutePolyline(
@@ -473,50 +475,24 @@ function upsertRoutePolyline(
 
   if (handles[key]) {
     handles[key]!.setLatLngs(latlngs);
+    handles[key]!.setStyle(style);
     return;
   }
 
   handles[key] = L.polyline(latlngs, style).addTo(layer);
 }
 
-/** Update route geometry in place so dash animations and tiles are not restarted every GPS tick. */
+/** Update route geometry in place so tiles are not restarted every GPS tick. */
 function updateRoutePolylines(
   layer: L.LayerGroup,
   handles: RoutePolylineHandles,
   traveled: [number, number][],
   remaining: [number, number][],
 ): void {
-  upsertRoutePolyline(layer, handles, 'traveled', traveled, {
-    color: 'rgba(148, 163, 184, 0.55)',
-    weight: 8,
-    opacity: 0.85,
-    lineCap: 'round',
-    lineJoin: 'round',
-  });
-
-  upsertRoutePolyline(layer, handles, 'glow', remaining, {
-    className: 'sbn-nav-route-glow',
-    color: NAV_ROUTE_GLOW,
-    weight: 15,
-    opacity: 0.9,
-    lineCap: 'round',
-    lineJoin: 'round',
-  });
-  upsertRoutePolyline(layer, handles, 'mid', remaining, {
-    color: NAV_BRAND_LIGHT,
-    weight: 9,
-    opacity: 0.95,
-    lineCap: 'round',
-    lineJoin: 'round',
-  });
-  upsertRoutePolyline(layer, handles, 'animated', remaining, {
-    className: 'sbn-nav-route-animated',
-    color: NAV_BRAND,
-    weight: 5,
-    opacity: 1,
-    lineCap: 'round',
-    lineJoin: 'round',
-  });
+  upsertRoutePolyline(layer, handles, 'traveledCasing', traveled, ROUTE_LINE_TRAVELED_CASING);
+  upsertRoutePolyline(layer, handles, 'traveled', traveled, ROUTE_LINE_TRAVELED);
+  upsertRoutePolyline(layer, handles, 'remainingCasing', remaining, ROUTE_LINE_CASING);
+  upsertRoutePolyline(layer, handles, 'remaining', remaining, ROUTE_LINE_MAIN);
 }
 
 function debounceMapInvalidate(map: L.Map, delayMs = 160): () => void {
@@ -539,9 +515,9 @@ function withProgrammaticNavCamera(fn: () => void): void {
   try {
     fn();
   } finally {
-    window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
       programmaticNavCamera = false;
-    });
+    }, 360);
   }
 }
 
@@ -677,7 +653,7 @@ export default function MapNavigationView({
   const arrivedRef = useRef(false);
   const routeAnnouncedRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const followUserRef = useRef(true);
+  const followUserRef = useRef(false);
   const userPosRef = useRef<LatLng>(origin);
   const logicPosRef = useRef<LatLng>(origin);
   const headingRef = useRef(0);
@@ -730,7 +706,7 @@ export default function MapNavigationView({
   const [heading, setHeading] = useState(0);
   const [speedMph, setSpeedMph] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
-  const [followUser, setFollowUser] = useState(true);
+  const [followUser, setFollowUser] = useState(false);
   followUserRef.current = followUser;
   const [voiceOn, setVoiceOn] = useState(() => readNavigationSettings().voiceEnabled);
   const [arrived, setArrived] = useState(false);
@@ -912,20 +888,24 @@ export default function MapNavigationView({
     const padding = measureMapFitPadding({
       mapElement: mapEl,
       obstructingElements: [sheet, banner],
-      defaults: { top: 112, bottom: 136, left: 48, right: 56 },
-      margin: 20,
+      defaults: { top: 88, bottom: 120, left: 28, right: 28 },
+      margin: 16,
     });
 
     isProgrammaticMapMoveRef.current = true;
-    map.fitBounds(activeRoute.coords, {
-      paddingTopLeft: padding.topLeft,
-      paddingBottomRight: padding.bottomRight,
+    map.invalidateSize({ animate: false });
+    const dest = destinationRef.current;
+    fitRoutePreviewToViewport({
+      map,
+      routeCoords: activeRoute.coords,
+      end: dest,
+      padding,
       maxZoom: 15,
-      animate: false,
+      minZoom: 9,
     });
-    window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
       isProgrammaticMapMoveRef.current = false;
-    });
+    }, 360);
   }, []);
 
   useEffect(() => {
@@ -1118,14 +1098,16 @@ export default function MapNavigationView({
     if (!mapContainerRef.current || mapRef.current || mapBootstrappedRef.current) return;
     mapBootstrappedRef.current = true;
 
+    const dest = destinationRef.current;
     const start = initialOriginRef.current;
+    const center = dest ?? start;
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
       attributionControl: true,
       fadeAnimation: false,
       zoomAnimation: false,
       markerZoomAnimation: false,
-    }).setView([start.lat, start.lng], 16);
+    }).setView([center.lat, center.lng], 13);
 
     const tileLayer = L.tileLayer(SBN_MAP_TILE_URL, SBN_MAP_TILE_OPTIONS).addTo(map);
     tileLayerRef.current = tileLayer;
@@ -1247,11 +1229,6 @@ export default function MapNavigationView({
       hasFittedRouteRef.current = true;
       const start = userPosRef.current;
 
-      // Before the device has moved, GPS gives us no heading, so the "look ahead"
-      // camera bias defaulted to north — if the road actually heads any other way,
-      // the route could render almost entirely off-screen on the very first frame.
-      // Orient using the route's own initial bearing instead so the road ahead is
-      // always visible from the moment navigation opens.
       if (route.coords.length >= 2) {
         const initialHeading = bearingAlongRoute(route.coords, start);
         headingRef.current = initialHeading;
@@ -1259,23 +1236,21 @@ export default function MapNavigationView({
         setHeading(initialHeading);
       }
 
-      followUserRef.current = true;
-      setFollowUser(true);
-      centerMapOnUser(map, start, 17);
-      applyHeadingUpRotation(mapRotatorRef.current, map, start, headingRef.current, northUpRef.current);
-      window.requestAnimationFrame(() => {
-        const live = mapRef.current;
-        if (!live || !followUserRef.current) return;
-        centerMapOnUser(live, userPosRef.current, Math.max(live.getZoom(), 17));
-        applyHeadingUpRotation(mapRotatorRef.current, live, userPosRef.current, headingRef.current, northUpRef.current);
-      });
+      followUserRef.current = false;
+      setFollowUser(false);
+      routeOverviewLockedRef.current = false;
+      applyHeadingUpRotation(mapRotatorRef.current, map, start, headingRef.current, true);
+      resetMapBearing(map);
       if (userMarkerRef.current) {
-        const markerHeading = northUpRef.current ? headingRef.current : 0;
-        userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
-        lastMarkerHeadingRef.current = markerHeading;
+        userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
+        lastMarkerHeadingRef.current = headingRef.current;
       }
+      window.requestAnimationFrame(() => {
+        fitRouteOverview({ force: true });
+        window.requestAnimationFrame(() => fitRouteOverview({ force: true }));
+      });
     }
-  }, [route, destination]);
+  }, [route, destination, fitRouteOverview]);
 
   useEffect(() => {
     const map = mapRef.current;

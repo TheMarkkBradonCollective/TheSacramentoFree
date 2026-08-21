@@ -73,6 +73,7 @@ const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'active', label: 'Available' },
   { value: 'pending_pickup', label: 'Pending pickup' },
   { value: 'on_hold', label: 'On hold' },
+  { value: 'completed', label: 'Given / fulfilled' },
 ];
 
 const VOTE_FILTER_OPTIONS: { value: VoteFilter; label: string }[] = [
@@ -233,7 +234,7 @@ export default function ItemGrid({
     setActiveQuickPicks(new Set(next.activeQuickPicks));
     setGridSortMode(next.gridSortMode);
     filtersBootstrappedRef.current = false;
-  }, [userProfile.uid]);
+  }, [userProfile.uid, userProfile.appPreferences]);
 
   useEffect(() => {
     if (!filtersBootstrappedRef.current) {
@@ -271,7 +272,7 @@ export default function ItemGrid({
   const [attributionItem, setAttributionItem] = useState<ItemPost | null>(null);
 
   const { savedIds, toggleSaved, isSaved } = useSavedItems(userProfile.uid);
-  const { confirm } = useConfirm();
+  const { confirm, alert } = useConfirm();
 
   // Subscribe to live GPS so we can show distance badges on cards.
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
@@ -335,11 +336,15 @@ export default function ItemGrid({
     setUpdatingItemId(itemId);
 
     try {
-      await updateSupabaseItemStatus(itemId, newStatus, userProfile.uid);
+      const ok = await updateSupabaseItemStatus(itemId, newStatus, userProfile.uid);
+      if (!ok) {
+        void alert({ message: 'Could not update this listing. Please try again.' });
+        return;
+      }
       onRefresh();
     } catch (err) {
       console.warn('Supabase update status failed:', err);
-      onRefresh();
+      void alert({ message: 'Could not update this listing. Please try again.' });
     } finally {
       setUpdatingItemId(null);
     }
@@ -437,7 +442,11 @@ export default function ItemGrid({
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) => {
       if (item.status === 'withdrawn') return false;
-      if (isClosedCommunityListing(item)) return false;
+      if (selectedStatus === 'completed') {
+        if (!isClosedCommunityListing(item)) return false;
+      } else if (isClosedCommunityListing(item)) {
+        return false;
+      }
 
       const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
       if (!searchString.includes(searchTerm.toLowerCase())) return false;

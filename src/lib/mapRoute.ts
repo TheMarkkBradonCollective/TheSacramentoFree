@@ -16,6 +16,29 @@ export interface DrivingRouteResult {
 
 const EARTH_RADIUS_M = 6_371_000;
 
+/** Matches api/_lib/mapCoords.ts — keep both boxes in sync. */
+export const SACRAMENTO_SERVICE_AREA = {
+  latMin: 38.0,
+  latMax: 39.1,
+  lngMin: -121.8,
+  lngMax: -120.7,
+} as const;
+
+export function isLatLngInSacramentoServiceArea(point: LatLng): boolean {
+  return (
+    Number.isFinite(point.lat) &&
+    Number.isFinite(point.lng) &&
+    point.lat >= SACRAMENTO_SERVICE_AREA.latMin &&
+    point.lat <= SACRAMENTO_SERVICE_AREA.latMax &&
+    point.lng >= SACRAMENTO_SERVICE_AREA.lngMin &&
+    point.lng <= SACRAMENTO_SERVICE_AREA.lngMax
+  );
+}
+
+export function isRouteInSacramentoServiceArea(from: LatLng, to: LatLng): boolean {
+  return isLatLngInSacramentoServiceArea(from) && isLatLngInSacramentoServiceArea(to);
+}
+
 const OSRM_PROFILE_ENDPOINTS: Record<NavTravelMode, readonly string[]> = {
   driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
   cycling: ['https://routing.openstreetmap.de/routed-bike'],
@@ -63,7 +86,7 @@ export function estimateDrivingStats(from: LatLng, to: LatLng): Pick<DrivingRout
 }
 
 export function isRoadGeometry(coords: [number, number][] | null | undefined): boolean {
-  return Array.isArray(coords) && coords.length > 2;
+  return Array.isArray(coords) && coords.length >= 2;
 }
 
 export function formatRouteDistance(meters: number): string {
@@ -127,42 +150,15 @@ export function openDrivingDirections(
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-function stitchRouteToEndpoints(
-  coords: [number, number][],
-  from: LatLng,
-  to: LatLng,
-): [number, number][] {
-  if (coords.length < 2) {
-    return [
-      [from.lat, from.lng],
-      [to.lat, to.lng],
-    ];
-  }
-
-  const stitched = coords.slice() as [number, number][];
-  const [firstLat, firstLng] = stitched[0];
-  const [lastLat, lastLng] = stitched[stitched.length - 1];
-  const snapMeters = 45;
-
-  if (haversineMeters({ lat: firstLat, lng: firstLng }, from) > snapMeters) {
-    stitched.unshift([from.lat, from.lng]);
-  }
-  if (haversineMeters({ lat: lastLat, lng: lastLng }, to) > snapMeters) {
-    stitched.push([to.lat, to.lng]);
-  }
-
-  return stitched;
-}
-
 function withRoadGeometry(
   coords: [number, number][],
-  from: LatLng,
-  to: LatLng,
+  _from: LatLng,
+  _to: LatLng,
   distanceMeters: number,
   durationSeconds: number,
 ): DrivingRouteResult {
   return {
-    coords: stitchRouteToEndpoints(coords, from, to),
+    coords,
     distanceMeters,
     durationSeconds,
     onRoads: true,
@@ -198,7 +194,7 @@ async function fetchOsrmDirect(
       if (data?.code !== 'Ok' || !coordinates || coordinates.length < 2) continue;
 
       const latLngCoords = coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
-      if (latLngCoords.length <= 2) continue;
+      if (latLngCoords.length < 2) continue;
 
       return withRoadGeometry(
         latLngCoords,
@@ -256,6 +252,10 @@ export async function fetchDrivingRoute(
   const timeoutId = window.setTimeout(() => controller.abort(), 14_000);
 
   try {
+    if (!isRouteInSacramentoServiceArea(from, to)) {
+      return buildStatsFallback(from, to);
+    }
+
     const viaApi = await fetchRouteFromApi(from, to, controller.signal, travelMode);
     if (viaApi) return viaApi;
 

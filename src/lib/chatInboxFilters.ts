@@ -1,12 +1,21 @@
-import type { Chat, CommunityEvent, ItemPost, SupportTicket } from '../types';
+import type {
+  Chat,
+  ChatCategoryFilter,
+  ChatInboxPreferences,
+  ChatStatusFilter,
+  CommunityEvent,
+  ItemPost,
+  SupportTicket,
+  UserProfile,
+} from '../types';
 import { isCommunityChat } from './communityChats';
 import { isEventPostChatReadOnly, isListingPostChatReadOnly } from './roles';
 import type { InboxEntry } from './chatInbox';
-import { inboxArchiveKey } from './chatInboxArchive';
+import { inboxArchiveKey, readArchivedInboxKeys } from './chatInboxArchive';
+import { readStoredAppPrefs } from './appPrefsCache';
+import { mergeAppPreferences } from './appPreferencesModel';
 
-export type ChatCategoryFilter = 'everyone' | 'dm' | 'support' | 'groups';
-
-export type ChatStatusFilter = 'all' | 'live' | 'closed' | 'archived';
+export type { ChatCategoryFilter, ChatInboxPreferences, ChatStatusFilter };
 
 export const CHAT_CATEGORY_FILTER_ORDER: ChatCategoryFilter[] = ['everyone', 'dm', 'support', 'groups'];
 
@@ -78,6 +87,22 @@ export function writeChatStatusFilter(value: ChatStatusFilter): void {
   } catch {
     /* ignore */
   }
+}
+
+export function resolveChatInboxFilters(profile: UserProfile): {
+  category: ChatCategoryFilter;
+  status: ChatStatusFilter;
+  archivedKeys: string[];
+} {
+  const stored = readStoredAppPrefs(profile.uid)?.appPreferences;
+  const merged = mergeAppPreferences(profile.appPreferences, stored ?? {});
+  const localArchived = [...readArchivedInboxKeys(profile.uid)];
+  const cloudArchived = merged.chatInbox?.archivedKeys ?? [];
+  return {
+    category: merged.chatInbox?.category ?? readChatCategoryFilter(),
+    status: merged.chatInbox?.status ?? readChatStatusFilter(),
+    archivedKeys: [...new Set([...cloudArchived, ...localArchived])],
+  };
 }
 
 export type InboxFilterContext = {

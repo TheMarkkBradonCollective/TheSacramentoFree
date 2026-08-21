@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity,
   Ban,
+  Download,
+  Copy,
   Flag,
   LifeBuoy,
   Package,
@@ -11,7 +13,8 @@ import {
   Users,
 } from 'lucide-react';
 import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
-import { getDirectorSiteOverview } from '../supabase';
+import { getDirectorSiteOverview, supabase } from '../supabase';
+import { apiUrl } from '../lib/appOrigin';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -97,11 +100,84 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
   const rootRef = useRef<HTMLDivElement>(null);
   const [overview, setOverview] = useState<DirectorSiteOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exportingTesters, setExportingTesters] = useState(false);
+  const [exportTestersError, setExportTestersError] = useState<string | null>(null);
+  const [exportTestersNotice, setExportTestersNotice] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const data = await getDirectorSiteOverview();
     setOverview(data);
     setLoading(false);
+  }, []);
+
+  const deliverPlayTestersCsv = async (csv: string) => {
+    const count = csv.split('\n').filter((line) => line.trim()).length;
+    const file = new File([csv], 'play-testers.csv', { type: 'text/csv;charset=utf-8' });
+
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Play testers' });
+        setExportTestersNotice(`Shared ${count} tester emails.`);
+        return;
+      }
+    } catch {
+      /* share cancelled or unsupported — try download / copy */
+    }
+
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = 'play-testers.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch {
+      /* ignore and copy */
+    }
+
+    try {
+      await navigator.clipboard.writeText(csv);
+      setExportTestersNotice(`Copied ${count} emails. Paste into Play Console testers.`);
+    } catch {
+      window.prompt('Copy these emails for Play Console:', csv);
+      setExportTestersNotice(`Showing ${count} emails to copy.`);
+    }
+  };
+
+  const downloadPlayTesters = useCallback(async () => {
+    setExportingTesters(true);
+    setExportTestersError(null);
+    setExportTestersNotice(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        throw new Error('Sign in again to download the tester list.');
+      }
+
+      const res = await fetch(apiUrl('/api/admin/export-play-testers'), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const json = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(json?.error || 'Could not export tester emails.');
+        }
+        const text = (await res.text().catch(() => '')).trim();
+        throw new Error(text || 'Could not export tester emails.');
+      }
+
+      const csv = await res.text();
+      await deliverPlayTestersCsv(csv);
+    } catch (err) {
+      setExportTestersError(err instanceof Error ? err.message : 'Could not export tester emails.');
+    } finally {
+      setExportingTesters(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -261,6 +337,41 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
       <div className="grid grid-cols-2 gap-2">
         <StatTile label="Downloads" value={data.downloadDevicesTotal} sub={downloadSub} accent="text-cyan-400" />
         <StatTile label="Installs" value={data.installDevicesCount} sub={installSub} accent="text-indigo-400" />
+      </div>
+
+      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-2">
+        <div>
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Play Console testers</h4>
+          <p className="text-[11px] text-muted mt-1 leading-snug">
+            On a phone this copies or shares every neighbor email. On a computer it also downloads a CSV.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void downloadPlayTesters()}
+          disabled={exportingTesters}
+          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold disabled:opacity-60"
+        >
+          {exportingTesters ? (
+            <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+          ) : (
+            <Copy className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+          )}
+          {exportingTesters ? 'Preparing CSV…' : 'Get Play tester emails'}
+        </button>
+        {exportTestersNotice && (
+          <p className="text-[11px] text-emerald-400 leading-snug" role="status">
+            {exportTestersNotice}
+          </p>
+        )}
+        {exportTestersError && (
+          <p className="text-[11px] text-red-400 leading-snug" role="alert">
+            {exportTestersError}
+          </p>
+        )}
+        <p className="text-[10px] text-muted/80 leading-snug">
+          Upload the file in Play Console → Testing → Closed testing → Testers.
+        </p>
       </div>
 
       <div>

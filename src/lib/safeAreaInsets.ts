@@ -29,8 +29,8 @@ export function syncNativeSafeAreaInsets(): void {
   let right = parseInsetPx(computed.getPropertyValue('--safe-area-inset-right'));
 
   if (isAndroidApp()) {
-    top = Math.max(top, ANDROID_FALLBACK_TOP_PX);
-    bottom = Math.max(bottom, ANDROID_FALLBACK_BOTTOM_PX);
+    if (top <= 0) top = ANDROID_FALLBACK_TOP_PX;
+    if (bottom <= 0) bottom = ANDROID_FALLBACK_BOTTOM_PX;
   }
 
   root.style.setProperty('--sbn-inset-top', `${top}px`);

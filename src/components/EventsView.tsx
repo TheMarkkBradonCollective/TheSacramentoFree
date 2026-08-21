@@ -160,7 +160,7 @@ export default function EventsView({
     setSelectedNeighborhood(next.selectedNeighborhood);
     setActiveQuickPicks(new Set(next.activeQuickPicks));
     filtersBootstrappedRef.current = false;
-  }, [userProfile.uid]);
+  }, [userProfile.uid, userProfile.appPreferences]);
 
   useEffect(() => {
     if (!filtersBootstrappedRef.current) {

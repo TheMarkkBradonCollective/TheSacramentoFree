@@ -15,7 +15,7 @@ import PostItemModal from './components/PostItemModal';
 import NewListingModal, { type NewListingModalMode } from './components/NewListingModal';
 import FeedPostDetailView from './components/feed/FeedPostDetailView';
 import ItemDetailView from './components/ItemDetailView';
-import { deleteFeedPost, getFeedPostById } from './lib/feedApi';
+import { deleteFeedPost, getFeedPostById, notifyFeedPostDeleted } from './lib/feedApi';
 import { isStaffRole, isListingOpenForCoordination } from './lib/roles';
 import { isEventUpcoming } from './lib/eventRsvp';
 import PickupAttributionModal from './components/PickupAttributionModal';
@@ -36,6 +36,7 @@ import {
   getSupabaseItemById,
   getSupabaseEvents,
   cancelSupabaseEvent,
+  deleteSupabaseEvent,
   updateSupabaseItemStatus,
   deleteSupabaseItem,
   deleteOwnAccount,
@@ -96,7 +97,7 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
-import { confirmDeleteFeedPost, confirmDeleteListing, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
+import { confirmDeleteFeedPost, confirmDeleteListing, confirmDeleteOwnEvent, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
 import { getOwnerCompletedActionLabel } from './lib/postType';
 import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
@@ -105,19 +106,24 @@ import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { useReviewPrompt } from './hooks/useReviewPrompt';
 import ReviewPromptModal from './components/ReviewPromptModal';
 import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
+import { App as CapacitorApp } from '@capacitor/app';
 import { isNativeApp } from './lib/nativePlatform';
 import { applyUserPreferencesToDevice } from './lib/appPreferences';
 import { mergeProfileFromDbRead } from './lib/profilePersistence';
 import { subscribePostgresChanges } from './lib/supabaseRealtime';
 import {
   clearLocalNativeSessionId,
-  readLocalNativeSessionId,
+  clearRemoteNativeAppSession,
   registerNativeAppSession,
   subscribeNativeAppSessionGuard,
   verifyNativeAppSession,
 } from './lib/nativeAppSession';
+import { PasswordRecoveryForm } from './components/public/AuthPage';
 import { hasSeenGoGetFirstRunPrompt } from './lib/goGetFirstRunState';
-import { clearActiveNavSession, hasActiveNavSession } from './lib/navigationSession';
+import RebrandAnnouncementModal from './components/RebrandAnnouncementModal';
+import { hasSeenRebrandAnnouncement, markRebrandAnnouncementSeen } from './lib/rebrandAnnouncementState';
+import { REBRAND_ANNOUNCEMENT_ID } from '../shared/rebrandAnnouncement2026';
+import { clearActiveNavSession, hasFreshNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
 import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath, normalizePublicPath } from './public/routes';
@@ -195,6 +201,7 @@ export default function App() {
   const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const profileSyncRef = useRef<string | null>(null);
   const profileSyncedUidRef = useRef<string | null>(null);
+  const profileSyncedAtRef = useRef(0);
   const handlingPopStateRef = useRef(false);
   const loadItemsRef = useRef<
     (isBackground?: boolean, attempt?: number, options?: { guest?: boolean }) => Promise<void>
@@ -215,6 +222,7 @@ export default function App() {
   const [showStaffApplyPanel, setShowStaffApplyPanel] = useState(false);
   const [privacyGateOpen, setPrivacyGateOpen] = useState(false);
   const [termsGateOpen, setTermsGateOpen] = useState(false);
+  const [rebrandLetterOpen, setRebrandLetterOpen] = useState(() => !hasSeenRebrandAnnouncement());
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [addEventDatesMode, setAddEventDatesMode] = useState(false);
@@ -277,6 +285,8 @@ export default function App() {
     setActiveTab('map');
     persistActiveTab('map', userProfile?.uid);
   }, [userProfile?.uid]);
+  const goHomeTabRef = useRef(goHomeTab);
+  goHomeTabRef.current = goHomeTab;
 
   const clearAuthenticatedUiState = useCallback(() => {
     setEvents([]);
@@ -468,6 +478,7 @@ export default function App() {
   const pendingDeepLinkPathRef = useRef<string | null>(
     typeof window !== 'undefined' ? readPendingDeepLinkPath() : null,
   );
+  const deepLinkAppliedRef = useRef(false);
 
   const refreshLegalGates = useCallback(() => {
     if (!sessionUser?.id) {
@@ -485,7 +496,7 @@ export default function App() {
   }, [refreshLegalGates]);
 
   useEffect(() => {
-    if (!userProfile?.uid || !hasActiveNavSession(userProfile.uid)) return;
+    if (!userProfile?.uid || !hasFreshNavSession(userProfile.uid)) return;
     setActiveTab('map');
     persistActiveTab('map', userProfile.uid);
   }, [userProfile?.uid]);
@@ -507,6 +518,7 @@ export default function App() {
   const [itemsHydrated, setItemsHydrated] = useState(() => initialAuth.items.length > 0);
   const [eventsHydrated, setEventsHydrated] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [guestDetailItem, setGuestDetailItem] = useState<ItemPost | null>(null);
 
   useEffect(() => {
@@ -738,7 +750,11 @@ export default function App() {
     if (typeof window === 'undefined') return;
     const syncDownloadRoute = () => setShowDownloadPage(isDownloadRoute());
     window.addEventListener('popstate', syncDownloadRoute);
-    return () => window.removeEventListener('popstate', syncDownloadRoute);
+    window.addEventListener('hashchange', syncDownloadRoute);
+    return () => {
+      window.removeEventListener('popstate', syncDownloadRoute);
+      window.removeEventListener('hashchange', syncDownloadRoute);
+    };
   }, []);
 
   useEffect(() => {
@@ -878,9 +894,13 @@ export default function App() {
     setAuthBootstrapping(false);
   }, [clearAuthenticatedUiState]);
 
-  const syncProfileFromDb = useCallback(async (user: any) => {
+  const syncProfileFromDb = useCallback(async (user: any, options?: { force?: boolean }) => {
     if (!user?.id) return;
-    if (profileSyncedUidRef.current === user.id) return;
+    const recentlySynced =
+      !options?.force &&
+      profileSyncedUidRef.current === user.id &&
+      Date.now() - profileSyncedAtRef.current < 15_000;
+    if (recentlySynced) return;
     if (profileSyncRef.current === user.id) return;
     profileSyncRef.current = user.id;
 
@@ -902,6 +922,7 @@ export default function App() {
             return merged;
           });
           profileSyncedUidRef.current = user.id;
+          profileSyncedAtRef.current = Date.now();
         }
         return;
       }
@@ -929,6 +950,20 @@ export default function App() {
     };
 
     const bootFailsafe = setTimeout(finishBootstrap, 4000);
+    let ghostSessionFailsafe: ReturnType<typeof setTimeout> | null = null;
+
+    const clearGhostCachedSession = () => {
+      lastSignedInUserIdRef.current = null;
+      profileSyncRef.current = null;
+      profileSyncedUidRef.current = null;
+      clearSessionCache();
+      clearAuthenticatedUiState();
+      setSessionUser(null);
+      setUserProfile(null);
+      setItems([]);
+      setIsAuthLoading(false);
+      resetTabStateForSignOut();
+    };
 
     const checkSession = async () => {
       try {
@@ -949,6 +984,16 @@ export default function App() {
         setUserProfile(null);
         clearSessionCache();
         clearAuthenticatedUiState();
+      } else if (error && /refresh token|invalid.+jwt|session not found|expired/i.test(error.message || '')) {
+        lastSignedInUserIdRef.current = null;
+        profileSyncRef.current = null;
+        profileSyncedUidRef.current = null;
+        setSessionUser(null);
+        setUserProfile(null);
+        clearSessionCache();
+        clearAuthenticatedUiState();
+        setItems([]);
+        resetTabStateForSignOut();
       }
       } catch (err) {
         if (!cancelled) {
@@ -965,8 +1010,22 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
       if (event === 'TOKEN_REFRESHED') return;
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+        if (session?.user) {
+          applySession(session.user);
+          setTimeout(() => {
+            if (!cancelled) void syncProfileFromDb(session.user);
+          }, 0);
+        }
+        return;
+      }
 
       if (session?.user) {
+        if (ghostSessionFailsafe) {
+          clearTimeout(ghostSessionFailsafe);
+          ghostSessionFailsafe = null;
+        }
         const alreadyInApp = !!lastSignedInUserIdRef.current;
         logoutCleanupDoneRef.current = false;
         applySession(session.user);
@@ -976,12 +1035,7 @@ export default function App() {
             void syncProfileFromDb(session.user);
           }
         }, 0);
-        if (event === 'SIGNED_IN' && isNativeApp()) {
-          setTimeout(() => {
-            if (!cancelled) void registerNativeAppSession(session.user.id);
-          }, 0);
-        }
-        if (event === 'INITIAL_SESSION' && isNativeApp() && !readLocalNativeSessionId(session.user.id)) {
+        if (isNativeApp() && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
           setTimeout(() => {
             if (!cancelled) void registerNativeAppSession(session.user.id);
           }, 0);
@@ -990,7 +1044,7 @@ export default function App() {
           const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
           const hasDeepLink = Boolean(pendingPath && parsePushDeepLink(pendingPath));
           if (!hasDeepLink) {
-            goHomeTab();
+            goHomeTabRef.current();
           }
         }
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
@@ -1016,9 +1070,18 @@ export default function App() {
           resetTabStateForSignOut();
           return;
         }
-        // INITIAL_SESSION with no user: keep a restored cache. getSession() often
-        // races and would otherwise flash the public site through the signed-in app.
+        // INITIAL_SESSION with no user: keep a restored cache briefly. getSession()
+        // often races and would otherwise flash the public site. If no JWT arrives,
+        // the cached shell is a ghost — clear it so writes don't fail silently.
         if (event === 'INITIAL_SESSION' && hadSessionOnMountRef.current) {
+          if (!ghostSessionFailsafe) {
+            ghostSessionFailsafe = setTimeout(() => {
+              void supabase.auth.getSession().then(({ data: { session: later } }) => {
+                if (cancelled || later?.user) return;
+                clearGhostCachedSession();
+              });
+            }, 2500);
+          }
           return;
         }
         if (event !== 'INITIAL_SESSION') return;
@@ -1036,9 +1099,22 @@ export default function App() {
     return () => {
       cancelled = true;
       clearTimeout(bootFailsafe);
+      if (ghostSessionFailsafe) clearTimeout(ghostSessionFailsafe);
       subscription.unsubscribe();
     };
-  }, [applySession, syncProfileFromDb, goHomeTab, clearAuthenticatedUiState, resetTabStateForSignOut]);
+  }, [applySession, syncProfileFromDb, clearAuthenticatedUiState, resetTabStateForSignOut]);
+
+  useEffect(() => {
+    if (!sessionUser) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      profileSyncedUidRef.current = null;
+      profileSyncedAtRef.current = 0;
+      void syncProfileFromDb(sessionUser, { force: true });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [sessionUser, syncProfileFromDb]);
 
   const loadItems = useCallback(
     async (isBackground = false, attempt = 0, options?: { guest?: boolean }) => {
@@ -1147,6 +1223,7 @@ export default function App() {
       setEvents((current) => (sameFeedSnapshot(current, loaded) ? current : loaded));
     } catch (err) {
       console.warn('Supabase events fetch failed:', err);
+      setErrorMsg('Could not load events. Pull to refresh or try again.');
     } finally {
       setIsEventsLoading(false);
       setEventsHydrated(true);
@@ -1180,16 +1257,25 @@ export default function App() {
         if (!fromDb) return;
         setUserProfile((prev) => {
           const merged = mergeProfileFromDbRead(prev, fromDb);
-          if (!prev) return merged;
+          if (!prev) {
+            applyUserPreferencesToDevice(merged);
+            return merged;
+          }
           if (
             merged.displayName === prev.displayName &&
             merged.photoURL === prev.photoURL &&
             merged.neighborhood === prev.neighborhood &&
             merged.bio === prev.bio &&
-            merged.role === prev.role
+            merged.role === prev.role &&
+            merged.goGetEnabled === prev.goGetEnabled &&
+            merged.staffInteractionMode === prev.staffInteractionMode &&
+            JSON.stringify(merged.appPreferences ?? null) === JSON.stringify(prev.appPreferences ?? null) &&
+            JSON.stringify(merged.pickupAvailability ?? null) === JSON.stringify(prev.pickupAvailability ?? null) &&
+            JSON.stringify(merged.navigationSettings ?? null) === JSON.stringify(prev.navigationSettings ?? null)
           ) {
             return prev;
           }
+          applyUserPreferencesToDevice(merged);
           return merged;
         });
       },
@@ -1347,12 +1433,29 @@ export default function App() {
   const handleLogOut = async () => {
     const signedOutUserId =
       userProfile?.uid || sessionUser?.id || lastSignedInUserIdRef.current;
-    if (signedOutUserId) clearLocalNativeSessionId(signedOutUserId);
+    if (signedOutUserId) {
+      clearLocalNativeSessionId(signedOutUserId);
+      try {
+        await clearRemoteNativeAppSession(signedOutUserId);
+      } catch (err) {
+        console.warn('Could not clear native session on sign-out:', err);
+      }
+    }
     try {
       logoutCleanupDoneRef.current = true;
       await clearNotificationDataOnLogout(signedOutUserId);
-      await supabase.auth.signOut();
-    } catch (_) {}
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn('Sign-out did not complete cleanly:', error.message);
+        void alert({
+          title: 'Signed out on this device',
+          message:
+            'The server sign-out did not finish. You are signed out here. If this device still looks signed in after a refresh, try again.',
+        });
+      }
+    } catch (err) {
+      console.warn('Sign-out failed:', err);
+    }
     lastSignedInUserIdRef.current = null;
     profileSyncedUidRef.current = null;
     clearActiveNavSession();
@@ -1382,14 +1485,19 @@ export default function App() {
       })();
     };
 
-    void (async () => {
+    const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (cancelled || session?.user?.id !== userId) return;
+
+      await registerNativeAppSession(userId);
+      if (cancelled) return;
 
       const status = await verifyNativeAppSession(userId);
       if (cancelled || status !== 'revoked') return;
       handleNativeSessionRevoked();
-    })();
+    };
+
+    void checkSession();
 
     let unsub = () => undefined;
     void (async () => {
@@ -1398,9 +1506,22 @@ export default function App() {
       unsub = subscribeNativeAppSessionGuard(userId, handleNativeSessionRevoked);
     })();
 
+    let removeAppState = () => undefined;
+    void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive || cancelled) return;
+      void checkSession();
+    }).then((handle) => {
+      removeAppState = () => {
+        void handle.remove();
+      };
+    }).catch(() => {
+      /* Capacitor App plugin unavailable in some web shells */
+    });
+
     return () => {
       cancelled = true;
       unsub();
+      removeAppState();
     };
   }, [sessionUser?.id, authBootstrapping, alert]);
 
@@ -1426,7 +1547,7 @@ export default function App() {
       setDetailItem((current) => {
         if (!current) return null;
         const next = loadedItems.find((i) => i.id === current.id);
-        if (!next) return current;
+        if (!next) return null;
         if (!next.description && current.description) {
           return {
             ...next,
@@ -1463,10 +1584,15 @@ export default function App() {
     }
     setDetailUpdating(true);
     try {
-      await updateSupabaseItemStatus(detailItem.id, status, userProfile?.uid);
+      const ok = await updateSupabaseItemStatus(detailItem.id, status, userProfile?.uid);
+      if (!ok) {
+        setErrorMsg('Could not update this listing. Please try again.');
+        return;
+      }
       await refreshDetailItem();
     } catch (err) {
       console.warn('Failed to update listing status:', err);
+      setErrorMsg('Could not update this listing. Please try again.');
     } finally {
       setDetailUpdating(false);
     }
@@ -1712,6 +1838,7 @@ export default function App() {
         return;
       }
       setDetailFeedPost(null);
+      notifyFeedPostDeleted(post.id);
     },
     [userProfile, confirm, alert],
   );
@@ -1815,6 +1942,12 @@ export default function App() {
             void alert({ message: 'This listing is unavailable.' });
             return;
           }
+          const isOwner = userProfile?.uid === item.userId;
+          const canViewWithdrawn = isOwner || isStaffRole(userProfile?.role);
+          if (item.status === 'withdrawn' && !canViewWithdrawn) {
+            void alert({ message: 'This listing is no longer available.' });
+            return;
+          }
           setDetailItem(item);
         };
         const existing = items.find((item) => item.id === target.listingId);
@@ -1842,9 +1975,13 @@ export default function App() {
         if (existing) {
           openEvent(existing);
         } else {
-          void getSupabaseEvents().then((loaded) => {
-            openEvent(loaded.find((event) => event.id === target.eventId));
-          });
+          void getSupabaseEvents()
+            .then((loaded) => {
+              openEvent(loaded.find((event) => event.id === target.eventId));
+            })
+            .catch(() => {
+              void alert({ message: 'Could not load this event. Try again.' });
+            });
         }
         tabForUrl = 'events';
         navigateToTab('events');
@@ -1952,8 +2089,11 @@ export default function App() {
       clearPendingDeepLinkPath();
       clearAppPathname(tabForUrl);
     },
-    [items, events, navigateToTab, blockedUserIds, alert, markAwardsSeen],
+    [items, events, navigateToTab, blockedUserIds, alert, markAwardsSeen, userProfile?.uid, userProfile?.role],
   );
+
+  const handlePushDeepLinkRef = useRef(handlePushDeepLink);
+  handlePushDeepLinkRef.current = handlePushDeepLink;
 
   usePushDeepLinkNavigation(handlePushDeepLink);
 
@@ -1972,12 +2112,32 @@ export default function App() {
 
   useEffect(() => {
     if (!userProfile) return;
-    const pendingPath = pendingDeepLinkPathRef.current ?? readPendingDeepLinkPath();
-    const target = pendingPath ? parsePushDeepLink(pendingPath) : parsePushDeepLink(window.location.pathname);
-    if (!target) return;
+    if (deepLinkAppliedRef.current) return;
+
+    const stored =
+      typeof window !== 'undefined' ? window.sessionStorage.getItem(PENDING_DEEP_LINK_KEY) : null;
+    const pendingPath = pendingDeepLinkPathRef.current ?? stored;
+    const fromPending = Boolean(pendingPath);
+    const path = pendingPath || (typeof window !== 'undefined' ? window.location.pathname : null);
+    if (!path) {
+      deepLinkAppliedRef.current = true;
+      return;
+    }
+
+    const target = parsePushDeepLink(path);
+    if (!target) {
+      deepLinkAppliedRef.current = true;
+      return;
+    }
+    if (!fromPending && !shouldPreservePushDeepLink(target)) {
+      deepLinkAppliedRef.current = true;
+      return;
+    }
+
+    deepLinkAppliedRef.current = true;
     pendingDeepLinkPathRef.current = null;
-    handlePushDeepLink(target);
-  }, [userProfile, handlePushDeepLink]);
+    handlePushDeepLinkRef.current(target);
+  }, [userProfile]);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -2023,11 +2183,34 @@ export default function App() {
     setNewListingModalMode(null);
   }, []);
 
+  const dismissRebrandLetter = useCallback(() => {
+    markRebrandAnnouncementSeen();
+    setRebrandLetterOpen(false);
+  }, []);
+
+  const handleOpenRebrandNews = useCallback(() => {
+    markRebrandAnnouncementSeen();
+    setRebrandLetterOpen(false);
+    openNotificationsHub('announcements', { announcementId: REBRAND_ANNOUNCEMENT_ID });
+  }, []);
+
+  const showRebrandLetterModal =
+    rebrandLetterOpen &&
+    !authBootstrapping &&
+    !showDownloadPage &&
+    !passwordRecovery &&
+    (!sessionUser ||
+      (Boolean(userProfile) &&
+        !privacyGateOpen &&
+        !termsGateOpen &&
+        !accountRestriction.restricted));
+
   const reviewPromptEnabled =
     Boolean(userProfile) &&
     !privacyGateOpen &&
     !termsGateOpen &&
-    !accountRestriction.restricted;
+    !accountRestriction.restricted &&
+    !rebrandLetterOpen;
 
   const {
     promptKind: reviewPromptKind,
@@ -2056,6 +2239,13 @@ export default function App() {
             } catch {
               window.location.assign(appTabPath(tab));
             }
+          }}
+        />
+      ) : passwordRecovery ? (
+        <PasswordRecoveryForm
+          onComplete={() => {
+            setPasswordRecovery(false);
+            goHomeTab();
           }}
         />
       ) : authBootstrapping && !sessionUser ? (
@@ -2554,6 +2744,22 @@ export default function App() {
                       });
                     }
                   }}
+                  onDelete={async () => {
+                    const confirmed = await confirmDeleteOwnEvent(confirm, detailEvent.title);
+                    if (!confirmed) return;
+                    setDetailEventUpdating(true);
+                    const result = await deleteSupabaseEvent(detailEvent.id);
+                    setDetailEventUpdating(false);
+                    if (result.ok) {
+                      setDetailEvent(null);
+                      void loadEvents(true);
+                    } else {
+                      await alert({
+                        title: 'Could not delete event',
+                        message: result.errorMessage || 'Could not delete event.',
+                      });
+                    }
+                  }}
                   onViewProfile={handleViewProfile}
                   onMessage={
                     blockedUserIds.has(detailEvent.userId) || isStaffActingOfficial(userProfile)
@@ -2757,6 +2963,7 @@ export default function App() {
         userProfile &&
         isNativeApp() &&
         !hasSeenGoGetFirstRunPrompt() &&
+        !rebrandLetterOpen &&
         !privacyGateOpen &&
         !termsGateOpen && (
           <GoGetFirstRunPrompt
@@ -2765,6 +2972,13 @@ export default function App() {
             onOpenNotificationSettings={() => openNotificationsHub('alerts')}
           />
         )}
+
+      {showRebrandLetterModal && (
+        <RebrandAnnouncementModal
+          onDismiss={dismissRebrandLetter}
+          onOpenNews={sessionReady ? handleOpenRebrandNews : undefined}
+        />
+      )}
     </div>
   );
 }

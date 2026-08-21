@@ -1630,6 +1630,93 @@ $acctdel$;
 REVOKE ALL ON FUNCTION public.delete_own_account() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
 
+-- Owner/staff listing delete that cascades others' comments, votes, chats, and Go Get rows.
+CREATE OR REPLACE FUNCTION public.delete_own_listing(target_item_id text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $dellisting$
+DECLARE
+  owner_id text;
+BEGIN
+  IF target_item_id IS NULL OR target_item_id = '' OR auth.uid() IS NULL THEN
+    RETURN false;
+  END IF;
+
+  SELECT "userId" INTO owner_id FROM public.items WHERE id = target_item_id;
+  IF owner_id IS NULL THEN
+    RETURN false;
+  END IF;
+  IF owner_id <> auth.uid()::text AND NOT public.is_staff() THEN
+    RETURN false;
+  END IF;
+
+  DELETE FROM public.go_get_live_locations
+  WHERE "sessionId" IN (SELECT id FROM public.go_get_sessions WHERE "itemId" = target_item_id);
+  DELETE FROM public.go_get_fulfiller_live_locations
+  WHERE "sessionId" IN (SELECT id FROM public.go_get_sessions WHERE "itemId" = target_item_id);
+  DELETE FROM public.go_get_location_trail
+  WHERE "sessionId" IN (SELECT id FROM public.go_get_sessions WHERE "itemId" = target_item_id);
+  UPDATE public.go_get_sessions
+  SET status = 'cancelled',
+      "cancelledAt" = NOW(),
+      "cancelReason" = 'Listing deleted',
+      "updatedAt" = NOW()
+  WHERE "itemId" = target_item_id
+    AND status NOT IN ('completed', 'cancelled', 'expired', 'disputed');
+
+  DELETE FROM public.item_claim_requests WHERE "itemId" = target_item_id;
+  DELETE FROM public.item_claims WHERE "itemId" = target_item_id;
+  DELETE FROM public.listing_subitems WHERE "itemId" = target_item_id;
+  DELETE FROM public.item_votes WHERE "itemId" = target_item_id;
+  DELETE FROM public.item_comments WHERE "itemId" = target_item_id;
+  DELETE FROM public.saved_items WHERE "itemId" = target_item_id;
+
+  DELETE FROM public.messages
+  WHERE "chatId" IN (SELECT id FROM public.chats WHERE "itemId" = target_item_id);
+  DELETE FROM public.chats WHERE "itemId" = target_item_id;
+
+  DELETE FROM public.items WHERE id = target_item_id;
+  RETURN true;
+END;
+$dellisting$;
+
+REVOKE ALL ON FUNCTION public.delete_own_listing(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_own_listing(text) TO authenticated;
+
+-- Owner/staff event delete that cascades others' RSVPs and comments.
+CREATE OR REPLACE FUNCTION public.delete_own_event(target_event_id text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $delevent$
+DECLARE
+  owner_id text;
+BEGIN
+  IF target_event_id IS NULL OR target_event_id = '' OR auth.uid() IS NULL THEN
+    RETURN false;
+  END IF;
+
+  SELECT "userId" INTO owner_id FROM public.community_events WHERE id = target_event_id;
+  IF owner_id IS NULL THEN
+    RETURN false;
+  END IF;
+  IF owner_id <> auth.uid()::text AND NOT public.is_staff() THEN
+    RETURN false;
+  END IF;
+
+  DELETE FROM public.event_rsvps WHERE "eventId" = target_event_id;
+  DELETE FROM public.event_comments WHERE "eventId" = target_event_id;
+  DELETE FROM public.community_events WHERE id = target_event_id;
+  RETURN true;
+END;
+$delevent$;
+
+REVOKE ALL ON FUNCTION public.delete_own_event(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_own_event(text) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.staff_delete_user_account(target_uid text)
 RETURNS void
 LANGUAGE plpgsql
@@ -2849,7 +2936,14 @@ DROP POLICY IF EXISTS "items_update_own" ON public.items;
 DROP POLICY IF EXISTS "items_delete_own" ON public.items;
 
 CREATE POLICY "items_select_authenticated" ON public.items
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND (
+      status IN ('active', 'pending_pickup', 'on_hold')
+      OR "userId" = auth.uid()::text
+      OR public.is_staff()
+    )
+  );
 
 CREATE POLICY "items_select_public_active" ON public.items
   FOR SELECT USING (status = 'active');
@@ -2940,6 +3034,10 @@ CREATE POLICY "chats_insert" ON public.chats
 CREATE POLICY "chats_update" ON public.chats
   FOR UPDATE USING (public.can_write_chat(id))
   WITH CHECK (public.can_write_chat(id));
+
+DROP POLICY IF EXISTS "chats_delete" ON public.chats;
+CREATE POLICY "chats_delete" ON public.chats
+  FOR DELETE USING (public.can_write_chat(id) OR public.is_staff());
 
 DROP POLICY IF EXISTS "Allow public read messages" ON public.messages;
 DROP POLICY IF EXISTS "Allow insert messages" ON public.messages;
@@ -3401,7 +3499,7 @@ CREATE POLICY "event_comments_update" ON public.event_comments
 CREATE POLICY "event_comments_delete" ON public.event_comments
   FOR DELETE USING (
     auth.uid()::text = "userId"
-    AND (public.events_unlocked() OR public.is_staff())
+    OR public.is_staff()
   );
 
 DROP POLICY IF EXISTS "Allow read app reviews" ON public.app_reviews;
@@ -3569,6 +3667,7 @@ CREATE POLICY "Users manage own saved items" ON public.saved_items
 
 -- ---------------------------------------------------------
 -- 11. STORAGE — path-scoped uploads
+-- audit-49-storage-items-auth
 -- ---------------------------------------------------------
 
 DROP POLICY IF EXISTS "Public read items bucket" ON storage.objects;

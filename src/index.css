@@ -903,23 +903,9 @@ html.sbn-session-restore #root:empty {
   50% { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(255, 69, 0, 0.75)); }
 }
 
-#map_navigation_view .leaflet-interactive.sbn-nav-route-glow {
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-accent) 65%, transparent));
-}
-
-@keyframes sbn-nav-route-flow {
-  to { stroke-dashoffset: -48; }
-}
-
-#map_navigation_view .leaflet-interactive.sbn-nav-route-animated {
-  stroke-dasharray: 18 12;
-  animation: sbn-nav-route-flow 1.4s linear infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   #map_navigation_view .sbn-nav-voice-waves span,
-  #map_navigation_view .sbn-nav-dest-pin,
-  #map_navigation_view .leaflet-interactive.sbn-nav-route-animated {
+  #map_navigation_view .sbn-nav-dest-pin {
     animation: none;
   }
 }
