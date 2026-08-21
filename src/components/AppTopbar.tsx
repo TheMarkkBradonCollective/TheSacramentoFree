@@ -56,7 +56,11 @@ export default function AppTopbar({
           </button>
         )}
         {brandLockup ? (
-          <BrandLogo showTitle compact className="flex items-center gap-2 min-w-0" />
+          <BrandLogo
+            imgClassName="h-9 w-auto max-w-[200px] object-contain shrink-0"
+            showTitle={false}
+            className="flex items-center gap-2 min-w-0"
+          />
         ) : (
           <div className="min-w-0">
             {eyebrow && <p className="sbn-topbar-eyebrow">{eyebrow}</p>}
