@@ -135,7 +135,9 @@ export default function PublicSite({
 
   const paperChrome = (
     <>
-      <NewspaperEditionBar />
+      <div className={newspaper && route === 'home' ? 'lg:hidden' : undefined}>
+        <NewspaperEditionBar />
+      </div>
       {newspaper && (
         route === 'home' ? (
           <div className="hidden lg:block">

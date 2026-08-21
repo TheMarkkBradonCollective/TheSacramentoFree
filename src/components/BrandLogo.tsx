@@ -30,7 +30,7 @@ function siteLockupClass(imgClassName: string) {
     }
     next.push(part);
   }
-  if (!next.some((p) => p.startsWith('max-w-'))) next.push('max-w-[220px]');
+  if (!next.some((p) => p.startsWith('max-w-'))) next.push('max-w-[8.5rem]');
   if (!next.includes('object-contain')) next.push('object-contain');
   next.push('tsf-lockup');
   return next.join(' ');
