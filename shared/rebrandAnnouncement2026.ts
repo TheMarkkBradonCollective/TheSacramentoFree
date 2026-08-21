@@ -45,14 +45,14 @@ The website and app remain fully available while we make that transition. Giftin
 };
 
 /** Short feed post for copy/paste (cliff-hanger). */
-export const REBRAND_FEED_CLIFFHANGER = `Okay don't panic… 😬
+export const REBRAND_FEED_CLIFFHANGER = `I have to lead with the part I didn't want to write.
 
-I finally get why our NAME is a trademark problem — and honestly it means we'd have to shut Sacramento Buy Nothing down for good…
+Our name — "Buy Nothing" — runs into trademarks that aren't ours. On paper, that means shutting Sacramento Buy Nothing down: site off, apps pulled, done.
 
 …
 
-NAWH I'M JUST GIV'N 😂
+NAWH, I'M JUST GIV'N.
 
-We're NOT closing. I'm pausing big new builds and cooking a rebrand in private — I think you're gonna love what I came up with. Full letter in News (bell → News). Stay tuned. 👀`;
+We're not closing. Your listings, messages, and this community stay. I'm pausing big new builds while I rebrand us into something that's fully our own — I'm not showing it yet on purpose. Full letter in News (bell → News).`;
 
 export const REBRAND_ANNOUNCEMENT_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
