@@ -153,7 +153,7 @@ export default function AuthPage({
 
         <div className="relative z-10">
           <h2 className="font-display text-3xl font-bold leading-tight text-white">
-            {newspaper ? NEWSPAPER.subscribeHed : SITE.joinCta.title}
+            {SITE.joinCta.title}
           </h2>
           <div className="mt-5 space-y-3">
             {SITE.joinCta.lines.map((line) => (

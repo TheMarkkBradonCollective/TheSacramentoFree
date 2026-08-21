@@ -96,7 +96,7 @@ export default function CommunityPage() {
           onClick={() => navigate('login')}
           className="sbn-btn sbn-btn-primary sbn-btn-sm mt-4"
         >
-          {newspaper ? NEWSPAPER.subscribeCta : 'Sign in or join'}
+          Sign in or join
         </button>
       </PublicCard>
     </PublicPageShell>
