@@ -852,6 +852,18 @@ html.newspaper-preview .sbn-mobile-header img.tsf-lockup {
   object-fit: contain;
 }
 
+html.newspaper-preview .sbn-mobile-header .tsf-brand-wordmark {
+  font-size: 0.8125rem;
+  line-height: 1.15;
+}
+
+html.newspaper-preview .sbn-mobile-header .tsf-brand-slogan {
+  font-size: 0.5625rem;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  margin-top: 0.125rem;
+}
+
 html.newspaper-preview .sbn-topbar img.tsf-lockup {
   height: 2.25rem;
   width: auto;
