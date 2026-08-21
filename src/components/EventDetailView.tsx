@@ -28,6 +28,7 @@ interface EventDetailViewProps {
   onEdit?: () => void;
   onAddDates?: () => void;
   onCancel?: () => void;
+  onDelete?: () => void;
   onMessage?: () => void;
   onViewProfile: (userId: string) => void;
   onStaffChat?: () => void;
@@ -81,6 +82,7 @@ export default function EventDetailView({
   onEdit,
   onAddDates,
   onCancel,
+  onDelete,
   onMessage,
   onViewProfile,
   onStaffChat,
@@ -331,6 +333,17 @@ export default function EventDetailView({
               className="sbn-btn sbn-btn-secondary w-full text-red-400 border-red-500/30 hover:bg-red-500/10"
             >
               Cancel this event
+            </button>
+          )}
+
+          {isOwner && !canEdit && onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={updating}
+              className="sbn-btn sbn-btn-secondary w-full text-red-400 border-red-500/30 hover:bg-red-500/10"
+            >
+              Delete this event
             </button>
           )}
 

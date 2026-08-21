@@ -12,7 +12,6 @@ import { getPickupAvailability } from '../lib/pickupAvailability';
 import {
   mergeGoGetPrefsIntoProfile,
   persistUserGoGetSettings,
-  readStoredGoGetPrefs,
 } from '../lib/goGetPrefs';
 import PickupAvailabilityEditor from './goget/PickupAvailabilityEditor';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -50,15 +49,6 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
     setRingDuration(normalizeGoGetRingDuration(merged.goGetRingDurationSeconds));
     setRingPattern(normalizeGoGetRingPattern(merged.goGetRingPattern));
   }, [userProfile.uid, userProfile.goGetEnabled, userProfile.pickupAvailability, userProfile.goGetRingDurationSeconds, userProfile.goGetRingPattern]);
-
-  useEffect(() => {
-    const stored = readStoredGoGetPrefs(userProfile.uid);
-    if (!stored) return;
-    setEnabled(stored.goGetEnabled);
-    setAvailability(stored.pickupAvailability);
-    setRingDuration(stored.goGetRingDurationSeconds);
-    setRingPattern(stored.goGetRingPattern);
-  }, [userProfile.uid]);
 
   const persist = async (patch: Partial<UserProfile>, successMsg?: string) => {
     setSaving(true);

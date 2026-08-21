@@ -47,8 +47,7 @@ import { buildInboxEntries } from '../lib/chatInbox';
 import {
   emptyInboxFilterMessage,
   filterInboxEntries,
-  readChatCategoryFilter,
-  readChatStatusFilter,
+  resolveChatInboxFilters,
   writeChatCategoryFilter,
   writeChatStatusFilter,
   type ChatCategoryFilter,
@@ -105,6 +104,7 @@ import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
 import ChatListingPreview from './ChatListingPreview';
 import ChatEventPreview from './ChatEventPreview';
 import { resolveEventStatus } from '../lib/eventRsvp';
+import { persistUserAppPreferences } from '../lib/appPreferences';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -186,13 +186,20 @@ export default function ChatSystem({
   const [errorMsg, setErrorMsg] = useState('');
   const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<ChatCategoryFilter>(() => readChatCategoryFilter());
-  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>(() => readChatStatusFilter());
+  const [categoryFilter, setCategoryFilter] = useState<ChatCategoryFilter>(
+    () => resolveChatInboxFilters(userProfile).category,
+  );
+  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>(
+    () => resolveChatInboxFilters(userProfile).status,
+  );
   const [archivedKeys, setArchivedKeys] = useState(() => readArchivedInboxKeys(userProfile.uid));
 
   useEffect(() => {
     setArchivedKeys(readArchivedInboxKeys(userProfile.uid));
-  }, [userProfile.uid]);
+    const next = resolveChatInboxFilters(userProfile);
+    setCategoryFilter(next.category);
+    setStatusFilter(next.status);
+  }, [userProfile.uid, userProfile.appPreferences]);
 
   const userIsStaff = isStaffRole(userProfile.role) && isStaffActingOfficial(userProfile);
   const staffActingOfficial = isStaffActingOfficial(userProfile);
@@ -1151,14 +1158,22 @@ export default function ChatSystem({
     [categoryFilter, statusFilter],
   );
 
+  const persistInboxFilters = (category: ChatCategoryFilter, status: ChatStatusFilter) => {
+    writeChatCategoryFilter(category);
+    writeChatStatusFilter(status);
+    void persistUserAppPreferences(userProfile, {
+      chatInbox: { category, status },
+    });
+  };
+
   const handleCategoryFilterChange = (filter: ChatCategoryFilter) => {
     setCategoryFilter(filter);
-    writeChatCategoryFilter(filter);
+    persistInboxFilters(filter, statusFilter);
   };
 
   const handleStatusFilterChange = (filter: ChatStatusFilter) => {
     setStatusFilter(filter);
-    writeChatStatusFilter(filter);
+    persistInboxFilters(categoryFilter, filter);
   };
 
   const handleArchiveChat = useCallback(

@@ -1,0 +1,6 @@
+Android beta 0.1.0 (49)
+
+• Feed and chat filters follow your account
+• Android status bar no longer double-pads
+• Event load failures show an error
+• Hosts can delete cancelled or past events

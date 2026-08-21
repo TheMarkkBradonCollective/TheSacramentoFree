@@ -1,4 +1,4 @@
-import { useMemo, useState, Fragment } from 'react';
+import { useMemo, useState, useEffect, Fragment } from 'react';
 import { ImageIcon, Newspaper, Plus, Sparkles, Type, Users } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../types';
 import { useFeedEngagement } from '../hooks/useFeedEngagement';
@@ -14,13 +14,13 @@ import {
   feedContentFilterLabel,
   feedPostMatchesAudienceScope,
   feedPostMatchesContentFilter,
-  readFeedAudienceScope,
-  readFeedContentFilter,
+  resolveFeedDisplayFilters,
   writeFeedAudienceScope,
   writeFeedContentFilter,
   type FeedAudienceScope,
   type FeedContentFilter,
 } from '../lib/feedDisplayPrefs';
+import { persistUserAppPreferences } from '../lib/appPreferences';
 
 interface FeedViewProps {
   userProfile: UserProfile;
@@ -78,8 +78,27 @@ export default function FeedView({
   const { posts, loading, creating, publishPost, removePost } = useFeedPosts(userProfile);
   const { friendIds, loading: friendsLoading } = useFriendIds(userProfile.uid);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [contentFilter, setContentFilter] = useState<FeedContentFilter>(() => readFeedContentFilter());
-  const [audienceScope, setAudienceScope] = useState<FeedAudienceScope>(() => readFeedAudienceScope());
+  const [contentFilter, setContentFilter] = useState<FeedContentFilter>(
+    () => resolveFeedDisplayFilters(userProfile).contentFilter,
+  );
+  const [audienceScope, setAudienceScope] = useState<FeedAudienceScope>(
+    () => resolveFeedDisplayFilters(userProfile).audienceScope,
+  );
+
+  useEffect(() => {
+    const next = resolveFeedDisplayFilters(userProfile);
+    setContentFilter(next.contentFilter);
+    setAudienceScope(next.audienceScope);
+  }, [userProfile.uid, userProfile.appPreferences]);
+
+  const persistDisplayFilters = (content: FeedContentFilter, audience: FeedAudienceScope) => {
+    writeFeedContentFilter(content);
+    writeFeedAudienceScope(audience);
+    void persistUserAppPreferences(userProfile, {
+      feedContentFilter: content,
+      feedAudienceScope: audience,
+    });
+  };
 
   const audienceContext = useMemo(
     () => ({
@@ -111,7 +130,7 @@ export default function FeedView({
   const handleCycleContentFilter = () => {
     setContentFilter((current) => {
       const next = cycleFeedContentFilter(current);
-      writeFeedContentFilter(next);
+      persistDisplayFilters(next, audienceScope);
       return next;
     });
   };
@@ -119,7 +138,7 @@ export default function FeedView({
   const handleCycleAudienceScope = () => {
     setAudienceScope((current) => {
       const next = cycleFeedAudienceScope(current);
-      writeFeedAudienceScope(next);
+      persistDisplayFilters(contentFilter, next);
       return next;
     });
   };
@@ -224,8 +243,7 @@ export default function FeedView({
               onClick={() => {
                 setContentFilter('all');
                 setAudienceScope('everyone');
-                writeFeedContentFilter('all');
-                writeFeedAudienceScope('everyone');
+                persistDisplayFilters('all', 'everyone');
               }}
               className="sbn-btn sbn-btn-secondary sbn-btn-sm mt-4"
             >

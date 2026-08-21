@@ -2,7 +2,13 @@ import type { AppPreferences, UserProfile } from '../types';
 import { writeStoredGoGetPrefs, profileToStoredGoGetPrefs } from './goGetPrefs';
 import { writeStoredNavPrefs, profileToStoredNavPrefs } from './navPrefs';
 import { writeStoredAppPrefs, profileToStoredAppPrefs, persistUserAppPreferencesCached, mergeStoredAppPreferencesIntoProfile } from './appPrefsCache';
-import { writeEventsViewMode, writeFeedViewMode } from './feedDisplayPrefs';
+import { writeChatCategoryFilter, writeChatStatusFilter } from './chatInboxFilters';
+import {
+  writeEventsViewMode,
+  writeFeedAudienceScope,
+  writeFeedContentFilter,
+  writeFeedViewMode,
+} from './feedDisplayPrefs';
 import { isStaffRole } from './roles';
 import {
   DEFAULT_STAFF_INTERACTION_MODE,
@@ -36,6 +42,10 @@ export function applyUserPreferencesToDevice(profile: UserProfile): void {
   const prefs = normalizeAppPreferences(profile.appPreferences);
   if (prefs.feedViewMode) writeFeedViewMode(prefs.feedViewMode);
   if (prefs.eventsViewMode) writeEventsViewMode(prefs.eventsViewMode);
+  if (prefs.feedContentFilter) writeFeedContentFilter(prefs.feedContentFilter);
+  if (prefs.feedAudienceScope) writeFeedAudienceScope(prefs.feedAudienceScope);
+  if (prefs.chatInbox?.category) writeChatCategoryFilter(prefs.chatInbox.category);
+  if (prefs.chatInbox?.status) writeChatStatusFilter(prefs.chatInbox.status);
 
   if (prefs.theme && typeof window !== 'undefined') {
     try {

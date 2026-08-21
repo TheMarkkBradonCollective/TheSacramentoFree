@@ -39,12 +39,25 @@ export interface FeedFilterPreferences {
   gridSortMode?: 'nearest' | 'new';
 }
 
+export type FeedContentFilter = 'all' | 'text' | 'pictures';
+export type FeedAudienceScope = 'everyone' | 'neighbors' | 'friends';
+export type ChatCategoryFilter = 'everyone' | 'dm' | 'support' | 'groups';
+export type ChatStatusFilter = 'all' | 'live' | 'closed' | 'archived';
+
+export interface ChatInboxPreferences {
+  category?: ChatCategoryFilter;
+  status?: ChatStatusFilter;
+}
+
 export interface AppPreferences {
   feedViewMode?: FeedViewMode;
   eventsViewMode?: FeedViewMode;
   theme?: 'light' | 'dark';
   eventsFilters?: EventsFilterPreferences;
   feedFilters?: FeedFilterPreferences;
+  feedContentFilter?: FeedContentFilter;
+  feedAudienceScope?: FeedAudienceScope;
+  chatInbox?: ChatInboxPreferences;
 }
 
 export interface NotificationPreferences {

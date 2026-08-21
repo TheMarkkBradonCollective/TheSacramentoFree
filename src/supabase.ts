@@ -4105,10 +4105,7 @@ export async function getSupabaseEvents(): Promise<CommunityEvent[]> {
       .select('*')
       .order('eventStartAt', { ascending: true });
 
-    if (error) {
-      handleSupabaseError(error, 'community_events');
-      return [];
-    }
+    if (error) throw error;
 
     setSupabaseConfigurationState(true);
     const rows = (data || []) as CommunityEvent[];
@@ -4116,7 +4113,7 @@ export async function getSupabaseEvents(): Promise<CommunityEvent[]> {
     return rows.map((row) => normalizeSupabaseEvent(row));
   } catch (err: unknown) {
     handleSupabaseError(err, 'community_events');
-    return [];
+    throw err;
   }
 }
 

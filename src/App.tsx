@@ -36,6 +36,7 @@ import {
   getSupabaseItemById,
   getSupabaseEvents,
   cancelSupabaseEvent,
+  deleteSupabaseEvent,
   updateSupabaseItemStatus,
   deleteSupabaseItem,
   deleteOwnAccount,
@@ -95,7 +96,7 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
-import { confirmDeleteFeedPost, confirmDeleteListing, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
+import { confirmDeleteFeedPost, confirmDeleteListing, confirmDeleteOwnEvent, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
 import { getOwnerCompletedActionLabel } from './lib/postType';
 import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
 import { PresenceProvider } from './contexts/PresenceContext';
@@ -1945,9 +1946,13 @@ export default function App() {
         if (existing) {
           openEvent(existing);
         } else {
-          void getSupabaseEvents().then((loaded) => {
-            openEvent(loaded.find((event) => event.id === target.eventId));
-          });
+          void getSupabaseEvents()
+            .then((loaded) => {
+              openEvent(loaded.find((event) => event.id === target.eventId));
+            })
+            .catch(() => {
+              void alert({ message: 'Could not load this event. Try again.' });
+            });
         }
         tabForUrl = 'events';
         navigateToTab('events');
@@ -2707,6 +2712,22 @@ export default function App() {
                       await alert({
                         title: 'Could not cancel event',
                         message: result.errorMessage || 'Could not cancel event.',
+                      });
+                    }
+                  }}
+                  onDelete={async () => {
+                    const confirmed = await confirmDeleteOwnEvent(confirm, detailEvent.title);
+                    if (!confirmed) return;
+                    setDetailEventUpdating(true);
+                    const result = await deleteSupabaseEvent(detailEvent.id);
+                    setDetailEventUpdating(false);
+                    if (result.ok) {
+                      setDetailEvent(null);
+                      void loadEvents(true);
+                    } else {
+                      await alert({
+                        title: 'Could not delete event',
+                        message: result.errorMessage || 'Could not delete event.',
                       });
                     }
                   }}

@@ -110,6 +110,16 @@ export async function confirmStaffDeleteEvent(confirm: ConfirmFn, title: string)
   });
 }
 
+export async function confirmDeleteOwnEvent(confirm: ConfirmFn, title: string): Promise<boolean> {
+  return confirm({
+    title: 'Delete event?',
+    message: `Permanently delete "${title}"? This cannot be undone.`,
+    confirmLabel: 'Delete event',
+    cancelLabel: 'Keep event',
+    variant: 'danger',
+  });
+}
+
 export async function confirmUnsendMessage(confirm: ConfirmFn): Promise<boolean> {
   return confirm({
     title: 'Unsend message?',

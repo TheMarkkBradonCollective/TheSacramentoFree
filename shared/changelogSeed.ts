@@ -87,6 +87,7 @@ const APK_0045_PUBLISHED_AT = '2026-08-20T21:30:00.000Z';
 const APK_0046_PUBLISHED_AT = '2026-08-20T22:35:00.000Z';
 const APK_0047_PUBLISHED_AT = '2026-08-21T02:00:00.000Z';
 const APK_0048_PUBLISHED_AT = '2026-08-21T04:00:00.000Z';
+const APK_0049_PUBLISHED_AT = '2026-08-21T05:00:00.000Z';
 const REBRAND_LETTER_PUBLISHED_AT = '2026-08-21T01:10:00.000Z';
 const APK_0033_PUBLISHED_AT = '2026-08-20T13:32:00.000Z';
 const FEED_GRID_UI_PUBLISHED_AT = '2026-08-20T10:15:00.000Z';
@@ -149,6 +150,35 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
     REBRAND_UPDATE_BODY,
     REBRAND_UPDATE_DETAIL,
     REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
+  update(
+    '2026-08-21_apk-0049',
+    '2026-08-21',
+    'New Android download — beta v0.1.0.0049',
+    'Feed/chat filters follow your account, Android padding, event errors.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0049.
+
+• Neighbor-feed and chat inbox filters follow your account across devices
+• Android no longer adds extra space above the status bar
+• Event load failures show an error instead of an empty calendar
+• Hosts can delete a cancelled or past event
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+- android/app/build.gradle — versionCode 49
+- play-store-assets/release-notes-v0.1.0-0049.txt
+- src/lib/feedDisplayPrefs.ts
+- src/lib/chatInboxFilters.ts
+- src/lib/safeAreaInsets.ts
+- src/supabase.ts — getSupabaseEvents
+
+HISTORY
+2026-08-21 — leftover audit 48 work as 49.`,
+    APK_0049_PUBLISHED_AT,
   ),
   update(
     '2026-08-21_apk-0048',
@@ -1639,6 +1669,25 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
     REBRAND_ANNOUNCEMENT_BODY,
     REBRAND_ANNOUNCEMENT_LETTER,
     REBRAND_ANNOUNCEMENT_PUBLISHED_AT,
+  ),
+  news(
+    '2026-08-21_apk-0049',
+    '2026-08-21',
+    'New Android beta 0049 — filters, padding, event errors',
+    'Feed and chat filters follow your account; Android padding and event load errors are fixed.',
+    `WHAT NEIGHBORS SEE
+Beta v0.1.0.0049: feed and chat filters follow you across devices, Android no longer double-pads the status bar, event load failures show an error, hosts can delete cancelled or past events.
+
+Sideload: https://www.sacramentobuynothing.com/download
+
+— Mark
+
+WHERE TO LOOK IN CODE
+See Update 2026-08-21_apk-0049.
+
+HISTORY
+2026-08-21 — Android beta 0049 / leftover audit 48.`,
+    APK_0049_PUBLISHED_AT,
   ),
   news(
     '2026-08-21_apk-0048',
