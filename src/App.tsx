@@ -60,6 +60,7 @@ import { registerStaffApplyOpener } from './lib/staffApplyOpen';
 import { detectInstallKind } from './lib/installContext';
 import { reportAppInstall } from './lib/deviceTracking';
 import { type AnyTab, type AppTab, isStaffTab } from './lib/appTabs';
+import { triggerNewspaperPageTurn } from './preview/pageTurn';
 import {
   appTabPath,
   parseStoredTab,
@@ -437,7 +438,10 @@ export default function App() {
   const handleTabChange = useCallback(
     (tab: AnyTab) => {
       closeTransientOverlays();
-      setActiveTab(tab);
+      setActiveTab((current) => {
+        if (current !== tab) triggerNewspaperPageTurn();
+        return tab;
+      });
       persistActiveTab(tab as AppTab, userProfile?.uid);
     },
     [closeTransientOverlays, userProfile?.uid],

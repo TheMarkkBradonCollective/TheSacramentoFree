@@ -1,13 +1,43 @@
-/* The Sacramento Free — preview-only grey NYT-style newspaper reskin.
-   Same DOM, same layout, same flows — tokens, typography, and chrome only.
-   Applied when html has .newspaper-preview */
+/* ════════════════════════════════════════════════════════════════════════
+   THE SACRAMENTO FREE
+   A grayscale newspaper reface of the same application.
+
+   Everything below is presentation only. The DOM, the routes, the data and
+   the flows are untouched — this stylesheet repaints the existing markup as
+   ink on newsprint. Scoped entirely to html.newspaper-preview so the
+   original brand stays exactly as it was.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────── 1. Tokens ─────────────────────────── */
 
 html.newspaper-preview {
   --font-sans: "Libre Baskerville", "Source Serif 4", Georgia, "Times New Roman", Times, serif;
   --font-display: "Playfair Display", "Libre Baskerville", Georgia, "Times New Roman", Times, serif;
   --font-masthead: "Playfair Display", Georgia, "Times New Roman", Times, serif;
+  /* Franklin-style news sans for controls, navigation and metadata. */
+  --font-news-sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* Typebar mono for datelines, archive references and classified metadata. */
+  --font-typewriter: "Courier Prime", "Courier New", Courier, ui-monospace, monospace;
+
+  /* Ink scale — pure black through paper white. */
+  --tsf-ink: #0a0a0a;
+  --tsf-ink-near: #121212;
+  --tsf-charcoal: #23231f;
+  --tsf-gray-dark: #3d3d38;
+  --tsf-gray: #6b6b64;
+  --tsf-gray-light: #a5a59d;
+  --tsf-rule-gray: #c9c9c2;
+  --tsf-newsprint: #e9e8e3;
+  --tsf-off-white: #f4f3ee;
+  --tsf-paper: #faf9f5;
+
+  --tsf-rule-hair: 1px solid var(--color-border-strong);
   --tsf-rule-thin: 1px solid var(--color-border-strong);
   --tsf-rule-thick: 3px double var(--color-border-strong);
+
+  --tsf-column-gap: 1.75rem;
+  --tsf-turn-ms: 560ms;
+
   --color-brand-orange: #121212;
   --color-brand-orange-hover: #000000;
   --color-brand-orange-light: #e8e8e4;
@@ -17,90 +47,117 @@ html.newspaper-preview {
   --radius-xl: 0;
   --radius-pill: 0;
   --radius-card: 0;
+
+  /* Newsprint grain, reused everywhere instead of an image download. */
+  --tsf-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+  --tsf-grain-fine: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='0.03'/%3E%3C/svg%3E");
 }
 
+/* Paper edition */
 html.newspaper-preview.light,
 html.newspaper-preview:not(.dark) {
-  --color-bg: #ececea;
-  --color-bg-secondary: #e2e2de;
-  --color-surface: #f7f7f4;
-  --color-surface-hover: #efefeb;
-  --color-inset: #e8e8e4;
-  --color-border: #c8c8c2;
+  --color-bg: #e6e5e0;
+  --color-bg-secondary: #dedcd6;
+  --color-surface: #faf9f5;
+  --color-surface-hover: #f1f0ea;
+  --color-inset: #eceae4;
+  --color-border: #c9c9c2;
   --color-border-strong: #121212;
-  --color-text: #121212;
-  --color-text-muted: #4a4a46;
-  --color-text-subtle: #6e6e68;
-  --color-accent: #121212;
+  --color-text: #0a0a0a;
+  --color-text-muted: #45453f;
+  --color-text-subtle: #6b6b64;
+  --color-accent: #0a0a0a;
   --color-accent-hover: #000000;
-  --color-accent-soft: #deded8;
-  --color-on-accent: #ffffff;
-  --color-card: #f7f7f4;
-  --color-card-muted: #efefeb;
-  --color-danger: #8b0000;
-  --color-danger-soft: #f0e4e4;
-  --color-shadow: rgba(18, 18, 18, 0.05);
-  --color-shadow-lg: rgba(18, 18, 18, 0.1);
+  --color-accent-soft: #e2e0d9;
+  --color-on-accent: #faf9f5;
+  --color-card: #faf9f5;
+  --color-card-muted: #f1f0ea;
+  --color-danger: #7a1416;
+  --color-danger-soft: #ece2e0;
+  --color-shadow: rgba(10, 10, 10, 0.07);
+  --color-shadow-lg: rgba(10, 10, 10, 0.16);
 }
 
+/* Late edition — the same ink relationship, inverted */
 html.newspaper-preview.dark {
-  --color-bg: #0f0f0f;
-  --color-bg-secondary: #0a0a0a;
-  --color-surface: #181816;
-  --color-surface-hover: #20201c;
-  --color-inset: #121210;
-  --color-border: #333330;
-  --color-border-strong: #ececea;
-  --color-text: #f4f4f0;
-  --color-text-muted: #b4b4ae;
-  --color-text-subtle: #888882;
-  --color-accent: #f4f4f0;
+  --color-bg: #0c0c0b;
+  --color-bg-secondary: #080807;
+  --color-surface: #161614;
+  --color-surface-hover: #1e1e1b;
+  --color-inset: #111110;
+  --color-border: #34342f;
+  --color-border-strong: #e9e8e3;
+  --color-text: #f4f3ee;
+  --color-text-muted: #b3b3aa;
+  --color-text-subtle: #86867e;
+  --color-accent: #f4f3ee;
   --color-accent-hover: #ffffff;
-  --color-accent-soft: rgba(244, 244, 240, 0.08);
-  --color-on-accent: #121212;
-  --color-card: #181816;
-  --color-card-muted: #121210;
-  --color-danger: #e07a7a;
-  --color-danger-soft: rgba(224, 122, 122, 0.12);
-  --color-shadow: rgba(0, 0, 0, 0.45);
-  --color-shadow-lg: rgba(0, 0, 0, 0.6);
+  --color-accent-soft: rgba(244, 243, 238, 0.09);
+  --color-on-accent: #0a0a0a;
+  --color-card: #161614;
+  --color-card-muted: #111110;
+  --color-danger: #d98b8b;
+  --color-danger-soft: rgba(217, 139, 139, 0.12);
+  --color-shadow: rgba(0, 0, 0, 0.5);
+  --color-shadow-lg: rgba(0, 0, 0, 0.7);
 }
+
+/* ─────────────────────── 2. Paper & typography ─────────────────────── */
 
 html.newspaper-preview,
 html.newspaper-preview body {
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
 }
 
 html.newspaper-preview body {
-  background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, #f2f2ee 0%, var(--color-bg) 8%, var(--color-bg) 100%);
-  background-size: 180px 180px, 100% 100%;
+  background-image: var(--tsf-grain), linear-gradient(180deg, #eeede8 0%, var(--color-bg) 9%, var(--color-bg) 100%);
+  background-size: 240px 240px, 100% 100%;
 }
 
 html.newspaper-preview.dark body {
-  background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, #141412 0%, var(--color-bg) 100%);
+  background-image: var(--tsf-grain), linear-gradient(180deg, #131312 0%, var(--color-bg) 100%);
+}
+
+html.newspaper-preview h1,
+html.newspaper-preview h2,
+html.newspaper-preview h3,
+html.newspaper-preview h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+html.newspaper-preview p,
+html.newspaper-preview li,
+html.newspaper-preview label,
+html.newspaper-preview input,
+html.newspaper-preview textarea,
+html.newspaper-preview select {
+  font-family: var(--font-sans);
 }
 
 html.newspaper-preview .font-display {
   font-family: var(--font-display);
 }
 
-html.newspaper-preview .font-sans {
-  font-family: var(--font-sans);
+/* Controls and metadata read in the news sans, the way a printed paper sets
+   its furniture apart from its body copy. */
+html.newspaper-preview button,
+html.newspaper-preview .sbn-btn,
+html.newspaper-preview .sbn-chip,
+html.newspaper-preview .sbn-badge,
+html.newspaper-preview .sbn-nav-tab,
+html.newspaper-preview .sbn-tab-btn,
+html.newspaper-preview .sbn-sidebar-item,
+html.newspaper-preview .sbn-topbar-eyebrow {
+  font-family: var(--font-news-sans);
 }
 
-html.newspaper-preview .mesh-bg {
-  background-color: var(--color-bg);
-  background-image: none;
-}
-
+html.newspaper-preview .mesh-bg,
 html.newspaper-preview .sbn-hero-glow {
-  background-color: transparent;
+  background-color: var(--color-bg);
   background-image: none;
 }
 
@@ -108,13 +165,181 @@ html.newspaper-preview .sbn-hero-glow::before {
   display: none;
 }
 
-/* ── Edition dateline ── */
+html.newspaper-preview ::selection {
+  background: var(--color-text);
+  color: var(--color-on-accent);
+}
+
+/* ────────────────────────── 3. Masthead ────────────────────────── */
+
+html.newspaper-preview .tsf-masthead {
+  border-top: 4px solid var(--color-border-strong);
+  border-bottom: var(--tsf-rule-thick);
+  padding: 0.5rem 0 0.55rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  background-image: var(--tsf-grain-fine);
+}
+
+html.newspaper-preview .tsf-masthead__strip {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0 0.5rem 0.4rem;
+  font-family: var(--font-news-sans);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-masthead__strip-item--center {
+  color: var(--color-text);
+  text-align: center;
+}
+
+html.newspaper-preview .tsf-masthead__strip-item--end {
+  text-align: right;
+  font-family: var(--font-typewriter);
+  letter-spacing: 0.08em;
+}
+
+html.newspaper-preview .tsf-masthead__rule {
+  height: 1px;
+  background: var(--color-border-strong);
+}
+
+html.newspaper-preview .tsf-masthead__rule--hair {
+  opacity: 0.55;
+}
+
+html.newspaper-preview .tsf-masthead__rule--double {
+  height: 4px;
+  background: none;
+  border-top: 2px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+html.newspaper-preview .tsf-masthead__crest {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.75rem, 3vw, 2rem);
+  padding: 0.85rem 0.5rem 0.35rem;
+}
+
+/* Engraved flourishes either side of the wordmark. */
+html.newspaper-preview .tsf-masthead__ornament {
+  flex: 1 1 0;
+  max-width: 8rem;
+  height: 9px;
+  border-top: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+  opacity: 0.75;
+}
+
+html.newspaper-preview .tsf-masthead__wordmark {
+  display: block;
+  margin: 0;
+  flex: 0 1 auto;
+}
+
+html.newspaper-preview .tsf-masthead__the {
+  display: block;
+  font-family: var(--font-news-sans);
+  font-size: clamp(0.55rem, 1.4vw, 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-masthead__name {
+  display: block;
+  font-family: var(--font-masthead);
+  font-weight: 900;
+  font-size: clamp(2.1rem, 8.5vw, 5.5rem);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  color: var(--color-text);
+  margin-top: 0.1rem;
+}
+
+html.newspaper-preview .tsf-masthead__tagline {
+  margin: 0.5rem 0 0.6rem;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(0.78rem, 1.6vw, 0.95rem);
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-masthead__dateline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  font-family: var(--font-typewriter);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-masthead__dateline-date {
+  text-align: center;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+html.newspaper-preview .tsf-masthead__dateline-price {
+  text-align: right;
+}
+
+html.newspaper-preview .tsf-masthead--compact {
+  border-top-width: 2px;
+  margin-bottom: 0.75rem;
+}
+
+html.newspaper-preview .tsf-masthead--compact .tsf-masthead__name {
+  font-size: clamp(1.5rem, 6vw, 2.25rem);
+}
+
+html.newspaper-preview .tsf-masthead--compact .tsf-masthead__crest {
+  padding: 0.5rem 0.5rem 0.2rem;
+}
+
+@media (max-width: 640px) {
+  html.newspaper-preview .tsf-masthead__ornament {
+    display: none;
+  }
+
+  html.newspaper-preview .tsf-masthead__strip,
+  html.newspaper-preview .tsf-masthead__dateline {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+    text-align: center;
+  }
+
+  html.newspaper-preview .tsf-masthead__strip-item--end,
+  html.newspaper-preview .tsf-masthead__dateline-price {
+    text-align: center;
+  }
+}
+
+/* ─────────────────── 4. Edition dateline strip ─────────────────── */
+
 html.newspaper-preview .tsf-edition-bar {
   background: var(--color-surface);
   color: var(--color-text-muted);
-  font-size: 0.62rem;
+  font-family: var(--font-typewriter);
+  font-size: 0.6rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  background-image: var(--tsf-grain-fine);
 }
 
 html.newspaper-preview .tsf-edition-bar__inner {
@@ -122,16 +347,16 @@ html.newspaper-preview .tsf-edition-bar__inner {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 0.75rem;
-  max-width: 72rem;
+  max-width: 76rem;
   margin: 0 auto;
   padding: 0.35rem 1rem;
 }
 
 html.newspaper-preview .tsf-edition-bar__city {
-  font-family: var(--font-masthead);
-  font-size: 0.72rem;
+  font-family: var(--font-news-sans);
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.2em;
   color: var(--color-text);
   text-align: center;
 }
@@ -151,63 +376,49 @@ html.newspaper-preview .tsf-edition-bar__rule--thick {
   border-bottom: 1px solid var(--color-border-strong);
 }
 
-/* ── Masthead (hero + nav wordmark) ── */
+@media (max-width: 640px) {
+  html.newspaper-preview .tsf-edition-bar__date,
+  html.newspaper-preview .tsf-edition-bar__meta {
+    display: none;
+  }
+
+  html.newspaper-preview .tsf-edition-bar__inner {
+    grid-template-columns: 1fr;
+    padding: 0.3rem 1rem;
+  }
+}
+
+/* ──────────────────── 5. Front page & headlines ──────────────────── */
+
 html.newspaper-preview .tsf-hero-masthead {
   text-align: center;
-  padding: 0.5rem 0 1rem;
-  border-top: var(--tsf-rule-thick);
-  border-bottom: var(--tsf-rule-thin);
-  margin-bottom: 0.25rem;
+  padding: 0;
+  border: 0;
+  margin-bottom: 0.75rem;
 }
 
-html.newspaper-preview .tsf-hero-masthead .tsf-logo-mark {
-  align-items: center;
-  border-left: none;
-  padding-left: 0;
-  margin: 0 auto;
-}
-
-html.newspaper-preview .tsf-hero-masthead .tsf-logo-the {
-  font-size: 0.65rem;
-  letter-spacing: 0.28em;
-}
-
-html.newspaper-preview .tsf-hero-masthead .tsf-logo-name {
-  font-family: var(--font-masthead);
-  font-size: clamp(2rem, 7vw, 3.25rem);
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  margin-top: 0.15rem;
-}
-
-html.newspaper-preview .tsf-masthead-tagline {
-  margin: 0.5rem 0 0;
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-style: italic;
-  color: var(--color-text-muted);
-  letter-spacing: 0.02em;
-}
-
-html.newspaper-preview .sbn-glass-nav .tsf-logo-mark {
-  border-left: 2px solid var(--color-text);
-  padding-left: 0.35rem;
-}
-
-html.newspaper-preview .sbn-glass-nav .tsf-logo-name {
-  font-family: var(--font-masthead);
-  font-size: 0.85rem;
+html.newspaper-preview .tsf-standfirst {
+  margin: 0 auto 1rem;
+  padding-bottom: 0.75rem;
+  max-width: 46rem;
+  border-bottom: var(--tsf-rule-hair);
+  font-family: var(--font-news-sans);
+  font-size: clamp(0.62rem, 1.5vw, 0.75rem);
   font-weight: 700;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--color-text-muted);
 }
 
-/* ── Front-page headline ── */
 html.newspaper-preview .tsf-front-page-hed {
   font-family: var(--font-masthead);
   font-weight: 900;
-  letter-spacing: -0.03em;
-  border-bottom: var(--tsf-rule-thin);
-  padding-bottom: 0.75rem;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  border-bottom: var(--tsf-rule-hair);
+  padding-bottom: 0.85rem;
 }
 
 html.newspaper-preview .tsf-front-page-hed .text-accent {
@@ -215,20 +426,130 @@ html.newspaper-preview .tsf-front-page-hed .text-accent {
   font-weight: 700;
 }
 
-/* ── Nav — section index ── */
+/* Lead paragraph gets the drop cap a front page deserves. */
+html.newspaper-preview .tsf-lede::first-letter {
+  float: left;
+  font-family: var(--font-masthead);
+  font-weight: 900;
+  font-size: 3.4em;
+  line-height: 0.78;
+  padding: 0.06em 0.09em 0 0;
+  color: var(--color-text);
+}
+
+html.newspaper-preview .tsf-kicker {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-news-sans);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Editorial byline / attribution line */
+html.newspaper-preview .tsf-byline {
+  font-family: var(--font-typewriter);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+/* Section head: FREE / WANTED / COMMUNITY */
+html.newspaper-preview .tsf-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--color-border-strong);
+}
+
+html.newspaper-preview .tsf-section-head__label {
+  font-family: var(--font-masthead);
+  font-size: clamp(1.15rem, 3vw, 1.75rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+html.newspaper-preview .tsf-section-head__blurb {
+  flex: 1 1 auto;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  min-width: 0;
+}
+
+html.newspaper-preview .tsf-section-head__index {
+  font-family: var(--font-typewriter);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+/* Editorial pull quote */
+html.newspaper-preview .tsf-pull-quote {
+  margin: 1.25rem 0;
+  padding: 0.85rem 0;
+  border-top: var(--tsf-rule-thick);
+  border-bottom: var(--tsf-rule-thick);
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  font-style: italic;
+  line-height: 1.35;
+  text-align: center;
+}
+
+/* Multi-column newspaper text — desktop only, collapses cleanly. */
+@media (min-width: 1024px) {
+  html.newspaper-preview .tsf-columns-2 {
+    column-count: 2;
+    column-gap: var(--tsf-column-gap);
+    column-rule: 1px solid var(--color-border);
+  }
+
+  html.newspaper-preview .tsf-columns-3 {
+    column-count: 3;
+    column-gap: var(--tsf-column-gap);
+    column-rule: 1px solid var(--color-border);
+  }
+
+  html.newspaper-preview .tsf-columns-2 > *,
+  html.newspaper-preview .tsf-columns-3 > * {
+    break-inside: avoid;
+  }
+}
+
+/* Vertical rules between front-page columns */
+@media (min-width: 1024px) {
+  html.newspaper-preview .tsf-rule-left {
+    border-left: 1px solid var(--color-border);
+    padding-left: var(--tsf-column-gap);
+  }
+}
+
+/* ───────────────────── 6. Navigation & chrome ───────────────────── */
+
 html.newspaper-preview .sbn-glass-nav {
   background: var(--color-surface);
   border-bottom: var(--tsf-rule-thick);
   box-shadow: none;
   backdrop-filter: none;
+  background-image: var(--tsf-grain-fine);
 }
 
 html.newspaper-preview .sbn-nav-tab {
   border-radius: 0;
-  font-family: var(--font-sans);
   font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--color-text-muted);
   background: transparent;
@@ -238,23 +559,104 @@ html.newspaper-preview .sbn-nav-tab:hover {
   color: var(--color-text);
   background: transparent;
   text-decoration: underline;
-  text-underline-offset: 0.2em;
+  text-underline-offset: 0.25em;
+  text-decoration-thickness: 2px;
 }
 
 html.newspaper-preview .sbn-nav-tab-active {
   color: var(--color-text);
   background: transparent;
+  border-bottom: 3px solid var(--color-text);
 }
 
 html.newspaper-preview .sbn-nav-tab-active::after {
   display: none;
 }
 
-html.newspaper-preview .sbn-nav-tab-active {
-  border-bottom: 2px solid var(--color-text);
+html.newspaper-preview .sbn-topbar,
+html.newspaper-preview .sbn-topbar-compact {
+  background: var(--color-surface);
+  border-bottom: var(--tsf-rule-thick);
+  box-shadow: none;
+  background-image: var(--tsf-grain-fine);
 }
 
-/* ── Square corners ── */
+html.newspaper-preview .sbn-topbar-title {
+  font-family: var(--font-masthead);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+html.newspaper-preview .sbn-topbar-eyebrow {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.56rem;
+  font-weight: 700;
+}
+
+html.newspaper-preview .sbn-mobile-header {
+  border-bottom: var(--tsf-rule-thick);
+  background: var(--color-surface);
+  background-image: var(--tsf-grain-fine);
+  box-shadow: none;
+}
+
+html.newspaper-preview .sbn-tab-bar,
+html.newspaper-preview .sbn-mobile-nav-bar,
+html.newspaper-preview nav[aria-label='Main navigation'] {
+  background: var(--color-surface);
+  border-top: var(--tsf-rule-thick);
+  box-shadow: none;
+  background-image: var(--tsf-grain-fine);
+}
+
+/* Bottom tabs read as the section index along the foot of the page. */
+html.newspaper-preview .sbn-tab-btn {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+html.newspaper-preview .sbn-sidebar,
+html.newspaper-preview .sbn-sidebar-drawer {
+  background: var(--color-surface);
+  border-right: var(--tsf-rule-thin);
+  background-image: var(--tsf-grain-fine);
+}
+
+html.newspaper-preview .sbn-sidebar-item {
+  border-radius: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-left: 3px solid transparent;
+}
+
+html.newspaper-preview .sbn-sidebar-item-active {
+  background: var(--color-accent-soft);
+  border-left-color: var(--color-text);
+  color: var(--color-text);
+}
+
+html.newspaper-preview .sbn-sidebar-accent-bar {
+  background: var(--color-text);
+}
+
+html.newspaper-preview .sbn-sidebar-role-pill {
+  font-family: var(--font-typewriter);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Section-index rule above the sidebar nav */
+html.newspaper-preview .sbn-sidebar-nav {
+  border-top: var(--tsf-rule-hair);
+  padding-top: 0.5rem;
+}
+
+/* ─────────────────────── 7. Squared corners ─────────────────────── */
+
 html.newspaper-preview .sbn-card,
 html.newspaper-preview .sbn-card-elevated,
 html.newspaper-preview .sbn-btn,
@@ -268,29 +670,47 @@ html.newspaper-preview .sbn-section,
 html.newspaper-preview .chat-inbox-row,
 html.newspaper-preview [class*='rounded-xl'],
 html.newspaper-preview [class*='rounded-2xl'],
+html.newspaper-preview [class*='rounded-3xl'],
 html.newspaper-preview [class*='rounded-lg'],
+html.newspaper-preview [class*='rounded-md'],
 html.newspaper-preview [class*='rounded-full'] {
   border-radius: 0;
 }
 
-/* ── Buttons ── */
+/* Avatars stay round — a portrait in a paper is still a portrait. */
+html.newspaper-preview .sbn-avatar,
+html.newspaper-preview [class*='rounded-full'].sbn-avatar,
+html.newspaper-preview img[class*='rounded-full'] {
+  border-radius: 9999px;
+}
+
+/* ───────────────────────── 8. Buttons ───────────────────────── */
+
 html.newspaper-preview .sbn-btn {
-  letter-spacing: 0.08em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
-  font-size: 0.65rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  font-family: var(--font-sans);
+  transition: background-color 140ms ease, color 140ms ease, transform 90ms ease, box-shadow 140ms ease;
 }
 
 html.newspaper-preview .sbn-btn-primary {
   background: var(--color-text);
   border: 1px solid var(--color-text);
   color: var(--color-on-accent);
+  box-shadow: 2px 2px 0 0 var(--color-shadow-lg);
 }
 
-html.newspaper-preview .sbn-btn-primary:hover {
+html.newspaper-preview .sbn-btn-primary:hover:not(:disabled) {
   background: var(--color-accent-hover);
   border-color: var(--color-accent-hover);
+  box-shadow: 3px 3px 0 0 var(--color-shadow-lg);
+}
+
+/* The stamp press: the button sinks into the paper. */
+html.newspaper-preview .sbn-btn-primary:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 0 var(--color-shadow-lg);
 }
 
 html.newspaper-preview .sbn-btn-secondary {
@@ -299,19 +719,155 @@ html.newspaper-preview .sbn-btn-secondary {
   color: var(--color-text);
 }
 
-/* ── Page headers ── */
+html.newspaper-preview .sbn-btn-secondary:hover:not(:disabled) {
+  background: var(--color-text);
+  color: var(--color-on-accent);
+}
+
+html.newspaper-preview .sbn-btn-ghost {
+  border: 1px solid transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+html.newspaper-preview .sbn-btn-ghost:hover:not(:disabled) {
+  border-color: var(--color-border);
+  text-decoration: none;
+}
+
+html.newspaper-preview .sbn-btn-danger {
+  background: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  color: #faf9f5;
+}
+
+/* Focus is a printed rule, not a glow. */
+html.newspaper-preview :focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+/* ────────────────── 9. Cards as classified blocks ────────────────── */
+
+html.newspaper-preview .sbn-card,
+html.newspaper-preview .sbn-card-elevated,
+html.newspaper-preview .sbn-section,
+html.newspaper-preview .sbn-hero-preview-card {
+  border: 1px solid var(--color-border-strong);
+  box-shadow: none;
+  background: var(--color-surface);
+  background-image: var(--tsf-grain-fine);
+}
+
+html.newspaper-preview .sbn-card-elevated {
+  box-shadow: 3px 3px 0 0 var(--color-shadow);
+}
+
+html.newspaper-preview .sbn-chip,
+html.newspaper-preview .sbn-badge {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+html.newspaper-preview .sbn-badge-give,
+html.newspaper-preview .sbn-chip-active {
+  background: var(--color-text);
+  color: var(--color-on-accent);
+  border-color: var(--color-text);
+}
+
+html.newspaper-preview .sbn-stat-pill {
+  border: 1px solid var(--color-border);
+  background: var(--color-inset);
+}
+
+html.newspaper-preview .sbn-stat-icon {
+  border-radius: 0;
+  background: var(--color-accent-soft);
+}
+
+/* ─────────────────── 10. Listing classified blocks ─────────────────── */
+
+html.newspaper-preview .item-feed-card,
+html.newspaper-preview .item-feed-tile {
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 3px;
+  background: var(--color-surface);
+  background-image: var(--tsf-grain-fine);
+  box-shadow: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+/* Hovering lifts the clipping off the page. */
+html.tsf-immersive.newspaper-preview .item-feed-card:hover,
+html.tsf-immersive.newspaper-preview .item-feed-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 3px 4px 0 0 var(--color-shadow-lg);
+}
+
+/* Listing headline set as a classified title. */
+html.newspaper-preview .item-feed-card h3,
+html.newspaper-preview .item-feed-tile h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Category, neighbourhood and date read as classified metadata. */
+html.newspaper-preview .item-feed-card .text-muted,
+html.newspaper-preview .item-feed-tile .text-muted {
+  font-family: var(--font-typewriter);
+  letter-spacing: 0.02em;
+}
+
+html.newspaper-preview .item-feed-card .sbn-badge {
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+}
+
+/* Photograph gets a printed halftone edge. */
+html.newspaper-preview .item-feed-card img,
+html.newspaper-preview .item-feed-tile img {
+  filter: grayscale(1) contrast(1.06);
+  transition: filter 220ms ease;
+}
+
+html.newspaper-preview .item-feed-card:hover img,
+html.newspaper-preview .item-feed-tile:hover img,
+html.newspaper-preview .item-feed-card:focus-within img {
+  filter: grayscale(0.82) contrast(1.02);
+}
+
+/* Dense classified column: consecutive rows share hairlines rather than gaps. */
+html.newspaper-preview .sbn-classified-column .item-feed-card {
+  border-width: 0 0 1px;
+  border-bottom-style: dotted;
+}
+
+html.newspaper-preview .sbn-classified-column .item-feed-card:last-child {
+  border-bottom-width: 0;
+}
+
+/* ───────────────────── 11. Page headers ───────────────────── */
+
 html.newspaper-preview .sbn-page-header {
   border-bottom: var(--tsf-rule-thick);
   padding-bottom: 1rem;
   margin-bottom: 1.5rem;
+  position: relative;
 }
 
-html.newspaper-preview .sbn-page-header h1 {
+html.newspaper-preview .sbn-page-header h1,
+html.newspaper-preview .sbn-page-header h2 {
   font-family: var(--font-masthead);
-  font-size: clamp(1.85rem, 4vw, 3rem);
+  font-size: clamp(1.85rem, 4.5vw, 3.15rem);
   font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
 }
 
 html.newspaper-preview .sbn-page-header p {
@@ -321,120 +877,260 @@ html.newspaper-preview .sbn-page-header p {
   color: var(--color-text-muted);
 }
 
-html.newspaper-preview .tsf-kicker {
-  margin: 0 0 0.35rem;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-/* ── Cards & classifieds ── */
-html.newspaper-preview .sbn-card,
-html.newspaper-preview .sbn-card-elevated,
-html.newspaper-preview .item-feed-card,
-html.newspaper-preview .item-feed-tile,
-html.newspaper-preview .sbn-hero-preview-card,
-html.newspaper-preview .sbn-section {
-  border: 1px solid var(--color-border-strong);
-  box-shadow: none;
-  background: var(--color-surface);
-}
-
-html.newspaper-preview .item-feed-card,
-html.newspaper-preview .item-feed-tile {
-  border-style: solid;
-  border-width: 1px 1px 2px;
-}
-
-html.newspaper-preview .sbn-chip,
-html.newspaper-preview .sbn-badge {
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-surface);
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-html.newspaper-preview .sbn-badge-give {
-  background: var(--color-text);
-  color: var(--color-on-accent);
-  border-color: var(--color-text);
-}
-
-/* ── Signed-in top bar ── */
-html.newspaper-preview .sbn-topbar,
-html.newspaper-preview .sbn-topbar-compact {
-  background: var(--color-surface);
-  border-bottom: var(--tsf-rule-thick);
-  box-shadow: none;
-}
-
-html.newspaper-preview .sbn-topbar-title {
-  font-family: var(--font-masthead);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-html.newspaper-preview .sbn-topbar-eyebrow {
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-size: 0.58rem;
-}
-
-/* ── Bottom tab bar ── */
-html.newspaper-preview .sbn-tab-bar,
-html.newspaper-preview [class*='bottom-nav'],
-html.newspaper-preview nav[aria-label='Main navigation'] {
-  background: var(--color-surface);
-  border-top: var(--tsf-rule-thick);
-  box-shadow: none;
-}
-
-html.newspaper-preview .sbn-tab-btn {
-  font-size: 0.58rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* ── Section heads inside app ── */
 html.newspaper-preview .sbn-section-title,
 html.newspaper-preview .DepthSection h2,
 html.newspaper-preview h2.font-display {
   font-family: var(--font-masthead);
   font-weight: 900;
-  border-bottom: var(--tsf-rule-thin);
+  border-bottom: var(--tsf-rule-hair);
   padding-bottom: 0.35rem;
 }
 
-/* ── Stats & pills ── */
-html.newspaper-preview .sbn-stat-pill {
-  border: 1px solid var(--color-border);
-  background: var(--color-inset);
+html.newspaper-preview .sbn-back-btn {
+  font-family: var(--font-news-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.64rem;
+  font-weight: 700;
 }
 
-html.newspaper-preview .sbn-stat-icon {
+html.newspaper-preview .sbn-page-content > .space-y-4 > * + *,
+html.newspaper-preview .sbn-section + .sbn-section {
+  border-top: var(--tsf-rule-hair);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+/* ───────────────────── 12. Forms — place a classified ───────────────────── */
+
+html.newspaper-preview .sbn-input,
+html.newspaper-preview .sbn-input-tray input,
+html.newspaper-preview textarea.sbn-input,
+html.newspaper-preview select.sbn-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  font-family: var(--font-sans);
+}
+
+html.newspaper-preview .sbn-input:focus {
+  box-shadow: inset 0 0 0 2px var(--color-text);
+  outline: none;
+}
+
+/* Field labels are set like the headings on a classified order form. */
+html.newspaper-preview .sbn-field > label,
+html.newspaper-preview .sbn-field-label {
+  font-family: var(--font-news-sans);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .sbn-switch,
+html.newspaper-preview .sbn-labeled-switch,
+html.newspaper-preview .sbn-filter-switch {
+  border-radius: 0;
+  border: 1px solid var(--color-border-strong);
+}
+
+html.newspaper-preview .sbn-switch-thumb,
+html.newspaper-preview .sbn-labeled-switch-thumb,
+html.newspaper-preview .sbn-filter-switch-thumb {
   border-radius: 0;
 }
 
-/* ── Auth panel ── */
+html.newspaper-preview .sbn-labeled-switch-label,
+html.newspaper-preview .sbn-filter-switch-name {
+  font-family: var(--font-news-sans);
+  letter-spacing: 0.1em;
+}
+
+html.newspaper-preview .sbn-feed-composer {
+  border: var(--tsf-rule-thick);
+  background: var(--color-surface);
+  background-image: var(--tsf-grain-fine);
+}
+
+/* ───────────────────── 13. Chat — the wire desk ───────────────────── */
+
+html.newspaper-preview .chat-inbox-panel,
+html.newspaper-preview .chat-inbox-header,
+html.newspaper-preview .chat-thread-header,
+html.newspaper-preview .chat-compose-tray {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+}
+
+html.newspaper-preview .chat-inbox-row {
+  border-bottom: 1px dotted var(--color-border);
+}
+
+html.newspaper-preview .chat-inbox-row--selected {
+  background: var(--color-accent-soft);
+  border-left: 3px solid var(--color-text);
+}
+
+html.newspaper-preview .chat-bubble-in {
+  background: var(--color-inset);
+  border: 1px solid var(--color-border);
+}
+
+html.newspaper-preview .chat-bubble-out {
+  background: var(--color-text);
+  color: var(--color-on-accent);
+  border: 1px solid var(--color-text);
+}
+
+html.newspaper-preview .chat-action-chip {
+  border-radius: 0;
+  font-family: var(--font-news-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.6rem;
+}
+
+/* Timestamps in the wire-copy mono. */
+html.newspaper-preview .chat-thread-bg time,
+html.newspaper-preview .chat-inbox-row time {
+  font-family: var(--font-typewriter);
+}
+
+/* ───────────────────── 14. Modals & sheets ───────────────────── */
+
+html.newspaper-preview .sbn-app-sheet,
+html.newspaper-preview .sbn-modal-panel,
+html.newspaper-preview .sbn-panel-content {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  background-image: var(--tsf-grain-fine);
+  box-shadow: 0 24px 60px -20px var(--color-shadow-lg);
+}
+
+/* Paper unfolding as a panel opens. */
+html.tsf-immersive.newspaper-preview .sbn-app-sheet,
+html.tsf-immersive.newspaper-preview .sbn-modal-panel {
+  animation: tsf-unfold 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes tsf-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scaleY(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+/* ───────────────────── 15. Auth & boot ───────────────────── */
+
 html.newspaper-preview .sbn-auth-brand-panel {
-  background: linear-gradient(180deg, #121212 0%, #2a2a28 100%);
-  color: #f4f4f0;
+  background: linear-gradient(180deg, #0a0a0a 0%, #262622 100%);
+  color: #f4f3ee;
+  background-image: var(--tsf-grain);
 }
 
-html.newspaper-preview .sbn-native-hero {
-  background: #121212;
+html.newspaper-preview .sbn-native-hero,
+html.newspaper-preview .sbn-boot-logo-glow {
+  background: #0a0a0a;
 }
 
-/* ── Links ── */
+html.newspaper-preview .sbn-auth-quote {
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+/* ───────────────────── 16. Links, accents, footer ───────────────────── */
+
 html.newspaper-preview a:not(.sbn-btn):not([class*='btn']) {
   text-decoration-thickness: 1px;
-  text-underline-offset: 0.15em;
+  text-underline-offset: 0.18em;
 }
 
-/* ── Preview banner ── */
+html.newspaper-preview .text-accent {
+  color: var(--color-text);
+}
+
+html.newspaper-preview .bg-accent-soft {
+  background: var(--color-accent-soft);
+}
+
+html.newspaper-preview .border-accent {
+  border-color: var(--color-border-strong);
+}
+
+html.newspaper-preview [class*='ring-accent'] {
+  --tw-ring-color: color-mix(in srgb, var(--color-text) 25%, transparent);
+}
+
+html.newspaper-preview .sbn-footer,
+html.newspaper-preview footer {
+  border-top: var(--tsf-rule-thick);
+  font-size: 0.75rem;
+}
+
+html.newspaper-preview footer .text-muted {
+  font-family: var(--font-typewriter);
+  font-size: 0.68rem;
+}
+
+html.newspaper-preview img[alt='Sacramento Buy Nothing'] {
+  display: none;
+}
+
+html.newspaper-preview .leaflet-container {
+  border: 1px solid var(--color-border-strong);
+}
+
+/* The map printed in ink rather than colour. */
+html.newspaper-preview .leaflet-tile-pane {
+  filter: grayscale(1) contrast(1.08) brightness(1.02);
+}
+
+html.newspaper-preview.dark .leaflet-tile-pane {
+  filter: grayscale(1) invert(0.92) contrast(0.95) brightness(0.95);
+}
+
+/* ───────────────────── 17. Wordmark ───────────────────── */
+
+html.newspaper-preview .tsf-logo-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 0.95;
+}
+
+html.newspaper-preview .tsf-logo-the {
+  font-family: var(--font-news-sans);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-logo-name {
+  font-family: var(--font-masthead);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  color: var(--color-text);
+}
+
+html.newspaper-preview .sbn-glass-nav .tsf-logo-mark {
+  border-left: 3px solid var(--color-text);
+  padding-left: 0.4rem;
+}
+
+html.newspaper-preview .sbn-glass-nav .tsf-logo-name {
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+/* ───────────────────── 18. Preview banner ───────────────────── */
+
 html.newspaper-preview .tsf-preview-banner,
 .tsf-preview-banner {
   display: flex;
@@ -443,8 +1139,8 @@ html.newspaper-preview .tsf-preview-banner,
   justify-content: space-between;
   gap: 0.65rem 1rem;
   padding: 0.45rem 1rem;
-  background: #121212;
-  color: #f4f4f0;
+  background: #0a0a0a;
+  color: #f4f3ee;
   font-size: 0.68rem;
   letter-spacing: 0.03em;
   line-height: 1.45;
@@ -468,149 +1164,335 @@ html.newspaper-preview .tsf-preview-banner strong,
 html.newspaper-preview .tsf-preview-banner button,
 .tsf-preview-banner button {
   flex-shrink: 0;
-  border: 1px solid rgba(244, 244, 240, 0.45);
+  border: 1px solid rgba(244, 243, 238, 0.45);
   padding: 0.3rem 0.7rem;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #f4f4f0;
+  color: #f4f3ee;
   background: transparent;
   cursor: pointer;
 }
 
 html.newspaper-preview .tsf-preview-banner button:hover,
 .tsf-preview-banner button:hover {
-  background: #f4f4f0;
-  color: #121212;
+  background: #f4f3ee;
+  color: #0a0a0a;
 }
 
 .tsf-root {
   background: var(--color-bg);
 }
 
-/* ── Wordmark (compact) ── */
-html.newspaper-preview .tsf-logo-mark {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 0.95;
+/* ───────────────── 19. Newspaper experience settings ───────────────── */
+
+html.newspaper-preview .tsf-experience-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border-strong);
 }
 
-html.newspaper-preview .tsf-logo-the {
-  font-size: 0.55rem;
+html.newspaper-preview .tsf-experience-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.7rem 0.15rem;
+  border-bottom: 1px dotted var(--color-border);
+}
+
+html.newspaper-preview .tsf-experience-row__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+  background: var(--color-inset);
+}
+
+html.newspaper-preview .tsf-experience-row__label {
+  font-family: var(--font-news-sans);
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
+  color: var(--color-text);
+}
+
+html.newspaper-preview .tsf-experience-row__blurb {
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
   color: var(--color-text-muted);
 }
 
-html.newspaper-preview .tsf-logo-name {
-  font-family: var(--font-masthead);
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
+/* ───────────────────── 20. Page-turn transition ───────────────────── */
+
+.tsf-page-turn {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  overflow: hidden;
+  perspective: 2400px;
+  perspective-origin: center;
 }
 
-html.newspaper-preview .sbn-page-content > .space-y-4 > * + *,
-html.newspaper-preview .sbn-section + .sbn-section {
-  border-top: var(--tsf-rule-thin);
-  padding-top: 1rem;
-  margin-top: 1rem;
+.tsf-page-turn__leaf {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
-html.newspaper-preview .sbn-back-btn {
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.65rem;
+.tsf-page-turn__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  background-color: var(--color-surface);
+  background-image: var(--tsf-grain),
+    linear-gradient(100deg, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0) 18%, rgba(0, 0, 0, 0) 78%, rgba(0, 0, 0, 0.1) 100%);
 }
 
-html.newspaper-preview .sbn-footer,
-html.newspaper-preview footer {
-  border-top: var(--tsf-rule-thick);
-  font-size: 0.75rem;
+.tsf-page-turn__face--back {
+  transform: rotateY(180deg);
+  background-image: var(--tsf-grain),
+    linear-gradient(260deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.02) 35%, rgba(0, 0, 0, 0.08) 100%);
 }
 
-html.newspaper-preview .text-accent {
-  color: var(--color-text);
+.tsf-page-turn__shadow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0) 45%);
+  opacity: 0;
+  will-change: opacity, transform;
 }
 
-html.newspaper-preview .bg-accent-soft {
-  background: var(--color-accent-soft);
+/* Desktop: a full broadsheet leaf swinging over on its spine. */
+.tsf-page-turn--sheet .tsf-page-turn__leaf {
+  transform-origin: left center;
+  animation: tsf-leaf-forward var(--tsf-turn-ms, 560ms) cubic-bezier(0.42, 0.02, 0.24, 1) forwards;
 }
 
-html.newspaper-preview .border-accent {
-  border-color: var(--color-border-strong);
+.tsf-page-turn--sheet.tsf-page-turn--back .tsf-page-turn__leaf {
+  transform-origin: right center;
+  animation-name: tsf-leaf-back;
 }
 
-html.newspaper-preview .ring-accent\/30,
-html.newspaper-preview [class*='ring-accent'] {
-  --tw-ring-color: color-mix(in srgb, var(--color-text) 25%, transparent);
+.tsf-page-turn--sheet .tsf-page-turn__shadow {
+  animation: tsf-turn-shadow var(--tsf-turn-ms, 560ms) ease-out forwards;
 }
 
-html.newspaper-preview img[alt='Sacramento Buy Nothing'] {
+@keyframes tsf-leaf-forward {
+  0% {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotateY(-172deg);
+    opacity: 0;
+  }
+}
+
+@keyframes tsf-leaf-back {
+  0% {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotateY(172deg);
+    opacity: 0;
+  }
+}
+
+@keyframes tsf-turn-shadow {
+  0% {
+    opacity: 0.5;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(60%);
+  }
+}
+
+/* Mobile: a single sheet sliding away — quick, quiet, no 3D cost. */
+.tsf-page-turn--compact .tsf-page-turn__leaf {
+  animation: tsf-sheet-slide 240ms cubic-bezier(0.3, 0, 0.2, 1) forwards;
+}
+
+.tsf-page-turn--compact .tsf-page-turn__face--back,
+.tsf-page-turn--compact .tsf-page-turn__shadow {
   display: none;
 }
 
-/* ── Map & listing grid ── */
-html.newspaper-preview .leaflet-container {
-  border: 1px solid var(--color-border-strong);
+@keyframes tsf-sheet-slide {
+  0% {
+    transform: translateX(0);
+    opacity: 0.96;
+  }
+  100% {
+    transform: translateX(-18%);
+    opacity: 0;
+  }
 }
 
-html.newspaper-preview .sbn-input,
-html.newspaper-preview .sbn-input-tray input,
-html.newspaper-preview textarea.sbn-input {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  font-family: var(--font-sans);
+/* ───────────────── 21. Press effects & micro-interactions ───────────────── */
+
+/* Headline arriving as if it had just come off the press. */
+html.tsf-immersive.newspaper-preview .tsf-masthead__name,
+html.tsf-immersive.newspaper-preview .tsf-front-page-hed {
+  animation: tsf-ink-set 520ms ease-out both;
 }
 
-html.newspaper-preview .sbn-input:focus {
-  box-shadow: inset 0 0 0 1px var(--color-text);
+@keyframes tsf-ink-set {
+  0% {
+    opacity: 0;
+    filter: blur(2.5px);
+    transform: translateY(3px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0.4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
 }
 
-/* ── Feed composer ── */
-html.newspaper-preview .sbn-feed-composer {
-  border: var(--tsf-rule-thick);
-  background: var(--color-surface);
+/* Registration nudge — the tiny misalignment of a colour pass. */
+html.tsf-immersive.newspaper-preview .tsf-section-head__label {
+  animation: tsf-registration 420ms ease-out both;
 }
 
-/* ── Guest listing preview on home ── */
-html.newspaper-preview .sbn-hero-preview-card {
-  border: var(--tsf-rule-thick);
+@keyframes tsf-registration {
+  0% {
+    transform: translateX(-1.5px);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-html.newspaper-preview .sbn-hero-preview-card > p:first-child {
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
+/* Editorial dividers drawing themselves in. */
+html.tsf-immersive.newspaper-preview .tsf-masthead__rule--double,
+html.tsf-immersive.newspaper-preview .tsf-section-head {
+  animation: tsf-rule-draw 460ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 
-html.newspaper-preview .sbn-hero-preview-feature + .sbn-hero-preview-feature {
-  border-top: 1px dotted var(--color-border);
+@keyframes tsf-rule-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
 }
 
-/* ── Modals / sheets keep structure, newspaper chrome ── */
-html.newspaper-preview .sbn-app-sheet,
-html.newspaper-preview .sbn-modal-panel {
-  background: var(--color-surface);
-  border-color: var(--color-border-strong);
+/* Paper shifting under the cursor. */
+html.tsf-immersive.newspaper-preview .sbn-card:hover {
+  box-shadow: 2px 3px 0 0 var(--color-shadow);
 }
 
-html.newspaper-preview h1,
-html.newspaper-preview h2,
-html.newspaper-preview h3,
-html.newspaper-preview .sbn-topbar-title {
-  font-family: var(--font-display);
+/* Ink wash used when a listing opens. */
+html.tsf-immersive.newspaper-preview .sbn-page-content {
+  animation: tsf-ink-wash 300ms ease-out both;
 }
 
+@keyframes tsf-ink-wash {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ───────────────────── 22. Accessibility ───────────────────── */
+
+/* The OS preference wins outright, and the in-app switch mirrors it. */
+@media (prefers-reduced-motion: reduce) {
+  .tsf-page-turn,
+  .tsf-page-turn__leaf,
+  .tsf-page-turn__shadow {
+    animation: none !important;
+    display: none !important;
+  }
+
+  html.newspaper-preview *,
+  html.newspaper-preview *::before,
+  html.newspaper-preview *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+html.tsf-calm-motion .tsf-page-turn {
+  display: none;
+}
+
+html.tsf-calm-motion.newspaper-preview .tsf-masthead__name,
+html.tsf-calm-motion.newspaper-preview .tsf-front-page-hed,
+html.tsf-calm-motion.newspaper-preview .tsf-section-head,
+html.tsf-calm-motion.newspaper-preview .tsf-section-head__label,
+html.tsf-calm-motion.newspaper-preview .sbn-page-content,
+html.tsf-calm-motion.newspaper-preview .sbn-app-sheet,
+html.tsf-calm-motion.newspaper-preview .sbn-modal-panel {
+  animation: none !important;
+}
+
+/* Body copy on newsprint needs a little more room than a UI sans. */
 html.newspaper-preview p,
-html.newspaper-preview li,
-html.newspaper-preview label,
-html.newspaper-preview input,
-html.newspaper-preview textarea,
-html.newspaper-preview select {
-  font-family: var(--font-sans);
+html.newspaper-preview li {
+  line-height: 1.62;
+}
+
+/* ───────────────────── 23. Mobile edition ───────────────────── */
+
+@media (max-width: 640px) {
+  html.newspaper-preview .tsf-front-page-hed {
+    font-size: clamp(2rem, 11vw, 2.75rem);
+    line-height: 1.03;
+  }
+
+  html.newspaper-preview .tsf-lede::first-letter {
+    font-size: 2.9em;
+  }
+
+  html.newspaper-preview .tsf-section-head {
+    flex-wrap: wrap;
+    gap: 0.3rem 0.75rem;
+  }
+
+  html.newspaper-preview .tsf-section-head__blurb {
+    flex-basis: 100%;
+    font-size: 0.78rem;
+  }
+
+  html.newspaper-preview .tsf-pull-quote {
+    font-size: 1rem;
+  }
+
+  /* Slightly larger body type — a phone is held closer than a broadsheet. */
+  html.newspaper-preview .sbn-page-content p {
+    font-size: 0.95rem;
+  }
 }

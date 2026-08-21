@@ -8,6 +8,9 @@ import HomeDownloadButtons from '../HomeDownloadButtons';
 import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
 import { SITE, SUPPORT } from '../../../siteContent';
 import { useBrand } from '../../../preview/useBrand';
+import { NEWSPAPER } from '../../../preview/newspaperBrand';
+import NewspaperMasthead from '../../../preview/NewspaperMasthead';
+import NewspaperSectionHead from '../../../preview/NewspaperSectionHead';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
 
@@ -45,25 +48,38 @@ export default function HomePage({
   onViewListing,
   onRequireSignIn,
 }: HomePageProps) {
-  const { name, tagline, copy } = useBrand();
+  const { newspaper, name, tagline, copy } = useBrand();
   const description = copy(SITE.description);
   const principles = SITE.principles.map((line) => copy(line));
   const freeRule = copy(SITE.freeRule);
 
   return (
     <HomeScrollStage>
+      {newspaper && (
+        <div className="px-4">
+          <NewspaperMasthead />
+          <p className="tsf-standfirst">{NEWSPAPER.standfirst}</p>
+        </div>
+      )}
+
       <section className="px-4 sbn-hero-glow pb-4">
         <div className="lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:items-center max-w-3xl lg:max-w-none mx-auto">
           <div>
-            <div className="tsf-hero-masthead">
-              <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl" />
-              <p className="tsf-masthead-tagline">{tagline}</p>
-            </div>
+            {!newspaper && (
+              <div className="tsf-hero-masthead">
+                <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain rounded-xl" />
+                <p className="tsf-masthead-tagline">{tagline}</p>
+              </div>
+            )}
 
-            <span className="sbn-badge sbn-badge-give">
-              <Heart className="w-3 h-3 inline mr-1" />
-              {name}
-            </span>
+            {newspaper ? (
+              <p className="tsf-kicker">Lead story · {NEWSPAPER.edition}</p>
+            ) : (
+              <span className="sbn-badge sbn-badge-give">
+                <Heart className="w-3 h-3 inline mr-1" />
+                {name}
+              </span>
+            )}
 
             <h1 className="tsf-front-page-hed mt-6 font-display text-4xl md:text-5xl lg:text-6xl font-bold text-app leading-[1.08] tracking-tight">
               Give freely.
@@ -71,7 +87,9 @@ export default function HomePage({
               <span className="text-accent">Ask kindly.</span>
             </h1>
 
-            <p className="mt-5 text-base lg:text-lg text-muted leading-relaxed max-w-lg">{description}</p>
+            <p className={`mt-5 text-base lg:text-lg text-muted leading-relaxed max-w-lg ${newspaper ? 'tsf-lede' : ''}`}>
+              {description}
+            </p>
 
             <ul className="mt-6 flex flex-wrap gap-2">
               {principles.map((line) => (
@@ -128,8 +146,11 @@ export default function HomePage({
         </div>
       </DepthSection>
 
+      {newspaper && <p className="tsf-pull-quote mx-4">“{copy(SITE.tagline)}”</p>}
+
       {onViewListing && onRequireSignIn && (
         <DepthSection depth={3} id="guest_listing_preview">
+          <NewspaperSectionHead label="Classifieds" blurb="Give. Get. Share." index="Today's edition" />
           <GuestListingPreview
             items={items}
             isLoading={isItemsLoading}
@@ -141,12 +162,14 @@ export default function HomePage({
       )}
 
       <DepthSection depth={2} className="mt-6">
+        <NewspaperSectionHead label="From the desk" blurb="Notes from the community team." />
         <div className="sbn-card p-1">
           <LeadershipMessagesCarousel onRequireSignIn={onRequireSignIn} />
         </div>
       </DepthSection>
 
       <DepthSection depth={2} className="mt-6">
+        <NewspaperSectionHead label="Letters" blurb="What neighbors are saying." />
         <div className="sbn-card p-1">
           <CommunityReviews
             preview
@@ -157,6 +180,7 @@ export default function HomePage({
       </DepthSection>
 
       <DepthSection depth={2} className="mt-6" id="home_support_section">
+        <NewspaperSectionHead label="Public notices" blurb="Keeping the paper free to print." />
         <button
           type="button"
           onClick={() => onNavigate('gofundme')}
@@ -180,6 +204,7 @@ export default function HomePage({
       </DepthSection>
 
       <DepthSection depth={2} className="mt-14">
+        <NewspaperSectionHead label="Sections" blurb="An index to the rest of the paper." />
         <h2 className="font-display text-xl font-bold text-app">About the community</h2>
         <p className="mt-1 text-sm text-muted">Learn how we keep gifting local and free.</p>
 
