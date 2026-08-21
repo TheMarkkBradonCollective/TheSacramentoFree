@@ -22,6 +22,7 @@ export interface EventsFilterPreferences {
   quickPicks?: EventQuickPickFilter[];
   selectedNeighborhood?: string;
   timeFilter?: EventTimeFilterPref | null;
+  gridSortMode?: 'nearest' | 'new';
 }
 
 export type FeedListingQuickPick = 'saved' | 'my_neighborhood' | 'with_photos' | 'needs_pickup';

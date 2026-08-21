@@ -32,6 +32,7 @@ export type EventsFilterState = {
   sortBy: EventSortFilter | null;
   selectedNeighborhood: string;
   activeQuickPicks: Set<EventQuickPickFilter>;
+  gridSortMode: 'nearest' | 'new';
 };
 
 export const DEFAULT_EVENTS_FILTER_STATE: EventsFilterState = {
@@ -39,6 +40,7 @@ export const DEFAULT_EVENTS_FILTER_STATE: EventsFilterState = {
   sortBy: null,
   selectedNeighborhood: 'All Neighborhoods',
   activeQuickPicks: new Set(),
+  gridSortMode: 'nearest',
 };
 
 function isEventSortFilter(value: unknown): value is EventSortFilter {
@@ -81,6 +83,10 @@ export function normalizeEventsFilterPreferences(raw: unknown): EventsFilterPref
     prefs.quickPicks = source.quickPicks.filter(isEventQuickPickFilter);
   }
 
+  if (source.gridSortMode === 'nearest' || source.gridSortMode === 'new') {
+    prefs.gridSortMode = source.gridSortMode;
+  }
+
   return prefs;
 }
 
@@ -93,6 +99,7 @@ export function eventsFilterStateFromPreferences(
     sortBy: normalized.sortBy ?? null,
     selectedNeighborhood: normalized.selectedNeighborhood ?? DEFAULT_EVENTS_FILTER_STATE.selectedNeighborhood,
     activeQuickPicks: new Set(normalized.quickPicks ?? []),
+    gridSortMode: normalized.gridSortMode ?? DEFAULT_EVENTS_FILTER_STATE.gridSortMode,
   };
 }
 
@@ -102,6 +109,7 @@ export function eventsFilterPreferencesFromState(state: EventsFilterState): Even
     timeFilter: state.timeFilter,
     selectedNeighborhood: state.selectedNeighborhood,
     quickPicks: [...state.activeQuickPicks],
+    gridSortMode: state.gridSortMode,
   };
 }
 
