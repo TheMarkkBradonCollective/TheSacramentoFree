@@ -67,7 +67,9 @@ This paints a full-bleed newsprint launcher from `public/Logo.png`, writes mipma
 
 **Neighbors:** share the in-app download page at [www.sacramentobuynothing.com/download](https://www.sacramentobuynothing.com/download). It compares APK vs home screen installs and shows whether an update is needed.
 
-After building, commit `public/buynothing.apk`, `public/buynothing-v*.apk`, `public/downloads/sac-buy-nothing.apk`, `public/downloads/sac-buy-nothing.aab`, and `public/android-version.json`, then deploy so the live download button and MBC App Market listing work.
+After building, commit `public/buynothing.apk`, `public/buynothing-v{version}.apk`, `public/downloads/sac-buy-nothing.apk`, `public/downloads/sac-buy-nothing.aab`, and `public/android-version.json`, then deploy so the live download button and MBC App Market listing work.
+
+Only the **current** versioned APK/AAB pair is kept in `public/downloads/` (plus `sac-buy-nothing.apk` / `.aab` aliases). Older builds are pruned automatically at the end of `npm run android:apk` and `npm run android:aab`, or manually with `npm run android:prune-downloads`. Do not commit historical APK/AAB pairs — they bloat every Vercel deploy.
 
 ## Open in Android Studio
 
