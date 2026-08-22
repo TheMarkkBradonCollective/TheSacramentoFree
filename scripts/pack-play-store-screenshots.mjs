@@ -17,17 +17,20 @@ const zipPath = join(outDir, 'play-store-screenshots.zip');
 
 const PHONE_SHOTS = [
   ['01-home.png', 'Public newspaper home'],
-  ['02-stuff.png', 'Stuff listings'],
-  ['03-listing.png', 'Listing detail'],
-  ['04-map.png', 'Neighborhood map'],
-  ['05-events.png', 'Community events'],
-  ['06-event.png', 'Event detail'],
-  ['07-messages.png', 'Messages'],
-  ['08-account.png', 'Account / profile'],
+  ['02-feed.png', 'Feed — neighbor social posts'],
+  ['03-stuff.png', 'Stuff — giveaways and requests'],
+  ['04-listing.png', 'Listing detail'],
+  ['05-map.png', 'Neighborhood map'],
+  ['06-events.png', 'Community events'],
+  ['07-event.png', 'Event detail'],
+  ['08-messages.png', 'Messages'],
 ];
 
 export function packPlayStoreScreenshotsZip() {
   mkdirSync(outDir, { recursive: true });
+  if (existsSync(zipPath)) {
+    rmSync(zipPath);
+  }
 
   const staging = mkdtempSync(join(tmpdir(), 'play-store-screenshots-'));
   const readme = [

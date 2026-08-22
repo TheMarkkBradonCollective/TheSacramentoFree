@@ -219,14 +219,18 @@ async function main() {
     await waitForImages(page);
     await shot(page, '01-home');
 
-    // Feed is the social section — Play listing uses Stuff (give/get), not neighbor posts.
-    await page.goto(`${ORIGIN}/stuff`, { waitUntil: 'networkidle2', timeout: 60000 });
+    await page.goto(`${ORIGIN}/feed`, { waitUntil: 'networkidle2', timeout: 60000 });
     await page.waitForSelector('#mobile_sticky_footer_nav', { timeout: 45000 });
     await wait(1200);
     await dismissGates(page);
+    await page.waitForSelector('[id^="feed_post_"]', { timeout: 20000 });
+    await wait(1000);
+    await shot(page, '02-feed');
+
+    await openTab(page, 'stuff');
     await page.waitForSelector('#item_feed_wrapper', { timeout: 20000 }).catch(() => null);
     await wait(1000);
-    await shot(page, '02-stuff');
+    await shot(page, '03-stuff');
 
     await page.evaluate(() => {
       const chair = document.querySelector('#item_card_demo-item-chair button');
@@ -242,7 +246,7 @@ async function main() {
     });
     await page.waitForSelector('#item_detail_fullscreen', { timeout: 12000 });
     await wait(1500);
-    await shot(page, '03-listing');
+    await shot(page, '04-listing');
     await page.evaluate(() => {
       const back = document.querySelector('#item_detail_fullscreen [aria-label="Back"]');
       if (back instanceof HTMLElement) back.click();
@@ -259,11 +263,11 @@ async function main() {
       }
     });
     await wait(1800);
-    await shot(page, '04-map');
+    await shot(page, '05-map');
 
     await openTab(page, 'events');
     await wait(1500);
-    await shot(page, '05-events');
+    await shot(page, '06-events');
 
     await page.evaluate(() => {
       const picnic = document.querySelector('#event_card_demo-event-picnic button');
@@ -277,19 +281,14 @@ async function main() {
     });
     await page.waitForSelector('#event_detail_fullscreen', { timeout: 12000 });
     await wait(1500);
-    await shot(page, '06-event');
+    await shot(page, '07-event');
     await page.click('#event_detail_fullscreen [aria-label="Back"]').catch(() => null);
     await wait(800);
 
     await openTab(page, 'chats');
     await page.waitForSelector('#chat_inbox_list, #empty_chat_inbox_state', { timeout: 20000 });
     await wait(1200);
-    await shot(page, '07-messages');
-
-    await page.click('#header_profile_btn');
-    await page.waitForSelector('#profile_root_container', { timeout: 12000 });
-    await wait(1200);
-    await shot(page, '08-account');
+    await shot(page, '08-messages');
     packPlayStoreScreenshotsZip();
   } finally {
     if (server) {

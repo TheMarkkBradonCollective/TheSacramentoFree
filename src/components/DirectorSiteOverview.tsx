@@ -357,7 +357,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           Download screenshots & store icon
         </a>
         <p className="text-[10px] text-muted/80 leading-snug -mt-1">
-          Zip: padded site lockup icon, feature graphic, and phone shots (01-home through 08-account).
+          Zip: padded site lockup icon, feature graphic, and phone shots (01-home through 08-messages, including Feed).
         </p>
         <button
           type="button"
