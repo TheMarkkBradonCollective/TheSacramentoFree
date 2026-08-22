@@ -466,6 +466,23 @@ export const PLAY_STORE_DEMO_CHATS: Chat[] = [
     itemId: 'demo-item-plants',
     itemTitle: 'Spider plant cuttings',
   },
+  {
+    id: 'demo-chat-lamp',
+    participantIds: [PLAY_STORE_DEMO_PROFILE.uid, NEIGHBORS.riley.uid],
+    participantNames: {
+      [PLAY_STORE_DEMO_PROFILE.uid]: PLAY_STORE_DEMO_PROFILE.displayName,
+      [NEIGHBORS.riley.uid]: NEIGHBORS.riley.name,
+    },
+    participantPhotos: {
+      [PLAY_STORE_DEMO_PROFILE.uid]: PLAY_STORE_DEMO_PROFILE.photoURL || '',
+      [NEIGHBORS.riley.uid]: NEIGHBORS.riley.photo,
+    },
+    lastMessageText: 'I have a floor lamp in Land Park if you can pick it up this weekend.',
+    lastMessageAt: hoursAgo(2),
+    lastMessageSenderId: NEIGHBORS.riley.uid,
+    itemId: 'demo-item-lamp',
+    itemTitle: 'Looking for a spare floor lamp',
+  },
 ];
 
 export const PLAY_STORE_DEMO_STATS = {

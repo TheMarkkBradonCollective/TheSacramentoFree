@@ -594,6 +594,11 @@ export function profileFromAuthUser(user: {
 }
 
 export async function getSupabaseProfile(uid: string): Promise<UserProfile | null> {
+  if (String(metaEnv.VITE_PLAY_STORE_DEMO || '') === '1') {
+    const { getPlayStoreDemoProfile } = await import('./preview/playStoreDemoGoGet');
+    const demoProfile = getPlayStoreDemoProfile(uid);
+    if (demoProfile) return demoProfile;
+  }
   try {
     const { data: sessionData } = await supabase.auth.getSession();
     const currentUid = sessionData.session?.user?.id || '';
@@ -1162,6 +1167,10 @@ export async function getSupabaseItems(): Promise<ItemPost[]> {
 
 export async function getSupabaseItemById(itemId: string): Promise<ItemPost | null> {
   if (!itemId) return null;
+  if (String(metaEnv.VITE_PLAY_STORE_DEMO || '') === '1') {
+    const { getPlayStoreDemoItemById } = await import('./preview/playStoreDemoGoGet');
+    return getPlayStoreDemoItemById(itemId);
+  }
   try {
     const headQuery = supabase.from('items').select(ITEM_FEED_COLUMNS).eq('id', itemId).maybeSingle();
     const { data: head, error } = await headQuery;

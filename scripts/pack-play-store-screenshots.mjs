@@ -24,6 +24,14 @@ const PHONE_SHOTS = [
   ['06-events.png', 'Community events'],
   ['07-event.png', 'Event detail'],
   ['08-messages.png', 'Messages'],
+  ['09-goget-listing.png', 'Go Get — listing pickup route'],
+  ['10-goget-chat.png', 'Go Get — chat coordination'],
+  ['11-goget-ring.png', 'Go Get — incoming pickup ring'],
+  ['12-goget-waiting.png', 'Go Get — waiting for neighbor'],
+  ['13-goget-navigation.png', 'Go Get — turn-by-turn navigation'],
+  ['14-goget-tracking.png', 'Go Get — live ETA tracking'],
+  ['15-goget-meeting.png', 'Go Get — meetup map'],
+  ['16-goget-arrived.png', 'Go Get — arrival handoff'],
 ];
 
 export function packPlayStoreScreenshotsZip() {
@@ -48,6 +56,8 @@ export function packPlayStoreScreenshotsZip() {
     '',
     'Phone screenshots (1080×1920) — upload in this order:',
     ...PHONE_SHOTS.map(([file, label], i) => `  ${i + 1}. ${file} — ${label}`),
+    '',
+    'Go Get screenshots use fictional Sacramento landmarks (Capitol, Midtown, East Sac, etc.).',
     '',
   ].join('\n');
   writeFileSync(join(staging, 'README.txt'), readme);
