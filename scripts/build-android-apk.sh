@@ -31,6 +31,9 @@ fi
 if compgen -G "public/downloads/*.aab" > /dev/null; then
   mv public/downloads/*.aab "$APK_STAGING_DIR/"
 fi
+if compgen -G "public/downloads/*.zip" > /dev/null; then
+  mv public/downloads/*.zip "$APK_STAGING_DIR/"
+fi
 if compgen -G "public/buynothing*.apk" > /dev/null; then
   mv public/buynothing*.apk "$APK_STAGING_DIR/"
 fi
@@ -108,6 +111,9 @@ for keep_aab in "$CURRENT_AAB" "sac-buy-nothing.aab"; do
     mv "$APK_STAGING_DIR/$keep_aab" public/downloads/
   fi
 done
+if compgen -G "$APK_STAGING_DIR/*.zip" > /dev/null; then
+  mv "$APK_STAGING_DIR"/*.zip public/downloads/
+fi
 rm -rf "$APK_STAGING_DIR"
 # MBC App Market (Findr pattern): root-level slug APK + versioned copy — after restore.
 cp "$APK_PATH" "public/buynothing.apk"

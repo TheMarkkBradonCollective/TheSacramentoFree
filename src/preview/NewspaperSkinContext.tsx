@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { isNativeApp } from '../lib/nativePlatform';
 import { NEWSPAPER, isNewspaperProductionHost } from './newspaperBrand';
+import { isPlayStoreDemo } from './playStoreDemo';
 
 const STORAGE_KEY = 'sbn_newspaper_look';
 export const NEWSPAPER_CLASS = 'newspaper-preview';
@@ -116,9 +117,9 @@ export function isNewspaperSkinActive(): boolean {
   return document.documentElement.classList.contains(NEWSPAPER_CLASS);
 }
 
-export function shouldShowNewspaperPreviewBanner(enabled: boolean): boolean {
+export function shouldShowNewspaperPreviewBanner(_enabled: boolean): boolean {
   if (typeof window === 'undefined') return false;
-  // No preview chrome on the live domain (this is the look) or in native.
-  if (isNewspaperProductionHost() || isNativeApp()) return false;
+  // No preview chrome on the live domain (this is the look), in native, or in Play Store captures.
+  if (isNewspaperProductionHost() || isNativeApp() || isPlayStoreDemo()) return false;
   return true;
 }

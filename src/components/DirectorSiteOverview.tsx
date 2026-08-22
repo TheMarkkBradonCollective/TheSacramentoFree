@@ -15,6 +15,7 @@ import {
 import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
 import { getDirectorSiteOverview, supabase } from '../supabase';
 import { apiUrl } from '../lib/appOrigin';
+import { PLAY_STORE_SCREENSHOTS_ZIP_NAME, playStoreScreenshotsZipUrl } from '../lib/apkDownload';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -290,6 +291,27 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
             Live
           </span>
         )}
+      </div>
+
+      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-2">
+        <div>
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Google Play Console graphics</h4>
+          <p className="text-[11px] text-muted mt-1 leading-snug">
+            App icon (512×512), feature graphic, and phone screenshots (1080×1920). Fictional demo neighbors only.
+          </p>
+        </div>
+        <a
+          id="director_download_play_screenshots"
+          href={playStoreScreenshotsZipUrl()}
+          download={PLAY_STORE_SCREENSHOTS_ZIP_NAME}
+          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold"
+        >
+          <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+          Download screenshots & app icon
+        </a>
+        <p className="text-[10px] text-muted/80 leading-snug">
+          Zip for Play Console → Store presence → Main store listing. Upload 01-home through 08-account in that order.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">

@@ -17,6 +17,11 @@ import type { FeedReactionEmoji } from '../lib/feedReactions';
 import { isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmRemoveFeedComment } from '../lib/destructiveConfirm';
+import {
+  isPlayStoreDemo,
+  PLAY_STORE_DEMO_FEED_COMMENTS,
+  PLAY_STORE_DEMO_FEED_REACTIONS,
+} from '../preview/playStoreDemo';
 
 export function useFeedEngagement(
   postIds: string[],
@@ -27,8 +32,17 @@ export function useFeedEngagement(
   const isStaff = userProfile ? isStaffRole(userProfile.role) : false;
   const { confirm, alert } = useConfirm();
 
-  const [commentsByPost, setCommentsByPost] = useState<Record<string, FeedPostComment[]>>({});
-  const [reactionsByPost, setReactionsByPost] = useState<Record<string, FeedPostReaction[]>>({});
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, FeedPostComment[]>>(
+    () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_FEED_COMMENTS : {}),
+  );
+  const [reactionsByPost, setReactionsByPost] = useState<Record<string, FeedPostReaction[]>>(() => {
+    if (!isPlayStoreDemo()) return {};
+    const next: Record<string, FeedPostReaction[]> = {};
+    for (const row of PLAY_STORE_DEMO_FEED_REACTIONS) {
+      (next[row.postId] ??= []).push(row);
+    }
+    return next;
+  });
   const [pollVotes, setPollVotes] = useState<import('../types').FeedPollVote[]>([]);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
 
@@ -92,6 +106,7 @@ export function useFeedEngagement(
   );
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     if (postIds.length === 0) {
       setCommentsByPost({});
       setReactionsByPost({});
@@ -102,7 +117,7 @@ export function useFeedEngagement(
   }, [postIds.join('|'), reload]);
 
   useEffect(() => {
-    if (postIds.length === 0) return;
+    if (isPlayStoreDemo() || postIds.length === 0) return;
 
     const unsubComments = subscribePostgresChanges<FeedPostComment>(
       { channelName: 'live-feed-comments', table: 'feed_post_comments', event: '*' },

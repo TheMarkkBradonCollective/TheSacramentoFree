@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getAcceptedFriendIds } from '../supabase';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 
 export function useFriendIds(userId: string | undefined): {
   friendIds: Set<string>;
@@ -8,10 +9,10 @@ export function useFriendIds(userId: string | undefined): {
   reload: () => Promise<void>;
 } {
   const [friendIds, setFriendIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !isPlayStoreDemo());
 
   const reload = useCallback(async () => {
-    if (!userId) {
+    if (!userId || isPlayStoreDemo()) {
       setFriendIds([]);
       setLoading(false);
       return;
@@ -22,12 +23,16 @@ export function useFriendIds(userId: string | undefined): {
   }, [userId]);
 
   useEffect(() => {
+    if (isPlayStoreDemo()) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     void reload();
   }, [reload]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || isPlayStoreDemo()) return;
     return subscribePostgresChanges(
       { channelName: `live-friends-${userId}`, table: 'friend_requests', event: '*' },
       () => {
