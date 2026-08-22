@@ -25,7 +25,7 @@ async function requireAuthUserId(): Promise<string | null> {
 function normalizePollOptions(raw: unknown): FeedPollOption[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((entry) => {
+    .map((entry): FeedPollOption | null => {
       if (!entry || typeof entry !== 'object') return null;
       const row = entry as Record<string, unknown>;
       const id = typeof row.id === 'string' ? row.id.trim() : '';
@@ -37,7 +37,9 @@ function normalizePollOptions(raw: unknown): FeedPollOption[] {
             ? row.short_label.trim()
             : '';
       if (!id || !label) return null;
-      return shortLabel ? { id, label, shortLabel } : { id, label };
+      const option: FeedPollOption = { id, label };
+      if (shortLabel) option.shortLabel = shortLabel;
+      return option;
     })
     .filter((option): option is FeedPollOption => option != null);
 }
