@@ -57,14 +57,6 @@
       ]
     },
     {
-      "source": "/downloads/play-store-screenshots\\.zip",
-      "headers": [
-        { "key": "Content-Type", "value": "application/zip" },
-        { "key": "Content-Disposition", "value": "attachment; filename=\"play-store-screenshots.zip\"" },
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-      ]
-    },
-    {
       "source": "/(.*)\\.aab",
       "headers": [
         { "key": "Content-Type", "value": "application/octet-stream" },

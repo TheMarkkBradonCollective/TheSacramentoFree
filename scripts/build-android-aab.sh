@@ -29,8 +29,8 @@ fi
 if compgen -G "public/downloads/*.aab" > /dev/null; then
   mv public/downloads/*.aab "$APK_STAGING_DIR/"
 fi
-if compgen -G "public/downloads/*.zip" > /dev/null; then
-  mv public/downloads/*.zip "$APK_STAGING_DIR/"
+if [[ -d public/downloads/play-store ]]; then
+  mv public/downloads/play-store "$APK_STAGING_DIR/"
 fi
 if compgen -G "public/buynothing*.apk" > /dev/null; then
   mv public/buynothing*.apk "$APK_STAGING_DIR/"
@@ -97,8 +97,8 @@ if compgen -G "$APK_STAGING_DIR/*.aab" > /dev/null; then
     mv "$staged" public/downloads/
   done
 fi
-if compgen -G "$APK_STAGING_DIR/*.zip" > /dev/null; then
-  mv "$APK_STAGING_DIR"/*.zip public/downloads/
+if [[ -d "$APK_STAGING_DIR/play-store" ]]; then
+  mv "$APK_STAGING_DIR/play-store" public/downloads/
 fi
 rm -rf "$APK_STAGING_DIR"
 
