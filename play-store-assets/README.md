@@ -4,12 +4,12 @@ Upload these from a computer (or Files app) into **Play Console → Store presen
 
 These screenshots are captured from a local demo build (`VITE_PLAY_STORE_DEMO=1`) that uses **fictional neighbors, listings, and messages**. They do not contain live member names, photos, or posts.
 
-## App icon (required)
+## Store icon (required)
 
 - `play-store-assets/icon-512.png`
 - or `play-store-assets/screenshots/00-app-icon-512.png` (same file)
 
-512×512 **32-bit PNG** (Play rejects 24-bit RGB). Fully opaque — no transparency.
+512×512 **32-bit PNG** (Play rejects 24-bit RGB). Generated from `public/TheSacramentoFree.png` — the same masthead lockup as the website, not the square launcher icon (`Logo.png`).
 
 ## Phone screenshots (required, 2–8)
 

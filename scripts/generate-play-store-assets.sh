@@ -5,13 +5,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 OUT_DIR="$ROOT_DIR/play-store-assets"
-LOGO="$ROOT_DIR/assets/icon-fullbleed.png"
-FEATURE_LOGO="$ROOT_DIR/public/TheSacramentoFree.png"
+SITE_LOCKUP="$ROOT_DIR/public/TheSacramentoFree.png"
+FEATURE_LOGO="$SITE_LOCKUP"
 
 mkdir -p "$OUT_DIR"
 
-if [[ ! -f "$FEATURE_LOGO" ]]; then
-  echo "Missing logo at $FEATURE_LOGO"
+if [[ ! -f "$SITE_LOCKUP" ]]; then
+  echo "Missing site lockup at $SITE_LOCKUP"
   exit 1
 fi
 
@@ -20,10 +20,8 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
   exit 1
 fi
 
-node "$ROOT_DIR/scripts/generate-android-assets.mjs" --prepare-only
-
-# Google Play: 512×512 app icon (32-bit PNG, full-bleed — no white corners).
-ffmpeg -y -loglevel error -i "$LOGO" \
+# Google Play: 512×512 store icon — same lockup as the website masthead (not Logo.png launcher art).
+ffmpeg -y -loglevel error -i "$SITE_LOCKUP" \
   -frames:v 1 \
   -vf "scale=512:512:flags=lanczos,format=rgba" \
   -pix_fmt rgba \
