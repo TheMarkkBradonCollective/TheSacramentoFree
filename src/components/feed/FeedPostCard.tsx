@@ -7,6 +7,7 @@ import { isStaffRole } from '../../lib/roles';
 import { PresenceUserAvatar } from '../UserAvatar';
 import ReportNeighborModal from '../ReportNeighborModal';
 import FeedPostClientBadge from './FeedPostClientBadge';
+import FeedPollBlock from './FeedPollBlock';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
 interface FeedPostCardProps {
@@ -48,7 +49,9 @@ export default function FeedPostCard({
   const votes = engagement.getVoteState(post.id);
   const reactions = engagement.getReactionState(post.id);
   const comments = engagement.getComments(post.id);
-  const cover = post.imageUrls[0];
+  const pollState = engagement.getPollState(post.id);
+  const isPoll = post.postKind === 'poll';
+  const cover = !isPoll ? post.imageUrls[0] : undefined;
   const extraPhotos = Math.max(0, post.imageUrls.length - 1);
 
   const canDelete = isOwn || isStaff;
@@ -97,6 +100,9 @@ export default function FeedPostCard({
           />
           <div className="min-w-0 flex-1">
             <p className="font-display text-sm font-bold text-app leading-snug truncate">{post.userDisplayName}</p>
+            {isPoll ? (
+              <p className="text-[10px] font-bold uppercase tracking-wider text-accent mt-0.5">Poll</p>
+            ) : null}
             <p className="text-[10px] sm:text-xs font-medium text-muted flex items-center gap-1 mt-0.5 truncate">
               <MapPin className="w-3 h-3 text-accent shrink-0" />
               <span className="truncate">{post.neighborhood}</span>
@@ -119,6 +125,16 @@ export default function FeedPostCard({
           <p className="text-sm text-app leading-relaxed whitespace-pre-wrap mt-2.5 line-clamp-4 pointer-events-none">
             {post.text}
           </p>
+        ) : null}
+
+        {isPoll ? (
+          <FeedPollBlock
+            post={post}
+            pollState={pollState}
+            canVote={canEngage}
+            compact
+            onVote={(optionId) => void engagement.handlePollVote(post.id, optionId, post.userId)}
+          />
         ) : null}
 
         <div

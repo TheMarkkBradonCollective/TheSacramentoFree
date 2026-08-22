@@ -51,7 +51,7 @@ const schemaMarkers = [
     label: 'Staff interaction mode',
   },
   {
-    markers: ['feed_posts', 'feed_post_comments', 'feed_post_reactions', "'feed_post'"],
+    markers: ['feed_posts', 'feed_post_comments', 'feed_post_reactions', 'feed_poll_votes', "'feed_post'", 'postKind'],
     label: 'Neighbor feed',
   },
   {
