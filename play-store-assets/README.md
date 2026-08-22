@@ -18,7 +18,7 @@ All files are **1080×1920**, 24-bit PNG (Play phone size). Upload in this order
 | Order | File | Screen |
 |-------|------|--------|
 | 1 | `01-home.png` | Public newspaper home — The Sacramento Free |
-| 2 | `02-feed.png` | Feed — neighbor social posts |
+| 2 | `02-feed.png` | Feed — neighbor social posts (support, jobs, check-ins — not Stuff listings) |
 | 3 | `03-stuff.png` | Stuff — giveaways and requests |
 | 4 | `04-listing.png` | Listing details |
 | 5 | `05-map.png` | Neighborhood map |

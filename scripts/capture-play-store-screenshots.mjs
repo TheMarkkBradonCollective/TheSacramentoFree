@@ -223,7 +223,9 @@ async function main() {
     await page.waitForSelector('#mobile_sticky_footer_nav', { timeout: 45000 });
     await wait(1200);
     await dismissGates(page);
-    await page.waitForSelector('[id^="feed_post_"]', { timeout: 20000 });
+    await page.waitForSelector('#mobile_nav_feed[aria-current="page"]', { timeout: 20000 });
+    await page.waitForSelector('#feed_post_demo-feed-hey', { timeout: 20000 });
+    await page.waitForSelector('#feed_post_demo-feed-job-ask', { timeout: 20000 });
     await wait(1000);
     await shot(page, '02-feed');
 
