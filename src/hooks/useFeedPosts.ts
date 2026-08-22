@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FeedPost } from '../types';
-import { createFeedPost, deleteFeedPost, getFeedPosts, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted } from '../lib/feedApi';
+import { createFeedPost, createFeedPollPost, deleteFeedPost, getFeedPosts, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted } from '../lib/feedApi';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { patchDenormalizedAuthorFields } from '../lib/profilePersistence';
 import type { UserProfile } from '../types';
@@ -87,6 +87,22 @@ export function useFeedPosts(userProfile: UserProfile | null) {
     [userProfile, alert],
   );
 
+  const publishPoll = useCallback(
+    async (input: { text: string; options: string[] }) => {
+      if (!userProfile) return false;
+      setCreating(true);
+      const result = await createFeedPollPost(userProfile, input);
+      setCreating(false);
+      if (!result.ok || !result.post) {
+        await alert({ title: 'Could not post poll', message: result.errorMessage || 'Try again.' });
+        return false;
+      }
+      setPosts((prev) => [result.post!, ...prev.filter((p) => p.id !== result.post!.id)]);
+      return true;
+    },
+    [userProfile, alert],
+  );
+
   const removePost = useCallback(
     async (post: FeedPost) => {
       if (!userProfile) return false;
@@ -104,5 +120,5 @@ export function useFeedPosts(userProfile: UserProfile | null) {
     [userProfile, isStaff, confirm, alert],
   );
 
-  return { posts, loading, creating, publishPost, removePost, reload };
+  return { posts, loading, creating, publishPost, publishPoll, removePost, reload };
 }

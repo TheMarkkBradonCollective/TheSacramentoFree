@@ -1643,6 +1643,20 @@ CREATE TABLE IF NOT EXISTS public.feed_posts (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE public.feed_posts ADD COLUMN IF NOT EXISTS "postKind" TEXT NOT NULL DEFAULT 'standard';
+ALTER TABLE public.feed_posts ADD COLUMN IF NOT EXISTS "pollOptions" JSONB;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'feed_posts_post_kind_check'
+  ) THEN
+    ALTER TABLE public.feed_posts
+      ADD CONSTRAINT feed_posts_post_kind_check
+      CHECK ("postKind" IN ('standard', 'poll'));
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS feed_posts_created_idx ON public.feed_posts ("createdAt" DESC);
 CREATE INDEX IF NOT EXISTS feed_posts_user_idx ON public.feed_posts ("userId");
 
@@ -1677,6 +1691,18 @@ CREATE TABLE IF NOT EXISTS public.feed_post_reactions (
 CREATE INDEX IF NOT EXISTS feed_post_reactions_post_idx ON public.feed_post_reactions ("postId");
 
 ALTER TABLE public.feed_post_reactions ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.feed_poll_votes (
+  "postId" TEXT NOT NULL REFERENCES public.feed_posts(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "optionId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY ("postId", "userId")
+);
+
+CREATE INDEX IF NOT EXISTS feed_poll_votes_post_idx ON public.feed_poll_votes ("postId");
+
+ALTER TABLE public.feed_poll_votes ENABLE ROW LEVEL SECURITY;
 
 
 -- =========================================================
@@ -3128,7 +3154,13 @@ DROP POLICY IF EXISTS "feed_posts_delete" ON public.feed_posts;
 CREATE POLICY "feed_posts_select" ON public.feed_posts
   FOR SELECT USING (auth.uid() IS NOT NULL AND status = 'active');
 CREATE POLICY "feed_posts_insert" ON public.feed_posts
-  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (
+      COALESCE("postKind", 'standard') = 'standard'
+      OR public.is_staff()
+    )
+  );
 CREATE POLICY "feed_posts_update_own" ON public.feed_posts
   FOR UPDATE USING (auth.uid()::text = "userId" OR public.is_staff())
   WITH CHECK (auth.uid()::text = "userId" OR public.is_staff());
@@ -3150,6 +3182,14 @@ DROP POLICY IF EXISTS "feed_post_reactions_write" ON public.feed_post_reactions;
 CREATE POLICY "feed_post_reactions_select" ON public.feed_post_reactions
   FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "feed_post_reactions_write" ON public.feed_post_reactions
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "feed_poll_votes_select" ON public.feed_poll_votes;
+DROP POLICY IF EXISTS "feed_poll_votes_write" ON public.feed_poll_votes;
+CREATE POLICY "feed_poll_votes_select" ON public.feed_poll_votes
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "feed_poll_votes_write" ON public.feed_poll_votes
   FOR ALL USING (auth.uid()::text = "userId")
   WITH CHECK (auth.uid()::text = "userId");
 
@@ -3965,6 +4005,59 @@ Say hi when you get a minute. Let me know what you think.',
 )
 ON CONFLICT (id) DO UPDATE SET
   text = EXCLUDED.text,
+  "userDisplayName" = EXCLUDED."userDisplayName",
+  "userPhotoURL" = EXCLUDED."userPhotoURL",
+  neighborhood = EXCLUDED.neighborhood,
+  "updatedAt" = NOW();
+
+
+INSERT INTO public.feed_posts (
+  id,
+  "userId",
+  "userDisplayName",
+  "userPhotoURL",
+  neighborhood,
+  text,
+  "imageUrls",
+  status,
+  "postedAsNeighbor",
+  "postKind",
+  "pollOptions",
+  "createdAt",
+  "updatedAt"
+)
+VALUES (
+  'feed_poll_design_2026',
+  '204b071f-100c-401d-b76d-40c594e1f132',
+  COALESCE(
+    (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    'Markeith White'
+  ),
+  (SELECT "photoURL" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  COALESCE(
+    (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    'Midtown'
+  ),
+  'We are trying out the TheSacramentoFree newspaper look on the site and app.
+
+The name TheSacramentoFree is what we are going with for now unless we come up with something better later. This poll is only about the design — not the name.
+
+Which look do you prefer?',
+  '[]'::jsonb,
+  'active',
+  false,
+  'poll',
+  '[
+    {"id":"newspaper","label":"TheSacramentoFree newspaper look (what you see now)"},
+    {"id":"original","label":"Original orange look (add ?skin=original to any page to peek)"}
+  ]'::jsonb,
+  '2026-08-22 01:00:00-07'::timestamptz,
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  text = EXCLUDED.text,
+  "postKind" = EXCLUDED."postKind",
+  "pollOptions" = EXCLUDED."pollOptions",
   "userDisplayName" = EXCLUDED."userDisplayName",
   "userPhotoURL" = EXCLUDED."userPhotoURL",
   neighborhood = EXCLUDED.neighborhood,

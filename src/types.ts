@@ -853,6 +853,11 @@ export interface ContentVoteState {
   downvotes: number;
 }
 
+export interface FeedPollOption {
+  id: string;
+  label: string;
+}
+
 export interface FeedPost {
   id: string;
   userId: string;
@@ -863,12 +868,27 @@ export interface FeedPost {
   imageUrls: string[];
   status: 'active' | 'hidden' | 'removed';
   postedAsNeighbor?: boolean;
+  postKind?: 'standard' | 'poll';
+  pollOptions?: FeedPollOption[];
   /** Install kind at post time: browser, pwa, ios-pwa, or android-apk. */
   clientInstallKind?: 'browser' | 'pwa' | 'ios-pwa' | 'android-apk';
   /** Web deploy version or APK versionName at post time. */
   clientVersion?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FeedPollVote {
+  postId: string;
+  userId: string;
+  optionId: string;
+  createdAt: string;
+}
+
+export interface FeedPollState {
+  counts: Record<string, number>;
+  total: number;
+  userOptionId: string | null;
 }
 
 export interface FeedPostComment {
