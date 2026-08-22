@@ -20,12 +20,8 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
   exit 1
 fi
 
-# Google Play: 512×512 store icon — same lockup as the website masthead (not Logo.png launcher art).
-ffmpeg -y -loglevel error -i "$SITE_LOCKUP" \
-  -frames:v 1 \
-  -vf "scale=512:512:flags=lanczos,format=rgba" \
-  -pix_fmt rgba \
-  "$OUT_DIR/icon-512.png"
+# Google Play: 512×512 store icon — website masthead, inset so masks do not clip the wordmark.
+node "$ROOT_DIR/scripts/generate-play-store-icon.mjs" "$SITE_LOCKUP" "$OUT_DIR/icon-512.png"
 
 # Google Play: 1024×500 feature graphic (logo + name + tagline).
 FONT_BOLD="${PLAY_STORE_FONT_BOLD:-/usr/share/fonts/truetype/macos/Inter-Bold.ttf}"

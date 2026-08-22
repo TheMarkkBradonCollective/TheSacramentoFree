@@ -9,7 +9,7 @@ These screenshots are captured from a local demo build (`VITE_PLAY_STORE_DEMO=1`
 - `play-store-assets/icon-512.png`
 - or `play-store-assets/screenshots/00-app-icon-512.png` (same file)
 
-512×512 **32-bit PNG** (Play rejects 24-bit RGB). Generated from `public/TheSacramentoFree.png` — the same masthead lockup as the website, not the square launcher icon (`Logo.png`).
+512×512 **32-bit PNG** (Play rejects 24-bit RGB). Generated from `public/TheSacramentoFree.png` — the same masthead lockup as the website. The lockup is scaled down and centered with newsprint padding so Play’s circular mask does not clip the wordmark.
 
 ## Phone screenshots (required, 2–8)
 
