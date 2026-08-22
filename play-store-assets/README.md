@@ -18,11 +18,11 @@ All files are **1080×1920**, 24-bit PNG (Play phone size). Upload in this order
 | Order | File | Screen |
 |-------|------|--------|
 | 1 | `01-home.png` | Public newspaper home — The Sacramento Free |
-| 2 | `02-feed.png` | Community feed |
-| 3 | `03-stuff.png` | Stuff listings |
-| 4 | `04-events.png` | Free community events |
-| 5 | `05-map.png` | Neighborhood map |
-| 6 | `06-messages.png` | Messages |
+| 2 | `02-stuff.png` | Stuff — giveaways and requests (not the social Feed tab) |
+| 3 | `03-events.png` | Free community events |
+| 4 | `04-map.png` | Neighborhood map |
+| 5 | `05-messages.png` | Messages |
+| 6 | `06-account.png` | Account / profile |
 | 7 | `07-listing.png` | Listing details |
 | 8 | `08-event.png` | Event details |
 

@@ -15,7 +15,7 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 
 ## What only you can do
 
-1. **Phone screenshots** — already captured at `play-store-assets/screenshots/` (feed, map, events, messages, account, home). Play Console → Store presence → Main store listing.
+1. **Phone screenshots** — already captured at `play-store-assets/screenshots/` (home, stuff listings, events, map, messages, account). Play Console → Store presence → Main store listing.
 2. **Set app price** — Play Console → Monetize → Products → set your paid download price.
 3. **Upload the AAB** — Play Console → Testing → Internal testing → Create release → upload `dist/android/sac-buy-nothing-release.aab`.
 4. **Contact email** — use your support address (e.g. `support@sacbuynothing.org` from `.env.example`).

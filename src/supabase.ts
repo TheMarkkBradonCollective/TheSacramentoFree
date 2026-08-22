@@ -2092,6 +2092,7 @@ export interface NeighborAwardClaimRow {
 }
 
 export async function getNeighborAwardClaims(uid: string): Promise<NeighborAwardClaimRow[]> {
+  if (String(metaEnv.VITE_PLAY_STORE_DEMO || '') === '1') return [];
   try {
     const [asClaimer, asGiver] = await Promise.all([
       supabase
@@ -2425,6 +2426,9 @@ export async function getNeighborStats(uid: string): Promise<NeighborStats> {
     upvotesReceived: 0,
     downvotesReceived: 0,
   };
+  if (String(metaEnv.VITE_PLAY_STORE_DEMO || '') === '1') {
+    return { itemsGiven: 2, itemsClaimed: 1, tradesCompleted: 0, upvotesReceived: 5, downvotesReceived: 0 };
+  }
   try {
     const [givenRes, claimedRes, helpedGiveRes, tradesPostedRes, tradesPartnerRes, itemsRes] =
       await Promise.all([
