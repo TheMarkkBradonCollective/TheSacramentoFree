@@ -293,27 +293,6 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         )}
       </div>
 
-      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-2">
-        <div>
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Google Play Console graphics</h4>
-          <p className="text-[11px] text-muted mt-1 leading-snug">
-            Store icon (512×512 site lockup, padded so words are not clipped), feature graphic, and phone screenshots (1080×1920). Fictional demo neighbors only.
-          </p>
-        </div>
-        <a
-          id="director_download_play_screenshots"
-          href={playStoreScreenshotsZipUrl()}
-          download={PLAY_STORE_SCREENSHOTS_ZIP_NAME}
-          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold"
-        >
-          <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
-          Download screenshots & store icon
-        </a>
-        <p className="text-[10px] text-muted/80 leading-snug">
-          Zip for Play Console → Store presence → Main store listing. Upload 01-home through 08-account in that order.
-        </p>
-      </div>
-
       <div className="grid grid-cols-2 gap-2">
         <StatTile
           label="Neighbors"
@@ -361,18 +340,30 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <StatTile label="Installs" value={data.installDevicesCount} sub={installSub} accent="text-indigo-400" />
       </div>
 
-      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-2">
+      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-3">
         <div>
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Play Console testers</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Play Console</h4>
           <p className="text-[11px] text-muted mt-1 leading-snug">
-            On a phone this copies or shares every neighbor email. On a computer it also downloads a CSV.
+            Listing graphics and closed-testing tester emails for Google Play.
           </p>
         </div>
+        <a
+          id="director_download_play_screenshots"
+          href={playStoreScreenshotsZipUrl()}
+          download={PLAY_STORE_SCREENSHOTS_ZIP_NAME}
+          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-app bg-surface text-app text-sm font-bold hover:bg-surface-hover transition-colors"
+        >
+          <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+          Download screenshots & store icon
+        </a>
+        <p className="text-[10px] text-muted/80 leading-snug -mt-1">
+          Zip: padded site lockup icon, feature graphic, and phone shots (01-home through 08-account).
+        </p>
         <button
           type="button"
           onClick={() => void downloadPlayTesters()}
           disabled={exportingTesters}
-          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-app bg-surface text-app text-sm font-bold hover:bg-surface-hover transition-colors disabled:opacity-60"
         >
           {exportingTesters ? (
             <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
@@ -392,7 +383,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           </p>
         )}
         <p className="text-[10px] text-muted/80 leading-snug">
-          Upload the file in Play Console → Testing → Closed testing → Testers.
+          Upload screenshots in Play Console → Store presence. Upload tester CSV in Testing → Closed testing → Testers.
         </p>
       </div>
 
