@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { AppUpdateInput, AppUpdateRecord, UserProfile } from '../types';
 import { neighborUpdateDetail } from '../../shared/changelogFilters';
+import LinkifiedText from './LinkifiedText';
 import { useAppUpdates } from '../hooks/useAppUpdates';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
 import { useAppUpdateComments } from '../hooks/useAppUpdateComments';
@@ -167,13 +168,13 @@ export default function UpdatesList({
                         Posted by {update.directorName} · {update.directorTitle}
                       </p>
                       <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap font-semibold">
-                        {summary}
+                        <LinkifiedText text={summary} />
                       </p>
                       {hasFullStory ? (
                         <>
                           {expanded ? (
-                            <p className="mt-3 text-sm text-muted leading-relaxed whitespace-pre-wrap font-normal border-t border-app pt-3">
-                              {fullStory}
+                            <p className="mt-3 text-sm text-muted leading-relaxed whitespace-pre-wrap font-normal border-t border-app pt-3 break-words [overflow-wrap:anywhere]">
+                              <LinkifiedText text={fullStory} />
                             </p>
                           ) : null}
                           <button
