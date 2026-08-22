@@ -2,9 +2,9 @@
 import { COMMUNITY_SLOGAN } from '../siteContent';
 
 export const NEWSPAPER = {
-  name: 'The Sacramento Free',
+  name: 'TheSacramentoFree',
   the: 'The',
-  title: 'Sacramento Free',
+  title: 'TheSacramentoFree',
   tagline: COMMUNITY_SLOGAN,
   city: 'Sacramento, California',
   cityLine: 'Sacramento • California',
@@ -17,7 +17,7 @@ export const NEWSPAPER = {
   previewNote:
     'Same app — same pages, features, and flows. The Sacramento Free is the look; this is a visual reskin only. Add ?skin=original to see the previous site.',
   originalCta: 'View original site',
-  newspaperCta: 'View The Sacramento Free',
+  newspaperCta: 'View TheSacramentoFree',
   footerByline: 'Printed for neighbors, not for profit.',
 } as const;
 

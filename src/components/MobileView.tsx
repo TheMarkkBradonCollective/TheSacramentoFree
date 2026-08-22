@@ -346,8 +346,10 @@ export default function MobileView({
       >
         <div className="sbn-mobile-header-row">
         <BrandLogo
+          showTitle
+          showTitleBesideLockup
+          className="flex items-center gap-2 min-w-0 flex-1"
           imgClassName="h-9 w-9 max-w-[2.25rem] max-h-[2.25rem] object-contain shrink-0"
-          showTitle={false}
         />
         <div className="flex items-center shrink-0">
           <TopbarActions

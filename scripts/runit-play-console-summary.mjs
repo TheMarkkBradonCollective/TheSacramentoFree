@@ -17,6 +17,9 @@ const releaseNotesPath = `play-store-assets/release-notes-v${versionName}-${buil
 const releaseTitle = `${versionName} (${versionCode})`;
 const aabPublicUrl = `https://www.sacramentobuynothing.com/downloads/${aabFile}`;
 const apkPublicUrl = `https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v${versionName}.${build}.apk`;
+const playStoreBetaUrl = 'https://play.google.com/apps/testing/org.sacramentobuynothing.app';
+const playStoreListingUrl =
+  'https://play.google.com/store/apps/details?id=org.sacramentobuynothing.app';
 
 let releaseNotesBody = '';
 if (fs.existsSync(path.join(root, releaseNotesPath))) {
@@ -45,25 +48,41 @@ const lines = [
   'Package name:',
   '  org.sacramentobuynothing.app',
   '',
+  'Closed testing opt-in link (share with neighbors):',
+  `  ${playStoreBetaUrl}`,
+  '',
+  'Store listing (after opt-in):',
+  `  ${playStoreListingUrl}`,
+  '',
   'Upload this file in Play Console:',
   `  ${aabPath}`,
   '  (local build copy: dist/android/sac-buy-nothing-release.aab)',
   '',
   'Play Console path:',
-  '  Testing → Internal testing → Create release → Upload AAB',
+  '  Testing → Closed testing → Create release → Upload AAB',
   '',
   'Release notes (paste into Play Console release notes field):',
   '───────────────────────────────────────────────────────────────',
   releaseNotesBody,
   '───────────────────────────────────────────────────────────────',
   '',
-  'Steps:',
+  'Steps — upload build:',
   '  1. Open Play Console → SacramentoBuyNothing',
-  '  2. Testing → Internal testing → Create release',
+  '  2. Testing → Closed testing → Create release',
   `  3. Upload: ${aabPath}`,
   `  4. Release name: ${releaseTitle}`,
   '  5. Paste release notes above',
-  '  6. Save → Review release → Start rollout to Internal testing',
+  '  6. Save → Review release → Start rollout to Closed testing',
+  '',
+  'Steps — rename store listing (can do before or after upload):',
+  '  1. Grow → Store presence → Main store listing',
+  '  2. App name: TheSacramentoFree',
+  '  3. Short description (80 chars): Sacramento neighbor gifting — give items, request what you need, meet locally.',
+  '  4. Update full description to say TheSacramentoFree instead of SacramentoBuyNothing',
+  '  5. Save → Send for review (if prompted)',
+  '',
+  'Retire internal testing:',
+  '  • Testing → Internal testing → halt rollout (do not upload new builds there)',
   '',
 ];
 
