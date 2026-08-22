@@ -56,7 +56,12 @@ function normalizeFeedPost(row: Record<string, unknown>): FeedPost {
     imageUrls,
     status: (row.status === 'hidden' || row.status === 'removed' ? row.status : 'active') as FeedPost['status'],
     postedAsNeighbor: row.postedAsNeighbor === true || row.posted_as_neighbor === true,
-    postKind: row.postKind === 'poll' || row.post_kind === 'poll' ? 'poll' : 'standard',
+    postKind:
+      row.postKind === 'poll' || row.post_kind === 'poll'
+        ? 'poll'
+        : normalizePollOptions(row.pollOptions ?? row.poll_options).length >= 2
+          ? 'poll'
+          : 'standard',
     pollOptions: normalizePollOptions(row.pollOptions ?? row.poll_options),
     clientInstallKind: normalizeClientInstallKind(row.clientInstallKind ?? row.client_install_kind),
     clientVersion:
