@@ -132,6 +132,7 @@ export default function FeedPostCard({
             post={post}
             pollState={pollState}
             canVote={canEngage}
+            isOwnPost={isOwn}
             compact
             onVote={(optionId) => void engagement.handlePollVote(post.id, optionId, post.userId)}
           />
