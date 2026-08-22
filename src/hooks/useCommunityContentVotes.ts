@@ -9,6 +9,7 @@ import { getSupabaseCommunityContentVotes, setSupabaseCommunityContentVote } fro
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 
 const EMPTY_VOTE: ContentVoteState = { userVote: null, upvotes: 0, downvotes: 0 };
 
@@ -37,12 +38,17 @@ export function useCommunityContentVotes(
 ) {
   const uid = userProfile?.uid;
   const [rows, setRows] = useState<CommunityContentVote[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !isPlayStoreDemo());
   const { alert } = useConfirm();
 
   const stableIds = useMemo(() => [...new Set(targetIds)].filter(Boolean).sort().join('|'), [targetIds]);
 
   const reload = useCallback(async () => {
+    if (isPlayStoreDemo()) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
     const ids = stableIds ? stableIds.split('|') : [];
     if (ids.length === 0) {
       setRows([]);
@@ -59,6 +65,7 @@ export function useCommunityContentVotes(
   }, [reload]);
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     return subscribePostgresChanges<CommunityContentVote>(
       { channelName: `live-content-votes-${targetType}`, table: 'community_content_votes', event: '*' },
       () => {

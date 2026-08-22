@@ -6,13 +6,14 @@ import {
   syncSavedItemBookmark,
   writeLocalSavedItemIds,
 } from '../supabase';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 
 export function useSavedItems(userId?: string) {
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set(readLocalSavedItemIds(userId)));
 
   useEffect(() => {
     setSavedIds(new Set(readLocalSavedItemIds(userId)));
-    if (!userId) return;
+    if (!userId || isPlayStoreDemo()) return;
 
     let cancelled = false;
     void (async () => {

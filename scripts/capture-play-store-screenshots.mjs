@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 /**
- * Capture Google Play phone screenshots (1080×1920, 24-bit PNG) from the live app.
+ * Capture Google Play phone screenshots (1080×1920, 24-bit PNG) from a local
+ * demo build that uses fictional neighbors — never live user data.
  *
  * Usage:
- *   PLAY_REVIEW_EMAIL=... PLAY_REVIEW_PASSWORD=... node scripts/capture-play-store-screenshots.mjs
+ *   npm run android:play-screenshots
+ *
+ * Starts Vite with VITE_PLAY_STORE_DEMO=1 unless PLAY_SCREENSHOT_ORIGIN is set.
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,11 +18,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'play-store-assets', 'screenshots');
 const tmpDir = join(outDir, '.raw');
 
-const ORIGIN = process.env.PLAY_SCREENSHOT_ORIGIN || 'https://www.sacramentobuynothing.com';
-const EMAIL = process.env.PLAY_REVIEW_EMAIL || 'playstore-review@sacramentobuynothing.com';
-const PASSWORD = process.env.PLAY_REVIEW_PASSWORD || '';
+const PORT = process.env.PLAY_SCREENSHOT_PORT || '4178';
+const ORIGIN = process.env.PLAY_SCREENSHOT_ORIGIN || `http://127.0.0.1:${PORT}`;
+const START_LOCAL = !process.env.PLAY_SCREENSHOT_ORIGIN;
 
-// CSS viewport stays under the 768px mobile breakpoint; scale up to 1080×1920 PNG.
 const WIDTH = 360;
 const HEIGHT = 640;
 const SCALE = 3;
@@ -39,6 +41,50 @@ async function wait(ms) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
+function startDemoServer() {
+  const child = spawn(
+    'npx',
+    ['vite', '--host', '127.0.0.1', '--port', PORT, '--strictPort'],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        VITE_PLAY_STORE_DEMO: '1',
+        BROWSER: 'none',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+
+  let output = '';
+  child.stdout.on('data', (chunk) => {
+    output += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    output += chunk.toString();
+  });
+
+  return { child, ready: waitForReady(() => output) };
+}
+
+function waitForReady(readOutput) {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const text = readOutput();
+      if (/Local:|ready in/i.test(text)) {
+        clearInterval(timer);
+        resolve(undefined);
+        return;
+      }
+      if (Date.now() - started > 60000) {
+        clearInterval(timer);
+        reject(new Error(`Vite did not start:\n${text}`));
+      }
+    }, 250);
+  });
+}
+
 async function dismissGates(page) {
   for (let i = 0; i < 8; i++) {
     const handled = await page.evaluate(() => {
@@ -48,19 +94,18 @@ async function dismissGates(page) {
         return true;
       }
       const labeled = Array.from(document.querySelectorAll('button')).find((n) =>
-        /^(maybe later|not now|skip|accept & continue)$/i.test((n.textContent || '').trim()),
+        /^(maybe later|not now|skip|accept & continue|got it — thanks mark)$/i.test(
+          (n.textContent || '').trim(),
+        ),
       );
       if (labeled) {
-        const dialog = labeled.closest('[role="dialog"]');
-        const checkbox = dialog?.querySelector('input[type="checkbox"]');
-        if (checkbox instanceof HTMLInputElement && !checkbox.checked) checkbox.click();
         labeled.click();
         return true;
       }
       return false;
     });
     if (!handled) break;
-    await wait(700);
+    await wait(400);
   }
 }
 
@@ -78,26 +123,26 @@ async function openTab(page, id) {
       await wait(800);
       return;
     }
-    await wait(500);
+    await wait(400);
   }
   throw new Error(`Could not open mobile tab ${id}`);
 }
 
-async function dismissLocationBanner(page) {
-  await page.evaluate(() => {
-    const banner = Array.from(document.querySelectorAll('div, p')).find((n) =>
-      /location permission denied/i.test(n.textContent || ''),
-    );
-    if (!banner) return;
-    const close = banner.closest('div')?.querySelector('button');
-    close?.click();
-  });
+async function waitForImages(page) {
+  await page
+    .waitForFunction(
+      () =>
+        Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0) ||
+        document.images.length === 0,
+      { timeout: 12000 },
+    )
+    .catch(() => null);
 }
 
 async function shot(page, name) {
   await dismissGates(page);
-  await dismissLocationBanner(page);
-  await wait(500);
+  await waitForImages(page);
+  await wait(400);
   const raw = join(tmpDir, `${name}.png`);
   const dest = join(outDir, `${name}.png`);
   await page.screenshot({ path: raw, type: 'png', captureBeyondViewport: false });
@@ -106,12 +151,15 @@ async function shot(page, name) {
 }
 
 async function main() {
-  if (!PASSWORD) {
-    console.error('Set PLAY_REVIEW_PASSWORD to capture signed-in screenshots.');
-    process.exit(1);
-  }
-
   mkdirSync(tmpDir, { recursive: true });
+
+  let server = null;
+  if (START_LOCAL) {
+    console.log(`Starting demo Vite on ${ORIGIN} (VITE_PLAY_STORE_DEMO=1)`);
+    server = startDemoServer();
+    await server.ready;
+    await wait(800);
+  }
 
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROME_PATH || '/usr/local/bin/google-chrome',
@@ -136,40 +184,52 @@ async function main() {
   const context = page.browserContext();
   await context.overridePermissions(origin, ['geolocation']);
   await page.setGeolocation({ latitude: 38.5816, longitude: -121.4944 });
+  await page.emulateMediaFeatures([
+    { name: 'prefers-color-scheme', value: 'light' },
+    { name: 'prefers-reduced-motion', value: 'reduce' },
+  ]);
   await page.setUserAgent(
     'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
   );
+  await page.evaluateOnNewDocument(() => {
+    try {
+      localStorage.setItem('sbn_theme', 'light');
+      localStorage.setItem(
+        'sbn_newspaper_experience_v1',
+        JSON.stringify({
+          pageSounds: false,
+          typewriterSounds: false,
+          notificationSounds: false,
+          immersiveMode: false,
+          reducedMotion: true,
+        }),
+      );
+      document.documentElement.classList.add('light', 'newspaper-preview');
+      document.documentElement.classList.remove('dark');
+    } catch {
+      /* ignore */
+    }
+  });
   page.setDefaultTimeout(45000);
 
   try {
-    const onlyExtra = process.env.PLAY_SCREENSHOT_SET === 'extra';
+    await page.goto(`${ORIGIN}/#/`, { waitUntil: 'networkidle2', timeout: 60000 });
+    await wait(1800);
+    await waitForImages(page);
+    await shot(page, '01-home');
 
-    if (!onlyExtra) {
-      await page.goto(`${ORIGIN}/#/`, { waitUntil: 'networkidle2', timeout: 60000 });
-      await wait(1500);
-      await shot(page, '01-home');
-    }
-
-    await page.goto(`${ORIGIN}/#/login`, { waitUntil: 'networkidle2', timeout: 60000 });
-    await wait(800);
-    await page.waitForSelector('#auth-signin-email');
-    await page.click('#auth-signin-email', { clickCount: 3 });
-    await page.type('#auth-signin-email', EMAIL, { delay: 20 });
-    await page.click('#auth-signin-password', { clickCount: 3 });
-    await page.type('#auth-signin-password', PASSWORD, { delay: 20 });
-    await page.click('button[type="submit"]');
-    await page.waitForSelector('#mobile_sticky_footer_nav, [role="dialog"]', { timeout: 45000 });
+    await page.goto(`${ORIGIN}/feed`, { waitUntil: 'networkidle2', timeout: 60000 });
+    await page.waitForSelector('#mobile_sticky_footer_nav', { timeout: 45000 });
     await wait(1200);
     await dismissGates(page);
-    await page.waitForSelector('#mobile_sticky_footer_nav', { timeout: 45000 });
-    await wait(2000);
-    await dismissGates(page);
+    await page.waitForSelector('#feed_post_demo-feed-porch, [id^="feed_post_"]', { timeout: 20000 });
     await wait(800);
+    await shot(page, '02-feed');
 
-    await openTab(page, 'feed');
+    await openTab(page, 'stuff');
     await page.waitForSelector('#item_feed_wrapper', { timeout: 20000 }).catch(() => null);
-    await wait(1500);
-    if (!onlyExtra) await shot(page, '02-feed');
+    await wait(1000);
+    await shot(page, '03-stuff');
 
     await page.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('[id^="item_card_"]'));
@@ -189,41 +249,32 @@ async function main() {
 
     await openTab(page, 'events');
     await wait(1500);
-    if (!onlyExtra) await shot(page, '03-events');
+    await shot(page, '04-events');
 
     await page.evaluate(() => {
       const card = document.querySelector('[id^="event_card_"]');
       const btn = card?.querySelector('button');
       if (btn instanceof HTMLElement) btn.click();
     });
-    await page.waitForFunction(
-      () => {
-        const back = document.querySelector('[aria-label="Back"]');
-        const sheet = document.querySelector('.sbn-app-sheet');
-        return !!(back && sheet);
-      },
-      { timeout: 12000 },
-    );
+    await page.waitForSelector('#event_detail_fullscreen', { timeout: 12000 });
     await wait(1500);
     await shot(page, '08-event');
-    await page.click('[aria-label="Back"]').catch(() => null);
+    await page.click('#event_detail_fullscreen [aria-label="Back"]').catch(() => null);
     await wait(800);
 
-    if (!onlyExtra) {
-      await openTab(page, 'map');
-      await wait(2500);
-      await shot(page, '04-map');
+    await openTab(page, 'map');
+    await wait(2800);
+    await shot(page, '05-map');
 
-      await openTab(page, 'chats');
-      await wait(1500);
-      await shot(page, '05-messages');
-
-      await openTab(page, 'profile');
-      await wait(1500);
-      await shot(page, '06-account');
-    }
+    await openTab(page, 'chats');
+    await page.waitForSelector('#chat_inbox_list, #empty_chat_inbox_state', { timeout: 20000 });
+    await wait(1200);
+    await shot(page, '06-messages');
   } finally {
     await browser.close();
+    if (server) {
+      server.child.kill('SIGTERM');
+    }
   }
 }
 

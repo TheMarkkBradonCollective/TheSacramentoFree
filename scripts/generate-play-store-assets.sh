@@ -25,7 +25,8 @@ node "$ROOT_DIR/scripts/generate-android-assets.mjs" --prepare-only
 # Google Play: 512×512 app icon (32-bit PNG, full-bleed — no white corners).
 ffmpeg -y -loglevel error -i "$LOGO" \
   -frames:v 1 \
-  -vf "scale=512:512:flags=lanczos" \
+  -vf "scale=512:512:flags=lanczos,format=rgba" \
+  -pix_fmt rgba \
   "$OUT_DIR/icon-512.png"
 
 # Google Play: 1024×500 feature graphic (logo + name + tagline).

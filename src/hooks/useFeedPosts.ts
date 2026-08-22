@@ -7,15 +7,21 @@ import type { UserProfile } from '../types';
 import { isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmDeleteFeedPost } from '../lib/destructiveConfirm';
+import { isPlayStoreDemo, PLAY_STORE_DEMO_FEED_POSTS } from '../preview/playStoreDemo';
 
 export function useFeedPosts(userProfile: UserProfile | null) {
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<FeedPost[]>(() => (isPlayStoreDemo() ? PLAY_STORE_DEMO_FEED_POSTS : []));
+  const [loading, setLoading] = useState(() => !isPlayStoreDemo());
   const [creating, setCreating] = useState(false);
   const { confirm, alert } = useConfirm();
   const isStaff = userProfile ? isStaffRole(userProfile.role) : false;
 
   const reload = useCallback(async () => {
+    if (isPlayStoreDemo()) {
+      setPosts(PLAY_STORE_DEMO_FEED_POSTS);
+      setLoading(false);
+      return;
+    }
     const data = await getFeedPosts(80);
     setPosts(data);
     setLoading(false);
@@ -26,6 +32,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
   }, [reload]);
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     return subscribePostgresChanges<FeedPost>(
       { channelName: 'live-feed-posts', table: 'feed_posts', event: '*' },
       () => {
@@ -45,7 +52,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
   }, []);
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (!userProfile || isPlayStoreDemo()) return;
 
     return subscribePostgresChanges(
       { channelName: 'live-feed-author-photos', table: 'users', event: 'UPDATE' },

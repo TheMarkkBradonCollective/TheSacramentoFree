@@ -28,6 +28,7 @@ import {
   communityChatTitle,
   communityChatSubtitle,
 } from '../lib/communityChats';
+import { isPlayStoreDemo, PLAY_STORE_DEMO_CHATS } from '../preview/playStoreDemo';
 import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffReports, canViewStaffTicketInbox, isEventPostChatReadOnly, isListingPostChatReadOnly, isStaffRole } from '../lib/roles';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
@@ -477,6 +478,13 @@ export default function ChatSystem({
     let active = true;
 
     const loadChats = async () => {
+      if (isPlayStoreDemo()) {
+        if (!active) return;
+        setChats(PLAY_STORE_DEMO_CHATS);
+        setIncomingRequests([]);
+        setIsChatsLoading(false);
+        return;
+      }
       try {
         const [loadedChats, requests] = await Promise.all([
           getSupabaseChats(userProfile.uid, chatFetchOptions),
@@ -552,6 +560,11 @@ export default function ChatSystem({
     };
 
     loadChats();
+    if (isPlayStoreDemo()) {
+      return () => {
+        active = false;
+      };
+    }
 
     const refreshChats = debounceRealtime(() => {
       if (active) void loadChats();
@@ -1058,6 +1071,12 @@ export default function ChatSystem({
   };
 
   const reloadSupportTickets = useCallback(async () => {
+    if (isPlayStoreDemo()) {
+      setSupportTickets([]);
+      setSupportPreviews({});
+      setSupportTicketsLoading(false);
+      return;
+    }
     setSupportTicketsLoading(true);
     const rows = isStaffSupportInbox
       ? await getSupportTicketsForStaff(userProfile)
@@ -1073,6 +1092,7 @@ export default function ChatSystem({
   }, [reloadSupportTickets]);
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     const refresh = debounceRealtime(() => {
       void reloadSupportTickets();
     }, 150);

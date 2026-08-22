@@ -2386,6 +2386,10 @@ export async function reviewStaffApplication(params: {
 }
 
 export async function getCommunityStats(): Promise<CommunityStats> {
+  const demo = String(metaEnv.VITE_PLAY_STORE_DEMO || '') === '1';
+  if (demo) {
+    return { memberCount: 128, activeListings: 6, itemsGiven: 2, requestsFulfilled: 1 };
+  }
   try {
     const [membersRes, activeRes, givenRes, fulfilledRes] = await Promise.all([
       supabase.rpc('community_member_count'),

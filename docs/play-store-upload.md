@@ -8,7 +8,9 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 - `versionCode` **30**, `versionName` **0.1.0**
 - Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
+- Phone screenshots: `play-store-assets/screenshots/` (fictional demo neighbors — not live member data)
 - Regenerate graphics: `npm run android:play-assets`
+- Regenerate screenshots: `npm run android:play-screenshots`
 - Firebase push configured (client + server)
 
 ## What only you can do
@@ -142,7 +144,7 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 |-------|------|
 | App icon (512×512) | `play-store-assets/icon-512.png` |
 | Feature graphic (1024×500) | `play-store-assets/feature-graphic-1024x500.png` |
-| Phone screenshots | `play-store-assets/screenshots/01-home.png` through `08-event.png` (1080×1920) |
+| Phone screenshots | `play-store-assets/screenshots/01-home.png` through `08-event.png` (1080×1920). Captured from fictional demo data. |
 
 ### Category
 - **Primary:** Social (or Lifestyle)
