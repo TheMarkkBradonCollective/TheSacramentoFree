@@ -19,12 +19,14 @@ All files are **1080×1920**, 24-bit PNG (Play phone size). Upload in this order
 |-------|------|--------|
 | 1 | `01-home.png` | Public newspaper home — The Sacramento Free |
 | 2 | `02-stuff.png` | Stuff — giveaways and requests (not the social Feed tab) |
-| 3 | `03-events.png` | Free community events |
+| 3 | `03-listing.png` | Listing details |
 | 4 | `04-map.png` | Neighborhood map |
-| 5 | `05-messages.png` | Messages |
-| 6 | `06-account.png` | Account / profile |
-| 7 | `07-listing.png` | Listing details |
-| 8 | `08-event.png` | Event details |
+| 5 | `05-events.png` | Free community events |
+| 6 | `06-event.png` | Event details |
+| 7 | `07-messages.png` | Messages |
+| 8 | `08-account.png` | Account / profile |
+
+Upload order matches the app footer: Stuff → Map → Events → Chat. Listing sits after Stuff; event detail sits after Events.
 
 ## Feature graphic (required)
 

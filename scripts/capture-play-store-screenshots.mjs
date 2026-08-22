@@ -241,31 +241,11 @@ async function main() {
     });
     await page.waitForSelector('#item_detail_fullscreen', { timeout: 12000 });
     await wait(1500);
-    await shot(page, '07-listing');
+    await shot(page, '03-listing');
     await page.evaluate(() => {
       const back = document.querySelector('#item_detail_fullscreen [aria-label="Back"]');
       if (back instanceof HTMLElement) back.click();
     });
-    await wait(800);
-
-    await openTab(page, 'events');
-    await wait(1500);
-    await shot(page, '03-events');
-
-    await page.evaluate(() => {
-      const picnic = document.querySelector('#event_card_demo-event-picnic button');
-      if (picnic instanceof HTMLElement) {
-        picnic.click();
-        return;
-      }
-      const card = document.querySelector('[id^="event_card_"]');
-      const btn = card?.querySelector('button');
-      if (btn instanceof HTMLElement) btn.click();
-    });
-    await page.waitForSelector('#event_detail_fullscreen', { timeout: 12000 });
-    await wait(1500);
-    await shot(page, '08-event');
-    await page.click('#event_detail_fullscreen [aria-label="Back"]').catch(() => null);
     await wait(800);
 
     await openTab(page, 'map');
@@ -280,15 +260,35 @@ async function main() {
     await wait(1800);
     await shot(page, '04-map');
 
+    await openTab(page, 'events');
+    await wait(1500);
+    await shot(page, '05-events');
+
+    await page.evaluate(() => {
+      const picnic = document.querySelector('#event_card_demo-event-picnic button');
+      if (picnic instanceof HTMLElement) {
+        picnic.click();
+        return;
+      }
+      const card = document.querySelector('[id^="event_card_"]');
+      const btn = card?.querySelector('button');
+      if (btn instanceof HTMLElement) btn.click();
+    });
+    await page.waitForSelector('#event_detail_fullscreen', { timeout: 12000 });
+    await wait(1500);
+    await shot(page, '06-event');
+    await page.click('#event_detail_fullscreen [aria-label="Back"]').catch(() => null);
+    await wait(800);
+
     await openTab(page, 'chats');
     await page.waitForSelector('#chat_inbox_list, #empty_chat_inbox_state', { timeout: 20000 });
     await wait(1200);
-    await shot(page, '05-messages');
+    await shot(page, '07-messages');
 
     await page.click('#header_profile_btn');
     await page.waitForSelector('#profile_root_container', { timeout: 12000 });
     await wait(1200);
-    await shot(page, '06-account');
+    await shot(page, '08-account');
   } finally {
     if (server) {
       try {

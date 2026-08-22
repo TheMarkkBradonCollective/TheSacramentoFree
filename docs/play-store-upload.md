@@ -15,7 +15,7 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 
 ## What only you can do
 
-1. **Phone screenshots** — already captured at `play-store-assets/screenshots/` (home, stuff listings, events, map, messages, account). Play Console → Store presence → Main store listing.
+1. **Phone screenshots** — already captured at `play-store-assets/screenshots/` (home, stuff, listing, map, events, event, messages, account). Play Console → Store presence → Main store listing.
 2. **Set app price** — Play Console → Monetize → Products → set your paid download price.
 3. **Upload the AAB** — Play Console → Testing → Internal testing → Create release → upload `dist/android/sac-buy-nothing-release.aab`.
 4. **Contact email** — use your support address (e.g. `support@sacbuynothing.org` from `.env.example`).
@@ -144,7 +144,7 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 |-------|------|
 | App icon (512×512) | `play-store-assets/icon-512.png` |
 | Feature graphic (1024×500) | `play-store-assets/feature-graphic-1024x500.png` |
-| Phone screenshots | `play-store-assets/screenshots/01-home.png` through `08-event.png` (1080×1920). Captured from fictional demo data. |
+| Phone screenshots | `play-store-assets/screenshots/01-home.png` through `08-account.png` (1080×1920). Captured from fictional demo data. |
 
 ### Category
 - **Primary:** Social (or Lifestyle)
