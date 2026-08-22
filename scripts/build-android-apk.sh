@@ -84,28 +84,7 @@ cp "$APK_PATH" "public/downloads/${VERSIONED_FILE}"
 # Legacy URL — always points at the latest build too.
 cp "$APK_PATH" "public/downloads/sac-buy-nothing.apk"
 node scripts/sync-android-version.mjs
-if compgen -G "$APK_STAGING_DIR/*.apk" > /dev/null; then
-  for staged in "$APK_STAGING_DIR"/*.apk; do
-    base="$(basename "$staged")"
-    if [[ "$base" == "$VERSIONED_FILE" || "$base" == "sac-buy-nothing.apk" ]]; then
-      continue
-    fi
-    mv "$staged" public/downloads/
-  done
-  for f in public/downloads/buynothing*.apk; do
-    [[ -f "$f" ]] && mv "$f" public/ 2>/dev/null || true
-  done
-fi
-if compgen -G "$APK_STAGING_DIR/*.aab" > /dev/null; then
-  for staged in "$APK_STAGING_DIR"/*.aab; do
-    base="$(basename "$staged")"
-    if [[ "$base" == "$CURRENT_AAB" || "$base" == "sac-buy-nothing.aab" ]]; then
-      continue
-    fi
-    mv "$staged" public/downloads/
-  done
-fi
-# Keep the current AAB (built separately) when this script only rebuilds APK.
+# Restore AAB sidecars only — do not re-add old versioned APK pairs to public/downloads.
 for keep_aab in "$CURRENT_AAB" "sac-buy-nothing.aab"; do
   if [[ -f "$APK_STAGING_DIR/$keep_aab" ]]; then
     mv "$APK_STAGING_DIR/$keep_aab" public/downloads/
@@ -115,6 +94,7 @@ if [[ -d "$APK_STAGING_DIR/play-store" ]]; then
   mv "$APK_STAGING_DIR/play-store" public/downloads/
 fi
 rm -rf "$APK_STAGING_DIR"
+node scripts/prune-android-downloads.mjs
 # MBC App Market (Findr pattern): root-level slug APK + versioned copy — after restore.
 cp "$APK_PATH" "public/buynothing.apk"
 cp "$APK_PATH" "public/buynothing-v${VERSION_NAME}.apk"
