@@ -232,6 +232,11 @@ async function main() {
     await shot(page, '03-stuff');
 
     await page.evaluate(() => {
+      const chair = document.querySelector('#item_card_demo-item-chair button');
+      if (chair instanceof HTMLElement) {
+        chair.click();
+        return;
+      }
       const cards = Array.from(document.querySelectorAll('[id^="item_card_"]'));
       const withPhoto = cards.find((card) => card.querySelector('img'));
       const card = withPhoto || cards[0];
@@ -252,6 +257,11 @@ async function main() {
     await shot(page, '04-events');
 
     await page.evaluate(() => {
+      const picnic = document.querySelector('#event_card_demo-event-picnic button');
+      if (picnic instanceof HTMLElement) {
+        picnic.click();
+        return;
+      }
       const card = document.querySelector('[id^="event_card_"]');
       const btn = card?.querySelector('button');
       if (btn instanceof HTMLElement) btn.click();
@@ -263,7 +273,15 @@ async function main() {
     await wait(800);
 
     await openTab(page, 'map');
-    await wait(2800);
+    await wait(2000);
+    await page.evaluate(() => {
+      const zoomOut = document.querySelector('.leaflet-control-zoom-out');
+      if (zoomOut instanceof HTMLElement) {
+        zoomOut.click();
+        zoomOut.click();
+      }
+    });
+    await wait(1800);
     await shot(page, '05-map');
 
     await openTab(page, 'chats');
@@ -271,10 +289,18 @@ async function main() {
     await wait(1200);
     await shot(page, '06-messages');
   } finally {
-    await browser.close();
     if (server) {
-      server.child.kill('SIGTERM');
+      try {
+        server.child.kill('SIGKILL');
+      } catch {
+        /* ignore */
+      }
     }
+    await Promise.race([
+      browser.close(),
+      wait(2000),
+    ]);
+    process.exit(0);
   }
 }
 
