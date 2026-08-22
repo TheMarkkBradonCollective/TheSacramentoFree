@@ -855,7 +855,10 @@ export interface ContentVoteState {
 
 export interface FeedPollOption {
   id: string;
+  /** Full label — detail view and results. */
   label: string;
+  /** Shorter card label; falls back to label when omitted. */
+  shortLabel?: string;
 }
 
 export interface FeedPost {

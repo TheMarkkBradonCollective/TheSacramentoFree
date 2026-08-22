@@ -4038,20 +4038,22 @@ VALUES (
     (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
     'Midtown'
   ),
-  'Welp — we''re on TheSacramentoFree now. Get it? Newspaper 😂
+  'Style poll: newspaper v2 or original layout in tan and black?
 
-It''s a free paper — but for free stuff. All the news that''s fit to give away. I thought I was so clever.
+0.2.0 landed as TheSacramentoFree. Same community, same account — but the site and app got a full newspaper redesign: gray ink, columns, section heads, crest lockup in the header. You see it on home, feed, map, listings — all of it.
 
-The name is what it is for now unless we cook up something better later. This poll is just about the look — like it or don''t.
+Why a newspaper? Because that is basically what we are running — a free circular for Sacramento neighbors. Who is giving something away, who needs something, pickup details. Nothing changed under the hood: same listings, chat, map, notifications.
 
-Tap a choice and let me know how you feel.',
+This poll is about style only — not the name. TheSacramentoFree stays either way. I want to know whether you want to keep this newspaper design as the default, or whether I should bring back the original app layout with our new tan-and-black theme instead of the old orange SacramentoBuyNothing look. On a browser you can still peek at the old orange with ?skin=original if you want to compare.
+
+Tap one below. Too plain? Too busy? Hard to read? You love it? You hate it? Say it in the comments — I read them.',
   '[]'::jsonb,
   'active',
   false,
   'poll',
   '[
-    {"id":"newspaper","label":"TheSacramentoFree newspaper look (what you see now)"},
-    {"id":"original","label":"Original orange look (add ?skin=original to any page to peek)"}
+    {"id":"newspaper","shortLabel":"Keep v2 — newspaper style","label":"Keep v2 — newspaper style (crest, columns, gray ink on home, feed, map, and the app — default now)"},
+    {"id":"original","shortLabel":"Original layout — tan & black","label":"Bring back the original app layout — tan and black TheSacramentoFree theme (same pages and flows as before, not the old orange)"}
   ]'::jsonb,
   '2026-08-22 01:00:00-07'::timestamptz,
   NOW()
