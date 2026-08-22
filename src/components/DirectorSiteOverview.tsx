@@ -297,7 +297,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <div>
           <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Google Play Console graphics</h4>
           <p className="text-[11px] text-muted mt-1 leading-snug">
-            App icon (512×512), feature graphic, and phone screenshots (1080×1920). Fictional demo neighbors only.
+            Store icon (512×512 site lockup), feature graphic, and phone screenshots (1080×1920). Fictional demo neighbors only.
           </p>
         </div>
         <a
@@ -307,7 +307,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold"
         >
           <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
-          Download screenshots & app icon
+          Download screenshots & store icon
         </a>
         <p className="text-[10px] text-muted/80 leading-snug">
           Zip for Play Console → Store presence → Main store listing. Upload 01-home through 08-account in that order.

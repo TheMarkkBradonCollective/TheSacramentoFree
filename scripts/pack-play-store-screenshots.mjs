@@ -37,7 +37,7 @@ export function packPlayStoreScreenshotsZip() {
     '',
     'Play Console → Store presence → Main store listing',
     '',
-    'App icon (512×512, 32-bit PNG):',
+    'Store icon (512×512, 32-bit PNG — website masthead lockup):',
     '  icon-512.png',
     '',
     'Feature graphic (1024×500):',

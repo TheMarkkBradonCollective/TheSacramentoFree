@@ -142,7 +142,7 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 
 | Asset | File |
 |-------|------|
-| App icon (512×512) | `play-store-assets/icon-512.png` |
+| Store icon (512×512, site lockup) | `play-store-assets/icon-512.png` (from `public/TheSacramentoFree.png`, not `Logo.png`) |
 | Feature graphic (1024×500) | `play-store-assets/feature-graphic-1024x500.png` |
 | Phone screenshots | `public/downloads/play-store-screenshots.zip` or `play-store-assets/screenshots/01-home.png` through `08-account.png` (1080×1920). Director overview: Download Play screenshots. |
 
