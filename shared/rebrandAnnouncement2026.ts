@@ -34,14 +34,14 @@ Thank you for being here while I get this right. You built this. I'm not walking
 — Mark
 Buy Nothing Director, Sacramento`;
 
-/** Professional home-page notice — no rug pull. */
+/** Professional home-page notice — upcoming link change (rebrand is live). */
 export const TRADEMARK_HOME_NOTICE = {
-  title: 'Official notice on our name',
-  body: `Sacramento Buy Nothing is an independent local gifting project. We are not affiliated with any national "Buy Nothing" trademark holder or project.
+  title: 'Heads up — new website and app link coming soon',
+  body: `TheSacramentoFree name and look are live — that change was immediate once the update shipped.
 
-We understand that our current name may conflict with trademarks held by other organizations. That is on us to fix. We are actively developing a distinct name and visual identity so we can serve Sacramento neighbors clearly and respectfully, without confusion or infringement.
+Next up: a new website address and a new Android download link. That switch is not today. Keep using this site and your current app until I post the exact links in News (bell → News).
 
-The website and app remain fully available while we make that transition. Gifting, messaging, and events continue as they do today.`,
+Same neighbor account, same listings and chat when we move. I will give install steps before anything changes.`,
 };
 
 /** Short feed post for copy/paste (cliff-hanger). */

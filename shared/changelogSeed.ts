@@ -88,14 +88,14 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
     id: '2026-08-22_upcoming-url-and-app-link',
     date: '2026-08-22',
     title: 'Heads up: new website link and Android download coming soon',
-    body: 'We are planning a new website address and a new Android download link. Not today — same as always for now. I will post the exact links and steps here when we switch.',
+    body: 'We are planning a new website address and a new Android download link. Not today — keep using the site and app as you do now. I will post the exact links and install steps in News before we switch.',
     detail: `Quick heads-up so this does not catch anyone off guard later.
 
 TheSacramentoFree name and look changed recently — that was immediate once the update shipped. The next change is different: we will move to a new website link and a new Android app download link. That is still coming, not live yet.
 
 What to expect:
 • A new web address for TheSacramentoFree (sacramentobuynothing.com may keep working for a while as a redirect)
-• A new Google Play closed-testing or download link when we cut over — not the same instant flip as today's in-app updates
+• A new Google Play closed-testing or download link when we cut over — not the same instant flip as an in-app update
 • Same neighbor account, same sign-in email, same listings, chat, and map — this is about links, not starting over
 
 What you should do now:
