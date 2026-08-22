@@ -243,11 +243,7 @@ export default function FeedPostDetailView({
                   </div>
                 </div>
               </>
-            ) : isPoll && isOwn ? null : (
-              <p className="text-xs text-muted border-t border-app pt-3">
-                Your post — neighbors vote and react here. You can read and reply in comments below.
-              </p>
-            )}
+            ) : null}
 
             <FeedPostComments
               post={post}

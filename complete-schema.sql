@@ -4040,6 +4040,8 @@ VALUES (
   ),
   'Welp — we''re on TheSacramentoFree now. Get it? Newspaper 😂
 
+It''s a free paper — but for free stuff. All the news that''s fit to give away. I thought I was so clever.
+
 The name is what it is for now unless we cook up something better later. This poll is just about the look — like it or don''t.
 
 Tap a choice and let me know how you feel.',
