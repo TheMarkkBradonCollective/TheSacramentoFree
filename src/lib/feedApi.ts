@@ -30,8 +30,14 @@ function normalizePollOptions(raw: unknown): FeedPollOption[] {
       const row = entry as Record<string, unknown>;
       const id = typeof row.id === 'string' ? row.id.trim() : '';
       const label = typeof row.label === 'string' ? row.label.trim() : '';
+      const shortLabel =
+        typeof row.shortLabel === 'string'
+          ? row.shortLabel.trim()
+          : typeof row.short_label === 'string'
+            ? row.short_label.trim()
+            : '';
       if (!id || !label) return null;
-      return { id, label };
+      return shortLabel ? { id, label, shortLabel } : { id, label };
     })
     .filter((option): option is FeedPollOption => option != null);
 }

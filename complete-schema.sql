@@ -4038,7 +4038,7 @@ VALUES (
     (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
     'Midtown'
   ),
-  'Alright neighbors — real talk on the new look. This is v2.
+  'Style poll: newspaper v2 or original layout in tan and black?
 
 0.2.0 landed as TheSacramentoFree. Same community, same account — but the site and app got a full newspaper redesign: gray ink, columns, section heads, crest lockup in the header. You see it on home, feed, map, listings — all of it.
 
@@ -4052,8 +4052,8 @@ Tap one below. Too plain? Too busy? Hard to read? You love it? You hate it? Say 
   false,
   'poll',
   '[
-    {"id":"newspaper","label":"Keep v2 — newspaper style (crest, columns, gray ink on home, feed, map, and the app — default now)"},
-    {"id":"original","label":"Bring back the original app layout — tan and black TheSacramentoFree theme (same pages and flows as before, not the old orange)"}
+    {"id":"newspaper","shortLabel":"Keep v2 — newspaper style","label":"Keep v2 — newspaper style (crest, columns, gray ink on home, feed, map, and the app — default now)"},
+    {"id":"original","shortLabel":"Original layout — tan & black","label":"Bring back the original app layout — tan and black TheSacramentoFree theme (same pages and flows as before, not the old orange)"}
   ]'::jsonb,
   '2026-08-22 01:00:00-07'::timestamptz,
   NOW()

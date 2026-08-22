@@ -32,6 +32,7 @@ export default function FeedPollBlock({
           const pct = pollState.total > 0 ? Math.round((count / pollState.total) * 100) : 0;
           const selected = pollState.userOptionId === option.id;
           const showResults = pollState.total > 0 && (!canVote || pollState.userOptionId != null);
+          const optionLabel = compact ? option.shortLabel?.trim() || option.label : option.label;
 
           return (
             <button
@@ -39,6 +40,7 @@ export default function FeedPollBlock({
               type="button"
               disabled={!canVote}
               onClick={() => onVote(option.id)}
+              aria-label={option.label}
               className={`relative w-full overflow-hidden rounded-xl border text-left transition-colors ${
                 selected
                   ? 'border-accent bg-accent-soft'
@@ -54,7 +56,7 @@ export default function FeedPollBlock({
               ) : null}
               <div className={`relative flex items-center justify-between gap-2 ${compact ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}>
                 <span className={`text-sm leading-snug ${selected ? 'font-bold text-app' : 'text-app'}`}>
-                  {option.label}
+                  {optionLabel}
                 </span>
                 {showResults ? (
                   <span className="text-[11px] font-bold tabular-nums text-muted shrink-0">

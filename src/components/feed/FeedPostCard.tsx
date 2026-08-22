@@ -8,6 +8,7 @@ import { PresenceUserAvatar } from '../UserAvatar';
 import ReportNeighborModal from '../ReportNeighborModal';
 import FeedPostClientBadge from './FeedPostClientBadge';
 import FeedPollBlock from './FeedPollBlock';
+import { feedPostPreview } from '../../lib/feedPostText';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
 interface FeedPostCardProps {
@@ -51,6 +52,7 @@ export default function FeedPostCard({
   const comments = engagement.getComments(post.id);
   const pollState = engagement.getPollState(post.id);
   const isPoll = post.postKind === 'poll';
+  const pollPreview = isPoll ? feedPostPreview(post.text) : null;
   const cover = !isPoll ? post.imageUrls[0] : undefined;
   const extraPhotos = Math.max(0, post.imageUrls.length - 1);
 
@@ -121,7 +123,14 @@ export default function FeedPostCard({
           </div>
         </header>
 
-        {post.text.trim() ? (
+        {isPoll && pollPreview?.headline ? (
+          <div className="mt-2.5 pointer-events-none space-y-1">
+            <p className="text-sm font-bold text-app leading-snug">{pollPreview.headline}</p>
+            {pollPreview.body ? (
+              <p className="text-[11px] text-muted leading-snug">Tap to read the full post</p>
+            ) : null}
+          </div>
+        ) : post.text.trim() ? (
           <p className="text-sm text-app leading-relaxed whitespace-pre-wrap mt-2.5 line-clamp-4 pointer-events-none">
             {post.text}
           </p>
