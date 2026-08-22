@@ -31,6 +31,7 @@ const DIRECTOR_TITLE = 'Buy Nothing Director';
 const APK_0051_AT = '2026-08-21T22:35:00.000Z';
 const APK_0052_AT = '2026-08-21T23:50:00.000Z';
 const CLOSED_TESTING_NEWS_AT = '2026-08-21T23:20:00.000Z';
+const TESTER_LIST_NEWS_AT = '2026-08-22T00:40:00.000Z';
 const PLAY_CLOSED_TESTING_URL = 'https://play.google.com/apps/testing/org.sacramentobuynothing.app';
 
 /** Canonical Updates feed — current APK plus later posts. */
@@ -80,6 +81,35 @@ TheSacramentoFree, 0.2.0 (51): same paper, tighter fit.
 
 /** Canonical News feed — community announcements for bell → News. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  {
+    id: '2026-08-22_closed-testing-tester-list',
+    date: '2026-08-22',
+    title: '411 neighbors are on the Android beta invite list',
+    body: 'We uploaded community emails to Google Play closed testing. On Android? Opt in with the Gmail on the list. Not on it? Chat → Support with your email.',
+    detail: `Neighbors on Android — here is where we stand on the Play Store beta.
+
+**411 neighbors** from our community are already on the **TheSacramentoFree** closed-testing email list in Google Play Console (pulled from neighbors who joined through the site).
+
+**If you are on the list:**
+1. On your **Android phone**, open this link while signed into the **Gmail we have on file**:
+   ${PLAY_CLOSED_TESTING_URL}
+2. Tap **Become a tester**
+3. Install **TheSacramentoFree** from the Play Store
+
+**If Play says you are not a tester — or you never got access:**
+Open **Chat → Support** in the app and send the **Gmail address you use on your phone**. I will add you to the list manually. Same community account — this is only about which Google account can install from Play.
+
+**Not on Android?** You can still use the website or add the app to your home screen — the Play beta is Android-only.
+
+Thank you for your patience while we move from internal testing to closed testing and work toward open testing.
+
+— Mark`,
+    authorName: DIRECTOR_NAME,
+    authorTitle: DIRECTOR_TITLE,
+    postedByUserId: CHANGELOG_AUTHOR_UID,
+    createdAt: TESTER_LIST_NEWS_AT,
+    updatedAt: TESTER_LIST_NEWS_AT,
+  },
   {
     id: '2026-08-21_closed-testing-beta',
     date: '2026-08-21',
