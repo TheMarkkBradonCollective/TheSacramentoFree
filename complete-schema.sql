@@ -4042,9 +4042,9 @@ VALUES (
 
 0.2.0 landed as TheSacramentoFree. Same community, same account — but the site and app got a full newspaper redesign: gray ink, columns, section heads, crest lockup in the header. You see it on home, feed, map, listings — all of it.
 
-Why a newspaper? Because that is basically what we are running — a free circular for Sacramento neighbors. Who is giving something away, who needs something, pickup details. Nothing changed under the hood: same listings, chat, map, notifications. I wanted a look that feels like ours and keeps us clear of Buy Nothing Project trademark issues.
+Why a newspaper? Because that is basically what we are running — a free circular for Sacramento neighbors. Who is giving something away, who needs something, pickup details. Nothing changed under the hood: same listings, chat, map, notifications.
 
-TheSacramentoFree is the name for now. I am not asking you to vote on the name in this poll — just whether you want to keep this design as the default, or go back to the original orange UI we had before.
+This poll is about style only — not the name. TheSacramentoFree stays either way. I want to know whether you want to keep this newspaper design as the default, or whether I should bring back the original app layout with our new tan-and-black theme instead of the old orange SacramentoBuyNothing look. On a browser you can still peek at the old orange with ?skin=original if you want to compare.
 
 Tap one below. Too plain? Too busy? Hard to read? You love it? You hate it? Say it in the comments — I read them.',
   '[]'::jsonb,
@@ -4052,8 +4052,8 @@ Tap one below. Too plain? Too busy? Hard to read? You love it? You hate it? Say 
   false,
   'poll',
   '[
-    {"id":"newspaper","label":"Keep v2 — TheSacramentoFree newspaper look (crest, columns, gray ink on home, feed, map, and the app — default now)"},
-    {"id":"original","label":"Go back to the original orange look — SacramentoBuyNothing-style UI (in a browser, add ?skin=original to any page to compare)"}
+    {"id":"newspaper","label":"Keep v2 — newspaper style (crest, columns, gray ink on home, feed, map, and the app — default now)"},
+    {"id":"original","label":"Bring back the original app layout — tan and black TheSacramentoFree theme (same pages and flows as before, not the old orange)"}
   ]'::jsonb,
   '2026-08-22 01:00:00-07'::timestamptz,
   NOW()
