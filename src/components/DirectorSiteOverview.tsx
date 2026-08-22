@@ -297,7 +297,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <div>
           <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Google Play Console graphics</h4>
           <p className="text-[11px] text-muted mt-1 leading-snug">
-            Store icon (512×512 site lockup), feature graphic, and phone screenshots (1080×1920). Fictional demo neighbors only.
+            Store icon (512×512 site lockup, padded so words are not clipped), feature graphic, and phone screenshots (1080×1920). Fictional demo neighbors only.
           </p>
         </div>
         <a
