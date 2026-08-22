@@ -4038,11 +4038,11 @@ VALUES (
     (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
     'Midtown'
   ),
-  'We are trying out the TheSacramentoFree newspaper look on the site and app.
+  'Welp — we''re on TheSacramentoFree now. Get it? Newspaper 😂
 
-The name TheSacramentoFree is what we are going with for now unless we come up with something better later. This poll is only about the design — not the name.
+The name is what it is for now unless we cook up something better later. This poll is just about the look — like it or don''t.
 
-Which look do you prefer?',
+Tap a choice and let me know how you feel.',
   '[]'::jsonb,
   'active',
   false,

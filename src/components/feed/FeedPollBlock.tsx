@@ -4,6 +4,7 @@ interface FeedPollBlockProps {
   post: FeedPost;
   pollState: FeedPollState;
   canVote: boolean;
+  isOwnPost?: boolean;
   onVote: (optionId: string) => void;
   compact?: boolean;
 }
@@ -12,6 +13,7 @@ export default function FeedPollBlock({
   post,
   pollState,
   canVote,
+  isOwnPost = false,
   onVote,
   compact = false,
 }: FeedPollBlockProps) {
@@ -64,10 +66,12 @@ export default function FeedPollBlock({
           );
         })}
       </div>
-      <p className="text-[10px] text-muted">
-        {pollState.total === 0
-          ? 'Tap a choice to vote. Comments and reactions work like any other post.'
-          : `${pollState.total} vote${pollState.total === 1 ? '' : 's'} so far.`}
+      <p className="text-[10px] text-muted leading-relaxed">
+        {pollState.total > 0
+          ? `${pollState.total} vote${pollState.total === 1 ? '' : 's'} so far.`
+          : isOwnPost
+            ? 'Welp, neighbors vote below. I will be in the comments.'
+            : 'Tap one — like this newspaper vibe or not? Comment and react like always.'}
       </p>
     </div>
   );
