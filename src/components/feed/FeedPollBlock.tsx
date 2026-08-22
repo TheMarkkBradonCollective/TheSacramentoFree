@@ -70,8 +70,8 @@ export default function FeedPollBlock({
         {pollState.total > 0
           ? `${pollState.total} vote${pollState.total === 1 ? '' : 's'} so far.`
           : isOwnPost
-            ? 'Welp, neighbors vote below. I will be in the comments.'
-            : 'Tap one — like this newspaper vibe or not? Comment and react like always.'}
+            ? 'Neighbors vote below — I will be in the comments.'
+            : 'Tap one below. Say more in the comments if you want — I read them.'}
       </p>
     </div>
   );

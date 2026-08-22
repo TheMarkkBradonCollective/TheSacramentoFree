@@ -4038,20 +4038,22 @@ VALUES (
     (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
     'Midtown'
   ),
-  'Welp — we''re on TheSacramentoFree now. Get it? Newspaper 😂
+  'Alright neighbors — real talk on the new look. This is v2.
 
-It''s a free paper — but for free stuff. All the news that''s fit to give away. I thought I was so clever.
+0.2.0 landed as TheSacramentoFree. Same community, same account — but the site and app got a full newspaper redesign: gray ink, columns, section heads, crest lockup in the header. You see it on home, feed, map, listings — all of it.
 
-The name is what it is for now unless we cook up something better later. This poll is just about the look — like it or don''t.
+Why a newspaper? Because that is basically what we are running — a free circular for Sacramento neighbors. Who is giving something away, who needs something, pickup details. Nothing changed under the hood: same listings, chat, map, notifications. I wanted a look that feels like ours and keeps us clear of Buy Nothing Project trademark issues.
 
-Tap a choice and let me know how you feel.',
+TheSacramentoFree is the name for now. I am not asking you to vote on the name in this poll — just whether you want to keep this design as the default, or go back to the original orange UI we had before.
+
+Tap one below. Too plain? Too busy? Hard to read? You love it? You hate it? Say it in the comments — I read them.',
   '[]'::jsonb,
   'active',
   false,
   'poll',
   '[
-    {"id":"newspaper","label":"TheSacramentoFree newspaper look (what you see now)"},
-    {"id":"original","label":"Original orange look (add ?skin=original to any page to peek)"}
+    {"id":"newspaper","label":"Keep v2 — TheSacramentoFree newspaper look (crest, columns, gray ink on home, feed, map, and the app — default now)"},
+    {"id":"original","label":"Go back to the original orange look — SacramentoBuyNothing-style UI (in a browser, add ?skin=original to any page to compare)"}
   ]'::jsonb,
   '2026-08-22 01:00:00-07'::timestamptz,
   NOW()
