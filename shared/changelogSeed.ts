@@ -38,12 +38,12 @@ export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
   {
     id: '2026-08-21_apk-0052',
     date: '2026-08-21',
-    title: 'The Sacramento Free — beta v0.2.0.0052',
-    body: 'The app is now The Sacramento Free on your home screen and in Google Play. Same community, new name.',
+    title: 'TheSacramentoFree — beta v0.2.0.0052',
+    body: 'The app is now TheSacramentoFree on your home screen and in Google Play. Same community, new name.',
     detail: `WHAT NEIGHBORS SEE
-The Sacramento Free, 0.2.0 (52): the rebrand lands on Android.
+TheSacramentoFree, 0.2.0 (52): the rebrand lands on Android.
 
-• Home screen and app switcher say **The Sacramento Free**
+• Home screen and app switcher say **TheSacramentoFree**
 • Same sign-in, listings, map, chat, and notifications
 • Package stays org.sacramentobuynothing.app — your account is unchanged
 • Opt in on closed testing if you have not yet: ${PLAY_CLOSED_TESTING_URL}
@@ -58,12 +58,12 @@ The Sacramento Free, 0.2.0 (52): the rebrand lands on Android.
   {
     id: '2026-08-21_apk-0051',
     date: '2026-08-21',
-    title: 'The Sacramento Free — beta v0.2.0.0051',
+    title: 'TheSacramentoFree — beta v0.2.0.0051',
     body: 'Smaller lockup on the home page. Map filters and listing cards no longer overlap or get cut off.',
     detail: `WHAT NEIGHBORS SEE
-The Sacramento Free, 0.2.0 (51): same paper, tighter fit.
+TheSacramentoFree, 0.2.0 (51): same paper, tighter fit.
 
-• The Sacramento Free lockup is a small crest — not a full-screen poster
+• TheSacramentoFree lockup is a small crest — not a full-screen poster
 • Sign-in no longer stacks three logos
 • Map All / Giving / Looking / Trade / Events no longer collide with Index
 • Listing cards on the map keep ASK, category, and page numbers apart
@@ -93,7 +93,7 @@ We moved out of **internal testing** (the tiny dev-only track) and into **closed
 1. Open this link while signed into the **Gmail we added to the tester list**:
    ${PLAY_CLOSED_TESTING_URL}
 2. Tap **Become a tester**
-3. Install **The Sacramento Free** from the Play Store
+3. Install **TheSacramentoFree** from the Play Store
 
 **Why this matters:** Google requires **at least 12 opted-in testers** on closed testing before we can graduate to **open testing** (a wider public beta link anyone can join). If you are on Android and got the invite, please opt in — it takes about a minute and helps the whole community move forward.
 

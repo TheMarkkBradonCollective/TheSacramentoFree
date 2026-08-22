@@ -424,7 +424,7 @@ export const CHILD_SAFETY = {
   shortTitle: 'Child safety',
   lastUpdated: 'August 2026',
   summary:
-    'Sacramento Buy Nothing (The Sacramento Free) has zero tolerance for child sexual abuse and exploitation (CSAE). These standards apply to the app, website, and every neighbor account.',
+    'Sacramento Buy Nothing (TheSacramentoFree) has zero tolerance for child sexual abuse and exploitation (CSAE). These standards apply to the app, website, and every neighbor account.',
   contactEmail: 'support@sacbuynothing.org',
   sections: [
     {

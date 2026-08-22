@@ -106,7 +106,7 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
         <button
           type="button"
           onClick={() => onNavigate('home')}
-          aria-label={newspaper ? 'The Sacramento Free home' : 'Sacramento Buy Nothing home'}
+          aria-label={newspaper ? 'TheSacramentoFree home' : 'Sacramento Buy Nothing home'}
           className={`shrink-0 ${hideBrandOnLarge ? 'lg:hidden' : ''}`}
         >
           <BrandLogo
