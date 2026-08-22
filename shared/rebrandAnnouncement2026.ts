@@ -36,12 +36,14 @@ Buy Nothing Director, Sacramento`;
 
 /** Professional home-page notice — upcoming link change (rebrand is live). */
 export const TRADEMARK_HOME_NOTICE = {
-  title: 'Heads up — new website and app link coming soon',
-  body: `TheSacramentoFree name and look are live — that change was immediate once the update shipped.
+  title: 'Notice: upcoming website and app link changes',
+  body: `TheSacramentoFree is now the community's published name and visual identity.
 
-Next up: a new website address and a new Android download link. That switch is not today. Keep using this site and your current app until I post the exact links in News (bell → News).
+We will move to a new website address and a new Android download link in a future update. That transition is not in effect today. Please continue using the current site and installed app until further notice.
 
-Same neighbor account, same listings and chat when we move. I will give install steps before anything changes.`,
+Your neighbor account, listings, messages, and notifications will remain the same. Advance notice and step-by-step instructions will be published in News before any change takes effect.
+
+Questions may be directed to Support through Chat.`,
 };
 
 /** Short feed post for copy/paste (cliff-hanger). */
