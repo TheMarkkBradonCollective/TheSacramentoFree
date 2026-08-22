@@ -1,7 +1,7 @@
 import { TRADEMARK_HOME_NOTICE } from '../../../shared/rebrandAnnouncement2026';
 import { isPlayStoreDemo } from '../../preview/playStoreDemo';
 
-/** Professional trademark notice on the public home page — no rug pull. */
+/** Upcoming link change — public home page (TheSacramentoFree edition). */
 export default function TrademarkNoticeBanner() {
   if (isPlayStoreDemo()) return null;
   return (

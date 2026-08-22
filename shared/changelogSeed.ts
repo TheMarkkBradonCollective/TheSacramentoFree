@@ -34,6 +34,7 @@ const CLOSED_TESTING_NEWS_AT = '2026-08-21T23:20:00.000Z';
 const TESTER_LIST_NEWS_AT = '2026-08-22T00:40:00.000Z';
 const TESTER_LIST_NEWS_UPDATED_AT = '2026-08-22T00:50:00.000Z';
 const CLOSED_TESTING_NEWS_UPDATED_AT = '2026-08-22T00:50:00.000Z';
+const UPCOMING_URL_NEWS_AT = '2026-08-22T03:50:00.000Z';
 const PLAY_CLOSED_TESTING_URL = 'https://play.google.com/apps/testing/org.sacramentobuynothing.app';
 
 /** Canonical Updates feed — current APK plus later posts. */
@@ -83,6 +84,34 @@ TheSacramentoFree, 0.2.0 (51): same paper, tighter fit.
 
 /** Canonical News feed — community announcements for bell → News. */
 export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
+  {
+    id: '2026-08-22_upcoming-url-and-app-link',
+    date: '2026-08-22',
+    title: 'Heads up: new website link and Android download coming soon',
+    body: 'We are planning a new website address and a new Android download link. Not today — keep using the site and app as you do now. I will post the exact links and install steps in News before we switch.',
+    detail: `Quick heads-up so this does not catch anyone off guard later.
+
+TheSacramentoFree name and look changed recently — that was immediate once the update shipped. The next change is different: we will move to a new website link and a new Android app download link. That is still coming, not live yet.
+
+What to expect:
+• A new web address for TheSacramentoFree (sacramentobuynothing.com may keep working for a while as a redirect)
+• A new Google Play closed-testing or download link when we cut over — not the same instant flip as an in-app update
+• Same neighbor account, same sign-in email, same listings, chat, and map — this is about links, not starting over
+
+What you should do now:
+• Keep using the app and site exactly as you do today
+• Stay on the current Play beta link until I post the new one here in News
+• When the switch happens, I will publish a follow-up with the new link, install steps, and whether you need to remove the old app icon from your phone
+
+If you have questions before then, Chat → Support.
+
+— Mark`,
+    authorName: DIRECTOR_NAME,
+    authorTitle: DIRECTOR_TITLE,
+    postedByUserId: CHANGELOG_AUTHOR_UID,
+    createdAt: UPCOMING_URL_NEWS_AT,
+    updatedAt: UPCOMING_URL_NEWS_AT,
+  },
   {
     id: '2026-08-22_closed-testing-tester-list',
     date: '2026-08-22',

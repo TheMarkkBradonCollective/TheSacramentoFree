@@ -34,14 +34,16 @@ Thank you for being here while I get this right. You built this. I'm not walking
 — Mark
 Buy Nothing Director, Sacramento`;
 
-/** Professional home-page notice — no rug pull. */
+/** Professional home-page notice — upcoming link change (rebrand is live). */
 export const TRADEMARK_HOME_NOTICE = {
-  title: 'Official notice on our name',
-  body: `Sacramento Buy Nothing is an independent local gifting project. We are not affiliated with any national "Buy Nothing" trademark holder or project.
+  title: 'Notice: upcoming website and app link changes',
+  body: `TheSacramentoFree is now the community's published name and visual identity.
 
-We understand that our current name may conflict with trademarks held by other organizations. That is on us to fix. We are actively developing a distinct name and visual identity so we can serve Sacramento neighbors clearly and respectfully, without confusion or infringement.
+We will move to a new website address and a new Android download link in a future update. That transition is not in effect today. Please continue using the current site and installed app until further notice.
 
-The website and app remain fully available while we make that transition. Gifting, messaging, and events continue as they do today.`,
+Your neighbor account, listings, messages, and notifications will remain the same. Advance notice and step-by-step instructions will be published in News before any change takes effect.
+
+Questions may be directed to Support through Chat.`,
 };
 
 /** Short feed post for copy/paste (cliff-hanger). */
