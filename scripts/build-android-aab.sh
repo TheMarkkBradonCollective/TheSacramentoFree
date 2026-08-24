@@ -29,8 +29,8 @@ fi
 if compgen -G "public/downloads/*.aab" > /dev/null; then
   mv public/downloads/*.aab "$APK_STAGING_DIR/"
 fi
-if [[ -d public/downloads/play-store ]]; then
-  mv public/downloads/play-store "$APK_STAGING_DIR/"
+if compgen -G "public/downloads/*.zip" > /dev/null; then
+  mv public/downloads/*.zip "$APK_STAGING_DIR/"
 fi
 if compgen -G "public/buynothing*.apk" > /dev/null; then
   mv public/buynothing*.apk "$APK_STAGING_DIR/"
@@ -76,17 +76,31 @@ cp "$AAB_PATH" "$VERSIONED_AAB"
 cp "$AAB_PATH" "public/downloads/${AAB_FILE}"
 cp "$AAB_PATH" "public/downloads/sac-buy-nothing.aab"
 node scripts/sync-android-version.mjs
-# Restore APK sidecars only — do not re-add old versioned AAB pairs to public/downloads.
-for keep_apk in "$CURRENT_APK" "sac-buy-nothing.apk"; do
-  if [[ -f "$APK_STAGING_DIR/$keep_apk" ]]; then
-    mv "$APK_STAGING_DIR/$keep_apk" public/downloads/
-  fi
-done
-if [[ -d "$APK_STAGING_DIR/play-store" ]]; then
-  mv "$APK_STAGING_DIR/play-store" public/downloads/
+if compgen -G "$APK_STAGING_DIR/*.apk" > /dev/null; then
+  for staged in "$APK_STAGING_DIR"/*.apk; do
+    base="$(basename "$staged")"
+    if [[ "$base" == "$CURRENT_APK" || "$base" == "sac-buy-nothing.apk" ]]; then
+      continue
+    fi
+    mv "$staged" public/downloads/
+  done
+  for f in public/downloads/buynothing*.apk; do
+    [[ -f "$f" ]] && mv "$f" public/ 2>/dev/null || true
+  done
+fi
+if compgen -G "$APK_STAGING_DIR/*.aab" > /dev/null; then
+  for staged in "$APK_STAGING_DIR"/*.aab; do
+    base="$(basename "$staged")"
+    if [[ "$base" == "$AAB_FILE" || "$base" == "sac-buy-nothing.aab" ]]; then
+      continue
+    fi
+    mv "$staged" public/downloads/
+  done
+fi
+if compgen -G "$APK_STAGING_DIR/*.zip" > /dev/null; then
+  mv "$APK_STAGING_DIR"/*.zip public/downloads/
 fi
 rm -rf "$APK_STAGING_DIR"
-node scripts/prune-android-downloads.mjs
 
 echo "AAB ready for Google Play: dist/android/sac-buy-nothing-release.aab"
 echo "Public download: public/downloads/${AAB_FILE}"

@@ -28,7 +28,7 @@ All files are **1080×1920**, 24-bit PNG (Play phone size). Upload in this order
 
 Upload order matches the app footer: Feed → Stuff → Map → Events → Chat. Listing sits after Stuff; event detail sits after Events.
 
-Director download (after deploy): Staff panel / Account overview → individual Play listing PNGs under `public/downloads/play-store/`.
+Director download (after deploy): Staff panel / Account overview → **Download Play screenshots**. Also at `public/downloads/play-store-screenshots.zip`.
 
 ## Feature graphic (required)
 
@@ -42,5 +42,5 @@ Director download (after deploy): Staff panel / Account overview → individual 
 ```bash
 npm run android:play-assets        # icon + feature graphic
 npm run android:play-screenshots   # phone screenshots from fictional demo data
-npm run android:play-screenshots-sync  # copy listing PNGs for the director download links
+npm run android:play-screenshots-zip  # zip for the director download button
 ```
