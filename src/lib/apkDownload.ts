@@ -8,12 +8,23 @@ export const APP_ORIGIN = 'https://www.sacramentobuynothing.com';
 export const PLAY_STORE_SCREENSHOTS_ZIP_PATH = '/downloads/play-store-screenshots.zip';
 export const PLAY_STORE_SCREENSHOTS_ZIP_NAME = 'play-store-screenshots.zip';
 
+/** Zip of Go Get pickup coordination promo screenshots. */
+export const GO_GET_SCREENSHOTS_ZIP_PATH = '/downloads/go-get-screenshots.zip';
+export const GO_GET_SCREENSHOTS_ZIP_NAME = 'go-get-screenshots.zip';
+
 /** Website URL so the native app downloads from the live site, not the APK bundle. */
 export function playStoreScreenshotsZipUrl(): string {
   if (typeof window === 'undefined' || isNativeApp()) {
     return `${APP_ORIGIN}${PLAY_STORE_SCREENSHOTS_ZIP_PATH}`;
   }
   return PLAY_STORE_SCREENSHOTS_ZIP_PATH;
+}
+
+export function goGetScreenshotsZipUrl(): string {
+  if (typeof window === 'undefined' || isNativeApp()) {
+    return `${APP_ORIGIN}${GO_GET_SCREENSHOTS_ZIP_PATH}`;
+  }
+  return GO_GET_SCREENSHOTS_ZIP_PATH;
 }
 
 /** Build a cache-busted APK download URL so browsers never serve a stale file. */
