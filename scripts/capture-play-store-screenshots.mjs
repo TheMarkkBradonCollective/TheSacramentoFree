@@ -291,6 +291,43 @@ async function main() {
     await page.waitForSelector('#chat_inbox_list, #empty_chat_inbox_state', { timeout: 20000 });
     await wait(1200);
     await shot(page, '08-messages');
+
+    const goGetScenes = [
+      ['goget-listing', '09-goget-listing', '#item_detail_fullscreen', 2500],
+      ['goget-chat', '10-goget-chat', '#chat_start_go_get_btn', 2000],
+      ['goget-ring', '11-goget-ring', '#go_get_incoming_ring_overlay', 2000],
+      ['goget-waiting', '12-goget-waiting', '#go_get_ring_waiting', 1500],
+      ['goget-navigation', '13-goget-navigation', '#map_navigation_view', 8000],
+      ['goget-tracking', '14-goget-tracking', '#go_get_live_tracking_card', 1500],
+      ['goget-meeting', '15-goget-meeting', '.go-get-meeting-pickup-pin, .leaflet-container', 3000],
+      ['goget-arrived', '16-goget-arrived', '#go_get_arrived_handoff', 1500],
+    ];
+
+    for (const [scene, filename, selector, settleMs] of goGetScenes) {
+      await page.goto(`${ORIGIN}/feed?scene=${scene}`, { waitUntil: 'networkidle2', timeout: 60000 });
+      await page.waitForSelector(selector, { timeout: scene === 'goget-navigation' ? 60000 : 30000 });
+      if (scene === 'goget-navigation') {
+        await page
+          .waitForSelector('#nav_instruction_banner', { timeout: 45000 })
+          .catch(() => null);
+        await page.evaluate(() => {
+          const zoomOut = document.querySelector('.leaflet-control-zoom-out');
+          if (zoomOut instanceof HTMLElement) zoomOut.click();
+        });
+      }
+      if (scene === 'goget-meeting') {
+        await page.evaluate(() => {
+          const zoomOut = document.querySelector('.leaflet-control-zoom-out');
+          if (zoomOut instanceof HTMLElement) {
+            zoomOut.click();
+            zoomOut.click();
+          }
+        });
+      }
+      await wait(settleMs);
+      await shot(page, filename);
+    }
+
     packPlayStoreScreenshotsZip();
   } finally {
     if (server) {

@@ -1,33 +1,38 @@
 #!/usr/bin/env node
 /**
- * Zip Play listing graphics for the director download button.
- * Writes public/downloads/play-store-screenshots.zip
+ * Publish Play listing graphics for director downloads + zip bundle.
+ * Writes public/downloads/play-store/* and public/downloads/play-store-screenshots.zip
  */
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import {
+  PLAY_STORE_FEATURE_GRAPHIC,
+  PLAY_STORE_ICON,
+  PLAY_STORE_PHONE_SCREENSHOTS,
+} from '../shared/playStoreAssets.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const shotDir = join(root, 'play-store-assets', 'screenshots');
 const assetsDir = join(root, 'play-store-assets');
 const outDir = join(root, 'public', 'downloads');
+const assetOutDir = join(outDir, 'play-store');
 const zipPath = join(outDir, 'play-store-screenshots.zip');
 
-const PHONE_SHOTS = [
-  ['01-home.png', 'Public newspaper home'],
-  ['02-feed.png', 'Feed — neighbor social posts'],
-  ['03-stuff.png', 'Stuff — giveaways and requests'],
-  ['04-listing.png', 'Listing detail'],
-  ['05-map.png', 'Neighborhood map'],
-  ['06-events.png', 'Community events'],
-  ['07-event.png', 'Event detail'],
-  ['08-messages.png', 'Messages'],
-];
+function copyAsset(src, destFileName) {
+  const dest = join(assetOutDir, destFileName);
+  if (!existsSync(src)) {
+    throw new Error(`Missing Play asset: ${src}`);
+  }
+  copyFileSync(src, dest);
+  return dest;
+}
 
 export function packPlayStoreScreenshotsZip() {
   mkdirSync(outDir, { recursive: true });
+  mkdirSync(assetOutDir, { recursive: true });
   if (existsSync(zipPath)) {
     rmSync(zipPath);
   }
@@ -41,31 +46,41 @@ export function packPlayStoreScreenshotsZip() {
     'Play Console → Store presence → Main store listing',
     '',
     'Store icon (512×512, 32-bit PNG — website masthead lockup):',
-    '  icon-512.png',
+    `  ${PLAY_STORE_ICON.file}`,
     '',
     'Feature graphic (1024×500):',
-    '  feature-graphic-1024x500.png',
+    `  ${PLAY_STORE_FEATURE_GRAPHIC.file}`,
     '',
     'Phone screenshots (1080×1920) — upload in this order:',
-    ...PHONE_SHOTS.map(([file, label], i) => `  ${i + 1}. ${file} — ${label}`),
+    ...PLAY_STORE_PHONE_SCREENSHOTS.map(([file, label], i) => `  ${i + 1}. ${file} — ${label}`),
+    '',
+    'Go Get screenshots (09–16) use fictional Sacramento landmarks (Capitol, Midtown, East Sac, etc.).',
+    '',
+    'Individual files are also at /downloads/play-store/ on the live site.',
     '',
   ].join('\n');
   writeFileSync(join(staging, 'README.txt'), readme);
 
   const copies = [
-    [join(assetsDir, 'icon-512.png'), join(staging, 'icon-512.png')],
-    [join(assetsDir, 'feature-graphic-1024x500.png'), join(staging, 'feature-graphic-1024x500.png')],
-    ...PHONE_SHOTS.map(([file]) => [join(shotDir, file), join(staging, file)]),
+    [join(assetsDir, PLAY_STORE_ICON.file), PLAY_STORE_ICON.file],
+    [join(assetsDir, PLAY_STORE_FEATURE_GRAPHIC.file), PLAY_STORE_FEATURE_GRAPHIC.file],
+    ...PLAY_STORE_PHONE_SCREENSHOTS.map(([file]) => [join(shotDir, file), file]),
   ];
 
-  for (const [src, dest] of copies) {
-    if (!existsSync(src)) {
-      throw new Error(`Missing Play asset: ${src}`);
-    }
-    copyFileSync(src, dest);
+  for (const [src, fileName] of copies) {
+    copyAsset(src, fileName);
+    copyFileSync(join(assetOutDir, fileName), join(staging, fileName));
   }
 
-  const zipArgs = ['-j', '-q', zipPath, join(staging, 'README.txt'), join(staging, 'icon-512.png'), join(staging, 'feature-graphic-1024x500.png'), ...PHONE_SHOTS.map(([file]) => join(staging, file))];
+  const zipArgs = [
+    '-j',
+    '-q',
+    zipPath,
+    join(staging, 'README.txt'),
+    join(staging, PLAY_STORE_ICON.file),
+    join(staging, PLAY_STORE_FEATURE_GRAPHIC.file),
+    ...PLAY_STORE_PHONE_SCREENSHOTS.map(([file]) => join(staging, file)),
+  ];
   let packed = spawnSync('zip', zipArgs, { encoding: 'utf8' });
   if (packed.error || packed.status !== 0) {
     packed = spawnSync(
@@ -76,7 +91,7 @@ export function packPlayStoreScreenshotsZip() {
 import zipfile, os
 staging = ${JSON.stringify(staging)}
 zip_path = ${JSON.stringify(zipPath)}
-names = ['README.txt', 'icon-512.png', 'feature-graphic-1024x500.png'] + ${JSON.stringify(PHONE_SHOTS.map(([file]) => file))}
+names = ['README.txt', ${JSON.stringify(PLAY_STORE_ICON.file)}, ${JSON.stringify(PLAY_STORE_FEATURE_GRAPHIC.file)}] + ${JSON.stringify(PLAY_STORE_PHONE_SCREENSHOTS.map(([file]) => file))}
 with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
     for name in names:
         zf.write(os.path.join(staging, name), name)
@@ -91,6 +106,7 @@ with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
   if (packed.status !== 0) {
     throw new Error(`Could not write ${zipPath}: ${packed.stderr || packed.stdout}`);
   }
+  console.log(`wrote ${assetOutDir} (${copies.length} files)`);
   console.log(`wrote ${zipPath}`);
   return zipPath;
 }

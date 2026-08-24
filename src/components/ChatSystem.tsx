@@ -483,6 +483,10 @@ export default function ChatSystem({
         setChats(PLAY_STORE_DEMO_CHATS);
         setIncomingRequests([]);
         setIsChatsLoading(false);
+        if (initialSelectedChatId) {
+          const target = PLAY_STORE_DEMO_CHATS.find((c) => c.id === initialSelectedChatId);
+          if (target) setSelectedChat(target);
+        }
         return;
       }
       try {

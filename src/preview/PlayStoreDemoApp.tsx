@@ -17,10 +17,17 @@ import {
   PLAY_STORE_DEMO_PROFILE,
   isPlayStoreDemoPublicHome,
 } from './playStoreDemo';
+import { parsePlayStoreGoGetScene } from './playStoreDemoGoGet';
+import PlayStoreDemoGoGetScene from './PlayStoreDemoGoGetScene';
 
 const noopAsync = async () => false;
 
 export default function PlayStoreDemoApp() {
+  const goGetScene = parsePlayStoreGoGetScene();
+  if (goGetScene) {
+    return <PlayStoreDemoGoGetScene scene={goGetScene} />;
+  }
+
   const profile = PLAY_STORE_DEMO_PROFILE;
   const items = PLAY_STORE_DEMO_ITEMS;
   const events = PLAY_STORE_DEMO_EVENTS;
