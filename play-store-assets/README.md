@@ -28,7 +28,7 @@ All files are **1080×1920**, 24-bit PNG (Play phone size). Upload in this order
 
 Upload order matches the app footer: Feed → Stuff → Map → Events → Chat. Listing sits after Stuff; event detail sits after Events.
 
-Director download (after deploy): Staff panel / Account overview → **Download Play screenshots**. Also at `public/downloads/play-store-screenshots.zip`.
+Director download (after deploy): Staff panel / Account overview → Play Console — each file downloads individually, or use **Download all as zip**. Files live at `public/downloads/play-store/` and `public/downloads/play-store-screenshots.zip`.
 
 ## Feature graphic (required)
 
