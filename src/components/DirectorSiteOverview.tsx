@@ -15,7 +15,7 @@ import {
 import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
 import { getDirectorSiteOverview, supabase } from '../supabase';
 import { apiUrl } from '../lib/appOrigin';
-import { GO_GET_SCREENSHOTS_ZIP_NAME, PLAY_STORE_SCREENSHOTS_ZIP_NAME, goGetScreenshotsZipUrl, playStoreScreenshotsZipUrl } from '../lib/apkDownload';
+import { PLAY_STORE_SCREENSHOTS_ZIP_NAME, playStoreScreenshotsZipUrl } from '../lib/apkDownload';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -357,19 +357,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           Download screenshots & store icon
         </a>
         <p className="text-[10px] text-muted/80 leading-snug -mt-1">
-          Zip: padded site lockup icon, feature graphic, and phone shots (01-home through 08-messages, including Feed).
-        </p>
-        <a
-          id="director_download_go_get_screenshots"
-          href={goGetScreenshotsZipUrl()}
-          download={GO_GET_SCREENSHOTS_ZIP_NAME}
-          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-app bg-surface text-app text-sm font-bold hover:bg-surface-hover transition-colors"
-        >
-          <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
-          Download Go Get screenshots
-        </a>
-        <p className="text-[10px] text-muted/80 leading-snug -mt-1">
-          Zip: full Go Get pickup flow (09–16) with fictional Sacramento landmarks — ring, navigation, tracking, handoff.
+          Zip: padded site lockup icon, feature graphic, and all phone shots (01-home through 16-goget-arrived, including Feed and Go Get).
         </p>
         <button
           type="button"

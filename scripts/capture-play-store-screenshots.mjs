@@ -14,7 +14,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { packPlayStoreScreenshotsZip } from './pack-play-store-screenshots.mjs';
-import { packGoGetScreenshotsZip } from './pack-go-get-screenshots.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'play-store-assets', 'screenshots');
@@ -330,7 +329,6 @@ async function main() {
     }
 
     packPlayStoreScreenshotsZip();
-    packGoGetScreenshotsZip();
   } finally {
     if (server) {
       try {
