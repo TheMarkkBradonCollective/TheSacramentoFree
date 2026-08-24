@@ -15,7 +15,7 @@ import {
 import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
 import { getDirectorSiteOverview, supabase } from '../supabase';
 import { apiUrl } from '../lib/appOrigin';
-import { PLAY_STORE_ASSETS, playStoreAssetUrl } from '../lib/apkDownload';
+import { PLAY_STORE_SCREENSHOTS_ZIP_NAME, playStoreScreenshotsZipUrl } from '../lib/apkDownload';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -347,28 +347,17 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
             Listing graphics and closed-testing tester emails for Google Play.
           </p>
         </div>
-        <ul className="space-y-1.5" aria-label="Play listing graphics">
-          {PLAY_STORE_ASSETS.map((asset) => (
-            <li key={asset.fileName}>
-              <a
-                id={`director_download_play_${asset.fileName.replace(/\.png$/, '').replace(/[^a-z0-9]+/gi, '_')}`}
-                href={playStoreAssetUrl(asset.fileName)}
-                download={asset.fileName}
-                className="flex items-center justify-between gap-2 w-full px-3 py-2 rounded-xl border border-app bg-surface text-app text-sm font-semibold hover:bg-surface-hover transition-colors"
-              >
-                <span className="min-w-0 text-left">
-                  <span className="block truncate">{asset.label}</span>
-                  {asset.detail ? (
-                    <span className="block text-[10px] font-normal text-muted/80 truncate">{asset.detail}</span>
-                  ) : null}
-                </span>
-                <Download className="w-4 h-4 shrink-0" strokeWidth={2.5} aria-hidden />
-              </a>
-            </li>
-          ))}
-        </ul>
-        <p className="text-[10px] text-muted/80 leading-snug">
-          Download each PNG individually — store icon, feature graphic, and phone shots (01-home through 08-messages).
+        <a
+          id="director_download_play_screenshots"
+          href={playStoreScreenshotsZipUrl()}
+          download={PLAY_STORE_SCREENSHOTS_ZIP_NAME}
+          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-app bg-surface text-app text-sm font-bold hover:bg-surface-hover transition-colors"
+        >
+          <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+          Download screenshots & store icon
+        </a>
+        <p className="text-[10px] text-muted/80 leading-snug -mt-1">
+          Zip: padded site lockup icon, feature graphic, and phone shots (01-home through 08-messages, including Feed).
         </p>
         <button
           type="button"
