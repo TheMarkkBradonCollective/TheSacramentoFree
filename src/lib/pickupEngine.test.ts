@@ -34,15 +34,19 @@ test('coordination modes follow listing type', () => {
   assert.equal(coordinationModeFromItem(item({ type: 'looking' })), 'drop_off');
   assert.equal(coordinationModeFromItem(item({ type: 'trade' })), 'meet_up');
   assert.equal(pickupModeConfigForItem(item({ type: 'trade' })).bothTravel, true);
-  assert.equal(pickupModeConfigForItem(item({ type: 'giveaway' })).bothTravel, false);
+  assert.equal(pickupModeConfigForItem(item({ type: 'giveaway' })).bothTravel, true);
+  assert.equal(pickupModeConfigForItem(item({ type: 'looking' })).bothTravel, true);
+  assert.equal(pickupModeConfigForItem(item({ type: 'giveaway', category: 'Curb Alert' })).bothTravel, false);
 });
 
-test('mode matrix: curb has navigation without handshake; go get has the full engine', () => {
+test('mode matrix: curb has instant trip sharing; go get has the full engine', () => {
   const curb = pickupModeConfigForItem(item({ category: 'Curb Alert' }));
   assert.equal(curb.availability, false);
   assert.equal(curb.handoff, false);
   assert.equal(curb.navigation, true);
-  assert.equal(isNavigationOnlyMode(curb.mode), true);
+  assert.equal(curb.liveLocation, true);
+  assert.equal(isNavigationOnlyMode(curb.mode), false);
+  assert.equal(pickupStartActionForItem(item({ category: 'Curb Alert' })), 'create_session');
 
   const goGet = pickupModeConfigForItem(item({}));
   assert.equal(goGet.availability, true);
@@ -61,8 +65,8 @@ test('porch pickup is instant with live location and handoff', () => {
   assert.equal(pickupStartActionForItem(item({ category: 'Porch Pickup' })), 'create_session');
 });
 
-test('curb alert start action is navigation only', () => {
-  assert.equal(pickupStartActionForItem(item({ category: 'Curb Alert' })), 'navigate_only');
+test('curb alert start action creates an instant trip session', () => {
+  assert.equal(pickupStartActionForItem(item({ category: 'Curb Alert' })), 'create_session');
   assert.equal(pickupStartActionForItem(item({})), 'create_session');
 });
 

@@ -20,6 +20,7 @@ import {
   getSupportTicketLastMessages,
   getSupabaseItemById,
   getSupabaseEventById,
+  getSupabaseProfile,
 } from '../supabase';
 import {
   isCommunityChat,
@@ -39,7 +40,12 @@ import {
   confirmRemoveCommunityMessage,
   confirmUnsendMessage,
 } from '../lib/destructiveConfirm';
-import { supportsGoGetCoordination } from '../lib/goGetEligibility';
+import { isGoGetCoordinationEnabled, supportsGoGetCoordination } from '../lib/goGetEligibility';
+import {
+  canShowAppPickupCoordination,
+  coordProfilesForListingDm,
+  type CoordinationProfileSlice,
+} from '../lib/goGetCoordinationGating';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
 import ChatInboxHeader from './ChatInboxHeader';
@@ -85,7 +91,7 @@ import {
   Archive,
   ArchiveRestore,
 } from 'lucide-react';
-import { formatPickupLocationMessage } from '../lib/itemLocation';
+import { formatPickupLocationMessage, formatChatMeetLocationMessage, getItemMapDestination } from '../lib/itemLocation';
 import { formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
 import {
   markItemFulfilledFromChat,
@@ -94,10 +100,16 @@ import {
 import ChatClaimActions from './ChatClaimActions';
 import ChatClaimerActions from './ChatClaimerActions';
 import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
-import { confirmGoGetAsFulfiller, confirmMeetUp } from './goget/goGetSafetyConfirm';
 import { getChatCoordinationLabel } from '../lib/listingMapActions';
-import { getItemMapDestination } from '../lib/itemLocation';
-import type { GoGetSession } from '../types';
+import {
+  coordinationDestinationLabel,
+  hasCoordinationDestination,
+  resolveCoordinationDestination,
+} from '../lib/coordinationDestination';
+import { getChatMeetLocation, upsertChatMeetLocation } from '../lib/chatMeetLocation';
+import { coordinationModeFromItem, isInstantPickupMode } from '../lib/pickupEngine';
+import { confirmGoGetAsRequester, confirmGoGetAsFulfiller, confirmMeetUp } from './goget/goGetSafetyConfirm';
+import type { ChatMeetLocation, GoGetSession } from '../types';
 import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
@@ -174,6 +186,9 @@ export default function ChatSystem({
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatGoGetSession, setChatGoGetSession] = useState<GoGetSession | null>(null);
+  const [chatMeetLocation, setChatMeetLocation] = useState<ChatMeetLocation | null>(null);
+  const [otherParticipantCoord, setOtherParticipantCoord] = useState<CoordinationProfileSlice | null>(null);
+  const [settingMeetLocation, setSettingMeetLocation] = useState(false);
   const [startingGoGet, setStartingGoGet] = useState(false);
   const [supportView, setSupportView] = useState<ChatSupportView>(null);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
@@ -242,18 +257,40 @@ export default function ChatSystem({
   const neighborModeChatIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    setChatGoGetSession(null);
+    setOtherParticipantCoord(null);
     if (!selectedChat || isCommunityChat(selectedChat.id)) return;
-    const linkedItem = items.find((i) => i.id === selectedChat.itemId);
-    if (!linkedItem || (linkedItem.type !== 'looking' && linkedItem.type !== 'trade')) return;
+    const otherId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
+    if (!otherId) return;
     let cancelled = false;
-    void getActiveGoGetSession(linkedItem.id, userProfile.uid).then((s) => {
-      if (!cancelled) setChatGoGetSession(s);
+    void getSupabaseProfile(otherId).then((profile) => {
+      if (cancelled) return;
+      setOtherParticipantCoord(
+        profile
+          ? {
+              uid: profile.uid,
+              goGetEnabled: profile.goGetEnabled,
+              pickupAvailability: profile.pickupAvailability,
+            }
+          : { uid: otherId, goGetEnabled: false },
+      );
     });
     return () => {
       cancelled = true;
     };
-  }, [selectedChat?.id, selectedChat?.itemId, items, userProfile.uid]);
+  }, [selectedChat?.id, userProfile.uid]);
+
+  useEffect(() => {
+    setChatGoGetSession(null);
+    setChatMeetLocation(null);
+    if (!selectedChat || isCommunityChat(selectedChat.id)) return;
+    let cancelled = false;
+    void getChatMeetLocation(selectedChat.id).then((loc) => {
+      if (!cancelled) setChatMeetLocation(loc);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChat?.id]);
 
   useEffect(() => {
     if (!selectedChat || isCommunityChat(selectedChat.id)) return;
@@ -298,6 +335,20 @@ export default function ChatSystem({
   }, [selectedChat?.itemId, selectedChat?.id, linkedItemFromFeed]);
 
   const resolvedLinkedItem = linkedItemFromFeed ?? fetchedLinkedItem ?? undefined;
+
+  useEffect(() => {
+    setChatGoGetSession(null);
+    if (!selectedChat || isCommunityChat(selectedChat.id)) return;
+    const linkedItem = resolvedLinkedItem;
+    if (!linkedItem || linkedItem.status !== 'active') return;
+    let cancelled = false;
+    void getActiveGoGetSession(linkedItem.id, userProfile.uid).then((s) => {
+      if (!cancelled) setChatGoGetSession(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChat?.id, resolvedLinkedItem, userProfile.uid]);
 
   const linkedEventFromFeed = useMemo(() => {
     if (!selectedChat?.eventId || isCommunityChat(selectedChat.id)) return undefined;
@@ -359,15 +410,24 @@ export default function ChatSystem({
     async (linkedItem: ItemPost, otherUserId: string, otherUserName: string) => {
       const isLooking = linkedItem.type === 'looking';
       const isTrade = linkedItem.type === 'trade';
+      const isGiveaway = linkedItem.type === 'giveaway';
       const myLocation = getLastLiveLatLng();
       if (!myLocation) {
         setErrorMsg(isTrade ? 'Enable location to start this Meet.' : 'Enable location to coordinate pickup.');
         return;
       }
       const posterIsMe = linkedItem.userId === userProfile.uid;
-      const dropOffDestination = getItemMapDestination(linkedItem, linkedItem.userId);
-      if (!dropOffDestination) {
-        setErrorMsg('This listing has no map pin yet. Ask the poster to add a meetup pin before coordinating.');
+      const meetDestination = resolveCoordinationDestination(
+        linkedItem,
+        userProfile.uid,
+        chatMeetLocation,
+      );
+      if (!meetDestination) {
+        setErrorMsg(
+          posterIsMe
+            ? 'Set a meet spot in this chat first — your neighbor needs a pin before Meet can start.'
+            : 'Ask the poster to set a meet spot in chat before coordinating.',
+        );
         return;
       }
       const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
@@ -380,34 +440,32 @@ export default function ChatSystem({
       if (!allowed) return;
       const confirmed = isTrade
         ? await confirmMeetUp(confirm, otherUserName, linkedItem.title, posterIsMe ? 'poster' : 'neighbor')
-        : await confirmGoGetAsFulfiller(confirm, otherUserName, linkedItem.title, 'looking');
+        : isLooking
+          ? await confirmGoGetAsFulfiller(confirm, otherUserName, linkedItem.title, 'looking')
+          : await confirmGoGetAsRequester(confirm, otherUserName, linkedItem.title, linkedItem.category);
       if (!confirmed) return;
       setStartingGoGet(true);
       setErrorMsg('');
-      // Listing poster = fulfiller. The other neighbor = requester.
-      // Trades: both navigate. If the poster starts, skip the ring — they already accepted.
       const fulfillerUserId = linkedItem.userId;
       const fulfillerName = posterIsMe ? userProfile.displayName : otherUserName;
       const requesterUserId = posterIsMe ? otherUserId : userProfile.uid;
       const requesterName = posterIsMe ? otherUserName : userProfile.displayName;
-      const posterInitiated = isTrade && posterIsMe;
+      const posterInitiated = (isTrade || isGiveaway) && posterIsMe;
       const result = await createGoGetSession({
         item: linkedItem,
         fulfillerUserId,
         fulfillerName,
         requesterUserId,
         requesterName,
-        destination: dropOffDestination,
-        destinationLabel: isLooking
-          ? `${fulfillerName}'s area`
-          : `Meetup: ${linkedItem.title}`,
+        destination: meetDestination,
+        destinationLabel: coordinationDestinationLabel(linkedItem, chatMeetLocation),
         posterInitiated,
       });
       setStartingGoGet(false);
       if (!result.ok || !result.session) {
         setErrorMsg(
           result.errorMessage ||
-            (isLooking ? 'Could not start drop off.' : 'Could not start Meet.'),
+            (isLooking ? 'Could not start drop off.' : isTrade ? 'Could not start Meet.' : 'Could not start Meet.'),
         );
         return;
       }
@@ -418,7 +476,9 @@ export default function ChatSystem({
           selectedChat!.id,
           isLooking
             ? `📦 ${navigatorName} is dropping off "${linkedItem.title}" — heading to ${fulfillerName}'s area. Open the listing to follow along.`
-            : `🔁 ${navigatorName} wants to meet for "${linkedItem.title}". You'll both navigate to the meetup pin.`,
+            : isTrade
+              ? `🔁 ${navigatorName} wants to meet for "${linkedItem.title}". You'll both navigate to the meetup pin.`
+              : `📍 ${navigatorName} wants to pick up "${linkedItem.title}". You'll both navigate to the meet spot.`,
           userProfile.uid,
           `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
           { skipPush: true, postedAsNeighbor: commentPostedAsNeighbor(userProfile) },
@@ -426,8 +486,53 @@ export default function ChatSystem({
         void getSupabaseMessages(selectedChat!.id).then(setMessages);
       }
     },
-    [alert, confirm, userProfile, selectedChat],
+    [alert, confirm, userProfile, selectedChat, chatMeetLocation],
   );
+
+  const handleSetMeetLocation = useCallback(async () => {
+    if (!selectedChat) return;
+    const linkedItem = resolvedLinkedItem;
+    if (!linkedItem || linkedItem.userId !== userProfile.uid) return;
+    const neighborId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
+    if (!neighborId) return;
+
+    const listingPin = getItemMapDestination(linkedItem, userProfile.uid);
+    const live = getLastLiveLatLng();
+    const latLng = listingPin ?? live;
+    if (!latLng) {
+      setErrorMsg('Enable location or add a pin on the listing to set a meet spot.');
+      return;
+    }
+
+    setSettingMeetLocation(true);
+    setErrorMsg('');
+    const result = await upsertChatMeetLocation({
+      chatId: selectedChat.id,
+      itemId: linkedItem.id,
+      setByUserId: userProfile.uid,
+      lat: latLng.lat,
+      lng: latLng.lng,
+      label: `Meet spot: ${linkedItem.title}`,
+    });
+    setSettingMeetLocation(false);
+    if (!result.ok || !result.location) {
+      setErrorMsg(result.errorMessage || 'Could not set the meet spot.');
+      return;
+    }
+    setChatMeetLocation(result.location);
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const text = formatChatMeetLocationMessage(linkedItem.title, latLng.lat, latLng.lng);
+    const sent = await createSupabaseMessage(
+      selectedChat.id,
+      text,
+      userProfile.uid,
+      messageId,
+      { postedAsNeighbor: commentPostedAsNeighbor(userProfile) },
+    );
+    if (sent) {
+      void getSupabaseMessages(selectedChat.id).then(setMessages);
+    }
+  }, [resolvedLinkedItem, selectedChat, userProfile]);
 
   useEffect(() => {
     if (!initialChatSupportView) return;
@@ -1491,7 +1596,43 @@ export default function ChatSystem({
               ? { otherName: communityChatTitle(selectedChat.id), otherPhoto: '' }
               : getRecipientInfo(selectedChat);
             const isListingOwner = linkedItem?.userId === userProfile.uid;
+            const claimerUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
             const showSendLocationBtn = !!linkedItem && !isChatDisabled && isListingOwner;
+            const neighborId = claimerUserId;
+            const coordinationMode = linkedItem ? coordinationModeFromItem(linkedItem) : 'go_get';
+            const instantCoordination = linkedItem ? isInstantPickupMode(coordinationMode) : false;
+            const neighborHasListingPin =
+              !!linkedItem &&
+              !!neighborId &&
+              hasCoordinationDestination(linkedItem, neighborId, null);
+            const showSetMeetLocationBtn =
+              !!linkedItem &&
+              !isChatDisabled &&
+              isListingOwner &&
+              supportsGoGetCoordination() &&
+              !instantCoordination &&
+              !neighborHasListingPin;
+            const hasCoordinationPin =
+              !!linkedItem &&
+              hasCoordinationDestination(linkedItem, userProfile.uid, chatMeetLocation);
+            const listingCoordinationGate =
+              linkedItem &&
+              otherParticipantCoord &&
+              canShowAppPickupCoordination({
+                item: linkedItem,
+                ...coordProfilesForListingDm(linkedItem, userProfile, otherParticipantCoord),
+              });
+            const listingCoordinationOk =
+              staffActingOfficial || (listingCoordinationGate?.ok ?? false);
+            const showMeetCoordinationHint =
+              !!linkedItem &&
+              !isChatDisabled &&
+              !instantCoordination &&
+              hasCoordinationPin &&
+              !chatGoGetSession &&
+              otherParticipantCoord &&
+              !listingCoordinationOk &&
+              supportsGoGetCoordination();
             const showMarkPendingPickupBtn =
               !!linkedItem &&
               !isChatDisabled &&
@@ -1523,8 +1664,6 @@ export default function ChatSystem({
               (linkedItem.type === 'giveaway' || linkedItem.type === 'looking') &&
               linkedItem.status === 'active';
 
-            const claimerUserId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
-
             const showMarkFulfilledBtn =
               !!linkedItem &&
               !isChatDisabled &&
@@ -1540,7 +1679,13 @@ export default function ChatSystem({
               !isChatDisabled &&
               linkedItem.status === 'active' &&
               !chatGoGetSession &&
-              ((linkedItem.type === 'looking' && !isListingOwner) || linkedItem.type === 'trade');
+              !instantCoordination &&
+              hasCoordinationPin &&
+              listingCoordinationOk &&
+              otherParticipantCoord &&
+              ((linkedItem.type === 'looking' && !isListingOwner) ||
+                linkedItem.type === 'trade' ||
+                linkedItem.type === 'giveaway');
 
             return (
               <>
@@ -1868,13 +2013,22 @@ export default function ChatSystem({
                 >
                   {!isCommunity &&
                   actingAsNeighborInSelectedChat &&
-                  (showSendLocationBtn ||
+                  (showMeetCoordinationHint ||
+                    showSendLocationBtn ||
+                    showSetMeetLocationBtn ||
                     showMarkPendingPickupBtn ||
                     showRequestHoldBtn ||
                     showMarkTradedBtn ||
                     showMarkFulfilledBtn ||
                     showStartGoGetBtn) ? (
                     <div className="chat-action-chips">
+                      {showMeetCoordinationHint ? (
+                        <p className="text-xs text-muted leading-snug px-1">
+                          {!isGoGetCoordinationEnabled(userProfile)
+                            ? 'Turn on Meet & pickup coordination in Account settings before you can start a Meet.'
+                            : `${otherName} hasn’t turned on Meet & pickup coordination — both neighbors need it on to start a Meet.`}
+                        </p>
+                      ) : null}
                       {showSendLocationBtn ? (
                         <button
                           type="button"
@@ -1885,6 +2039,19 @@ export default function ChatSystem({
                         >
                           <Navigation className="w-3.5 h-3.5 shrink-0" />
                           Send location
+                        </button>
+                      ) : null}
+                      {showSetMeetLocationBtn ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleSetMeetLocation()}
+                          disabled={isSending || settingMeetLocation}
+                          className="chat-action-chip chat-action-chip--primary"
+                          id="chat_set_meet_location_btn"
+                          title="Share a meet spot with this neighbor only — not on the public map"
+                        >
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
+                          {settingMeetLocation ? 'Setting…' : chatMeetLocation ? 'Update meet spot' : 'Set meet spot'}
                         </button>
                       ) : null}
                       {showMarkPendingPickupBtn ? (

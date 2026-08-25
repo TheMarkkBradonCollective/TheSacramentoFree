@@ -11,6 +11,12 @@ import {
   stripListingMetadata,
 } from '../lib/itemLocation';
 import {
+  hasCoordinationDestination,
+  resolveCoordinationDestination,
+} from '../lib/coordinationDestination';
+import { getChatMeetLocationsForUser } from '../lib/chatMeetLocation';
+import type { ChatMeetLocation } from '../types';
+import {
   canOfferContactlessClaim,
   getListingNavigateLabel,
   navigatesDirectlyToPin,
@@ -755,10 +761,20 @@ export default function SacramentoMapView({
   const [posterCoordByUid, setPosterCoordByUid] = useState<
     Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
   >({});
+  const [chatMeetLocations, setChatMeetLocations] = useState<ChatMeetLocation[]>([]);
+
+  useEffect(() => {
+    if (!userProfile?.uid) {
+      setChatMeetLocations([]);
+      return;
+    }
+    void getChatMeetLocationsForUser().then(setChatMeetLocations);
+  }, [userProfile?.uid]);
 
   const neighborListingUsesNavigate = (post: ItemPost): boolean => {
     if (post.userId === userProfile.uid || post.status !== 'active') return false;
-    if (!hasNavigablePin(post, userProfile.uid)) return false;
+    const chatMeet = chatMeetLocations.find((loc) => loc.itemId === post.id);
+    if (!hasCoordinationDestination(post, userProfile.uid, chatMeet)) return false;
     const posterCoord = posterCoordByUid[post.userId];
     return canShowAppPickupCoordination({
       item: post,
@@ -1295,7 +1311,7 @@ export default function SacramentoMapView({
 
   // Only listings with an exact, viewer-visible GPS pin appear on the map.
   const blipPositions = useMemo(() => {
-    return activeItems.flatMap((item) => {
+    const publicBlips = activeItems.flatMap((item) => {
       if (!hasExactMapPin(item, userProfile?.uid)) return [];
       const customCoords = extractGPSCoordinates(item.description)!;
       const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
@@ -1308,7 +1324,20 @@ export default function SacramentoMapView({
         },
       ];
     });
-  }, [activeItems, userProfile?.uid]);
+    const meetBlips = chatMeetLocations.flatMap((loc) => {
+      const item = activeItems.find((i) => i.id === loc.itemId);
+      if (!item || hasExactMapPin(item, userProfile?.uid)) return [];
+      return [
+        {
+          item,
+          lat: loc.lat,
+          lng: loc.lng,
+          color: getCategoryColor(item.category),
+        },
+      ];
+    });
+    return [...publicBlips, ...meetBlips];
+  }, [activeItems, userProfile?.uid, chatMeetLocations]);
 
   const mapPinnedItems = useMemo(
     () => blipPositions.map((entry) => entry.item),
@@ -1555,13 +1584,13 @@ export default function SacramentoMapView({
 
   const routeDestination = useMemo(() => {
     if (selectedPost) {
-      // Looking/Trade: navigate to the poster's pin (even if marked private for map display).
-      const locationOwnerId =
-        selectedPost.type === 'looking' || selectedPost.type === 'trade'
-          ? selectedPost.userId
-          : userProfile.uid;
-      const dest = getItemMapDestination(selectedPost, locationOwnerId);
-      if (dest) return dest;
+      const chatMeet = chatMeetLocations.find((loc) => loc.itemId === selectedPost.id);
+      const coordinated = resolveCoordinationDestination(
+        selectedPost,
+        userProfile.uid,
+        chatMeet,
+      );
+      if (coordinated) return coordinated;
       const session = readActiveNavSession(userProfile.uid);
       if (session?.targetId === selectedPost.id && session.targetType === 'post') {
         return session.destination;
@@ -1586,7 +1615,7 @@ export default function SacramentoMapView({
     }
 
     return null;
-  }, [selectedPost, selectedEvent, userProfile.uid]);
+  }, [selectedPost, selectedEvent, userProfile.uid, chatMeetLocations]);
 
   const navTargetLabel = selectedPost?.title ?? selectedEvent?.title ?? '';
   const navTargetId = selectedPost?.id ?? selectedEvent?.id ?? null;
@@ -1801,10 +1830,12 @@ export default function SacramentoMapView({
       return;
     }
 
-    const destination =
-      selectedPost.type === 'looking' || selectedPost.type === 'trade'
-        ? getItemMapDestination(selectedPost, selectedPost.userId)
-        : getItemMapDestination(selectedPost, userProfile.uid);
+    const chatMeet = chatMeetLocations.find((loc) => loc.itemId === selectedPost.id);
+    const destination = resolveCoordinationDestination(
+      selectedPost,
+      userProfile.uid,
+      chatMeet,
+    );
     if (!destination) {
       openItemDetail?.(selectedPost);
       return;
@@ -1880,7 +1911,7 @@ export default function SacramentoMapView({
     if (result.ok && result.session?.status === 'active') openNavigation();
     else if (!result.ok) await alert({ title: 'Could not start', message: result.errorMessage || 'Could not start Go Get.' });
     else openItemDetail?.(selectedPost);
-  }, [selectedEvent, selectedPost, userProfile, isStaffViewer, openNavigation, openItemDetail, confirm, alert]);
+  }, [selectedEvent, selectedPost, userProfile, isStaffViewer, openNavigation, openItemDetail, confirm, alert, chatMeetLocations]);
 
   const handleOpenExternalMaps = useCallback(() => {
     if (!routeEndpoints) return;

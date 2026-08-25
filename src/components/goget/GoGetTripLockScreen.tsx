@@ -254,9 +254,11 @@ export default function GoGetTripLockScreen({
     return unsub;
   }, [isFulfiller, session.fulfillerSharingLocation, session.id, session.status, usePhoneCompass]);
 
+  const sharesLiveLocation = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].liveLocation;
+
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
-      if (session.handshakeMode !== 'instant') {
+      if (sharesLiveLocation) {
         if (session.requesterUserId === userProfile.uid) {
           void upsertLiveLocation(session.id, {
             lat: update.lat,
