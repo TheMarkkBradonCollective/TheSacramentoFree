@@ -31,6 +31,7 @@ const DIRECTOR_TITLE = 'TheSacramentoFree Director';
 const APK_0051_AT = '2026-08-21T22:35:00.000Z';
 const APK_0052_AT = '2026-08-21T23:50:00.000Z';
 const APK_0053_AT = '2026-08-25T03:05:00.000Z';
+const APK_0054_AT = '2026-08-25T03:32:00.000Z';
 const CLOSED_TESTING_NEWS_AT = '2026-08-21T23:20:00.000Z';
 const TESTER_LIST_NEWS_AT = '2026-08-22T00:40:00.000Z';
 const TESTER_LIST_NEWS_UPDATED_AT = '2026-08-22T00:50:00.000Z';
@@ -41,6 +42,28 @@ const PLAY_CLOSED_TESTING_URL = 'https://play.google.com/apps/testing/org.sacram
 
 /** Canonical Updates feed — current APK plus later posts. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  {
+    id: '2026-08-25_apk-0054',
+    date: '2026-08-25',
+    title: 'TheSacramentoFree — beta v0.2.0.0054',
+    body: 'Cleaner app icon — no green fringe or bleeding around the hands artwork on the site or your home screen.',
+    detail: `WHAT NEIGHBORS SEE
+TheSacramentoFree, 0.2.0 (54): sharper Sacramento green icon on web and Android.
+
+• Logo edges are clean — no green smear or halo around the hands
+• Homepage logo no longer sits on a green glow behind it
+• Android install and home-screen icons use a proper safe-zone inset
+• Same sign-in, listings, map, chat, and notifications
+• Package stays org.sacramentobuynothing.app — your account is unchanged
+• Opt in on closed testing if you have not yet: ${PLAY_CLOSED_TESTING_URL}
+
+— Mark`,
+    directorName: DIRECTOR_NAME,
+    directorTitle: DIRECTOR_TITLE,
+    postedByUserId: CHANGELOG_AUTHOR_UID,
+    createdAt: APK_0054_AT,
+    updatedAt: APK_0054_AT,
+  },
   {
     id: '2026-08-25_apk-0053',
     date: '2026-08-25',

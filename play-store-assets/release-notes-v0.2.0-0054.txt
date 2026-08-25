@@ -1,0 +1,7 @@
+Android beta 0.2.0 (54)
+
+• Cleaner app icon — no green fringe or bleeding around the hands artwork
+• Homepage logo no longer sits on a green glow halo
+• Android launcher icon inset for cleaner circle mask on install
+• Same community — give freely, ask kindly, neighbors helping neighbors
+• Closed testing opt-in: https://play.google.com/apps/testing/org.sacramentobuynothing.app
