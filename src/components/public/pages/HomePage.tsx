@@ -339,7 +339,7 @@ function OriginalHomePage({
               </span>
             </h1>
 
-            <p className="mt-4 text-xl md:text-2xl lg:text-3xl font-display font-semibold text-app leading-snug">
+            <p className="sbn-hero-tagline mt-5 font-display text-app leading-snug">
               Give freely.
               <br />
               <span className="text-accent">Ask kindly.</span>

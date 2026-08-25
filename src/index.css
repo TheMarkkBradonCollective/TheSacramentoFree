@@ -2441,15 +2441,21 @@ button {
 }
 
 .sbn-hero-wordmark__the {
-  font-size: clamp(1.25rem, 4.5vw, 1.75rem);
+  font-size: clamp(1.125rem, 3.75vw, 1.625rem);
   line-height: 1.15;
 }
 
 .sbn-hero-wordmark__name {
   display: block;
-  font-size: clamp(1.75rem, 9vw, 3.75rem);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-size: clamp(2.25rem, 12vw, 4.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+}
+
+.sbn-hero-tagline {
+  font-size: clamp(1rem, 4.25vw, 1.5rem);
+  font-weight: 600;
 }
 
 .sbn-hero-wordmark__city,
@@ -2473,7 +2479,7 @@ html.capacitor-native .home-scroll-stage {
 }
 
 html.capacitor-native .sbn-hero-wordmark__name {
-  font-size: clamp(1.5rem, 7.5vw, 2.5rem);
+  font-size: clamp(2rem, 10.5vw, 3.5rem);
 }
 
 html.capacitor-native .sbn-hero-wordmark__city,
