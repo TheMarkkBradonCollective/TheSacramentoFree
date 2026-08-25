@@ -54,9 +54,7 @@ import {
   type NavLane,
 } from '../lib/navLanes';
 import {
-  requestCompassPermission,
   resolveNavHeading,
-  subscribeDeviceCompass,
 } from '../lib/navHeading';
 import {
   readNavigationSettings,
@@ -730,7 +728,6 @@ export default function MapNavigationView({
   const routeRequestIdRef = useRef(0);
   const lastBearingApplyRef = useRef(0);
   const lastAppliedRotationRef = useRef(0);
-  const compassHeadingRef = useRef<number | null>(null);
   const settingsRef = useRef<NavigationSettings>(readNavigationSettings());
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
@@ -969,10 +966,6 @@ export default function MapNavigationView({
   useEffect(() => {
     voiceRef.current.prime();
     voiceRef.current.setEnabled(readNavigationSettings().voiceEnabled);
-    void requestCompassPermission();
-    const unsubscribeCompass = subscribeDeviceCompass((degrees) => {
-      compassHeadingRef.current = degrees;
-    });
 
     const unsubscribeSpeaking = voiceRef.current.subscribeSpeaking((speaking, phrase) => {
       setVoiceSpeaking(speaking);
@@ -1017,7 +1010,6 @@ export default function MapNavigationView({
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', onPageHide);
       unsubscribeSpeaking();
-      unsubscribeCompass();
       void wakeLockRef.current?.release();
       wakeLockRef.current = null;
       voiceRef.current.cancel();
@@ -1499,18 +1491,12 @@ export default function MapNavigationView({
       }
 
       const dest = destinationRef.current;
-      const gpsHeading = position.coords.heading;
-      const speed = position.coords.speed;
 
       let nextHeading = resolveNavHeading({
         previous: headingRef.current,
-        gpsHeading,
         lastPosition: lastGpsPosRef.current,
         currentPosition: snapped,
         routeCoords: activeRoute?.coords,
-        compassHeading: compassHeadingRef.current,
-        speedMps: speed,
-        travelMode: settingsRef.current.travelMode,
         offRouteMeters: offRouteDistance,
       });
       lastGpsPosRef.current = snapped;
@@ -1560,7 +1546,7 @@ export default function MapNavigationView({
           lat: snapped.lat,
           lng: snapped.lng,
           heading: nextHeading,
-          speedMph: speed != null ? Number(formatSpeedMph(speed)) || null : null,
+          speedMph: position.coords.speed != null ? Number(formatSpeedMph(position.coords.speed)) || null : null,
           etaSeconds,
           distanceMeters: remainingAlongRoute,
           arrived: hasArrived,
