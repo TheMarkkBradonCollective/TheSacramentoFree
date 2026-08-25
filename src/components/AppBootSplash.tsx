@@ -1,16 +1,12 @@
 import BrandLogo from './BrandLogo';
-import { SITE } from '../siteContent';
 import { NEWSPAPER } from '../preview/newspaperBrand';
-import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 import { getBetaVersionLabel } from '../lib/appVersion';
 import { isNativeApp } from '../lib/nativePlatform';
 
 export default function AppBootSplash() {
   const isNative = isNativeApp();
   const betaVersion = getBetaVersionLabel();
-  const { enabled: newspaper } = useNewspaperSkin();
-  const brandName = newspaper ? `${NEWSPAPER.the} ${NEWSPAPER.title}` : 'Sacramento Buy Nothing';
-  const tagline = newspaper ? NEWSPAPER.tagline : SITE.tagline;
+  const brandName = `${NEWSPAPER.the} ${NEWSPAPER.title}`;
 
   return (
     <div
@@ -20,30 +16,14 @@ export default function AppBootSplash() {
       aria-label={`Loading ${brandName}`}
     >
       <div className={`flex flex-col items-center gap-3 ${isNative ? 'sbn-boot-logo-glow' : ''}`}>
-        {newspaper ? (
-          <div className="tsf-boot-wordmark">
-            <span className="tsf-boot-wordmark__the">{NEWSPAPER.the}</span>
-            <span className="tsf-boot-wordmark__city">{NEWSPAPER.title.split(' ')[0]}</span>
-            <span className="tsf-boot-wordmark__free">{NEWSPAPER.title.split(' ')[1]}</span>
-          </div>
-        ) : (
-          <BrandLogo
-            className="flex flex-col items-center"
-            imgClassName={isNative ? 'h-16 w-16 object-cover rounded-2xl shadow-app' : 'h-11 w-11 object-cover rounded-xl'}
-            showTitle={false}
-          />
-        )}
+        <BrandLogo
+          className="flex flex-col items-center"
+          imgClassName={isNative ? 'h-16 w-16 object-cover rounded-2xl shadow-app' : 'h-11 w-11 object-cover rounded-xl'}
+          showTitle={false}
+        />
         <div className="text-center">
-          <p className="font-display font-bold text-base text-app leading-tight">
-            {newspaper ? (
-              brandName
-            ) : (
-              <>
-                Sacramento <span className="text-accent">Buy Nothing</span>
-              </>
-            )}
-          </p>
-          <p className="text-[11px] text-muted mt-0.5">{tagline}</p>
+          <p className="font-display font-bold text-base text-app leading-tight">{brandName}</p>
+          <p className="text-[11px] text-muted mt-0.5">{NEWSPAPER.tagline}</p>
         </div>
       </div>
       <div

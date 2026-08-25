@@ -6,17 +6,17 @@ export const SITE_LOGO_SRC = '/TheSacramentoFree.png';
 export const COMMUNITY_SLOGAN = 'Give freely. Ask kindly.';
 
 export const SITE = {
-  name: 'SacramentoBuyNothing',
-  shortName: 'SacramentoBuyNothing',
+  name: 'TheSacramentoFree',
+  shortName: 'TheSacramentoFree',
   url: 'https://www.sacramentobuynothing.com',
-  tagline: 'Sharing is better than throwing away.',
+  tagline: COMMUNITY_SLOGAN,
   description:
     'A community-powered platform where people in Sacramento can give away items they no longer need — completely free.',
   metaDescription:
-    'Sacramento Buy Nothing — free local gifting. No selling, no bidding, no flipping. Neighbors helping neighbors across Sacramento.',
+    'TheSacramentoFree — free local gifting in Sacramento. No selling, no bidding, no flipping. Neighbors helping neighbors.',
   principles: ['No selling.', 'No bidding.', 'No flipping.', 'Just neighbors helping neighbors.'],
   freeRule: 'Everything posted must be 100% free.',
-  downloadHelper: 'Google Play on Android (if invited) or add SacramentoBuyNothing to your home screen — free for everyone.',
+  downloadHelper: 'Google Play on Android (if invited) or add TheSacramentoFree to your home screen — free for everyone.',
   /** Google Play closed testing — opt in on the web, then install from the store listing. */
   playStoreBetaUrl: 'https://play.google.com/apps/testing/org.sacramentobuynothing.app',
   playStoreListingUrl:
@@ -424,7 +424,7 @@ export const CHILD_SAFETY = {
   shortTitle: 'Child safety',
   lastUpdated: 'August 2026',
   summary:
-    'Sacramento Buy Nothing has zero tolerance for child sexual abuse and exploitation (CSAE). These standards apply to the app, website, and every neighbor account.',
+    'TheSacramentoFree has zero tolerance for child sexual abuse and exploitation (CSAE). These standards apply to the app, website, and every neighbor account.',
   contactEmail: 'support@sacbuynothing.org',
   sections: [
     {

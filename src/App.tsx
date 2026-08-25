@@ -2878,7 +2878,7 @@ export default function App() {
               <div className="min-w-0">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-accent">Download Mobile App</h4>
                 <p className="text-xs font-bold text-app mt-1">
-                  {isNewspaperSkinActive() ? `${NEWSPAPER.the} ${NEWSPAPER.title}` : SITE.name}
+                  {`${NEWSPAPER.the} ${NEWSPAPER.title}`}
                 </p>
                 <div className="text-[11px] text-muted mt-1.5 leading-relaxed font-semibold">
                   {isIOS ? (
