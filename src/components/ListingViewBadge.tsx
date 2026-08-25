@@ -20,10 +20,11 @@ function viewCountLabel(count: number): string {
 interface ListingViewCountProps {
   count: number;
   className?: string;
+  compact?: boolean;
 }
 
-/** Inline view count for listing detail (cards use overlay badge). */
-export function ListingViewCount({ count, className = '' }: ListingViewCountProps) {
+/** Inline view count for listing detail and list cards (grid uses overlay badge). */
+export function ListingViewCount({ count, className = '', compact = false }: ListingViewCountProps) {
   if (count <= 0) return null;
 
   const label = viewCountLabel(count);
@@ -33,8 +34,8 @@ export function ListingViewCount({ count, className = '' }: ListingViewCountProp
       aria-label={label}
       title="Unique neighbors who opened this listing"
     >
-      <Eye className="h-4 w-4 shrink-0" aria-hidden />
-      {label}
+      <Eye className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} aria-hidden />
+      {compact ? formatListingViewCount(count) : label}
     </span>
   );
 }

@@ -16,7 +16,7 @@ import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { isListingOpenForCoordination } from '../lib/roles';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
-import ListingViewBadge from './ListingViewBadge';
+import ListingViewBadge, { ListingViewCount } from './ListingViewBadge';
 import UserAvatar from './UserAvatar';
 import { usePresence } from '../contexts/PresenceContext';
 import { PostVoteState } from '../hooks/useItemsEngagement';
@@ -332,6 +332,8 @@ export default function ItemCard({
     );
   }
 
+  const netScore = voteState.upvotes - voteState.downvotes;
+
   return (
     <article
       id={`item_card_${item.id}`}
@@ -355,7 +357,6 @@ export default function ItemCard({
           ) : (
             <Tag className="w-6 h-6 text-subtle" aria-hidden />
           )}
-          <ListingViewBadge count={item.viewCount ?? 0} className="sm:top-2 sm:right-2 sm:text-[10px]" />
         </button>
 
         <div className="item-feed-card__copy">
@@ -393,6 +394,19 @@ export default function ItemCard({
               <Calendar className="w-3 h-3 shrink-0" />
               {dateLabel}
             </span>
+            <ListingViewCount count={item.viewCount ?? 0} compact className="gap-0.5 shrink-0" />
+            {(voteState.upvotes > 0 || voteState.downvotes > 0) && (
+              <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-app">
+                <ChevronUp className="w-3 h-3 shrink-0" aria-hidden />
+                {netScore > 0 ? `+${netScore}` : netScore}
+              </span>
+            )}
+            {comments.length > 0 && (
+              <span className="inline-flex items-center gap-0.5 shrink-0">
+                <MessageSquare className="w-3 h-3 shrink-0" aria-hidden />
+                {comments.length}
+              </span>
+            )}
           </div>
 
           <ListingEngagement
