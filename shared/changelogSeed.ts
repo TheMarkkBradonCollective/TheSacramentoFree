@@ -33,6 +33,7 @@ const APK_0052_AT = '2026-08-21T23:50:00.000Z';
 const APK_0053_AT = '2026-08-25T03:05:00.000Z';
 const APK_0054_AT = '2026-08-25T03:32:00.000Z';
 const APK_0055_AT = '2026-08-25T03:48:00.000Z';
+const APK_0056_AT = '2026-08-25T15:20:00.000Z';
 const ENGAGEMENT_UPDATE_AT = '2026-08-25T12:00:00.000Z';
 const CLOSED_TESTING_NEWS_AT = '2026-08-21T23:20:00.000Z';
 const TESTER_LIST_NEWS_AT = '2026-08-22T00:40:00.000Z';
@@ -44,6 +45,29 @@ const PLAY_CLOSED_TESTING_URL = 'https://play.google.com/apps/testing/org.sacram
 
 /** Canonical Updates feed — current APK plus later posts. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  {
+    id: '2026-08-25_apk-0056',
+    date: '2026-08-25',
+    title: 'TheSacramentoFree — beta v0.2.0.0056',
+    body: 'Go Get pickup coordination, smarter notifications with quiet hours, smoother GPS navigation, and feed engagement stats.',
+    detail: `WHAT NEIGHBORS SEE
+TheSacramentoFree, 0.2.0 (56): pickup coordination, notifications, navigation, and engagement.
+
+• Go Get — ring, schedule, Meet handoffs, and dual-travel trade Meet sessions
+• Notifications — priorities, dedup, quiet hours, and listing view alerts
+• GPS navigation — smoother live heading for Go Get and map routes
+• Feed engagement — view counts on posts and listings, event votes, chat read receipts
+• Staff neighbor chat tools restored in coordination threads
+• Package stays org.sacramentobuynothing.app — your account is unchanged
+• Opt in on closed testing if you have not yet: ${PLAY_CLOSED_TESTING_URL}
+
+— Mark`,
+    directorName: DIRECTOR_NAME,
+    directorTitle: DIRECTOR_TITLE,
+    postedByUserId: CHANGELOG_AUTHOR_UID,
+    createdAt: APK_0056_AT,
+    updatedAt: APK_0056_AT,
+  },
   {
     id: '2026-08-25_feed-listings-events-chat',
     date: '2026-08-25',
