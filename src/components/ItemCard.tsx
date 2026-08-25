@@ -80,7 +80,7 @@ export default function ItemCard({
 }: ItemCardProps) {
   const authorLastActive = usePresence(item.userId);
   const isOwner = item.userId === currentUserId;
-  const isStaffViewer = isStaffActingOfficial(userProfile);
+  const isStaffOfficialMode = isStaffActingOfficial(userProfile);
   const inactive = item.status === 'completed' || item.status === 'withdrawn';
 
   const dateLabel = item.createdAt
@@ -212,7 +212,7 @@ export default function ItemCard({
         <Eye className="w-3.5 h-3.5" />
         <span className="hidden sm:inline ml-1">View</span>
       </button>
-      {isStaffViewer && onStaffChat ? (
+      {isStaffOfficialMode && onStaffChat ? (
         <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
           <LifeBuoy className="w-3.5 h-3.5" />
           <span className="ml-1">Staff chat</span>
@@ -222,10 +222,11 @@ export default function ItemCard({
         <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
           <Navigation className="w-3.5 h-3.5" />
           <span className="ml-1">
-            {isStaffViewer ? 'Navigate' : getListingNavigateLabel(item)}
+            {isStaffOfficialMode ? 'Navigate' : getListingNavigateLabel(item)}
           </span>
         </button>
-      ) : !isStaffViewer && isListingOpenForCoordination(item.status) ? (
+      ) : null}
+      {isListingOpenForCoordination(item.status) ? (
         <button
           type="button"
           onClick={onMessage}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useKeyboardInset, useScrollInputOnFocus } from '../hooks/useKeyboardInset';
-import { CommunityEvent, FeedPost, ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, FeedPost, ItemPost, PendingChatCompose, UserProfile, InitiateChatOptions } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
@@ -41,7 +41,13 @@ interface MobileViewProps {
   onOpenNewStuff: () => void;
   onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
-  onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onInitiateChat: (
+    posterUid: string,
+    posterName: string,
+    posterPhoto?: string,
+    item?: ItemPost,
+    options?: InitiateChatOptions,
+  ) => void;
   onStaffListingChat?: (item: ItemPost) => void;
   onStaffEventChat?: (event: CommunityEvent) => void;
   onClaimSubmitted?: (chatId: string) => void;
@@ -287,7 +293,7 @@ export default function MobileView({
             <main className="flex-1 min-h-0 overflow-hidden">
                 {/* Reuse all existing community tab views */}
                 <div className={`relative h-full w-full min-h-0 ${communityTab === 'map' ? '' : 'hidden'}`} aria-hidden={communityTab !== 'map'}>
-                  <SacramentoMapView items={items} events={events} userProfile={userProfile} selectedType={selectedMobileType} selectedCategory={selectedMobileCategory} onInitiateChat={onInitiateChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} isFullScreenMobile mapVisible={communityTab === 'map'} colorGuideOpen={colorGuideOpen} onColorGuideOpenChange={setColorGuideOpen} onOpenNewPost={onOpenNewPost} onImmersiveModeChange={setMapImmersiveNav} itemsHydrated={itemsHydrated} eventsHydrated={eventsHydrated} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} />
+                  <SacramentoMapView items={items} events={events} userProfile={userProfile} selectedType={selectedMobileType} selectedCategory={selectedMobileCategory} onInitiateChat={onInitiateChat} onStaffListingChat={onStaffListingChat} onClaimSubmitted={onClaimSubmitted} onViewItem={onViewItem} onViewEvent={onViewEvent} onEditItem={onEditItem} isFullScreenMobile mapVisible={communityTab === 'map'} colorGuideOpen={colorGuideOpen} onColorGuideOpenChange={setColorGuideOpen} onOpenNewPost={onOpenNewPost} onImmersiveModeChange={setMapImmersiveNav} itemsHydrated={itemsHydrated} eventsHydrated={eventsHydrated} eventsEngagement={eventsEngagement} commentsLocked={!canAccessEvents} />
                 </div>
                 <ScrollPage
                   className={communityTab === 'feed' ? '' : 'hidden'}
@@ -380,6 +386,7 @@ export default function MobileView({
             selectedType={selectedMobileType}
             selectedCategory={selectedMobileCategory}
             onInitiateChat={onInitiateChat}
+            onStaffListingChat={onStaffListingChat}
             onClaimSubmitted={onClaimSubmitted}
             onViewItem={onViewItem}
             onViewEvent={onViewEvent}

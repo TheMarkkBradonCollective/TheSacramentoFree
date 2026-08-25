@@ -365,6 +365,12 @@ export interface Chat {
   eventTitle?: string;
 }
 
+/** Options when opening a neighbor pickup / event chat (not staff outreach). */
+export interface InitiateChatOptions {
+  /** Staff in official mode acting as a neighbor for this thread — hide staff badge. */
+  asNeighbor?: boolean;
+}
+
 /** Compose UI before the chat row exists in the database (first outbound message creates it). */
 export interface PendingChatCompose {
   chatId: string;
@@ -375,6 +381,8 @@ export interface PendingChatCompose {
   itemTitle?: string;
   eventId?: string;
   eventTitle?: string;
+  /** Locked at compose time when staff messages as a neighbor while in staff mode. */
+  postedAsNeighbor?: boolean;
 }
 
 export interface Message {

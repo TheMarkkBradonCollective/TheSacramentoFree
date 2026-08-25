@@ -1,4 +1,4 @@
-import type { EventComment, ItemComment, UserProfile } from '../types';
+import type { EventComment, ItemComment, PendingChatCompose, UserProfile } from '../types';
 import { isStaffRole } from './roles';
 import {
   DEFAULT_STAFF_INTERACTION_MODE,
@@ -43,6 +43,15 @@ export function commentPostedAsNeighbor(
   profile: Pick<UserProfile, 'role' | 'staffInteractionMode'> | null | undefined,
 ): boolean {
   return Boolean(profile && isStaffRole(profile.role) && !isStaffActingOfficial(profile));
+}
+
+/** Send-time neighbor mode for chat — respects compose lock when staff used a neighbor action in staff mode. */
+export function messagePostedAsNeighbor(
+  profile: Pick<UserProfile, 'role' | 'staffInteractionMode'> | null | undefined,
+  compose?: Pick<PendingChatCompose, 'postedAsNeighbor'> | null,
+): boolean {
+  if (compose?.postedAsNeighbor === true) return true;
+  return commentPostedAsNeighbor(profile);
 }
 
 /** Whether to show the staff role badge on persisted neighbor-facing content. */
