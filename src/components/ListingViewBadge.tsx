@@ -44,26 +44,31 @@ interface ListingViewBadgeProps {
   count: number;
   className?: string;
   compact?: boolean;
+  /** `corner` = absolute top-right; `inline` = flex sibling (use in a top overlay row). */
+  placement?: 'corner' | 'inline';
 }
 
 export default function ListingViewBadge({
   count,
   className = '',
   compact = false,
+  placement = 'corner',
 }: ListingViewBadgeProps) {
   if (count <= 0) return null;
 
   const label = viewCountLabel(count);
+  const sizeClass = compact ? 'px-1 py-0 text-[7px]' : 'px-1.5 py-0.5 text-[9px]';
+  const iconClass = compact ? 'h-2.5 w-2.5 shrink-0' : 'h-3 w-3 shrink-0';
+  const positionClass =
+    placement === 'inline' ? 'inline-flex shrink-0' : 'absolute top-1.5 right-1.5 inline-flex';
 
   return (
     <span
-      className={`absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/70 font-bold text-white ${
-        compact ? 'px-1 py-0 text-[7px]' : 'px-1.5 py-0.5 text-[9px]'
-      } ${className}`}
+      className={`${positionClass} items-center gap-0.5 rounded-full bg-black/70 font-bold text-white ${sizeClass} ${className}`}
       aria-label={label}
       title="Unique neighbors who opened this listing"
     >
-      <Eye className={compact ? 'h-2.5 w-2.5 shrink-0' : 'h-3 w-3 shrink-0'} aria-hidden />
+      <Eye className={iconClass} aria-hidden />
       {formatListingViewCount(count)}
     </span>
   );
