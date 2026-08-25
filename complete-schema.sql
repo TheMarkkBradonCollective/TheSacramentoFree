@@ -1061,14 +1061,17 @@ BEGIN
     sess."fulfillerReadyAt" := now_ts;
 
   ELSIF p_action = 'start_trip' THEN
-    IF role NOT IN ('requester', 'staff') THEN
-      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
-    END IF;
     IF sess.status <> 'scheduled' OR sess."fulfillerReadyAt" IS NULL THEN
       RETURN jsonb_build_object('ok', false, 'error', sess."fulfillerName" || ' hasn''t confirmed they''re ready yet.');
     END IF;
     IF sess."scheduledAt" IS NOT NULL AND now_ts < (sess."scheduledAt" - make_interval(mins => window_mins)) THEN
       RETURN jsonb_build_object('ok', false, 'error', 'Too early to start this pickup.');
+    END IF;
+    IF COALESCE(sess."coordinationMode", 'go_get') <> 'meet_up' AND role NOT IN ('requester', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF role NOT IN ('requester', 'fulfiller', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
     END IF;
     SELECT status INTO listing_status FROM public.items WHERE id = sess."itemId";
     IF listing_status IS NOT NULL AND listing_status NOT IN ('active', 'pending_pickup') THEN
@@ -1078,7 +1081,11 @@ BEGIN
     sess."startedAt" := now_ts;
 
   ELSIF p_action = 'mark_arrived' THEN
-    IF role NOT IN ('requester', 'staff') THEN
+    IF COALESCE(sess."coordinationMode", 'go_get') = 'meet_up' THEN
+      IF role NOT IN ('requester', 'fulfiller', 'staff') THEN
+        RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+      END IF;
+    ELSIF role NOT IN ('requester', 'staff') THEN
       RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
     END IF;
     IF sess.status <> 'active' THEN

@@ -3,7 +3,9 @@ import type { CoordinationMode, GoGetFulfillerLiveLocation, GoGetHandshakeMode, 
 import {
   coordinationModeFromItem,
   handshakeModeForCoordination,
+  normalizeCoordinationMode,
   pickupStartActionForItem,
+  PICKUP_MODE_CONFIG,
 } from './pickupEngine';
 import {
   canPerformPickupAction,
@@ -28,6 +30,7 @@ import {
 } from './goGetEligibility';
 import { getGoGetRingDuration } from './goGetRing';
 import { getPickupAvailability, isProfileWithinPickupAvailability, isTimeInSharedAvailability } from './pickupAvailability';
+import { meetCopyForItem, meetCopyForSession } from './meetCopy';
 
 /** Curb Alert / Porch Pickup — first-come items meant to be grabbed with no handshake. */
 export const INSTANT_CLAIM_CATEGORIES = ['Curb Alert', 'Porch Pickup'];
@@ -42,6 +45,16 @@ export function goGetHandshakeModeForItem(item: Pick<ItemPost, 'type' | 'categor
 
 export function coordinationModeForItem(item: Pick<ItemPost, 'type' | 'category'>): CoordinationMode {
   return coordinationModeFromItem(item);
+}
+
+function sessionActor(session: GoGetSession, actorUserId: string) {
+  const isFulfiller = actorUserId === session.fulfillerUserId;
+  return {
+    userId: isFulfiller ? session.fulfillerUserId : session.requesterUserId,
+    name: isFulfiller ? session.fulfillerName : session.requesterName,
+    otherUserId: isFulfiller ? session.requesterUserId : session.fulfillerUserId,
+    otherName: isFulfiller ? session.requesterName : session.fulfillerName,
+  };
 }
 
 const TERMINAL_STATUSES: GoGetSessionStatus[] = ['completed', 'cancelled', 'expired', 'disputed'];
@@ -259,6 +272,8 @@ export interface CreateGoGetSessionParams {
   requesterName: string;
   destination: { lat: number; lng: number };
   destinationLabel: string;
+  /** Trade poster starts the Meet — they are already available, so skip the ring. */
+  posterInitiated?: boolean;
 }
 
 /** Start a "Go Get" — creates (or reuses) the pairing chat and the session row. */
@@ -267,9 +282,10 @@ export async function createGoGetSession(
 ): Promise<Result<{ session: GoGetSession }>> {
   const { item, fulfillerUserId, fulfillerName, requesterUserId, requesterName, destination, destinationLabel } =
     params;
+  const copy = meetCopyForItem(item);
 
   if (fulfillerUserId === requesterUserId) {
-    return { ok: false, errorMessage: 'You cannot Go Get your own listing.' };
+    return { ok: false, errorMessage: copy.cannotOwn };
   }
   if (item.status !== 'active') {
     return { ok: false, errorMessage: 'This listing is no longer available.' };
@@ -364,12 +380,14 @@ export async function createGoGetSession(
   const coordinationMode = coordinationModeFromItem(item);
   const now = new Date().toISOString();
   const instant = handshakeMode === 'instant';
+  const posterInitiatedMeet = params.posterInitiated === true && coordinationMode === 'meet_up';
 
   const id = `ggs_${item.id}_${requesterUserId}_${Date.now()}`;
   const ringDurationSeconds = fulfillerProfile ? getGoGetRingDuration(fulfillerProfile) : 140;
-  const ringExpiresAt = instant
-    ? null
-    : new Date(Date.now() + ringDurationSeconds * 1000).toISOString();
+  const ringExpiresAt =
+    instant || posterInitiatedMeet
+      ? null
+      : new Date(Date.now() + ringDurationSeconds * 1000).toISOString();
 
   const payload: Record<string, unknown> = {
     id,
@@ -382,14 +400,16 @@ export async function createGoGetSession(
     chatId,
     handshakeMode,
     coordinationMode,
-    status: instant ? 'active' : 'awaiting_availability',
+    status: instant ? 'active' : posterInitiatedMeet ? 'scheduled' : 'awaiting_availability',
     destinationLat: destination.lat,
     destinationLng: destination.lng,
     destinationLabel,
+    scheduledAt: posterInitiatedMeet ? now : null,
+    fulfillerReadyAt: posterInitiatedMeet ? now : null,
     startedAt: instant ? now : null,
-    ringStartedAt: instant ? null : now,
+    ringStartedAt: instant || posterInitiatedMeet ? null : now,
     ringExpiresAt,
-    ringDurationSeconds: instant ? null : ringDurationSeconds,
+    ringDurationSeconds: instant || posterInitiatedMeet ? null : ringDurationSeconds,
     readyWindowMinutes: 15,
     createdAt: now,
     updatedAt: now,
@@ -414,17 +434,32 @@ export async function createGoGetSession(
   const session = normalizeGoGetSession(payload);
 
   const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  if (!instant) {
+  if (posterInitiatedMeet) {
     await createSupabaseMessage(
       chatId,
-      `📦 ${requesterName} wants to Go Get "${item.title}". Are you available for pickup right now?`,
+      `🔁 ${fulfillerName} is ready to meet to trade "${item.title}". You can both navigate to the meetup pin.`,
+      fulfillerUserId,
+      messageId,
+      { skipPush: true },
+    );
+    await runGoGetPushTask(() =>
+      import('./pushEvents').then((m) =>
+        m.notifyGoGetFulfillerReady({
+          item,
+          requesterUserId,
+          fulfillerName,
+          sessionId: id,
+        }),
+      ),
+    );
+  } else if (!instant) {
+    await createSupabaseMessage(
+      chatId,
+      copy.requestLine(requesterName, item.title) + ' Are you available now?',
       requesterUserId,
       messageId,
       { skipPush: true },
     );
-  }
-
-  if (!instant) {
     await runGoGetPushTask(() =>
       import('./pushEvents').then((m) =>
         m.notifyGoGetAvailabilityRequest({
@@ -838,9 +873,10 @@ export async function markFulfillerReady(
   });
   if (!result.ok || !result.session) return result;
 
+  const copy = meetCopyForSession(session);
   await createSupabaseMessage(
     session.chatId,
-    `✅ ${session.fulfillerName} is ready — ${session.requesterName} can Go Get it now.`,
+    `✅ ${copy.theyAreReady(session.fulfillerName)} ${session.requesterName} can ${copy.startTrip} now.`,
     session.fulfillerUserId,
     `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     { skipPush: true },
@@ -858,7 +894,7 @@ export async function markFulfillerReady(
   return { ok: true, session: result.session };
 }
 
-/** Requester taps "Go Get" once the fulfiller is ready — this is what starts the trip. */
+/** Either traveler starts live navigation once the fulfiller is ready. */
 export async function startGoGetTrip(
   session: GoGetSession,
   item: ItemPost,
@@ -884,10 +920,15 @@ export async function startGoGetTrip(
   });
   if (!result.ok || !result.session) return result;
 
+  const { data: authData } = await supabase.auth.getSession();
+  const actor = sessionActor(session, authData.session?.user?.id || session.requesterUserId);
+  const bothTravel = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].bothTravel;
   await createSupabaseMessage(
     session.chatId,
-    `📍 ${session.requesterName} started the trip to pick up "${item.title}".`,
-    session.requesterUserId,
+    bothTravel
+      ? `📍 ${actor.name} started heading to the meetup pin for "${item.title}".`
+      : `📍 ${session.requesterName} started the trip to pick up "${item.title}".`,
+    actor.userId,
     `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     { skipPush: true },
   );
@@ -896,8 +937,8 @@ export async function startGoGetTrip(
     import('./pushEvents').then((m) =>
       m.notifyGoGetStarted({
         item,
-        fulfillerUserId: session.fulfillerUserId,
-        requesterName: session.requesterName,
+        recipientUserId: actor.otherUserId,
+        travelerName: actor.name,
         sessionId: session.id,
       }),
     ),
@@ -916,10 +957,13 @@ export async function markGoGetArrived(
   });
   if (!result.ok || !result.session) return result;
 
+  const { data: authData } = await supabase.auth.getSession();
+  const actor = sessionActor(session, authData.session?.user?.id || session.requesterUserId);
+  const copy = meetCopyForSession(session);
   await createSupabaseMessage(
     session.chatId,
-    `📍 ${session.requesterName} arrived for "${item.title}".`,
-    session.requesterUserId,
+    `📍 ${actor.name} arrived for "${item.title}".`,
+    actor.userId,
     `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     { skipPush: true },
   );
@@ -928,9 +972,10 @@ export async function markGoGetArrived(
     import('./pushEvents').then((m) =>
       m.notifyGoGetArrived({
         item,
-        fulfillerUserId: session.fulfillerUserId,
-        requesterName: session.requesterName,
+        recipientUserId: actor.otherUserId,
+        travelerName: actor.name,
         sessionId: session.id,
+        confirmHandoff: copy.confirmHandoff,
       }),
     ),
   );
@@ -983,9 +1028,10 @@ export async function confirmGoGetCompletion(session: GoGetSession): Promise<Res
     },
   });
   if (!result.ok || !result.session) return result;
+  const copy = meetCopyForSession(session);
   await createSupabaseMessage(
     session.chatId,
-    `✅ Pickup completed.`,
+    `✅ ${copy.completedChat}`,
     session.fulfillerUserId,
     `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     { skipPush: true },

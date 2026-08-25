@@ -17,8 +17,9 @@ export interface PickupModeConfig {
   navigation: boolean;
   liveLocation: boolean;
   handoff: boolean;
-  /** Who travels to the destination pin. DB roles stay stable; this only names the traveler. */
+  /** Who typically travels to the pin. Meet-up sets bothTravel so both neighbors navigate. */
   travelerRole: PickupTravelerRole;
+  bothTravel: boolean;
 }
 
 export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
@@ -32,6 +33,7 @@ export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
     liveLocation: true,
     handoff: true,
     travelerRole: 'requester',
+    bothTravel: false,
   },
   curb_alert: {
     mode: 'curb_alert',
@@ -43,6 +45,7 @@ export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
     liveLocation: false,
     handoff: false,
     travelerRole: 'requester',
+    bothTravel: false,
   },
   porch_pickup: {
     mode: 'porch_pickup',
@@ -54,6 +57,7 @@ export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
     liveLocation: true,
     handoff: true,
     travelerRole: 'requester',
+    bothTravel: false,
   },
   drop_off: {
     mode: 'drop_off',
@@ -66,6 +70,7 @@ export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
     handoff: true,
     // Looking poster waits (fulfiller). Neighbor bringing the item travels (requester in DB).
     travelerRole: 'requester',
+    bothTravel: false,
   },
   meet_up: {
     mode: 'meet_up',
@@ -77,6 +82,7 @@ export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
     liveLocation: true,
     handoff: true,
     travelerRole: 'requester',
+    bothTravel: true,
   },
 };
 
@@ -125,18 +131,22 @@ export function formatRingCountdown(totalSeconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function formatPickupCountdown(scheduledAt: string, now = new Date()): string {
+export function formatPickupCountdown(
+  scheduledAt: string,
+  now = new Date(),
+  eventNoun = 'Pickup',
+): string {
   const target = new Date(scheduledAt).getTime();
   if (Number.isNaN(target)) return '';
   const deltaMs = target - now.getTime();
-  if (deltaMs <= 0) return 'Pickup time is here';
+  if (deltaMs <= 0) return `${eventNoun} time is here`;
   const minutes = Math.round(deltaMs / 60_000);
-  if (minutes < 1) return 'Pickup in under a minute';
-  if (minutes === 1) return 'Pickup in 1 minute';
-  if (minutes < 120) return `Pickup in ${minutes} minutes`;
+  if (minutes < 1) return `${eventNoun} in under a minute`;
+  if (minutes === 1) return `${eventNoun} in 1 minute`;
+  if (minutes < 120) return `${eventNoun} in ${minutes} minutes`;
   const hours = Math.round(minutes / 60);
-  if (hours === 1) return 'Pickup in 1 hour';
-  return `Pickup in ${hours} hours`;
+  if (hours === 1) return `${eventNoun} in 1 hour`;
+  return `${eventNoun} in ${hours} hours`;
 }
 
 export function formatScheduledWhen(scheduledAt: string): string {

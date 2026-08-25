@@ -51,8 +51,8 @@ const ACTION_ROLES: Record<PickupTransitionAction, PickupActorRole[]> = {
   pick_time: ['requester', 'staff'],
   propose_schedule: ['requester', 'staff'],
   mark_ready: ['fulfiller', 'staff'],
-  start_trip: ['requester', 'staff'],
-  mark_arrived: ['requester', 'staff'],
+  start_trip: ['requester', 'fulfiller', 'staff'],
+  mark_arrived: ['requester', 'fulfiller', 'staff'],
   confirm_complete: ['fulfiller', 'staff'],
   dispute: ['requester', 'fulfiller', 'staff'],
   cancel: ['requester', 'fulfiller', 'staff'],
@@ -182,6 +182,17 @@ export function canPerformPickupAction(params: {
     }
     if (isTooEarlyToStartTrip(session.scheduledAt, now, readyWindowMinutesForSession(session))) {
       return { ok: false, error: 'Too early to start this pickup.' };
+    }
+    const bothTravel = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].bothTravel;
+    if (!bothTravel && role === 'fulfiller') {
+      return { ok: false, error: 'Waiting for the other neighbor to start heading over.' };
+    }
+  }
+
+  if (action === 'mark_arrived') {
+    const bothTravel = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].bothTravel;
+    if (!bothTravel && role === 'fulfiller') {
+      return { ok: false, error: 'The neighbor on the way confirms arrival.' };
     }
   }
 

@@ -53,6 +53,7 @@ import {
   type PickupTravelerRole,
 } from '../../lib/pickupEngine';
 import { extractPickupInstructionSections } from '../../lib/listingContent';
+import { meetCopyForSession } from '../../lib/meetCopy';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { confirmGoGetTripStart } from './goGetSafetyConfirm';
 import MapNavigationView, { type NavProgressUpdate } from '../MapNavigationView';
@@ -115,6 +116,8 @@ export default function GoGetTripLockScreen({
   const coordinationMode = modeProp ?? normalizeCoordinationMode(session.coordinationMode);
   const travelerRole = travelerRoleProp ?? PICKUP_MODE_CONFIG[coordinationMode].travelerRole;
   const modeLabel = PICKUP_MODE_CONFIG[coordinationMode].label;
+  const bothTravel = PICKUP_MODE_CONFIG[coordinationMode].bothTravel;
+  const copy = meetCopyForSession(session);
 
   usePhoneCompassHeading(
     isFulfiller && session.fulfillerSharingLocation === true,
@@ -254,14 +257,22 @@ export default function GoGetTripLockScreen({
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
       if (session.handshakeMode !== 'instant') {
-        void upsertLiveLocation(session.id, {
-          lat: update.lat,
-          lng: update.lng,
-          heading: update.heading,
-          speedMph: update.speedMph,
-          etaSeconds: update.etaSeconds,
-          distanceMeters: update.distanceMeters,
-        });
+        if (session.requesterUserId === userProfile.uid) {
+          void upsertLiveLocation(session.id, {
+            lat: update.lat,
+            lng: update.lng,
+            heading: update.heading,
+            speedMph: update.speedMph,
+            etaSeconds: update.etaSeconds,
+            distanceMeters: update.distanceMeters,
+          });
+        } else if (session.fulfillerUserId === userProfile.uid) {
+          void upsertFulfillerLiveLocation(session.id, {
+            lat: update.lat,
+            lng: update.lng,
+            heading: update.heading,
+          });
+        }
       }
       setNearDestination(update.arrived || update.distanceMeters <= ARRIVAL_GEOFENCE_METERS);
       if (
@@ -272,17 +283,21 @@ export default function GoGetTripLockScreen({
         session.status === 'active'
       ) {
         approachingSentRef.current = true;
+        const travelerName =
+          userProfile.uid === session.fulfillerUserId ? session.fulfillerName : session.requesterName;
+        const recipientUserId =
+          userProfile.uid === session.fulfillerUserId ? session.requesterUserId : session.fulfillerUserId;
         void import('../../lib/pushEvents').then((m) =>
           m.notifyGoGetApproaching({
             item,
-            fulfillerUserId: session.fulfillerUserId,
-            requesterName: session.requesterName,
+            recipientUserId,
+            travelerName,
             sessionId: session.id,
           }),
         );
       }
     },
-    [session, item],
+    [session, item, userProfile.uid],
   );
 
   const run = async (fn: () => Promise<{ ok: boolean; errorMessage?: string; session?: GoGetSession }>) => {
@@ -310,7 +325,7 @@ export default function GoGetTripLockScreen({
 
   const handleStartTrip = async () => {
     if (!item) return;
-    const confirmed = await confirmGoGetTripStart(confirm, otherName);
+    const confirmed = await confirmGoGetTripStart(confirm, otherName, coordinationMode);
     if (!confirmed) return;
     unlockNavigationSpeech();
     await run(() => startGoGetTrip(session, item));
@@ -434,7 +449,7 @@ export default function GoGetTripLockScreen({
         }
       : null;
 
-  const isTraveler = travelerRole === 'fulfiller' ? isFulfiller : isRequester;
+  const isTraveler = bothTravel || (travelerRole === 'fulfiller' ? isFulfiller : isRequester);
   const showPickerNav =
     isTraveler &&
     session.status === 'active' &&
@@ -443,15 +458,16 @@ export default function GoGetTripLockScreen({
 
   const statusTitle = (() => {
     if (session.status === 'awaiting_availability') return `Waiting for ${otherName}`;
-    if (session.status === 'scheduled' && isFulfiller && !session.fulfillerReadyAt) return 'Are you ready for pickup?';
+    if (session.status === 'scheduled' && isFulfiller && !session.fulfillerReadyAt) return copy.readyQuestion;
     if (session.status === 'scheduled' && isRequester && !session.fulfillerReadyAt) return `${otherName} is getting ready`;
+    if (session.status === 'scheduled' && bothTravel) return `${copy.umbrella} is ready`;
     if (session.status === 'scheduled' && isRequester) return `${otherName} is ready`;
     if (session.status === 'scheduled' && isFulfiller) return `Waiting for ${otherName}`;
     if (session.status === 'active' && isTraveler) return `Heading to ${otherName}`;
     if (session.status === 'active') return `${otherName} is on the way`;
     if (session.status === 'arrived' && isFulfiller) return `${otherName} has arrived`;
     if (session.status === 'arrived') return `Waiting for ${otherName}`;
-    return `${modeLabel} pickup`;
+    return `${copy.umbrella}`;
   })();
 
   const pickupInstructions = item ? extractPickupInstructionSections(item.description) : null;
@@ -525,6 +541,7 @@ export default function GoGetTripLockScreen({
             role="fulfiller"
             ready={false}
             readyWindowOpen={readyWindowOpen}
+            mode={coordinationMode}
           >
             {errorBanner}
             {readyWindowOpen ? (
@@ -550,6 +567,7 @@ export default function GoGetTripLockScreen({
             role="fulfiller"
             ready
             readyWindowOpen={readyWindowOpen}
+            mode={coordinationMode}
           >
             {errorBanner}
             <GoGetShareLocationToggle
@@ -559,6 +577,17 @@ export default function GoGetTripLockScreen({
               onError={setErr}
               compact
             />
+            {bothTravel ? (
+              <button
+                type="button"
+                disabled={busy || !origin}
+                onClick={() => void handleStartTrip()}
+                className="sbn-btn sbn-btn-primary w-full justify-center disabled:opacity-60"
+              >
+                <Navigation2 className="w-4 h-4" />
+                {copy.startTrip}
+              </button>
+            ) : null}
           </GoGetScheduledCard>
         );
       }
@@ -571,6 +600,7 @@ export default function GoGetTripLockScreen({
             role="requester"
             ready={false}
             readyWindowOpen={readyWindowOpen}
+            mode={coordinationMode}
           >
             {errorBanner}
           </GoGetScheduledCard>
@@ -584,6 +614,7 @@ export default function GoGetTripLockScreen({
           role="requester"
           ready
           readyWindowOpen={readyWindowOpen}
+          mode={coordinationMode}
         >
           {errorBanner}
           <button
@@ -594,14 +625,14 @@ export default function GoGetTripLockScreen({
             id="go_get_start_trip_btn"
           >
             <Navigation2 className="w-4 h-4" />
-            Start {modeLabel}
+            {copy.startTrip}
           </button>
           {!origin && <p className="text-xs text-muted">Getting your location…</p>}
         </GoGetScheduledCard>
       );
     }
 
-    if (session.status === 'active' && isFulfiller) {
+    if (session.status === 'active' && isFulfiller && !isTraveler) {
       return (
         <div className="space-y-3" id="go_get_live_tracking_card">
           {errorBanner}
@@ -655,7 +686,7 @@ export default function GoGetTripLockScreen({
         <div className="space-y-3" id="go_get_arrived_handoff">
           {errorBanner}
           <p className="text-sm font-semibold text-app">{session.requesterName} is here</p>
-          <p className="text-xs text-muted">Confirm once the item is in their hands.</p>
+          <p className="text-xs text-muted">{copy.arrivedHint}</p>
           {(item?.imageUrl || item?.imageUrls?.[0]) && (
             <img
               src={(item?.imageUrl || item?.imageUrls?.[0]) ?? ''}
@@ -678,7 +709,7 @@ export default function GoGetTripLockScreen({
               className="sbn-btn sbn-btn-primary justify-center disabled:opacity-60"
             >
               <CheckCircle className="w-4 h-4" />
-              Confirm pickup
+              {copy.confirmHandoff}
             </button>
             <button
               type="button"
@@ -702,7 +733,7 @@ export default function GoGetTripLockScreen({
           {errorBanner}
           <p className="text-sm text-app flex items-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin text-accent" />
-            Waiting for {otherName} to confirm the handoff…
+            {copy.waitForHandoff(otherName)}
           </p>
           <p className="text-xs text-muted tabular-nums">Waiting: {waitLabel}</p>
           {arrivedWaitMs >= NO_SHOW_WAIT_MS ? (
@@ -718,14 +749,14 @@ export default function GoGetTripLockScreen({
       );
     }
 
-    if (session.status === 'active' && isRequester) {
+    if (session.status === 'active' && isTraveler) {
       return (
         <div className="space-y-3">
           {errorBanner}
-          <p className="text-sm text-app">You&apos;re on the way to {otherName}&apos;s pickup.</p>
+          <p className="text-sm text-app">{copy.onTheWay(otherName)}</p>
           <p className="text-xs text-muted">{session.destinationLabel}</p>
           {nearDestination ? (
-            <p className="text-sm font-semibold text-accent">You&apos;re at the pickup location.</p>
+            <p className="text-sm font-semibold text-accent">You&apos;re at the {copy.locationKind.toLowerCase()}.</p>
           ) : null}
           {pickupInstructionsCard}
           {etaLabel && !nearDestination && (
@@ -767,8 +798,8 @@ export default function GoGetTripLockScreen({
           destination={destination}
           destinationLabel={session.destinationLabel}
           onProgressUpdate={handleProgressUpdate}
-          otherPartyLocation={neighborParty}
-          otherPartyLabel={session.fulfillerName}
+          otherPartyLocation={isFulfiller ? travelerParty : neighborParty}
+          otherPartyLabel={isFulfiller ? session.requesterName : session.fulfillerName}
           navigationStartMessage={goGetNavigationVoice.start}
           navigationFollowUpMessages={goGetNavigationVoice.followUp}
           tripLock
@@ -835,7 +866,7 @@ export default function GoGetTripLockScreen({
                   className="sbn-btn sbn-btn-secondary justify-center text-red-400 disabled:opacity-60 col-span-2"
                 >
                   <PhoneOff className="w-4 h-4" />
-                  Cancel pickup
+                  {copy.cancelTitle}
                 </button>
               </div>
             </div>
