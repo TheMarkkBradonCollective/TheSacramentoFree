@@ -32,8 +32,7 @@ const APK_0051_AT = '2026-08-21T22:35:00.000Z';
 const APK_0052_AT = '2026-08-21T23:50:00.000Z';
 const APK_0053_AT = '2026-08-25T03:05:00.000Z';
 const APK_0054_AT = '2026-08-25T03:32:00.000Z';
-const APK_0055_AT = '2026-08-25T03:38:00.000Z';
-const APK_0056_AT = '2026-08-25T03:48:00.000Z';
+const APK_0055_AT = '2026-08-25T03:48:00.000Z';
 const CLOSED_TESTING_NEWS_AT = '2026-08-21T23:20:00.000Z';
 const TESTER_LIST_NEWS_AT = '2026-08-22T00:40:00.000Z';
 const TESTER_LIST_NEWS_UPDATED_AT = '2026-08-22T00:50:00.000Z';
@@ -45,36 +44,15 @@ const PLAY_CLOSED_TESTING_URL = 'https://play.google.com/apps/testing/org.sacram
 /** Canonical Updates feed — current APK plus later posts. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
   {
-    id: '2026-08-25_apk-0056',
-    date: '2026-08-25',
-    title: 'TheSacramentoFree — beta v0.2.0.0056',
-    body: 'Restored the original Sacramento green 3D hands logo on the website, Install app, and Android home screen.',
-    detail: `WHAT NEIGHBORS SEE
-TheSacramentoFree, 0.2.0 (56): the original green rounded-square logo is back.
-
-• Same 3D hands-and-bill artwork we first shipped in Sacramento green
-• Website, Install app, and Android launcher all use that logo
-• Same sign-in, listings, map, chat, and notifications
-• Package stays org.sacramentobuynothing.app — your account is unchanged
-• Opt in on closed testing if you have not yet: ${PLAY_CLOSED_TESTING_URL}
-
-— Mark`,
-    directorName: DIRECTOR_NAME,
-    directorTitle: DIRECTOR_TITLE,
-    postedByUserId: CHANGELOG_AUTHOR_UID,
-    createdAt: APK_0056_AT,
-    updatedAt: APK_0056_AT,
-  },
-  {
     id: '2026-08-25_apk-0055',
     date: '2026-08-25',
     title: 'TheSacramentoFree — beta v0.2.0.0055',
-    body: 'Rebuilt the app icon from clean 3D hands — no more green smear or dark fringe when you tap Install app.',
+    body: 'Restored the original Sacramento green 3D hands logo on the website, Install app, and Android home screen.',
     detail: `WHAT NEIGHBORS SEE
-TheSacramentoFree, 0.2.0 (55): crisp Sacramento green icon on web, Install app, and Android.
+TheSacramentoFree, 0.2.0 (55): the original green rounded-square logo is back.
 
-• White hands are clean again — no green bleeding into the artwork
-• Install app dialog uses a proper maskable icon (no dark circle fringe)
+• Same 3D hands-and-bill artwork we first shipped in Sacramento green
+• Website, Install app, and Android launcher all use that logo
 • Same sign-in, listings, map, chat, and notifications
 • Package stays org.sacramentobuynothing.app — your account is unchanged
 • Opt in on closed testing if you have not yet: ${PLAY_CLOSED_TESTING_URL}
