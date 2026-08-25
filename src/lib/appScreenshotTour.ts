@@ -81,8 +81,8 @@ export const GOGET_TOUR_STEPS: AppTourShot[] = [
   },
   {
     file: '13-goget-navigation.png',
-    title: '5. You drive like an Uber driver',
-    body: 'When they say yes, the app locks you into turn-by-turn to the porch. Voice guidance, lane hints, Message, and Cancel live on that screen. Your live location is shared with them until pickup ends.',
+    title: '5. You drive with GPS',
+    body: 'When they say yes, the app switches to a real GPS: heading-up camera, next-turn banner, speed, and your puck on the street. No city-wide highlighted path — that overview is only before you start. Voice guidance, Message, and Cancel stay on that screen.',
   },
   {
     file: '14-goget-tracking.png',

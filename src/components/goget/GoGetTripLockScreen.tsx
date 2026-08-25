@@ -436,20 +436,37 @@ export default function GoGetTripLockScreen({
       return (
         <div className="space-y-3" id="go_get_live_tracking_card">
           {errorBanner}
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 animate-ping" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
-            </span>
-            <p className="text-sm font-bold text-app">{session.requesterName} is on the way</p>
+          <div className="flex items-start gap-3">
+            {item?.imageUrl || item?.imageUrls?.[0] ? (
+              <img
+                src={(item?.imageUrl || item?.imageUrls?.[0]) ?? ''}
+                alt=""
+                className="h-14 w-14 rounded-xl object-cover border border-app shrink-0"
+              />
+            ) : (
+              <span className="relative flex h-2.5 w-2.5 shrink-0 mt-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 animate-ping" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-app">
+                {pickerLocation?.etaSeconds != null && pickerLocation.etaSeconds < 90
+                  ? `${session.requesterName} is arriving now`
+                  : `${session.requesterName} is on the way`}
+              </p>
+              <p className="text-[11px] text-muted truncate mt-0.5">
+                {item?.title || session.destinationLabel}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3 rounded-xl bg-inset p-3">
             <Navigation2 className="w-5 h-5 text-accent shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-lg font-black text-app tabular-nums leading-none">{etaLabel ?? '—'}</p>
-              <p className="text-xs text-muted mt-0.5">
+              <p className="text-2xl font-black text-app tabular-nums leading-none">{etaLabel ?? '—'}</p>
+              <p className="text-xs text-muted mt-1">
                 {distanceLabel ? `${distanceLabel} away` : 'Waiting for their live location…'}
-                {' · '}heading to {session.destinationLabel}
+                {pickerLocation?.speedMph != null ? ` · ${Math.round(pickerLocation.speedMph)} mph` : ''}
               </p>
             </div>
           </div>
@@ -468,9 +485,15 @@ export default function GoGetTripLockScreen({
       return (
         <div className="space-y-3" id="go_get_arrived_handoff">
           {errorBanner}
-          <p className="text-sm font-semibold text-app">{session.requesterName} has arrived.</p>
-          <p className="text-xs text-muted">Confirm once the handoff is complete.</p>
-          <p className="text-xs text-muted">{item?.title || session.destinationLabel}</p>
+          <p className="text-sm font-semibold text-app">{session.requesterName} is here</p>
+          <p className="text-xs text-muted">Confirm once the item is in their hands.</p>
+          {(item?.imageUrl || item?.imageUrls?.[0]) && (
+            <img
+              src={(item?.imageUrl || item?.imageUrls?.[0]) ?? ''}
+              alt=""
+              className="h-16 w-16 rounded-xl object-cover border border-app"
+            />
+          )}
           <GoGetShareLocationToggle
             session={session}
             pickerName={session.requesterName}
