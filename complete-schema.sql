@@ -1600,6 +1600,10 @@ CREATE POLICY "Users mark own notifications read" ON public.user_notifications
   FOR UPDATE USING (auth.uid()::text = "userId")
   WITH CHECK (auth.uid()::text = "userId");
 
+DROP POLICY IF EXISTS "Users delete own notifications" ON public.user_notifications;
+CREATE POLICY "Users delete own notifications" ON public.user_notifications
+  FOR DELETE USING (auth.uid()::text = "userId");
+
 -- Inserts use service role from /api/push (same as push_subscriptions).
 
 DO $$
