@@ -17,6 +17,7 @@ interface ClaimAtPickupButtonProps {
   onClaimSubmitted: (chatId: string) => void;
   className?: string;
   compact?: boolean;
+  variant?: 'button' | 'gps';
 }
 
 export default function ClaimAtPickupButton({
@@ -27,6 +28,7 @@ export default function ClaimAtPickupButton({
   onClaimSubmitted,
   className = '',
   compact = false,
+  variant = 'button',
 }: ClaimAtPickupButtonProps) {
   const { alert } = useConfirm();
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
@@ -143,8 +145,20 @@ export default function ClaimAtPickupButton({
     }
   };
 
-  return (
-    <>
+  const trigger =
+    variant === 'gps' ? (
+      <button
+        type="button"
+        onClick={() => void handleOpen()}
+        title="Optional — let the poster know you picked this up"
+        className={`sbn-gps-action ${className}`}
+      >
+        <span className="sbn-gps-action__icon">
+          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+        </span>
+        <span className="sbn-gps-action__label">Claim</span>
+      </button>
+    ) : (
       <button
         type="button"
         onClick={() => void handleOpen()}
@@ -154,6 +168,11 @@ export default function ClaimAtPickupButton({
         <CheckCircle className="w-4 h-4" />
         {compact ? 'Notify picked up' : 'Notify poster I picked up'}
       </button>
+    );
+
+  return (
+    <>
+      {trigger}
 
       {showPicker && (
         <div className="fixed inset-0 z-[75] bg-black/60 flex items-center justify-center p-4">

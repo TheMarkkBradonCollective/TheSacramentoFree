@@ -8,34 +8,34 @@ const SHARED = {
   bubblingMouseEvents: false,
 };
 
-/** Light outline so the route stays readable on Voyager tiles. */
+/** Preview route on the community map — same green GPS path as turn-by-turn. */
 export const ROUTE_LINE_CASING = {
-  ...SHARED,
-  color: '#FFFFFF',
-  weight: 12,
-  opacity: 1,
-};
-
-/** Remaining / preview route — charcoal, street-snapped. */
-export const ROUTE_LINE_MAIN = {
-  ...SHARED,
-  color: '#1A1A1A',
-  weight: 7,
-  opacity: 1,
-};
-
-/** Turn-by-turn remaining path — brand green so GPS mode reads like a navigation app. */
-export const NAV_ROUTE_LINE_CASING = {
   ...SHARED,
   color: '#FFFFFF',
   weight: 14,
   opacity: 1,
 };
 
-export const NAV_ROUTE_LINE_MAIN = {
+/** Remaining / preview route — Sacramento green, street-snapped. */
+export const ROUTE_LINE_MAIN = {
   ...SHARED,
   color: '#00845A',
   weight: 8,
+  opacity: 1,
+};
+
+/** Turn-by-turn remaining path — slightly thicker for heading-up GPS. */
+export const NAV_ROUTE_LINE_CASING = {
+  ...SHARED,
+  color: '#FFFFFF',
+  weight: 16,
+  opacity: 1,
+};
+
+export const NAV_ROUTE_LINE_MAIN = {
+  ...SHARED,
+  color: '#00845A',
+  weight: 9,
   opacity: 1,
 };
 
