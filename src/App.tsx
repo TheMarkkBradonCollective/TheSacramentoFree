@@ -133,6 +133,7 @@ import { completedActionNeedsAttribution } from './lib/pickupAttribution';
 import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath, normalizePublicPath } from './public/routes';
 import DownloadPage from './components/public/pages/DownloadPage';
 import { canDownloadApkFromWebsite } from './lib/apkWebsiteAccess';
+import { isWebsiteBrowser } from './lib/installContext';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -246,7 +247,7 @@ export default function App() {
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [showDirectMessageModal, setShowDirectMessageModal] = useState(false);
   const [showDownloadPage, setShowDownloadPage] = useState(
-    () => !isNativeApp() && isDownloadRoute(),
+    () => isWebsiteBrowser() && isDownloadRoute(),
   );
   const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
     'reviews' | 'report' | 'staffReports' | null
@@ -274,7 +275,7 @@ export default function App() {
   }, [markAwardsSeen]);
 
   const handleOpenDownload = useCallback(() => {
-    if (isNativeApp()) return;
+    if (!isWebsiteBrowser()) return;
     setShowDownloadPage(true);
     try {
       window.history.pushState(window.history.state, '', downloadPagePath());
@@ -721,7 +722,7 @@ export default function App() {
     } else if (publicDest === 'gofundme') {
       setShowGoFundMeDetail(true);
       setLegalPanel(null);
-    } else if (publicDest === 'download' && !isNativeApp()) {
+    } else if (publicDest === 'download' && isWebsiteBrowser()) {
       setShowDownloadPage(true);
       try {
         window.history.replaceState(window.history.state, '', downloadPagePath());
@@ -764,7 +765,7 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const syncDownloadRoute = () => {
-      if (isNativeApp()) {
+      if (!isWebsiteBrowser()) {
         setShowDownloadPage(false);
         return;
       }
@@ -2289,7 +2290,7 @@ export default function App() {
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {sessionUser ? <NewspaperPreviewBanner /> : null}
       {sessionUser ? <NewspaperEditionBar /> : null}
-      {showDownloadPage && sessionUser && !isNativeApp() ? (
+      {showDownloadPage && sessionUser && isWebsiteBrowser() ? (
         <DownloadPage
           userProfile={userProfile}
           onBack={() => {

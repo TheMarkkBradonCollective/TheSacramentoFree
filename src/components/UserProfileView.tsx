@@ -62,8 +62,7 @@ import { openStaffApplyPanel } from '../lib/staffApplyOpen';
 import { useInstallVersions } from '../hooks/useInstallVersions';
 import { apkWebsiteAccessMessage, canDownloadApkFromWebsite } from '../lib/apkWebsiteAccess';
 import { SITE } from '../siteContent';
-import { detectInstallKind } from '../lib/installContext';
-import { isNativeApp } from '../lib/nativePlatform';
+import { detectInstallKind, isWebsiteBrowser } from '../lib/installContext';
 import TrackedDownloadLink from './TrackedDownloadLink';
 
 interface UserProfileViewProps {
@@ -142,7 +141,7 @@ export default function UserProfileView({
 
   const openDownloadPage = (event?: React.MouseEvent) => {
     event?.preventDefault();
-    if (isNativeApp()) return;
+    if (!isWebsiteBrowser()) return;
     if (onOpenDownload) {
       onOpenDownload();
       return;
@@ -666,7 +665,7 @@ export default function UserProfileView({
                 <span>Get it from Play Store</span>
               </a>
 
-              {!isNativeApp() ? (
+              {isWebsiteBrowser() ? (
                 <button
                   type="button"
                   onClick={openDownloadPage}

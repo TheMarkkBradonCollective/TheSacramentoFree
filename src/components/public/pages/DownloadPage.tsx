@@ -14,6 +14,7 @@ import {
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
 import TrackedDownloadLink from '../../TrackedDownloadLink';
+import AppScreenshotTour from '../AppScreenshotTour';
 import { useInstallVersions, type VersionStatus } from '../../../hooks/useInstallVersions';
 import { apkWebsiteAccessMessage } from '../../../lib/apkWebsiteAccess';
 import { isWebsiteBrowser } from '../../../lib/installContext';
@@ -126,6 +127,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
     apkStatus === 'not-installed' &&
     (installKind === 'browser' || usingHomeScreen);
   const apkAccessMessage = !isPublicDownloadPage ? apkWebsiteAccessMessage(userProfile) : '';
+  const showWebsiteShowcase = isWebsiteBrowser();
 
   const shell = onBack ? (
     <div className="sbn-download-in-app min-h-screen min-h-[100dvh] overflow-y-auto overflow-x-hidden bg-app text-app">
@@ -139,7 +141,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <p>
             {newspaper
               ? `Take ${NEWSPAPER.name} with you — Google Play on Android or add to your home screen.`
-              : 'Install options for Google Play, home screen, or (for early joiners) APK sideload. Screenshot walkthrough lives on the home page when you visit on desktop.'}
+              : 'See the screenshots below, then pick Google Play, home screen, or (for early joiners) APK sideload.'}
           </p>
         </header>
         <div className="space-y-4 min-w-0">{renderBody()}</div>
@@ -151,7 +153,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
       subtitle={
         newspaper
           ? `Take ${NEWSPAPER.name} with you — Google Play on Android or add to your home screen.`
-          : 'Install Google Play or add to your home screen. Full screenshot tour is on the home page (desktop).'
+          : 'See the app screenshots below, then install from Google Play or add to your home screen.'
       }
       className="min-w-0 overflow-x-hidden"
     >
@@ -191,17 +193,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         ) : null}
 
-        {isPublicDownloadPage && isWebsiteBrowser() ? (
-          <PublicCard>
-            <p className="text-xs text-muted leading-relaxed">
-              Want the full app walkthrough with screenshots? Open the{' '}
-              <a href="/" className="font-bold text-accent hover:underline">
-                home page on a desktop browser
-              </a>{' '}
-              — furniture, electronics, baby gear, Go Get pickup, and more.
-            </p>
-          </PublicCard>
-        ) : null}
+        {showWebsiteShowcase ? <AppScreenshotTour scrollToInstallId="download_install" /> : null}
 
         <div id="download_install" className="space-y-4 scroll-mt-8">
         {!isPublicDownloadPage ? (
@@ -438,7 +430,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <h2 className="text-sm font-black text-app mb-1">Which should you use?</h2>
           <p className="text-xs text-muted mb-4 leading-relaxed">
             {isPublicDownloadPage
-              ? 'Home screen is the website as an icon. Google Play adds live Go Get pickup on Android. See the desktop home page for the full screenshot tour.'
+              ? 'Home screen is the website as an icon. Google Play adds live Go Get pickup on Android.'
               : usingHomeScreen
                 ? 'You are on the home screen app — it updates when you reopen. Google Play / APK add live Go Get pickup on Android.'
                 : 'Home screen is the website as an icon. Google Play / APK add live Go Get pickup. Free APK sideload in Account is only for our first 500 neighbors.'}

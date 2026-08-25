@@ -4,6 +4,7 @@ import ThemeToggle from '../ThemeToggle';
 import BrandLogo from '../BrandLogo';
 import { PUBLIC_NAV, type PublicRoute } from '../../public/routes';
 import { isNativeApp } from '../../lib/nativePlatform';
+import { isWebsiteBrowser } from '../../lib/installContext';
 import { useNewspaperSkin } from '../../preview/NewspaperSkinContext';
 
 interface PublicNavProps {
@@ -51,9 +52,12 @@ function useDropdownMenu(onClose: () => void) {
 }
 
 export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false }: PublicNavProps) {
-  // Already inside the installed app — advertising the download is redundant.
+  // Installed app (APK) or home-screen PWA — install lives in Account settings, not nav.
   const COMMUNITY_LINKS = useMemo(
-    () => (isNativeApp() ? ALL_COMMUNITY_LINKS.filter((l) => l.route !== 'download') : ALL_COMMUNITY_LINKS),
+    () =>
+      isNativeApp() || !isWebsiteBrowser()
+        ? ALL_COMMUNITY_LINKS.filter((l) => l.route !== 'download')
+        : ALL_COMMUNITY_LINKS,
     [],
   );
   const { enabled: newspaper } = useNewspaperSkin();
