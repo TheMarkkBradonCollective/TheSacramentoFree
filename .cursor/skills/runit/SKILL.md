@@ -79,7 +79,8 @@ Example: `https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0
 | Upload file | `public/downloads/sac-buy-nothing-beta-v{versionName}.{build}.aab` |
 | Public AAB URL | `https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v{versionName}.{build}.aab` |
 | Release notes | `play-store-assets/release-notes-v{versionName}-{build}.txt` |
-| Path | Testing → Internal testing → Create release |
+| Path | Testing → Closed testing → Create release |
+| Closed testing opt-in | `https://play.google.com/apps/testing/org.sacramentobuynothing.app` |
 
 Full guide: `docs/play-store-upload.md`
 
