@@ -687,6 +687,7 @@ html.sbn-session-restore #root:empty {
   position: relative;
   width: 3.25rem;
   height: 3.25rem;
+  will-change: transform;
 }
 
 #map_navigation_view .sbn-nav-user-puck-glow {

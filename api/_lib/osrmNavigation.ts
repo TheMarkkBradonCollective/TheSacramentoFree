@@ -1,6 +1,7 @@
-import type { LatLng } from './osrmRoute';
+import type { LatLng, OsrmTravelMode } from './osrmRoute';
+import { buildOsrmRouteUrl, OSRM_MIRROR_ENDPOINTS } from './osrmProfile';
 
-export type OsrmTravelMode = 'driving' | 'walking' | 'cycling';
+export type { OsrmTravelMode };
 
 export interface NavigationLanePayload {
   indications: string[];
@@ -27,11 +28,6 @@ export interface NavigationRoutePayload {
   travelMode: OsrmTravelMode;
 }
 
-const OSRM_PROFILE_ENDPOINTS: Record<OsrmTravelMode, readonly string[]> = {
-  driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
-  cycling: ['https://routing.openstreetmap.de/routed-bike'],
-  walking: ['https://routing.openstreetmap.de/routed-foot'],
-};
 
 export function parseTravelMode(value: unknown): OsrmTravelMode {
   if (value === 'walking' || value === 'foot') return 'walking';
@@ -182,14 +178,14 @@ export async function fetchOsrmNavigationRoute(
   travelMode: OsrmTravelMode = 'driving',
 ): Promise<NavigationRoutePayload | null> {
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
-  const endpoints = OSRM_PROFILE_ENDPOINTS[travelMode];
+  const endpoints = OSRM_MIRROR_ENDPOINTS[travelMode];
 
   for (const base of endpoints) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 14_000);
 
     try {
-      const url = `${base}/route/v1/driving/${coordPath}?overview=full&geometries=geojson&steps=true&annotations=false`;
+      const url = buildOsrmRouteUrl(base, coordPath, travelMode, true);
       const res = await fetch(url, {
         signal: controller.signal,
         headers: { Accept: 'application/json' },
