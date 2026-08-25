@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BarChart3, Camera, ImagePlus, Loader2, Send, X } from 'lucide-react';
-import type { UserProfile } from '../../types';
+import type { FeedPost, UserProfile } from '../../types';
 import { isLikelyImageFile, INVALID_IMAGE_FILE_MESSAGE } from '../../lib/imageUrl';
 import { PresenceUserAvatar } from '../UserAvatar';
 
@@ -8,8 +8,10 @@ interface FeedPostComposerProps {
   userProfile: UserProfile;
   creating?: boolean;
   canCreatePoll?: boolean;
+  editingPost?: FeedPost | null;
   onPublish: (input: { text: string; imageFiles: File[] }) => Promise<boolean>;
   onPublishPoll?: (input: { text: string; options: string[] }) => Promise<boolean>;
+  onUpdate?: (input: { text: string; imageFiles: File[]; keepImageUrls: string[] }) => Promise<boolean>;
   onCancel?: () => void;
 }
 
@@ -17,34 +19,55 @@ export default function FeedPostComposer({
   userProfile,
   creating = false,
   canCreatePoll = false,
+  editingPost = null,
   onPublish,
   onPublishPoll,
+  onUpdate,
   onCancel,
 }: FeedPostComposerProps) {
+  const isEditing = Boolean(editingPost);
   const [mode, setMode] = useState<'post' | 'poll'>('post');
-  const [text, setText] = useState('');
+  const [text, setText] = useState(editingPost?.text ?? '');
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>(editingPost?.imageUrls ?? []);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [err, setErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editingPost) return;
+    setMode('post');
+    setText(editingPost.text);
+    setExistingImageUrls(editingPost.imageUrls);
+    setFiles([]);
+    setPreviews((prev) => {
+      prev.forEach((url) => {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+      return [];
+    });
+    setPollOptions(['', '']);
+    setErr('');
+  }, [editingPost?.id]);
 
   const addFiles = (incoming: FileList | null) => {
     if (!incoming?.length) return;
     const next: File[] = [];
     const nextPreviews: string[] = [];
+    const totalImages = existingImageUrls.length + files.length;
     for (const file of Array.from(incoming)) {
       if (!isLikelyImageFile(file)) {
         setErr(INVALID_IMAGE_FILE_MESSAGE);
         continue;
       }
-      if (files.length + next.length >= 4) break;
+      if (totalImages + next.length >= 4) break;
       next.push(file);
       nextPreviews.push(URL.createObjectURL(file));
     }
     if (next.length) {
-      setFiles((prev) => [...prev, ...next].slice(0, 4));
-      setPreviews((prev) => [...prev, ...nextPreviews].slice(0, 4));
+      setFiles((prev) => [...prev, ...next].slice(0, 4 - existingImageUrls.length));
+      setPreviews((prev) => [...prev, ...nextPreviews].slice(0, 4 - existingImageUrls.length));
       setErr('');
     }
     if (fileRef.current) fileRef.current.value = '';
@@ -59,17 +82,27 @@ export default function FeedPostComposer({
     });
   };
 
+  const removeExistingImage = (index: number) => {
+    setExistingImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const resetComposer = () => {
     setText('');
     setFiles([]);
     previews.forEach((url) => URL.revokeObjectURL(url));
     setPreviews([]);
+    setExistingImageUrls([]);
     setPollOptions(['', '']);
     setErr('');
   };
 
   const handleSubmit = async () => {
     setErr('');
+    if (isEditing && editingPost && onUpdate) {
+      const ok = await onUpdate({ text, imageFiles: files, keepImageUrls: existingImageUrls });
+      if (ok) resetComposer();
+      return;
+    }
     if (mode === 'poll') {
       if (!onPublishPoll) return;
       const options = pollOptions.map((option) => option.trim()).filter(Boolean);
@@ -82,15 +115,15 @@ export default function FeedPostComposer({
   };
 
   const pollReady = text.trim().length > 0 && pollOptions.filter((option) => option.trim()).length >= 2;
-  const postReady = text.trim().length > 0 || files.length > 0;
+  const postReady = text.trim().length > 0 || files.length > 0 || existingImageUrls.length > 0;
 
   return (
     <section className="item-feed-card sbn-feed-composer p-3 sm:p-4 space-y-3 min-w-0 overflow-hidden" id="feed_post_composer">
       <div className="flex items-center gap-2">
         <span className="sbn-badge sbn-badge-give text-[8px] px-1 py-0 leading-none whitespace-nowrap">
-          {mode === 'poll' ? 'Poll' : 'Post'}
+          {isEditing ? 'Edit' : mode === 'poll' ? 'Poll' : 'Post'}
         </span>
-        {canCreatePoll ? (
+        {canCreatePoll && !isEditing ? (
           <div className="inline-flex rounded-xl border border-app overflow-hidden">
             <button
               type="button"
@@ -130,7 +163,7 @@ export default function FeedPostComposer({
             className="sbn-input w-full min-w-0 text-sm resize-none min-h-[4.5rem]"
             id="feed_compose_text"
           />
-          {mode === 'poll' ? (
+          {mode === 'poll' && !isEditing ? (
             <div className="space-y-2">
               {pollOptions.map((option, index) => (
                 <input
@@ -154,8 +187,23 @@ export default function FeedPostComposer({
               ) : null}
             </div>
           ) : null}
-          {mode === 'post' && previews.length > 0 && (
+          {mode === 'post' && (existingImageUrls.length > 0 || previews.length > 0) && (
             <div className="flex flex-wrap gap-2">
+              {existingImageUrls.map((src, index) => (
+                <div key={src} className="relative">
+                  <img src={src} alt="" className="h-20 w-20 rounded-xl object-cover border border-app" />
+                  {isEditing ? (
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(index)}
+                      className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-surface border border-app text-muted hover:text-app"
+                      aria-label="Remove photo"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+              ))}
               {previews.map((src, index) => (
                 <div key={src} className="relative">
                   <img src={src} alt="" className="h-20 w-20 rounded-xl object-cover border border-app" />
@@ -196,7 +244,8 @@ export default function FeedPostComposer({
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl border border-app bg-inset text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:border-accent/40 shrink-0"
+                    disabled={existingImageUrls.length + files.length >= 4}
+                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl border border-app bg-inset text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:border-accent/40 shrink-0 disabled:opacity-50"
                   >
                     <ImagePlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Photo
@@ -204,7 +253,8 @@ export default function FeedPostComposer({
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl border border-app bg-inset text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:border-accent/40 shrink-0 sm:hidden"
+                    disabled={existingImageUrls.length + files.length >= 4}
+                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl border border-app bg-inset text-[11px] sm:text-xs font-bold text-muted hover:text-app hover:border-accent/40 shrink-0 sm:hidden disabled:opacity-50"
                   >
                     <Camera className="w-3.5 h-3.5" />
                     Camera
@@ -220,7 +270,7 @@ export default function FeedPostComposer({
               id="feed_compose_submit"
             >
               {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {mode === 'poll' ? 'Post poll' : 'Post'}
+              {isEditing ? 'Save' : mode === 'poll' ? 'Post poll' : 'Post'}
             </button>
           </div>
         </div>

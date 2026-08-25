@@ -80,10 +80,11 @@ export default function FeedView({
 }: FeedViewProps) {
   const sharedPostsApi = useFeedPostsApi();
   const localPostsApi = useFeedPosts(userProfile, { enabled: !sharedPostsApi });
-  const { posts, loading, creating, publishPost, publishPoll, removePost } = sharedPostsApi ?? localPostsApi;
+  const { posts, loading, creating, publishPost, publishPoll, removePost, editPost } = sharedPostsApi ?? localPostsApi;
   const canCreatePoll = isStaffRole(userProfile.role);
   const { friendIds, loading: friendsLoading } = useFriendIds(userProfile.uid);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<FeedPost | null>(null);
   const [contentFilter, setContentFilter] = useState<FeedContentFilter>(
     () => resolveFeedDisplayFilters(userProfile).contentFilter,
   );
@@ -165,7 +166,10 @@ export default function FeedView({
             <button
               type="button"
               id="feed_new_post_btn"
-              onClick={() => setComposerOpen((open) => !open)}
+              onClick={() => {
+                setEditingPost(null);
+                setComposerOpen((open) => !open);
+              }}
               className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2 py-1.5 sm:px-2.5 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
                 composerOpen
                   ? 'border-accent bg-accent text-on-accent'
@@ -224,21 +228,43 @@ export default function FeedView({
           userProfile={userProfile}
           creating={creating}
           canCreatePoll={canCreatePoll}
+          editingPost={editingPost}
           onPublish={async (input) => {
             const ok = await publishPost(input);
-            if (ok) setComposerOpen(false);
+            if (ok) {
+              setComposerOpen(false);
+              setEditingPost(null);
+            }
             return ok;
           }}
           onPublishPoll={
             canCreatePoll
               ? async (input) => {
                   const ok = await publishPoll(input);
-                  if (ok) setComposerOpen(false);
+                  if (ok) {
+                    setComposerOpen(false);
+                    setEditingPost(null);
+                  }
                   return ok;
                 }
               : undefined
           }
-          onCancel={() => setComposerOpen(false)}
+          onUpdate={
+            editingPost
+              ? async (input) => {
+                  const ok = await editPost(editingPost, input);
+                  if (ok) {
+                    setComposerOpen(false);
+                    setEditingPost(null);
+                  }
+                  return ok;
+                }
+              : undefined
+          }
+          onCancel={() => {
+            setComposerOpen(false);
+            setEditingPost(null);
+          }}
         />
       )}
 
@@ -287,6 +313,10 @@ export default function FeedView({
                 engagement={engagement}
                 onViewPost={onViewFeedPost}
                 onViewProfile={onViewProfile}
+                onEditPost={(target) => {
+                  setEditingPost(target);
+                  setComposerOpen(true);
+                }}
                 onDeletePost={removePost}
               />
             </Fragment>
