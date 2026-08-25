@@ -1,0 +1,8 @@
+Android beta 0.2.0 (56)
+
+• Go Get pickup coordination — ring, schedule, and Meet or trade handoffs
+• Smarter notifications — priorities, dedup, quiet hours, and listing views
+• Smoother GPS navigation with live heading for Go Get and map routes
+• Feed and listing engagement — view counts, event votes, chat read receipts
+• Staff neighbor chat tools restored for coordination threads
+• Closed testing opt-in: https://play.google.com/apps/testing/org.sacramentobuynothing.app
