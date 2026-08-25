@@ -17,9 +17,9 @@ function rankLabel(rank: number): string {
 }
 
 function rankAccent(rank: number): string {
-  if (rank === 1) return 'border-amber-400/50 bg-gradient-to-r from-amber-500/10 to-accent-soft/20';
+  if (rank === 1) return 'border-accent/50 bg-gradient-to-r from-accent/10 to-accent-soft/20';
   if (rank === 2) return 'border-slate-300/40 bg-gradient-to-r from-slate-400/10 to-inset/40';
-  if (rank === 3) return 'border-orange-400/35 bg-gradient-to-r from-orange-500/10 to-inset/30';
+  if (rank === 3) return 'border-accent/35 bg-gradient-to-r from-accent/10 to-inset/30';
   return 'border-app bg-surface';
 }
 

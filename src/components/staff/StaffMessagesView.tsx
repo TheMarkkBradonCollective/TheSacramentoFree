@@ -305,7 +305,7 @@ export default function StaffMessagesView({
                         className="min-w-0 flex-1 text-left"
                       >
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${report.status === 'new' ? 'bg-amber-500/15 text-amber-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${report.status === 'new' ? 'bg-accent/15 text-accent' : 'bg-zinc-500/15 text-zinc-400'}`}>
                             {report.status === 'new' ? 'New' : 'Reviewed'}
                           </span>
                           <span className="text-xs font-semibold text-app">{report.subject || 'User report'}</span>
@@ -648,10 +648,10 @@ export default function StaffMessagesView({
                   </div>
                 </button>
               </div>
-              <div className="mt-4 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+              <div className="mt-4 p-3 bg-accent/5 border border-accent/20 rounded-xl">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-400 leading-relaxed">
+                  <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                  <p className="text-xs text-accent leading-relaxed">
                     <strong>Staff oversight:</strong> Use the DMs tab to review neighbor direct messages and listing-linked chats.
                     Open any thread in Chats to respond or moderate when needed.
                   </p>

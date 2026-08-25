@@ -1,21 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FeedPost } from '../types';
-import { createFeedPost, deleteFeedPost, getFeedPosts, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted } from '../lib/feedApi';
+import { createFeedPost, createFeedPollPost, deleteFeedPost, getFeedPosts, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted } from '../lib/feedApi';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { patchDenormalizedAuthorFields } from '../lib/profilePersistence';
 import type { UserProfile } from '../types';
 import { isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmDeleteFeedPost } from '../lib/destructiveConfirm';
+import { isPlayStoreDemo, PLAY_STORE_DEMO_FEED_POSTS } from '../preview/playStoreDemo';
 
 export function useFeedPosts(userProfile: UserProfile | null) {
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<FeedPost[]>(() => (isPlayStoreDemo() ? PLAY_STORE_DEMO_FEED_POSTS : []));
+  const [loading, setLoading] = useState(() => !isPlayStoreDemo());
   const [creating, setCreating] = useState(false);
   const { confirm, alert } = useConfirm();
   const isStaff = userProfile ? isStaffRole(userProfile.role) : false;
 
   const reload = useCallback(async () => {
+    if (isPlayStoreDemo()) {
+      setPosts(PLAY_STORE_DEMO_FEED_POSTS);
+      setLoading(false);
+      return;
+    }
     const data = await getFeedPosts(80);
     setPosts(data);
     setLoading(false);
@@ -26,6 +32,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
   }, [reload]);
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     return subscribePostgresChanges<FeedPost>(
       { channelName: 'live-feed-posts', table: 'feed_posts', event: '*' },
       () => {
@@ -45,7 +52,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
   }, []);
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (!userProfile || isPlayStoreDemo()) return;
 
     return subscribePostgresChanges(
       { channelName: 'live-feed-author-photos', table: 'users', event: 'UPDATE' },
@@ -87,6 +94,22 @@ export function useFeedPosts(userProfile: UserProfile | null) {
     [userProfile, alert],
   );
 
+  const publishPoll = useCallback(
+    async (input: { text: string; options: string[] }) => {
+      if (!userProfile) return false;
+      setCreating(true);
+      const result = await createFeedPollPost(userProfile, input);
+      setCreating(false);
+      if (!result.ok || !result.post) {
+        await alert({ title: 'Could not post poll', message: result.errorMessage || 'Try again.' });
+        return false;
+      }
+      setPosts((prev) => [result.post!, ...prev.filter((p) => p.id !== result.post!.id)]);
+      return true;
+    },
+    [userProfile, alert],
+  );
+
   const removePost = useCallback(
     async (post: FeedPost) => {
       if (!userProfile) return false;
@@ -104,5 +127,5 @@ export function useFeedPosts(userProfile: UserProfile | null) {
     [userProfile, isStaff, confirm, alert],
   );
 
-  return { posts, loading, creating, publishPost, removePost, reload };
+  return { posts, loading, creating, publishPost, publishPoll, removePost, reload };
 }

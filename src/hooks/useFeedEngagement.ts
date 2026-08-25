@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FeedPostComment, FeedPostReaction, UserProfile } from '../types';
 import {
+  aggregateFeedPollVotes,
   aggregateFeedReactions,
   createFeedPostComment,
   deleteFeedPostComment,
+  getFeedPollVotes,
   getFeedPostComments,
   getFeedPostReactions,
+  setFeedPollVote,
   toggleFeedPostReaction,
 } from '../lib/feedApi';
 import { subscribePostgresChanges, debounceRealtime } from '../lib/supabaseRealtime';
@@ -14,6 +17,11 @@ import type { FeedReactionEmoji } from '../lib/feedReactions';
 import { isStaffRole } from '../lib/roles';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmRemoveFeedComment } from '../lib/destructiveConfirm';
+import {
+  isPlayStoreDemo,
+  PLAY_STORE_DEMO_FEED_COMMENTS,
+  PLAY_STORE_DEMO_FEED_REACTIONS,
+} from '../preview/playStoreDemo';
 
 export function useFeedEngagement(
   postIds: string[],
@@ -24,8 +32,18 @@ export function useFeedEngagement(
   const isStaff = userProfile ? isStaffRole(userProfile.role) : false;
   const { confirm, alert } = useConfirm();
 
-  const [commentsByPost, setCommentsByPost] = useState<Record<string, FeedPostComment[]>>({});
-  const [reactionsByPost, setReactionsByPost] = useState<Record<string, FeedPostReaction[]>>({});
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, FeedPostComment[]>>(
+    () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_FEED_COMMENTS : {}),
+  );
+  const [reactionsByPost, setReactionsByPost] = useState<Record<string, FeedPostReaction[]>>(() => {
+    if (!isPlayStoreDemo()) return {};
+    const next: Record<string, FeedPostReaction[]> = {};
+    for (const row of PLAY_STORE_DEMO_FEED_REACTIONS) {
+      (next[row.postId] ??= []).push(row);
+    }
+    return next;
+  });
+  const [pollVotes, setPollVotes] = useState<import('../types').FeedPollVote[]>([]);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
 
   const postIdSetRef = useRef(new Set<string>());
@@ -42,6 +60,11 @@ export function useFeedEngagement(
     [reactionsByPost, uid],
   );
 
+  const getPollState = useCallback(
+    (postId: string) => aggregateFeedPollVotes(pollVotes, postId, uid),
+    [pollVotes, uid],
+  );
+
   useEffect(() => {
     postIdSetRef.current = new Set(postIds);
   }, [postIds.join('|')]);
@@ -51,9 +74,10 @@ export function useFeedEngagement(
       if (ids.length === 0) return;
       const tracked = ids.filter((id) => postIdSetRef.current.has(id));
       if (tracked.length === 0) return;
-      const [comments, reactions] = await Promise.all([
+      const [comments, reactions, pollVoteRows] = await Promise.all([
         getFeedPostComments(tracked),
         getFeedPostReactions(tracked),
+        getFeedPollVotes(tracked),
       ]);
 
       setCommentsByPost((prev) => {
@@ -71,21 +95,29 @@ export function useFeedEngagement(
         }
         return next;
       });
+
+      setPollVotes((prev) => {
+        const trackedSet = new Set(tracked);
+        const kept = prev.filter((vote) => !trackedSet.has(vote.postId));
+        return [...kept, ...pollVoteRows];
+      });
     }, 150),
     [],
   );
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     if (postIds.length === 0) {
       setCommentsByPost({});
       setReactionsByPost({});
+      setPollVotes([]);
       return;
     }
     void reload(postIds);
   }, [postIds.join('|'), reload]);
 
   useEffect(() => {
-    if (postIds.length === 0) return;
+    if (isPlayStoreDemo() || postIds.length === 0) return;
 
     const unsubComments = subscribePostgresChanges<FeedPostComment>(
       { channelName: 'live-feed-comments', table: 'feed_post_comments', event: '*' },
@@ -106,9 +138,20 @@ export function useFeedEngagement(
       },
     );
 
+    const unsubPollVotes = subscribePostgresChanges<{ postId: string; userId: string; optionId: string }>(
+      { channelName: 'live-feed-poll-votes', table: 'feed_poll_votes', event: '*' },
+      (payload) => {
+        const row = (payload.new || payload.old) as { postId?: string } | null;
+        if (!row?.postId || !postIdSetRef.current.has(row.postId)) return;
+        if (payload.eventType === 'INSERT' && (payload.new as { userId?: string } | null)?.userId === uid) return;
+        void reload([row.postId]);
+      },
+    );
+
     return () => {
       unsubComments();
       unsubReactions();
+      unsubPollVotes();
     };
   }, [postIds.join('|'), uid, reload]);
 
@@ -170,9 +213,24 @@ export function useFeedEngagement(
     [votesApi],
   );
 
+  const handlePollVote = useCallback(
+    async (postId: string, optionId: string, authorId: string) => {
+      if (!uid || authorId === uid) return false;
+      const result = await setFeedPollVote(postId, uid, optionId);
+      if (!result.ok) {
+        await alert({ title: 'Could not vote', message: result.errorMessage || 'Try again.' });
+        return false;
+      }
+      void reload([postId]);
+      return true;
+    },
+    [uid, reload, alert],
+  );
+
   return {
     getComments,
     getReactionState,
+    getPollState,
     getVoteState: votesApi.getVoteState,
     expandedComments,
     toggleComments,
@@ -180,6 +238,7 @@ export function useFeedEngagement(
     removeComment,
     toggleReaction,
     handleVote,
+    handlePollVote,
     votesLoading: votesApi.loading,
   };
 }

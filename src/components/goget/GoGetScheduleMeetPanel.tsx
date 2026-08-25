@@ -65,7 +65,7 @@ export default function GoGetScheduleMeetPanel({
       </div>
 
       {slots.length === 0 ? (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-accent">
           No shared pickup hours in the next week. Message {posterName} or try again later.
         </p>
       ) : (

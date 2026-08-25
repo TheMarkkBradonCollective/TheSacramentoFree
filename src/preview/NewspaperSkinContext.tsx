@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { isNativeApp } from '../lib/nativePlatform';
 import { NEWSPAPER, isNewspaperProductionHost } from './newspaperBrand';
+import { isPlayStoreDemo } from './playStoreDemo';
 
-const STORAGE_KEY = 'sbn_newspaper_look';
+const STORAGE_KEY = 'sbn_newspaper_look_v2';
 export const NEWSPAPER_CLASS = 'newspaper-preview';
-const ORIGINAL_DOCUMENT_TITLE = 'SacramentoBuyNothing — Local Gifting';
+const ORIGINAL_DOCUMENT_TITLE = 'TheSacramentoFree — Give freely. Ask kindly.';
 
 interface NewspaperSkinContextValue {
   enabled: boolean;
@@ -26,15 +27,15 @@ function readSkinFromLocation(): boolean | null {
 }
 
 function defaultNewspaperEnabled(): boolean {
-  // 0.2.0 (50) is The Sacramento Free, including production.
-  // Escape hatch: ?skin=original (handled in readEnabled).
-  return true;
+  // Original Sacramento Buy Nothing layout is the default again.
+  // Escape hatch: ?skin=newspaper (handled in readEnabled).
+  return false;
 }
 
 function readEnabled(): boolean {
   const fromUrl = readSkinFromLocation();
   if (fromUrl !== null) return fromUrl;
-  if (typeof window === 'undefined') return true;
+  if (typeof window === 'undefined') return false;
   const stored = sessionStorage.getItem(STORAGE_KEY);
   if (stored === '0') return false;
   if (stored === '1') return true;
@@ -116,9 +117,9 @@ export function isNewspaperSkinActive(): boolean {
   return document.documentElement.classList.contains(NEWSPAPER_CLASS);
 }
 
-export function shouldShowNewspaperPreviewBanner(enabled: boolean): boolean {
+export function shouldShowNewspaperPreviewBanner(_enabled: boolean): boolean {
   if (typeof window === 'undefined') return false;
-  // No preview chrome on the live domain (this is the look) or in native.
-  if (isNewspaperProductionHost() || isNativeApp()) return false;
+  // No preview chrome on the live domain (this is the look), in native, or in Play Store captures.
+  if (isNewspaperProductionHost() || isNativeApp() || isPlayStoreDemo()) return false;
   return true;
 }

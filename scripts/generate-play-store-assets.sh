@@ -5,13 +5,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 OUT_DIR="$ROOT_DIR/play-store-assets"
-LOGO="$ROOT_DIR/assets/icon-fullbleed.png"
-FEATURE_LOGO="$ROOT_DIR/public/TheSacramentoFree.png"
+APP_ICON="$ROOT_DIR/public/app-icon.png"
+FEATURE_LOGO="$APP_ICON"
 
 mkdir -p "$OUT_DIR"
 
-if [[ ! -f "$FEATURE_LOGO" ]]; then
-  echo "Missing logo at $FEATURE_LOGO"
+if [[ ! -f "$APP_ICON" ]]; then
+  echo "Missing app icon at $APP_ICON"
   exit 1
 fi
 
@@ -20,13 +20,8 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
   exit 1
 fi
 
-node "$ROOT_DIR/scripts/generate-android-assets.mjs" --prepare-only
-
-# Google Play: 512×512 app icon (32-bit PNG, full-bleed — no white corners).
-ffmpeg -y -loglevel error -i "$LOGO" \
-  -frames:v 1 \
-  -vf "scale=512:512:flags=lanczos" \
-  "$OUT_DIR/icon-512.png"
+# Google Play: 512×512 store icon — same green rounded-square as the app and website.
+node "$ROOT_DIR/scripts/generate-play-store-icon.mjs" "$APP_ICON" "$OUT_DIR/icon-512.png"
 
 # Google Play: 1024×500 feature graphic (logo + name + tagline).
 FONT_BOLD="${PLAY_STORE_FONT_BOLD:-/usr/share/fonts/truetype/macos/Inter-Bold.ttf}"

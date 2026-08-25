@@ -7,12 +7,18 @@ import {
   upsertSupabaseAppReview,
 } from '../supabase';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 
 export function useAppReviews(userProfile?: UserProfile | null, blockedUserIds: Set<string> = new Set()) {
   const [reviews, setReviews] = useState<AppReview[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !isPlayStoreDemo());
 
   const reload = useCallback(async () => {
+    if (isPlayStoreDemo()) {
+      setReviews([]);
+      setLoading(false);
+      return;
+    }
     const data = await getSupabaseAppReviews(100);
     setReviews(data);
     setLoading(false);
@@ -23,6 +29,7 @@ export function useAppReviews(userProfile?: UserProfile | null, blockedUserIds: 
   }, [reload]);
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     return subscribePostgresChanges<AppReview>(
       { channelName: 'live-app-reviews', table: 'app_reviews', event: '*' },
       () => {

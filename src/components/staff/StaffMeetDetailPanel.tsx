@@ -81,10 +81,10 @@ function buildTimeline(session: GoGetSession): TimelineEvent[] {
     });
   }
   if (session.status === 'disputed') {
-    events.push({ label: 'Disputed — under review', time: session.updatedAt, icon: AlertTriangle, color: 'text-amber-400' });
+    events.push({ label: 'Disputed — under review', time: session.updatedAt, icon: AlertTriangle, color: 'text-accent' });
   }
   if (session.status === 'expired') {
-    events.push({ label: 'Session expired', time: session.updatedAt, icon: XCircle, color: 'text-orange-400' });
+    events.push({ label: 'Session expired', time: session.updatedAt, icon: XCircle, color: 'text-accent' });
   }
 
   return events.sort((a, b) => {
@@ -277,7 +277,7 @@ export default function StaffMeetDetailPanel({
 
     // Destination pin
     const destIcon = L.divIcon({
-      html: `<div style="width:18px;height:18px;background:#f97316;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>`,
+      html: `<div style="width:18px;height:18px;background:#00845A;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>`,
       iconSize: [18, 18], iconAnchor: [9, 9], className: '',
     });
     destMarkerRef.current = L.marker([session.destinationLat, session.destinationLng], { icon: destIcon })
@@ -475,7 +475,7 @@ export default function StaffMeetDetailPanel({
                   Expire session
                 </button>
                 {['active', 'arrived'].includes(session.status) && (
-                  <button type="button" disabled={busy} onClick={() => setReasonAction('dispute')} className="sbn-btn sbn-btn-sm bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <button type="button" disabled={busy} onClick={() => setReasonAction('dispute')} className="sbn-btn sbn-btn-sm bg-accent/10 text-accent border border-accent/20">
                     Mark disputed
                   </button>
                 )}
@@ -574,8 +574,8 @@ export default function StaffMeetDetailPanel({
               onClick={() => onViewProfile(session.fulfillerUserId)}
               className="flex items-center gap-2 p-3 rounded-xl bg-inset border border-app hover:border-accent/40 text-left transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-orange-500/15 flex items-center justify-center shrink-0">
-                <MapPin className="w-4 h-4 text-orange-400" />
+              <div className="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center shrink-0">
+                <MapPin className="w-4 h-4 text-accent" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-app truncate">{session.fulfillerName}</p>

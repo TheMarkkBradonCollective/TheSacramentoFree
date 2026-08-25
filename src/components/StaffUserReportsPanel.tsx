@@ -37,7 +37,7 @@ export default function StaffUserReportsPanel({ onClose, viewer }: StaffUserRepo
                   <span
                     className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
                       report.status === 'new'
-                        ? 'bg-amber-500/15 text-amber-500'
+                        ? 'bg-accent/15 text-accent'
                         : 'bg-muted/20 text-muted'
                     }`}
                   >

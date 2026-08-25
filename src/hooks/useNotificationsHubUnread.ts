@@ -13,6 +13,7 @@ import type { UserProfile } from '../types';
 import { receivesStaffNotifications } from '../lib/staffInteractionMode';
 import { isStaffApplyInviteSeen } from '../lib/staffApplyInvite';
 import { isStaffRole } from '../lib/roles';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 
 function countUnseenSince(
   rows: { updatedAt: string }[],
@@ -48,12 +49,12 @@ export function useNotificationsHubUnread(
   const [ready, setReady] = useState(false);
 
   const reload = useCallback(async () => {
-    if (!userId) {
+    if (!userId || isPlayStoreDemo()) {
       setUnreadNotifications(0);
       setSeededStaffApplyUnread(0);
       setUnreadAnnouncements(0);
       setUnreadUpdates(0);
-      setReady(false);
+      setReady(Boolean(userId) && isPlayStoreDemo());
       return;
     }
 
@@ -88,7 +89,7 @@ export function useNotificationsHubUnread(
   }, [reload]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || isPlayStoreDemo()) return;
 
     const refresh = debounceRealtime(() => {
       void reload();

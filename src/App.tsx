@@ -49,7 +49,9 @@ import {
 } from './supabase';
 import { confirmStaffEventOutreach, confirmStaffListingOutreach } from './lib/staffChatSafety';
 import { isStaffActingOfficial } from './lib/staffInteractionMode';
-import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
+import { APP_ICON_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
+import { NEWSPAPER } from './preview/newspaperBrand';
+import { isNewspaperSkinActive } from './preview/NewspaperSkinContext';
 import GoGetRingCoordinator from './components/goget/GoGetRingCoordinator';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
@@ -2866,14 +2868,18 @@ export default function App() {
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start space-x-3">
-              <img
-                src={APP_LOGO_SRC}
-                alt=""
-                className="w-10 h-10 rounded-lg object-contain shrink-0 mt-0.5 bg-surface border border-app"
-              />
+              {!isNewspaperSkinActive() ? (
+                <img
+                  src={APP_ICON_SRC}
+                  alt=""
+                  className="w-10 h-10 rounded-lg object-contain shrink-0 mt-0.5 bg-surface border border-app"
+                />
+              ) : null}
               <div className="min-w-0">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-accent">Download Mobile App</h4>
-                <p className="text-xs font-bold text-app mt-1">{SITE.name}</p>
+                <p className="text-xs font-bold text-app mt-1">
+                  {`${NEWSPAPER.the} ${NEWSPAPER.title}`}
+                </p>
                 <div className="text-[11px] text-muted mt-1.5 leading-relaxed font-semibold">
                   {isIOS ? (
                     <span>

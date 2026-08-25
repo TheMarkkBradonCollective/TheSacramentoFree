@@ -7,6 +7,8 @@ import { ConfirmProvider } from './contexts/ConfirmContext';
 import { NewspaperSkinProvider } from './preview/NewspaperSkinContext';
 import { NewspaperExperienceProvider } from './preview/NewspaperExperienceContext';
 import NewspaperExperienceLayer from './preview/NewspaperExperienceLayer';
+import PlayStoreDemoApp from './preview/PlayStoreDemoApp';
+import { isPlayStoreDemo } from './preview/playStoreDemo';
 import { initCapacitorApp } from './capacitor/init';
 import { recordInstalledWebVersion } from './lib/installContext';
 import { isNativeApp } from './lib/nativePlatform';
@@ -32,7 +34,7 @@ createRoot(document.getElementById('root')!).render(
         <NewspaperSkinProvider>
           <NewspaperExperienceProvider>
             <ConfirmProvider>
-              <App />
+              {isPlayStoreDemo() ? <PlayStoreDemoApp /> : <App />}
               <NewspaperExperienceLayer />
             </ConfirmProvider>
           </NewspaperExperienceProvider>

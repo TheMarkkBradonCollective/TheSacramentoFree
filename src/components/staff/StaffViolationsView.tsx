@@ -263,7 +263,7 @@ export default function StaffViolationsView({
                           </button>
                         </div>
                       ) : (
-                        <p className="text-xs text-amber-500 flex items-center gap-1.5">
+                        <p className="text-xs text-accent flex items-center gap-1.5">
                           <AlertTriangle className="w-3.5 h-3.5" />
                           Only a city administrator or higher can decide this appeal.
                         </p>

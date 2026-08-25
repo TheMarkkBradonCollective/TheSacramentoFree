@@ -41,7 +41,7 @@ export default function DirectorBroadcastTestModal({
               id="director_broadcast_title"
               className="font-display font-bold text-app flex items-center gap-2"
             >
-              <Megaphone className="w-4 h-4 text-amber-300" />
+              <Megaphone className="w-4 h-4 text-accent/80" />
               Broadcast
             </h4>
             <p className="text-xs text-muted mt-1 leading-snug">

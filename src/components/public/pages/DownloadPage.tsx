@@ -42,7 +42,7 @@ function StatusBadge({ status, optional = false }: { status: VersionStatus; opti
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
           optional
-            ? 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+            ? 'bg-accent/10 text-accent border-accent/25'
             : 'bg-accent/15 text-accent border-accent/30'
         }`}
       >
@@ -379,7 +379,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
             </dl>
 
             {webStatus === 'update-available' ? (
-              <p className="text-xs text-amber-500/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-4">
+              <p className="text-xs text-accent/90 bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 mb-4">
                 A newer version is live. Home screen apps usually pick this up automatically when you close and reopen
                 the app. You can also force a refresh now.
               </p>

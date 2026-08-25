@@ -28,6 +28,7 @@ import {
   communityChatTitle,
   communityChatSubtitle,
 } from '../lib/communityChats';
+import { isPlayStoreDemo, PLAY_STORE_DEMO_CHATS } from '../preview/playStoreDemo';
 import { canDeleteChatMessage, canDeleteDirectChat, canViewStaffReports, canViewStaffTicketInbox, isEventPostChatReadOnly, isListingPostChatReadOnly, isStaffRole } from '../lib/roles';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useStaffUserReports } from '../hooks/useStaffUserReports';
@@ -477,6 +478,17 @@ export default function ChatSystem({
     let active = true;
 
     const loadChats = async () => {
+      if (isPlayStoreDemo()) {
+        if (!active) return;
+        setChats(PLAY_STORE_DEMO_CHATS);
+        setIncomingRequests([]);
+        setIsChatsLoading(false);
+        if (initialSelectedChatId) {
+          const target = PLAY_STORE_DEMO_CHATS.find((c) => c.id === initialSelectedChatId);
+          if (target) setSelectedChat(target);
+        }
+        return;
+      }
       try {
         const [loadedChats, requests] = await Promise.all([
           getSupabaseChats(userProfile.uid, chatFetchOptions),
@@ -552,6 +564,11 @@ export default function ChatSystem({
     };
 
     loadChats();
+    if (isPlayStoreDemo()) {
+      return () => {
+        active = false;
+      };
+    }
 
     const refreshChats = debounceRealtime(() => {
       if (active) void loadChats();
@@ -1058,6 +1075,12 @@ export default function ChatSystem({
   };
 
   const reloadSupportTickets = useCallback(async () => {
+    if (isPlayStoreDemo()) {
+      setSupportTickets([]);
+      setSupportPreviews({});
+      setSupportTicketsLoading(false);
+      return;
+    }
     setSupportTicketsLoading(true);
     const rows = isStaffSupportInbox
       ? await getSupportTicketsForStaff(userProfile)
@@ -1073,6 +1096,7 @@ export default function ChatSystem({
   }, [reloadSupportTickets]);
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     const refresh = debounceRealtime(() => {
       void reloadSupportTickets();
     }, 150);
@@ -1886,7 +1910,7 @@ export default function ChatSystem({
                     </p>
                   )}
                   {staffActingOfficial && (linkedItem || linkedEvent) && !isCommunity && (
-                    <p className="text-[11px] text-amber-500/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-center leading-snug">
+                    <p className="text-[11px] text-accent/90 bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 text-center leading-snug">
                       Staff oversight — neighbor coordination chat. Use Staff chat on the listing or event for
                       official outreach; reply here only when needed for safety or moderation.
                     </p>

@@ -85,7 +85,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
             </div>
           )}
           {saveWarning && (
-            <div className="p-3 bg-amber-950/40 text-amber-300 text-xs font-semibold rounded-xl border border-amber-900/50">
+            <div className="p-3 bg-accent/20 text-accent/80 text-xs font-semibold rounded-xl border border-accent/40">
               {saveWarning}
             </div>
           )}

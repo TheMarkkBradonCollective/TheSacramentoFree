@@ -677,10 +677,10 @@ export default function NeighborProfileView({
             </div>
 
             {canManageTeamRoles && (
-              <div className="sbn-card p-5 border border-amber-500/25 bg-amber-500/5">
+              <div className="sbn-card p-5 border border-accent/25 bg-accent/5">
                 <div className="flex items-center gap-2 mb-4">
-                  <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
-                  <h3 className="text-xs font-bold text-amber-500 uppercase tracking-widest">
+                  <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
+                  <h3 className="text-xs font-bold text-accent uppercase tracking-widest">
                     Team Management
                   </h3>
                 </div>
@@ -695,7 +695,7 @@ export default function NeighborProfileView({
                       key={value}
                       className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                         selectedRole === value
-                          ? 'border-amber-500/50 bg-amber-500/10'
+                          ? 'border-accent/50 bg-accent/10'
                           : 'border-app hover:border-app/60 hover:bg-inset'
                       }`}
                     >
@@ -708,7 +708,7 @@ export default function NeighborProfileView({
                           setSelectedRole(value);
                           setRoleMsg('');
                         }}
-                        className="mt-0.5 accent-amber-500"
+                        className="mt-0.5 accent-accent"
                       />
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-app">{label}</p>

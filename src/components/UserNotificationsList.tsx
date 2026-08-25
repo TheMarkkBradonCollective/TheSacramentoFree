@@ -110,7 +110,7 @@ function kindColor(kind: UserNotificationKind): string {
       return 'text-emerald-400 bg-emerald-500/10';
     case 'downvote':
     case 'feed_downvote':
-      return 'text-amber-400 bg-amber-500/10';
+      return 'text-accent bg-accent/10';
     case 'claim':
     case 'claim_request':
     case 'gift':

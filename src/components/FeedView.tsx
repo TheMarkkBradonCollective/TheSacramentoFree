@@ -21,6 +21,7 @@ import {
   type FeedContentFilter,
 } from '../lib/feedDisplayPrefs';
 import { persistUserAppPreferences } from '../lib/appPreferences';
+import { isStaffRole } from '../lib/roles';
 
 interface FeedViewProps {
   userProfile: UserProfile;
@@ -75,7 +76,8 @@ export default function FeedView({
   onViewProfile,
   onViewFeedPost,
 }: FeedViewProps) {
-  const { posts, loading, creating, publishPost, removePost } = useFeedPosts(userProfile);
+  const { posts, loading, creating, publishPost, publishPoll, removePost } = useFeedPosts(userProfile);
+  const canCreatePoll = isStaffRole(userProfile.role);
   const { friendIds, loading: friendsLoading } = useFriendIds(userProfile.uid);
   const [composerOpen, setComposerOpen] = useState(false);
   const [contentFilter, setContentFilter] = useState<FeedContentFilter>(
@@ -215,11 +217,21 @@ export default function FeedView({
         <FeedPostComposer
           userProfile={userProfile}
           creating={creating}
+          canCreatePoll={canCreatePoll}
           onPublish={async (input) => {
             const ok = await publishPost(input);
             if (ok) setComposerOpen(false);
             return ok;
           }}
+          onPublishPoll={
+            canCreatePoll
+              ? async (input) => {
+                  const ok = await publishPoll(input);
+                  if (ok) setComposerOpen(false);
+                  return ok;
+                }
+              : undefined
+          }
           onCancel={() => setComposerOpen(false)}
         />
       )}

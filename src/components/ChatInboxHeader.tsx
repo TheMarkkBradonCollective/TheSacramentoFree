@@ -175,7 +175,7 @@ export default function ChatInboxHeader({
                     setMenuOpen(false);
                   }}
                 >
-                  <Star className="w-4 h-4 text-amber-500 shrink-0" />
+                  <Star className="w-4 h-4 text-accent shrink-0" />
                   Community reviews
                 </button>
                 <button
@@ -201,7 +201,7 @@ export default function ChatInboxHeader({
                     <ClipboardList className="w-4 h-4 text-violet-400 shrink-0" />
                     <span className="flex-1">User reports</span>
                     {staffReportCount > 0 ? (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent/15 text-accent">
                         {staffReportCount}
                       </span>
                     ) : null}

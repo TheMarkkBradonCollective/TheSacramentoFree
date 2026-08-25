@@ -1,18 +1,19 @@
 import BrandLogo from './BrandLogo';
-import { SITE } from '../siteContent';
+import { NEWSPAPER } from '../preview/newspaperBrand';
 import { getBetaVersionLabel } from '../lib/appVersion';
 import { isNativeApp } from '../lib/nativePlatform';
 
 export default function AppBootSplash() {
   const isNative = isNativeApp();
   const betaVersion = getBetaVersionLabel();
+  const brandName = `${NEWSPAPER.the} ${NEWSPAPER.title}`;
 
   return (
     <div
       id="app_boot_splash"
       className="min-h-[100svh] flex flex-col items-center justify-center gap-6 px-6 text-center mesh-bg relative"
       aria-busy="true"
-      aria-label="Loading Sacramento Buy Nothing"
+      aria-label={`Loading ${brandName}`}
     >
       <div className={`flex flex-col items-center gap-3 ${isNative ? 'sbn-boot-logo-glow' : ''}`}>
         <BrandLogo
@@ -21,10 +22,8 @@ export default function AppBootSplash() {
           showTitle={false}
         />
         <div className="text-center">
-          <p className="font-display font-bold text-base text-app leading-tight">
-            Sacramento <span className="text-accent">Buy Nothing</span>
-          </p>
-          <p className="text-[11px] text-muted mt-0.5">{SITE.tagline}</p>
+          <p className="font-display font-bold text-base text-app leading-tight">{brandName}</p>
+          <p className="text-[11px] text-muted mt-0.5">{NEWSPAPER.tagline}</p>
         </div>
       </div>
       <div

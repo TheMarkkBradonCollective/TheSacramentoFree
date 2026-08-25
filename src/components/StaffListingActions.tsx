@@ -68,7 +68,7 @@ export default function StaffListingActions({
           type="button"
           disabled={busy !== null}
           onClick={() => void handleWithdraw()}
-          className={`${btnClass} bg-amber-500/10 text-amber-400 border border-amber-500/20`}
+          className={`${btnClass} bg-accent/10 text-accent border border-accent/20`}
         >
           {busy === 'withdraw' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
           Withdraw

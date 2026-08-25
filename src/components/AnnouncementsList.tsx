@@ -11,6 +11,7 @@ import AppUpdateEditModal from './AppUpdateEditModal';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmDeleteAnnouncement } from '../lib/destructiveConfirm';
 import { REBRAND_ANNOUNCEMENT_ID, REBRAND_ANNOUNCEMENT_LETTER } from '../../shared/rebrandAnnouncement2026';
+import LinkifiedText from './LinkifiedText';
 
 interface AnnouncementsListProps {
   userProfile?: UserProfile | null;
@@ -146,18 +147,22 @@ export default function AnnouncementsList({
                       )}
                       {!isLetter ? (
                         <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap font-semibold">
-                          {summary}
+                          <LinkifiedText text={summary} />
                         </p>
                       ) : null}
                       {hasFullStory ? (
                         <>
                           {isLetter || expanded ? (
                             <div
-                              className={`mt-3 text-sm text-app leading-relaxed whitespace-pre-wrap ${
+                              className={`mt-3 text-sm text-app leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${
                                 isLetter ? 'font-serif border-t-2 border-app pt-4' : 'text-muted font-normal border-t border-app pt-3'
                               }`}
                             >
-                              {letterText}
+                              {isLetter ? (
+                                letterText
+                              ) : (
+                                <LinkifiedText text={letterText} />
+                              )}
                             </div>
                           ) : null}
                           {!isLetter ? (

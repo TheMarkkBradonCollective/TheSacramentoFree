@@ -106,14 +106,14 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
         <button
           type="button"
           onClick={() => onNavigate('home')}
-          aria-label={newspaper ? 'The Sacramento Free home' : 'Sacramento Buy Nothing home'}
-          className={`shrink-0 ${hideBrandOnLarge ? 'lg:hidden' : ''}`}
+          aria-label="TheSacramentoFree home"
+          className={`shrink-0 ${hideBrandOnLarge ? 'lg:hidden' : ''} ${newspaper ? 'hidden' : ''}`}
         >
           <BrandLogo
             imgClassName={
               newspaper
                 ? 'h-10 w-10 max-w-[2.5rem] max-h-[2.5rem] object-contain'
-                : 'h-8 w-auto max-w-[130px] object-contain rounded-lg'
+                : 'h-9 w-9 object-contain rounded-xl shrink-0'
             }
           />
         </button>
