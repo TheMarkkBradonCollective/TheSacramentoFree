@@ -280,7 +280,7 @@ html.newspaper-preview .tsf-masthead__crest {
   align-items: center;
   justify-content: center;
   gap: 0.2rem;
-  padding: 0.35rem 0.5rem 0.1rem;
+  padding: 0.15rem 0.5rem 0;
   min-width: 0;
 }
 
@@ -319,6 +319,115 @@ html.newspaper-preview .tsf-brand-slogan {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+html.newspaper-preview .tsf-brand-crest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  min-width: 2rem;
+  line-height: 1;
+  text-align: center;
+}
+
+html.newspaper-preview .tsf-brand-crest__city {
+  font-family: var(--font-masthead);
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+html.newspaper-preview .tsf-brand-crest__free {
+  font-family: var(--font-masthead);
+  font-size: 0.62rem;
+  font-style: italic;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+html.newspaper-preview .tsf-nav-wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 0.95;
+  min-width: 0;
+}
+
+html.newspaper-preview .tsf-nav-wordmark__the {
+  font-family: var(--font-news-sans);
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-nav-wordmark__city {
+  font-family: var(--font-masthead);
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+}
+
+html.newspaper-preview .tsf-nav-wordmark__free {
+  font-family: var(--font-masthead);
+  font-size: 0.72rem;
+  font-style: italic;
+  font-weight: 300;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+html.newspaper-preview .tsf-auth-panel-wordmark {
+  font-family: var(--font-masthead);
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+html.newspaper-preview .tsf-boot-wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.9;
+}
+
+html.newspaper-preview .tsf-boot-wordmark__the {
+  font-family: var(--font-news-sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+html.newspaper-preview .tsf-boot-wordmark__city {
+  font-family: var(--font-masthead);
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--color-text);
+}
+
+html.newspaper-preview .tsf-boot-wordmark__free {
+  font-family: var(--font-masthead);
+  font-size: clamp(1.2rem, 5vw, 1.65rem);
+  font-style: italic;
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text);
 }
 
 html.newspaper-preview .tsf-section-bar img.tsf-lockup {
