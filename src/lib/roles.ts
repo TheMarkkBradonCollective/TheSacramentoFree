@@ -22,7 +22,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 /**
  * Per-role visual identity used across the app shell (sidebar, topbar chips,
  * badges) so each rank reads as a distinct "tier" at a glance — neighbors stay
- * on-brand orange, staff ranks step up through blue → teal → violet → gold.
+ * on-brand Sacramento green, staff ranks step up through blue → teal → violet → deeper green.
  */
 export interface RoleTheme {
   /** CSS color value for accents, borders, active nav states. */
@@ -50,8 +50,8 @@ export const ROLE_THEME: Record<UserRole, RoleTheme> = {
     shortLabel: 'Manager',
   },
   director: {
-    accent: 'var(--sbn-role-director, #f59e0b)',
-    soft: 'var(--sbn-role-director-soft, rgba(245, 158, 11, 0.16))',
+    accent: 'var(--color-accent)',
+    soft: 'var(--color-accent-soft)',
     shortLabel: 'Director',
   },
 };
