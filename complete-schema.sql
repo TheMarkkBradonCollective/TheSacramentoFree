@@ -2265,6 +2265,9 @@ CREATE INDEX IF NOT EXISTS user_awards_user_idx ON public.user_awards ("userId")
 CREATE INDEX IF NOT EXISTS user_awards_award_idx ON public.user_awards ("awardId") WHERE "revokedAt" IS NULL;
 CREATE INDEX IF NOT EXISTS award_definitions_sort_idx ON public.award_definitions ("sortOrder", title);
 
+ALTER TABLE public.award_definitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_awards ENABLE ROW LEVEL SECURITY;
+
 
 -- Awards functions, triggers, RLS
 
@@ -4112,6 +4115,18 @@ CREATE POLICY "Users manage own notification preferences" ON public.notification
 DROP POLICY IF EXISTS "Users manage own saved items" ON public.saved_items;
 CREATE POLICY "Users manage own saved items" ON public.saved_items
   FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "award_definitions_select" ON public.award_definitions;
+DROP POLICY IF EXISTS "award_definitions_staff_write" ON public.award_definitions;
+CREATE POLICY "award_definitions_select" ON public.award_definitions
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "award_definitions_staff_write" ON public.award_definitions
+  FOR ALL USING (public.is_staff()) WITH CHECK (public.is_staff());
+
+DROP POLICY IF EXISTS "user_awards_select" ON public.user_awards;
+CREATE POLICY "user_awards_select" ON public.user_awards
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+-- Grants/revokes use SECURITY DEFINER RPCs; no direct client write policy.
 
 
 -- ---------------------------------------------------------
