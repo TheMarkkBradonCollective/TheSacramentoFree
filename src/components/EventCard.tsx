@@ -103,9 +103,9 @@ export default function EventCard({
                 <Calendar className="w-7 h-7 text-subtle" aria-hidden />
               </div>
             )}
-            <div className="absolute inset-x-0 top-0 z-[1] flex items-start justify-between gap-1 p-1.5 pointer-events-none">
-              <span className="sbn-badge sbn-badge-give text-[9px] py-0.5 shadow-sm shrink-0">Event</span>
-              <ListingViewBadge count={event.viewCount ?? 0} placement="inline" />
+            <div className="absolute inset-x-0 top-0 z-[1] flex items-start justify-between gap-0.5 px-1 py-1 pointer-events-none">
+              <span className="sbn-badge sbn-badge-grid sbn-badge-give shrink min-w-0 truncate shadow-sm">Event</span>
+              <ListingViewBadge count={event.viewCount ?? 0} placement="inline" compact />
             </div>
             <EventCardEngagementOverlay
               upvotes={voteState.upvotes}

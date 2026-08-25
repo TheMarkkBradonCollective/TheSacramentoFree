@@ -2309,6 +2309,16 @@ html.capacitor-android .sbn-sidebar-overlay {
   border-radius: var(--radius-sm);
 }
 
+/* Compact type badges on 3-column grid tiles — must beat .sbn-badge defaults */
+.sbn-badge.sbn-badge-grid {
+  padding: 1px 3px;
+  font-size: 0.5rem;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  border-radius: 0.2rem;
+  max-width: 100%;
+}
+
 .sbn-badge-give {
   background: var(--color-accent-soft);
   color: var(--color-accent);

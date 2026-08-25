@@ -197,7 +197,7 @@ export default function GuestListingPreview({
                       </div>
                     )}
                     <span
-                      className={`absolute top-2 left-2 sbn-badge text-[8px] px-1 py-0 leading-none whitespace-nowrap ${getPostTypeBadgeClass(item.type)}`}
+                      className={`absolute top-2 left-2 sbn-badge sbn-badge-grid ${getPostTypeBadgeClass(item.type)}`}
                     >
                       {getPostTypeGridBadgeLabel(item.type)}
                     </span>
