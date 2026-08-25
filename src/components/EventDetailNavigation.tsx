@@ -38,7 +38,7 @@ export default function EventDetailNavigation({
   currentUserId,
   autoStartNavigation = false,
   onAutoStartNavigationConsumed,
-  primaryActionPlacement = 'footer',
+  primaryActionPlacement = 'inline',
   onFooterActions,
 }: EventDetailNavigationProps) {
   const pinActionsToFooter = primaryActionPlacement === 'footer' && !!onFooterActions;
@@ -159,8 +159,9 @@ export default function EventDetailNavigation({
   ]);
 
   useEffect(() => {
-    if (!pinActionsToFooter || !onFooterActions || !destination) {
-      onFooterActions?.([]);
+    if (!onFooterActions) return;
+    if (!pinActionsToFooter || !destination) {
+      onFooterActions([]);
       return;
     }
     onFooterActions([

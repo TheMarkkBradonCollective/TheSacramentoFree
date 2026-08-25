@@ -103,7 +103,7 @@ export default function ItemDetailNavigation({
   autoStartNavigation = false,
   onAutoStartNavigationConsumed,
   onPickupCompleted,
-  primaryActionPlacement = 'footer',
+  primaryActionPlacement = 'inline',
   onFooterActions,
 }: ItemDetailNavigationProps) {
   const { confirm, alert } = useConfirm();
@@ -618,7 +618,7 @@ export default function ItemDetailNavigation({
   };
 
   useEffect(() => {
-    if (!pinActionsToFooter || !onFooterActions) return;
+    if (!onFooterActions) return;
 
     const actions: DetailFooterButton[] = [];
 
@@ -627,7 +627,7 @@ export default function ItemDetailNavigation({
       return;
     }
 
-    if (!session && coordinationGate.ok && !isOwner) {
+    if (!session && coordinationGate.ok && !isOwner && pinActionsToFooter) {
       actions.push({
         id: 'listing_navigate',
         label: isStaffOfficial || !goGetAvailable ? 'Navigate' : getListingNavigateLabel(item),
