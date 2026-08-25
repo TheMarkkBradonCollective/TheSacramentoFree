@@ -8,6 +8,7 @@ import ReportNeighborModal from '../ReportNeighborModal';
 import FeedPostClientBadge from './FeedPostClientBadge';
 import FeedPollBlock from './FeedPollBlock';
 import FeedEngagementBar from './FeedEngagementBar';
+import { FeedPostViewCount } from '../MessageReadReceiptLabel';
 import { feedPostPreview } from '../../lib/feedPostText';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
@@ -145,6 +146,7 @@ export default function FeedPostCard({
               <span className="truncate">{post.neighborhood}</span>
               <span className="text-subtle">·</span>
               <span className="shrink-0">{timeLabel(post.createdAt)}</span>
+              <FeedPostViewCount count={post.viewCount ?? 0} />
               {post.clientInstallKind ? (
                 <>
                   <span className="text-subtle">·</span>

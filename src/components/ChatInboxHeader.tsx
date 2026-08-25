@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ClipboardList,
+  CheckCheck,
   Flag,
   LifeBuoy,
   MessageSquare,
@@ -34,6 +35,8 @@ interface ChatInboxHeaderProps {
   statusFilter: ChatStatusFilter;
   onCategoryFilterChange: (filter: ChatCategoryFilter) => void;
   onStatusFilterChange: (filter: ChatStatusFilter) => void;
+  readReceiptsEnabled: boolean;
+  onReadReceiptsChange: (enabled: boolean) => void;
 }
 
 const CATEGORY_ICONS: Record<ChatCategoryFilter, typeof Users> = {
@@ -53,6 +56,8 @@ export default function ChatInboxHeader({
   statusFilter,
   onCategoryFilterChange,
   onStatusFilterChange,
+  readReceiptsEnabled,
+  onReadReceiptsChange,
 }: ChatInboxHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -167,6 +172,23 @@ export default function ChatInboxHeader({
             </button>
             {menuOpen ? (
               <div className="absolute right-0 top-full mt-1 z-20 min-w-[12rem] rounded-xl border border-app bg-surface py-1 shadow-lg">
+                <button
+                  type="button"
+                  className="w-full px-3 py-2.5 text-left text-sm text-app hover:bg-surface-hover flex items-center gap-2"
+                  onClick={() => {
+                    onReadReceiptsChange(!readReceiptsEnabled);
+                  }}
+                >
+                  <CheckCheck className="w-4 h-4 text-accent shrink-0" />
+                  <span className="flex-1">Read receipts</span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      readReceiptsEnabled ? 'bg-accent/15 text-accent' : 'bg-inset text-muted'
+                    }`}
+                  >
+                    {readReceiptsEnabled ? 'On' : 'Off'}
+                  </span>
+                </button>
                 <button
                   type="button"
                   className="w-full px-3 py-2.5 text-left text-sm text-app hover:bg-surface-hover flex items-center gap-2"

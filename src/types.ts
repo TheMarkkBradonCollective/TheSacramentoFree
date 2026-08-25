@@ -60,6 +60,8 @@ export interface AppPreferences {
   feedContentFilter?: FeedContentFilter;
   feedAudienceScope?: FeedAudienceScope;
   chatInbox?: ChatInboxPreferences;
+  /** When false, you do not send or see read receipts in chat. Default true. */
+  readReceiptsEnabled?: boolean;
 }
 
 export interface NotificationPreferences {
@@ -889,6 +891,8 @@ export interface FeedPost {
   clientVersion?: string;
   createdAt: string;
   updatedAt: string;
+  /** Unique neighbor views when opening full post detail. */
+  viewCount?: number;
 }
 
 export interface FeedPollVote {

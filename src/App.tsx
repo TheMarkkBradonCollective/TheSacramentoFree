@@ -1857,6 +1857,10 @@ export default function App() {
     setDetailFeedPost(post);
   }, []);
 
+  const handleFeedPostViewCountUpdated = useCallback((postId: string, viewCount: number) => {
+    setDetailFeedPost((current) => (current?.id === postId ? { ...current, viewCount } : current));
+  }, []);
+
   const handleDeleteFeedPost = useCallback(
     async (post: FeedPost) => {
       if (!userProfile) return;
@@ -2619,6 +2623,7 @@ export default function App() {
                   onClose={() => setDetailFeedPost(null)}
                   onViewProfile={handleViewProfile}
                   onDeletePost={(post) => void handleDeleteFeedPost(post)}
+                  onViewCountUpdated={handleFeedPostViewCountUpdated}
                 />
               )}
 

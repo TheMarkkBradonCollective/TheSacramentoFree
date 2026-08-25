@@ -7,7 +7,10 @@ import { useFeedEngagement } from '../../hooks/useFeedEngagement';
 import { useOptionalFeedEngagement } from '../../contexts/FeedEngagementContext';
 import { useDismissOnEscape } from '../../hooks/useDismissOnEscape';
 import { isStaffRole } from '../../lib/roles';
+import { recordFeedPostView } from '../../lib/feedApi';
+import { useFeedPostsApi } from '../../contexts/FeedLiveProvider';
 import { PresenceUserAvatar } from '../UserAvatar';
+import { FeedPostViewCount } from '../MessageReadReceiptLabel';
 import FeedPostComments from './FeedPostComments';
 import FeedPostClientBadge from './FeedPostClientBadge';
 import FeedPollBlock from './FeedPollBlock';
@@ -23,6 +26,7 @@ interface FeedPostDetailViewProps {
   onClose: () => void;
   onViewProfile?: (userId: string) => void;
   onDeletePost?: (post: FeedPost) => void;
+  onViewCountUpdated?: (postId: string, viewCount: number) => void;
 }
 
 function timeLabel(iso: string): string {
@@ -41,8 +45,10 @@ export default function FeedPostDetailView({
   onClose,
   onViewProfile,
   onDeletePost,
+  onViewCountUpdated,
 }: FeedPostDetailViewProps) {
   const [reportOpen, setReportOpen] = useState(false);
+  const feedPostsApi = useFeedPostsApi();
   const isOwn = post.userId === userProfile.uid;
   const isStaff = isStaffRole(userProfile.role);
   const canEngage = !isOwn;
@@ -63,6 +69,16 @@ export default function FeedPostDetailView({
   const isPoll = post.postKind === 'poll';
 
   useDismissOnEscape(onClose);
+
+  useEffect(() => {
+    if (isOwn) return;
+    void recordFeedPostView(post.id).then((result) => {
+      if (result.ok && result.viewCount != null) {
+        feedPostsApi?.updatePostViewCount(post.id, result.viewCount);
+        onViewCountUpdated?.(post.id, result.viewCount);
+      }
+    });
+  }, [post.id, isOwn, feedPostsApi, onViewCountUpdated]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -163,6 +179,7 @@ export default function FeedPostDetailView({
                   {post.neighborhood}
                   <span className="text-subtle">·</span>
                   {timeLabel(post.createdAt)}
+                  <FeedPostViewCount count={post.viewCount ?? 0} />
                   {post.clientInstallKind ? (
                     <>
                       <span className="text-subtle">·</span>

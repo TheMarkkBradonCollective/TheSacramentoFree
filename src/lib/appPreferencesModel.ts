@@ -63,6 +63,8 @@ export function normalizeAppPreferences(raw: unknown): AppPreferences {
   if (Object.keys(feedFilters).length > 0) prefs.feedFilters = feedFilters;
   const chatInbox = normalizeChatInboxPreferences(source.chatInbox);
   if (Object.keys(chatInbox).length > 0) prefs.chatInbox = chatInbox;
+  if (source.readReceiptsEnabled === false) prefs.readReceiptsEnabled = false;
+  else if (source.readReceiptsEnabled === true) prefs.readReceiptsEnabled = true;
   return prefs;
 }
 
