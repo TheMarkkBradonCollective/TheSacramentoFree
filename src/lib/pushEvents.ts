@@ -1,6 +1,8 @@
 import { convertPercentToLatLng, extractGPSCoordinates } from '../types';
 import type { DirectorAlertCategory, ItemPost } from '../types';
 import { sendPushNotification } from './pushNotifications';
+import { meetCopyForItem } from './meetCopy';
+import { pickupModeConfigForItem } from './pickupEngine';
 import {
   isListingInExpiryWarningWindow,
   listingExpiryDaysRemaining,
@@ -625,8 +627,8 @@ export async function notifyGoGetAvailabilityRequest(params: {
 }) {
   await sendPushNotification({
     eventType: 'go_get_availability_request',
-    title: 'Go Get request',
-    body: `${params.requesterName} wants to pick up "${params.item.title}" — are you available now?`,
+    title: meetCopyForItem(params.item).requestTitle,
+    body: meetCopyForItem(params.item).requestLine(params.requesterName, params.item.title) + ' Are you available now?',
     url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
@@ -650,7 +652,7 @@ export async function notifyGoGetAvailableNow(params: {
   await sendPushNotification({
     eventType: 'go_get_available_now',
     title: `${params.fulfillerName} is available now`,
-    body: `Pickup is ready — start heading to "${params.item.title}"`,
+    body: `${meetCopyForItem(params.item).theyAreReady(params.fulfillerName)} Start heading to "${params.item.title}".`,
     url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
@@ -720,10 +722,11 @@ export async function notifyGoGetFulfillerReady(params: {
   fulfillerName: string;
   sessionId: string;
 }) {
+  const copy = meetCopyForItem(params.item);
   await sendPushNotification({
     eventType: 'go_get_fulfiller_ready',
-    title: 'Pickup is ready',
-    body: `${params.fulfillerName} is ready — start heading to "${params.item.title}"`,
+    title: copy.theyAreReady(params.fulfillerName).replace(/\.$/, ''),
+    body: `${params.fulfillerName} is ready — ${copy.startTrip.toLowerCase()} for "${params.item.title}"`,
     url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
@@ -734,17 +737,20 @@ export async function notifyGoGetFulfillerReady(params: {
 
 export async function notifyGoGetStarted(params: {
   item: ItemPost;
-  fulfillerUserId: string;
-  requesterName: string;
+  recipientUserId: string;
+  travelerName: string;
   sessionId: string;
 }) {
+  const bothTravel = pickupModeConfigForItem(params.item).bothTravel;
   await sendPushNotification({
     eventType: 'go_get_started',
-    title: `${params.requesterName} is on the way`,
-    body: `Heading to pick up "${params.item.title}" now`,
+    title: `${params.travelerName} is on the way`,
+    body: bothTravel
+      ? `Heading to the meetup pin for "${params.item.title}"`
+      : `Heading to pick up "${params.item.title}" now`,
     url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
-    recipientUserIds: [params.fulfillerUserId],
+    recipientUserIds: [params.recipientUserId],
     tag: `go-get-started-${params.sessionId}`,
     data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
@@ -752,17 +758,17 @@ export async function notifyGoGetStarted(params: {
 
 export async function notifyGoGetApproaching(params: {
   item: ItemPost;
-  fulfillerUserId: string;
-  requesterName: string;
+  recipientUserId: string;
+  travelerName: string;
   sessionId: string;
 }) {
   await sendPushNotification({
     eventType: 'go_get_approaching',
-    title: `${params.requesterName} is almost there`,
+    title: `${params.travelerName} is almost there`,
     body: `Arriving soon for "${params.item.title}"`,
     url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
-    recipientUserIds: [params.fulfillerUserId],
+    recipientUserIds: [params.recipientUserId],
     tag: `go-get-approaching-${params.sessionId}`,
     data: { goGetSessionId: params.sessionId },
   });
@@ -770,17 +776,18 @@ export async function notifyGoGetApproaching(params: {
 
 export async function notifyGoGetArrived(params: {
   item: ItemPost;
-  fulfillerUserId: string;
-  requesterName: string;
+  recipientUserId: string;
+  travelerName: string;
   sessionId: string;
+  confirmHandoff?: string;
 }) {
   await sendPushNotification({
     eventType: 'go_get_arrived',
-    title: 'Your pickup has arrived',
-    body: `${params.requesterName} is here for "${params.item.title}" — confirm the handoff`,
+    title: `${params.travelerName} has arrived`,
+    body: `${params.travelerName} is here for "${params.item.title}" — ${params.confirmHandoff || 'confirm the handoff'}`,
     url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
-    recipientUserIds: [params.fulfillerUserId],
+    recipientUserIds: [params.recipientUserId],
     tag: `go-get-arrived-${params.sessionId}`,
     data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });

@@ -94,7 +94,7 @@ import {
 import ChatClaimActions from './ChatClaimActions';
 import ChatClaimerActions from './ChatClaimerActions';
 import { createGoGetSession, getActiveGoGetSession } from '../lib/goGetSessions';
-import { confirmGoGetAsFulfiller } from './goget/goGetSafetyConfirm';
+import { confirmGoGetAsFulfiller, confirmMeetUp } from './goget/goGetSafetyConfirm';
 import { getChatCoordinationLabel } from '../lib/listingMapActions';
 import { getItemMapDestination } from '../lib/itemLocation';
 import type { GoGetSession } from '../types';
@@ -351,16 +351,17 @@ export default function ChatSystem({
 
   const handleStartGoGetFromChat = useCallback(
     async (linkedItem: ItemPost, otherUserId: string, otherUserName: string) => {
-      const myLocation = getLastLiveLatLng();
-      if (!myLocation) {
-        setErrorMsg('Enable location to coordinate pickup.');
-        return;
-      }
       const isLooking = linkedItem.type === 'looking';
       const isTrade = linkedItem.type === 'trade';
+      const myLocation = getLastLiveLatLng();
+      if (!myLocation) {
+        setErrorMsg(isTrade ? 'Enable location to start this Meet.' : 'Enable location to coordinate pickup.');
+        return;
+      }
+      const posterIsMe = linkedItem.userId === userProfile.uid;
       const dropOffDestination = getItemMapDestination(linkedItem, linkedItem.userId);
       if (!dropOffDestination) {
-        setErrorMsg('This listing has no map pin yet. Ask the poster to add a pickup pin before coordinating.');
+        setErrorMsg('This listing has no map pin yet. Ask the poster to add a meetup pin before coordinating.');
         return;
       }
       const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
@@ -371,23 +372,19 @@ export default function ChatSystem({
         alert,
       });
       if (!allowed) return;
-      const confirmed = await confirmGoGetAsFulfiller(
-        confirm,
-        otherUserName,
-        linkedItem.title,
-        isTrade ? 'trade' : 'looking',
-      );
+      const confirmed = isTrade
+        ? await confirmMeetUp(confirm, otherUserName, linkedItem.title, posterIsMe ? 'poster' : 'neighbor')
+        : await confirmGoGetAsFulfiller(confirm, otherUserName, linkedItem.title, 'looking');
       if (!confirmed) return;
       setStartingGoGet(true);
       setErrorMsg('');
-      // Keep roles aligned with listing/map: listing poster = fulfiller (waits),
-      // the other neighbor = requester (navigates). Looking responders and trade
-      // claimers are always the navigator.
-      const posterIsMe = linkedItem.userId === userProfile.uid;
+      // Listing poster = fulfiller. The other neighbor = requester.
+      // Trades: both navigate. If the poster starts, skip the ring — they already accepted.
       const fulfillerUserId = linkedItem.userId;
       const fulfillerName = posterIsMe ? userProfile.displayName : otherUserName;
       const requesterUserId = posterIsMe ? otherUserId : userProfile.uid;
       const requesterName = posterIsMe ? otherUserName : userProfile.displayName;
+      const posterInitiated = isTrade && posterIsMe;
       const result = await createGoGetSession({
         item: linkedItem,
         fulfillerUserId,
@@ -398,27 +395,30 @@ export default function ChatSystem({
         destinationLabel: isLooking
           ? `${fulfillerName}'s area`
           : `Meetup: ${linkedItem.title}`,
+        posterInitiated,
       });
       setStartingGoGet(false);
       if (!result.ok || !result.session) {
         setErrorMsg(
           result.errorMessage ||
-            (isLooking ? 'Could not start drop off.' : 'Could not start meet up.'),
+            (isLooking ? 'Could not start drop off.' : 'Could not start Meet.'),
         );
         return;
       }
       setChatGoGetSession(result.session);
-      const navigatorName = requesterName;
-      await createSupabaseMessage(
-        selectedChat!.id,
-        isLooking
-          ? `📦 ${navigatorName} is dropping off "${linkedItem.title}" — heading to ${fulfillerName}'s area. Open the listing to follow along.`
-          : `🔁 ${navigatorName} is heading to the meetup spot for "${linkedItem.title}". Open the listing to follow along.`,
-        userProfile.uid,
-        `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-        { skipPush: true, postedAsNeighbor: commentPostedAsNeighbor(userProfile) },
-      );
-      void getSupabaseMessages(selectedChat!.id).then(setMessages);
+      if (!posterInitiated) {
+        const navigatorName = requesterName;
+        await createSupabaseMessage(
+          selectedChat!.id,
+          isLooking
+            ? `📦 ${navigatorName} is dropping off "${linkedItem.title}" — heading to ${fulfillerName}'s area. Open the listing to follow along.`
+            : `🔁 ${navigatorName} wants to meet for "${linkedItem.title}". You'll both navigate to the meetup pin.`,
+          userProfile.uid,
+          `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          { skipPush: true, postedAsNeighbor: commentPostedAsNeighbor(userProfile) },
+        );
+        void getSupabaseMessages(selectedChat!.id).then(setMessages);
+      }
     },
     [alert, confirm, userProfile, selectedChat],
   );
@@ -1517,16 +1517,15 @@ export default function ChatSystem({
               linkedItem.type === 'looking' &&
               linkedItem.status === 'active';
 
-            // Looking/Trade: only the non-poster starts coordination so they become the
-            // navigator (requester). Poster waits as fulfiller — same as listing/map.
+            // Looking/Trade: looking drop-off is started by the neighbor bringing the item.
+            // Trades are a Meet — either neighbor can start it.
             const showStartGoGetBtn =
               supportsGoGetCoordination() &&
               !!linkedItem &&
               !isChatDisabled &&
               linkedItem.status === 'active' &&
-              !isListingOwner &&
-              (linkedItem.type === 'looking' || linkedItem.type === 'trade') &&
-              !chatGoGetSession;
+              !chatGoGetSession &&
+              ((linkedItem.type === 'looking' && !isListingOwner) || linkedItem.type === 'trade');
 
             return (
               <>
@@ -1974,7 +1973,7 @@ export default function ChatSystem({
                   ) : null}
                   {!isCommunity && chatGoGetSession && !isChatDisabled && (
                     <p className="text-[11px] text-muted text-center">
-                      Go Get in progress — open "{linkedItem?.title}" to follow along.
+                      Meet in progress — open "{linkedItem?.title}" to follow along.
                     </p>
                   )}
                   {isChatDisabled && (

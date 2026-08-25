@@ -1,6 +1,8 @@
 import type { ConfirmOptions } from '../../contexts/ConfirmContext';
 
 import { isInstantClaimCategory } from '../../lib/goGetSessions';
+import { meetCopyForMode } from '../../lib/meetCopy';
+import type { CoordinationMode } from '../../types';
 
 type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
 
@@ -57,25 +59,43 @@ export async function confirmMeetUp(
   confirm: ConfirmFn,
   otherName: string,
   itemTitle: string,
+  startedBy: 'neighbor' | 'poster' = 'neighbor',
 ): Promise<boolean> {
+  if (startedBy === 'poster') {
+    return confirm({
+      title: 'Start this Meet?',
+      message:
+        `This invites ${otherName} to meet for "${itemTitle}". You'll both navigate to the meetup pin. Live location is shared only while this Meet is active.`,
+      confirmLabel: 'Start Meet',
+      cancelLabel: 'Not now',
+    });
+  }
   return confirm({
     title: 'Meet up?',
     message:
-      `This will notify ${otherName} that you're heading to the meetup spot for "${itemTitle}". ` +
-      `You can share live location while en route.`,
+      `This notifies ${otherName} that you want to meet for "${itemTitle}". You'll both navigate to the meetup pin once they accept.\n\n` +
+      `Live location is shared only while this Meet is active.`,
     confirmLabel: 'Meet up',
     cancelLabel: 'Not now',
   });
 }
 
-/** Requester taps Go Get it after the poster confirms they're ready — starts live navigation. */
-export async function confirmGoGetTripStart(confirm: ConfirmFn, posterName: string): Promise<boolean> {
+/** Traveler starts live navigation after the other neighbor is ready. */
+export async function confirmGoGetTripStart(
+  confirm: ConfirmFn,
+  otherName: string,
+  mode: CoordinationMode = 'go_get',
+): Promise<boolean> {
+  const copy = meetCopyForMode(mode);
+  const isMeet = mode === 'meet_up';
   return confirm({
     title: 'Before you go',
-    message:
-      `Confirm the pickup location, keep communication in Sacramento Free, and don't enter unsafe or private areas. If something feels wrong, cancel and report it.\n\n` +
-      `Your live location will be shared with ${posterName} until this pickup ends.`,
-    confirmLabel: 'Start trip',
+    message: isMeet
+      ? `Confirm the meet location, keep communication in Sacramento Free, and don't enter unsafe or private areas. If something feels wrong, cancel and report it.\n\n` +
+        `Your live location will be shared with ${otherName} until this Meet ends.`
+      : `Confirm the pickup location, keep communication in Sacramento Free, and don't enter unsafe or private areas. If something feels wrong, cancel and report it.\n\n` +
+        `Your live location will be shared with ${otherName} until this pickup ends.`,
+    confirmLabel: copy.startTrip,
     cancelLabel: 'Not yet',
   });
 }

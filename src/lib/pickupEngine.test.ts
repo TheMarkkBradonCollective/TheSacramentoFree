@@ -33,6 +33,8 @@ test('coordination modes follow listing type', () => {
   assert.equal(coordinationModeFromItem(item({ type: 'giveaway', category: 'Porch Pickup' })), 'porch_pickup');
   assert.equal(coordinationModeFromItem(item({ type: 'looking' })), 'drop_off');
   assert.equal(coordinationModeFromItem(item({ type: 'trade' })), 'meet_up');
+  assert.equal(pickupModeConfigForItem(item({ type: 'trade' })).bothTravel, true);
+  assert.equal(pickupModeConfigForItem(item({ type: 'giveaway' })).bothTravel, false);
 });
 
 test('mode matrix: curb has navigation without handshake; go get has the full engine', () => {

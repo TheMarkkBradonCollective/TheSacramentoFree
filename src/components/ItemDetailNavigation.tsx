@@ -49,6 +49,8 @@ import {
 } from '../lib/goGetSessions';
 import { isGoGetTripLocked } from '../lib/goGetTripLock';
 import { cancelRequiresReason, isWithinReadyWindow } from '../lib/pickupStateMachine';
+import { meetCopyForSession } from '../lib/meetCopy';
+import { normalizeCoordinationMode, PICKUP_MODE_CONFIG } from '../lib/pickupEngine';
 import GoGetScheduledCard from './goget/GoGetScheduledCard';
 import CancelPickupDialog from './goget/CancelPickupDialog';
 import { fileGoGetViolation } from '../lib/violations';
@@ -639,12 +641,22 @@ export default function ItemDetailNavigation({
         icon: <Navigation className="w-4 h-4" />,
       });
     } else if (session) {
-      if (session.status === 'scheduled' && isRequester && session.fulfillerReadyAt) {
+      const copy = meetCopyForSession(session);
+      const bothTravel = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].bothTravel;
+      if (
+        session.status === 'scheduled' &&
+        session.fulfillerReadyAt &&
+        (isRequester || (bothTravel && isFulfiller))
+      ) {
         actions.push({
           id: 'go_get_start',
-          label: 'Go Get it',
+          label: copy.startTrip,
           onClick: async () => {
-            const confirmed = await confirmGoGetTripStart(confirm, otherUserName);
+            const confirmed = await confirmGoGetTripStart(
+              confirm,
+              otherUserName,
+              normalizeCoordinationMode(session.coordinationMode),
+            );
             if (!confirmed) return;
             await run(() => startGoGetTrip(session, item));
           },
@@ -666,7 +678,7 @@ export default function ItemDetailNavigation({
             icon: <CheckCircle className="w-4 h-4" />,
           });
         }
-      } else if (session.status === 'active' && isRequester) {
+      } else if (session.status === 'active' && (isRequester || bothTravel)) {
         actions.push({
           id: 'resume_nav',
           label: 'Resume navigation',
@@ -683,7 +695,7 @@ export default function ItemDetailNavigation({
       } else if (session.status === 'arrived' && isFulfiller) {
         actions.push({
           id: 'confirm_pickup',
-          label: 'Confirm pickup',
+          label: copy.confirmHandoff,
           onClick: () => void handleConfirmCompletion(),
           disabled: busy,
           icon: <CheckCircle className="w-4 h-4" />,
@@ -795,7 +807,7 @@ export default function ItemDetailNavigation({
 
     const cancelLink = !isTerminalGoGetStatus(session.status) && (
       <button type="button" onClick={() => void handleCancel()} disabled={busy} className="text-xs text-muted hover:text-red-400 underline underline-offset-2">
-        Cancel Go Get
+        {meetCopyForSession(session).cancelTitle}
       </button>
     );
 
@@ -807,6 +819,7 @@ export default function ItemDetailNavigation({
             <GoGetAvailabilityPrompt
               requesterName={session.requesterName}
               itemTitle={item.title}
+              requestLine={meetCopyForSession(session).requestLine(session.requesterName, item.title)}
               submitting={busy}
               onAvailableNow={() => void run(() => respondAvailableNow(session, item))}
               onProposeWindow={(w) => void run(() => proposeAvailabilityWindow(session, item, w))}
@@ -889,6 +902,7 @@ export default function ItemDetailNavigation({
               role="fulfiller"
               ready={false}
               readyWindowOpen={readyWindowOpen}
+              mode={session.coordinationMode}
             >
               {errorBanner}
               {readyWindowOpen && !pinActionsToFooter ? (
@@ -914,8 +928,28 @@ export default function ItemDetailNavigation({
             role="fulfiller"
             ready
             readyWindowOpen={readyWindowOpen}
+            mode={session.coordinationMode}
           >
             {errorBanner}
+            {PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].bothTravel &&
+            !pinActionsToFooter ? (
+              <button
+                type="button"
+                disabled={busy || !userLocation}
+                onClick={async () => {
+                  const confirmed = await confirmGoGetTripStart(
+                    confirm,
+                    otherUserName,
+                    normalizeCoordinationMode(session.coordinationMode),
+                  );
+                  if (!confirmed) return;
+                  await run(() => startGoGetTrip(session, item));
+                }}
+                className="sbn-btn sbn-btn-primary w-full justify-center disabled:opacity-60"
+              >
+                {meetCopyForSession(session).startTrip}
+              </button>
+            ) : null}
             {cancelLink}
           </GoGetScheduledCard>
         );
@@ -930,6 +964,7 @@ export default function ItemDetailNavigation({
             role="requester"
             ready={false}
             readyWindowOpen={readyWindowOpen}
+            mode={session.coordinationMode}
           >
             {errorBanner}
             {cancelLink}
@@ -944,6 +979,7 @@ export default function ItemDetailNavigation({
           role="requester"
           ready
           readyWindowOpen={readyWindowOpen}
+          mode={session.coordinationMode}
         >
           {errorBanner}
           {!pinActionsToFooter && (
@@ -951,13 +987,13 @@ export default function ItemDetailNavigation({
             type="button"
             disabled={busy || !userLocation}
             onClick={async () => {
-              const confirmed = await confirmGoGetTripStart(confirm, otherUserName);
+              const confirmed = await confirmGoGetTripStart(confirm, otherUserName, normalizeCoordinationMode(session.coordinationMode));
               if (!confirmed) return;
               await run(() => startGoGetTrip(session, item));
             }}
             className="sbn-btn sbn-btn-primary w-full justify-center disabled:opacity-60"
           >
-            Start trip
+            {meetCopyForSession(session).startTrip}
           </button>
           )}
           {cancelLink}
@@ -966,11 +1002,12 @@ export default function ItemDetailNavigation({
     }
 
     if (session.status === 'active') {
-      if (isRequester) {
+      const bothTravel = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].bothTravel;
+      if (isRequester || bothTravel) {
         return (
           <div className="sbn-card p-4 space-y-3">
             {errorBanner}
-            <p className="text-sm text-app">You're on the way to {otherUserName}'s pickup.</p>
+            <p className="text-sm text-app">{meetCopyForSession(session).onTheWay(otherUserName)}</p>
             {renderPickerMeetingMap()}
             {!pinActionsToFooter && (
             <div className="grid grid-cols-2 gap-2">
@@ -1020,7 +1057,7 @@ export default function ItemDetailNavigation({
           <div className="sbn-card p-4 space-y-3">
             {errorBanner}
             <p className="text-sm font-semibold text-app">{session.requesterName} has arrived.</p>
-            <p className="text-xs text-muted">Confirm once the handoff is complete.</p>
+            <p className="text-xs text-muted">{meetCopyForSession(session).arrivedHint}</p>
             {renderPosterShareToggle()}
             {!pinActionsToFooter && (
             <div className="grid grid-cols-2 gap-2">
@@ -1031,7 +1068,7 @@ export default function ItemDetailNavigation({
                 className="sbn-btn sbn-btn-primary justify-center disabled:opacity-60"
               >
                 <CheckCircle className="w-4 h-4" />
-                Confirm pickup
+                {meetCopyForSession(session).confirmHandoff}
               </button>
               <button
                 type="button"
@@ -1052,7 +1089,7 @@ export default function ItemDetailNavigation({
           {errorBanner}
           <p className="text-sm text-app flex items-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin text-accent" />
-            Waiting for {otherUserName} to confirm the pickup…
+            {meetCopyForSession(session).waitForHandoff(otherUserName)}
           </p>
           {renderPickerMeetingMap()}
         </div>

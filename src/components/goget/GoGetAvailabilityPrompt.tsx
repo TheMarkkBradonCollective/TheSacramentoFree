@@ -4,6 +4,7 @@ import { Check, Clock, X } from 'lucide-react';
 interface GoGetAvailabilityPromptProps {
   requesterName: string;
   itemTitle: string;
+  requestLine?: string;
   submitting: boolean;
   onAvailableNow: () => void;
   onProposeWindow: (window: { from: string; until: string }) => void;
@@ -26,6 +27,7 @@ function defaultWindow(): { from: string; until: string } {
 export default function GoGetAvailabilityPrompt({
   requesterName,
   itemTitle,
+  requestLine,
   submitting,
   onAvailableNow,
   onProposeWindow,
@@ -57,7 +59,7 @@ export default function GoGetAvailabilityPrompt({
       <div className="flex items-start gap-2">
         <Clock className="w-4 h-4 text-accent shrink-0 mt-0.5" />
         <p className="text-sm font-semibold text-app leading-snug">
-          {requesterName} wants to pick up "{itemTitle}".
+          {requestLine || `${requesterName} wants to pick up "${itemTitle}".`}
         </p>
       </div>
 

@@ -11,6 +11,7 @@ import {
   proposeAvailabilityWindow,
 } from '../../lib/goGetSessions';
 import { formatRingCountdown } from '../../lib/pickupEngine';
+import { meetCopyForSession } from '../../lib/meetCopy';
 import { getGoGetRingDuration, getGoGetRingPattern, startGoGetRingAlert, stopGoGetRingAlert } from '../../lib/goGetRing';
 import GoGetAvailabilityPrompt from './GoGetAvailabilityPrompt';
 import GoGetLiveTripMap from './GoGetLiveTripMap';
@@ -103,7 +104,7 @@ export default function GoGetIncomingRingOverlay({
         className="fixed inset-0 z-[200] flex flex-col"
         role="dialog"
         aria-modal="true"
-        aria-label="Incoming Go Get pickup request"
+        aria-label="Incoming Meet request"
         id="go_get_incoming_ring_overlay"
       >
         <GoGetLiveTripMap
@@ -114,7 +115,7 @@ export default function GoGetIncomingRingOverlay({
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 p-4 safe-area-pt">
           <div className="pointer-events-auto sbn-card px-3 py-2 flex items-center gap-2 shadow-lg border border-accent/40">
             <Phone className="w-5 h-5 text-accent animate-pulse shrink-0" />
-            <p className="text-sm font-bold text-app">Go Get request</p>
+            <p className="text-sm font-bold text-app">{meetCopyForSession(session).requestTitle}</p>
           </div>
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 safe-area-pb">
@@ -163,6 +164,7 @@ export default function GoGetIncomingRingOverlay({
           <GoGetAvailabilityPrompt
             requesterName={session.requesterName}
             itemTitle={item.title}
+            requestLine={meetCopyForSession(session).requestLine(session.requesterName, item.title)}
             submitting={busy}
             onAvailableNow={() => void run(() => respondAvailableNow(session, item))}
             onProposeWindow={(w) => void run(() => proposeAvailabilityWindow(session, item, w))}

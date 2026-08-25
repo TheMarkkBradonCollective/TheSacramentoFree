@@ -122,6 +122,41 @@ test('cancel requires a reason once the pickup is scheduled or live', () => {
   assert.equal(ok.ok, true);
 });
 
+test('trade Meet lets both neighbors start the trip and mark arrived', () => {
+  const trade = session({
+    coordinationMode: 'meet_up',
+    status: 'scheduled',
+    scheduledAt: new Date().toISOString(),
+    fulfillerReadyAt: new Date().toISOString(),
+  });
+  const posterStart = canPerformPickupAction({
+    session: trade,
+    action: 'start_trip',
+    actorUserId: 'poster',
+  });
+  assert.equal(posterStart.ok, true);
+
+  const giveaway = session({
+    status: 'scheduled',
+    scheduledAt: new Date().toISOString(),
+    fulfillerReadyAt: new Date().toISOString(),
+  });
+  const posterBlocked = canPerformPickupAction({
+    session: giveaway,
+    action: 'start_trip',
+    actorUserId: 'poster',
+  });
+  assert.equal(posterBlocked.ok, false);
+
+  const tradeActive = session({ coordinationMode: 'meet_up', status: 'active' });
+  const posterArrive = canPerformPickupAction({
+    session: tradeActive,
+    action: 'mark_arrived',
+    actorUserId: 'poster',
+  });
+  assert.equal(posterArrive.ok, true);
+});
+
 test('drop-off traveler is the requester (neighbor bringing the item)', () => {
   const drop = session({ coordinationMode: 'drop_off' });
   assert.equal(travelerUserId(drop), 'picker');

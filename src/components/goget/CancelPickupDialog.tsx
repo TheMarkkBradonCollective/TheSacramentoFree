@@ -64,12 +64,12 @@ export default function CancelPickupDialog({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h4 id="cancel_pickup_title" className="font-display font-bold text-app">
-              Cancel pickup
+              Cancel Meet
             </h4>
             <p className="text-sm text-muted mt-2 leading-relaxed">
               {requireReason
-                ? `Are you sure? ${otherName} will be notified and this pickup will end.`
-                : `Cancel this pickup with ${otherName}? They'll be notified.`}
+                ? `Are you sure? ${otherName} will be notified and this Meet will end.`
+                : `Cancel this Meet with ${otherName}? They'll be notified.`}
             </p>
           </div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-inset shrink-0" aria-label="Close">
@@ -114,7 +114,7 @@ export default function CancelPickupDialog({
 
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary flex-1">
-            Keep pickup
+            Keep Meet
           </button>
           <button
             type="button"
@@ -122,7 +122,7 @@ export default function CancelPickupDialog({
             onClick={handleConfirm}
             className="sbn-btn sbn-btn-danger flex-1 disabled:opacity-60"
           >
-            Cancel pickup
+            Cancel Meet
           </button>
         </div>
       </div>
