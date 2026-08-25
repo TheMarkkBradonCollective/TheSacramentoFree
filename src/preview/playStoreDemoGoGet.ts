@@ -6,7 +6,7 @@ import type { GoGetFulfillerLiveLocation, GoGetLiveLocation, GoGetSession, UserP
 import { isGoGetTripLocked } from '../lib/goGetTripLock';
 import { PLAY_STORE_DEMO_ITEMS, PLAY_STORE_DEMO_PROFILE, isPlayStoreDemo } from './playStoreDemo';
 
-export const DEMO_GOGET_SESSION_ID = 'demo-goget-chair';
+export const DEMO_GOGET_SESSION_ID = 'demo-goget-couch';
 
 /** Major Sacramento locations used in mock pickup flows. */
 export const SACRAMENTO_LOCATIONS = {
@@ -87,16 +87,16 @@ export function getPlayStoreDemoItemById(itemId: string) {
   return PLAY_STORE_DEMO_ITEMS.find((item) => item.id === itemId) ?? null;
 }
 
-function baseChairSession(overrides: Partial<GoGetSession>): GoGetSession {
+function baseCouchSession(overrides: Partial<GoGetSession>): GoGetSession {
   return {
     id: DEMO_GOGET_SESSION_ID,
-    itemId: 'demo-item-chair',
+    itemId: 'demo-item-couch',
     itemType: 'giveaway',
     fulfillerUserId: DEMO_GOGET_AVERY_PROFILE.uid,
     fulfillerName: DEMO_GOGET_AVERY_PROFILE.displayName,
     requesterUserId: PLAY_STORE_DEMO_PROFILE.uid,
     requesterName: PLAY_STORE_DEMO_PROFILE.displayName,
-    chatId: 'demo-chat-chair',
+    chatId: 'demo-chat-couch',
     handshakeMode: 'availability',
     status: 'awaiting_availability',
     destinationLat: SACRAMENTO_LOCATIONS.eastSac.lat,
@@ -111,22 +111,22 @@ function baseChairSession(overrides: Partial<GoGetSession>): GoGetSession {
   };
 }
 
-export const DEMO_GOGET_RING_SESSION = baseChairSession({
+export const DEMO_GOGET_RING_SESSION = baseCouchSession({
   status: 'awaiting_availability',
 });
 
-export const DEMO_GOGET_WAITING_SESSION = baseChairSession({
+export const DEMO_GOGET_WAITING_SESSION = baseCouchSession({
   status: 'awaiting_availability',
 });
 
-export const DEMO_GOGET_ACTIVE_SESSION = baseChairSession({
+export const DEMO_GOGET_ACTIVE_SESSION = baseCouchSession({
   status: 'active',
   ringExpiresAt: null,
   startedAt: hoursAgo(0.08),
   fulfillerSharingLocation: true,
 });
 
-export const DEMO_GOGET_ARRIVED_SESSION = baseChairSession({
+export const DEMO_GOGET_ARRIVED_SESSION = baseCouchSession({
   status: 'arrived',
   ringExpiresAt: null,
   startedAt: hoursAgo(0.15),

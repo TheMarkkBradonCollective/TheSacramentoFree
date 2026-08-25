@@ -44,7 +44,7 @@ export default function PlayStoreDemoGoGetScene({ scene }: PlayStoreDemoGoGetSce
   const eventIds = useMemo(() => events.map((event) => event.id), [events]);
   const engagement = useItemsEngagement(itemIds, profile);
   const eventsEngagement = useEventsEngagement(eventIds, profile);
-  const chairItem = useMemo(() => items.find((item) => item.id === 'demo-item-chair') ?? items[0], [items]);
+  const couchItem = useMemo(() => items.find((item) => item.id === 'demo-item-couch') ?? items[0], [items]);
 
   if (scene === 'goget-ring') {
     return (
@@ -68,7 +68,7 @@ export default function PlayStoreDemoGoGetScene({ scene }: PlayStoreDemoGoGetSce
         <GoGetTripLockScreen
           session={DEMO_GOGET_WAITING_SESSION}
           userProfile={profile}
-          item={chairItem}
+          item={couchItem}
           initialOrigin={SACRAMENTO_LOCATIONS.downtown}
         />
       </DemoShell>
@@ -81,7 +81,7 @@ export default function PlayStoreDemoGoGetScene({ scene }: PlayStoreDemoGoGetSce
         <GoGetTripLockScreen
           session={DEMO_GOGET_ACTIVE_SESSION}
           userProfile={profile}
-          item={chairItem}
+          item={couchItem}
           initialOrigin={SACRAMENTO_LOCATIONS.downtown}
         />
       </DemoShell>
@@ -94,7 +94,7 @@ export default function PlayStoreDemoGoGetScene({ scene }: PlayStoreDemoGoGetSce
         <GoGetTripLockScreen
           session={DEMO_GOGET_ACTIVE_SESSION}
           userProfile={DEMO_GOGET_AVERY_PROFILE}
-          item={chairItem}
+          item={couchItem}
           initialOrigin={SACRAMENTO_LOCATIONS.eastSac}
         />
       </DemoShell>
@@ -107,7 +107,7 @@ export default function PlayStoreDemoGoGetScene({ scene }: PlayStoreDemoGoGetSce
         <GoGetTripLockScreen
           session={DEMO_GOGET_ACTIVE_SESSION}
           userProfile={profile}
-          item={chairItem}
+          item={couchItem}
           initialOrigin={SACRAMENTO_LOCATIONS.downtown}
           preferOverview
         />
@@ -121,7 +121,7 @@ export default function PlayStoreDemoGoGetScene({ scene }: PlayStoreDemoGoGetSce
         <GoGetTripLockScreen
           session={DEMO_GOGET_ARRIVED_SESSION}
           userProfile={DEMO_GOGET_AVERY_PROFILE}
-          item={chairItem}
+          item={couchItem}
           initialOrigin={SACRAMENTO_LOCATIONS.eastSac}
         />
       </DemoShell>
@@ -151,7 +151,7 @@ export default function PlayStoreDemoGoGetScene({ scene }: PlayStoreDemoGoGetSce
               onEditItem={() => undefined}
               onLogout={() => undefined}
               onUpdateProfile={() => undefined}
-              initialSelectedChatId="demo-chat-lamp"
+              initialSelectedChatId="demo-chat-couch"
               onClearInitialChat={() => undefined}
               onRefresh={() => undefined}
               onRefreshEvents={() => undefined}
@@ -166,21 +166,21 @@ export default function PlayStoreDemoGoGetScene({ scene }: PlayStoreDemoGoGetSce
     );
   }
 
-  // goget-listing — chair giveaway with Go Get route row
+  // goget-listing — sectional couch with Go Get route row
   return (
     <DemoShell>
       <ItemDetailView
-        item={chairItem}
+        item={couchItem}
         currentUserId={profile.uid}
         userProfile={profile}
         onClose={() => undefined}
         onEdit={() => undefined}
         onUpdateStatus={() => undefined}
         onViewProfile={() => undefined}
-        voteState={engagement.getVotesForPost(chairItem.id)}
-        comments={engagement.getCommentsForPost(chairItem.id)}
-        onVote={(dir) => engagement.handleVote(chairItem.id, chairItem.userId, dir)}
-        onAddComment={(text) => engagement.handleAddComment(chairItem.id, text)}
+        voteState={engagement.getVotesForPost(couchItem.id)}
+        comments={engagement.getCommentsForPost(couchItem.id)}
+        onVote={(dir) => engagement.handleVote(couchItem.id, couchItem.userId, dir)}
+        onAddComment={(text) => engagement.handleAddComment(couchItem.id, text)}
       />
     </DemoShell>
   );
