@@ -115,6 +115,15 @@ export function extractListingImageUrls(item: {
   return urls.slice(0, MAX_LISTING_PHOTOS);
 }
 
+/** True when a listing has at least one displayable photo (uploaded or embedded in description). */
+export function listingHasPhoto(item: {
+  description?: string;
+  imageUrl?: string;
+  imageUrls?: string[];
+}): boolean {
+  return extractListingImageUrls(item).length > 0;
+}
+
 export function appendPhotosToDescription(description: string, urls: string[]): string {
   let text = plainListingDescription(description);
   text = text.replace(/\n\n\[PHOTOS:[^\]]+\]\s*/gi, '');

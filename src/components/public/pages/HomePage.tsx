@@ -14,7 +14,7 @@ import { NEWSPAPER } from '../../../preview/newspaperBrand';
 import NewspaperSectionHead from '../../../preview/NewspaperSectionHead';
 import type { PublicRoute } from '../../../public/routes';
 import { ItemPost } from '../../../types';
-import { extractListingImageUrls } from '../../../lib/listingContent';
+import { extractListingImageUrls, listingHasPhoto } from '../../../lib/listingContent';
 import { stripListingMetadata } from '../../../lib/itemLocation';
 import { getPostTypeGridBadgeLabel } from '../../../lib/postType';
 import ListingImage from '../../ListingImage';
@@ -108,13 +108,10 @@ function NewspaperFrontPage({
   const freeRule = copy(SITE.freeRule);
 
   const activeItems = useMemo(
-    () => items.filter((item) => item.status === 'active'),
+    () => items.filter((item) => item.status === 'active' && listingHasPhoto(item)),
     [items],
   );
-  const lead = useMemo(() => {
-    const withPhoto = activeItems.find((item) => Boolean(listingCover(item)));
-    return withPhoto ?? activeItems[0] ?? null;
-  }, [activeItems]);
+  const lead = useMemo(() => activeItems[0] ?? null, [activeItems]);
   const leadCover = lead ? listingCover(lead) : undefined;
   const leadDek = lead ? stripListingMetadata(lead.description) : '';
   const trending = useMemo(
