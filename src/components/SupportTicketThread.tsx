@@ -18,6 +18,7 @@ import { useImageAttachment } from '../hooks/useImageAttachment';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmUnsendMessage } from '../lib/destructiveConfirm';
+import LinkifiedText from './LinkifiedText';
 import {
   getMessageGroupMeta,
   messageBubbleClass,
@@ -332,7 +333,16 @@ export default function SupportTicketThread({
                     })()
                   )}
                   {showText && (
-                    <p className="leading-snug whitespace-pre-wrap">{msg.text}</p>
+                    <p className="leading-snug whitespace-pre-wrap">
+                      <LinkifiedText
+                        text={msg.text}
+                        linkClassName={
+                          isMine
+                            ? 'text-on-accent underline underline-offset-2 break-all font-semibold'
+                            : undefined
+                        }
+                      />
+                    </p>
                   )}
                   {groupMeta.isLastInGroup && (
                     <div

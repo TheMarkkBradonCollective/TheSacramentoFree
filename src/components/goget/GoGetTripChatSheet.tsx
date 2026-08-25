@@ -5,6 +5,7 @@ import { createSupabaseMessage, getSupabaseMessages } from '../../supabase';
 import { takeSafetyCooldownBlockMessage } from '../../lib/safetyCooldowns';
 import { subscribePostgresChanges } from '../../lib/supabaseRealtime';
 import { isPlayStoreDemo } from '../../preview/playStoreDemo';
+import LinkifiedText from '../LinkifiedText';
 
 interface GoGetTripChatSheetProps {
   chatId: string;
@@ -103,7 +104,14 @@ export default function GoGetTripChatSheet({
                       mine ? 'bg-accent text-white' : 'bg-inset text-app'
                     }`}
                   >
-                    {message.text}
+                    <LinkifiedText
+                      text={message.text}
+                      linkClassName={
+                        mine
+                          ? 'text-white underline underline-offset-2 break-all font-semibold'
+                          : undefined
+                      }
+                    />
                   </p>
                 </div>
               );

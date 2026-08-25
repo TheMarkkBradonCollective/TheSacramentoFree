@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 
-const URL_PATTERN = /https?:\/\/[^\s]+/g;
+const URL_PATTERN = /https?:\/\/[^\s]+|play\.google\.com\/[^\s]+/g;
+
+function normalizeHref(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
 
 function splitUrlSuffix(url: string): { href: string; suffix: string } {
   let href = url;
@@ -13,8 +17,12 @@ function splitUrlSuffix(url: string): { href: string; suffix: string } {
 }
 
 /** Plain text with https URLs as tappable, wrapping links. Preserves newlines via pre-wrap on the wrapper. */
-export function linkifyPlainText(text: string): ReactNode[] {
+export function linkifyPlainText(text: string, linkClassName?: string): ReactNode[] {
   if (!text) return [];
+
+  const linkClass =
+    linkClassName ??
+    'text-accent underline underline-offset-2 break-all font-semibold';
 
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
@@ -26,13 +34,14 @@ export function linkifyPlainText(text: string): ReactNode[] {
       nodes.push(text.slice(lastIndex, start));
     }
     const { href, suffix } = splitUrlSuffix(raw);
+    const normalizedHref = normalizeHref(href);
     nodes.push(
       <a
-        key={`${start}-${href}`}
-        href={href}
+        key={`${start}-${normalizedHref}`}
+        href={normalizedHref}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-accent underline underline-offset-2 break-all font-semibold"
+        className={linkClass}
       >
         {href}
       </a>,
@@ -51,8 +60,17 @@ export function linkifyPlainText(text: string): ReactNode[] {
 interface LinkifiedTextProps {
   text: string;
   className?: string;
+  linkClassName?: string;
 }
 
-export default function LinkifiedText({ text, className = '' }: LinkifiedTextProps) {
-  return <span className={`break-words [overflow-wrap:anywhere] ${className}`.trim()}>{linkifyPlainText(text)}</span>;
+export default function LinkifiedText({ text, className = '', linkClassName }: LinkifiedTextProps) {
+  const linkClass =
+    linkClassName ??
+    'text-accent underline underline-offset-2 break-all font-semibold';
+
+  return (
+    <span className={`break-words [overflow-wrap:anywhere] ${className}`.trim()}>
+      {linkifyPlainText(text, linkClass)}
+    </span>
+  );
 }

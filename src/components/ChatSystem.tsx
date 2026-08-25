@@ -66,6 +66,7 @@ import {
   messageGroupSpacing,
 } from '../lib/chatMessageLayout';
 import PageScrollFooter, { ScrollPage } from './PageScrollFooter';
+import LinkifiedText from './LinkifiedText';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { PresenceUserAvatar } from './UserAvatar';
 import { useTrackPresence } from '../contexts/PresenceContext';
@@ -1743,7 +1744,16 @@ export default function ChatSystem({
                               </div>
                             )}
                             <div className={messageBubbleClass(isUser, groupMeta)}>
-                              <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                              <p className="whitespace-pre-wrap break-words">
+                                <LinkifiedText
+                                  text={msg.text}
+                                  linkClassName={
+                                    isUser
+                                      ? 'text-on-accent underline underline-offset-2 break-all font-semibold'
+                                      : undefined
+                                  }
+                                />
+                              </p>
                               {groupMeta.isLastInGroup && (
                                 <div
                                   className={`mt-1 flex items-center gap-1 ${
