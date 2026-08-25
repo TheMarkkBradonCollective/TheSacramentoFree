@@ -16,6 +16,7 @@ import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { isListingOpenForCoordination } from '../lib/roles';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
+import ListingViewBadge from './ListingViewBadge';
 import UserAvatar from './UserAvatar';
 import { usePresence } from '../contexts/PresenceContext';
 import { PostVoteState } from '../hooks/useItemsEngagement';
@@ -269,25 +270,19 @@ export default function ItemCard({
         >
           <div className="item-feed-tile__media relative aspect-square overflow-hidden bg-inset">
             {showCoverPhoto ? (
-              <>
-                <ListingImage
-                  src={coverPhoto}
-                  alt=""
-                  width={320}
-                  className="h-full w-full object-cover"
-                  onLoadError={() => setCoverFailed(true)}
-                />
-                {photos.length > 1 && (
-                  <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
-                    +{photos.length - 1}
-                  </span>
-                )}
-              </>
+              <ListingImage
+                src={coverPhoto}
+                alt=""
+                width={320}
+                className="h-full w-full object-cover"
+                onLoadError={() => setCoverFailed(true)}
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <Tag className="w-7 h-7 text-subtle" aria-hidden />
               </div>
             )}
+            <ListingViewBadge count={item.viewCount ?? 0} />
             <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
               <span
                 className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[8px] px-1 py-0 leading-none whitespace-nowrap shadow-sm`}
@@ -345,23 +340,17 @@ export default function ItemCard({
           className={`item-feed-card__media${showCoverPhoto ? '' : ' item-feed-card__media--empty'}`}
         >
           {showCoverPhoto ? (
-            <>
-              <ListingImage
-                src={coverPhoto}
-                alt={item.title}
-                width={480}
-                className="h-full w-full object-cover"
-                onLoadError={() => setCoverFailed(true)}
-              />
-              {photos.length > 1 && (
-                <span className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 text-[8px] sm:text-[10px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
-                  +{photos.length - 1}
-                </span>
-              )}
-            </>
+            <ListingImage
+              src={coverPhoto}
+              alt={item.title}
+              width={480}
+              className="h-full w-full object-cover"
+              onLoadError={() => setCoverFailed(true)}
+            />
           ) : (
             <Tag className="w-6 h-6 text-subtle" aria-hidden />
           )}
+          <ListingViewBadge count={item.viewCount ?? 0} className="sm:top-2 sm:right-2 sm:text-[10px]" />
         </button>
 
         <div className="item-feed-card__copy">

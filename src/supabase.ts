@@ -1087,7 +1087,7 @@ export async function upsertSupabaseProfile(
  * --- ITEMS / LISTINGS ---
  */
 const ITEM_FEED_COLUMNS =
-  'id,title,type,category,userId,userDisplayName,userPhotoURL,neighborhood,status,imageUrl,createdAt,updatedAt,expiresAt,expiryWarnedAt,pickupAttributionType,pickupAttributionUserId,pickupAttributionLabel';
+  'id,title,type,category,userId,userDisplayName,userPhotoURL,neighborhood,status,imageUrl,createdAt,updatedAt,expiresAt,expiryWarnedAt,pickupAttributionType,pickupAttributionUserId,pickupAttributionLabel,viewCount';
 
 function mapItemRows(rows: unknown[]): ItemPost[] {
   const items: ItemPost[] = [];
@@ -1262,6 +1262,26 @@ export async function getSupabaseItemById(itemId: string): Promise<ItemPost | nu
     handleSupabaseError(err, 'items');
     return null;
   }
+}
+
+let listingViewRpcAvailable: boolean | null = null;
+
+/** Count one unique neighbor view when opening listing detail (RPC + items.viewCount). */
+export async function recordListingView(itemId: string): Promise<{ ok: boolean; viewCount?: number }> {
+  if (!itemId || listingViewRpcAvailable === false) return { ok: false };
+
+  const { data, error } = await supabase.rpc('record_listing_view', { target_item_id: itemId });
+  if (error) {
+    const message = String(error.message || '');
+    if (/record_listing_view|viewcount|listing_views/i.test(message)) {
+      listingViewRpcAvailable = false;
+    }
+    return { ok: false };
+  }
+
+  listingViewRpcAvailable = true;
+  const viewCount = typeof data === 'number' ? data : Number(data);
+  return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
 }
 
 async function requireAuthUserId(): Promise<string | null> {

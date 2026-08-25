@@ -490,6 +490,19 @@ ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionUserId" TEXT
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "pickupAttributionLabel" TEXT;
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMPTZ;
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "expiryWarnedAt" TIMESTAMPTZ;
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS "viewCount" INTEGER NOT NULL DEFAULT 0;
+
+-- One view per neighbor per listing (denormalized count on items.viewCount).
+CREATE TABLE IF NOT EXISTS public.listing_views (
+  "itemId" TEXT NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "viewedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("itemId", "userId")
+);
+
+ALTER TABLE public.listing_views ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS listing_views_item_idx ON public.listing_views ("itemId");
+
 ALTER TABLE public.items DROP CONSTRAINT IF EXISTS items_pickup_attribution_type_check;
 ALTER TABLE public.items ADD CONSTRAINT items_pickup_attribution_type_check
   CHECK (
@@ -1189,6 +1202,7 @@ BEGIN
   DELETE FROM public.listing_subitems WHERE "itemId" = target_item_id;
   DELETE FROM public.item_votes WHERE "itemId" = target_item_id;
   DELETE FROM public.item_comments WHERE "itemId" = target_item_id;
+  DELETE FROM public.listing_views WHERE "itemId" = target_item_id;
   DELETE FROM public.saved_items WHERE "itemId" = target_item_id;
 
   DELETE FROM public.messages
@@ -2612,6 +2626,55 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION public.item_feed_description(text) TO anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.record_listing_view(target_item_id text)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $recordview$
+DECLARE
+  viewer_uid text;
+  owner_uid text;
+  inserted_count integer;
+  result_count integer;
+BEGIN
+  viewer_uid := auth.uid()::text;
+  IF viewer_uid IS NULL OR target_item_id IS NULL OR target_item_id = '' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT "userId" INTO owner_uid FROM public.items WHERE id = target_item_id;
+  IF owner_uid IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF owner_uid = viewer_uid THEN
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.items WHERE id = target_item_id;
+    RETURN result_count;
+  END IF;
+
+  INSERT INTO public.listing_views ("itemId", "userId")
+  VALUES (target_item_id, viewer_uid)
+  ON CONFLICT ("itemId", "userId") DO NOTHING;
+
+  GET DIAGNOSTICS inserted_count = ROW_COUNT;
+
+  IF inserted_count > 0 THEN
+    UPDATE public.items
+    SET "viewCount" = COALESCE("viewCount", 0) + 1
+    WHERE id = target_item_id
+    RETURNING "viewCount" INTO result_count;
+  ELSE
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.items WHERE id = target_item_id;
+  END IF;
+
+  RETURN result_count;
+END;
+$recordview$;
+
+REVOKE ALL ON FUNCTION public.record_listing_view(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_listing_view(text) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.item_feed_image_url_map()
 RETURNS TABLE(id text, image_urls text[])

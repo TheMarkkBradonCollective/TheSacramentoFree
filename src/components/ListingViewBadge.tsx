@@ -1,0 +1,36 @@
+import { Eye } from 'lucide-react';
+
+export function formatListingViewCount(count: number): string {
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  }
+  if (count >= 10_000) {
+    return `${Math.round(count / 1000)}k`;
+  }
+  if (count >= 1_000) {
+    return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  }
+  return String(count);
+}
+
+interface ListingViewBadgeProps {
+  count: number;
+  className?: string;
+  compact?: boolean;
+}
+
+export default function ListingViewBadge({ count, className = '', compact = false }: ListingViewBadgeProps) {
+  if (count <= 0) return null;
+
+  return (
+    <span
+      className={`absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/70 font-bold text-white ${
+        compact ? 'px-1 py-0 text-[7px]' : 'px-1.5 py-0.5 text-[9px]'
+      } ${className}`}
+      aria-label={`${count} view${count === 1 ? '' : 's'}`}
+    >
+      <Eye className={compact ? 'h-2.5 w-2.5 shrink-0' : 'h-3 w-3 shrink-0'} aria-hidden />
+      {formatListingViewCount(count)}
+    </span>
+  );
+}

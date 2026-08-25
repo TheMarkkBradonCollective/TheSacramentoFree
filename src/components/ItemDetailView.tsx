@@ -36,7 +36,7 @@ import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { isListingOpenForCoordination } from '../lib/roles';
 import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import { isStaffRole } from '../lib/roles';
-import { getListingSubitems, itemHasRecordedAppClaim } from '../supabase';
+import { getListingSubitems, itemHasRecordedAppClaim, recordListingView } from '../supabase';
 import { getPickupAttributionLabel, listingNeedsPickupAttribution } from '../lib/pickupAttribution';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { useSavedItems } from '../hooks/useSavedItems';
@@ -69,6 +69,7 @@ interface ItemDetailViewProps {
   startNavigationOnOpen?: boolean;
   onStartNavigationConsumed?: () => void;
   onPickupCompleted?: () => void;
+  onViewCountUpdated?: (itemId: string, viewCount: number) => void;
 }
 
 export default function ItemDetailView({
@@ -97,6 +98,7 @@ export default function ItemDetailView({
   startNavigationOnOpen = false,
   onStartNavigationConsumed,
   onPickupCompleted,
+  onViewCountUpdated,
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [hasAppClaim, setHasAppClaim] = useState(false);
@@ -112,6 +114,15 @@ export default function ItemDetailView({
     void getListingSubitems(item.id).then(setSubitems);
     void itemHasRecordedAppClaim(item.id).then(setHasAppClaim);
   }, [item.id]);
+
+  useEffect(() => {
+    if (!currentUserId || item.userId === currentUserId) return;
+    void recordListingView(item.id).then((result) => {
+      if (result.ok && result.viewCount != null) {
+        onViewCountUpdated?.(item.id, result.viewCount);
+      }
+    });
+  }, [currentUserId, item.id, item.userId, onViewCountUpdated]);
 
   useDismissOnEscape(onClose);
 
