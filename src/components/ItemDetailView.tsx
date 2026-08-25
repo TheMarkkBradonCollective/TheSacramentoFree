@@ -24,6 +24,7 @@ import {
   parsePickupNotes,
 } from '../lib/listingContent';
 import ListingPhotoGallery from './ListingPhotoGallery';
+import { ListingViewCount } from './ListingViewBadge';
 import ListingEngagement from './ListingEngagement';
 import DetailActionFooter, { type DetailFooterButton } from './DetailActionFooter';
 import { PresenceUserAvatar } from './UserAvatar';
@@ -455,6 +456,7 @@ export default function ItemDetailView({
               <Calendar className="w-4 h-4" />
               {dateLabel}
             </span>
+            <ListingViewCount count={item.viewCount ?? 0} />
             <span className="inline-flex items-center gap-1.5">
               <Tag className="w-4 h-4" />
               {item.userDisplayName}
