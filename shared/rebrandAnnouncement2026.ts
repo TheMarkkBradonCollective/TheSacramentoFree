@@ -10,7 +10,7 @@ export const REBRAND_ANNOUNCEMENT_TITLE = 'I do not know what else to do';
 export const REBRAND_ANNOUNCEMENT_BODY =
   'Sounds like shutdown. Nope — got a good idea. You gotta wait for version 0.2.0.';
 
-/** Full letter — popup + News detail. Not a traditional release note. */
+/** Full letter — News detail. Not a traditional release note. */
 export const REBRAND_ANNOUNCEMENT_LETTER = `Neighbors,
 
 I'm going to be honest — I'm kind of defeated on this one.
@@ -68,8 +68,7 @@ export const REBRAND_UPDATE_BODY =
   'Site stays up while version 0.2.0 cooks in private — you gotta wait on the reveal.';
 
 export const REBRAND_UPDATE_DETAIL = `WHAT NEIGHBORS SEE
-• sacramentobuynothing.com now shows an official trademark notice on the home page — we are independent and working on a distinct name
-• First visit shows a one-time letter from Mark (dismiss it anytime; the full letter also lives in bell → News)
+• sacramentobuynothing.com shows an official trademark notice on the home page — we are independent and working on a distinct name
 • The site and apps stay fully available — post, gift, chat, and events work as they do today
 • Large new feature work pauses while version 0.2.0 is built in private (mobile, desktop, PWA, and Android)
 • When version 0.2.0 ships, the Android app moves from internal testing to closed testing — a wider invited Play beta before any public launch
@@ -80,7 +79,6 @@ Mark's full personal letter is in Notifications → News.
 
 WHERE TO LOOK IN CODE
 - shared/rebrandAnnouncement2026.ts — letter, home notice, feed cliff-hanger
-- src/components/RebrandAnnouncementModal.tsx — one-time popup
 - src/components/public/TrademarkNoticeBanner.tsx — home page notice
 
 HISTORY
