@@ -21,6 +21,8 @@ import EventDetailNavigation from './EventDetailNavigation';
 import DetailActionFooter, { type DetailFooterButton } from './DetailActionFooter';
 import { PresenceUserAvatar } from './UserAvatar';
 import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
+import { recordEventView } from '../supabase';
+import { ListingViewCount } from './ListingViewBadge';
 
 interface EventDetailViewProps {
   event: CommunityEvent;
@@ -50,6 +52,7 @@ interface EventDetailViewProps {
   /** Open event detail and auto-start in-app navigation (events Navigate button). */
   startNavigationOnOpen?: boolean;
   onStartNavigationConsumed?: () => void;
+  onViewCountUpdated?: (eventId: string, viewCount: number) => void;
 }
 
 function formatEventDate(iso: string): string {
@@ -104,6 +107,7 @@ export default function EventDetailView({
   commentsLocked = false,
   startNavigationOnOpen = false,
   onStartNavigationConsumed,
+  onViewCountUpdated,
 }: EventDetailViewProps) {
   const [showPinModal, setShowPinModal] = useState(false);
   const [navFooterActions, setNavFooterActions] = useState<DetailFooterButton[]>([]);
@@ -116,6 +120,15 @@ export default function EventDetailView({
   const canEdit = isOwner && isEventEditable(event);
   const canAddDates = isOwner && !isCancelled && onAddDates;
   const seriesDates = event.seriesId ? getSeriesOccurrences(allEvents, event.seriesId) : [];
+
+  useEffect(() => {
+    if (!currentUserId || event.userId === currentUserId) return;
+    void recordEventView(event.id).then((result) => {
+      if (result.ok && result.viewCount != null) {
+        onViewCountUpdated?.(event.id, result.viewCount);
+      }
+    });
+  }, [currentUserId, event.id, event.userId, onViewCountUpdated]);
 
   const activeRsvp = isPast ? effectivePastRsvp(rsvpState.userRsvp) : rsvpState.userRsvp;
 
@@ -248,6 +261,7 @@ export default function EventDetailView({
               )}
             </div>
             <h2 className="font-display text-xl sm:text-2xl font-bold text-app leading-tight">{event.title}</h2>
+            <ListingViewCount count={event.viewCount ?? 0} compact className="text-xs text-muted" />
             <EventDetailNavigation
               event={event}
               currentUserId={currentUserId}

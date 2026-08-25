@@ -1284,6 +1284,26 @@ export async function recordListingView(itemId: string): Promise<{ ok: boolean; 
   return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
 }
 
+let eventViewRpcAvailable: boolean | null = null;
+
+/** Record one unique neighbor view when the full event detail is opened (not feed cards). */
+export async function recordEventView(eventId: string): Promise<{ ok: boolean; viewCount?: number }> {
+  if (!eventId || eventViewRpcAvailable === false) return { ok: false };
+
+  const { data, error } = await supabase.rpc('record_event_view', { target_event_id: eventId });
+  if (error) {
+    const message = String(error.message || '');
+    if (/record_event_view|viewcount|event_views/i.test(message)) {
+      eventViewRpcAvailable = false;
+    }
+    return { ok: false };
+  }
+
+  eventViewRpcAvailable = true;
+  const viewCount = typeof data === 'number' ? data : Number(data);
+  return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
+}
+
 async function requireAuthUserId(): Promise<string | null> {
   const { data: sessionData } = await supabase.auth.getSession();
   return sessionData.session?.user?.id ?? null;
@@ -4238,6 +4258,7 @@ export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
     ...row,
     hostedBy: row.hostedBy?.trim() || null,
     seriesId: row.seriesId?.trim() || null,
+    viewCount: typeof row.viewCount === 'number' && Number.isFinite(row.viewCount) ? row.viewCount : 0,
     locationLat:
       typeof row.locationLat === 'number' && Number.isFinite(row.locationLat) ? row.locationLat : null,
     locationLng:

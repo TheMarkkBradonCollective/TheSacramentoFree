@@ -1861,6 +1861,13 @@ export default function App() {
     setDetailFeedPost((current) => (current?.id === postId ? { ...current, viewCount } : current));
   }, []);
 
+  const handleEventViewCountUpdated = useCallback((eventId: string, viewCount: number) => {
+    setEvents((current) =>
+      current.map((row) => (row.id === eventId ? { ...row, viewCount } : row)),
+    );
+    setDetailEvent((current) => (current?.id === eventId ? { ...current, viewCount } : current));
+  }, []);
+
   const handleDeleteFeedPost = useCallback(
     async (post: FeedPost) => {
       if (!userProfile) return;
@@ -2813,6 +2820,7 @@ export default function App() {
                   commentsLocked={!canAccessEvents}
                   startNavigationOnOpen={detailEventNavigateOnOpen}
                   onStartNavigationConsumed={() => setDetailEventNavigateOnOpen(false)}
+                  onViewCountUpdated={handleEventViewCountUpdated}
                 />
               )}
 

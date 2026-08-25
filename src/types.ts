@@ -627,6 +627,8 @@ export interface CommunityEvent {
   isFree: true;
   status: EventStatus;
   imageUrl?: string;
+  /** Unique neighbors who opened the full event detail (denormalized). */
+  viewCount?: number;
   createdAt: any;
   updatedAt: any;
 }
