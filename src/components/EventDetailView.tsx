@@ -7,12 +7,18 @@ import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
 import StaffEventActions from './StaffEventActions';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
-import { isEventEditable, isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
-import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
+import {
+  formatOccurrenceRsvpSummary,
+  isEventEditable,
+  isEventPast,
+  isEventUpcoming,
+  resolveEventStatus,
+  effectivePastRsvp,
+} from '../lib/eventRsvp';
+import { getSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
 import EventStatusBadge from './EventStatusBadge';
 import EventDetailNavigation from './EventDetailNavigation';
 import DetailActionFooter, { type DetailFooterButton } from './DetailActionFooter';
-import { effectivePastRsvp } from '../lib/eventRsvp';
 import { PresenceUserAvatar } from './UserAvatar';
 import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
@@ -37,6 +43,8 @@ interface EventDetailViewProps {
   onEventStaffAction?: () => void;
   onSelectOccurrence?: (event: CommunityEvent) => void;
   onEventUpdated?: (event: CommunityEvent) => void;
+  /** Per-date RSVP counts — going / gone / missed belong to that occurrence only. */
+  getOccurrenceRsvps?: (eventId: string) => EventRsvpState;
   updating?: boolean;
   commentsLocked?: boolean;
   /** Open event detail and auto-start in-app navigation (events Navigate button). */
@@ -91,6 +99,7 @@ export default function EventDetailView({
   onEventStaffAction,
   onSelectOccurrence,
   onEventUpdated,
+  getOccurrenceRsvps,
   updating = false,
   commentsLocked = false,
   startNavigationOnOpen = false,
@@ -106,10 +115,7 @@ export default function EventDetailView({
   const isOpenForCoordination = isEventUpcoming(event) && !isCancelled;
   const canEdit = isOwner && isEventEditable(event);
   const canAddDates = isOwner && !isCancelled && onAddDates;
-  const seriesSiblings = getSeriesSiblings(allEvents, event);
-  const upcomingInSeries =
-    event.seriesId ? getUpcomingSeriesOccurrences(allEvents, event.seriesId) : [];
-  const pastSiblings = seriesSiblings.filter((sibling) => !isEventUpcoming(sibling));
+  const seriesDates = event.seriesId ? getSeriesOccurrences(allEvents, event.seriesId) : [];
 
   const activeRsvp = isPast ? effectivePastRsvp(rsvpState.userRsvp) : rsvpState.userRsvp;
 
@@ -285,7 +291,7 @@ export default function EventDetailView({
             </div>
           </div>
 
-          {isSeriesEvent(event) && (
+          {isSeriesEvent(event) && seriesDates.length > 0 && (
             <div className="sbn-card p-4 space-y-3">
               <div>
                 <p className="text-xs font-semibold text-muted uppercase tracking-wide flex items-center gap-1">
@@ -293,45 +299,47 @@ export default function EventDetailView({
                   All dates at this location
                 </p>
                 <p className="text-[11px] text-muted mt-0.5">
-                  RSVP per date — pick the day you plan to go.
+                  Each date has its own going, gone, and missed counts. Passed dates stay on the next upcoming one in the feed.
                 </p>
               </div>
 
-              {upcomingInSeries.length > 0 && (
-                <ul className="space-y-2">
-                  {upcomingInSeries.map((occurrence) => (
+              <ul className="space-y-2">
+                {seriesDates.map((occurrence) => {
+                  const occurrenceStatus = resolveEventStatus(occurrence);
+                  const occurrencePast = isEventPast(occurrence);
+                  const rsvpCounts = getOccurrenceRsvps?.(occurrence.id);
+                  const summary = rsvpCounts
+                    ? formatOccurrenceRsvpSummary(rsvpCounts, occurrencePast)
+                    : null;
+                  const selected = occurrence.id === event.id;
+                  return (
                     <li key={occurrence.id}>
                       <button
                         type="button"
                         onClick={() => onSelectOccurrence?.(occurrence)}
                         className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
-                          occurrence.id === event.id
+                          selected
                             ? 'border-accent bg-accent/10 text-app'
                             : 'border-app bg-inset/40 hover:border-accent/50'
                         }`}
                       >
-                        <span className="font-semibold">
-                          {formatOccurrenceLabel(occurrence.eventStartAt, occurrence.eventEndAt)}
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold">
+                            {formatOccurrenceLabel(occurrence.eventStartAt, occurrence.eventEndAt)}
+                          </span>
+                          <EventStatusBadge status={occurrenceStatus} />
                         </span>
-                        {occurrence.id === event.id && (
+                        {summary && (
+                          <span className="text-xs text-muted block mt-0.5">{summary}</span>
+                        )}
+                        {selected && (
                           <span className="text-xs text-muted block mt-0.5">Viewing this date</span>
                         )}
                       </button>
                     </li>
-                  ))}
-                </ul>
-              )}
-
-              {pastSiblings.length > 0 && (
-                <div className="space-y-2 border-t border-app pt-3">
-                  <p className="text-[10px] font-semibold text-muted uppercase">Past dates</p>
-                  <ul className="space-y-1 text-xs text-muted">
-                    {pastSiblings.map((sibling) => (
-                      <li key={sibling.id}>{formatOccurrenceLabel(sibling.eventStartAt, sibling.eventEndAt)}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                  );
+                })}
+              </ul>
             </div>
           )}
 

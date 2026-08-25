@@ -104,3 +104,17 @@ export function countPastRsvps(
   }
   return { gone, missed };
 }
+
+/** Compact going / gone / missed line for one occurrence (not the whole series). */
+export function formatOccurrenceRsvpSummary(
+  counts: { going: number; gone: number; missed: number },
+  past: boolean,
+): string {
+  if (past) {
+    const parts: string[] = [];
+    if (counts.gone > 0) parts.push(`${counts.gone} gone`);
+    if (counts.missed > 0) parts.push(`${counts.missed} missed`);
+    return parts.length > 0 ? parts.join(' · ') : 'No check-ins yet';
+  }
+  return counts.going > 0 ? `${counts.going} going` : 'No RSVPs yet';
+}

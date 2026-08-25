@@ -2710,6 +2710,7 @@ export default function App() {
                   userProfile={userProfile}
                   rsvpState={eventsEngagement.getRsvpsForEvent(detailEvent.id)}
                   comments={eventsEngagement.getCommentsForEvent(detailEvent.id)}
+                  getOccurrenceRsvps={eventsEngagement.getRsvpsForEvent}
                   onRsvp={(status) =>
                     eventsEngagement.handleRsvp(
                       detailEvent.id,
