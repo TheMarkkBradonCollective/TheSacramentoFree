@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CLEARED_NOTIFICATION_PREFERENCES,
   clearNotificationDataOnLogout,
+  clearNotificationDataOnAccountDeletion,
   ensurePushSubscription,
   getNotificationPreferences,
   getPushPermissionState,
   hasActivePushSubscription,
   listenForNotificationClicks,
-  NOTIFICATION_SESSION_CLEARED_EVENT,
   preferencesEqual,
   refreshNativePushPermissionState,
   saveNotificationPreferences,
@@ -20,7 +20,7 @@ import {
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import type { NotificationPreferences } from '../types';
 
-export { clearNotificationDataOnLogout, clearNotificationDataOnLogout as clearPushSessionOnLogout };
+export { clearNotificationDataOnLogout, clearNotificationDataOnAccountDeletion, clearNotificationDataOnLogout as clearPushSessionOnLogout };
 
 type UsePushNotificationsOptions = {
   /** Load preference toggles and subscribe to DB changes. Off for lightweight subscribe-only UI. */
@@ -81,8 +81,7 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     setIsSubscribed(await hasActivePushSubscription());
   }, []);
 
-  const resetPreferencesState = useCallback(() => {
-    applyLoadedPreferences(CLEARED_NOTIFICATION_PREFERENCES);
+  const resetSessionUiState = useCallback(() => {
     setError('');
     setSaveMessage('');
     setTestMessage('');
@@ -90,7 +89,7 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
     setPrefsLoading(false);
     setIsSubscribed(false);
     hasUnsavedRef.current = false;
-  }, [applyLoadedPreferences]);
+  }, []);
 
   const hasUnsavedChanges = useMemo(
     () => !preferencesEqual(preferences, savedPreferences),
@@ -107,7 +106,7 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
 
   useEffect(() => {
     if (!userId) {
-      resetPreferencesState();
+      resetSessionUiState();
       return;
     }
 
@@ -115,16 +114,7 @@ export function usePushNotifications(userId?: string, options?: UsePushNotificat
       void loadPreferences({ force: true });
     }
     void checkSubscription();
-  }, [userId, syncPreferences, loadPreferences, checkSubscription, resetPreferencesState]);
-
-  useEffect(() => {
-    const onSessionCleared = () => {
-      resetPreferencesState();
-    };
-
-    window.addEventListener(NOTIFICATION_SESSION_CLEARED_EVENT, onSessionCleared);
-    return () => window.removeEventListener(NOTIFICATION_SESSION_CLEARED_EVENT, onSessionCleared);
-  }, [resetPreferencesState]);
+  }, [userId, syncPreferences, loadPreferences, checkSubscription, resetSessionUiState]);
 
   useEffect(() => {
     if (!userId || !syncPreferences) return;

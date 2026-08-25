@@ -8615,8 +8615,8 @@ export async function deleteOwnAccount(): Promise<{ ok: boolean; errorMessage?: 
       return { ok: false, errorMessage: profileError.message };
     }
 
-    const { clearNotificationDataOnLogout } = await import('./hooks/usePushNotifications');
-    await clearNotificationDataOnLogout(uid);
+    const { clearNotificationDataOnAccountDeletion } = await import('./hooks/usePushNotifications');
+    await clearNotificationDataOnAccountDeletion(uid);
     await supabase.auth.signOut();
     return {
       ok: true,

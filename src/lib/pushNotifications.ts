@@ -416,6 +416,25 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
   return subscription;
 }
 
+/** Remove this device's push registration from the server without revoking OS permission. */
+export async function detachPushSubscriptionFromServer(userId: string): Promise<void> {
+  if (!userId) return;
+
+  if (isNativeApp()) {
+    const token = getStoredFcmToken();
+    await removePushSubscription(userId, token ? fcmEndpointForToken(token) : undefined);
+    return;
+  }
+
+  if (!('serviceWorker' in navigator)) return;
+
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.getSubscription();
+  if (subscription) {
+    await removePushSubscription(userId, subscription.endpoint);
+  }
+}
+
 export async function detachPushSubscriptionForUser(userId: string): Promise<void> {
   if (!userId) return;
 
@@ -447,10 +466,33 @@ function broadcastNotificationSessionCleared(): void {
 }
 
 /**
- * Wipe all notification session data on logout: device push subscription,
- * notification-related localStorage, and in-memory UI state (via event).
+ * Logout cleanup — pauses server push for this device but keeps notification settings
+ * and OS/browser permission so sign-in restores alerts without re-toggling.
  */
 export async function clearNotificationDataOnLogout(userId?: string | null): Promise<void> {
+  const uid = userId || (await getSessionUserId());
+
+  try {
+    if (uid) {
+      await detachPushSubscriptionFromServer(uid);
+    }
+  } catch {
+    // ignore — session may already be clearing
+  }
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(PUSH_CELEBRATION_DISMISSED_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Full teardown when an account is deleted — removes device push registration.
+ */
+export async function clearNotificationDataOnAccountDeletion(userId?: string | null): Promise<void> {
   const uid = userId || (await getSessionUserId());
 
   try {
