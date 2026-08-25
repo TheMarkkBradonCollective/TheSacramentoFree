@@ -352,7 +352,8 @@ export async function validateClientPush(
     case 'listing_approved':
     case 'listing_denied':
     case 'listing_upvote':
-    case 'listing_downvote': {
+    case 'listing_downvote':
+    case 'listing_viewed': {
       const listingId = String(body.listingId || '').trim();
       if (!listingId) return { ok: false, error: 'listingId is required' };
       const supabaseAdmin = await getSupabaseAdmin();
@@ -363,7 +364,7 @@ export async function validateClientPush(
         .maybeSingle();
       const ownerId = String((item as { userId?: string } | null)?.userId || '');
       if (!ownerId) return { ok: false, error: 'Listing not found' };
-      if (eventType === 'item_claimed' || eventType === 'listing_upvote' || eventType === 'listing_downvote') {
+      if (eventType === 'item_claimed' || eventType === 'listing_upvote' || eventType === 'listing_downvote' || eventType === 'listing_viewed') {
         if (ownerId === callerId) return { ok: false, error: 'Invalid notification target' };
       }
       if (eventType === 'listing_status') {
@@ -449,6 +450,10 @@ export async function validateClientPush(
     case 'go_get_available_now':
     case 'go_get_schedule_proposed':
     case 'go_get_schedule_confirmed':
+    case 'go_get_schedule_changed':
+    case 'go_get_pickup_tomorrow':
+    case 'go_get_pickup_in_one_hour':
+    case 'go_get_pickup_thirty_min':
     case 'go_get_ready_reminder':
     case 'go_get_fulfiller_ready':
     case 'go_get_started':
@@ -456,6 +461,7 @@ export async function validateClientPush(
     case 'go_get_arrived':
     case 'go_get_completed':
     case 'go_get_cancelled':
+    case 'go_get_ring_expired':
     case 'go_get_expired':
     case 'go_get_declined':
     case 'go_get_disputed':

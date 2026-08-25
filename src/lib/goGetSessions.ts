@@ -107,6 +107,9 @@ function normalizeGoGetSession(row: Record<string, unknown>): GoGetSession {
     ringExpiresAt: nullableStr(row.ringExpiresAt),
     ringStartedAt: nullableStr(row.ringStartedAt),
     ringDurationSeconds: nullableNum(row.ringDurationSeconds),
+    onTheWayNotifiedAt: nullableStr(row.onTheWayNotifiedAt),
+    approachingNotifiedAt: nullableStr(row.approachingNotifiedAt),
+    ringExpiredNotifiedAt: nullableStr(row.ringExpiredNotifiedAt),
     readyWindowMinutes: nullableNum(row.readyWindowMinutes),
     createdAt: str(row.createdAt, new Date().toISOString()),
     updatedAt: str(row.updatedAt, new Date().toISOString()),
@@ -459,7 +462,8 @@ export async function expireGoGetRing(
     fallbackPatch: { status: 'awaiting_schedule' },
   });
   if (!result.ok || !result.session) return result;
-  if (item) {
+
+  if (!session.ringExpiredNotifiedAt && item) {
     await createSupabaseMessage(
       session.chatId,
       `⏳ No response yet for "${item.title}". You can propose a pickup time.`,
@@ -477,7 +481,9 @@ export async function expireGoGetRing(
         }),
       ),
     );
+    await updateSession(session.id, { ringExpiredNotifiedAt: new Date().toISOString() });
   }
+
   return { ok: true, session: result.session };
 }
 

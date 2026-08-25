@@ -17,6 +17,7 @@ import {
   pushUrlForAwards,
   pushUrlForAnnouncement,
   pushUrlForAppUpdate,
+  pushUrlForGoGetSession,
   pushUrlForPickup,
 } from './pushDeepLink';
 
@@ -258,6 +259,22 @@ export async function notifyListingDownvote(params: {
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
     tag: `vote-down-${params.item.id}-${params.voterUserId}`,
+  });
+}
+
+export async function notifyListingViewed(params: {
+  item: ItemPost;
+  viewerUserId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'listing_viewed',
+    title: 'Someone viewed your listing',
+    body: `A neighbor viewed "${params.item.title}"`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.item.userId],
+    tag: `view-${params.item.id}-${params.viewerUserId}`,
+    data: { viewerUserId: params.viewerUserId },
   });
 }
 
@@ -616,6 +633,7 @@ export async function notifyGoGetAvailabilityRequest(params: {
     tag: `go-get-availability-${params.sessionId}`,
     data: {
       goGetSessionId: params.sessionId,
+      sessionId: params.sessionId,
       urgentGoGetRing: 'true',
       ringDurationSeconds: String(params.ringDurationSeconds ?? 140),
       ringPattern: params.ringPattern ?? 'ring',
@@ -637,7 +655,7 @@ export async function notifyGoGetAvailableNow(params: {
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-available-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -656,7 +674,7 @@ export async function notifyGoGetScheduleProposed(params: {
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-schedule-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -675,7 +693,7 @@ export async function notifyGoGetScheduleConfirmed(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-confirmed-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -692,7 +710,7 @@ export async function notifyGoGetReadyReminder(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-ready-reminder-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -710,7 +728,7 @@ export async function notifyGoGetFulfillerReady(params: {
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-fulfiller-ready-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -728,7 +746,7 @@ export async function notifyGoGetStarted(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-started-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -764,7 +782,7 @@ export async function notifyGoGetArrived(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-arrived-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -781,7 +799,7 @@ export async function notifyGoGetCompleted(params: {
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-completed-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -790,16 +808,54 @@ export async function notifyGoGetCancelled(params: {
   recipientUserId: string;
   cancelledByName: string;
   sessionId: string;
+  reason?: string | null;
 }) {
+  const reasonSuffix = params.reason?.trim() ? ` Reason: ${params.reason.trim()}` : '';
   await sendPushNotification({
     eventType: 'go_get_cancelled',
     title: 'Pickup cancelled',
-    body: `${params.cancelledByName} cancelled the pickup for "${params.item.title}"`,
+    body: `${params.cancelledByName} cancelled the pickup for "${params.item.title}"${reasonSuffix}`,
     url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.recipientUserId],
     tag: `go-get-cancelled-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetRingExpired(params: {
+  item: ItemPost;
+  requesterUserId: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_ring_expired',
+    title: 'No response yet',
+    body: `No answer on "${params.item.title}" — you can schedule a pickup time instead`,
+    url: pushUrlForGoGetSession(params.sessionId),
+    listingId: params.item.id,
+    recipientUserIds: [params.requesterUserId],
+    tag: `go-get-ring-expired-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetScheduleChanged(params: {
+  item: ItemPost;
+  recipientUserId: string;
+  whenLabel: string;
+  sessionId: string;
+  actorName: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_schedule_changed',
+    title: 'Pickup time changed',
+    body: `${params.actorName} updated the pickup for "${params.item.title}" to ${params.whenLabel}`,
+    url: pushUrlForGoGetSession(params.sessionId),
+    listingId: params.item.id,
+    recipientUserIds: [params.recipientUserId],
+    tag: `go-get-schedule-changed-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 

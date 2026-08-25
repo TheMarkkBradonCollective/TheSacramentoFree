@@ -16,6 +16,8 @@ import { receivesStaffModeNotifications } from '../../../shared/staffInteraction
 export interface PushSendOptions {
   /** When false (public /api/push/send), recipients are validated server-side. Default true. */
   trusted?: boolean;
+  /** Origin of the dispatch — used by the notification engine for auditing. */
+  source?: 'client' | 'webhook' | 'cron' | 'internal';
 }
 
 export interface PushSendBody {
@@ -308,6 +310,9 @@ export async function runPushSend(
 
   const result = await sendPushToUsers(recipients, payload, {
     excludeUserIds: excludeIds,
+    source: options?.source ?? (trusted ? 'webhook' : 'client'),
+    actorId: callerId,
+    entityId: safeBody.listingId || safeBody.conversationId || safeBody.requestId,
   });
 
   return { status: 200, body: { ok: true, recipients: recipients.length, ...result } };

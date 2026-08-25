@@ -20,6 +20,8 @@ export interface PushDeepLinkTarget {
   chatFeedbackPanel?: 'reviews' | 'report' | 'staffReports';
   /** Neighbor staff application page. */
   staffApply?: boolean;
+  /** Open Go Get session (native Android pickup coordination). */
+  goGetSessionId?: string;
   /** @deprecated tickets — opens Messages → Support inbox */
   directorOverview?: boolean;
   supportTicketId?: string;
@@ -95,6 +97,12 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   const listingMatch = pathOnly.match(/^listing\/([^/]+)/);
   if (listingMatch) return { tab: 'stuff', listingId: listingMatch[1], pickupSessionId };
 
+  const goGetMatch = pathOnly.match(/^go-get\/([^/]+)/);
+  if (goGetMatch) return { tab: 'stuff', goGetSessionId: goGetMatch[1] };
+
+  const pickupMatch = pathOnly.match(/^pickup\/([^/]+)/);
+  if (pickupMatch) return { tab: 'stuff', goGetSessionId: pickupMatch[1] };
+
   const eventMatch = pathOnly.match(/^events\/([^/]+)/);
   if (eventMatch) return { tab: 'events', eventId: eventMatch[1] };
 
@@ -148,8 +156,13 @@ export function shouldPreservePushDeepLink(target: PushDeepLinkTarget | null): b
       target.directorOverview ||
       target.staffApply ||
       target.supportTicketId ||
-      target.chatSupportView,
+      target.chatSupportView ||
+      target.goGetSessionId,
   );
+}
+
+export function pushUrlForGoGetSession(sessionId: string): string {
+  return `/go-get/${sessionId}`;
 }
 
 export function pushUrlForListing(listingId: string): string {

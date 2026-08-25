@@ -76,6 +76,7 @@ export interface NotificationPreferences {
   comments: boolean;
   listingUpvotes: boolean;
   listingDownvotes: boolean;
+  listingViews: boolean;
   listingStatus: boolean;
   nearbyListings: boolean;
   requests: boolean;
@@ -119,6 +120,10 @@ export interface NotificationPreferences {
   directorClaimRequests: boolean;
   nearbyRadiusMiles: NearbyRadiusMiles;
   followedCategories: string[];
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  quietHoursAllowUrgent?: boolean;
 }
 
 export interface NavigationSettingsPreference {
@@ -494,6 +499,9 @@ export interface GoGetSession {
   ringStartedAt?: string | null;
   /** Snapshot of poster ring duration when the session was created. */
   ringDurationSeconds?: number | null;
+  onTheWayNotifiedAt?: string | null;
+  approachingNotifiedAt?: string | null;
+  ringExpiredNotifiedAt?: string | null;
   /** Minutes before scheduledAt when Ready / Start trip become available. */
   readyWindowMinutes?: number | null;
   createdAt: string;

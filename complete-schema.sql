@@ -826,6 +826,9 @@ CREATE TABLE IF NOT EXISTS public.go_get_sessions (
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "fulfillerSharingLocation" BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringExpiresAt" TIMESTAMPTZ;
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringDurationSeconds" INTEGER;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "onTheWayNotifiedAt" TIMESTAMPTZ;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "approachingNotifiedAt" TIMESTAMPTZ;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringExpiredNotifiedAt" TIMESTAMPTZ;
 -- Go Get 2.0 pickup engine (Aug 25, 2026)
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "coordinationMode" TEXT NOT NULL DEFAULT 'go_get';
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringStartedAt" TIMESTAMPTZ;
@@ -1687,6 +1690,7 @@ ALTER TABLE public.notification_preferences
   ADD COLUMN IF NOT EXISTS "messageRequests" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "listingUpvotes" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "listingDownvotes" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "listingViews" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "listingStatus" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "savedItems" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "accountUpdates" BOOLEAN NOT NULL DEFAULT true,
@@ -1722,6 +1726,46 @@ CREATE INDEX IF NOT EXISTS push_dispatch_log_tag_created_idx
 
 CREATE UNIQUE INDEX IF NOT EXISTS push_dispatch_log_tag_unique
   ON public.push_dispatch_log (tag);
+
+-- 4b. Notification events — deterministic per-recipient dedup (replaces 90s tag window)
+CREATE TABLE IF NOT EXISTS public.notification_events (
+  id TEXT PRIMARY KEY,
+  "eventType" TEXT NOT NULL,
+  "dedupKey" TEXT NOT NULL,
+  "actorId" TEXT,
+  "recipientId" TEXT NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
+  "entityType" TEXT,
+  "entityId" TEXT,
+  priority TEXT NOT NULL DEFAULT 'normal',
+  "deliveryMode" TEXT NOT NULL DEFAULT 'push_and_in_app',
+  source TEXT,
+  title TEXT,
+  body TEXT,
+  url TEXT,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS notification_events_recipient_dedup_unique
+  ON public.notification_events ("recipientId", "dedupKey");
+
+CREATE INDEX IF NOT EXISTS notification_events_recipient_created_idx
+  ON public.notification_events ("recipientId", "createdAt" DESC);
+
+CREATE INDEX IF NOT EXISTS notification_events_event_type_created_idx
+  ON public.notification_events ("eventType", "createdAt" DESC);
+
+ALTER TABLE public.notification_events ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notification_events') THEN
+    EXECUTE 'ALTER TABLE public.notification_events ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "notification_events service only" ON public.notification_events';
+    EXECUTE 'CREATE POLICY "notification_events service only" ON public.notification_events FOR ALL USING (false)';
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
 
 -- 4. Backfill preferences for existing users (all toggles ON by default)
 INSERT INTO public.notification_preferences ("userId")
@@ -1796,7 +1840,11 @@ ALTER TABLE public.notification_preferences
   ADD COLUMN IF NOT EXISTS awards BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "eventRsvps" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "eventComments" BOOLEAN NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS "discussionComments" BOOLEAN NOT NULL DEFAULT true;
+  ADD COLUMN IF NOT EXISTS "discussionComments" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "quietHoursEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "quietHoursStart" TEXT NOT NULL DEFAULT '22:00',
+  ADD COLUMN IF NOT EXISTS "quietHoursEnd" TEXT NOT NULL DEFAULT '07:00',
+  ADD COLUMN IF NOT EXISTS "quietHoursAllowUrgent" BOOLEAN NOT NULL DEFAULT true;
 
 INSERT INTO public.notification_preferences ("userId")
 SELECT u.uid FROM public.users u

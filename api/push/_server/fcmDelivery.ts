@@ -1,6 +1,7 @@
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import type { PushPayload } from './pushDelivery';
+import { getEventMetadata, fcmAndroidPriority } from '../../../shared/notificationTypes';
 
 export const FCM_ENDPOINT_PREFIX = 'fcm:';
 export const FCM_NATIVE_KEY = 'native-fcm';
@@ -62,6 +63,10 @@ function shouldRemoveFcmToken(errorCode?: string): boolean {
     || errorCode === 'messaging/invalid-registration-token';
 }
 
+function isUrgentGoGetRing(payload: PushPayload): boolean {
+  return payload.data?.urgentGoGetRing === 'true' || payload.eventType === 'go_get_availability_request';
+}
+
 export async function sendFcmToSubscription(
   endpoint: string,
   payload: PushPayload,
@@ -73,8 +78,28 @@ export async function sendFcmToSubscription(
   if (!token) return { ok: false, removed: false };
 
   const body = String(payload.body || '').trim() || String(payload.title || '').trim() || 'New activity';
+  const priorityFromPayload = payload.data?.priority;
+  const priority =
+    priorityFromPayload === 'silent' ||
+    priorityFromPayload === 'normal' ||
+    priorityFromPayload === 'important' ||
+    priorityFromPayload === 'urgent'
+      ? priorityFromPayload
+      : getEventMetadata(payload.eventType).priority;
+  const channelFromPayload = payload.data?.androidChannel;
+  const channelId =
+    channelFromPayload === 'messages' ||
+    channelFromPayload === 'listings' ||
+    channelFromPayload === 'community' ||
+    channelFromPayload === 'pickup' ||
+    channelFromPayload === 'account' ||
+    channelFromPayload === 'staff' ||
+    channelFromPayload === 'urgent'
+      ? `sac_buy_nothing_${channelFromPayload}`
+      : 'sac_buy_nothing_alerts';
 
   try {
+    const urgentRing = isUrgentGoGetRing(payload);
     await getMessaging(app).send({
       token,
       notification: {
@@ -83,11 +108,12 @@ export async function sendFcmToSubscription(
       },
       data: buildFcmData(payload),
       android: {
-        priority: 'high',
+        priority: urgentRing ? 'high' : fcmAndroidPriority(priority),
         notification: {
-          channelId: 'sac_buy_nothing_alerts',
+          channelId: urgentRing ? 'sac_buy_nothing_urgent' : channelId,
           icon: 'ic_stat_notification',
           color: '#000000',
+          ...(urgentRing ? { sound: 'default', defaultVibrateTimings: true } : {}),
         },
       },
     });

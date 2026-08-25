@@ -88,6 +88,7 @@ import {
   sessionStubFromProfile,
 } from './lib/sessionCache';
 import { applyStoredGoGetPrefsToProfile } from './lib/goGetPrefs';
+import { getGoGetSessionById, isTerminalGoGetStatus } from './lib/goGetSessions';
 import { applyStoredNavPrefsToProfile } from './lib/navPrefs';
 import { applyStoredStaffModeToProfile } from './lib/staffModePrefs';
 import AppBootSplash from './components/AppBootSplash';
@@ -1973,6 +1974,38 @@ export default function App() {
         setInitialFocusMessageRequests(false);
         navigateToTab('chats');
         tabForUrl = 'chats';
+      }
+      if (target.goGetSessionId && userProfile?.uid) {
+        const openGoGetSession = async () => {
+          const session = await getGoGetSessionById(target.goGetSessionId!);
+          if (!session) {
+            void alert({ message: 'This pickup session is no longer available.' });
+            return;
+          }
+          const isParticipant =
+            session.requesterUserId === userProfile.uid || session.fulfillerUserId === userProfile.uid;
+          if (!isParticipant) {
+            void alert({ message: 'You do not have access to this pickup session.' });
+            return;
+          }
+          if (isTerminalGoGetStatus(session.status)) {
+            void alert({
+              message:
+                session.status === 'completed'
+                  ? 'This pickup is already complete.'
+                  : 'This pickup session has ended.',
+            });
+          }
+          const item = await getSupabaseItemById(session.itemId);
+          if (!item) {
+            void alert({ message: 'This listing is no longer available.' });
+            return;
+          }
+          setDetailItem(item);
+          tabForUrl = 'stuff';
+          navigateToTab('stuff');
+        };
+        void openGoGetSession();
       }
       if (target.listingId) {
         const openListing = (item: ItemPost | undefined) => {

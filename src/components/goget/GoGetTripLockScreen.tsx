@@ -281,6 +281,16 @@ export default function GoGetTripLockScreen({
           }),
         );
       }
+      if (session.status === 'active' && item && !isFulfiller) {
+        void import('../../lib/goGetNavigationPush').then(({ maybeEmitGoGetNavigationPushes }) =>
+          maybeEmitGoGetNavigationPushes({
+            session,
+            item,
+            etaSeconds: update.etaSeconds,
+            distanceMeters: update.distanceMeters,
+          }),
+        );
+      }
     },
     [session, item],
   );

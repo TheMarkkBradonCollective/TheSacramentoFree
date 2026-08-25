@@ -34,6 +34,27 @@ const RADIUS_OPTIONS: { value: NearbyRadiusMiles; label: string }[] = [
   { value: 0, label: 'Entire city only' },
 ];
 
+const QUIET_HOUR_OPTIONS = [
+  '20:00',
+  '21:00',
+  '22:00',
+  '23:00',
+  '00:00',
+  '06:00',
+  '07:00',
+  '08:00',
+  '09:00',
+] as const;
+
+function formatQuietHourLabel(value: string): string {
+  const [hourPart, minutePart = '00'] = value.split(':');
+  const hour = Number(hourPart);
+  if (!Number.isFinite(hour)) return value;
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}:${minutePart} ${suffix}`;
+}
+
 type BooleanPrefKey = {
   [K in keyof NotificationPreferences]: NotificationPreferences[K] extends boolean ? K : never;
 }[keyof NotificationPreferences];
@@ -190,6 +211,11 @@ const YOUR_POSTS_SECTIONS: {
         description: 'When someone upvotes your listing (anonymous)',
       },
       {
+        key: 'listingViews',
+        label: 'Listing views',
+        description: 'When a neighbor views your listing for the first time',
+      },
+      {
         key: 'listingDownvotes',
         label: 'Listing downvotes',
         description: 'When someone downvotes your listing (anonymous)',
@@ -211,13 +237,15 @@ const YOUR_POSTS_SECTIONS: {
     items: [
       {
         key: 'goGetAlerts',
-        label: 'Go Get handoff',
-        description: 'Ring alerts, schedule proposals, on-the-way, and Go Get milestones (Android app)',
+        label: 'Go Get requests & live trip',
+        description:
+          'Availability rings, schedule proposals, fulfiller ready, on-the-way, approaching, and arrival (Android app only)',
       },
       {
         key: 'pickupCoordination',
-        label: 'Pickup coordination',
-        description: 'Scheduled pickup, reminders, on-the-way, and contactless handoff (Android app)',
+        label: 'Pickup reminders & schedule',
+        description:
+          'Scheduled pickup, 30-minute and 1-hour reminders, pickup tomorrow, cancellations, and contactless handoff (Android app only)',
       },
     ],
   },
@@ -381,7 +409,7 @@ export default function NotificationSettings({
   const masterDisabled = !preferences.enabled || permission === 'denied' || permission === 'unsupported';
   const directorMasterDisabled = masterDisabled || !preferences.directorAlerts;
 
-  const setPref = (key: keyof NotificationPreferences, value: boolean | number | string[]) => {
+  const setPref = (key: keyof NotificationPreferences, value: boolean | number | string | string[]) => {
     setDraftPreferences({ ...preferences, [key]: value });
   };
 
@@ -594,6 +622,70 @@ export default function NotificationSettings({
                 checked={preferences.enabled}
                 onChange={(value) => setPref('enabled', value)}
               />
+            </div>
+          ) : null}
+
+          {showAlertsScope ? (
+            <div
+              className={`mt-5 rounded-xl border border-app bg-inset/30 px-3 py-1 ${
+                masterDisabled || prefsLoading ? 'opacity-50 pointer-events-none' : ''
+              }`}
+            >
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mt-3 mb-1 px-1">
+                Quiet hours
+              </h4>
+              <SwitchRow
+                label="Pause alerts overnight"
+                description="Silence normal push between your chosen times (inbox still updates)"
+                checked={preferences.quietHoursEnabled === true}
+                onChange={(value) => setPref('quietHoursEnabled', value)}
+              />
+              {preferences.quietHoursEnabled ? (
+                <>
+                  <div className="flex items-center justify-between gap-3 py-3 border-b border-app/60">
+                    <div className="min-w-0 flex-1 pr-2">
+                      <div className="text-sm font-semibold text-app">Start</div>
+                      <div className="text-[11px] text-muted mt-0.5 leading-snug">When quiet hours begin</div>
+                    </div>
+                    <select
+                      value={preferences.quietHoursStart || '22:00'}
+                      onChange={(e) => setPref('quietHoursStart', e.target.value)}
+                      className="text-sm rounded-lg border border-app bg-surface px-2 py-1.5 text-app"
+                      aria-label="Quiet hours start"
+                    >
+                      {QUIET_HOUR_OPTIONS.map((time) => (
+                        <option key={`start-${time}`} value={time}>
+                          {formatQuietHourLabel(time)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 py-3 border-b border-app/60">
+                    <div className="min-w-0 flex-1 pr-2">
+                      <div className="text-sm font-semibold text-app">End</div>
+                      <div className="text-[11px] text-muted mt-0.5 leading-snug">When alerts resume</div>
+                    </div>
+                    <select
+                      value={preferences.quietHoursEnd || '07:00'}
+                      onChange={(e) => setPref('quietHoursEnd', e.target.value)}
+                      className="text-sm rounded-lg border border-app bg-surface px-2 py-1.5 text-app"
+                      aria-label="Quiet hours end"
+                    >
+                      {QUIET_HOUR_OPTIONS.map((time) => (
+                        <option key={`end-${time}`} value={time}>
+                          {formatQuietHourLabel(time)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <SwitchRow
+                    label="Allow urgent alerts"
+                    description="Pickup arrivals, Go Get rings, and safety alerts can still push"
+                    checked={preferences.quietHoursAllowUrgent !== false}
+                    onChange={(value) => setPref('quietHoursAllowUrgent', value)}
+                  />
+                </>
+              ) : null}
             </div>
           ) : null}
 

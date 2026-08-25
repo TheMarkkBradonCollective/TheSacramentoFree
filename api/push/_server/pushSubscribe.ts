@@ -48,6 +48,7 @@ const DEFAULT_NOTIFICATION_PREFS = {
   comments: true,
   listingUpvotes: true,
   listingDownvotes: true,
+  listingViews: true,
   listingStatus: true,
   nearbyListings: true,
   requests: true,

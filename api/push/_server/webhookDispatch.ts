@@ -14,6 +14,7 @@ import {
   runNeighborMessageRequestAcceptedNotify,
   runNeighborMessageRequestNotify,
   runNeighborItemVoteNotify,
+  runNeighborListingViewNotify,
   runNeighborNewCommentNotify,
   runNeighborNewListingNotify,
   runNeighborNewMessageNotify,
@@ -36,6 +37,7 @@ import {
   runUpdateCommentNotify,
 } from './engagementNotify';
 import { getSupabaseAdmin } from './supabaseAdmin';
+import { runGoGetSessionWebhook } from './goGetNotify';
 
 type WebhookPayload = {
   type?: string;
@@ -158,6 +160,10 @@ export async function runSupabasePushWebhook(
         return handleItemContentUpdate(record);
       }
       return { status: 200, body: { ok: true, skipped: 'item update not notifiable' } };
+    }
+
+    if (table === 'go_get_sessions' && body.record) {
+      return runGoGetSessionWebhook(body.record, body.old_record);
     }
 
     if (table === 'item_votes' && body.record) {
@@ -306,6 +312,10 @@ export async function runSupabasePushWebhook(
     });
   }
 
+  if (table === 'go_get_sessions') {
+    return runGoGetSessionWebhook(record);
+  }
+
   if (table === 'item_votes') {
     const voteType = String(record.voteType || '');
     if (voteType !== 'up' && voteType !== 'down') {
@@ -315,6 +325,13 @@ export async function runSupabasePushWebhook(
       itemId: String(record.itemId || ''),
       userId: String(record.userId || ''),
       voteType: voteType as 'up' | 'down',
+    });
+  }
+
+  if (table === 'listing_views') {
+    return runNeighborListingViewNotify(String(record.userId || 'system'), {
+      itemId: String(record.itemId || ''),
+      userId: String(record.userId || ''),
     });
   }
 

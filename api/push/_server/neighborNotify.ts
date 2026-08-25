@@ -347,6 +347,50 @@ export async function runNeighborItemVoteNotify(
   });
 }
 
+export async function runNeighborListingViewNotify(
+  callerId: string,
+  view: {
+    itemId?: string;
+    userId?: string;
+  },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const viewerUserId = String(view.userId || callerId);
+  const itemId = String(view.itemId || '');
+  if (!itemId || !viewerUserId) {
+    return { status: 200, body: { ok: true, skipped: 'missing view fields' } };
+  }
+
+  const supabaseAdmin = await getSupabaseAdmin();
+  const { data: item } = await supabaseAdmin
+    .from('items')
+    .select('id, userId, title')
+    .eq('id', itemId)
+    .maybeSingle();
+  if (!item) {
+    return { status: 200, body: { ok: true, skipped: 'item not found' } };
+  }
+
+  const ownerId = String((item as { userId?: string }).userId || '');
+  if (!ownerId || ownerId === viewerUserId) {
+    return { status: 200, body: { ok: true, skipped: 'no view alert needed' } };
+  }
+
+  const itemTitle = String((item as { title?: string }).title || 'your listing');
+
+  return sendNeighborPush(viewerUserId, {
+    eventType: 'listing_viewed',
+    title: 'Someone viewed your listing',
+    body: `A neighbor viewed "${itemTitle}"`,
+    url: listingUrl(itemId),
+    listingId: itemId,
+    recipientUserIds: [ownerId],
+    tag: `view-${itemId}-${viewerUserId}`,
+    data: {
+      viewerUserId,
+    },
+  });
+}
+
 export async function runSavedItemsActivityNotify(
   callerId: string,
   params: {

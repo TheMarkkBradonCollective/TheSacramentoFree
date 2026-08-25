@@ -55,6 +55,7 @@ const GRANULAR_PREF_COLUMNS = [
   'eventRsvps',
   'eventComments',
   'discussionComments',
+  'listingViews',
 ] as const;
 
 function isMissingPrefColumnError(error: { code?: string; message?: string } | null): boolean {
@@ -575,6 +576,7 @@ export type PushEventType =
   | 'new_comment'
   | 'listing_upvote'
   | 'listing_downvote'
+  | 'listing_viewed'
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
@@ -596,6 +598,10 @@ export type PushEventType =
   | 'go_get_available_now'
   | 'go_get_schedule_proposed'
   | 'go_get_schedule_confirmed'
+  | 'go_get_schedule_changed'
+  | 'go_get_pickup_tomorrow'
+  | 'go_get_pickup_in_one_hour'
+  | 'go_get_pickup_thirty_min'
   | 'go_get_ready_reminder'
   | 'go_get_fulfiller_ready'
   | 'go_get_started'
@@ -603,6 +609,7 @@ export type PushEventType =
   | 'go_get_arrived'
   | 'go_get_completed'
   | 'go_get_cancelled'
+  | 'go_get_ring_expired'
   | 'go_get_expired'
   | 'go_get_declined'
   | 'go_get_disputed'
@@ -911,6 +918,7 @@ export const CLEARED_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   comments: false,
   listingUpvotes: false,
   listingDownvotes: false,
+  listingViews: false,
   listingStatus: false,
   nearbyListings: false,
   requests: false,
@@ -954,6 +962,10 @@ export const CLEARED_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   directorClaimRequests: false,
   nearbyRadiusMiles: 10,
   followedCategories: [],
+  quietHoursEnabled: false,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '07:00',
+  quietHoursAllowUrgent: true,
 };
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -968,6 +980,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   comments: true,
   listingUpvotes: true,
   listingDownvotes: true,
+  listingViews: true,
   listingStatus: true,
   nearbyListings: true,
   requests: true,
@@ -1011,6 +1024,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   directorClaimRequests: true,
   nearbyRadiusMiles: 10,
   followedCategories: [],
+  quietHoursEnabled: false,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '07:00',
+  quietHoursAllowUrgent: true,
 };
 
 function normalizePreferencesRow(row: Record<string, unknown>): NotificationPreferences {
@@ -1026,6 +1043,7 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     comments: row.comments !== false,
     listingUpvotes: row.listingUpvotes !== false,
     listingDownvotes: row.listingDownvotes !== false,
+    listingViews: boolPref(row, 'listingViews', 'listingUpvotes'),
     listingStatus: row.listingStatus !== false,
     nearbyListings: row.nearbyListings !== false,
     requests: row.requests !== false,
@@ -1069,6 +1087,10 @@ function normalizePreferencesRow(row: Record<string, unknown>): NotificationPref
     directorClaimRequests: row.directorClaimRequests !== false,
     nearbyRadiusMiles: (Number(row.nearbyRadiusMiles) || 10) as NearbyRadiusMiles,
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
+    quietHoursEnabled: row.quietHoursEnabled === true,
+    quietHoursStart: typeof row.quietHoursStart === 'string' ? row.quietHoursStart : '22:00',
+    quietHoursEnd: typeof row.quietHoursEnd === 'string' ? row.quietHoursEnd : '07:00',
+    quietHoursAllowUrgent: row.quietHoursAllowUrgent !== false,
   };
   return syncLegacyNotificationPrefs(prefs);
 }
