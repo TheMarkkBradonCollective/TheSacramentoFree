@@ -40,11 +40,15 @@ import MapNavigationView from './MapNavigationView';
 import { unlockNavigationSpeech } from '../lib/navigationVoice';
 import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
-import { MapPin, MessageSquare, LifeBuoy, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
+import { MapPin, MessageSquare, LifeBuoy, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon, Bookmark } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import EventEngagement from './EventEngagement';
 import EventStatusBadge from './EventStatusBadge';
+import { PresenceUserAvatar } from './UserAvatar';
+import { usePresence, useTrackPresence } from '../contexts/PresenceContext';
+import { useSavedItems } from '../hooks/useSavedItems';
+import { isUserOnline } from '../lib/presence';
 import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
@@ -335,70 +339,401 @@ function MapSelectedEventCard({
           <CalendarDays className={compact ? 'w-7 h-7' : 'w-9 h-9'} style={{ color: EVENT_MAP_COLOR }} />
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span
-                className="inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider text-white"
-                style={{ backgroundColor: EVENT_MAP_COLOR }}
-              >
-                📅 EVENT
-              </span>
-              <EventStatusBadge status={eventStatus} />
-            </div>
-            <h4 className={`font-semibold text-app mt-1 truncate ${compact ? 'text-xs' : 'text-sm'}`}>{event.title}</h4>
-            <p className={`text-muted mt-0.5 line-clamp-2 ${compact ? 'text-[9.5px]' : 'text-xs'}`}>{event.description}</p>
-            <p className={`text-accent font-semibold mt-1 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
-              {formatEventMapDate(event.eventStartAt)}
-            </p>
-            <p className={`text-muted mt-0.5 truncate ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
-              {event.location} · {event.neighborhood}
-            </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className="inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider text-white"
+              style={{ backgroundColor: EVENT_MAP_COLOR }}
+            >
+              📅 EVENT
+            </span>
+            <EventStatusBadge status={eventStatus} />
           </div>
-
-          {!isCancelled && eventsEngagement && (
-            <div className={compact ? 'mt-2 pt-2 border-t border-app' : 'mt-3 pt-3 border-t border-app'}>
-              <EventEngagement
-                hostUserId={event.userId}
-                currentUserId={userProfile.uid}
-                rsvpState={rsvpState}
-                comments={comments}
-                onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status, isPast)}
-                onAddComment={() => {}}
-                variant="card"
-                commentsLocked={commentsLocked}
-                isPast={isPast}
-              />
-            </div>
-          )}
-
-          <MapSelectionRouteRow
-            locationHint={event.location?.trim() || `Event pin · ${event.neighborhood}`}
-            routeEndpoints={routeEndpoints ?? null}
-            routeLoading={routeLoading ?? false}
-            distanceMeters={distanceMeters ?? null}
-            durationSeconds={durationSeconds ?? null}
-            routeOnMap={routeOnMap ?? false}
-            hasLiveGps={hasLiveGps ?? false}
-            canNavigate={canNavigate}
-            onStartNavigation={onStartNavigation}
-            onOpenExternalMaps={onOpenExternalMaps}
-          />
-
-          {onViewEvent && (
-            <div className={`flex gap-1 shrink-0 ${compact ? 'mt-2' : 'mt-3'}`}>
-              <button
-                type="button"
-                onClick={() => onViewEvent(event)}
-                className="sbn-btn sbn-btn-primary sbn-btn-sm w-full"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                View full event
-              </button>
-            </div>
-          )}
+          <h4 className={`font-semibold text-app mt-1 truncate ${compact ? 'text-xs' : 'text-sm'}`}>{event.title}</h4>
+          <p className={`text-muted mt-0.5 line-clamp-2 ${compact ? 'text-[9.5px]' : 'text-xs'}`}>{event.description}</p>
+          <p className={`text-accent font-semibold mt-1 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+            {formatEventMapDate(event.eventStartAt)}
+          </p>
+          <p className={`text-muted mt-0.5 truncate ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
+            {event.location} · {event.neighborhood}
+          </p>
         </div>
       </div>
+
+      {!isCancelled && eventsEngagement && (
+        <div className={compact ? 'mt-2 pt-2 border-t border-app' : 'mt-3 pt-3 border-t border-app'}>
+          <EventEngagement
+            hostUserId={event.userId}
+            currentUserId={userProfile.uid}
+            rsvpState={rsvpState}
+            comments={comments}
+            onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status, isPast)}
+            onAddComment={() => {}}
+            variant="card"
+            commentsLocked={commentsLocked}
+            isPast={isPast}
+          />
+        </div>
+      )}
+
+      <MapSelectionRouteRow
+        locationHint={event.location?.trim() || `Event pin · ${event.neighborhood}`}
+        routeEndpoints={routeEndpoints ?? null}
+        routeLoading={routeLoading ?? false}
+        distanceMeters={distanceMeters ?? null}
+        durationSeconds={durationSeconds ?? null}
+        routeOnMap={routeOnMap ?? false}
+        hasLiveGps={hasLiveGps ?? false}
+        canNavigate={canNavigate}
+        onStartNavigation={onStartNavigation}
+        onOpenExternalMaps={onOpenExternalMaps}
+      />
+
+      {onViewEvent && (
+        <div className="sbn-gps-action-row">
+          <button type="button" onClick={() => onViewEvent(event)} className="sbn-gps-action is-primary">
+            <span className="sbn-gps-action__icon">
+              <Eye className="w-4 h-4" />
+            </span>
+            <span className="sbn-gps-action__label">View</span>
+          </button>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function MapListingGpsActions({
+  post,
+  userProfile,
+  isStaffViewer,
+  userLat,
+  userLng,
+  openItemDetail,
+  onEditItem,
+  onClaimSubmitted,
+  onStaffListingChat,
+  onInitiateChat,
+  usesNavigate,
+  isSaved,
+  onToggleSaved,
+}: {
+  post: ItemPost;
+  userProfile: UserProfile;
+  isStaffViewer: boolean;
+  userLat: number | null;
+  userLng: number | null;
+  openItemDetail?: (item: ItemPost) => void;
+  onEditItem?: (item: ItemPost) => void;
+  onClaimSubmitted?: (chatId: string) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
+  onInitiateChat: SacramentoMapViewProps['onInitiateChat'];
+  usesNavigate: boolean;
+  isSaved: boolean;
+  onToggleSaved: (itemId: string) => void;
+}) {
+  const isOwner = post.userId === userProfile.uid;
+  const showMessage = !isOwner && !(usesNavigate && !isStaffViewer);
+  const showClaim =
+    !isOwner &&
+    !!onClaimSubmitted &&
+    !usesNavigate &&
+    canOfferContactlessClaim(post, userProfile.uid, userLat, userLng);
+
+  return (
+    <div className="sbn-gps-action-row">
+      {openItemDetail && (
+        <button
+          id="map_view_card_btn"
+          type="button"
+          onClick={() => openItemDetail(post)}
+          className="sbn-gps-action"
+        >
+          <span className="sbn-gps-action__icon">
+            <Eye className="w-4 h-4" />
+          </span>
+          <span className="sbn-gps-action__label">View</span>
+        </button>
+      )}
+      {isOwner
+        ? onEditItem && (
+            <button
+              id="map_edit_card_btn"
+              type="button"
+              onClick={() => onEditItem(post)}
+              className="sbn-gps-action is-primary"
+            >
+              <span className="sbn-gps-action__icon">
+                <Pencil className="w-4 h-4" />
+              </span>
+              <span className="sbn-gps-action__label">Edit</span>
+            </button>
+          )
+        : (
+          <>
+            {showClaim && (
+              <ClaimAtPickupButton
+                item={post}
+                user={userProfile}
+                userLat={userLat}
+                userLng={userLng}
+                onClaimSubmitted={onClaimSubmitted}
+                variant="gps"
+              />
+            )}
+            {isStaffViewer && onStaffListingChat && (
+              <button type="button" onClick={() => onStaffListingChat(post)} className="sbn-gps-action">
+                <span className="sbn-gps-action__icon">
+                  <LifeBuoy className="w-4 h-4" />
+                </span>
+                <span className="sbn-gps-action__label">Staff</span>
+              </button>
+            )}
+            {showMessage && (
+              <button
+                id="map_message_btn"
+                type="button"
+                onClick={() =>
+                  onInitiateChat(
+                    post.userId,
+                    post.userDisplayName,
+                    post.userPhotoURL,
+                    post,
+                    isStaffViewer ? { asNeighbor: true } : undefined,
+                  )
+                }
+                className="sbn-gps-action is-primary"
+              >
+                <span className="sbn-gps-action__icon">
+                  <MessageSquare className="w-4 h-4" />
+                </span>
+                <span className="sbn-gps-action__label">{getListingContactButtonLabel(post.type)}</span>
+              </button>
+            )}
+          </>
+        )}
+      <button
+        type="button"
+        onClick={() => onToggleSaved(post.id)}
+        className={`sbn-gps-action${isSaved ? ' is-primary' : ''}`}
+        title={isSaved ? 'Remove from saved' : 'Save this listing'}
+        aria-label={isSaved ? 'Remove from saved' : 'Save listing'}
+      >
+        <span className="sbn-gps-action__icon">
+          <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+        </span>
+        <span className="sbn-gps-action__label">{isSaved ? 'Saved' : 'Save'}</span>
+      </button>
+    </div>
+  );
+}
+
+function MapSelectedListingCard({
+  post,
+  currentIndex,
+  total,
+  slideDirection,
+  compact = false,
+  onClose,
+  onPrev,
+  onNext,
+  userProfile,
+  isStaffViewer,
+  userLat,
+  userLng,
+  openItemDetail,
+  onEditItem,
+  onClaimSubmitted,
+  onStaffListingChat,
+  onInitiateChat,
+  usesNavigate,
+  isSaved,
+  onToggleSaved,
+  routeEndpoints,
+  routeLoading,
+  distanceMeters,
+  durationSeconds,
+  routeOnMap,
+  hasLiveGps,
+  canNavigate,
+  navigateLabel,
+  onStartNavigation,
+  onOpenExternalMaps,
+}: {
+  post: ItemPost;
+  currentIndex: number;
+  total: number;
+  slideDirection: 'left' | 'right';
+  compact?: boolean;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  userProfile: UserProfile;
+  isStaffViewer: boolean;
+  userLat: number | null;
+  userLng: number | null;
+  openItemDetail?: (item: ItemPost) => void;
+  onEditItem?: (item: ItemPost) => void;
+  onClaimSubmitted?: (chatId: string) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
+  onInitiateChat: SacramentoMapViewProps['onInitiateChat'];
+  usesNavigate: boolean;
+  isSaved: boolean;
+  onToggleSaved: (itemId: string) => void;
+  routeEndpoints: { start: LatLng; end: LatLng } | null;
+  routeLoading: boolean;
+  distanceMeters: number | null;
+  durationSeconds: number | null;
+  routeOnMap: boolean;
+  hasLiveGps: boolean;
+  canNavigate: boolean;
+  navigateLabel: string;
+  onStartNavigation: () => void;
+  onOpenExternalMaps: () => void;
+}) {
+  const authorLastActive = usePresence(post.userId);
+  useTrackPresence([post.userId]);
+  const photos = post.imageUrls?.length ? post.imageUrls : extractListingImageUrls(post);
+  const thumb = photos[0];
+  const online = isUserOnline(authorLastActive);
+
+  return (
+    <motion.div
+      key={post.id}
+      initial={{ opacity: 0, x: slideDirection === 'right' ? (compact ? 70 : 80) : -(compact ? 70 : 80) }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: slideDirection === 'right' ? -(compact ? 70 : 80) : compact ? 70 : 80 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+      id={compact ? 'mobile_map_detail_floating_card' : 'map_item_detail_card'}
+      className={
+        compact
+          ? 'pointer-events-auto sbn-card sbn-map-selection-card p-4 shadow-2xl w-full'
+          : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'
+      }
+    >
+      <div className={`flex items-center justify-end gap-1 ${compact ? 'mb-2' : 'mb-2.5'}`}>
+        <div className={`flex items-center space-x-1 bg-inset border border-app px-2 rounded-lg ${compact ? 'py-1' : 'py-0.5'}`}>
+          <button
+            type="button"
+            onClick={onPrev}
+            disabled={total <= 1}
+            aria-label="Previous listing"
+            className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+          >
+            <ChevronLeft className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+          </button>
+          <span className={`font-bold font-mono text-muted text-center ${compact ? 'text-[9px] min-w-[24px]' : 'text-[10px] min-w-[28px]'}`}>
+            {currentIndex + 1}/{total}
+          </span>
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={total <= 1}
+            aria-label="Next listing"
+            className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
+          >
+            <ChevronRight className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+          </button>
+        </div>
+        <button
+          id={compact ? undefined : 'close_map_card_btn'}
+          type="button"
+          onClick={onClose}
+          aria-label="Close listing details"
+          className="text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
+        >
+          <X className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+        </button>
+      </div>
+
+      <div className="sbn-gps-poster">
+        <PresenceUserAvatar
+          uid={post.userId}
+          src={post.userPhotoURL}
+          name={post.userDisplayName}
+          size={compact ? 'sm' : 'md'}
+        />
+        <div className="sbn-gps-poster__copy">
+          <p className="sbn-gps-poster__name">{post.userDisplayName}</p>
+          <p className="sbn-gps-poster__meta">
+            {online ? 'Online · ' : ''}
+            {post.neighborhood}
+          </p>
+        </div>
+      </div>
+
+      <div className={`flex ${compact ? 'gap-3' : 'gap-4 text-left'}`}>
+        {thumb ? (
+          <div className={`relative shrink-0 overflow-hidden rounded-xl border border-app ${compact ? 'w-16 h-16' : 'w-20 h-20 sm:w-24 sm:h-24'}`}>
+            <ListingImage
+              src={thumb}
+              alt={post.title}
+              width={compact ? 160 : 240}
+              className="w-full h-full object-cover"
+            />
+            {photos.length > 1 && (
+              <span className="absolute bottom-0.5 right-0.5 text-[7px] font-bold bg-black/75 text-white px-1 rounded">
+                +{photos.length - 1}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className={`bg-inset border border-app rounded-xl shrink-0 flex flex-col items-center justify-center ${compact ? 'w-16 h-16' : 'w-20 h-20 sm:w-24 sm:h-24'}`}>
+            <Tag className={compact ? 'w-4 h-4 text-muted' : 'w-5 h-5 text-subtle'} />
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider shrink-0 ${
+              post.type === 'giveaway'
+                ? 'bg-accent text-on-accent'
+                : post.type === 'trade'
+                  ? 'bg-zinc-500 text-white'
+                  : 'bg-inset border border-app text-muted'
+            }`}>
+              {compact ? getPostTypeMapLabel(post.type) : getPostTypeMapDetailLabel(post.type)}
+            </span>
+            <span className="text-[8px] font-bold font-mono uppercase tracking-wider min-w-0 truncate" style={{ color: getCategoryColor(post.category) }}>
+              {post.category}
+            </span>
+          </div>
+          <h4 className={`font-semibold text-app mt-1 truncate ${compact ? 'text-xs' : 'text-sm'}`}>{post.title}</h4>
+          <p className={`text-muted mt-0.5 break-words ${compact ? 'text-[9.5px] line-clamp-1' : 'text-[10.5px] line-clamp-2 leading-tight font-medium'}`}>
+            {stripListingMetadata(post.description)}
+          </p>
+        </div>
+      </div>
+
+      <MapSelectionRouteRow
+        locationHint={listingLocationHint(post, userProfile.uid)}
+        routeEndpoints={routeEndpoints}
+        routeLoading={routeLoading}
+        distanceMeters={distanceMeters}
+        durationSeconds={durationSeconds}
+        routeOnMap={routeOnMap}
+        hasLiveGps={hasLiveGps}
+        canNavigate={canNavigate}
+        navigateLabel={navigateLabel}
+        onStartNavigation={onStartNavigation}
+        onOpenExternalMaps={onOpenExternalMaps}
+      />
+
+      <MapListingGpsActions
+        post={post}
+        userProfile={userProfile}
+        isStaffViewer={isStaffViewer}
+        userLat={userLat}
+        userLng={userLng}
+        openItemDetail={openItemDetail}
+        onEditItem={onEditItem}
+        onClaimSubmitted={onClaimSubmitted}
+        onStaffListingChat={onStaffListingChat}
+        onInitiateChat={onInitiateChat}
+        usesNavigate={usesNavigate}
+        isSaved={isSaved}
+        onToggleSaved={onToggleSaved}
+      />
     </motion.div>
   );
 }
@@ -430,6 +765,7 @@ export default function SacramentoMapView({
   commentsLocked = false,
 }: SacramentoMapViewProps) {
   const isStaffViewer = isStaffActingOfficial(userProfile);
+  const { isSaved, toggleSaved } = useSavedItems(userProfile.uid);
   const [posterCoordByUid, setPosterCoordByUid] = useState<
     Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
   >({});
@@ -1828,209 +2164,42 @@ export default function SacramentoMapView({
               />
             )}
             {selectedPost && (
-              <motion.div
-                key={selectedPost.id}
-                initial={{ opacity: 0, x: slideDirection === 'right' ? 70 : -70 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: slideDirection === 'right' ? -70 : 70 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                id="mobile_map_detail_floating_card"
-                className="pointer-events-auto sbn-card sbn-map-selection-card p-4 shadow-2xl w-full"
-              >
-                <div className="flex items-center justify-end gap-1 mb-2">
-                  <div className="flex items-center space-x-1 bg-inset border border-app px-2 py-1 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={handlePrevPost}
-                      disabled={activeItems.length <= 1}
-                      aria-label="Previous listing"
-                      className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="text-[9px] font-bold font-mono text-muted min-w-[24px] text-center">
-                      {currentIndex + 1}/{activeItems.length}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleNextPost}
-                      disabled={activeItems.length <= 1}
-                      aria-label="Next listing"
-                      className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPost(null)}
-                    aria-label="Close listing details"
-                    className="text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex gap-3">
-                  {(() => {
-                    const photos = selectedPost.imageUrls?.length
-                      ? selectedPost.imageUrls
-                      : extractListingImageUrls(selectedPost);
-                    const thumb = photos[0];
-                    return thumb ? (
-                    <div className="relative w-16 h-16 rounded-xl border border-app shrink-0 overflow-hidden">
-                      <ListingImage
-                        src={thumb}
-                        alt={selectedPost.title}
-                        width={160}
-                        className="w-full h-full object-cover"
-                      />
-                      {photos.length > 1 && (
-                        <span className="absolute bottom-0.5 right-0.5 text-[7px] font-bold bg-black/75 text-white px-1 rounded">
-                          +{photos.length - 1}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="w-16 h-16 bg-inset border border-app rounded-xl shrink-0 flex flex-col items-center justify-center">
-                      <Tag className="w-4 h-4 text-muted" />
-                    </div>
-                  );
-                  })()}
-
-                  <div className="flex-1 min-w-0 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-1.5 flex-wrap pr-1">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider shrink-0 ${
-                          selectedPost.type === 'giveaway'
-                            ? 'bg-accent text-on-accent'
-                            : selectedPost.type === 'trade'
-                              ? 'bg-zinc-500 text-white'
-                              : 'bg-inset border border-app text-muted'
-                        }`}>
-                          {getPostTypeMapLabel(selectedPost.type)}
-                        </span>
-                        <span className="text-[8px] font-bold font-mono uppercase tracking-wider min-w-0 truncate" style={{ color: getCategoryColor(selectedPost.category) }}>
-                          {selectedPost.category}
-                        </span>
-                      </div>
-
-                      <h4 className="text-xs font-semibold text-app mt-1 truncate">
-                        {selectedPost.title}
-                      </h4>
-
-                      <p className="text-[9.5px] text-muted mt-0.5 line-clamp-1 break-words">
-                        {stripListingMetadata(selectedPost.description)}
-                      </p>
-
-                      <MapSelectionRouteRow
-                        locationHint={listingLocationHint(selectedPost, userProfile.uid)}
-                        routeEndpoints={routeEndpoints}
-                        routeLoading={routeLoading}
-                        distanceMeters={liveRouteDistanceMeters}
-                        durationSeconds={routeDurationSeconds}
-                        routeOnMap={isRoadGeometry(routeCoords)}
-                        hasLiveGps={!!userLocation}
-                        canNavigate={supportsInAppNavigation() && hasGpsFix && !!routeDestination}
-                        navigateLabel={
-                          selectedPost
-                            ? isStaffViewer || !supportsGoGetCoordination()
-                              ? 'Navigate'
-                              : getListingNavigateLabel(selectedPost)
-                            : 'Navigate'
-                        }
-                        onStartNavigation={handleNavigateRequest}
-                        onOpenExternalMaps={handleOpenExternalMaps}
-                      />
-                    </div>
-
-                    <div className="mt-2 pt-2 border-t border-app space-y-2">
-                      <div className="flex items-center gap-1 text-[9px] font-medium text-muted min-w-0">
-                        <MapPin className="w-3 h-3 text-accent shrink-0" />
-                        <span className="truncate">{selectedPost.neighborhood}</span>
-                      </div>
-
-                      <div className="sbn-map-selection-card__actions">
-                        {openItemDetail && (
-                          <button
-                            type="button"
-                            onClick={() => openItemDetail(selectedPost)}
-                            className="sbn-btn sbn-btn-secondary sbn-btn-sm"
-                          >
-                            <Eye className="w-3 h-3" />
-                            View
-                          </button>
-                        )}
-                        {selectedPost.userId === userProfile.uid ? (
-                          onEditItem && (
-                            <button
-                              type="button"
-                              onClick={() => onEditItem(selectedPost)}
-                              className="sbn-btn sbn-btn-primary sbn-btn-sm"
-                            >
-                              <Pencil className="w-3 h-3" />
-                              Edit
-                            </button>
-                          )
-                        ) : (
-                          <>
-                            {onClaimSubmitted &&
-                              selectedPost &&
-                              !neighborListingUsesNavigate(selectedPost) &&
-                              canOfferContactlessClaim(
-                                selectedPost,
-                                userProfile.uid,
-                                userLocation?.lat ?? null,
-                                userLocation?.lng ?? null,
-                              ) && (
-                              <ClaimAtPickupButton
-                                item={selectedPost}
-                                user={userProfile}
-                                userLat={userLocation?.lat ?? null}
-                                userLng={userLocation?.lng ?? null}
-                                onClaimSubmitted={onClaimSubmitted}
-                                compact
-                              />
-                            )}
-                            {isStaffViewer && onStaffListingChat ? (
-                              <button
-                                type="button"
-                                onClick={() => onStaffListingChat(selectedPost)}
-                                className="sbn-btn sbn-btn-primary sbn-btn-sm"
-                              >
-                                <LifeBuoy className="w-3 h-3" />
-                                Staff chat
-                              </button>
-                            ) : null}
-                            {selectedPost &&
-                            neighborListingUsesNavigate(selectedPost) &&
-                            !isStaffViewer
-                              ? null
-                              : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onInitiateChat(
-                                  selectedPost.userId,
-                                  selectedPost.userDisplayName,
-                                  selectedPost.userPhotoURL,
-                                  selectedPost,
-                                  isStaffViewer ? { asNeighbor: true } : undefined,
-                                )
-                              }
-                              className="sbn-btn sbn-btn-primary sbn-btn-sm"
-                            >
-                              <MessageSquare className="w-3 h-3" />
-                              {getListingContactButtonLabel(selectedPost.type)}
-                            </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+              <MapSelectedListingCard
+                post={selectedPost}
+                currentIndex={currentIndex}
+                total={activeItems.length}
+                slideDirection={slideDirection}
+                compact
+                onClose={() => setSelectedPost(null)}
+                onPrev={handlePrevPost}
+                onNext={handleNextPost}
+                userProfile={userProfile}
+                isStaffViewer={isStaffViewer}
+                userLat={userLocation?.lat ?? null}
+                userLng={userLocation?.lng ?? null}
+                openItemDetail={openItemDetail}
+                onEditItem={onEditItem}
+                onClaimSubmitted={onClaimSubmitted}
+                onStaffListingChat={onStaffListingChat}
+                onInitiateChat={onInitiateChat}
+                usesNavigate={neighborListingUsesNavigate(selectedPost)}
+                isSaved={isSaved(selectedPost.id)}
+                onToggleSaved={toggleSaved}
+                routeEndpoints={routeEndpoints}
+                routeLoading={routeLoading}
+                distanceMeters={liveRouteDistanceMeters}
+                durationSeconds={routeDurationSeconds}
+                routeOnMap={isRoadGeometry(routeCoords)}
+                hasLiveGps={!!userLocation}
+                canNavigate={supportsInAppNavigation() && hasGpsFix && !!routeDestination}
+                navigateLabel={
+                  isStaffViewer || !supportsGoGetCoordination()
+                    ? 'Navigate'
+                    : getListingNavigateLabel(selectedPost)
+                }
+                onStartNavigation={handleNavigateRequest}
+                onOpenExternalMaps={handleOpenExternalMaps}
+              />
             )}
           </AnimatePresence>
         </div>
@@ -2426,218 +2595,41 @@ export default function SacramentoMapView({
           />
         )}
         {selectedPost && (
-          <motion.div
-            key={selectedPost.id}
-            initial={{ opacity: 0, x: slideDirection === 'right' ? 80 : -80 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: slideDirection === 'right' ? -80 : 80 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            id="map_item_detail_card"
-            className="border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl"
-          >
-            <div className="flex items-center justify-end gap-1 mb-2.5">
-              <div className="flex items-center space-x-1.5 pointer-events-auto bg-inset border border-app px-2 py-0.5 rounded-lg">
-                <button
-                  type="button"
-                  onClick={handlePrevPost}
-                  disabled={activeItems.length <= 1}
-                  className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                  title="Slide Left"
-                  aria-label="Previous listing"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-[10px] font-bold font-mono text-muted min-w-[28px] text-center">
-                  {currentIndex + 1}/{activeItems.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleNextPost}
-                  disabled={activeItems.length <= 1}
-                  className="text-muted hover:text-app disabled:opacity-30 cursor-pointer p-0.5 inline-flex items-center"
-                  title="Slide Right"
-                  aria-label="Next listing"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <button
-                id="close_map_card_btn"
-                type="button"
-                onClick={() => setSelectedPost(null)}
-                className="text-muted hover:text-app transition-colors cursor-pointer bg-inset border border-app p-1 rounded-lg"
-                title="Close panel"
-                aria-label="Close listing details"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex gap-4 text-left">
-              {/* Cargo Image preview */}
-              {(() => {
-                const photos = selectedPost.imageUrls?.length
-                  ? selectedPost.imageUrls
-                  : extractListingImageUrls(selectedPost);
-                const thumb = photos[0];
-                return thumb ? (
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 border border-app shrink-0 bg-app rounded-xl overflow-hidden">
-                  <ListingImage
-                    src={thumb}
-                    alt={selectedPost.title}
-                    width={240}
-                    className="w-full h-full object-cover rounded-none"
-                  />
-                  {photos.length > 1 && (
-                    <span className="absolute bottom-1 right-1 text-[7px] font-bold bg-black/75 text-white px-1 rounded">
-                      +{photos.length - 1}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-app border border-app shrink-0 flex flex-col items-center justify-center text-center rounded-xl">
-                  <Tag className="w-5 h-5 text-subtle" />
-                  <span className="text-[6.5px] text-subtle font-bold tracking-widest mt-1 block">NO IMAGE</span>
-                </div>
-              );
-              })()}
-
-              <div className="flex-1 min-w-0 flex flex-col justify-between font-sans">
-                <div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider ${
-                      selectedPost.type === 'giveaway'
-                        ? 'bg-accent text-on-accent font-mono'
-                        : selectedPost.type === 'trade'
-                          ? 'bg-zinc-500 text-white font-mono'
-                          : 'bg-inset border border-app text-muted font-mono'
-                    }`}>
-                      {getPostTypeMapDetailLabel(selectedPost.type)}
-                    </span>
-                    <span className="text-[8.5px] font-black font-mono uppercase tracking-wider" style={{ color: getCategoryColor(selectedPost.category) }}>
-                      {selectedPost.category}
-                    </span>
-                  </div>
-
-                  <h4 className="text-xs sm:text-sm font-bold text-app font-display mt-2 truncate">
-                    {selectedPost.title}
-                  </h4>
-
-                  <p className="text-[10.5px] text-muted mt-1 line-clamp-2 leading-tight break-words font-medium">
-                    {stripListingMetadata(selectedPost.description)}
-                  </p>
-
-                  <MapSelectionRouteRow
-                    locationHint={listingLocationHint(selectedPost, userProfile.uid)}
-                    routeEndpoints={routeEndpoints}
-                    routeLoading={routeLoading}
-                    distanceMeters={liveRouteDistanceMeters}
-                    durationSeconds={routeDurationSeconds}
-                    routeOnMap={isRoadGeometry(routeCoords)}
-                    hasLiveGps={!!userLocation}
-                    canNavigate={supportsInAppNavigation() && hasGpsFix && !!routeDestination}
-                    navigateLabel={
-                      selectedPost
-                        ? isStaffViewer || !supportsGoGetCoordination()
-                          ? 'Navigate'
-                          : getListingNavigateLabel(selectedPost)
-                        : 'Navigate'
-                    }
-                    onStartNavigation={handleNavigateRequest}
-                    onOpenExternalMaps={handleOpenExternalMaps}
-                  />
-                </div>
-
-                <div className="mt-3 pt-2.5 border-t border-app space-y-2">
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-app uppercase min-w-0">
-                    <MapPin className="w-3.5 h-3.5 text-accent shrink-0" />
-                    <span className="truncate">{selectedPost.neighborhood}</span>
-                  </div>
-
-                  <div className="sbn-map-selection-card__actions">
-                    {openItemDetail && (
-                      <button
-                        id="map_view_card_btn"
-                        type="button"
-                        onClick={() => openItemDetail(selectedPost)}
-                        className="px-3 py-1.5 bg-inset hover:bg-surface-hover text-app text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-app"
-                      >
-                        <Eye className="w-3 h-3" />
-                        <span>View</span>
-                      </button>
-                    )}
-                    {selectedPost.userId === userProfile.uid ? (
-                      onEditItem && (
-                        <button
-                          id="map_edit_card_btn"
-                          type="button"
-                          onClick={() => onEditItem(selectedPost)}
-                          className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
-                        >
-                          <Pencil className="w-3 h-3" />
-                          <span>Edit</span>
-                        </button>
-                      )
-                    ) : (
-                      <>
-                        {onClaimSubmitted &&
-                          selectedPost &&
-                          !neighborListingUsesNavigate(selectedPost) &&
-                          canOfferContactlessClaim(
-                            selectedPost,
-                            userProfile.uid,
-                            userLocation?.lat ?? null,
-                            userLocation?.lng ?? null,
-                          ) && (
-                          <ClaimAtPickupButton
-                            item={selectedPost}
-                            user={userProfile}
-                            userLat={userLocation?.lat ?? null}
-                            userLng={userLocation?.lng ?? null}
-                            onClaimSubmitted={onClaimSubmitted}
-                            compact
-                          />
-                        )}
-                        {isStaffViewer && onStaffListingChat ? (
-                          <button
-                            type="button"
-                            onClick={() => onStaffListingChat(selectedPost)}
-                            className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
-                          >
-                            <LifeBuoy className="w-3 h-3" />
-                            <span>Staff chat</span>
-                          </button>
-                        ) : null}
-                        {selectedPost &&
-                        neighborListingUsesNavigate(selectedPost) &&
-                        !isStaffViewer
-                          ? null
-                          : (
-                        <button
-                          id="map_message_btn"
-                          onClick={() =>
-                            onInitiateChat(
-                              selectedPost.userId,
-                              selectedPost.userDisplayName,
-                              selectedPost.userPhotoURL,
-                              selectedPost,
-                              isStaffViewer ? { asNeighbor: true } : undefined,
-                            )
-                          }
-                          className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
-                        >
-                          <MessageSquare className="w-3 h-3" />
-                          <span>{getListingContactButtonLabel(selectedPost.type)}</span>
-                        </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+          <MapSelectedListingCard
+            post={selectedPost}
+            currentIndex={currentIndex}
+            total={activeItems.length}
+            slideDirection={slideDirection}
+            onClose={() => setSelectedPost(null)}
+            onPrev={handlePrevPost}
+            onNext={handleNextPost}
+            userProfile={userProfile}
+            isStaffViewer={isStaffViewer}
+            userLat={userLocation?.lat ?? null}
+            userLng={userLocation?.lng ?? null}
+            openItemDetail={openItemDetail}
+            onEditItem={onEditItem}
+            onClaimSubmitted={onClaimSubmitted}
+            onStaffListingChat={onStaffListingChat}
+            onInitiateChat={onInitiateChat}
+            usesNavigate={neighborListingUsesNavigate(selectedPost)}
+            isSaved={isSaved(selectedPost.id)}
+            onToggleSaved={toggleSaved}
+            routeEndpoints={routeEndpoints}
+            routeLoading={routeLoading}
+            distanceMeters={liveRouteDistanceMeters}
+            durationSeconds={routeDurationSeconds}
+            routeOnMap={isRoadGeometry(routeCoords)}
+            hasLiveGps={!!userLocation}
+            canNavigate={supportsInAppNavigation() && hasGpsFix && !!routeDestination}
+            navigateLabel={
+              isStaffViewer || !supportsGoGetCoordination()
+                ? 'Navigate'
+                : getListingNavigateLabel(selectedPost)
+            }
+            onStartNavigation={handleNavigateRequest}
+            onOpenExternalMaps={handleOpenExternalMaps}
+          />
         )}
       </AnimatePresence>
     </div>

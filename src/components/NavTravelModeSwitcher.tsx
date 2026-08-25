@@ -14,7 +14,7 @@ const MODE_ICONS: Record<NavTravelMode, typeof Car> = {
 interface NavTravelModeSwitcherProps {
   value: NavTravelMode;
   onChange: (mode: NavTravelMode) => void;
-  variant?: 'compact' | 'nav';
+  variant?: 'compact' | 'nav' | 'gps';
 }
 
 export default function NavTravelModeSwitcher({
@@ -22,6 +22,31 @@ export default function NavTravelModeSwitcher({
   onChange,
   variant = 'compact',
 }: NavTravelModeSwitcherProps) {
+  if (variant === 'gps') {
+    return (
+      <div className="sbn-gps-mode-row" role="radiogroup" aria-label="Travel mode">
+        {NAV_TRAVEL_MODES.map((mode) => {
+          const Icon = MODE_ICONS[mode];
+          const selected = value === mode;
+          return (
+            <button
+              type="button"
+              key={mode}
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(mode)}
+              className={`sbn-gps-mode ${selected ? 'is-selected' : ''}`}
+              title={NAV_TRAVEL_MODE_LABELS[mode]}
+              aria-label={NAV_TRAVEL_MODE_LABELS[mode]}
+            >
+              <Icon className="w-4 h-4" />
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   const isNav = variant === 'nav';
 
   if (isNav) {

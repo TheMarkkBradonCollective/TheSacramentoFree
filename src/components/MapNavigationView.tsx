@@ -459,7 +459,7 @@ function ManeuverIcon({ kind, className = 'w-10 h-10' }: { kind: ManeuverIconKin
 
 function createNavUserIcon(heading: number): L.DivIcon {
   return L.divIcon({
-    html: `<div class="sbn-nav-user-puck" style="transform: rotate(${heading}deg)"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-chevron"></span></div>`,
+    html: `<div class="sbn-nav-user-puck" style="transform: rotate(${heading}deg)"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-dot"></span><span class="sbn-nav-user-puck-chevron"></span></div>`,
     className: 'nav-user-marker',
     iconSize: [56, 56],
     iconAnchor: [28, 36],
