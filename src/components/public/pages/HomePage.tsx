@@ -328,7 +328,7 @@ function OriginalHomePage({
       <section className="px-4 sbn-hero-glow pb-4">
         <div className="lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:items-center max-w-3xl lg:max-w-none mx-auto">
           <div>
-            <BrandLogo imgClassName="h-14 w-auto max-w-[220px] object-contain bg-transparent mb-6" />
+            <BrandLogo imgClassName="sbn-hero-logo h-14 w-auto max-w-[220px] object-contain bg-transparent mb-6" />
 
             <span className="sbn-badge sbn-badge-give">
               <Heart className="w-3 h-3 inline mr-1" />

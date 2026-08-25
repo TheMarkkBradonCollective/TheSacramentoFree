@@ -2377,7 +2377,7 @@ button {
   transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Public marketing hero */
+/* Public marketing hero — glow sits behind headline copy, not the logo */
 .sbn-hero-glow {
   position: relative;
 }
@@ -2385,11 +2385,11 @@ button {
 .sbn-hero-glow::before {
   content: '';
   position: absolute;
-  top: -40%;
+  top: 5.5rem;
   left: 50%;
   transform: translateX(-50%);
   width: min(100%, 480px);
-  height: 280px;
+  height: 240px;
   background: radial-gradient(circle, var(--color-accent-soft) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
@@ -2398,6 +2398,11 @@ button {
 .sbn-hero-glow > * {
   position: relative;
   z-index: 1;
+}
+
+.sbn-hero-glow img.sbn-hero-logo {
+  filter: none;
+  image-rendering: auto;
 }
 
 /* Public home — normal document layout (no 3D scroll / pointer tilt) */

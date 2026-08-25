@@ -192,13 +192,30 @@ function writeCompositeLauncher(srcPng, destPng, size) {
   ]);
 }
 
+function scaleAdaptiveForeground(srcPng, destPng, canvasSize) {
+  const iconSize = Math.round(canvasSize * 0.66);
+  const pad = Math.round((canvasSize - iconSize) / 2);
+  execFileSync('ffmpeg', [
+    '-y',
+    '-loglevel',
+    'error',
+    '-i',
+    srcPng,
+    '-frames:v',
+    '1',
+    '-vf',
+    `scale=${iconSize}:${iconSize}:flags=lanczos,format=rgba,pad=${canvasSize}:${canvasSize}:${pad}:${pad}:color=black@0.0`,
+    destPng,
+  ]);
+}
+
 function writeLauncherIcons(foregroundSrc, legacySrc, fillHex) {
   for (const [density, sizes] of Object.entries(DENSITIES)) {
     const dir = join(resDir, `mipmap-${density}`);
     mkdirSync(dir, { recursive: true });
     scaleRgbaPng(legacySrc, join(dir, 'ic_launcher.png'), sizes.icon);
     scaleRgbaPng(legacySrc, join(dir, 'ic_launcher_round.png'), sizes.icon);
-    scaleRgbaPng(foregroundSrc, join(dir, 'ic_launcher_foreground.png'), sizes.adaptive);
+    scaleAdaptiveForeground(foregroundSrc, join(dir, 'ic_launcher_foreground.png'), sizes.adaptive);
     solidPng(fillHex, join(dir, 'ic_launcher_background.png'), sizes.adaptive);
   }
 }
