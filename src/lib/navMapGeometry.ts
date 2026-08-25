@@ -125,3 +125,27 @@ export function splitRouteProgress(coords: [number, number][], user: LatLng): Ro
 
   return { traveled, remaining, projection };
 }
+
+/** Keep only the next `maxMeters` of a remaining polyline (GPS lookahead / last-meters). */
+export function clipRouteAhead(
+  remaining: [number, number][],
+  maxMeters: number,
+): [number, number][] {
+  if (remaining.length < 2 || maxMeters <= 0) return [];
+  const out: [number, number][] = [remaining[0]];
+  let acc = 0;
+  for (let i = 1; i < remaining.length; i++) {
+    const a = remaining[i - 1];
+    const b = remaining[i];
+    const seg = haversineMeters({ lat: a[0], lng: a[1] }, { lat: b[0], lng: b[1] });
+    if (seg <= 0) continue;
+    if (acc + seg >= maxMeters) {
+      const t = (maxMeters - acc) / seg;
+      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      break;
+    }
+    out.push(b);
+    acc += seg;
+  }
+  return out.length >= 2 ? out : [];
+}

@@ -18,7 +18,8 @@ export const SITE = {
     'TheSacramentoFree — free local gifting in Sacramento. No selling, no bidding, no flipping. Neighbors helping neighbors.',
   principles: ['No selling.', 'No bidding.', 'No flipping.', 'Just neighbors helping neighbors.'],
   freeRule: 'Everything posted must be 100% free.',
-  downloadHelper: 'Google Play on Android (if invited) or add TheSacramentoFree to your home screen — free for everyone.',
+  downloadHelper:
+    'Google Play on Android for live Go Get pickup (if invited), or add TheSacramentoFree to your home screen — the website works either way.',
   /** Google Play closed testing — opt in on the web, then install from the store listing. */
   playStoreBetaUrl: 'https://play.google.com/apps/testing/org.sacramentobuynothing.app',
   playStoreListingUrl:

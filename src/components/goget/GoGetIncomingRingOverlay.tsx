@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, Loader2, Phone, X } from 'lucide-react';
+import { Clock, Loader2, Phone } from 'lucide-react';
 import type { GoGetSession, ItemPost, UserProfile } from '../../types';
 import {
   abandonGoGetRing,
@@ -11,6 +11,7 @@ import {
 } from '../../lib/goGetSessions';
 import { getGoGetRingDuration, getGoGetRingPattern, startGoGetRingAlert, stopGoGetRingAlert } from '../../lib/goGetRing';
 import GoGetAvailabilityPrompt from './GoGetAvailabilityPrompt';
+import GoGetLiveTripMap from './GoGetLiveTripMap';
 import { getSupabaseItemById } from '../../supabase';
 
 interface GoGetIncomingRingOverlayProps {
@@ -97,22 +98,27 @@ export default function GoGetIncomingRingOverlay({
   const shell = (body: ReactNode) =>
     createPortal(
       <div
-        className="fixed inset-0 z-[200] bg-black/80 flex flex-col items-center justify-end sm:justify-center p-4 pb-8"
+        className="fixed inset-0 z-[200] flex flex-col"
         role="dialog"
         aria-modal="true"
+        aria-label="Incoming Go Get pickup request"
         id="go_get_incoming_ring_overlay"
       >
-        <div className="w-full max-w-md sbn-card p-5 space-y-4 shadow-2xl border border-accent/40">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Phone className="w-5 h-5 text-accent animate-pulse" />
-              <p className="text-sm font-bold text-app">Pickup request</p>
-            </div>
-            <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-inset text-muted" aria-label="Dismiss">
-              <X className="w-5 h-5" />
-            </button>
+        <GoGetLiveTripMap
+          destination={{ lat: session.destinationLat, lng: session.destinationLng }}
+          destinationLabel={session.destinationLabel}
+          mapId="go_get_ring_map"
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 p-4 safe-area-pt">
+          <div className="pointer-events-auto sbn-card px-3 py-2 flex items-center gap-2 shadow-lg border border-accent/40">
+            <Phone className="w-5 h-5 text-accent animate-pulse shrink-0" />
+            <p className="text-sm font-bold text-app">Incoming pickup request</p>
           </div>
-          {body}
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 safe-area-pb">
+          <div className="pointer-events-auto w-full max-w-lg mx-auto sbn-card rounded-b-none rounded-t-3xl p-5 space-y-4 shadow-2xl border border-accent/40">
+            {body}
+          </div>
         </div>
       </div>,
       document.body,
@@ -120,9 +126,14 @@ export default function GoGetIncomingRingOverlay({
 
   if (itemLoadFailed) {
     return shell(
-      <p className="text-sm text-app leading-snug">
-        This listing is no longer available. The pickup request was cancelled.
-      </p>,
+      <div className="space-y-3">
+        <p className="text-sm text-app leading-snug">
+          This listing is no longer available. The pickup request was cancelled.
+        </p>
+        <button type="button" onClick={onClose} className="sbn-btn sbn-btn-secondary w-full justify-center">
+          Close
+        </button>
+      </div>,
     );
   }
 
@@ -139,10 +150,6 @@ export default function GoGetIncomingRingOverlay({
 
   return shell(
     <>
-      <p className="text-sm text-app leading-snug">
-        <strong>{session.requesterName}</strong> wants to Go Get &quot;{item.title}&quot;
-      </p>
-
       {active ? (
         <>
           <p className="text-xs text-muted flex items-center gap-2">
@@ -155,6 +162,7 @@ export default function GoGetIncomingRingOverlay({
             submitting={busy}
             onAvailableNow={() => void run(() => respondAvailableNow(session, item))}
             onProposeWindow={(w) => void run(() => proposeAvailabilityWindow(session, item, w))}
+            embedded
           />
         </>
       ) : (

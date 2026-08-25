@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
 import { haversineMeters, geolocationAgeMs, openDrivingDirections, googleMapsDirectionsUrl } from '../lib/mapRoute';
-import { projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
+import { clipRouteAhead, projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
 import NavManeuverShield from './navigation/NavManeuverShield';
 import NavigationSettingsForm from './NavigationSettingsForm';
 import NavTravelModeSwitcher from './NavTravelModeSwitcher';
@@ -76,6 +76,7 @@ import {
 } from '../lib/navigationVoice';
 import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
 import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 import {
   ROUTE_LINE_CASING,
   ROUTE_LINE_MAIN,
@@ -108,6 +109,13 @@ interface MapNavigationViewProps {
   navigationStartMessage?: string;
   /** Extra phrases spoken after the start message (e.g. pickup instructions). */
   navigationFollowUpMessages?: string[];
+  /** Go Get live trip: stay on this screen until pickup is cancelled or completed. */
+  tripLock?: boolean;
+  /** When set, the details sheet shows an in-trip message action. */
+  onOpenChat?: () => void;
+  chatLabel?: string;
+  /** Fill a parent overlay instead of covering the viewport as a root portal. */
+  embedded?: boolean;
 }
 
 type NavLoadingStage = 'locating' | 'routing' | 'ready';
@@ -232,6 +240,9 @@ interface NavigationDetailsSheetProps {
   onSettings: () => void;
   onExit: () => void;
   currentRoad?: string | null;
+  exitLabel?: string;
+  onOpenChat?: () => void;
+  chatLabel?: string;
 }
 
 function NavigationDetailsSheet({
@@ -253,6 +264,9 @@ function NavigationDetailsSheet({
   onSettings,
   onExit,
   currentRoad,
+  exitLabel,
+  onOpenChat,
+  chatLabel = 'Message',
 }: NavigationDetailsSheetProps) {
   const dragStartYRef = useRef(0);
   const expanded = snap === 'expanded';
@@ -340,8 +354,13 @@ function NavigationDetailsSheet({
             )}
           </div>
 
+          {onOpenChat ? (
+            <button type="button" onClick={onOpenChat} className="sbn-nav-exit-btn shrink-0" title={chatLabel}>
+              Message
+            </button>
+          ) : null}
           <button type="button" onClick={onExit} className="sbn-nav-exit-btn shrink-0">
-            {arrived ? 'Done' : 'Exit'}
+            {exitLabel ?? (arrived ? 'Done' : 'Exit')}
           </button>
         </div>
       </div>
@@ -349,7 +368,7 @@ function NavigationDetailsSheet({
       {expanded && (
         <div className="flex-1 min-h-0 overflow-y-auto border-t border-[var(--sbn-nav-glass-border)] px-4 pb-4">
           <div className="flex items-center justify-center gap-2 py-3">
-            <button type="button" onClick={onOverview} className="sbn-nav-sheet-action" aria-label="Route overview" title="Overview">
+            <button type="button" onClick={onOverview} className="sbn-nav-sheet-action" aria-label="See full route" title="See full route">
               <MapIcon className="w-4 h-4" />
             </button>
             <button type="button" onClick={onVoiceToggle} className="sbn-nav-sheet-action" aria-label={voiceOn ? 'Mute voice' : 'Enable voice'} title={voiceOn ? 'Mute' : 'Voice on'}>
@@ -440,12 +459,21 @@ function ManeuverIcon({ kind, className = 'w-10 h-10' }: { kind: ManeuverIconKin
 
 function createNavUserIcon(heading: number): L.DivIcon {
   return L.divIcon({
-    html: `<div class="sbn-nav-user-puck" style="transform: rotate(${heading}deg)"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-core"></span><span class="sbn-nav-user-puck-arrow"></span></div>`,
+    html: `<div class="sbn-nav-user-puck" style="transform: rotate(${heading}deg)"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-chevron"></span></div>`,
     className: 'nav-user-marker',
     iconSize: [56, 56],
-    iconAnchor: [28, 28],
+    iconAnchor: [28, 36],
   });
 }
+
+function gpsFollowZoom(mode: NavTravelMode): number {
+  if (mode === 'walking') return 18;
+  if (mode === 'cycling') return 17;
+  return 17;
+}
+
+/** Hide the city-wide route during GPS follow; only paint the last meters to the pin. */
+const GPS_APPROACH_LINE_METERS = 380;
 
 type RoutePolylineHandles = {
   traveledCasing: L.Polyline | null;
@@ -557,8 +585,8 @@ function visibleMapCenterOffsetPx(map: L.Map): { x: number; y: number } {
   return { x: 0, y: size.y / 2 - visibleMidY };
 }
 
-/** Keep the puck in the center of the uncovered map, not the full canvas. */
-function centerMapOnUser(map: L.Map, center: LatLng, zoom: number): void {
+/** Keep the puck in the visible map hole; GPS follow sits lower so more road is ahead. */
+function centerMapOnUser(map: L.Map, center: LatLng, zoom: number, gpsAhead = false): void {
   if (!map.getContainer()?.isConnected) return;
 
   const mapSize = map.getSize();
@@ -571,6 +599,9 @@ function centerMapOnUser(map: L.Map, center: LatLng, zoom: number): void {
 
   try {
     const offset = visibleMapCenterOffsetPx(map);
+    if (gpsAhead) {
+      offset.y += Math.round(mapSize.y * 0.16);
+    }
     const targetPoint = map.project([center.lat, center.lng], zoom);
     const shiftedCenter = map.unproject(L.point(targetPoint.x + offset.x, targetPoint.y + offset.y), zoom);
     withProgrammaticNavCamera(() => {
@@ -612,7 +643,7 @@ function applyHeadingUpRotation(
   try {
     const point = map.latLngToContainerPoint([center.lat, center.lng]);
     rotator.style.transformOrigin = `${point.x}px ${point.y}px`;
-    rotator.style.transform = `rotate(${-heading}deg) scale(1.42)`;
+    rotator.style.transform = `rotateX(48deg) rotate(${-heading}deg) scale(1.72)`;
   } catch (error) {
     console.warn('Could not rotate navigation map:', error);
     rotator.style.transform = '';
@@ -631,6 +662,10 @@ export default function MapNavigationView({
   otherPartyLabel = 'Other party',
   navigationStartMessage,
   navigationFollowUpMessages,
+  tripLock = false,
+  onOpenChat,
+  chatLabel = 'Message',
+  embedded = false,
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -653,7 +688,7 @@ export default function MapNavigationView({
   const arrivedRef = useRef(false);
   const routeAnnouncedRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const followUserRef = useRef(false);
+  const followUserRef = useRef(true);
   const userPosRef = useRef<LatLng>(origin);
   const logicPosRef = useRef<LatLng>(origin);
   const headingRef = useRef(0);
@@ -706,7 +741,7 @@ export default function MapNavigationView({
   const [heading, setHeading] = useState(0);
   const [speedMph, setSpeedMph] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
-  const [followUser, setFollowUser] = useState(false);
+  const [followUser, setFollowUser] = useState(true);
   followUserRef.current = followUser;
   const [voiceOn, setVoiceOn] = useState(() => readNavigationSettings().voiceEnabled);
   const [arrived, setArrived] = useState(false);
@@ -1236,21 +1271,47 @@ export default function MapNavigationView({
         setHeading(initialHeading);
       }
 
-      followUserRef.current = false;
-      setFollowUser(false);
+      followUserRef.current = true;
+      setFollowUser(true);
       routeOverviewLockedRef.current = false;
-      applyHeadingUpRotation(mapRotatorRef.current, map, start, headingRef.current, true);
-      resetMapBearing(map);
+      applyHeadingUpRotation(
+        mapRotatorRef.current,
+        map,
+        start,
+        headingRef.current,
+        !settingsRef.current.headingUp,
+      );
       if (userMarkerRef.current) {
-        userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
-        lastMarkerHeadingRef.current = headingRef.current;
+        const markerHeading = settingsRef.current.headingUp ? 0 : headingRef.current;
+        userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
+        lastMarkerHeadingRef.current = markerHeading;
       }
       window.requestAnimationFrame(() => {
-        fitRouteOverview({ force: true });
-        window.requestAnimationFrame(() => fitRouteOverview({ force: true }));
+        const live = mapRef.current;
+        if (!live) return;
+        centerMapOnUser(
+          live,
+          start,
+          gpsFollowZoom(settingsRef.current.travelMode),
+          settingsRef.current.headingUp,
+        );
+        applyHeadingUpRotation(
+          mapRotatorRef.current,
+          live,
+          start,
+          headingRef.current,
+          !settingsRef.current.headingUp,
+        );
       });
     }
-  }, [route, destination, fitRouteOverview]);
+  }, [route, destination]);
+
+  useEffect(() => {
+    const marker = destMarkerRef.current;
+    if (!marker) return;
+    const showPin = !followUser || arrived || remainingMeters <= GPS_APPROACH_LINE_METERS;
+    marker.setOpacity(showPin ? 1 : 0);
+  }, [followUser, arrived, remainingMeters, route]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1338,7 +1399,12 @@ export default function MapNavigationView({
       const target = pendingNavPanRef.current;
       const liveMap = mapRef.current;
       if (!target || !liveMap || !followUserRef.current) return;
-      centerMapOnUser(liveMap, target, Math.max(liveMap.getZoom(), 17));
+      centerMapOnUser(
+        liveMap,
+        target,
+        Math.max(liveMap.getZoom(), gpsFollowZoom(settingsRef.current.travelMode)),
+        !northUpRef.current,
+      );
       applyHeadingUpRotation(mapRotatorRef.current, liveMap, target, headingRef.current, northUpRef.current);
     });
   }, []);
@@ -1356,8 +1422,15 @@ export default function MapNavigationView({
 
     lastRouteDrawRef.current = { lat: logicPos.lat, lng: logicPos.lng, at: now };
     const split = splitRouteProgress(route.coords, logicPos);
-    updateRoutePolylines(routeLayerRef.current, routePolylineHandlesRef.current, split.traveled, split.remaining);
-  }, [route, userPos, loading]);
+    if (followUserRef.current) {
+      const remainingM = remainingRouteMeters(route.coords, logicPos);
+      const approach =
+        remainingM <= GPS_APPROACH_LINE_METERS ? clipRouteAhead(split.remaining, remainingM) : [];
+      updateRoutePolylines(routeLayerRef.current, routePolylineHandlesRef.current, [], approach);
+    } else {
+      updateRoutePolylines(routeLayerRef.current, routePolylineHandlesRef.current, split.traveled, split.remaining);
+    }
+  }, [route, userPos, loading, followUser]);
 
   const handleGpsUpdate = useCallback(
     (position: GeolocationPosition) => {
@@ -1551,6 +1624,7 @@ export default function MapNavigationView({
   handleGpsUpdateRef.current = handleGpsUpdate;
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return undefined;
     const unsubscribe = subscribeLiveGeolocation(
       (position) => {
         handleGpsUpdateRef.current(position);
@@ -1600,10 +1674,11 @@ export default function MapNavigationView({
     routeOverviewLockedRef.current = false;
     const headingUp = settingsRef.current.headingUp;
     lastNavPanRef.current = null;
+    lastRouteDrawRef.current = null;
     const pos = userPosRef.current;
     const map = mapRef.current;
     if (!map) return;
-    centerMapOnUser(map, pos, Math.max(map.getZoom(), 17));
+    centerMapOnUser(map, pos, gpsFollowZoom(settingsRef.current.travelMode), headingUp);
     applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, !headingUp);
     if (userMarkerRef.current) {
       const markerHeading = headingUp ? 0 : headingRef.current;
@@ -1625,6 +1700,7 @@ export default function MapNavigationView({
       lastMarkerHeadingRef.current = headingRef.current;
     }
     routeOverviewLockedRef.current = false;
+    lastRouteDrawRef.current = null;
     fitRouteOverview({ force: true });
   };
 
@@ -1647,6 +1723,10 @@ export default function MapNavigationView({
   };
 
   const handleExit = () => {
+    if (tripLock) {
+      onExit();
+      return;
+    }
     voiceRef.current.cancel();
     void wakeLockRef.current?.release();
     onExit();
@@ -1696,11 +1776,17 @@ export default function MapNavigationView({
     const frame = window.requestAnimationFrame(() => {
       const live = mapRef.current;
       if (!live || !followUserRef.current) return;
-      centerMapOnUser(live, userPosRef.current, Math.max(live.getZoom(), 17));
+      syncNavigationMap(userPosRef.current, headingRef.current);
+      centerMapOnUser(
+        live,
+        userPosRef.current,
+        gpsFollowZoom(settingsRef.current.travelMode),
+        !northUpRef.current,
+      );
       applyHeadingUpRotation(mapRotatorRef.current, live, userPosRef.current, headingRef.current, northUpRef.current);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [followUser, route, sheetSnap, isCompact]);
+  }, [followUser, route, sheetSnap, isCompact, syncNavigationMap]);
 
   useEffect(() => {
     if (navSettings.travelMode !== 'driving' || !navSettings.showLaneGuidance) {
@@ -1725,7 +1811,7 @@ export default function MapNavigationView({
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}${isNarrow ? ' sbn-nav-narrow' : ''}`}
+      className={`${embedded ? 'absolute inset-0 z-10 h-full w-full' : 'fixed inset-0 z-[200]'} flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}${isNarrow ? ' sbn-nav-narrow' : ''}${followUser ? ' sbn-nav--follow' : ''}${followUser && navSettings.headingUp ? ' sbn-nav--gps' : ''}`}
       id="map_navigation_view"
       style={{ background: 'var(--sbn-nav-bg)' }}
       onPointerDown={() => voiceRef.current.unlock()}
@@ -1755,7 +1841,7 @@ export default function MapNavigationView({
                   Open in Apple / Google Maps
                 </button>
                 <button type="button" onClick={handleExit} className="sbn-nav-tertiary-btn">
-                  Back to map
+                  {tripLock ? 'Cancel pickup' : 'Back to map'}
                 </button>
               </div>
             </div>
@@ -1801,7 +1887,7 @@ export default function MapNavigationView({
 
               {!loading && route && (rerouting || offRouteMeters > NAV_OFF_ROUTE_THRESHOLD_M) && !arrived && (
                 <p className="mt-2 text-xs font-semibold text-[var(--sbn-nav-warning)]">
-                  {rerouting ? 'Recalculating route…' : 'Return to highlighted route'}
+                  {rerouting ? 'Recalculating…' : 'Head back toward the next turn'}
                 </p>
               )}
 
@@ -1827,6 +1913,11 @@ export default function MapNavigationView({
             )}
             {!loading && route && sheetSnap === 'collapsed' && (
                 <>
+                  {followUser && currentRoadLabel && !arrived ? (
+                    <div className="sbn-nav-street-chip" aria-live="polite">
+                      {currentRoadLabel}
+                    </div>
+                  ) : null}
                   {showSpeedCard && (
                     <div className="sbn-nav-speed-dock">
                       <NavSpeedCard currentMph={speedMph} limitMph={speedLimitMph} />
@@ -1850,10 +1941,20 @@ export default function MapNavigationView({
                     </button>
                     <button
                       type="button"
+                      onClick={handleOverview}
+                      className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${followUser ? '' : 'sbn-nav-fab-active'}`}
+                      title="See full route"
+                      aria-label="See full route"
+                      aria-pressed={!followUser}
+                    >
+                      <MapIcon className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleRecenter}
                       className={`sbn-nav-fab ${isCompact ? 'sbn-nav-fab-compact' : ''} ${followUser ? '' : 'sbn-nav-fab-active'}`}
-                      title="Center on you and speak the next turn"
-                      aria-label="Center on you"
+                      title="Resume GPS"
+                      aria-label="Resume GPS"
                     >
                       <LocateFixed className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
                     </button>
@@ -1892,6 +1993,9 @@ export default function MapNavigationView({
                 onRecenter={handleRecenter}
                 onSettings={() => setSettingsOpen(true)}
                 onExit={handleExit}
+                exitLabel={tripLock ? 'Cancel' : undefined}
+                onOpenChat={onOpenChat}
+                chatLabel={chatLabel}
               />
             </div>
           )}

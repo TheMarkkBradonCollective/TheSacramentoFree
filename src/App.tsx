@@ -53,6 +53,7 @@ import { APP_ICON_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteConte
 import { NEWSPAPER } from './preview/newspaperBrand';
 import { isNewspaperSkinActive } from './preview/NewspaperSkinContext';
 import GoGetRingCoordinator from './components/goget/GoGetRingCoordinator';
+import GoGetTripCoordinator from './components/goget/GoGetTripCoordinator';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
@@ -2294,6 +2295,12 @@ export default function App() {
               onOpenAwards={handleOpenAwards}
             >
             <GoGetRingCoordinator userProfile={userProfile} />
+            <GoGetTripCoordinator
+              userProfile={userProfile}
+              onPickupCompleted={() => {
+                void loadItems(true);
+              }}
+            />
             <PresenceProvider userId={userProfile.uid}>
                {deviceType === 'mobile' ? (
                 <MobileView

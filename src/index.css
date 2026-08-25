@@ -305,6 +305,15 @@ html.sbn-session-restore #root:empty {
   will-change: transform;
 }
 
+#map_navigation_view.sbn-nav--gps .sbn-nav-map-stage {
+  perspective: 1100px;
+  perspective-origin: 50% 82%;
+}
+
+#map_navigation_view.sbn-nav--gps .sbn-nav-map-rotator {
+  transform-style: preserve-3d;
+}
+
 #map_navigation_view .sbn-nav-map-canvas {
   width: 100%;
   height: 100%;
@@ -651,6 +660,28 @@ html.sbn-session-restore #root:empty {
   }
 }
 
+#map_navigation_view .sbn-nav-street-chip {
+  position: absolute;
+  left: 50%;
+  bottom: 4.35rem;
+  transform: translateX(-50%);
+  max-width: min(16rem, calc(100% - 8.5rem));
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--sbn-nav-chrome) 88%, transparent);
+  border: 1px solid var(--sbn-nav-glass-border);
+  box-shadow: var(--sbn-nav-shadow);
+  color: var(--sbn-nav-text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 #map_navigation_view .sbn-nav-user-puck {
   position: relative;
   width: 3.5rem;
@@ -659,31 +690,31 @@ html.sbn-session-restore #root:empty {
 
 #map_navigation_view .sbn-nav-user-puck-glow {
   position: absolute;
-  inset: 0.2rem;
+  inset: 0.35rem 0.45rem 0.15rem;
   border-radius: 9999px;
-  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 32%, transparent);
   filter: blur(10px);
 }
 
-#map_navigation_view .sbn-nav-user-puck-core {
-  position: absolute;
-  inset: 0.45rem;
-  border-radius: 9999px;
-  background: #fff;
-  border: 3px solid #fff;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.45), 0 0 0 10px rgba(255,255,255,0.14);
-}
-
-#map_navigation_view .sbn-nav-user-puck-arrow {
+#map_navigation_view .sbn-nav-user-puck-chevron {
   position: absolute;
   left: 50%;
-  top: 0.55rem;
+  top: 0.2rem;
+  width: 1.55rem;
+  height: 2.15rem;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-bottom: 16px solid var(--color-accent);
+  background: var(--color-accent);
+  clip-path: polygon(50% 0%, 100% 100%, 50% 78%, 0% 100%);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+  border-radius: 2px;
+}
+
+#map_navigation_view .sbn-nav-user-puck-chevron::after {
+  content: '';
+  position: absolute;
+  inset: 0.18rem 0.28rem 0.45rem;
+  background: #fff;
+  clip-path: polygon(50% 8%, 86% 88%, 50% 70%, 14% 88%);
 }
 
 #map_navigation_view .sbn-nav-lane {

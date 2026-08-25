@@ -9,6 +9,7 @@ interface GoGetShareLocationToggleProps {
   pickerName: string;
   onSessionChange: (session: GoGetSession) => void;
   onError?: (message: string) => void;
+  compact?: boolean;
 }
 
 const UPLOAD_INTERVAL_MS = 4000;
@@ -19,6 +20,7 @@ export default function GoGetShareLocationToggle({
   pickerName,
   onSessionChange,
   onError,
+  compact = false,
 }: GoGetShareLocationToggleProps) {
   const [busy, setBusy] = useState(false);
   const sharing = session.fulfillerSharingLocation === true;
@@ -68,8 +70,9 @@ export default function GoGetShareLocationToggle({
             Share my location
           </p>
           <p className="text-xs text-muted mt-1 leading-relaxed">
-            Let {pickerName} see where you actually are — helpful when the pickup spot is a big area or you're not
-            right at the pin.
+            {compact
+              ? `Visible to ${pickerName} during this pickup.`
+              : `Let ${pickerName} see where you actually are — helpful when the pickup spot is a big area or you're not right at the pin.`}
           </p>
         </div>
         <button
@@ -96,7 +99,7 @@ export default function GoGetShareLocationToggle({
           Updating…
         </p>
       )}
-      {sharing && !busy && (
+      {sharing && !busy && !compact && (
         <p className="text-[11px] text-emerald-500 font-medium">Your live location is visible to {pickerName}.</p>
       )}
     </div>

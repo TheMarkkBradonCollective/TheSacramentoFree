@@ -14,6 +14,7 @@ import {
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
 import TrackedDownloadLink from '../../TrackedDownloadLink';
+import AppScreenshotTour from '../AppScreenshotTour';
 import { useInstallVersions, type VersionStatus } from '../../../hooks/useInstallVersions';
 import { apkWebsiteAccessMessage } from '../../../lib/apkWebsiteAccess';
 import { SITE } from '../../../siteContent';
@@ -138,7 +139,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <p>
             {newspaper
               ? `Take ${NEWSPAPER.name} with you — Google Play on Android or add to your home screen.`
-              : 'Google Play for most neighbors, home screen for everyone, and free APK sideload for our first 500 joiners.'}
+              : 'See the screenshots first. Same Sacramento community as the website — live Go Get pickup is the Android extra. Google Play for most neighbors, home screen for everyone, and free APK sideload for our first 500 joiners.'}
           </p>
         </header>
         <div className="space-y-4 min-w-0">{renderBody()}</div>
@@ -150,7 +151,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
       subtitle={
         newspaper
           ? `Take ${NEWSPAPER.name} with you — Google Play on Android or add to your home screen.`
-          : `Get ${SITE.shortName} on your phone — Google Play on Android or add to your home screen.`
+          : 'See the app before you install — same Sacramento community as the website, plus live Go Get pickup on Android.'
       }
       className="min-w-0 overflow-x-hidden"
     >
@@ -190,6 +191,9 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         ) : null}
 
+        <AppScreenshotTour />
+
+        <div id="download_install" className="space-y-4 scroll-mt-8">
         {!isPublicDownloadPage ? (
           <PublicCard>
             <div className="flex items-start gap-3 mb-4">
@@ -418,13 +422,14 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
             )}
           </PublicCard>
         </div>
+        </div>
 
         <PublicCard>
           <h2 className="text-sm font-black text-app mb-1">Which should you use?</h2>
           <p className="text-xs text-muted mb-4 leading-relaxed">
             {isPublicDownloadPage
-              ? 'Both connect to the same Sacramento community. Use Google Play on Android if you are on the invite list, or add to your home screen on any phone — no file download required for home screen.'
-              : 'All options connect to the same Sacramento community. Home screen works everywhere. Google Play is the native Android path for most neighbors. Free APK sideload in Account is only for our first 500 joiners.'}
+              ? 'The screenshots above are the decision. Stay on the website if browse, post, and messages are enough. Install Google Play on Android only if you want live Go Get pickup. Home screen is the website as an icon — no Go Get.'
+              : 'The screenshots above are the decision. Home screen is the website as an icon. Google Play / APK add live Go Get pickup. Free APK sideload in Account is only for our first 500 joiners.'}
           </p>
 
           <div className="overflow-x-auto -mx-1">
@@ -452,6 +457,11 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
                   label="Updates"
                   apk="Install once — then auto-updates from the live site"
                   homeScreen="Updates automatically when you reopen the app"
+                />
+                <ComparisonRow
+                  label="Go Get live pickup"
+                  apk="Locked maps on both sides — turn-by-turn for the picker, live tracking for the poster, like Uber"
+                  homeScreen="Not included. Message the neighbor and arrange pickup yourselves (same as the website)."
                 />
                 <ComparisonRow
                   label="Background notifications"
@@ -509,9 +519,10 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
             <div className="flex gap-3">
               <Globe className="w-5 h-5 text-accent shrink-0" />
               <div>
-                <p className="font-bold text-app">Same community</p>
+                <p className="font-bold text-app">Same community, extra on Android</p>
                 <p className="text-muted mt-1 leading-relaxed">
-                  Listings, chat, map, and profile are identical. You can switch approaches anytime.
+                  Listings, chat, map, and events match the website shots. The Go Get walkthrough is Android Play / APK
+                  only — if that is not what you need, skip the install and stay in the browser.
                 </p>
               </div>
             </div>

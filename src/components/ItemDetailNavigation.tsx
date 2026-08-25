@@ -31,9 +31,9 @@ import {
   cancelGoGetSession,
   confirmGoGetCompletion,
   createGoGetSession,
+  completeGoGetItemForSession,
   disputeGoGetCompletion,
   getActiveGoGetSession,
-  goGetHandshakeModeForItem,
   isTerminalGoGetStatus,
   markFulfillerReady,
   markGoGetArrived,
@@ -46,14 +46,9 @@ import {
   upsertLiveLocation,
   getFulfillerLiveLocation,
 } from '../lib/goGetSessions';
+import { isGoGetTripLocked } from '../lib/goGetTripLock';
 import { fileGoGetViolation } from '../lib/violations';
-import {
-  markItemFulfilledFromChat,
-  markTradeCompletedFromChat,
-  getListingSubitems,
-  recordGiveawayPickupFromGoGet,
-} from '../supabase';
-import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from '../lib/claims';
+import { getListingSubitems, getSupabaseProfile } from '../supabase';
 import type { GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
 import MapNavigationView, { type NavProgressUpdate } from './MapNavigationView';
 import {
@@ -73,7 +68,6 @@ import GoGetRingWaitingPanel from './goget/GoGetRingWaitingPanel';
 import GoGetScheduleMeetPanel from './goget/GoGetScheduleMeetPanel';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
-import { getSupabaseProfile } from '../supabase';
 import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
 import { supportsGoGetCoordination } from '../lib/goGetEligibility';
 
@@ -94,34 +88,7 @@ async function applyCompletionForItemType(
   item: ItemPost,
   session: GoGetSession,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
-  if (item.type === 'giveaway') {
-    return recordGiveawayPickupFromGoGet({
-      itemId: item.id,
-      itemTitle: item.title,
-      giverUserId: session.fulfillerUserId,
-      claimerUserId: session.requesterUserId,
-      chatId: session.chatId,
-      claimMessage: formatItemClaimedChatMessage(item.title),
-    });
-  }
-  if (item.type === 'looking') {
-    // Looking sessions: fulfiller = looking poster (owner), requester = helper who dropped off.
-    return markItemFulfilledFromChat({
-      itemId: item.id,
-      ownerUserId: session.fulfillerUserId,
-      helperUserId: session.requesterUserId,
-      chatId: session.chatId,
-      message: formatItemFulfilledChatMessage(item.title, session.requesterName),
-    });
-  }
-  // trade — fulfiller is the listing poster; requester is the trade partner
-  return markTradeCompletedFromChat({
-    itemId: item.id,
-    posterUserId: session.fulfillerUserId,
-    partnerUserId: session.requesterUserId,
-    chatId: session.chatId,
-    message: formatTradeCompletedChatMessage(item.title, session.requesterName),
-  });
+  return completeGoGetItemForSession(item, session);
 }
 
 export default function ItemDetailNavigation({
@@ -369,7 +336,7 @@ export default function ItemDetailNavigation({
       return;
     }
     setSession(result.session);
-    if (result.session.status === 'active') {
+    if (result.session.status === 'active' && !isGoGetTripLocked(result.session, userProfile.uid)) {
       openNavigation();
     }
   }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
@@ -404,7 +371,7 @@ export default function ItemDetailNavigation({
       return;
     }
     setSession(result.session);
-    if (result.session.status === 'active') {
+    if (result.session.status === 'active' && !isGoGetTripLocked(result.session, userProfile.uid)) {
       openNavigation();
     }
   }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
@@ -438,7 +405,7 @@ export default function ItemDetailNavigation({
       return;
     }
     setSession(result.session);
-    if (result.session.status === 'active') {
+    if (result.session.status === 'active' && !isGoGetTripLocked(result.session, userProfile.uid)) {
       openNavigation();
     }
   }, [alert, confirm, destination, userLocation, userProfile, item, openNavigation]);
@@ -469,6 +436,10 @@ export default function ItemDetailNavigation({
       onAutoStartNavigationConsumed?.();
       return;
     }
+    if (session && isGoGetTripLocked(session, currentUserId)) {
+      onAutoStartNavigationConsumed?.();
+      return;
+    }
     if (session && session.status !== 'active' && !navigatesDirectlyToPin(item)) {
       onAutoStartNavigationConsumed?.();
       return;
@@ -491,7 +462,15 @@ export default function ItemDetailNavigation({
     onAutoStartNavigationConsumed,
     coordinationGate.ok,
     item,
+    currentUserId,
   ]);
+
+  useEffect(() => {
+    if (!session || !isGoGetTripLocked(session, currentUserId) || !navigationOpen) return;
+    clearActiveNavSession();
+    setNavigationOpen(false);
+    setLockedOrigin(null);
+  }, [session, currentUserId, navigationOpen]);
 
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {
@@ -848,7 +827,6 @@ export default function ItemDetailNavigation({
               const confirmed = await confirmGoGetTripStart(confirm, otherUserName);
               if (!confirmed) return;
               await run(() => startGoGetTrip(session, item));
-              openNavigation();
             }}
             className="sbn-btn sbn-btn-primary w-full justify-center disabled:opacity-60"
           >
@@ -1118,7 +1096,7 @@ export default function ItemDetailNavigation({
         />
       )}
 
-      {navigationOpen && lockedOrigin && destination && (
+      {navigationOpen && lockedOrigin && destination && !(session && isGoGetTripLocked(session, currentUserId)) && (
         createPortal(
           <Fragment key={item.id}>
             <MapNavigationView
