@@ -4,6 +4,8 @@ const TERMINAL_STATUSES: GoGetSessionStatus[] = ['completed', 'cancelled', 'expi
 
 const LIVE_QUERY_STATUSES: GoGetSessionStatus[] = [
   'awaiting_availability',
+  'awaiting_schedule',
+  'window_offered',
   'scheduled',
   'active',
   'arrived',
@@ -14,10 +16,11 @@ export function isGoGetTripLockStatus(status: GoGetSessionStatus): boolean {
 }
 
 /**
- * Whether this user should be locked into the full-screen Uber-style trip UI.
+ * Whether this user should stay in the full-screen pickup coordinator
+ * (schedule, ready, navigation, arrival, handoff) instead of the listing page.
  *
- * Poster (fulfiller) incoming ring stays on GoGetIncomingRingOverlay.
- * Instant curb/porch trips lock the picker only — the poster did not accept a meetup.
+ * Poster incoming ring stays on GoGetIncomingRingOverlay.
+ * Instant porch trips lock the picker only — the poster did not accept a meetup.
  */
 export function isGoGetTripLocked(session: GoGetSession, userId: string): boolean {
   if (TERMINAL_STATUSES.includes(session.status)) return false;
@@ -27,7 +30,8 @@ export function isGoGetTripLocked(session: GoGetSession, userId: string): boolea
   if (!isFulfiller && !isRequester) return false;
 
   if (session.status === 'awaiting_availability') return isRequester;
-  if (session.status === 'scheduled' && session.fulfillerReadyAt) return true;
+  if (session.status === 'awaiting_schedule' || session.status === 'window_offered') return isRequester;
+  if (session.status === 'scheduled') return true;
   if (session.status === 'active') {
     if (session.handshakeMode === 'instant' && isFulfiller) return false;
     return true;

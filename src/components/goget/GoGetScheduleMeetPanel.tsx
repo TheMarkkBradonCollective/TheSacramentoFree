@@ -1,8 +1,15 @@
 import { useMemo, useState } from 'react';
 import { CalendarClock, Loader2 } from 'lucide-react';
 import type { GoGetSession, ItemPost, UserProfile } from '../../types';
-import { getPickupAvailability, getSharedSchedulingSlots } from '../../lib/pickupAvailability';
+import { getPickupAvailability, getSharedSchedulingSlots, groupSchedulingSlots } from '../../lib/pickupAvailability';
 import { requesterProposeScheduledMeet } from '../../lib/goGetSessions';
+
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 interface GoGetScheduleMeetPanelProps {
   session: GoGetSession;
@@ -28,7 +35,9 @@ export default function GoGetScheduleMeetPanel({
     const requesterSchedule = getPickupAvailability(requesterProfile);
     return getSharedSchedulingSlots(posterSchedule, requesterSchedule);
   }, [posterProfile, requesterProfile]);
+  const grouped = useMemo(() => groupSchedulingSlots(slots), [slots]);
   const [selectedIso, setSelectedIso] = useState(slots[0]?.toISOString() ?? '');
+  const [customMode, setCustomMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -56,9 +65,9 @@ export default function GoGetScheduleMeetPanel({
       <div className="flex items-start gap-2">
         <CalendarClock className="w-5 h-5 text-accent shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-app">{posterName} isn’t available right now</p>
+          <p className="text-sm font-semibold text-app">No response yet</p>
           <p className="text-xs text-muted mt-1 leading-relaxed">
-            Schedule a meet inside both of your pickup availability windows. {posterName} gets a normal
+            You can propose a pickup time inside both of your pickup hours. {posterName} gets a normal
             notification — no urgent ring.
           </p>
         </div>
@@ -68,28 +77,49 @@ export default function GoGetScheduleMeetPanel({
         <p className="text-xs text-accent">
           No shared pickup hours in the next week. Message {posterName} or try again later.
         </p>
-      ) : (
+      ) : customMode ? (
         <label className="block text-xs text-muted">
-          Pickup time
-          <select
-            value={selectedIso}
-            onChange={(e) => setSelectedIso(e.target.value)}
+          Custom time
+          <input
+            type="datetime-local"
+            value={selectedIso ? toLocalInput(selectedIso) : ''}
+            onChange={(e) => {
+              const chosen = new Date(e.target.value);
+              if (!Number.isNaN(chosen.getTime())) setSelectedIso(chosen.toISOString());
+            }}
             className="sbn-input text-sm mt-1 w-full"
             disabled={busy}
-          >
-            {slots.map((slot) => (
-              <option key={slot.toISOString()} value={slot.toISOString()}>
-                {slot.toLocaleString(undefined, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </option>
-            ))}
-          </select>
+          />
         </label>
+      ) : (
+        <div className="space-y-3 max-h-56 overflow-y-auto">
+          {grouped.map((group) => (
+            <div key={group.label}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">{group.label}</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {group.slots.slice(0, 8).map((slot) => {
+                  const iso = slot.toISOString();
+                  return (
+                    <button
+                      key={iso}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setSelectedIso(iso)}
+                      className={`text-xs rounded-lg px-2 py-2 border ${
+                        selectedIso === iso ? 'border-accent bg-accent-soft font-bold text-app' : 'border-app text-muted'
+                      }`}
+                    >
+                      {slot.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <button type="button" onClick={() => setCustomMode(true)} className="text-xs text-accent underline">
+            Choose custom time
+          </button>
+        </div>
       )}
 
       {err && <p className="text-xs font-semibold text-red-400">{err}</p>}

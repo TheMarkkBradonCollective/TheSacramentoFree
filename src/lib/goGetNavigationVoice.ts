@@ -1,4 +1,4 @@
-import { parsePickupNotes } from './listingContent';
+import { parsePickupNotes, pickupNotesContainSensitiveDetails } from './listingContent';
 import { isInstantClaimCategory } from './goGetSessions';
 
 function formatItemListForSpeech(labels: string[]): string {
@@ -43,6 +43,7 @@ export function buildGoGetNavigationStartPhrase(params: GoGetNavigationVoicePara
 export function buildGoGetPickupInstructionsPhrase(description: string): string | null {
   const notes = parsePickupNotes(description).replace(/\s+/g, ' ').trim();
   if (!notes) return null;
+  if (pickupNotesContainSensitiveDetails(notes)) return null;
   return `Pickup instructions. ${notes}`;
 }
 

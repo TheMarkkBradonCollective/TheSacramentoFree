@@ -9,11 +9,12 @@ interface ReportGoGetViolationDialogProps {
   onSubmit: (params: { category: ViolationCategory; description: string }) => Promise<void> | void;
 }
 
-const CATEGORY_OPTIONS: { value: ViolationCategory; label: string }[] = [
-  { value: 'no_show', label: 'No-show — never showed up / never came out' },
-  { value: 'false_claim', label: "False claim — said it was picked up but wasn't (or wasn't dropped off)" },
-  { value: 'unsafe_behavior', label: 'Unsafe or disrespectful behavior' },
-  { value: 'other', label: 'Something else' },
+const CATEGORY_OPTIONS: { value: ViolationCategory; label: string; id: string }[] = [
+  { id: 'no_show', value: 'no_show', label: "Nobody here / person didn't show" },
+  { id: 'unavailable', value: 'false_claim', label: "Item isn't available / false claim" },
+  { id: 'wrong_place', value: 'other', label: 'Wrong item or wrong location' },
+  { id: 'unsafe', value: 'unsafe_behavior', label: 'Unsafe situation' },
+  { id: 'other', value: 'other', label: 'Something else' },
 ];
 
 export default function ReportGoGetViolationDialog({
@@ -23,6 +24,7 @@ export default function ReportGoGetViolationDialog({
   onSubmit,
 }: ReportGoGetViolationDialogProps) {
   const [category, setCategory] = useState<ViolationCategory>('no_show');
+  const [selectedId, setSelectedId] = useState('no_show');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState('');
@@ -72,16 +74,19 @@ export default function ReportGoGetViolationDialog({
         <div className="space-y-2">
           {CATEGORY_OPTIONS.map((opt) => (
             <label
-              key={opt.value}
+              key={opt.id}
               className={`flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors ${
-                category === opt.value ? 'border-accent bg-accent-soft' : 'border-app hover:bg-inset'
+                selectedId === opt.id ? 'border-accent bg-accent-soft' : 'border-app hover:bg-inset'
               }`}
             >
               <input
                 type="radio"
                 name="violation_category"
-                checked={category === opt.value}
-                onChange={() => setCategory(opt.value)}
+                checked={selectedId === opt.id}
+                onChange={() => {
+                  setSelectedId(opt.id);
+                  setCategory(opt.value);
+                }}
                 className="mt-0.5"
               />
               <span className="text-xs font-semibold text-app leading-snug">{opt.label}</span>

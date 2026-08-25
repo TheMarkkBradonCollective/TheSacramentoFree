@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Clock, Loader2, PhoneOff } from 'lucide-react';
+import { Loader2, PhoneOff } from 'lucide-react';
 import type { GoGetSession, ItemPost } from '../../types';
 import { expireGoGetRing, isGoGetRingActive } from '../../lib/goGetSessions';
+import { formatRingCountdown } from '../../lib/pickupEngine';
 
 interface GoGetRingWaitingPanelProps {
   session: GoGetSession;
@@ -40,7 +41,7 @@ export default function GoGetRingWaitingPanel({
     if (expiring || session.status !== 'awaiting_availability') return;
     if (isGoGetRingActive(session)) return;
     setExpiring(true);
-    const result = await expireGoGetRing(session);
+    const result = await expireGoGetRing(session, item);
     setExpiring(false);
     if (result.ok && result.session) {
       onSessionChange(result.session);
@@ -48,20 +49,19 @@ export default function GoGetRingWaitingPanel({
     }
   };
 
-  const total = session.ringDurationSeconds ?? 140;
-
   return (
     <div className="sbn-card p-4 space-y-3 border border-accent/30 bg-accent/5" id="go_get_ring_waiting">
       <div className="flex items-start gap-3">
         <Loader2 className="w-5 h-5 text-accent animate-spin shrink-0 mt-0.5" />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-app">Checking if {posterName} is available now</p>
+          <p className="text-sm font-semibold text-app">Waiting for {posterName}</p>
           <p className="text-xs text-muted mt-1 leading-relaxed">
-            Their phone is ringing for up to {total} seconds — like a delivery alert. You’ll hear back here
-            when they answer or when the timer ends.
+            {remaining > 0
+              ? `Their phone is ringing. You'll hear back here when they answer.`
+              : `No response yet. You can propose a pickup time.`}
           </p>
-          <p className="text-xs font-mono text-accent mt-2">
-            {remaining > 0 ? `${remaining}s remaining` : 'Ring window ended'}
+          <p className="text-2xl font-black font-mono text-accent mt-2 tabular-nums">
+            {remaining > 0 ? formatRingCountdown(remaining) : '0:00'}
           </p>
         </div>
       </div>

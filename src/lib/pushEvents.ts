@@ -17,6 +17,7 @@ import {
   pushUrlForAwards,
   pushUrlForAnnouncement,
   pushUrlForAppUpdate,
+  pushUrlForPickup,
 } from './pushDeepLink';
 
 function itemCoords(item: ItemPost): { lat: number; lng: number } | null {
@@ -593,6 +594,10 @@ export async function notifyRequestFulfilled(params: {
 // "Go Get" pickup sessions
 // =========================================================
 
+function goGetPushUrl(itemId: string, sessionId: string): string {
+  return pushUrlForPickup(itemId, sessionId);
+}
+
 export async function notifyGoGetAvailabilityRequest(params: {
   item: ItemPost;
   fulfillerUserId: string;
@@ -603,9 +608,9 @@ export async function notifyGoGetAvailabilityRequest(params: {
 }) {
   await sendPushNotification({
     eventType: 'go_get_availability_request',
-    title: 'Ready for pickup?',
-    body: `${params.requesterName} wants to Go Get "${params.item.title}" — are you available now?`,
-    url: pushUrlForListing(params.item.id),
+    title: 'Go Get request',
+    body: `${params.requesterName} wants to pick up "${params.item.title}" — are you available now?`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-availability-${params.sessionId}`,
@@ -627,8 +632,8 @@ export async function notifyGoGetAvailableNow(params: {
   await sendPushNotification({
     eventType: 'go_get_available_now',
     title: `${params.fulfillerName} is available now`,
-    body: `Tap Go Get to start heading to "${params.item.title}"`,
-    url: pushUrlForListing(params.item.id),
+    body: `Pickup is ready — start heading to "${params.item.title}"`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-available-${params.sessionId}`,
@@ -647,7 +652,7 @@ export async function notifyGoGetScheduleProposed(params: {
     eventType: 'go_get_schedule_proposed',
     title: `${params.fulfillerName} isn't available right now`,
     body: `Free ${params.windowLabel} for "${params.item.title}" — pick a pickup time`,
-    url: pushUrlForListing(params.item.id),
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-schedule-${params.sessionId}`,
@@ -665,8 +670,8 @@ export async function notifyGoGetScheduleConfirmed(params: {
   await sendPushNotification({
     eventType: 'go_get_schedule_confirmed',
     title: 'Pickup time confirmed',
-    body: `${params.requesterName} will Go Get "${params.item.title}" ${params.whenLabel}`,
-    url: pushUrlForListing(params.item.id),
+    body: `${params.requesterName} will pick up "${params.item.title}" ${params.whenLabel}`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-confirmed-${params.sessionId}`,
@@ -683,7 +688,7 @@ export async function notifyGoGetReadyReminder(params: {
     eventType: 'go_get_ready_reminder',
     title: 'Pickup time is here',
     body: `Tap Ready when you're set for "${params.item.title}" — the neighbor is waiting on you.`,
-    url: pushUrlForListing(params.item.id),
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-ready-reminder-${params.sessionId}`,
@@ -699,9 +704,9 @@ export async function notifyGoGetFulfillerReady(params: {
 }) {
   await sendPushNotification({
     eventType: 'go_get_fulfiller_ready',
-    title: `${params.fulfillerName} is ready`,
-    body: `Tap Go Get to start heading to "${params.item.title}"`,
-    url: pushUrlForListing(params.item.id),
+    title: 'Pickup is ready',
+    body: `${params.fulfillerName} is ready — start heading to "${params.item.title}"`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-fulfiller-ready-${params.sessionId}`,
@@ -719,10 +724,28 @@ export async function notifyGoGetStarted(params: {
     eventType: 'go_get_started',
     title: `${params.requesterName} is on the way`,
     body: `Heading to pick up "${params.item.title}" now`,
-    url: pushUrlForListing(params.item.id),
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-started-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetApproaching(params: {
+  item: ItemPost;
+  fulfillerUserId: string;
+  requesterName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_approaching',
+    title: `${params.requesterName} is almost there`,
+    body: `Arriving soon for "${params.item.title}"`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
+    listingId: params.item.id,
+    recipientUserIds: [params.fulfillerUserId],
+    tag: `go-get-approaching-${params.sessionId}`,
     data: { goGetSessionId: params.sessionId },
   });
 }
@@ -735,9 +758,9 @@ export async function notifyGoGetArrived(params: {
 }) {
   await sendPushNotification({
     eventType: 'go_get_arrived',
-    title: `${params.requesterName} has arrived`,
-    body: `Confirm the pickup for "${params.item.title}" once it's handed off`,
-    url: pushUrlForListing(params.item.id),
+    title: 'Your pickup has arrived',
+    body: `${params.requesterName} is here for "${params.item.title}" — confirm the handoff`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-arrived-${params.sessionId}`,
@@ -753,8 +776,8 @@ export async function notifyGoGetCompleted(params: {
   await sendPushNotification({
     eventType: 'go_get_completed',
     title: 'Pickup confirmed',
-    body: `"${params.item.title}" pickup is complete — thanks for using Go Get!`,
-    url: pushUrlForListing(params.item.id),
+    body: `"${params.item.title}" pickup is complete.`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-completed-${params.sessionId}`,
@@ -770,12 +793,65 @@ export async function notifyGoGetCancelled(params: {
 }) {
   await sendPushNotification({
     eventType: 'go_get_cancelled',
-    title: 'Go Get cancelled',
+    title: 'Pickup cancelled',
     body: `${params.cancelledByName} cancelled the pickup for "${params.item.title}"`,
-    url: pushUrlForListing(params.item.id),
+    url: goGetPushUrl(params.item.id, params.sessionId),
     listingId: params.item.id,
     recipientUserIds: [params.recipientUserId],
     tag: `go-get-cancelled-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetExpired(params: {
+  item: ItemPost;
+  requesterUserId: string;
+  fulfillerName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_expired',
+    title: 'No response yet',
+    body: `${params.fulfillerName} didn't answer for "${params.item.title}". You can propose a pickup time.`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
+    listingId: params.item.id,
+    recipientUserIds: [params.requesterUserId],
+    tag: `go-get-expired-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetDeclined(params: {
+  item: ItemPost;
+  requesterUserId: string;
+  fulfillerName: string;
+  sessionId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_declined',
+    title: `${params.fulfillerName} isn't available`,
+    body: `They declined the pickup for "${params.item.title}". Message them to try another time.`,
+    url: goGetPushUrl(params.item.id, params.sessionId),
+    listingId: params.item.id,
+    recipientUserIds: [params.requesterUserId],
+    tag: `go-get-declined-${params.sessionId}`,
+    data: { goGetSessionId: params.sessionId },
+  });
+}
+
+export async function notifyGoGetDisputed(params: {
+  sessionId: string;
+  recipientUserId: string;
+  title: string;
+  body: string;
+}) {
+  await sendPushNotification({
+    eventType: 'go_get_disputed',
+    title: params.title,
+    body: params.body,
+    url: '/profile',
+    recipientUserIds: [params.recipientUserId],
+    tag: `go-get-disputed-${params.sessionId}`,
     data: { goGetSessionId: params.sessionId },
   });
 }

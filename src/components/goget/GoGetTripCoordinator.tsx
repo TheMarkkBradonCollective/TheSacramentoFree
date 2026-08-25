@@ -3,6 +3,7 @@ import type { GoGetSession, UserProfile } from '../../types';
 import { supportsGoGetCoordination } from '../../lib/goGetEligibility';
 import { getLockedGoGetSessionForUser, subscribeToUserGoGetSessions } from '../../lib/goGetSessions';
 import { isGoGetTripLocked } from '../../lib/goGetTripLock';
+import { normalizeCoordinationMode, PICKUP_MODE_CONFIG } from '../../lib/pickupEngine';
 import GoGetTripLockScreen from './GoGetTripLockScreen';
 
 interface GoGetTripCoordinatorProps {
@@ -45,10 +46,15 @@ export default function GoGetTripCoordinator({
 
   if (!userProfile || !session || !isGoGetTripLocked(session, userProfile.uid)) return null;
 
+  const mode = normalizeCoordinationMode(session.coordinationMode);
+  const travelerRole = PICKUP_MODE_CONFIG[mode].travelerRole;
+
   return (
     <GoGetTripLockScreen
       session={session}
       userProfile={userProfile}
+      mode={mode}
+      travelerRole={travelerRole}
       onSessionChange={(next) => {
         setSession(isGoGetTripLocked(next, userProfile.uid) ? next : null);
       }}

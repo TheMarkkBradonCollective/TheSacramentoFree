@@ -67,6 +67,42 @@ export function parsePickupNotes(description: string): string {
   return match ? match[1].trim() : '';
 }
 
+/** Gate codes, lockbox PINs, and similar details should be shown on-screen, not spoken. */
+export function pickupNotesContainSensitiveDetails(notes: string): boolean {
+  const text = notes.trim();
+  if (!text) return false;
+  return (
+    /\b(gate\s*code|door\s*code|keypad|passcode|password|pin\s*code|lockbox|access\s*code|buzzer\s*code)\b/i.test(text) ||
+    /\bcode\s*[:#]?\s*\d{3,}\b/i.test(text)
+  );
+}
+
+export interface PickupInstructionSections {
+  raw: string;
+  parking?: string;
+  gate?: string;
+  porch?: string;
+  building?: string;
+}
+
+/** Split pickup notes into useful sections when neighbors wrote them as labeled lines. */
+export function extractPickupInstructionSections(description: string): PickupInstructionSections | null {
+  const raw = parsePickupNotes(description);
+  if (!raw) return null;
+  const lines = raw
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const pick = (pattern: RegExp) => lines.find((line) => pattern.test(line));
+  return {
+    raw,
+    parking: pick(/\b(park|driveway|parking)\b/i),
+    gate: pick(/\b(gate|buzzer|intercom)\b/i),
+    porch: pick(/\b(porch|doorstep|front door|covered porch)\b/i),
+    building: pick(/\b(building|apartment|apt\.?|unit|complex)\b/i),
+  };
+}
+
 /** User-facing item description (excludes pickup notes and machine tags). */
 export function getListingDetailsText(description: string): string {
   const safe = plainListingDescription(description);

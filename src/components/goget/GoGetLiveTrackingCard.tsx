@@ -11,7 +11,7 @@ interface GoGetLiveTrackingCardProps {
   onOpenChat: () => void;
 }
 
-/** Fulfiller-side "Uber driver approaching" style card — ETA + distance only, never a raw map pin of a private device. */
+/** Fulfiller-side waiting card — ETA + distance only, never a raw map pin of a private device. */
 export default function GoGetLiveTrackingCard({
   sessionId,
   requesterName,

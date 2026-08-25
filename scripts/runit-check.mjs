@@ -43,7 +43,14 @@ if (!exists(releaseNotesFile)) {
 // --- complete-schema.sql required markers ---
 const schemaMarkers = [
   {
-    markers: ['pickupAvailability', 'goGetRingDurationSeconds', 'ringExpiresAt', 'awaiting_schedule'],
+    markers: [
+      'pickupAvailability',
+      'goGetRingDurationSeconds',
+      'ringExpiresAt',
+      'awaiting_schedule',
+      'coordinationMode',
+      'transition_go_get_session',
+    ],
     label: 'Go Get ring / pickup availability',
   },
   {

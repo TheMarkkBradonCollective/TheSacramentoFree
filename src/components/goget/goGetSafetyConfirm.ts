@@ -23,11 +23,11 @@ export async function confirmGoGetAsRequester(
   }
 
   return confirm({
-    title: 'Start Go Get?',
+    title: 'Start this pickup?',
     message:
-      `This will notify ${posterName} that you want to pick up "${itemTitle}".\n\n` +
-      `While you're on your way, your live location will be shared with them until pickup is cancelled or completed.`,
-    confirmLabel: 'Yes, start Go Get',
+      `This notifies ${posterName} that you want "${itemTitle}". The app coordinates the pickup — you stay in control of the exchange.\n\n` +
+      `Your live location is shared only while this pickup is active.`,
+    confirmLabel: 'Request pickup',
     cancelLabel: 'Not now',
   });
 }
@@ -71,10 +71,11 @@ export async function confirmMeetUp(
 /** Requester taps Go Get it after the poster confirms they're ready — starts live navigation. */
 export async function confirmGoGetTripStart(confirm: ConfirmFn, posterName: string): Promise<boolean> {
   return confirm({
-    title: 'Head over now?',
+    title: 'Before you go',
     message:
-      `Your live location will be shared with ${posterName} so they can follow your progress until pickup is cancelled or completed.`,
-    confirmLabel: 'Go Get it',
+      `Confirm the pickup location, keep communication in Sacramento Free, and don't enter unsafe or private areas. If something feels wrong, cancel and report it.\n\n` +
+      `Your live location will be shared with ${posterName} until this pickup ends.`,
+    confirmLabel: 'Start trip',
     cancelLabel: 'Not yet',
   });
 }

@@ -1,4 +1,4 @@
-import type { OsrmTravelMode } from './mapCoords';
+import type { OsrmTravelMode } from './osrmRoute';
 
 /** OSRM profile segment for generic OSRM servers (not profile-dedicated hosts). */
 export function osrmProfilePath(mode: OsrmTravelMode): string {
