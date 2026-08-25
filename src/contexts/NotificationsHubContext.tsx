@@ -13,14 +13,14 @@ import { isStaffRole } from '../lib/roles';
 import { markStaffApplyInviteSeen } from '../lib/staffApplyInvite';
 import { useNewspaperAlertBell } from '../preview/useNewspaperAlerts';
 
-export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts' | 'awards';
+export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts';
 
 export type NotificationsHubFocus = {
   announcementId?: string;
   updateId?: string;
 };
 
-const HUB_TAB_ORDER: NotificationsHubTab[] = ['notifications', 'announcements', 'updates', 'awards', 'alerts'];
+const HUB_TAB_ORDER: NotificationsHubTab[] = ['notifications', 'announcements', 'updates', 'alerts'];
 
 const HUB_TAB_META: Record<
   NotificationsHubTab,
@@ -46,13 +46,6 @@ const HUB_TAB_META: Record<
     title: 'App updates',
     subtitle: 'Director changelog — vote and comment',
     intro: 'Technical release notes for the app. Expand any entry for the full story and discussion.',
-  },
-  awards: {
-    label: 'Badges',
-    mobileLabel: 'Badges',
-    title: 'Your badges',
-    subtitle: 'Community awards and milestones',
-    intro: 'Open your full badges panel to see earned awards and progress.',
   },
   alerts: {
     label: 'Alerts',
@@ -141,12 +134,10 @@ function tabUnreadCount(
 export function NotificationsHubProvider({
   userProfile,
   onDeepLink,
-  onOpenAwards,
   children,
 }: {
   userProfile: UserProfile | null;
   onDeepLink?: (target: PushDeepLinkTarget) => void;
-  onOpenAwards?: () => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -284,18 +275,6 @@ export function NotificationsHubProvider({
                 embedded
                 scope="alerts"
               />
-            ) : null}
-            {tab === 'awards' ? (
-              <div className="sbn-card p-6 text-center space-y-4">
-                <p className="text-sm text-muted leading-relaxed">
-                  Badges celebrate giving, events, and community participation. View your full awards panel for details.
-                </p>
-                {onOpenAwards ? (
-                  <button type="button" className="sbn-btn sbn-btn-primary" onClick={onOpenAwards}>
-                    Open badges panel
-                  </button>
-                ) : null}
-              </div>
             ) : null}
           </div>
         </FullScreenPanel>

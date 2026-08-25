@@ -14,7 +14,7 @@ export interface PushDeepLinkTarget {
   /** Open Chat inbox focused on pending message requests (not a chat id). */
   messageRequests?: boolean;
   notifications?: boolean;
-  notificationsTab?: 'announcements' | 'updates' | 'notifications' | 'alerts' | 'listings' | 'awards';
+  notificationsTab?: 'announcements' | 'updates' | 'notifications' | 'alerts' | 'listings';
   staffPanel?: 'tickets' | 'reports';
   chatFeedbackPanel?: 'reviews' | 'report' | 'staffReports';
   /** Neighbor staff application page. */

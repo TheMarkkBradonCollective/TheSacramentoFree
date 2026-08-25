@@ -2330,7 +2330,6 @@ export default function App() {
             <NotificationsHubProvider
               userProfile={userProfile}
               onDeepLink={handlePushDeepLink}
-              onOpenAwards={handleOpenAwards}
             >
             <FeedLiveProvider userProfile={userProfile} blockedUserIds={blockedUserIds}>
             <GoGetRingCoordinator userProfile={userProfile} />
