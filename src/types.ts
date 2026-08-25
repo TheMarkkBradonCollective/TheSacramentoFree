@@ -342,6 +342,8 @@ export interface ItemPost {
   pickupAttributionType?: PickupAttributionType | null;
   pickupAttributionUserId?: string | null;
   pickupAttributionLabel?: string | null;
+  /** Unique neighbor views (excludes the poster viewing their own listing). */
+  viewCount?: number;
 }
 
 export type PickupAttributionType =

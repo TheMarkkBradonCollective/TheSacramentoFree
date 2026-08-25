@@ -1327,7 +1327,8 @@ export default function App() {
       updated.title !== detailItem.title ||
       (updated.description !== detailItem.description && updated.description) ||
       updated.pickupAttributionType !== detailItem.pickupAttributionType ||
-      updated.pickupAttributionLabel !== detailItem.pickupAttributionLabel
+      updated.pickupAttributionLabel !== detailItem.pickupAttributionLabel ||
+      updated.viewCount !== detailItem.viewCount
     ) {
       setDetailItem({
         ...updated,
@@ -1811,6 +1812,13 @@ export default function App() {
     },
     [blockedUserIds],
   );
+
+  const handleListingViewCountUpdated = useCallback((itemId: string, viewCount: number) => {
+    setItems((current) =>
+      current.map((row) => (row.id === itemId ? { ...row, viewCount } : row)),
+    );
+    setDetailItem((current) => (current?.id === itemId ? { ...current, viewCount } : current));
+  }, []);
 
   const openDetailItem = useCallback((item: ItemPost, startNavigation = false) => {
     setDetailNavigateOnOpen(startNavigation);
@@ -2682,6 +2690,7 @@ export default function App() {
                   onPickupCompleted={() => {
                     void loadItems(true);
                   }}
+                  onViewCountUpdated={handleListingViewCountUpdated}
                 />
               )}
 

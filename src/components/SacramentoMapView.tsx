@@ -43,6 +43,7 @@ import MapSelectionRouteRow from './MapSelectionRouteRow';
 import { MapPin, MessageSquare, LifeBuoy, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
+import ListingViewBadge from './ListingViewBadge';
 import EventEngagement from './EventEngagement';
 import EventStatusBadge from './EventStatusBadge';
 import UserAvatar from './UserAvatar';
@@ -640,13 +641,9 @@ function MapSelectedListingCard({
 
       <div className="item-feed-card__main">
         {thumb ? (
-          <div className="item-feed-card__media">
+          <div className="item-feed-card__media relative">
             <ListingImage src={thumb} alt={post.title} width={compact ? 160 : 240} className="h-full w-full object-cover" />
-            {photos.length > 1 && (
-              <span className="absolute bottom-1 right-1 text-[7px] font-bold bg-black/75 text-white px-1 rounded">
-                +{photos.length - 1}
-              </span>
-            )}
+            <ListingViewBadge count={post.viewCount ?? 0} compact={compact} />
           </div>
         ) : (
           <div className="item-feed-card__media item-feed-card__media--empty">
