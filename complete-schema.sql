@@ -2837,6 +2837,25 @@ AS $$
   SELECT COUNT(*)::INT FROM public.users;
 $$;
 
+CREATE OR REPLACE FUNCTION public.community_stats()
+RETURNS TABLE (
+  member_count INT,
+  active_listings INT,
+  items_given INT,
+  requests_fulfilled INT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    (SELECT COUNT(*)::INT FROM public.users),
+    (SELECT COUNT(*)::INT FROM public.items WHERE status = 'active'),
+    (SELECT COUNT(*)::INT FROM public.items WHERE type = 'giveaway' AND status = 'completed'),
+    (SELECT COUNT(*)::INT FROM public.items WHERE type = 'looking' AND status = 'completed');
+$$;
+
 CREATE OR REPLACE FUNCTION public.events_unlocked()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -2847,7 +2866,8 @@ AS $$
   SELECT public.community_member_count() >= 500;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.community_member_count() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.community_member_count() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.community_stats() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.events_unlocked() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.awards_unlocked() TO authenticated;
 

@@ -2559,6 +2559,20 @@ export async function getCommunityStats(): Promise<CommunityStats> {
     return { memberCount: 128, activeListings: 6, itemsGiven: 2, requestsFulfilled: 1 };
   }
   try {
+    const { data, error } = await supabase.rpc('community_stats');
+    if (!error && data) {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row && typeof row === 'object') {
+        const stats = row as Record<string, unknown>;
+        return {
+          memberCount: Number(stats.member_count ?? stats.memberCount ?? 0),
+          activeListings: Number(stats.active_listings ?? stats.activeListings ?? 0),
+          itemsGiven: Number(stats.items_given ?? stats.itemsGiven ?? 0),
+          requestsFulfilled: Number(stats.requests_fulfilled ?? stats.requestsFulfilled ?? 0),
+        };
+      }
+    }
+
     const [membersRes, activeRes, givenRes, fulfilledRes] = await Promise.all([
       supabase.rpc('community_member_count'),
       supabase.from('items').select('id', { count: 'exact', head: true }).eq('status', 'active'),
