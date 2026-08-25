@@ -280,7 +280,7 @@ export default function ItemCard({
                 <Tag className="w-7 h-7 text-subtle" aria-hidden />
               </div>
             )}
-            <ListingViewBadge count={item.viewCount ?? 0} showZero />
+            <ListingViewBadge count={item.viewCount ?? 0} />
             <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
               <span
                 className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[8px] px-1 py-0 leading-none whitespace-nowrap shadow-sm`}
